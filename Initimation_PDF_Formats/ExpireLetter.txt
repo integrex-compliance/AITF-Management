@@ -1,0 +1,26 @@
+<span style="text-align:justify;">
+<pre>Ref: &&customer_unique_id                                         Date:&&due_date </pre>
+
+<span>TO, </span>
+<br><b>&&customer_customer_name</b> 
+<br>&&customer_address
+<br>
+<br>Kind Attn:- &&customer_contact_person
+<br>
+<br><b>Subject:</b> &&servicedesc
+<br>
+<br><span>Dear &&customer_customer_name, </span>
+<br><br>
+<span>Please take a look at our earlier letters dated &&PrevPrevDueDate, and &&PrevDueDate.</span>
+<br><br><span>Since you failed to complete the recertification audit before the expiry, Your ISO certificate has expired from Dt. &&due_date.</span> 
+<br><br><span>In case you have already applied for renewal or the recertification process has been initiated by AITF then we can restore certification within 4 months.</span>
+<br><span>(Subject to outstanding recertification activities being completed within 4 months from the date of expiry)</span>
+<br><span>If this is not the case then your organization needs to apply for new certification.</span> 
+<br><br>
+<span>This is system generated mail as per the dates of certificatin due in the AITF software system, if you have already completed the requred compliences or needs more clarification / information, Kindly contact us. </span>
+<br><br><br>
+<br><span>Thanks & regards,</span>
+<br>AITF Management Certification Ltd.
+<br>(Technical Operational Staff)
+<br> PH- 9422011836 / 37
+</font></p></span>

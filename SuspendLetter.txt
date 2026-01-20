@@ -1,0 +1,25 @@
+<span style="text-align:justify;">
+<pre>Ref: &&customer_unique_id                                         Date:&&due_date </pre>
+
+<span>TO, </span>
+<br><b>&&customer_customer_name</b> 
+<br>&&customer_address
+<br>
+<br>Kind Attn:- M/S:&&customer_contact_person
+<br>
+<br><b>Subject:</b> &&servicedesc
+<br>
+<br><span>Dear Sir/Ma'am, </span>
+<br><br>
+<span>Your first surveillance audit was due in &&PrevDueDateMonYr. It is the requirement that the first surveillance audit has to be completed within 12 months from the Certification Registration Date.</span>
+<br><br><span>Since the periodical surveillance audit of your organization is not completed within the stipulated period, your certification stands suspended from &&due_date.</span> 
+<br><br><span>You are required to inform us immediately for conducting the audit before &&NextDueDate to revoke the suspension and to avoid permanent cancellation (Withdrawal) of your certificate.</span>
+<br><br><span>Until the revoke of suspension, your organization can not claim as ISO 9001 certified and you are required to restrain from using the logos of the certification body with immediate effect.</span>
+<br><br>
+<span>Kindly contact us if any more clarification. or information needed.</span>
+<br><br><br>
+<br><span>Thanks & regards,</span>
+<br>AITF Management Certification Ltd.
+<br>(Technical Operational Staff)
+<br> PH- 9422011836 / 37
+</font></p></span>

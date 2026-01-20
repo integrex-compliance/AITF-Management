@@ -1,0 +1,32 @@
+RewriteEngine On
+
+    # Force HTTPS for production domain
+    RewriteCond %{HTTP_HOST} aitf\.co\.in [NC]
+    RewriteCond %{SERVER_PORT} 80
+    RewriteRule ^(.*)$ https://aitf.co.in/$1 [R=301,L]
+
+    # Do not rewrite existing non-PHP files or directories
+    RewriteCond %{REQUEST_URI} !\.php$ [NC]
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Hide direct .php in browser bar for key public pages
+    # Index (login/landing)
+    RewriteCond %{THE_REQUEST} \s/+index\.php[\s?] [NC]
+    RewriteRule ^index\.php$ login? [R=302,L]
+
+    # Authenticated dashboard
+    RewriteCond %{THE_REQUEST} \s+/homePage\.php[\s?] [NC]
+    RewriteRule ^homePage\.php$ dashboard? [R=302,L]
+
+    # Generic error page
+    RewriteCond %{THE_REQUEST} \s+/errorPage\.php[\s?] [NC]
+    RewriteRule ^errorPage\.php$ error? [R=302,L]
+
+    # Clean, user-friendly routes
+    RewriteRule ^login/?$ index.php [L,QSA]
+    RewriteRule ^dashboard/?$ homePage.php [L,QSA]
+    RewriteRule ^account/?$ customerAccount.php [L,QSA]
+    RewriteRule ^logout/?$ logout.php [L,QSA]
+    RewriteRule ^error/?$ errorPage.php [L,QSA]

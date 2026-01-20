@@ -1,0 +1,28 @@
+<span style="text-align:justify;">
+<pre>Ref: &&customer_unique_id                                         Date:&&due_date </pre>
+
+<span>TO, </span>
+<br><b>&&customer_customer_name</b> 
+<br>&&customer_address
+<br>
+<br>Kind Attn:- &&customer_contact_person
+<br>
+<br><b>Subject:</b> &&servicedesc
+<br>
+<br><span>Dear &&customer_contact_person, </span>
+<br><br>
+<span>Certification no. &&customer_certification_no Registered on &&reg_date is now due for its annual surveillance audit.</span>
+<br><br><span>1) As per the contractual agreement and procedural requirement of AITF, surveillance shall be conducted before intervals of 12 months from the date of certificate registration. </span> 
+<br><br><span>2) If the surveillance assessment is not completed successfully within the next 1 month, it may result in the suspension of certification, 
+which will affect it from &&NextDueDate </span>
+<br><br><span>3) You are required to intimate to us in case of any changes in the number of employees, address, scope (reduction or extension), or any significant changes in the organization from the last audit conducted by AITF. </span>
+<br><br><span>4) Kindly let us know the convenient dates for the audit so that we can plan the audit accordingly.</span>
+<br><br><span>5) Please note that the expenses of the surveillance audit are as per the signed agreement during initial certification.</span>
+<br><br>
+<span>Kindly contact us if any more clarification. or information needed.</span>
+<br><br><br>
+<br><span>Thanks & regards,</span>
+<br>AITF Management Certification Ltd.
+<br>(Technical Operational Staff)
+<br> PH- 9422011836 / 37
+</font></p></span>

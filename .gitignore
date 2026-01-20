@@ -1,0 +1,15 @@
+﻿# Directories to ignore
+uploads/
+tinymce/
+PHPMailer/
+
+# Files to ignore
+.project
+.buildpath
+.ftpquota
+
+# Additional common ignores
+*.log
+debug.php
+dubug.php
+*.crdownload

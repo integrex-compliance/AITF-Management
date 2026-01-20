@@ -1,0 +1,24 @@
+<span style="text-align:justify;">
+<pre>Ref: &&customer_unique_id                                         Date:&&due_date </pre>
+
+<span>TO, </span>
+<br><b>&&customer_customer_name</b> 
+<br>&&customer_address
+<br>
+<br>Kind Attn:- &&customer_contact_person
+<br>
+<br><b>Subject:</b> &&servicedesc
+<br>
+<br><span>Dear &&customer_contact_person, </span>
+<br><br>
+<span>Your organization is certified For ISO with certification no. &&customer_certification_no Certification Registered on &&reg_date.</span>
+<br><br><span>The validity of the certificate will complete on date &&NextDueDate. Hence, after this date your certification will expire.</span> 
+<br><br><span>To avoid the expiry of your certification, your organization required to successfully Complete the recertification activities before expiry date.</span>
+<br><br>
+<span>Kindly contact us if any more clarification or information needed.</span>
+<br><br><br>
+<br><span>Thanks & regards,</span>
+<br>AITF Management Certification Ltd.
+<br>(Technical Operational Staff)
+<br> PH- 9422011836 / 37
+</font></p></span>

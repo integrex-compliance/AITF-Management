@@ -1,0 +1,24 @@
+<span style="text-align:justify;">
+<pre>Ref: &&customer_unique_id                                         Date:&&due_date </pre>
+
+<span>TO, </span>
+<br><b>&&customer_customer_name</b> 
+<br>&&customer_address
+<br>
+<br>Kind Attn:- M/S:&&customer_contact_person
+<br>
+<br><b>Subject:</b> &&servicedesc
+<br>
+<br><span>Dear Sir/Ma'am, </span>
+<br><br>
+<span>We would like to draw your attention to our previous letter dated &&PrevDueDate.</span>
+<br><br><span>Your recertification audit is due, Please inform us urgently the date(s) convenient to you for the audit to avoid expiry of the Certification.</span> 
+<br><br><span>Kindly note that failure to successfully conduct the recertification audit before expiry of validity of certificate would lead to the cancellation of your certificate, as per procedural requirement and agreement. <u>If recertification not conducted before date &&NextDueDate Your ISO certificate will be expired</u>.</span>
+<br><br>
+<span>Kindly contact us if any more clarification or information needed.</span>
+<br><br><br>
+<br><span>Thanks & regards,</span>
+<br>AITF Management Certification Ltd.
+<br>(Technical Operational Staff)
+<br> PH- 9422011836 / 37
+</font></p></span>

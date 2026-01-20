@@ -1,0 +1,81 @@
+/*-----------------------------------------------------------------------------
+
+REVOLUTION RESPONSIVE BASIC STYLES OF HTML DOCUMENT
+
+Screen Stylesheet
+
+version:   	1.0
+date:      	26/06/12
+author:		themepunch
+email:     	support@themepunch.com
+website:   	http://www.themepunch.com
+-----------------------------------------------------------------------------*/
+
+
+  /*********************************************************************************************
+		-	SET THE SCREEN SIZES FOR THE BANNER IF YOU WISH TO MAKE THE BANNER RESOPONSIVE 	-
+  **********************************************************************************************/
+
+  /*	-	THE BANNER CONTAINER (Padding, Shadow, Border etc. )	-	*/
+
+
+	 .fullwidthbanner-container{
+		width:100% !important;
+		position:relative;
+		padding:0;
+		margin-top: 0px;
+		max-height:570px !important;
+		overflow:hidden;
+		border-bottom: 1px solid #e6e6e6;
+	}
+
+
+@media only screen and (min-width: 1000px){}
+@media only screen and (min-width: 768px) and (max-width: 999px){
+
+	 .fullwidthbanner-container{
+		width:100% !important;
+		position:relative;
+		padding:0;
+		margin-top: 0px;
+		max-height:470px !important;
+		overflow:hidden;
+	}
+
+}
+
+
+
+
+@media only screen and (min-width: 480px) and (max-width: 767px){
+
+	 .fullwidthbanner-container{
+		width:100% !important;
+		position:relative;
+		padding: 0px 0px 0px 0px;
+		margin-top: 0px;
+		margin-bottom: 40px;
+		height:260px !important;
+		overflow:hidden;
+		top: 50px;
+	}
+
+}
+
+
+
+@media only screen and (max-width: 479px){
+
+
+	 .fullwidthbanner-container{
+		width:100% !important;
+		position:relative;
+		padding:0;
+		margin-top: 0px;
+		margin-bottom: 100px;
+		height:170px !important;
+		overflow:hidden;
+		top: 110px;
+	}
+
+}

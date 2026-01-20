@@ -1,0 +1,24 @@
+<span style="text-align:justify;">
+<pre>Ref: &&customer_unique_id                                         Date:&&due_date </pre>
+
+<span>TO, </span>
+<br><b>&&customer_customer_name</b> 
+<br>&&customer_address
+<br>
+<br>Kind Attn:- &&customer_contact_person
+<br>
+<br><b>Subject:</b> &&servicedesc
+<br>
+<br><span>Dear &&customer_contact_person, </span>
+<br><br>
+<span>Please refer to our earlier letter dated &&PrevDueDate regarding the Reminder / Intimation of your ISO certification audit.</span>
+<br><br><span>Since you have failed to complete the surveillance audit within the specified period, hence certification is withdrawn.</span> 
+<br><br><span>The organization needs to apply for new certification, and till completion of the new certification, you are required to restrain from using the logos of the certification body on any of your promotional material, website, stationary, etc. and shall not claim as an ISO 9001 certified company.</span>
+<br><br>
+<span>This is system generated mail as per the dates of certificatin due in the AITF software system, if you have already completed the requred compliences or needs more clarification / information, Kindly contact us. </span>
+<br><br><br>
+<br><span>Thanks & regards,</span>
+<br>AITF Management Certification Ltd.
+<br>(Technical Operational Staff)
+<br> PH- 9422011836 / 37
+</font></p></span>

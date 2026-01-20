@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Application Form Buttons - Example</title>
+    
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/outer/custom.css">
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            font-family: 'Poppins', sans-serif;
+        }
+        
+        .example-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+        }
+        
+        .example-title {
+            text-align: center;
+            color: #1e293b;
+            margin-bottom: 40px;
+            font-size: 32px;
+            font-weight: 700;
+        }
+        
+        .example-description {
+            text-align: center;
+            color: #64748b;
+            margin-bottom: 40px;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        
+        .demo-section {
+            margin: 40px 0;
+        }
+        
+        .demo-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="example-container">
+        <h1 class="example-title">Application Form Buttons</h1>
+        <p class="example-description">
+            Modern, styled buttons with gradients, shadows, and hover effects that match your design requirements.
+        </p>
+        
+        <!-- Example 1: Dark Background Container -->
+        <div class="demo-section">
+            <h3 class="demo-title">Dark Background Container</h3>
+            <div class="app-form-container">
+                <div class="app-form-buttons">
+                    <a href="#" class="btn-app-form btn-download-form">
+                        <i class="fas fa-download"></i>
+                        DOWNLOAD APPLICATION FORM
+                    </a>
+                    <a href="#" class="btn-app-form btn-view-form">
+                        <i class="fas fa-external-link-alt"></i>
+                        VIEW APPLICATION FORM
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Example 2: Individual Buttons -->
+        <div class="demo-section">
+            <h3 class="demo-title">Individual Buttons</h3>
+            <div class="app-form-buttons">
+                <a href="#" class="btn-app-form btn-download-form">
+                    <i class="fas fa-download"></i>
+                    DOWNLOAD APPLICATION FORM
+                </a>
+                <a href="#" class="btn-app-form btn-view-form">
+                    <i class="fas fa-external-link-alt"></i>
+                    VIEW APPLICATION FORM
+                </a>
+            </div>
+        </div>
+        
+        <!-- Example 3: Different Icons -->
+        <div class="demo-section">
+            <h3 class="demo-title">Alternative Icons</h3>
+            <div class="app-form-buttons">
+                <a href="#" class="btn-app-form btn-download-form">
+                    <i class="fas fa-file-pdf"></i>
+                    DOWNLOAD PDF FORM
+                </a>
+                <a href="#" class="btn-app-form btn-view-form">
+                    <i class="fas fa-eye"></i>
+                    VIEW ONLINE FORM
+                </a>
+            </div>
+        </div>
+        
+        <!-- Usage Instructions -->
+        <div class="demo-section">
+            <h3 class="demo-title">Usage Instructions</h3>
+            <div style="background: #f8fafc; padding: 20px; border-radius: 12px; border-left: 4px solid #3b82f6;">
+                <h4 style="color: #1e293b; margin-top: 0;">HTML Structure:</h4>
+                <pre style="background: #1e293b; color: #e2e8f0; padding: 15px; border-radius: 8px; overflow-x: auto;"><code>&lt;!-- With dark container --&gt;
+&lt;div class="app-form-container"&gt;
+    &lt;div class="app-form-buttons"&gt;
+        &lt;a href="#" class="btn-app-form btn-download-form"&gt;
+            &lt;i class="fas fa-download"&gt;&lt;/i&gt;
+            DOWNLOAD APPLICATION FORM
+        &lt;/a&gt;
+        &lt;a href="#" class="btn-app-form btn-view-form"&gt;
+            &lt;i class="fas fa-external-link-alt"&gt;&lt;/i&gt;
+            VIEW APPLICATION FORM
+        &lt;/a&gt;
+    &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;!-- Individual buttons --&gt;
+&lt;a href="#" class="btn-app-form btn-download-form"&gt;
+    &lt;i class="fas fa-download"&gt;&lt;/i&gt;
+    DOWNLOAD APPLICATION FORM
+&lt;/a&gt;</code></pre>
+                
+                <h4 style="color: #1e293b; margin-top: 20px;">CSS Classes:</h4>
+                <ul style="color: #64748b; line-height: 1.8;">
+                    <li><strong>.app-form-container:</strong> Dark gradient background container</li>
+                    <li><strong>.app-form-buttons:</strong> Flex container for button layout</li>
+                    <li><strong>.btn-app-form:</strong> Base button styling</li>
+                    <li><strong>.btn-download-form:</strong> Blue download button with purple shadow</li>
+                    <li><strong>.btn-view-form:</strong> Dark grey view button</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

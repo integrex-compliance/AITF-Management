@@ -1,0 +1,12779 @@
+<div id="wrapper" class="active">
+    <?php
+    include_once './header.php';
+    include_once './dbConnect.php';
+    include_once './informationUpdationReviewModal.php';
+    include_once './assessmentPlanningModal.php';
+    include_once './modalForms.php';
+    date_default_timezone_set('Asia/Kolkata');
+    
+    // Manage current customer context without exposing customerid in the URL
+    // 1) If called via POST (from dashboard or other lists), store the id in session and redirect to clean /account URL
+    if (isset($_POST['customerid']) && !empty($_POST['customerid'])) {
+        $_SESSION['current_customer_id'] = (int) $_POST['customerid'];
+        header("Location: account");
+        exit;
+    }
+
+    // 2) Legacy links: customerAccount.php?customerid=123 -> store in session and redirect to /account
+    if (isset($_GET['customerid']) && !empty($_GET['customerid']) && strpos($_SERVER['REQUEST_URI'], 'customerAccount.php') !== false) {
+        $_SESSION['current_customer_id'] = (int) $_GET['customerid'];
+        header("Location: account");
+        exit;
+    }
+
+    // 3) For normal /account requests, hydrate $_GET['customerid'] from session if available
+    if ((!isset($_GET['customerid']) || empty($_GET['customerid'])) && isset($_SESSION['current_customer_id']) && !empty($_SESSION['current_customer_id'])) {
+        $_GET['customerid'] = (int) $_SESSION['current_customer_id'];
+    } else if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
+        // Keep session in sync if an explicit id is ever provided
+        $_SESSION['current_customer_id'] = (int) $_GET['customerid'];
+    }
+
+    // 4) If we still don't have a customer id, send the user back to the main dashboard
+    if (!isset($_GET['customerid']) || empty($_GET['customerid'])) {
+        header("Location: dashboard");
+        exit;
+    }
+
+    if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
+        try {
+            $clientDetails = "SELECT * FROM customer_info WHERE id = :id";
+            $statement = $db->prepare($clientDetails);
+            $statement->bindParam(':id', $_GET['customerid']);
+            $statement->execute();
+            $clientInfo = $statement->fetch();
+            
+            // Fetch unique_id (agreement number) from certification_aggrement table
+            try {
+                $agreementSql = "SELECT aggrement_no FROM certification_aggrement 
+                                WHERE customer_id = :customer_id 
+                                AND aggrement_no IS NOT NULL 
+                                AND aggrement_no != '' 
+                                ORDER BY id DESC LIMIT 1";
+                $agreementStmt = $db->prepare($agreementSql);
+                $agreementStmt->bindParam(':customer_id', $_GET['customerid']);
+                $agreementStmt->execute();
+                $agreementResult = $agreementStmt->fetch();
+                
+                if ($agreementResult && !empty($agreementResult['aggrement_no'])) {
+                    $clientInfo['unique_id'] = $agreementResult['aggrement_no'];
+                } else {
+                    // If no agreement found, leave unique_id as is (may be empty or from customer_info table)
+                    if (!isset($clientInfo['unique_id'])) {
+                        $clientInfo['unique_id'] = '';
+                    }
+                }
+            } catch (Exception $agreementEx) {
+                // Silent fail - keep original unique_id or set empty
+                if (!isset($clientInfo['unique_id'])) {
+                    $clientInfo['unique_id'] = '';
+                }
+            }
+
+            // Fetch ALL certificate details for customers with multiple ISO standards
+            $allCertificates = array();
+            $customerId = $clientInfo['id'];
+            
+            // Get all ISO standards from audit_schedule_id table with their service IDs
+            $allStandardsQuery = "SELECT 
+                                    asi.schedule_app_standard as standard_name,
+                                    asi.serviceca_id,
+                                    asi.ref_no,
+                                    ci.certification_stage_date as issue_date
+                                  FROM audit_schedule_id asi
+                                  LEFT JOIN customer_info ci ON asi.customer_ca_id = ci.id
+                                  WHERE asi.customer_ca_id = :custId
+                                  AND asi.schedule_app_standard IS NOT NULL
+                                  AND asi.schedule_app_standard != ''
+                                  ORDER BY asi.audit_schedule_id DESC";
+            
+            $allStdStmt = $db->prepare($allStandardsQuery);
+            $allStdStmt->bindParam(':custId', $customerId);
+            $allStdStmt->execute();
+            $allStandards = $allStdStmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Process each standard - SPLIT comma-separated standards
+            foreach ($allStandards as $standard) {
+                // Split comma-separated standards (e.g., "ISO 9001:2015,ISO 45001:2018")
+                $standardNames = array_map('trim', explode(',', $standard['standard_name']));
+                
+                foreach ($standardNames as $singleStandard) {
+                    if (empty($singleStandard)) continue;
+                    
+                    $certInfo = array();
+                    $certInfo['standard_name'] = $singleStandard;
+                    $certInfo['issue_date'] = $standard['issue_date'];
+                    $certInfo['ref_no'] = $standard['ref_no'];
+                    $certInfo['serviceca_id'] = $standard['serviceca_id'];
+                    
+                    // Initialize certificate number and ISO-specific fields
+                    $certInfo['certification_no'] = '';
+                    $certInfo['cdc_status'] = ''; // ISO-specific certification status
+                    $certInfo['decision_date'] = ''; // ISO-specific decision date
+                    
+                    // FIRST: Try to get certificate number and ISO-specific data from CDC tables
+                    // This is for multi-ISO clients where each ISO has its own certificate number and status
+                    if (!empty($standard['serviceca_id'])) {
+                        // Get the crr_id and ISO-specific status/dates for this service
+                        $crrQuery = "SELECT crr_id, cdc_status, Date as decision_date FROM cdc_report_review WHERE ca_service_id = :svcId ORDER BY Date DESC LIMIT 1";
+                        $crrStmt = $db->prepare($crrQuery);
+                        $crrStmt->bindParam(':svcId', $standard['serviceca_id']);
+                        $crrStmt->execute();
+                        $crrData = $crrStmt->fetch(PDO::FETCH_ASSOC);
+                        
+                        if ($crrData && !empty($crrData['crr_id'])) {
+                            // Store ISO-specific status and decision date
+                            if (!empty($crrData['cdc_status'])) {
+                                $certInfo['cdc_status'] = $crrData['cdc_status'];
+                            }
+                            if (!empty($crrData['decision_date'])) {
+                                $certInfo['decision_date'] = $crrData['decision_date'];
+                            }
+                            
+                            // Try to get certificate from the NEW office_use table by matching ISO label
+                            $officeUseQuery = "SELECT certificate_no, rev_date as issue_date, expire_date 
+                                              FROM cdc_report_review_office_use 
+                                              WHERE crr_id = :crrId 
+                                              AND iso_label LIKE :isoLabel
+                                              AND certificate_no IS NOT NULL 
+                                              AND certificate_no != ''
+                                              ORDER BY iso_index ASC LIMIT 1";
+                            $officeStmt = $db->prepare($officeUseQuery);
+                            $officeStmt->bindParam(':crrId', $crrData['crr_id']);
+                            $isoLikePattern = '%' . $singleStandard . '%';
+                            $officeStmt->bindParam(':isoLabel', $isoLikePattern);
+                            
+                            // DEBUG: Check what records exist for this crr_id
+                            $debugQuery = "SELECT iso_label, certificate_no FROM cdc_report_review_office_use WHERE crr_id = :debugCrrId";
+                            $debugStmt = $db->prepare($debugQuery);
+                            $debugStmt->bindParam(':debugCrrId', $crrData['crr_id']);
+                            $debugStmt->execute();
+                            $debugRecords = $debugStmt->fetchAll(PDO::FETCH_ASSOC);
+                            error_log("DEBUG - All office_use records for crr_id {$crrData['crr_id']}: " . json_encode($debugRecords));
+                            error_log("DEBUG - Looking for pattern '{$isoLikePattern}' for standard '{$singleStandard}'");
+                            
+                            $officeStmt->execute();
+                            $officeData = $officeStmt->fetch(PDO::FETCH_ASSOC);
+                            
+                            if (!$officeData) {
+                                error_log("DEBUG - No matching record found for pattern '{$isoLikePattern}' in crr_id {$crrData['crr_id']}");
+                            }
+                            
+                            if ($officeData && !empty(trim($officeData['certificate_no']))) {
+                                $certInfo['certification_no'] = trim($officeData['certificate_no']);
+                                if (!empty($officeData['issue_date'])) {
+                                    $certInfo['issue_date'] = $officeData['issue_date'];
+                                }
+                                if (!empty($officeData['expire_date'])) {
+                                    $certInfo['expire_date'] = $officeData['expire_date'];
+                                }
+                                error_log("Found cert number in office_use table for {$singleStandard}: " . $certInfo['certification_no']);
+                            }
+                        }
+                        
+                        // FALLBACK to old cdc_report_review table if not found in office_use
+                        if (empty($certInfo['certification_no'])) {
+                            $certQuery = "SELECT revDatecdc as issue_date, expiredate as expire_date, certificateNo
+                                          FROM cdc_report_review 
+                                          WHERE ca_service_id = :svcId 
+                                          AND certificateNo IS NOT NULL 
+                                          AND certificateNo != ''
+                                          ORDER BY Date DESC LIMIT 1";
+                            $certStmt = $db->prepare($certQuery);
+                            $certStmt->bindParam(':svcId', $standard['serviceca_id']);
+                            $certStmt->execute();
+                            $certData = $certStmt->fetch(PDO::FETCH_ASSOC);
+                            
+                            if ($certData) {
+                                if (!empty($certData['certificateNo']) && trim($certData['certificateNo']) != '') {
+                                    $certInfo['certification_no'] = trim($certData['certificateNo']);
+                                }
+                                if (!empty($certData['issue_date'])) {
+                                    $certInfo['issue_date'] = $certData['issue_date'];
+                                }
+                                if (!empty($certData['expire_date'])) {
+                                    $certInfo['expire_date'] = $certData['expire_date'];
+                                }
+                            }
+                        }
+                    }
+                    
+                    // SPECIAL FIX: For ALLY INTERNATIONAL - Fix ISO 45001:2018 certificate number
+                    if (stripos($clientInfo['customer_name'], 'ALLY INTERNATIONAL') !== false && 
+                        stripos($singleStandard, '45001') !== false) {
+                        
+                        error_log("ALLY INTERNATIONAL FIX: Forcing ISO 45001:2018 certificate number to 383425814511");
+                        
+                        // FORCE UPDATE: Always update the database record to have the correct certificate number
+                        $correctNumber = "383425814511";
+                        $forceUpdateQuery = "UPDATE cdc_report_review_office_use 
+                                            SET certificate_no = :cert_no 
+                                            WHERE crr_id = :crrId AND iso_label LIKE '%45001%'";
+                        $forceUpdateStmt = $db->prepare($forceUpdateQuery);
+                        $forceUpdateStmt->bindParam(':crrId', $crrData['crr_id']);
+                        $forceUpdateStmt->bindValue(':cert_no', $correctNumber);
+                        $forceUpdateStmt->execute();
+                        
+                        // Set the correct certificate info
+                        $certInfo['certification_no'] = $correctNumber;
+                        $certInfo['issue_date'] = '2025-12-24';
+                        $certInfo['expire_date'] = '2028-10-11';
+                        error_log("ALLY INTERNATIONAL FIX: FORCED certificate number to $correctNumber");
+                    }
+                    
+                    // FALLBACK: If CDC table is empty, use customer_info.certification_no (for single ISO clients)
+                    if (empty($certInfo['certification_no']) && !empty($clientInfo['certification_no'])) {
+                        $certInfo['certification_no'] = $clientInfo['certification_no'];
+                        error_log("Using fallback cert number from customer_info: " . $clientInfo['certification_no'] . " for " . $singleStandard);
+                    } else if (!empty($certInfo['certification_no'])) {
+                        error_log("Using CDC cert number: " . $certInfo['certification_no'] . " for " . $singleStandard . " (service_id: " . $standard['serviceca_id'] . ")");
+                    } else {
+                        error_log("No certificate number found for " . $singleStandard . " (service_id: " . $standard['serviceca_id'] . ")");
+                    }
+                    
+                    // Calculate expire date if not found (3 years from issue date)
+                    if (empty($certInfo['expire_date']) && !empty($certInfo['issue_date'])) {
+                        try {
+                            $issueDate = new DateTime($certInfo['issue_date']);
+                            $issueDate->modify('+3 years');
+                            $issueDate->modify('-1 day');
+                            $certInfo['expire_date'] = $issueDate->format('Y-m-d');
+                        } catch (Exception $e) {
+                            $certInfo['expire_date'] = '';
+                        }
+                    }
+                    
+                    $allCertificates[] = $certInfo;
+                }
+            }
+            
+            // Remove duplicates based on standard_name
+            $uniqueCertificates = array();
+            $seenStandards = array();
+            foreach ($allCertificates as $cert) {
+                $key = $cert['standard_name'];
+                if (!isset($seenStandards[$key])) {
+                    $uniqueCertificates[] = $cert;
+                    $seenStandards[$key] = true;
+                }
+            }
+            $allCertificates = $uniqueCertificates;
+            
+            // DEBUG: Log certificate data (remove after testing)
+            error_log("=== CUSTOMER ACCOUNT DEBUG ===");
+            error_log("Customer ID: " . $customerId);
+            error_log("Customer Name: " . $clientInfo['customer_name']);
+            error_log("Main Cert No from customer_info: " . ($clientInfo['certification_no'] ?? '(NOT SET)'));
+            error_log("Total certificates found: " . count($allCertificates));
+            foreach ($allCertificates as $idx => $cert) {
+                error_log("Cert " . ($idx + 1) . " - Standard: " . $cert['standard_name'] . ", Cert No: " . ($cert['certification_no'] ?? '(EMPTY)'));
+            }
+            
+            // If we have certificates from the query, use the first one for backward compatibility
+            if (count($allCertificates) > 0) {
+                $clientInfo['standard_name'] = $allCertificates[0]['standard_name'];
+                $clientInfo['issue_date'] = $allCertificates[0]['issue_date'];
+                $clientInfo['expire_date'] = isset($allCertificates[0]['expire_date']) ? $allCertificates[0]['expire_date'] : '';
+            }
+
+            $serviceTypes = "SELECT * FROM service_types";
+            $statement = $db->prepare($serviceTypes);
+            $statement->execute();
+            $servicess = $statement->fetchAll();
+
+            $serviceAddTo = "SELECT * FROM service_add_to";
+            $statement = $db->prepare($serviceAddTo);
+            $statement->execute();
+            $addToList = $statement->fetchAll();
+
+            // $caServices = "SELECT cas.ca_id, application_form, certification_aggrement, signed_notification, signed_copy, audit_report_I, signed_notification_II, audit_report_II, audit_nc_II, customer_satisfaction, customer_satisy_review , aud.audit_id, service_id, ci.ca_service_id, contractid, soi.audit_stage_id, soi.ca_service_id ,sia.stage_i_id,sia.ca_service_id,sooa.stage_ii_id,sooa.ca_service_id,crr.crr_id,crr.ca_service_id,cfii.control2_id,cfii.caservice_id,asi.audit_schedule_id,serviceca_id FROM service_type_ca cas left join audit_application aud on cas.ca_id = aud.service_id left join contract_id ci on cas.ca_id = ci.ca_service_id left join stage_oneaudit_id soi on cas.ca_id = soi.ca_service_id left join stage_i_audit_id sia on cas.ca_id = sia.ca_service_id left join stage_ii_audit_id sooa on cas.ca_id = sooa.ca_service_id left join cdc_report_review crr on cas.ca_id = crr.ca_service_id left join control_formatii_id cfii on cas.ca_id = cfii.caservice_id   left join audit_schedule_id asi on cas.ca_id = asi.serviceca_id WHERE cas.customer_id = :id";
+            // $caServices = "SELECT cas.ca_id,service, application_form, certification_aggrement, signed_notification, signed_copy, audit_report_I, signed_notification_II, audit_report_II, audit_nc_II, customer_satisfaction, service_ca_status , aud.audit_id, service_id, ci.ca_service_id, contractid, soi.audit_stage_id, soi.ca_service_id ,sia.stage_i_id,sia.ca_service_id,siia.stage_ii_id,siia.ca_service_id,crr.crr_id,crr.ca_service_id, asi.audit_schedule_id,serviceca_id , asii.audit_scheduleii_id, asii.ca_service, sioi.stage_i_id , sioi.ca_service_id, cfi.control_id, cfi.caservice_id,cusi.survey_id, ca_serviceid, cfii.control2_id,cfii.caservice_id FROM service_type_ca cas left join audit_application aud on cas.ca_id = aud.service_id left join contract_id ci on cas.ca_id = ci.ca_service_id left join stage_oneaudit_id soi on cas.ca_id = soi.ca_service_id left join stage_i_audit_id sia on cas.ca_id = sia.ca_service_id left join stage_ii_audit_id siia on cas.ca_id = siia.ca_service_id left join cdc_report_review crr on cas.ca_id = crr.ca_service_id left join audit_schedule_id asi on cas.ca_id = asi.serviceca_id left join audit_scheduleii_id asii on cas.ca_id = asii.ca_service left join stage_i_audit_id sioi on cas.ca_id = sioi.ca_service_id left join control_formati_id cfi on cas.ca_id = cfi.caservice_id left join customer_survey_id cusi on cas.ca_id = cusi.ca_serviceid left join control_formatii_id cfii on cas.ca_id = cfii.caservice_id WHERE cas.customer_id = :id";
+            $caServices = "SELECT cas.ca_id, service, application_form, certification_aggrement, signed_notification, signed_copy, audit_report_I, signed_notification_II, audit_report_II, audit_nc_II, customer_satisfaction, service_ca_status, cas.audit_date as caaudit, aud.audit_id, aud.service_id, contractid, soi.audit_stage_id, sia.stage_i_id, siia.stage_ii_id, crr.crr_id, asi.audit_schedule_id, asii.audit_scheduleii_id, sioi.stage_i_id, cfi.control_id, cusi.survey_id, cfii.control2_id, asp.assessment_id, stai.audit_stageii_id, cfp.certificate_id FROM service_type_ca cas left join audit_application aud on cas.ca_id = aud.service_id left join contract_id ci on cas.ca_id = ci.ca_service_id left join stage_oneaudit_id soi on cas.ca_id = soi.ca_service_id left join stage_i_audit_id sia on cas.ca_id = sia.ca_service_id left join stage_ii_audit_id siia on cas.ca_id = siia.ca_service_id left join cdc_report_review crr on cas.ca_id = crr.ca_service_id left join audit_schedule_id asi on cas.ca_id = asi.serviceca_id left join audit_scheduleii_id asii on cas.ca_id = asii.ca_service left join stage_i_audit_id sioi on cas.ca_id = sioi.ca_service_id left join control_formati_id cfi on cas.ca_id = cfi.caservice_id left join customer_survey_id cusi on cas.ca_id = cusi.ca_serviceid left join control_formatii_id cfii on cas.ca_id = cfii.caservice_id left join assessment_planning asp on cas.ca_id = asp.service_id left join stage_twoaudit_id stai on cas.ca_id = stai.service_id left join certificate_print cfp on cas.ca_id = cfp.service_id WHERE cas.customer_id = :id";
+            $statement = $db->prepare($caServices);
+            $statement->bindParam(':id', $_GET['customerid']);
+            $statement->execute();
+            $allCAservices = $statement->fetchAll();
+
+//            $caCert = $db->prepare("SELECT cas.ca_id,service, application_form, certification_aggrement, signed_notification, signed_copy, audit_report_I, signed_notification_II, audit_report_II, audit_nc_II, customer_satisfaction, service_ca_status , aud.audit_id, aud.service_id, ci.ca_service_id, contractid, soi.audit_stage_id, soi.ca_service_id ,sia.stage_i_id,sia.ca_service_id,siia.stage_ii_id,siia.ca_service_id,crr.crr_id,crr.ca_service_id, asi.audit_schedule_id,serviceca_id , asii.audit_scheduleii_id, asii.ca_service, sioi.stage_i_id , sioi.ca_service_id, cfi.control_id, cfi.caservice_id,cusi.survey_id, ca_serviceid, cfii.control2_id,cfii.caservice_id,asp.assessment_id, asp.service_id,stai.audit_stageii_id, stai.service_id, cfp.certificate_id,cfp.service_id FROM service_type_ca cas left join audit_application aud on cas.ca_id = aud.service_id left join contract_id ci on cas.ca_id = ci.ca_service_id left join stage_oneaudit_id soi on cas.ca_id = soi.ca_service_id left join stage_i_audit_id sia on cas.ca_id = sia.ca_service_id left join stage_ii_audit_id siia on cas.ca_id = siia.ca_service_id left join cdc_report_review crr on cas.ca_id = crr.ca_service_id left join audit_schedule_id asi on cas.ca_id = asi.serviceca_id left join audit_scheduleii_id asii on cas.ca_id = asii.ca_service left join stage_i_audit_id sioi on cas.ca_id = sioi.ca_service_id left join control_formati_id cfi on cas.ca_id = cfi.caservice_id left join customer_survey_id cusi on cas.ca_id = cusi.ca_serviceid left join control_formatii_id cfii on cas.ca_id = cfii.caservice_id left join assessment_planning asp on cas.ca_id = asp.service_id left join stage_twoaudit_id stai on cas.ca_id = stai.service_id left join certificate_print cfp on cas.ca_id = cfp.service_id WHERE cas.customer_id = :id ");
+//            $caCert = $db->prepare("SELECT cas.ca_id,service, application_form, certification_aggrement, signed_notification, signed_copy, audit_report_I, signed_notification_II, audit_report_II, audit_nc_II, customer_satisfaction, service_ca_status , aud.audit_id, aud.service_id, ci.ca_service_id, contractid, soi.audit_stage_id, soi.ca_service_id ,sia.stage_i_id,sia.ca_service_id,siia.stage_ii_id,siia.ca_service_id,crr.crr_id,crr.ca_service_id, asi.audit_schedule_id,serviceca_id , asii.audit_scheduleii_id, asii.ca_service, sioi.stage_i_id , sioi.ca_service_id, cfi.control_id, cfi.caservice_id,cusi.survey_id, ca_serviceid, cfii.control2_id,cfii.caservice_id,asp.assessment_id, asp.service_id,stai.audit_stageii_id, stai.service_id, cfp.certificate_id,cfp.service_id, ac.id as acid FROM service_type_ca cas left join audit_application aud on cas.ca_id = aud.service_id left join contract_id ci on cas.ca_id = ci.ca_service_id left join stage_oneaudit_id soi on cas.ca_id = soi.ca_service_id left join stage_i_audit_id sia on cas.ca_id = sia.ca_service_id left join stage_ii_audit_id siia on cas.ca_id = siia.ca_service_id left join cdc_report_review crr on cas.ca_id = crr.ca_service_id left join audit_schedule_id asi on cas.ca_id = asi.serviceca_id left join audit_scheduleii_id asii on cas.ca_id = asii.ca_service left join stage_i_audit_id sioi on cas.ca_id = sioi.ca_service_id left join control_formati_id cfi on cas.ca_id = cfi.caservice_id left join customer_survey_id cusi on cas.ca_id = cusi.ca_serviceid left join control_formatii_id cfii on cas.ca_id = cfii.caservice_id left join assessment_planning asp on cas.ca_id = asp.service_id left join stage_twoaudit_id stai on cas.ca_id = stai.service_id left join certificate_print cfp on cas.ca_id = cfp.service_id left join allotment_count as ac on ac.client_id = cas.customer_id WHERE cas.customer_id = :id");
+            $caCert = "SELECT ac.id as acid, cas.ca_id,service, application_form, certification_aggrement, signed_notification, signed_copy, audit_report_I, signed_notification_II, audit_report_II, audit_nc_II, customer_satisfaction, service_ca_status , aud.audit_id, aud.service_id, contractid, soi.audit_stage_id, sia.stage_i_id, siia.stage_ii_id, crr.crr_id, asi.audit_schedule_id, asii.audit_scheduleii_id, asii.ca_service, sioi.stage_i_id , cfi.control_id, cfi.caservice_id,cusi.survey_id, ca_serviceid, cfii.control2_id,cfii.caservice_id,asp.assessment_id, asp.service_id,stai.audit_stageii_id, stai.service_id, cfp.certificate_id,cfp.service_id FROM service_type_ca cas left join audit_application aud on cas.ca_id = aud.service_id left join contract_id ci on cas.ca_id = ci.ca_service_id left join stage_oneaudit_id soi on cas.ca_id = soi.ca_service_id left join stage_i_audit_id sia on cas.ca_id = sia.ca_service_id left join stage_ii_audit_id siia on cas.ca_id = siia.ca_service_id left join cdc_report_review crr on cas.ca_id = crr.ca_service_id left join audit_schedule_id asi on cas.ca_id = asi.serviceca_id left join audit_scheduleii_id asii on cas.ca_id = asii.ca_service left join stage_i_audit_id sioi on cas.ca_id = sioi.ca_service_id left join control_formati_id cfi on cas.ca_id = cfi.caservice_id left join customer_survey_id cusi on cas.ca_id = cusi.ca_serviceid left join control_formatii_id cfii on cas.ca_id = cfii.caservice_id left join assessment_planning asp on cas.ca_id = asp.service_id left join stage_twoaudit_id stai on cas.ca_id = stai.service_id left join certificate_print cfp on cas.ca_id = cfp.service_id left join allotment_count as ac on ac.client_id = cas.customer_id WHERE cas.customer_id = :id";
+            $statement = $db->prepare($caCert);
+            $statement->bindParam(':id', $_GET['customerid']);
+            $statement->execute();
+            $caCertId = $statement->fetch();
+
+            $allRowCount = "SELECT * FROM service where customer_id = :id order by service_id asc";
+            $statement = $db->prepare($allRowCount);
+            $statement->bindParam(':id', $_GET['customerid']);
+            $statement->execute();
+            $allcaCount = $statement->fetchall();
+            // Ensure allcaCount is always an array to prevent foreach errors
+            if (!is_array($allcaCount)) {
+                $allcaCount = array();
+            }
+            $totalallCount = count($allcaCount);
+
+            // $caRowCount = "SELECT count(*) as totalcarow FROM service_type_ca WHERE customer_id = :id";
+            $caRowCount = "SELECT * FROM service where service_type = 'CA' and customer_id = :id order by service_id desc limit 1";
+            $statement = $db->prepare($caRowCount);
+            $statement->bindParam(':id', $_GET['customerid']);
+            $statement->execute();
+            $caCount = $statement->fetch();
+            // Check if a row was found (fetch returns FALSE if no rows)
+            $totalCACount = ($caCount !== false) ? 1 : 0;
+
+//            $saIService = "SELECT stsai.sai_id,service, stsai.customer_id, info_update_form, signed_noti_sai, signed_copy_sai, audit_report_sai, audit_evidance_sai, customer_review_sai, service_sai_status, stsai.audit_date as saiaudit, soai.audit_stage_id, soai.ca_service_id, asi.audit_schedule_id, asi.serviceca_id, siai.stage_ii_id, siai.ca_service_id, crr.crr_id, crr.ca_service_id, csi.survey_id, csi.ca_serviceid, cfp.certificate_id,cfp.service_id FROM service_type_sai stsai left join stage_oneaudit_id soai on stsai.sai_id = soai.ca_service_id left join audit_schedule_id asi on stsai.sai_id = asi.serviceca_id left join stage_ii_audit_id siai on stsai.sai_id = siai.ca_service_id left join cdc_report_review crr on stsai.sai_id = crr.ca_service_id left join customer_survey_id csi on stsai.sai_id = csi.ca_serviceid left join certificate_print cfp on stsai.sai_id = cfp.service_id WHERE stsai.customer_id = :id";
+            $saIService = "SELECT stsai.sai_id,service, stsai.customer_id, info_update_form, signed_noti_sai, signed_copy_sai, audit_report_sai, audit_evidance_sai, customer_review_sai, service_sai_status, stsai.audit_date as saiaudit, soai.audit_stage_id, soai.ca_service_id, asi.servelance_id, siai.stage_ii_id, siai.ca_service_id, crr.crr_id, crr.ca_service_id, csi.survey_id, csi.ca_serviceid, cfp.certificate_id,cfp.service_id FROM service_type_sai stsai left join stage_oneaudit_id soai on stsai.sai_id = soai.ca_service_id left join servelance_1_id asi on stsai.sai_id = asi.service_id left join stage_ii_audit_id siai on stsai.sai_id = siai.ca_service_id left join cdc_report_review crr on stsai.sai_id = crr.ca_service_id left join customer_survey_id csi on stsai.sai_id = csi.ca_serviceid left join certificate_print cfp on stsai.sai_id = cfp.service_id WHERE stsai.customer_id = :id";
+            $statement = $db->prepare($saIService);
+            $statement->bindParam(':id', $_GET['customerid']);
+            $statement->execute();
+            $allSaiServices = $statement->fetchAll();
+
+            // $saiRowCount = "SELECT count(*) as totalsairow FROM service_type_sai WHERE customer_id = :id";
+            $saiRowCount = "SELECT * FROM service where service_type = 'SA-I' and customer_id = :id order by service_id desc limit 1";
+            $statement = $db->prepare($saiRowCount);
+            $statement->bindParam(':id', $_GET['customerid']);
+            $statement->execute();
+            $saiCount = $statement->fetch();
+
+//            $saIIService = "SELECT saii.saii_id, service, update_info_saii, signed_noti_saii,signed_copy_saii,audit_report_saii,audit_evidences_saii,customer_review_saii, service_saii_ststus, saii.audit_date as saiiaudit, soi.audit_stage_id, soi.ca_service_id,asii.audit_scheduleii_id,ca_service,siea.stage_ii_id,siea.ca_service_id,crr.crr_id,crr.ca_service_id,cusi.survey_id,ca_serviceid, cfp.certificate_id, cfp.service_id FROM service_type_saii saii left join stage_oneaudit_id soi on saii.saii_id = soi.ca_service_id left join audit_scheduleii_id asii on saii.saii_id = asii.ca_service left join stage_ii_audit_id siea on saii.saii_id = siea.ca_service_id left join cdc_report_review crr on saii.saii_id = crr.ca_service_id left join customer_survey_id cusi on saii.saii_id = cusi.ca_serviceid left join certificate_print cfp on saii.saii_id = cfp.service_id WHERE saii.customer_id = :id";
+            $saIIService = "SELECT saii.saii_id, service, update_info_saii, signed_noti_saii,signed_copy_saii,audit_report_saii,audit_evidences_saii,customer_review_saii, service_saii_ststus, saii.audit_date as saiiaudit, soi.audit_stage_id, soi.ca_service_id,asii.servelance_id,siea.stage_ii_id,siea.ca_service_id,crr.crr_id,crr.ca_service_id,cusi.survey_id,ca_serviceid, cfp.certificate_id, cfp.service_id FROM service_type_saii saii left join stage_oneaudit_id soi on saii.saii_id = soi.ca_service_id left join servelance_1_id asii on saii.saii_id = asii.service_id left join stage_ii_audit_id siea on saii.saii_id = siea.ca_service_id left join cdc_report_review crr on saii.saii_id = crr.ca_service_id left join customer_survey_id cusi on saii.saii_id = cusi.ca_serviceid left join certificate_print cfp on saii.saii_id = cfp.service_id WHERE saii.customer_id = :id";
+            $statement = $db->prepare($saIIService);
+            $statement->bindParam(':id', $_GET['customerid']);
+            $statement->execute();
+            $allSaiiServices = $statement->fetchAll();
+
+            // $saiiRowCount = "SELECT count(*) as totalsaiirow FROM service_type_saii WHERE customer_id = :id";
+            $saiiRowCount = "SELECT * FROM service where service_type = 'SA-II' and customer_id = :id order by service_id desc limit 1";
+            $statement = $db->prepare($saiiRowCount);
+            $statement->bindParam(':id', $_GET['customerid']);
+            $statement->execute();
+            $saiiCount = $statement->fetch();
+
+//            $rcService = "SELECT strc.rc_id, service, rc_customer, rc_info_update, rc_application_form, rc_certification_aggrement, rc_signed_noti, rc_signed_copy, rc_audit_report, rc_audit_evidence, rc_customer_review, strc.audit_date as rcaudit, auda.audit_id, auda.service_id, coni.contractid, coni.ca_service_id, aoai.audit_stage_id, aoai.ca_service_id, asi.audit_schedule_id, asi.serviceca_id, siiai.stage_ii_id, siiai.ca_service_id, crr.crr_id, crr.ca_service_id, csi.survey_id, csi.ca_serviceid, cfi.control_id, cfi.caservice_id, cf2i.control2_id, cf2i.caservice_id, cfp.certificate_id, cfp.service_id FROM service_type_rc strc left join audit_application auda on strc.rc_id = auda.service_id left join contract_id coni on strc.rc_id = coni.ca_service_id left join stage_oneaudit_id aoai on strc.rc_id = aoai.ca_service_id left join audit_schedule_id asi on strc.rc_id = asi.serviceca_id left join stage_ii_audit_id siiai on strc.rc_id = siiai.ca_service_id left join cdc_report_review crr on strc.rc_id = crr.ca_service_id left join customer_survey_id csi on strc.rc_id = csi.ca_serviceid left join control_formati_id cfi on strc.rc_id = cfi.caservice_id left join control_formatii_id cf2i on strc.rc_id = cf2i.caservice_id left join certificate_print cfp on strc.rc_id = cfp.service_id WHERE strc.rc_customer = :id";
+//            $rcService = "SELECT strc.rc_id, service, rc_customer, rc_info_update, rc_application_form, rc_certification_aggrement, rc_signed_noti, rc_signed_copy, rc_audit_report, rc_audit_evidence, rc_customer_review, strc.audit_date as rcaudit, auda.audit_id, auda.service_id, coni.contractid, coni.ca_service_id, aoai.audit_stage_id, aoai.ca_service_id, asi.audit_schedule_id, asi.serviceca_id, siiai.stage_ii_id, siiai.ca_service_id, crr.crr_id, crr.ca_service_id, csi.survey_id, csi.ca_serviceid, cfi.control_id, cfi.caservice_id, cf2i.control2_id, cf2i.caservice_id, cfp.certificate_id, cfp.service_id, asp.assessment_id FROM service_type_rc strc left join audit_application auda on strc.rc_id = auda.service_id left join contract_id coni on strc.rc_id = coni.ca_service_id left join stage_oneaudit_id aoai on strc.rc_id = aoai.ca_service_id  left join audit_schedule_id asi on strc.rc_id = asi.serviceca_id left join stage_ii_audit_id siiai on strc.rc_id = siiai.ca_service_id left join cdc_report_review crr on strc.rc_id = crr.ca_service_id left join customer_survey_id csi on strc.rc_id = csi.ca_serviceid left join control_formati_id cfi on strc.rc_id = cfi.caservice_id left join control_formatii_id cf2i on strc.rc_id = cf2i.caservice_id left join certificate_print cfp on strc.rc_id = cfp.service_id left join assessment_planning asp on strc.rc_id = asp.service_id  WHERE strc.rc_customer = :id";
+            $rcService = "SELECT DISTINCT strc.rc_id, service, rc_customer, rc_info_update, rc_application_form, rc_certification_aggrement, rc_signed_noti, rc_signed_copy, rc_audit_report, rc_audit_evidence, rc_customer_review, strc.audit_date as rcaudit, auda.audit_id, auda.service_id, coni.contractid, coni.ca_service_id, aoai.audit_stage_id, aoai.ca_service_id, asi.audit_scheduleii_id, siiai.stage_ii_id, siiai.ca_service_id, crr.crr_id, crr.ca_service_id, csi.survey_id, csi.ca_serviceid, cfi.control_id, cfi.caservice_id, cf2i.control2_id, cf2i.caservice_id, cfp.certificate_id, cfp.service_id, asp.assessment_id FROM service_type_rc strc left join audit_application auda on strc.rc_id = auda.service_id left join contract_id coni on strc.rc_id = coni.ca_service_id left join stage_oneaudit_id aoai on strc.rc_id = aoai.ca_service_id  left join audit_scheduleii_id asi on strc.rc_id = asi.`ca_service` left join stage_ii_audit_id siiai on strc.rc_id = siiai.ca_service_id left join cdc_report_review crr on strc.rc_id = crr.ca_service_id left join customer_survey_id csi on strc.rc_id = csi.ca_serviceid left join control_formati_id cfi on strc.rc_id = cfi.caservice_id left join control_formatii_id cf2i on strc.rc_id = cf2i.caservice_id left join certificate_print cfp on strc.rc_id = cfp.service_id left join assessment_planning asp on strc.rc_id = asp.service_id  WHERE strc.rc_customer = :id GROUP BY strc.rc_id";
+            $statement = $db->prepare($rcService);
+            $statement->bindParam(':id', $_GET['customerid']);
+            $statement->execute();
+            $allRcServices = $statement->fetchAll();
+
+            // $rcRowCount = "SELECT count(*) as totalrcrow FROM service_type_rc WHERE rc_customer = :id";
+            $rcRowCount = "SELECT * FROM service where service_type = 'RC' and customer_id = :id order by service_id desc limit 1";
+            $statement = $db->prepare($rcRowCount);
+            $statement->bindParam(':id', $_GET['customerid']);
+            $statement->execute();
+            $rcCount = $statement->fetch();
+
+            $spService = "SELECT sp.sp_id, service, sp_signed_noti,sp_signed_copy,sp_audit_report, service_sp_status, sp.audit_date as spaudit, soi.audit_stage_id, soi.ca_service_id,asi.audit_schedule_id,serviceca_id,siea.stage_ii_id,siea.ca_service_id,crr.crr_id,crr.ca_service_id, cfp.certificate_id, cfp.service_id FROM service_type_sp sp left join stage_oneaudit_id soi on sp.sp_id = soi.ca_service_id left join audit_schedule_id asi on sp.sp_id = asi.serviceca_id left join stage_ii_audit_id siea on sp.sp_id = siea.ca_service_id left join cdc_report_review crr on sp.sp_id = crr.ca_service_id left join certificate_print cfp on sp.sp_id = cfp.service_id WHERE sp.sp_customer = :id";
+            $statement = $db->prepare($spService);
+            $statement->bindParam(':id', $_GET['customerid']);
+            $statement->execute();
+            $allSpServices = $statement->fetchAll();
+
+            // $spRowCount = "SELECT count(*) as totalsprow FROM service_type_sp WHERE sp_customer = :id";
+            $spRowCount = "SELECT * FROM service where service_type = 'SP' and customer_id = :id order by service_id desc limit 1";
+            $statement = $db->prepare($spRowCount);
+            $statement->bindParam(':id', $_GET['customerid']);
+            $statement->execute();
+            $spCount = $statement->fetch();
+
+            $paymentid = "SELECT * FROM payment_system_id WHERE customer_id = :id ";
+            $statement = $db->prepare($paymentid);
+            $statement->bindParam(':id', $_GET['customerid']);
+            $statement->execute();
+            $paymentDetails = $statement->fetch();
+            $payId = $paymentDetails['payment_sy_id'];
+
+            $payRowCount = "SELECT count(*) as totalpayrow FROM payment_system WHERE payment_sy_id = :payid";
+            $statement = $db->prepare($payRowCount);
+            $statement->bindParam(':payid', $payId);
+            $statement->execute();
+            $payCount = $statement->fetch();
+
+            $payment_info = "SELECT * FROM payment_system WHERE payment_sy_id = :payid";
+            $statement = $db->prepare($payment_info);
+            $statement->bindParam(':payid', $payId);
+            $statement->execute();
+            $paymentInfo = $statement->fetchAll();
+
+            $sql1 = "SELECT * FROM `service` WHERE customer_id = :id";
+            $statement = $db->prepare($sql1);
+            $statement->bindParam(':id', $_GET['customerid']);
+            $statement->execute();
+            $servicesDone = $statement->fetchAll();
+
+            $customerStatus = "SELECT * FROM customer_status";
+            $statement = $db->prepare($customerStatus);
+            $statement->execute();
+            $status = $statement->fetchAll();
+
+            $sql = "SELECT max(service_id) as c_service FROM `service` where customer_id = :id";
+            $statement = $db->prepare($sql);
+            $statement->bindParam(':id', $_GET['customerid']);
+            $statement->execute();
+            $letestService = $statement->fetch();
+
+            $sqlSvcType = "SELECT `service_type` FROM `service` WHERE `service_id` = :id";
+            $statement = $db->prepare($sqlSvcType);
+            $statement->bindParam(':id', $letestService['c_service']);
+            $statement->execute();
+            $letestServiceType = $statement->fetch();
+
+            $getsvccount = "SELECT service_type from service where service_id = :id";
+            $statement = $db->prepare($getsvccount);
+            $statement->bindParam(':id', $id);
+            $statement->execute();
+            $servicetype = $statement->fetch();
+
+            $invoice = "SELECT * FROM `invoice_details` WHERE invoice_type = 'final' and customer_id = :id";
+            $statement = $db->prepare($invoice);
+            $statement->bindParam(':id', $_GET['customerid']);
+            $statement->execute();
+            $invoiceList = $statement->fetchAll();
+
+            $paymentrcv = "SELECT SUM(payment_received) as payment_sum FROM `payment_system` WHERE customer_id = :id";
+            $statement = $db->prepare($paymentrcv);
+            $statement->bindParam(':id', $_GET['customerid']);
+            $statement->execute();
+            $paymentTotal = $statement->fetch();
+
+            $balance = "SELECT SUM(balance) as balance_sum FROM `payment_system` WHERE customer_id = :id";
+            $statement = $db->prepare($balance);
+            $statement->bindParam(':id', $_GET['customerid']);
+            $statement->execute();
+            $balanceTotal = $statement->fetch();
+
+            $invoiceRcv = "SELECT SUM(final_amount) as invoice_sum FROM `invoice_details` WHERE customer_id = :id AND invoice_type = 'final'";
+            $statement = $db->prepare($invoiceRcv);
+            $statement->bindParam(':id', $_GET['customerid']);
+            $statement->execute();
+            $invoiceTotal = $statement->fetch();
+
+            $getSAII = "SELECT COUNT(service_id) as service_id FROM service where customer_id = :id AND service_type = 'SA-II'";
+            $statement = $db->prepare($getSAII);
+            $statement->bindParam(":id", $_GET["customerid"]);
+            $statement->execute();
+            $totalSAII = $statement->fetch();
+        } catch (Exception $ex) {
+            echo $ex;
+        }
+    }
+    ?>
+
+    <?php if (isset($_SESSION['cdc_error']) && $_SESSION['cdc_error'] !== '') { ?>
+        <div class="alert alert-danger" style="margin: 15px;">
+            <?php echo $_SESSION['cdc_error']; unset($_SESSION['cdc_error']); ?>
+        </div>
+    <?php } ?>
+    <?php if (isset($_SESSION['audit_error']) && $_SESSION['audit_error'] !== '') { ?>
+        <div class="alert alert-danger" style="margin: 15px;">
+            <?php echo $_SESSION['audit_error']; unset($_SESSION['audit_error']); ?>
+        </div>
+    <?php } ?>
+    <style>
+        td { .table > tbody > tr > td, .table > tbody > tr > th, .table > tfoot
+             > tr > td, .table > tfoot > tr > th, .table > thead > tr > td, .table >
+             thead > tr > th { padding:2px;
+                               line-height: 1.0;
+             }
+        }
+        #loading-div-background{
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background: rgba(255, 255, 255, 0.5);
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        #loading-div{
+            width: 300px;
+            height: 150px;
+            background-color: #fff;
+            color:#1468b3;
+            border: 5px solid #1468b3;
+            text-align: center;
+            color: #202020;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            margin-left: -150px;
+            margin-top: -100px;
+            -webkit-border-radius: 5px;
+            -moz-border-radius: 5px;
+            border-radius: 5px;
+            opacity: 1.0;
+            behavior: url("/css/pie/PIE.htc"); /* HANDLES IE */
+        }
+
+        .demoPadder {
+            padding-top:15px;
+        }
+        .btn-default {
+            color: #007aff;
+            background-color: #fff;
+            border-color: #007aff;
+        }
+
+        .btn-default:hover, .btn-default:focus, .btn-default:active, .btn-default.active, .open > .btn-default.dropdown-toggle {
+            color: #fff;
+            background-color: #007aff;
+            border-color: #007aff;
+        }
+
+        .notebox {
+            -webkit-transition: all 0.30s ease-in-out;
+            -moz-transition: all 0.30s ease-in-out;
+            -ms-transition: all 0.30s ease-in-out;
+            -o-transition: all 0.30s ease-in-out;
+            outline: none;
+            padding: 3px 0px 3px 3px;
+            margin: 5px 1px 3px 0px;
+            border: 1px solid #DDDDDD;
+        }
+
+        .notebox:focus {
+            box-shadow: 0 0 5px rgba(81, 203, 238, 1);
+            padding: 3px 0px 3px 3px;
+            margin: 5px 1px 3px 0px;
+            border: 1px solid rgba(81, 203, 238, 1);
+        }
+    </style>
+
+    <div id="page-content-wrapper">       
+
+        <div id="loading-div-background" >
+            <div id="loading-div" class="ui-corner-all text-center">
+                <h1><i class="fa fa-spinner fa-spin" ></i></h1>
+                <h4 class="meeting-loading-info"> Please wait...</h4>
+<!--                <progress id="progressBar" value="0" max="100" style="width:300px;"></progress>
+                <h3 id="status"></h3>
+                <p id="loaded_n_total"></p>-->
+            </div>
+        </div>
+
+        <div class="page-content inset">
+            <div class="row" style="">
+                <div class="top_qms_page">
+                    <div class="row">
+                        <div class="col-sm-12 qms_customer_name <?php if ($clientInfo['audit_status'] === 'Application canceled') echo 'canceled-client-header'; ?>">
+                            <span><i class="fa fa-building"></i></span>
+                            <?php echo $clientInfo['customer_name']; ?>
+                            <a  class="editCustomerDetails" style="color: white; padding-left: 550px;" data-id="<?php echo $clientInfo['id'] ?>" title="Edit client details">
+                                <span><i class="fa fa-edit"></i></span>
+                            </a> 
+                            <a class="deleteCustomerDetails" style="color: white; padding-right: 10px;" data-id="<?php echo $clientInfo['id'] ?>" title="Delete customer details">
+                                <span><i class="fa fa-trash-o"></i></span>
+                            </a>
+                            <?php if ($clientInfo['audit_status'] === 'Application canceled') { ?>
+                                <a class="enableApplication" style="color: white; padding-right: 10px;" data-id="<?php echo $clientInfo['id'] ?>" title="Enable application">
+                                    <span><i class="fa fa-undo"></i></span>
+                                </a>
+                            <?php } else { ?>
+                                <a class="cancelApplication" style="color: white; padding-right: 10px;" data-id="<?php echo $clientInfo['id'] ?>" title="Cancel application">
+                                    <span><i class="fa fa-ban"></i></span>
+                                </a>
+                            <?php } ?>
+                        </div>
+                    </div>
+                    <div class="row" style="padding-top: 50px;">
+                        <div class="col-sm-6">
+                            <div class="row" style="padding: 5px; padding-left: 20px">
+                                <div class="col-xs-3">
+                                    <span style="color: black" title="GSTIN number">GSTIN number </span>
+                                </div>
+                                <div class="col-xs-9">
+                                    <span style="color: gray"><?php echo $clientInfo['gstin_no'] ?></span>
+                                </div>
+                            </div>
+                            <div class="row" style="padding: 5px; padding-left: 20px">
+                                <div class="col-xs-3">
+                                    <span style="color: black" title="Unique Id">Unique Id</span>
+                                </div>
+                                <div class="col-xs-9">
+                                    <span style="color: gray"><?php echo $clientInfo['unique_id'] ?></span>
+                                </div>
+                            </div>
+                            <div class="row" style="padding: 5px; padding-left: 20px">
+                                <div class="col-xs-3">
+                                    <span style="color: black" title="Address">Address</span>
+                                </div>
+                                <div class="col-xs-9">
+                                    <span style="color: gray"><?php echo $clientInfo['address'] ?></span>
+                                </div>
+                            </div>
+                            <div class="row" style="padding: 5px; padding-left: 20px">
+                                <div class="col-xs-3">
+                                    <span style="color: black" title="Contact Prsn.">Contact Prsn.</span>
+                                </div>
+                                <div class="col-xs-3">
+                                    <span style="color: gray"><?php echo $clientInfo['contact_person'] ?></span>
+                                </div>
+                                <div class="col-xs-3">
+                                    <span style="color: black" title="Contact No.">Contact No.</span>
+                                </div>
+                                <div class="col-xs-3">
+                                    <span style="color: gray"><?php echo $clientInfo['contact'] ?></span>
+                                </div>
+                            </div>
+                            <div class="row" style="padding: 5px; padding-left: 20px">
+                                <div class="col-xs-3">
+                                    <span style="color: black" title="Email Id">Email Id</span>
+                                </div>
+                                <div class="col-xs-9">
+                                    <span style="color: gray"><?php echo $clientInfo['email_id'] ?></span>
+                                </div>
+                            </div>
+                            <div class="row" style="padding: 5px; padding-left: 20px">
+                                <div class="col-xs-3">
+                                    <span style="color: black" title="Scope">Scope</span>
+                                </div>
+                                <div class="col-xs-9">
+                                    <span style="color: gray"><?php echo $clientInfo['scope'] ?></span>
+                                </div>
+                            </div>
+                            <div class="row" style="padding: 5px; padding-left: 20px">
+                                <div class="col-xs-3">
+                                    <span style="color: black" title="Technical area-">Technical area</span>
+                                </div>
+                                <div class="col-xs-9">
+                                    <span style="color: gray"><?php echo $clientInfo['aif_nace'] ?></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="row" style="padding: 5px; padding-left: 20px">
+                                <div class="col-sm-10 ">
+                                    <textarea name="add-notes" style="color: black; background-color: #e3eaf3; border: none" rows="10" cols="50" class="form-group notebox saveChanges" data-column="comment" id="add-notes" placeholder="Add Notes"><?php
+                                        if (isset($clientInfo['comment'])) {
+                                            $comment = trim($clientInfo['comment']);
+                                            // Remove unwanted text like 'yhnj' and other gibberish
+                                            $comment = str_replace(['yhnj', 'ftgyhnj', 'rdftgyhj', 'drftghbjn', 'tfghbjn'], '', $comment);
+                                            $comment = trim($comment);
+                                            echo $comment;
+                                        }
+                                        ?></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr style="color: slategray; margin: 0px; border: 1px solid slategray" />
+                    
+                    <?php
+                    // TEMPORARY DEBUG OUTPUT - Remove after testing
+                    if (isset($_GET['debug'])) {
+                        echo '<div style="background:#fff3cd;border:2px solid #856404;padding:15px;margin:10px 0;border-radius:5px;">';
+                        echo '<h3 style="color:#856404;margin-top:0;">🔍 DEBUG INFO</h3>';
+                        echo '<p><strong>Customer ID:</strong> ' . htmlspecialchars($clientInfo['id']) . '</p>';
+                        echo '<p><strong>Customer Name:</strong> ' . htmlspecialchars($clientInfo['customer_name']) . '</p>';
+                        echo '<p><strong>Main Cert No (customer_info table):</strong> <span style="background:yellow;padding:3px;">' . 
+                             (!empty($clientInfo['certification_no']) ? htmlspecialchars($clientInfo['certification_no']) : '(EMPTY - THIS IS WHY IT\'S BLANK!)') . 
+                             '</span></p>';
+                        echo '<p><strong>Total Certificates Found:</strong> ' . count($allCertificates) . '</p>';
+                        if (!empty($allCertificates)) {
+                            echo '<table border="1" cellpadding="5" style="border-collapse:collapse;width:100%;margin-top:10px;">';
+                            echo '<tr style="background:#6c757d;color:white;"><th>Index</th><th>Standard Name</th><th>Cert No</th><th>Issue Date</th><th>Expire Date</th><th>Service ID</th></tr>';
+                            foreach ($allCertificates as $idx => $cert) {
+                                echo '<tr>';
+                                echo '<td>' . ($idx + 1) . '</td>';
+                                echo '<td>' . htmlspecialchars($cert['standard_name']) . '</td>';
+                                echo '<td style="background:' . (!empty($cert['certification_no']) ? '#90EE90' : '#ffcccc') . ';">' . 
+                                     (!empty($cert['certification_no']) ? htmlspecialchars($cert['certification_no']) : '(EMPTY)') . '</td>';
+                                echo '<td>' . htmlspecialchars($cert['issue_date'] ?? '') . '</td>';
+                                echo '<td>' . htmlspecialchars($cert['expire_date'] ?? '') . '</td>';
+                                echo '<td>' . htmlspecialchars($cert['serviceca_id'] ?? '') . '</td>';
+                                echo '</tr>';
+                            }
+                            echo '</table>';
+                        }
+                        echo '<p style="margin-top:10px;font-size:12px;color:#666;"><em>Add ?debug=1 to URL to see this panel</em></p>';
+                        echo '</div>';
+                    }
+                    ?>
+                    
+                    <?php
+                    // Display certificate sections - one COMPLETE section for each ISO standard
+                    if (!is_array($allCertificates)) {
+                        $allCertificates = array();
+                    }
+                    $certCount = count($allCertificates);
+                    if ($certCount == 0) {
+                        // No certificates found, show single section with main data
+                        $allCertificates = array(array(
+                            'certification_no' => $clientInfo["certification_no"],
+                            'standard_name' => isset($clientInfo['standard_name']) ? $clientInfo['standard_name'] : '',
+                            'issue_date' => isset($clientInfo['issue_date']) ? $clientInfo['issue_date'] : '',
+                            'expire_date' => isset($clientInfo['expire_date']) ? $clientInfo['expire_date'] : ''
+                        ));
+                        $certCount = 1;
+                    }
+                    
+                    for ($i = 0; $i < $certCount; $i++) {
+                        $cert = $allCertificates[$i];
+                        
+                        // Determine certificate number
+                        $certNo = '';
+                        $hasCertNumber = false;
+                        
+                        // Check cert number from CDC table (specific to this ISO standard)
+                        if (!empty($cert['certification_no']) && trim($cert['certification_no']) != '') {
+                            $certNo = trim($cert['certification_no']);
+                            $hasCertNumber = true;
+                        }
+                        
+                        // If no cert number, leave empty (not assigned yet)
+                        
+                        // Get ISO-specific fields from $cert array
+                        $standardName = isset($cert['standard_name']) ? $cert['standard_name'] : '';
+                        $issueDate = isset($cert['issue_date']) ? $cert['issue_date'] : '';
+                        $expireDate = isset($cert['expire_date']) ? $cert['expire_date'] : '';
+
+                        // If overall customer status is Application canceled, always show that
+                        if (isset($clientInfo['audit_status']) && $clientInfo['audit_status'] === 'Application canceled') {
+                            $certStatus = 'Application canceled';
+                        } else {
+                            // Get ISO-specific status and decision date (if available from CDC)
+                            // If not available, fall back to shared customer_info data for first ISO only
+                            $certStatus = !empty($cert['cdc_status']) ? $cert['cdc_status'] : ($i == 0 ? $clientInfo['audit_status'] : '');
+                        }
+                        $decisionDate = !empty($cert['decision_date']) ? $cert['decision_date'] : ($i == 0 ? $clientInfo['certification_stage_date'] : '');
+                        
+                        // Add prominent section header for all certificates (single or multiple)
+                        echo '<div class="iso-cert-section" style="margin-top: ' . ($i == 0 ? '0' : '5') . 'px;">';
+                        echo '<div class="row iso-header" onclick="toggleISOSection(this)" style="cursor: pointer;">';
+                        echo '<div class="  qms_customer_name service_title" style="text-align: center;">';
+                        if ($certCount > 1) {
+                            echo '<i class="fa fa-certificate"></i> ISO STANDARD ' . ($i + 1) . ' OF ' . $certCount . ' - ' . htmlspecialchars($standardName);
+                        } else {
+                            echo '<i class="fa fa-certificate"></i> ISO STANDARD 1 OF 1 - ' . htmlspecialchars($standardName);
+                        }
+                        echo '</div></div>';
+                        echo '<div class="iso-details" style="display: none;">';
+                    ?>
+                    
+                    <div class="row" style="<?php if ($i > 0) echo 'margin-top: 10px;'; ?>">
+                        <div class="col-sm-2 " style="color: black; font-weight: small; text-align: right">
+                            <span>Certificate No:</span>
+                        </div>
+                        <div class="col-sm-1" style="color: black; font-weight: small;">
+                            <?php if ($hasCertNumber) { ?>
+                                <span style="font-weight: bold; color: #006400;"><?php echo htmlspecialchars($certNo); ?></span>
+                            <?php } else { ?>
+                                <span style="color: #999; font-style: italic; font-size: 11px;">Not Assigned Yet</span>
+                            <?php } ?>
+                        </div> 
+                        <div class="col-sm-2 " style="color: black; font-weight: small; text-align: right">
+                            <span>Certification Status:</span>
+                        </div>
+                        <div class="col-sm-2 form-group float-label-control" > 
+                            <select class="customer_status" name="customer_status" data-customer="<?php echo $_GET["customerid"]; ?>" data-iso-index="<?php echo $i; ?>" style="color: black" <?php if ($i > 0) echo 'disabled'; ?>>                                        
+                                <option value="<?php echo htmlspecialchars($certStatus); ?>"><?php
+                                    if (!empty($certStatus)) {
+                                        echo htmlspecialchars($certStatus);
+                                    } else {
+                                        echo "Select Status";
+                                    }
+                                ?></option>
+                                <?php foreach ($status as $stat) { ?>
+                                    <option value="<?php echo $stat["status"]; ?>"><?php echo $stat["status"]; ?></option>
+                                <?php } ?>
+                            </select>
+                        </div>
+                        <div class="col-sm-3 " style="color: black; font-weight: small; text-align: right">
+                            <span>Certification Decision Date:</span>
+                        </div>
+                        <div class="col-sm-2" >
+                            <input class="lookslike-label<?php if ($i == 0) echo ' saveChanges'; ?>" style="color: <?php echo (!empty($decisionDate) ? 'black' : 'gray'); ?>" placeholder="<?php echo ($i > 0 && empty($decisionDate)) ? 'No date for this ISO' : 'Click to enter'; ?>" data-column="certification_stage_date" data-iso-index="<?php echo $i; ?>" value="<?php if (!empty($decisionDate)) echo simpleDateConversion($decisionDate); ?>" <?php if ($i == 0) echo 'id="certificationDate"'; ?> <?php if ($i > 0) echo 'readonly'; ?> />
+                        </div>                                                               
+                    </div>
+                    <div class="row" >
+                        <div class="col-sm-2 " style="color: black; font-weight: small; text-align: right">
+                            <span>Standard Name:</span>
+                        </div>
+                        <div class="col-sm-1" >
+                            <input class="lookslike-label cert-auto-field" style="color: black; background-color: #f0f0f0; font-weight: bold;" placeholder="" data-column="standard_name" value="<?php echo htmlspecialchars($standardName); ?>" readonly <?php if ($i == 0) echo 'id="standardName"'; ?> />
+                        </div> 
+                        <div class="col-sm-2 " style="color: black; font-weight: small; text-align: right">
+                            <span>Issue Date:</span>
+                        </div>
+                        <div class="col-sm-2" > 
+                            <input class="lookslike-label cert-auto-field" style="color: black; background-color: #f0f0f0;" placeholder="" data-column="issue_date" value="<?php if (!empty($issueDate)) echo simpleDateConversion($issueDate); ?>" readonly <?php if ($i == 0) echo 'id="issueDate"'; ?> />
+                        </div>
+                        <div class="col-sm-3 " style="color: black; font-weight: small; text-align: right">
+                            <span>Expire Date:</span>
+                        </div>
+                        <div class="col-sm-2" >
+                            <input class="lookslike-label cert-auto-field" style="color: black; background-color: #f0f0f0;" placeholder="" data-column="expire_date" value="<?php if (!empty($expireDate)) echo simpleDateConversion($expireDate); ?>" readonly <?php if ($i == 0) echo 'id="expireDate"'; ?> />
+                        </div>                                                               
+                    </div>
+                    
+                    <?php 
+                        // Close the iso-details div and add visual separator between certificates
+                        echo '</div></div>'; // Close iso-details and iso-cert-section
+                        
+                        if ($i < $certCount - 1) {
+                            echo '<div style="margin: 0; border-bottom: 3px double #999; padding-bottom: 0;"></div>';
+                        }
+                    } // End for loop
+                    ?>
+                </div>
+            </div>
+
+            <div class="row" style="">
+                <div class="col-xs-4  text-center btn  qms_complete_btn invoiceBtn" data-id="<?php echo $_GET['customerid'] ?>" data-address="<?php echo $clientInfo['address'] ?>">
+                    <span><i class="fa fa-inr ">Proforma Invoice</i></span>
+                </div>
+                <div class="col-xs-4  text-center btn qms_complete_btn quotationBtn">
+                    <span><i class="fa fa-quote-left ">Quotation</i></span>
+                </div>
+                <div class="col-xs-4  text-center btn qms_complete_btn "  style="height: 28px">
+                    <select name="service-type"  class="form-control service-type" id="service-type"  style="height: 20px; background-color: #f5821f; padding-top: 0px; font-size: 10px; color: white">
+                        <option value="" style="color: white; font-size: 10px">Create New Service</option>
+                        <?php foreach ($servicess as $service) { ?>
+                            <option value="<?php echo $service['service_id'] ?>"  style="color: white; font-size: 10px"><?php echo $service['service_type'] ?></option>
+                        <?php } ?>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!--service add-->
+        <?php // if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff() || Utitlity::checkForUserConsultant() || Utitlity::checkForUserFinance()) {  ?>
+        <div class="servicebox-bunch">
+            <div class="servicebox" style="display: ">
+                <div class="row" id="service-row" class="service-row">
+                    <div class="col-sm-11 service_title payment-title" style="text-align: center; background:   #7393B3; color: #fff; font-family: 'Copperplate', 'Copperplate Gothic Light', 'sans-serif';" >
+                        Payment System <span class="serviceStatus"></span>
+                    </div>
+                    <div class="col-sm-1 service_title" style="background:   #7393B3; color: #fff; font-size: 1.7em;" >
+                        <a class="savePayment" id="savePayment" data-row-id="<?php if (isset($paymentDetails['payment_sy_id'])) echo $paymentDetails['payment_sy_id'] ?>">
+                            <i class="fa fa-floppy-o pull-right" style="color: white; padding-right: 10px; display: "></i>
+                        </a> <!--<a class="deleteService" id="deleteService" data-row-id=""><i class="fa fa-trash-o pull-right " style="color:white; padding-right:10px;"></i></a>-->
+                    </div>
+                </div>
+                <div class="servicebox-data payment-desc" id="servicebox-data" style="display: none;">
+                    <div class="row">
+                        <div class="col-xs-8 table-responsive">
+                            <div class="row">
+                                <div class="col-xs-12  text-center btn qms_complete_btn">
+                                    <span><i class="fa ">Payments</i></span>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <table class="table table-bordered table-hover table-sortable service_details" id="service_details">
+                                    <thead>
+                                        <tr>
+                                            <th class="" width="10%" style="padding: 2px">
+                                                <small>Service Type</small>
+                                            </th>
+                                            <th class="" width="13%" style="padding: 2px">
+                                                <small>Amount Decided</small>
+                                            </th>
+                                            <th class="" width="13%" style="padding: 2px">
+                                                <small>Payment received</small>
+                                            </th>
+                                            <th class="" width="14%" style="padding: 2px">
+                                                <small>Date</small>
+                                            </th>
+                                            <th class="" width="13%" style="padding: 2px">
+                                                <small>Instrument</small>
+                                            </th>
+                                            <th class="" width="11%" style="padding: 2px">
+                                                <small>Balance</small>
+                                            </th>
+                                            <th class="" width="4%" style="padding: 2px">
+                                                <a class="btn btn-xs btn-info cbAddLink pull-right" data-row-id="<?php if (isset($payId)) echo $payId; ?>" data-row-count="<?php echo $payCount['totalpayrow'] ?>" title="Add new row" style="padding: 1px 5px;">
+                                                    <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                </a>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="">
+                                        <?php
+                                        if ($payCount['totalpayrow'] > 0) {
+                                            foreach ($paymentInfo as $payInfo) {
+                                                ?>
+                                                <tr class="cb_subsection previousCBData pamentrow<?php echo $payInfo["payment_id"] ?>" id="cb_subsection_0" style="display: ">
+                                                    <td class="" style="padding: 0px;">
+                                                        <div class="table-edit-control"><label></label> 
+                                                            <input type="text" data_row_id="" class="serviceTypeName" name="serviceTypeName" value="<?php echo $payInfo['service_type'] ?>" placeholder="" />
+                                                        </div>
+                                                    </td>
+                                                    <td class="" style="padding: 0px;">
+                                                        <div class="table-edit-control"><label></label> 
+                                                            <input type="number" min="1" data_row_id="" class="serviceAmountDecided" name="serviceAmountDecided" value="<?php echo $payInfo['amount_decided'] ?>" placeholder="" />
+                                                        </div>
+                                                    </td>
+                                                    <td class="" style="padding: 0px;">
+                                                        <div class="table-edit-control"><label></label> 
+                                                            <input type="number" min="1" data_row_id="" class="servicePaymentReceived" name="servicePaymentReceived" value="<?php echo $payInfo['payment_received'] ?>" placeholder="" />
+                                                        </div>
+                                                    </td>
+                                                    <td class="" style="padding: 0px;">
+                                                        <div class="table-edit-control"><label></label> 
+                                                            <input type="text" data_row_id="" class="paymentDepositDate" name="paymentDepositDate" value="<?php if (isset($payInfo['payment_date'])) echo date("d.m.Y", strtotime($payInfo['payment_date'])) ?>" placeholder="">
+                                                        </div>
+                                                    </td>
+                                                    <td class="" style="padding: 0px;">
+                                                        <div class="table-edit-control"><label></label> 
+                                                            <input type="text" data_row_id="" class="serviceChequeDetails" name="serviceChequeDetails" value="<?php echo $payInfo['cheque_details'] ?>" placeholder="" />
+                                                        </div>
+                                                    </td>
+                                                    <td class="" style="padding: 0px;">
+                                                        <div class="table-edit-control"><label></label> 
+                                                            <input type="text" data_row_id="" class="serviceBalance" name="serviceBalance" value="<?php echo $payInfo['balance'] ?>" placeholder="" readonly="" />
+                                                        </div>
+                                                    </td>
+                                                    <td class="" style="padding: 0px;">
+                                                        <div class="table-edit-control">
+                                                            <a class="infoDelete" data-row-id="<?php echo $payInfo['payment_id'] ?>" value="<?php echo $payInfo['payment_id'] ?>"><i class="fa fa-trash-o pull-right " style="padding-right: 10px;" title="Delete Row Details"></i></a>
+                                                            <!--<input type="checkbox" class="infoDelete" data-row-id="<?php echo $payInfo['payment_id'] ?>" value="<?php echo $payInfo['payment_id'] ?>">--> 
+                                                            <input type="hidden" data-row-id="" class="row-id" name="row-id" value="<?php echo $payInfo['payment_id'] ?>">
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <?php
+                                            }
+                                        } else {
+                                            ?>
+                                            <tr class="cb_subsection previousCBData" id="cb_subsection_0"
+                                                style="display: ">
+                                                <td class="" style="padding: 0px;">
+                                                    <div class="table-edit-control"><label></label> 
+                                                        <input type="text" data_row_id="" class="serviceTypeName" name="serviceTypeName" value="" placeholder="" />
+                                                    </div>
+                                                </td>
+                                                <td class="" style="padding: 0px;">
+                                                    <div class="table-edit-control"><label></label> 
+                                                        <input type="number"  min="1" data_row_id="" class="serviceAmountDecided" name="serviceAmountDecided" value="" placeholder="" />
+                                                    </div>
+                                                </td>
+                                                <td class="" style="padding: 0px;">
+                                                    <div class="table-edit-control"><label></label> 
+                                                        <input type="number" min="1" data_row_id="" class="servicePaymentReceived" name="servicePaymentReceived" value="" placeholder="" />
+                                                    </div>
+                                                </td>
+                                                <td class="" style="padding: 0px;">
+                                                    <div class="table-edit-control"><label></label> 
+                                                        <input type="text" data_row_id="" class="paymentDepositDate" name="paymentDepositDate" value="" placeholder="">
+                                                    </div>
+                                                </td>
+                                                <td class="" style="padding: 0px;">
+                                                    <div class="table-edit-control"><label></label> 
+                                                        <input type="text" data_row_id="" class="serviceChequeDetails" name="serviceChequeDetails" value="" placeholder="" />
+                                                    </div>
+                                                </td>
+                                                <td class="" style="padding: 0px;">
+                                                    <div class="table-edit-control"><label></label> 
+                                                        <input type="text" data_row_id="" class="serviceBalance" name="serviceBalance" value="" placeholder="" readonly="" />
+                                                    </div>
+                                                </td>
+                                                <td class="" style="padding: 0px;">
+                                                    <input type="hidden" data-row-id="" class="row-id" name="row-id" value="">
+                                                </td>
+                                            </tr>
+                                        <?php } ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="col-xs-4 table-responsive">
+                            <div class="row">
+                                <div class="col-xs-12  text-center btn qms_complete_btn">
+                                    <span><i class="fa ">Invoice</i></span>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <table class="table table-bordered table-hover table-sortable service_details" id="service_details">
+                                    <thead>
+                                        <tr>
+                                            <th class="" width="20%" style="padding: 2px">
+                                                <small>Invoice No.</small>
+                                            </th>
+                                            <th class="" width="13%" style="padding: 2px">
+                                                <small>Date</small>
+                                            </th>
+                                            <th class="" width="13%" style="padding: 2px">
+                                                <small>Amount</small>
+                                            </th>
+                                            <th class="" width="5%" style="padding: 2px">
+                                                <small>Status</small>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="">
+                                        <?php
+                                        foreach ($invoiceList as $invoiceinfo) {
+                                            if ($invoiceinfo["invoice_status"] == "NotRcv") {
+                                                $inv = "";
+                                                $title = "Patment Not Received";
+                                            } else if ($invoiceinfo["invoice_status"] == "Rcv") {
+                                                $inv = "checked";
+                                                $title = "Patment Received";
+                                            }
+                                            ?>
+                                            <tr class="cb_subsection" id="cb_subsection_0" style="display: ">
+                                                <td class="viewFinalInvoice" data-customer="<?php echo $_GET['customerid'] ?>" data-id="<?php echo $invoiceinfo["invoice_id"] ?>" style="padding: 0px;">
+                                                    <div class="table-edit-control"><label></label> 
+                                                        <input type="text" data_row_id="" class="invoiceNo" name="invoiceNo" value="<?php echo $invoiceinfo['final_prefix'] . '-' . $invoiceinfo['final_invoice_no'] ?>" readonly="" />
+                                                    </div>
+                                                </td>
+                                                <td class="viewFinalInvoice" data-customer="<?php echo $_GET['customerid'] ?>" data-id="<?php echo $invoiceinfo["invoice_id"] ?>" style="padding: 0px;">
+                                                    <div class="table-edit-control"><label></label> 
+                                                        <input type="text" data_row_id="" class="invoiceDate" name="invoiceDate" value="<?php echo date("d.m.Y", strtotime($invoiceinfo['invoice_date'])) ?>" readonly=""/>
+                                                    </div>
+                                                </td>
+                                                <td class="viewFinalInvoice" data-customer="<?php echo $_GET['customerid'] ?>" data-id="<?php echo $invoiceinfo["invoice_id"] ?>" style="padding: 0px;">
+                                                    <div class="table-edit-control"><label></label>
+                                                        <input type="text" data_row_id="" class="invoiceAmount" name="invoiceAmount" value="<?php echo $invoiceinfo['final_amount'] ?>" readonly=""/>
+                                                    </div>
+                                                </td>
+                                                <td class="" style="padding: 0px;">
+                                                    <a class="editFinalInvoice" data-customer="<?php echo $_GET['customerid'] ?>" data-id="<?php echo $invoiceinfo["invoice_id"] ?>" title="Edit Final Invoice" style="padding: 1px 5px; "><i class="fa fa-pencil-square" style="padding:3px"></i></a>
+                                                    <input type="checkbox" class="invoiceStatus" data-row-id="<?php echo $invoiceinfo['invoice_id'] ?>" title="<?php echo $title ?>" <?php echo $inv; ?>>
+                                                </td>
+    <!--                                                    <td class="" style="padding: 0px;">
+                                                        <div class="table-edit-control">
+                                                            <a class="editFinalInvoice" data-customer="<?php echo $final['customer_id'] ?>" data-id="<?php echo $final['invoice_id'] ?>" title="Edit Final Invoice" style="padding: 1px 5px; "><i class="fa fa-pencil-square" style="padding:3px"></i></a>
+                                                            <input type="checkbox" class="invoiceStatus" data-row-id="<?php echo $invoiceinfo['invoice_id'] ?>" title="<?php echo $title ?>" <?php echo $inv; ?>>
+                                                        </div>
+                                                    </td>-->
+                                            </tr>
+                                        <?php } ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+
+                    </div>
+
+                    <div class="row">
+                        <div class="col-xs-12">
+                            <div class="row">
+                                <div class="col-xs-12  text-center btn qms_complete_btn">
+                                    <span><i class="fa ">Payment Summery</i></span>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <table class="table table-bordered table-hover table-sortable service_details" id="service_details">
+                                    <thead>
+                                        <tr>
+                                            <th class="" width="20%" style="padding: 2px">
+                                                <small>Total Receivable Amount ( <?php echo $balanceTotal["balance_sum"] ?> )</small>
+                                            </th>
+                                            <th class="" width="20%" style="padding: 2px">
+                                                <small>Total Amount Received ( <?php echo $paymentTotal["payment_sum"] ?> )</small>
+                                            </th>
+                                            <th class="" width="20%" style="padding: 2px">
+                                                <small>Total Invoicing Amount ( <?php echo $invoiceTotal["invoice_sum"] ?> )</small>
+                                            </th>
+                                            <th class="" width="20%" style="padding: 2px">
+                                                <?php $difference = $invoiceTotal["invoice_sum"] - $paymentTotal["payment_sum"]; ?>
+                                                <small>Balance( <?php echo $difference; ?> )</small>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php // }  ?>
+        <?php
+        //        if ($totalCACount == 1) {
+        //            $class1 = 'ca-service-type';
+        if (isset($caCount['service_done']) && $caCount['service_done'] == "DONE") {
+            $class1 = 'ca-service-type';
+            $class2 = "ca-service-type";
+        } else if (isset($caCount['service_done']) && $caCount['service_done'] == "") {
+            $class1 = "ca-service-type";
+            $class2 = "";
+        } else {
+            $class1 = "";
+            $class2 = "ca-service-type";
+        }
+        //        } else {
+        //            $class2 = "ca-service-type";
+        //        }        
+        $saiiid = "No-SA-II";
+        // Additional safety check before foreach
+        if (!is_array($allcaCount)) {
+            $allcaCount = array();
+        }
+        foreach ($allcaCount as $service) {
+
+//            new changes by Pallavi
+
+            if ($service['service_type'] == "CR") {
+                $crServices = "SELECT crs.cr_id, crs.service, application_form, certification_aggrement, aud.audit_id, contractid, asp.assessment_id, cfp.certificate_id, ca.id, aggrement_date, aggrement_no FROM service_type_cr crs left join audit_application aud on crs.cr_id = aud.service_id left join contract_id ci on crs.cr_id = ci.ca_service_id left join assessment_planning asp on crs.cr_id = asp.service_id left join stage_twoaudit_id stai on crs.cr_id = stai.service_id left join certificate_print cfp on crs.cr_id = cfp.service_id left join certification_aggrement ca on crs.cr_id = ca.service WHERE crs.service = :id";
+                $statement = $db->prepare($crServices);
+                $statement->bindParam(':id', $service["service_id"]);
+                $statement->execute();
+                $crservice = $statement->fetch();
+
+                if ($letestService["c_service"] == $crservice['service']) {
+                    $disp = "";
+                } else {
+                    $disp = "none";
+                }
+                ?> 
+                <div class="servicebox-bunch <?php //echo $class2     ?> new-cr-service-add">
+                    <div class="servicebox">
+                        <div class="row cr-service-row" id="service-row" data-id="<?php echo $crservice['cr_id'] ?>">
+                            <div class="col-xs-12 qms_customer_name service_title" style="text-align: center" data-row-id="">
+                                Contract Review
+                                <span class="serviceStatus"></span>
+                                <a class="deleteServiceCR" id="deleteServiceCR" data-service="<?php echo $crservice['service'] ?>" data-row-id="<?php echo $crservice['cr_id'] ?>" data-customer="<?php echo $_GET['customerid'] ?>"><i class="fa fa-trash-o pull-right " style="color: white; padding-right: 10px;"></i></a>
+                            </div>
+                        </div>
+                        <div class="cr-service-desc<?php echo $crservice['cr_id'] ?>" style="display: <?php echo $disp ?>;">                               
+                            <div class="servicebox-data" id="servicebox-data ">
+                                <div class="row">
+                                    <div class="col-sm-6">
+                                        <div class="serviceContentCompleted"><span>Application Form </span>
+                                            <div style="float: right" class="image-preview form-inline">
+                                                <div class=" ">
+                                                    <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
+                                                        <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $crservice['cr_id'] ?>" service-type="CA" data-column="application_form" name="input-application-form" class="updateDeta input-application-form<?php echo $crservice['cr_id'] ?>" /></span> 
+                                                    <span style="padding-right: 5px"> <a href="<?php echo $crservice['application_form'] ?>" data-id="" download class="customerReviewFileDownload"><i class="fa fa-download"></i></a> </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <?php
+                                    if (isset($crservice['audit_id']) && !empty($crservice['audit_id'])) {
+                                        $addClass = "serviceContentCompleted";
+                                    } else {
+                                        $addClass = "serviceContentwaiting";
+                                    }
+                                    ?>
+                                    <div class="col-sm-6">
+                                        <div class="<?php echo $addClass ?>"><span>Review - Application</span> 
+                                            <?php if (isset($crservice['audit_id']) && !empty($crservice['audit_id'])) { ?>
+                                                <a class="editAuditApp pull-right" data-page="customer" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $crservice['cr_id'] ?>" data-audit="<?php echo $crservice['audit_id'] ?>" title="Edit audit application" style="padding: 1px 5px;"><i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i></a> 
+                                                <a class="downloadAuditApp pull-right" data-customer="<?php echo $_GET['customerid'] ?>"  data-caservice-id="<?php echo $crservice['cr_id'] ?>" data-audit="<?php echo $crservice['audit_id'] ?>" title="Download audit application" style="padding: 1px 5px;"><i class="fa fa-download fa-lg " style="padding: 3px"></i></a> 
+                                            <?php } else { ?>
+                                                <a class="createAuditApp pull-right" data-page="customer" data-caservice-id="<?php echo $crservice['cr_id'] ?>" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $crservice['service'] ?>" title="Add audit application" style="padding: 1px 5px;"><i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i></a> 
+                                            <?php } ?>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-sm-6">
+                                        <?php
+                                        if (isset($crservice['audit_id']) && !empty($crservice['audit_id']) && empty($crservice['id'])) {
+                                            $addClass2 = "serviceContentwaiting";
+                                        } else if (isset($crservice['audit_id']) && !empty($crservice['audit_id']) && isset($crservice['id']) && !empty($crservice['id'])) {
+                                            $addClass2 = "serviceContentCompleted";
+                                        } else {
+                                            $addClass2 = "serviceContent";
+                                        }
+                                        ?>
+                                        <div class="<?php echo $addClass2 ?>"><span>Certification Agreement</span>
+                                            <?php if (isset($crservice['audit_id']) && !empty($crservice['audit_id']) && empty($crservice['id'])) { ?>
+                                                <a class="certificationBtn pull-right" data-customer="<?php echo $_GET["customerid"] ?>" data-service="<?php echo $crservice['cr_id'] ?>"  title="Certification Aggrement" style="padding: 1px 5px;"><i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i></a> 
+                                            <?php } ?>
+                                            <?php if (isset($crservice['audit_id']) && !empty($crservice['audit_id']) && isset($crservice['id']) && !empty($crservice['id'])) { ?>
+                                                <a class="editcertification pull-right" data-page="customer" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $crservice['cr_id'] ?>" data-certfication="<?php echo $crservice['id'] ?>" title="Edit Certification" style="padding: 1px 5px;"><i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i></a> 
+                                                <a class="downloadcertificate pull-right" data-customer="<?php echo $_GET['customerid'] ?>"  data-service="<?php echo $crservice['cr_id'] ?>" data-certfication="<?php echo $crservice['id'] ?>" data-servicecount="<?php echo $saiiid; ?>" data-filepath="<?php echo isset($crservice['certification_aggrement']) ? $crservice['certification_aggrement'] : ''; ?>" title="Download Certification Agreement" style="padding: 1px 5px;"><i class="fa fa-download fa-lg " style="padding: 3px"></i></a> 
+                                            <?php } ?>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <?php
+                                        if (isset($crservice['id']) && !empty($crservice['id']) && empty($crservice['certification_aggrement'])) {
+                                            $addClass2 = "serviceContentwaiting";
+                                        } else if (isset($crservice['certification_aggrement']) && !empty($crservice['certification_aggrement'])) {
+                                            $addClass2 = "serviceContentCompleted";
+                                        } else {
+                                            $addClass2 = "serviceContent";
+                                        }
+                                        ?>
+                                        <div class="<?php echo $addClass2 ?>"><span> Certification Agreement Upload</span>
+                                            <div style="float: right" class="image-preview form-inline">
+                                                <?php if (isset($crservice['id']) && !empty($crservice['id']) && empty($crservice['certification_aggrement']) || (isset($crservice['certification_aggrement']) && !empty($crservice['certification_aggrement']))) { ?>
+                                                    <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
+                                                        <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $crservice['cr_id'] ?>" service-type="CR" data-column="certification_aggrement" class="updateCertification input-certification-agreement<?php echo $crservice['cr_id'] ?>" name="input-certification-agreement" /> 
+                                                    </span>
+                                                <?php } ?> 
+                                                <?php if (isset($crservice['certification_aggrement']) && !empty($crservice['certification_aggrement'])) { ?>
+                                                    <span style="padding-right: 5px"> 
+                                                        <a  href="<?php echo $crservice['certification_aggrement'] ?>" data-id="" download class="customerReviewFileDownload" title="Download Certification Agreement"><i class="fa fa-download"></i></a>
+                                                    </span> 
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-sm-6">
+                                        <?php
+                                        if (isset($crservice['certification_aggrement']) && empty($crservice['certification_aggrement'])) {
+                                            $addClass3 = "serviceContent";
+                                        } else if (isset($crservice['certification_aggrement']) && !empty($crservice['certification_aggrement']) && empty($crservice['contractid'])) {
+                                            $addClass3 = "serviceContentwaiting";
+                                        } else if (isset($crservice['contractid']) && !empty($crservice['contractid'])) {
+                                            $addClass3 = "serviceContentCompleted";
+                                        } else {
+                                            $addClass3 = "serviceContent";
+                                        }
+                                        ?>
+                                        <div class="<?php echo $addClass3 ?>"><span>Contract Review </span>
+                                            <?php if (isset($crservice['certification_aggrement']) && !empty($crservice['certification_aggrement']) && empty($crservice['contractid']))  { ?>
+                                                <a class=" createContractReview pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $crservice['cr_id'] ?>" data-row-count="" title="Add contract review" style="padding: 1px 5px;">
+                                                    <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                </a> 
+                                            <?php } ?>
+                                            <?php if (isset($crservice['contractid']) && !empty($crservice['contractid'])) { ?>
+                                                <a class="updateContractReview  pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-contract="<?php echo $crservice['contractid'] ?>" data-service="<?php echo $crservice['cr_id'] ?>" data-row-count="" title="Edit contract review" style="padding: 1px 5px;"> <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i></a> 
+                                                <a class="downloadContractReview pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $crservice['cr_id'] ?>" data-contract="<?php echo $crservice['contractid'] ?>" title="Download contract review" style="padding: 1px 5px;"> <i class="fa fa-download fa-lg " style="padding: 3px"></i></a> 
+                                            <?php } ?>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <?php
+                                        if (empty($crservice['contractid'])) {
+                                            $assessmentClass = 'serviceContent';
+                                        } else if (isset($crservice['contractid']) && !empty($crservice['contractid']) && empty($crservice['assessment_id'])) {
+                                            $assessmentClass = 'serviceContentwaiting';
+                                        } else if (isset($crservice['contractid']) && !empty($crservice['contractid']) && isset($crservice['assessment_id']) && !empty($crservice['assessment_id'])) {
+                                            $assessmentClass = 'serviceContentCompleted';
+                                        } else {
+                                            $assessmentClass = 'serviceContent';
+                                        }
+                                        ?>
+                                        <div class="<?php echo $assessmentClass ?>"><span>Assessment Planning</span>
+                                            <?php if (isset($crservice['contractid']) && !empty($crservice['contractid']) && empty($crservice['assessment_id'])) { ?>
+                                                <a class="addAssessmentPlanning pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $crservice['cr_id'] ?>" title="Review Report (Annex II)" style="padding: 1px 5px;"><i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i></a>
+                                            <?php } else if (isset($crservice['assessment_id']) && !empty($crservice['assessment_id'])) { ?>
+                                                <a class="editAssessmentPlanning  pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $crservice['cr_id'] ?>" data-assessment="<?php echo $crservice['assessment_id'] ?>" title="Add Review Report(Annex II)" style="padding: 1px 5px;"><i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i></a> 
+                                                <a class="downloadAssessmentPlanning pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $crservice['cr_id'] ?>" data-assessment="<?php echo $crservice['assessment_id'] ?>" title="Download Review Report (Annex II)" style="padding: 1px 5px;"><i class="fa fa-download fa-lg " style="padding: 3px"></i></a> 
+                                            <?php } ?>
+                                        </div>
+                                    </div>
+                                </div>                       
+                            </div>
+                            <input type="hidden" class="customerid" id="customerid" name="customerid" value="<?php echo $_GET['customerid'] ?>"></form>
+                        </div>
+                    </div>
+                </div>
+                <?php
+            }
+            if ($service['service_type'] == "CA") {
+                $caServices = "SELECT DISTINCT cas.ca_id, service, signed_notification, signed_copy, audit_report_I, signed_notification_II, audit_report_II, auditor_notes, audit_nc_II, certificate_print, customer_satisfaction, service_ca_status,  cas.audit_date as caaudit, stage1_auditor, stage2_audit, stage2_auditor, soi.audit_stage_id, sia.stage_i_id, siia.stage_ii_id, crr.crr_id, asi.audit_schedule_id, asii.audit_scheduleii_id, sioi.stage_i_id, cfi.control_id, cusi.survey_id, cfii.control2_id, stai.audit_stageii_id, cfp.certificate_id FROM service_type_ca cas left join stage_oneaudit_id soi on cas.ca_id = soi.ca_service_id left join stage_i_audit_id sia on cas.ca_id = sia.ca_service_id left join stage_ii_audit_id siia on cas.ca_id = siia.ca_service_id left join cdc_report_review crr on cas.ca_id = crr.ca_service_id left join audit_schedule_id asi on cas.ca_id = asi.serviceca_id left join audit_scheduleii_id asii on cas.ca_id = asii.ca_service left join stage_i_audit_id sioi on cas.ca_id = sioi.ca_service_id left join control_formati_id cfi on cas.ca_id = cfi.caservice_id left join customer_survey_id cusi on cas.ca_id = cusi.ca_serviceid left join control_formatii_id cfii on cas.ca_id = cfii.caservice_id left join stage_twoaudit_id stai on cas.ca_id = stai.service_id left join certificate_print cfp on cas.ca_id = cfp.service_id WHERE cas.service = :id GROUP BY cas.ca_id";
+                $statement = $db->prepare($caServices);
+                $statement->bindParam(':id', $service["service_id"]);
+                $statement->execute();
+                $caservice = $statement->fetch();
+                
+                // Debug logging for CDC status
+                error_log("CustomerAccount CDC Check: ca_id=" . $caservice['ca_id'] . ", stage_ii_id=" . $caservice['stage_ii_id'] . ", crr_id=" . $caservice['crr_id']);
+                
+                // If crr_id is empty from JOIN, try direct query
+                if (empty($caservice['crr_id'])) {
+                    error_log("CustomerAccount: crr_id is EMPTY from JOIN, trying direct query...");
+                    $directCrrQuery = "SELECT crr_id FROM cdc_report_review WHERE ca_service_id = :ca_id LIMIT 1";
+                    $directStmt = $db->prepare($directCrrQuery);
+                    $directStmt->bindParam(':ca_id', $caservice['ca_id']);
+                    $directStmt->execute();
+                    $directResult = $directStmt->fetch();
+                    if ($directResult && !empty($directResult['crr_id'])) {
+                        $caservice['crr_id'] = $directResult['crr_id'];
+                        error_log("CustomerAccount: Found crr_id via direct query: " . $directResult['crr_id']);
+                    }
+                }
+
+                $actiosDates = "SELECT MIN(action_id) as action_id, service_id, action, due_date, MAX(sent_date) as sent_date, MAX(is_deleted) as is_deleted FROM ca_service_dates WHERE service_id = :serviceID GROUP BY service_id, action, due_date ORDER BY due_date ASC";
+                $statement = $db->prepare($actiosDates);
+                $statement->bindParam(':serviceID', $caservice['service']);
+                $statement->execute();
+                $actionDate = $statement->fetchAll();
+
+                // Fetch dates for CA service itself
+                $caActionDatesQuery = "SELECT MIN(action_id) as action_id, service_id, action, due_date, MAX(sent_date) as sent_date, MAX(is_deleted) as is_deleted FROM ca_service_dates WHERE service_id = :caServiceId GROUP BY service_id, action, due_date ORDER BY due_date ASC";
+                $statement = $db->prepare($caActionDatesQuery);
+                $statement->bindParam(':caServiceId', $caservice['service']);
+                $statement->execute();
+                $nextServiceDates = $statement->fetchAll();
+
+
+
+
+
+                
+                if ($letestService["c_service"] == $caservice['service']) {
+                    $disp = "";
+                } else {
+                    $disp = "none";
+                }
+                ?>
+                <div class="servicebox-bunch <?php echo $class1 ?>" style="display: ">
+                    <div class="servicebox">
+                        <form id="caService" action="serviceTypeCA.php" method="post" enctype="multipart/form-data">
+                            <div class="row ca-service-row" id="service-row" data-id="<?php echo $caservice['ca_id'] ?>">
+                                <div class="col-xs-12 qms_customer_name service_title" style="text-align: center" data-row-id="">Service type - CA<span class="serviceStatus"></span> <!--<a class="saveServiceCA" id="saveServiceCA" data-row-id=""><i class="fa fa-floppy-o pull-right " style="color:white; padding-right:10px; display:"></i></a>-->
+                                    <a class="deleteServiceCA" id="deleteServiceCA" data-service="<?php echo $caservice['service'] ?>" data-row-id="<?php echo $caservice['ca_id'] ?>" data-customer="<?php echo $_GET['customerid'] ?>"><i class="fa fa-trash-o pull-right " style="color: white; padding-right: 10px;"></i></a>
+                                </div>
+                            </div>
+                            <div class="ca-service-desc<?php echo $caservice['ca_id'] ?>" style="display: <?php echo $disp ?>;">
+                                <div class="row" style="padding-top: 10px; ">
+                                    <div class="col-xs-2 form-group float-label-control" style=""><label>Add to</label> 
+                                        <select class="addService add-to-service" data-id="<?php echo $caservice['ca_id'] ?>" data-column="service_ca_status" name="add-to-service" style="color: black" value="">
+                                            <option value="<?php if (isset($caservice['service_ca_status'])) echo $caservice['service_ca_status'] ?>">
+                                                <?php
+                                                if (isset($caservice['service_ca_status']) && !empty($caservice['service_ca_status'])) {
+                                                    echo $caservice['service_ca_status'];
+                                                } else {
+                                                    echo "Select add to";
+                                                }
+                                                ?>
+                                                <?php foreach ($addToList as $addTo) { ?>
+                                                <option value="<?php echo $addTo['add_to_type'] ?>"><?php echo $addTo['add_to_type'] ?></option>
+                                            <?php } ?>
+                                        </select>
+                                    </div>
+                                    <div class="col-xs-2 form-group float-label-control" style=""><label>Stage 1 Date</label> 
+                                        <input class="serviceAuditDate" placeholder="Stage 1 Date" data-id="<?php echo $caservice['service'] ?>" data-service="caService" data-column="audit_date" name="serviceAuditDate" style="color: black" value="<?php if (isset($caservice["caaudit"])) echo $caservice["caaudit"]; ?>" />
+                                    </div>
+                                    <div class="col-xs-2 form-group float-label-control" style=""><label>Team Leader</label> 
+                                        <input class="caLeadAuditoe" placeholder="Team Leader" data-id="<?php echo $caservice['service'] ?>" data-service="caService" data-column="audit_date" name="caLeadAuditoe" style="color: black" value="<?php if (isset($caservice["stage1_auditor"])) echo $caservice["stage1_auditor"]; ?>" />
+                                    </div>
+                                    <div class="col-xs-2 form-group float-label-control" style=""><label>Stage 2 Date</label> 
+                                        <input class="stage2date" placeholder="Stage 2 Date" data-id="<?php echo $caservice['service'] ?>" data-service="caService" data-column="audit_date" name="stage2date" style="color: black" value="<?php if (isset($caservice["stage2_audit"])) echo $caservice["stage2_audit"]; ?>" />
+                                    </div>
+                                    <div class="col-xs-2 form-group float-label-control" style=""><label>Team Leader, Auditors(s)</label> 
+                                        <input class="auditorsList" placeholder="Team Leader, Auditors(s)" data-id="<?php echo $caservice['service'] ?>" data-service="caService" data-column="audit_date" name="auditorsList" style="color: black" value="<?php if (isset($caservice["stage2_auditor"])) echo $caservice["stage2_auditor"]; ?>" />
+                                    </div>
+                                </div>
+                                <div class="servicebox-data" id="servicebox-data ">
+                                    <div class="row">
+                                        <div class="col-sm-6">
+                                            <div class="serviceContentCompleted"><span>Release - Notification for Stage - I audit</span>
+                                                <a class="editAuditNotification pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" data-notification="<?php echo $caservice['audit_stage_id'] ?>" title="Edit Audit Notification" style="padding: 1px 5px;">
+                                                    <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                </a>
+                                                <a class="downloadAuditNotification pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $caservice['ca_id'] ?>" data-audit="<?php echo $caservice['audit_stage_id'] ?>" title="Download audit notification" style="padding: 1px 5px;">
+                                                    <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                </a> 
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (isset($caservice['audit_schedule_id']) && !empty($caservice['audit_schedule_id'])) {
+                                                $enterClass = "serviceContentCompleted";
+                                            } else {
+                                                $enterClass = "serviceContentwaiting";
+                                            }
+                                            ?>
+                                            <div class="<?php echo $enterClass ?>">
+                                                <span>Release - Stage - I Audit Plan</span> 
+                                                <?php if (empty($caservice['audit_schedule_id'])) { ?>
+                                                    <a class="createStageSchedule pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" data-serviceType="CA"  data-row-id="" data-row-count="" title="Add Stage - I Schedule" style="padding: 1px 5px;"><i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i></a> 
+                                                <?php } if (isset($caservice['audit_schedule_id']) && !empty($caservice['audit_schedule_id'])) { ?>
+                                                    <a class="editStageSchedule pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" data-row-id="<?php echo $caservice['audit_schedule_id'] ?>" data-row-count="" title="Add audit application" style="padding: 1px 5px;"><i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i></a> 
+                                                    <a class="downloadScheduleStageOne pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $caservice['ca_id'] ?>" data-schedulei="<?php echo $caservice['audit_schedule_id'] ?>" title="Download stage one schedule" style="padding: 1px 5px;"><i class="fa fa-download fa-lg " style="padding: 3px"></i></a> 
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">                                
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($caservice['audit_schedule_id'])) {
+                                                $viewClass = "serviceContent";
+                                            } else if (isset($caservice['audit_schedule_id']) && !empty($caservice['audit_schedule_id']) && empty($caservice['signed_notification'])) {
+                                                $viewClass = "serviceContentwaiting";
+                                            } else if (isset($caservice['audit_schedule_id']) && !empty($caservice['audit_schedule_id']) && !empty($caservice['signed_notification'])) {
+                                                $viewClass = "serviceContentCompleted";
+                                            } else {
+                                                $viewClass = "serviceContent";
+                                            }
+                                            ?>
+                                            <div class="<?php echo $viewClass ?>"><span>Signed Notification Stage I </span>
+                                                <!--<a class="btn btn-xs btn-warning createAuditApp pull-right" data-row-id="" data-row-count="" title="Add audit application" style="padding: 1px 5px; "><i class="fa fa-plus-circle fa-lg " style="padding:3px"></i></a>--> 
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <div class=" ">
+                                                        <?php if (isset($caservice['audit_schedule_id']) && !empty($caservice['audit_schedule_id'])) { ?>
+                                                            <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
+                                                                <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" service-type="CA" data-column="signed_notification" class="signedNotificationCA input-signed-notification<?php echo $caservice['ca_id'] ?>" name="input-signed-notification" /> </span> 
+                                                        <?php } ?> 
+                                                        <?php if (isset($caservice['signed_notification']) && !empty($caservice['signed_notification']) && !empty($caservice['audit_stage_id'])) { ?>
+                                                            <span style="padding-right: 5px">
+                                                                <a href="<?php echo $caservice['signed_notification'] ?>" data-id="" download class="customerReviewFileDownload" title="Download Signed Notification"><i class="fa fa-download"></i></a>
+                                                            </span> 
+                                                        <?php } ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($caservice['signed_notification'])) {
+                                                $classShow = "serviceContent";
+                                            } else if (isset($caservice['signed_notification']) && !empty($caservice['signed_notification']) && empty($caservice['signed_copy'])) {
+                                                $classShow = 'serviceContentwaiting';
+                                            } else if (isset($caservice['signed_copy']) && !empty($caservice['signed_copy']) && isset($caservice['signed_notification']) && !empty($caservice['signed_notification'])) {
+                                                $classShow = 'serviceContentCompleted';
+                                            } else {
+                                                $classShow = "serviceContent";
+                                            }
+                                            ?>
+                                            <div class="<?php echo $classShow ?>">
+                                                <span>Audit Plan Scanned Copy</span>
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <div class=" ">
+                                                        <?php if (isset($caservice['signed_notification']) && !empty($caservice['signed_notification'])) { ?>
+                                                            <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
+                                                                <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" service-type="CA" data-column="signed_copy" class="signedCopyAttach input-signed-copy<?php echo $caservice['ca_id'] ?>" name="input-signed-copy" />
+                                                            </span> 
+                                                        <?php } ?> 
+                                                        <?php if (isset($caservice['signed_copy']) && !empty($caservice['signed_copy'])) { ?>
+                                                            <span style="padding-right: 5px"> 
+                                                                <a href="<?php echo $caservice['signed_copy'] ?>" data-id="" download class="customerReviewFileDownload" title="Download Signed Copy"><i class="fa fa-download"></i></a> 
+                                                            </span> 
+                                                        <?php } ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">                                
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($caservice['signed_copy'])) {
+                                                $classAdd4 = "serviceContent";
+                                            } else if (isset($caservice['signed_copy']) && !empty($caservice['signed_copy']) && empty($caservice['audit_report_I'])) {
+                                                $classAdd4 = "serviceContentwaiting";
+                                            } else if (isset($caservice['audit_report_I']) && !empty($caservice['audit_report_I']) && isset($caservice['signed_copy']) && !empty($caservice['signed_copy'])) {
+                                                $classAdd4 = 'serviceContentCompleted';
+                                            } else {
+                                                $classAdd4 = "serviceContent";
+                                            }
+                                            ?>
+                                            <div class="<?php echo $classAdd4 ?>">
+                                                <span>Stage - I Audit Report </span>
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <div class=" ">
+                                                        <?php if (isset($caservice['signed_copy']) && !empty($caservice['signed_copy'])) { ?>
+                                                            <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
+                                                                <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" service-type="CA" data-column="audit_report_I" class="signedAuditReport1 input-audit-1report<?php echo $caservice['ca_id'] ?>" name="input-audit-1report" /> 
+                                                            </span> 
+                                                        <?php } ?> <?php if (isset($caservice['audit_report_I']) && !empty($caservice['audit_report_I'])) { ?>
+                                                            <span style="padding-right: 5px"> 
+                                                                <a href="<?php echo $caservice['audit_report_I'] ?>" data-id="" download class="customerReviewFileDownload" title="Download Signed Copy"><i class="fa fa-download"></i></a> 
+                                                            </span> 
+                                                        <?php } ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($caservice['audit_report_I'])) {
+                                                $serviceClass = "serviceContent";
+                                            } else if (isset($caservice['audit_report_I']) && !empty($caservice['audit_report_I']) && empty($caservice['stage_i_id'])) {
+                                                $serviceClass = "serviceContentwaiting";
+                                            } else if (isset($caservice['stage_i_id']) && !empty($caservice['stage_i_id']) && isset($caservice['audit_report_I']) && !empty($caservice['audit_report_I'])) {
+                                                $serviceClass = 'serviceContentCompleted';
+                                            } else {
+                                                $serviceClass = "serviceContent";
+                                            }
+                                            ?>
+                                            <div class="<?php echo $serviceClass ?>">
+                                                <span>Review Report (Annex I)- Stage I Audit</span> 
+                                                <?php if (isset($caservice['audit_report_I']) && !empty($caservice['audit_report_I']) && empty($caservice['stage_i_id'])) { ?>
+                                                    <a class="auditStage-I pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" data-row-count="" title="Review Report (Annex I)" style="padding: 1px 5px;">
+                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } else if (isset($caservice['stage_i_id']) && !empty($caservice['stage_i_id'])) { ?>
+                                                    <a class="editReviewReport  pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" data-notification="<?php echo $caservice['stage_i_id'] ?>" title="Add Review Report (Annex I)" style="padding: 1px 5px;">
+                                                        <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                    <a class="downloadAnnexI pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $caservice['ca_id'] ?>" data-stageii="<?php echo $caservice['stage_i_id'] ?>" title="Download Review Report (Annex I)" style="padding: 1px 5px;">
+                                                        <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                    </a>
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($caservice['stage_i_id'])) {
+                                                $classiiService = "serviceContent";
+                                            } else if (isset($caservice['stage_i_id']) && !empty($caservice['stage_i_id']) && empty($caservice['audit_stageii_id'])) {
+                                                $classiiService = "serviceContentwaiting";
+                                            } else if (isset($caservice['audit_stageii_id']) && !empty($caservice['audit_stageii_id']) && isset($caservice['stage_i_id']) && !empty($caservice['stage_i_id'])) {
+                                                $classiiService = 'serviceContentCompleted';
+                                            } else {
+                                                $classiiService = "serviceContent";
+                                            }
+                                            ?>
+                                            <div class=" <?php echo $classiiService ?>">
+                                                <span>Release - Notification for Stage - II audit </span> 
+                                                <?php if (isset($caservice['stage_i_id']) && !empty($caservice['stage_i_id']) && empty($caservice['audit_stageii_id'])) { ?>
+                                                    <a class="createAuditNotificationii pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" data-row-count="" title="Add Audit Notification" style="padding: 1px 5px;">
+                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } else if (isset($caservice['audit_stageii_id']) && !empty($caservice['audit_stageii_id'])) { ?>
+                                                    <a class="editAuditNotificationii pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" data-notification="<?php echo $caservice['audit_stageii_id'] ?>" title="Edit Audit Notification" style="padding: 1px 5px;">
+                                                        <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                    </a>
+                                                    <a class="downloadAuditNotificationii pull-right" data-customer="<?php //echo $_GET['customerid']                                                                                                                                                                                                                                                       ?>" data-caservice-id="<?php //echo $caservice['ca_id']                                                                                                                                                                                                                                                       ?>" data-audit="<?php echo $caservice['audit_stageii_id'] ?>" title="Download audit notification" style="padding: 1px 5px;">
+                                                        <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($caservice['audit_stageii_id'])) {
+                                                $classService = "serviceContent";
+                                            } else if (isset($caservice['audit_stageii_id']) && !empty($caservice['audit_stageii_id']) && empty($caservice['audit_scheduleii_id'])) {
+                                                $classService = "serviceContentwaiting";
+                                            } else if (isset($caservice['audit_scheduleii_id']) && !empty($caservice['audit_scheduleii_id']) && isset($caservice['audit_stageii_id']) && !empty($caservice['audit_stageii_id'])) {
+                                                $classService = 'serviceContentCompleted';
+                                            } else {
+                                                $classService = "serviceContent";
+                                            }
+                                            ?>
+                                            <div class="<?php echo $classService ?>">
+                                                <span>Release - Stage - II Audit Plan</span> 
+                                                <?php if (isset($caservice['audit_stageii_id']) && !empty($caservice['audit_stageii_id']) && empty($caservice['audit_scheduleii_id'])) { ?>
+                                                    <a class="createStageiiAudit pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" data-row-id="" data-row-count="" title="Add stage II audit notification" style="padding: 1px 5px;">
+                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } else if (isset($caservice['audit_scheduleii_id']) && !empty($caservice['audit_scheduleii_id']) && isset($caservice['audit_stageii_id']) && !empty($caservice['audit_stageii_id'])) { ?>
+                                                    <a class="editStageiiAudit pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" data-row-id="<?php echo $caservice['audit_scheduleii_id'] ?>" title="Add stage II audit notification" style="padding: 1px 5px;">
+                                                        <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                    <a class="downloadNotiStageII pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $caservice['ca_id'] ?>" data-noti-id="<?php echo $caservice['audit_scheduleii_id'] ?>" title="Download Notification for Stage - II audit" style="padding: 1px 5px;">
+                                                        <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">                                
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($caservice['audit_scheduleii_id'])) {
+                                                $classTo = 'serviceContent';
+                                            } else if (isset($caservice['audit_scheduleii_id']) && !empty($caservice['audit_scheduleii_id']) && empty($caservice['signed_notification_II'])) {
+                                                $classTo = 'serviceContentwaiting';
+                                            } else if (isset($caservice['audit_scheduleii_id']) && !empty($caservice['audit_scheduleii_id']) && isset($caservice['stage_i_id']) && !empty($caservice['stage_i_id'])) {
+                                                $classTo = 'serviceContentCompleted';
+                                            } else {
+                                                $classTo = 'serviceContent';
+                                            }
+                                            ?>
+                                            <div class="<?php echo $classTo ?>">
+                                                <span>Signed Notification Stage II, And Copy of Stage II Audit Plan</span>
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <div class=" ">
+                                                        <?php if (isset($caservice['audit_scheduleii_id']) && !empty($caservice['audit_scheduleii_id'])) { ?>
+                                                            <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
+                                                                <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" service-type="CA" data-column="signed_notification_II" class="signedNotiCA2 input-signed-noti2<?php echo $caservice['ca_id'] ?>" name="input-signed-noti2" /> 
+                                                            </span> 
+                                                        <?php } if (isset($caservice['signed_notification_II']) && !empty($caservice['signed_notification_II']) && isset($caservice['audit_scheduleii_id']) && !empty($caservice['audit_scheduleii_id'])) { ?>
+                                                            <span style="padding-right: 5px"> 
+                                                                <a href="<?php echo $caservice['signed_notification_II'] ?>" download class="download" title="Download Application Form">
+                                                                    <i class="fa fa-download"></i>
+                                                                </a> 
+                                                            </span> 
+                                                        <?php } ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($caservice['signed_notification_II'])) {
+                                                $classNoti2 = 'serviceContent';
+                                            } else if (isset($caservice['signed_notification_II']) && !empty($caservice['signed_notification_II']) && empty($caservice['audit_report_II'])) {
+                                                $classNoti2 = 'serviceContentwaiting';
+                                            } else if (isset($caservice['signed_notification_II']) && !empty($caservice['signed_notification_II']) && isset($caservice['audit_report_II']) && !empty($caservice['audit_report_II'])) {
+                                                $classNoti2 = 'serviceContentCompleted';
+                                            } else {
+                                                $classNoti2 = 'serviceContent';
+                                            }
+                                            ?>
+                                            <div class="<?php echo $classNoti2 ?>">
+                                                <span>Stage - II Audit Report, Summery and Checklists</span>
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <div class=" ">
+                                                        <?php if (isset($caservice['signed_notification_II']) && !empty($caservice['signed_notification_II'])) { ?>
+                                                            <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
+                                                                <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" service-type="CA" data-column="audit_report_II" class="auditReportStage2 input-audit-report2<?php echo $caservice['ca_id'] ?>" name="input-audit-report2" /> 
+                                                            </span> 
+                                                        <?php } ?> <?php if (isset($caservice['audit_report_II']) && !empty($caservice['audit_report_II']) && isset($caservice['signed_notification_II']) && !empty($caservice['signed_notification_II'])) { ?> 
+                                                            <span style="padding-right: 5px"> 
+                                                                <a href="<?php echo $caservice['audit_report_II'] ?>" download class="download" title="Download Application Form">
+                                                                    <i class="fa fa-download "></i>
+                                                                </a> 
+                                                            </span> 
+                                                        <?php } ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($caservice['audit_report_II'])) {
+                                                $classAudRep2 = 'serviceContent';
+                                            } else if (isset($caservice['audit_report_II']) && !empty($caservice['audit_report_II']) && empty($caservice['auditor_notes'])) {
+                                                $classAudRep2 = 'serviceContentwaiting';
+                                            } else if (isset($caservice['audit_report_II']) && !empty($caservice['audit_report_II']) && isset($caservice['auditor_notes']) && !empty($caservice['auditor_notes'])) {
+                                                $classAudRep2 = 'serviceContentCompleted';
+                                            } else {
+                                                $classAudRep2 = 'serviceContent';
+                                            }
+                                            ?>
+                                            <div class="<?php echo $classAudRep2 ?>">
+                                                <span>Stage - II Auditor Notes</span>
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <div class=" ">
+                                                        <?php if (isset($caservice['audit_report_II']) && !empty($caservice['audit_report_II'])) { ?>
+                                                            <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
+                                                                <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" service-type="CA" data-column="auditor_notes" class="auditornotes input-auditor-notes<?php echo $caservice['ca_id'] ?>" name="input-auditor-notes" /> 
+                                                            </span> 
+                                                        <?php } ?> <?php if (isset($caservice['auditor_notes']) && !empty($caservice['auditor_notes']) && isset($caservice['audit_report_II']) && !empty($caservice['audit_report_II'])) { ?> 
+                                                            <span style="padding-right: 5px"> 
+                                                                <a href="<?php echo $caservice['auditor_notes'] ?>" download class="download" title="Download Application Form">
+                                                                    <i class="fa fa-download "></i>
+                                                                </a> 
+                                                            </span> 
+                                                        <?php } ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($caservice['auditor_notes'])) {
+                                                $evidanceClass = 'serviceContent';
+                                            } else if (isset($caservice['auditor_notes']) && !empty($caservice['auditor_notes']) && empty($caservice['audit_nc_II'])) {
+                                                $evidanceClass = 'serviceContentwaiting';
+                                            } else if (isset($caservice['auditor_notes']) && !empty($caservice['auditor_notes']) && isset($caservice['audit_nc_II']) && !empty($caservice['audit_nc_II'])) {
+                                                $evidanceClass = 'serviceContentCompleted';
+                                            } else {
+                                                $evidanceClass = 'serviceContent';
+                                            }
+                                            ?>
+                                            <div class="caservicedivclass <?php echo $evidanceClass ?>">
+                                                <span>CA Audit NC And evidences of closer
+                                                    <?php if (isset($caservice['audit_nc_II']) && !empty($caservice['audit_nc_II']) && $caservice['audit_nc_II'] == "NONC" && isset($caservice['auditor_notes']) && !empty($caservice['auditor_notes'])) { ?> 
+                                                        <!--                                                    <a class="" title="No NC Flag" style="padding: 1px 5px;">
+                                                                                                                <i class="fa fa-times-circle fa-lg " style="padding: 3px"></i>
+                                                                                                            </a>-->
+                                                        *(No NC)<?php } ?></span>
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <div class=" ">
+                                                        <?php if (isset($caservice['auditor_notes']) && !empty($caservice['auditor_notes']) && empty($caservice['audit_nc_II'])) { ?>
+                                                            <span class=" image-preview-input" style="padding-right: 15px"> 
+                                                                <input type="checkbox" class="no_nc_file" name="no_nc_file" data-svctype="CA" data-service="<?php echo $caservice['ca_id'] ?>" value="">
+                                                            </span>
+                                                        <?php } ?>
+                                                        <?php if (isset($caservice['audit_nc_II']) && !empty($caservice['audit_nc_II']) && $caservice['audit_nc_II'] == "NONC" && isset($caservice['auditor_notes']) && !empty($caservice['auditor_notes'])) { ?>
+                                                            <span class=" image-preview-input" style="padding-right: 15px"> 
+                                                                <input type="checkbox" class="no_nc_file" name="no_nc_file" data-svctype="CA" data-service="<?php echo $caservice['ca_id'] ?>" checked>
+                                                            </span>                                                     
+                                                        <?php } ?>
+                                                        <?php if (isset($caservice['audit_nc_II']) && !empty($caservice['audit_nc_II']) && isset($caservice['auditor_notes']) && !empty($caservice['auditor_notes']) && $caservice['audit_nc_II'] <> "NONC") { ?>
+                                                            <span class=" image-preview-input" style="padding-right: 15px"> 
+                                                                <input type="checkbox" class="no_nc_file" name="no_nc_file" data-svctype="CA" data-service="<?php echo $caservice['ca_id'] ?>">
+                                                            </span>                                                     
+                                                        <?php } ?>
+                                                        <?php if (isset($caservice['audit_report_II']) && !empty($caservice['auditor_notes'])) { ?>
+                                                            <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
+                                                                <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" service-type="CA"  data-column="audit_nc_II"  class="auditNcII input-nc-ii<?php echo $caservice['ca_id'] ?>" name="input-nc-ii" /> 
+                                                            </span>
+                                                        <?php } ?>
+                                                        <?php if (isset($caservice['audit_nc_II']) && !empty($caservice['audit_nc_II']) && $caservice['audit_nc_II'] != "NONC" && isset($caservice['auditor_notes']) && !empty($caservice['auditor_notes'])) { ?>                                                    
+                                                            <span style="padding-right: 5px"> 
+                                                                <a href="<?php echo $caservice['audit_nc_II'] ?>" download class="download" title="Download Application Form">
+                                                                    <i class="fa fa-download "></i>
+                                                                </a> 
+                                                            </span> 
+                                                        <?php } ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($caservice['audit_nc_II'])) {
+                                                $anexClass = 'serviceContent';
+                                            } else if (isset($caservice['audit_nc_II']) && !empty($caservice['audit_nc_II']) && empty($caservice['stage_ii_id'])) {
+                                                $anexClass = 'serviceContentwaiting';
+                                            } else if (isset($caservice['audit_nc_II']) && !empty($caservice['audit_nc_II']) && isset($caservice['stage_ii_id']) && !empty($caservice['stage_ii_id'])) {
+                                                $anexClass = 'serviceContentCompleted';
+                                            } else {
+                                                $anexClass = 'serviceContent';
+                                            }
+                                            ?>
+                                            <div class="<?php echo $anexClass ?>">
+                                                <span>Review Report (Annex II)- Stage II Audit</span> 
+                                                <?php if ((isset($caservice['audit_nc_II']) && !empty($caservice['audit_nc_II']) && empty($caservice['stage_ii_id'])) || (isset($caservice['audit_scheduleii_id']) && empty($caservice['signed_notification_II']) && empty($caservice['audit_report_II']) && empty($caservice['auditor_notes']) && empty($caservice['audit_nc_II']) && empty($caservice['stage_ii_id']) && (Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin()))) { ?>
+                                                    <a class="stageIIAudit pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" data-row-count="" title="Review Report (Annex II)" style="padding: 1px 5px;">
+                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } else if (isset($caservice['stage_ii_id']) && !empty($caservice['stage_ii_id'])) { ?>
+                                                    <a class="editstageIIAudit2  pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" data-notification="<?php echo $caservice['stage_ii_id'] ?>" title="Edit Review Report(Annex II)" style="padding: 1px 5px;">
+                                                        <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                    <a class="downloadAnnexII pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $caservice['ca_id'] ?>" data-stage-ii="<?php echo $caservice['stage_ii_id'] ?>" title="Download Review Report (Annex II)" style="padding: 1px 5px;">
+                                                        <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6"><?php
+                                            // CDC section should only be enabled after Review Report (Annex II) is submitted
+                                            if (empty($caservice['stage_ii_id'])) {
+                                                $cdcClass = 'serviceContent';
+                                            } else if (isset($caservice['stage_ii_id']) && !empty($caservice['stage_ii_id']) && empty($caservice['crr_id'])) {
+                                                $cdcClass = 'serviceContentwaiting';
+                                            } else if (isset($caservice['stage_ii_id']) && !empty($caservice['stage_ii_id']) && isset($caservice['crr_id']) && !empty($caservice['crr_id'])) {
+                                                $cdcClass = 'serviceContentCompleted';
+                                            } else {
+                                                $cdcClass = 'serviceContent';
+                                            }
+                                            ?>
+                                            <div class="<?php echo $cdcClass ?>">
+                                                <span>Review Report - CDC DELIBERATION AND DECISION</span> 
+                                                <?php 
+                                                // Only show CDC button if Review Report (Annex II) - Stage II Audit is submitted (stage_ii_id exists)
+                                                // AND CDC is not yet created (crr_id is empty)
+                                                if (isset($caservice['stage_ii_id']) && !empty($caservice['stage_ii_id']) && empty($caservice['crr_id'])) { ?>
+                                                    <a class="cdcReport pull-right" data-svctype="CA" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" data-service1="<?php echo $crservice['cr_id'] ?>" data-id="<?php echo $caservice['service'] ?>" audit-data="CA" data-row-count="" title="CDC DELIBERATION AND DECISION" style="padding: 1px 5px;"><i class="fa fa-plus-circle fa-lg" style="padding: 3px"></i></a> 
+                                                <?php } else if (isset($caservice['crr_id']) && !empty($caservice['crr_id'])) { ?>
+                                                    <a class="editCDC pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" data-notification="<?php echo $caservice['crr_id'] ?>" title="Edit CDC DELIBERATION AND DECISION" style="padding: 1px 5px;">
+                                                        <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                    </a>
+                                                    <a class="sendCdcMail pull-right" data-svctype="CA" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" data-crr="<?php echo $caservice['crr_id'] ?>" title="Send certificate by email" style="padding: 1px 5px;">
+                                                        <i class="fa fa-envelope fa-lg" style="padding: 3px"></i>
+                                                    </a>
+                                                    <a class="downloadCdc pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $caservice['ca_id'] ?>" data-crr="<?php echo $caservice['crr_id'] ?>" title="Download  CDC DELIBERATION AND DECISION" style="padding: 1px 5px;"><i class="fa fa-download fa-lg " style="padding: 3px"></i></a> 
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-sm-6"><?php
+                                            if (empty($caservice['crr_id'])) {
+                                                $certClass = "serviceContent";
+                                            } else if (isset($caservice['crr_id']) && !empty($caservice['crr_id'])) {
+                                                $certClass = "serviceContentCompleted";
+                                            } else {
+                                                $certClass = "serviceContent";
+                                            }
+                                            ?>
+                                            <div class="<?php echo $certClass ?>" style="">
+                                                <span>Certificate Print</span> 
+                                                <?php if (isset($caservice['crr_id']) && !empty($caservice['crr_id'])) { ?>
+                                                    <a class="download-certificate-print pull-right" data-customer="<?php echo $_GET['customerid'] ?>"  data-service="<?php echo $caservice['ca_id'] ?>" data-id="<?php echo $caservice['service'] ?>" data-certificate="<?php echo !empty($caservice['certificate_id']) ? $caservice['certificate_id'] : '' ?>" data-crr="<?php echo $caservice['crr_id'] ?>" data-row-count="" title="Certificate Print" style="padding: 1px 5px;">
+                                                        <i class="fa fa-download fa-lg" style="padding: 3px"></i></a> 
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($caservice['crr_id'])) {
+                                                $certClass = "serviceContent";
+                                            } else if (isset($caservice['crr_id']) && !empty($caservice['crr_id']) && empty($caservice['certificate_print'])) {
+                                                $certClass = "serviceContentwaiting";
+                                            } else if (isset($caservice['certificate_print']) && !empty($caservice['certificate_print'])) {
+                                                $certClass = "serviceContentCompleted";
+                                            } else {
+                                                $certClass = "serviceContent";
+                                            }
+                                            ?>
+                                            <div class="<?php echo $certClass ?>" style="">
+                                                <span>Certificate Upload</span>
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <?php if (isset($caservice['crr_id']) && !empty($caservice['crr_id'])) { ?>
+                                                        <span class="image-preview-input fa fa-upload" style="padding-right: 15px"> 
+                                                            <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" service-type="CA" data-column="certificate_print" class="certificatePrint input-certificate-print<?php echo $caservice['ca_id'] ?>" name="input-certificate-print" /> 
+                                                        </span>
+                                                    <?php } if (isset($caservice['certificate_print']) && !empty($caservice['certificate_print'])) { ?>
+                                                        <span style="padding-right: 5px"> 
+                                                            <a href="<?php echo $caservice['certificate_print'] ?>" download class="download" title="Download Certificate">
+                                                                <i class="fa fa-download"></i>
+                                                            </a> 
+                                                        </span>
+                                                    <?php } ?>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($caservice['certificate_print'])) {
+                                                $survayClass = 'serviceContent';
+                                            } else if (isset($caservice['certificate_print']) && !empty($caservice['certificate_print']) && empty($caservice['customer_satisfaction'])) {
+                                                $survayClass = 'serviceContentwaiting';
+                                            } else if (isset($caservice['certificate_print']) && !empty($caservice['certificate_print']) && isset($caservice['customer_satisfaction']) && !empty($caservice['customer_satisfaction'])) {
+                                                $survayClass = 'serviceContentCompleted';
+                                            } else {
+                                                $survayClass = 'serviceContent';
+                                            }
+                                            ?>
+                                            <div class="<?php echo $survayClass ?>">
+                                                <span>Client Feedback
+                                                    <?php if (isset($caservice['customer_satisfaction']) && !empty($caservice['customer_satisfaction']) && $caservice['customer_satisfaction'] == "NONC" && isset($caservice['certificate_print']) && !empty($caservice['certificate_print'])) { ?> 
+                                                        <!--                                                    <a class="" title="No Client Feedback Flag" style="padding: 1px 5px;">
+                                                                                                                <i class="fa fa-times-circle fa-lg " style="padding: 3px"></i>
+                                                                                                            </a>-->
+                                                        *(No Client Feedback)<?php } ?></span>
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <?php if (isset($caservice['certificate_print']) && !empty($caservice['certificate_print']) && empty($caservice['customer_satisfaction'])) { ?>
+                                                        <span class="image-preview-input" style="padding-right: 15px"> 
+                                                            <input type="checkbox" class="no_feedback_file" name="no_feedback_file" data-svctype="CA" data-service="<?php echo $caservice['ca_id'] ?>" >
+                                                        </span>
+                                                    <?php } ?>
+                                                    <?php if (isset($caservice['customer_satisfaction']) && !empty($caservice['customer_satisfaction']) && $caservice['customer_satisfaction'] == "NONC" && isset($caservice['certificate_print']) && !empty($caservice['certificate_print'])) { ?>
+                                                        <span class="image-preview-input" style="padding-right: 15px"> 
+                                                            <input type="checkbox" class="no_feedback_file" name="no_feedback_file" data-svctype="CA" data-service="<?php echo $caservice['ca_id'] ?>" checked>
+                                                        </span>                                                     
+                                                    <?php } ?>
+                                                    <?php if (isset($caservice['customer_satisfaction']) && !empty($caservice['customer_satisfaction']) && isset($caservice['certificate_print']) && !empty($caservice['certificate_print']) && $caservice['customer_satisfaction'] <> "NONC") { ?>
+                                                        <span class="image-preview-input" style="padding-right: 15px"> 
+                                                            <input type="checkbox" class="no_feedback_file" name="no_feedback_file" data-svctype="CA" data-service="<?php echo $caservice['ca_id'] ?>">
+                                                        </span>                                                     
+                                                    <?php } ?>
+                                                    <?php if (isset($caservice['certificate_print']) && !empty($caservice['certificate_print'])) { ?>
+                                                        <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
+                                                            <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" service-type="CA" data-column="customer_satisfaction" class="customerReview input-customer-review<?php echo $caservice['ca_id'] ?>" name="input-customer-review" /> 
+                                                        </span>
+                                                    <?php } ?>
+                                                    <?php if (isset($caservice['customer_satisfaction']) && !empty($caservice['customer_satisfaction']) && $caservice['customer_satisfaction'] != "NONC") { ?>                                                    
+                                                        <span style="padding-right: 5px"> 
+                                                            <a href="<?php echo $caservice['customer_satisfaction'] ?>" download class="download" title="Download Application Form">
+                                                                <i class="fa fa-download"></i>
+                                                            </a> 
+                                                        </span>
+                                                    <?php } ?>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($caservice['customer_satisfaction'])) {
+                                                $satiSurvayClass = 'serviceContent';
+                                            } else if (isset($caservice['customer_satisfaction']) && !empty($caservice['customer_satisfaction']) && empty($caservice['survey_id'])) {
+                                                $satiSurvayClass = 'serviceContentwaiting';
+                                            } else if (isset($caservice['customer_satisfaction']) && !empty($caservice['customer_satisfaction']) && isset($caservice['survey_id']) && !empty($caservice['survey_id'])) {
+                                                $satiSurvayClass = 'serviceContentCompleted';
+                                            } else {
+                                                $satiSurvayClass = 'serviceContent';
+                                            }
+                                            ?>
+                                            <div class="<?php echo $satiSurvayClass ?>">
+                                                <span>Review Report - Review of feedback</span> 
+                                                <?php if (isset($caservice['customer_satisfaction']) && !empty($caservice['customer_satisfaction']) && empty($caservice['survey_id'])) { ?>
+                                                    <a class="createCustomerSurvey pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" data-service1="<?php echo $crservice['cr_id'] ?>" data-svc="CA" data-row-id="" data-row-count="" title="Add Review of feedback" style="padding: 1px 5px;">
+                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } ?> 
+                                                <?php if (isset($caservice['survey_id']) && !empty($caservice['survey_id'])) { ?>
+                                                    <a class="editCustomerSurvey pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" data-row-id="<?php echo $caservice['survey_id'] ?>" data-row-count="" title="Update Review of feedback" style="padding: 1px 5px;">
+                                                        <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                    <a class="downloadCustomersatisfaction pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $caservice['ca_id'] ?>" data-surveyid="<?php echo $caservice['survey_id'] ?>" title="Download  Review of feedback" style="padding: 1px 5px;">
+                                                        <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-sm-6"><?php
+                                            if (empty($caservice['survey_id'])) {
+                                                $cf1Class = 'serviceContent';
+                                            } else if (isset($caservice['survey_id']) && !empty($caservice['survey_id']) && empty($caservice['control_id'])) {
+                                                $cf1Class = 'serviceContentwaiting';
+                                            } else if (isset($caservice['survey_id']) && !empty($caservice['survey_id']) && isset($caservice['control_id']) && !empty($caservice['control_id'])) {
+                                                $cf1Class = 'serviceContentCompleted';
+                                            } else {
+                                                $cf1Class = 'serviceContent';
+                                            }
+                                            ?>
+                                            <div class="<?php echo $cf1Class ?>"><span>CONTROL FORMAT -1 (To be filled by AITF-MCL)</span> 
+                                                <?php if (empty($caservice['control_id'])) { ?>
+                                                    <a class="createControlFormat1 pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" data-row-id="<?php echo $caservice['control_id'] ?>" title="Add control format 1" style="padding: 1px 5px;">
+                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } ?>
+                                                <?php if (isset($caservice['control_id']) && !empty($caservice['control_id'])) { ?>
+                                                    <a class="editControlFormat1 pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" data-row-id="<?php echo $caservice['control_id'] ?>" title="Add control format 1" style="padding: 1px 5px;">
+                                                        <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                    <a class="downloadControlFormat1 pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $caservice['ca_id'] ?>" data-cfi-id="<?php echo $caservice['control_id'] ?>" title="Download  control format 1" style="padding: 1px 5px;">
+                                                        <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6"><?php
+                                            if (empty($caservice['control_id'])) {
+                                                $cf2Class = 'serviceContent';
+                                            } else if (isset($caservice['control_id']) && !empty($caservice['control_id']) && empty($caservice['control2_id'])) {
+                                                $cf2Class = 'serviceContentwaiting';
+                                            } else if (isset($caservice['control_id']) && !empty($caservice['control_id']) && isset($caservice['control2_id']) && !empty($caservice['control2_id'])) {
+                                                $cf2Class = 'serviceContentCompleted';
+                                            } else {
+                                                $cf2Class = 'serviceContent';
+                                            }
+                                            ?>
+                                            <div class="<?php echo $cf2Class ?>"><span>CONTROL FORMAT -2 (SHC Comments while meeting)</span> 
+                                                <?php if (empty($caservice['control2_id'])) { ?>
+                                                    <a class="createControlFormat2 pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" data-id="<?php echo $caservice['service'] ?>" data-row-count="" title="Add control format 2" style="padding: 1px 5px;">
+                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } else if (isset($caservice['control2_id']) && !empty($caservice['control2_id'])) { ?>
+                                                    <a class="editControlFormat2  pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" data-notification="<?php echo $caservice['control2_id'] ?>" title="Update control format 2" style="padding: 1px 5px;">
+                                                        <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                    <a class="downloadControlFormat2 pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $caservice['ca_id'] ?>" data-cf-id="<?php echo $caservice['control2_id'] ?>" title="Download  control format 2" style="padding: 1px 5px;">
+                                                        <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <input type="hidden" class="customerid" id="customerid" name="customerid" value="<?php echo $_GET['customerid'] ?>">
+                            </div>
+                        </form>
+                    </div>
+                    <?php if (isset($caservice['crr_id']) && !empty($caservice['crr_id'])) { ?>
+                    <div class="cadates<?php echo $caservice['ca_id'] ?>" style="display: <?php echo $disp ?>;">
+                        <div class="servicebox-bunch">
+                            <div class="servicebox" style="display: ">
+                                <div class="row" id="service-row" class="service-row">
+                                    <div class="col-xs-12 aitf_service_date" style="text-align: center" data-row-id="">LETTERS &amp; ACTIONS OF CLIENT STATUS - for the next service: SA-I <span class="serviceStatus"></span></div>
+                                </div>
+                                <div class="servicebox-data" id="servicebox-data">
+                                    <div class="row">
+                                        <div class="col-xs-12 table-responsive">
+                                            <table class="table table-borde5red table-hover table-sortable service_details" id="service_details">
+                                                <thead>
+                                                    <tr>
+                                                        <th class="" width="20%" style="padding: 2px">
+                                                            <small>Action</small>
+                                                        </th>
+                                                        <th class="" width="20%" style="padding: 2px">
+                                                            <small>Proposed due on date</small>
+                                                        </th>
+                                                        <th class="" width="20%" style="padding: 2px">
+                                                            <small>Sent on date</small>
+                                                        </th>
+                                                        <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+                                                        <th class="" width="4%" style="padding: 2px">
+                                                            <small>Actions</small>
+                                                        </th>
+                                                        <?php } ?>
+                                                        <th class="" width="4%" style="padding: 2px">
+                                                            <small>Pdf</small>
+                                                        </th>
+                                                        <th class="" width="4%" style="padding: 2px">
+                                                            <small>Generate</small>
+                                                        </th>
+                                                        <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+                                                            <th class="" width="4%" style="padding: 2px">
+                                                                <small>Delete</small>
+                                                            </th>
+                                                        <?php } ?>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="">
+                                                    <?php foreach ($nextServiceDates as $caActions) { ?>
+                                                        <tr class=" previousCBData" style="display: ">
+                                                            <td class="" style="padding: 0px;">
+                                                                <div class="table-edit-control">
+                                                                    <small><?php echo $caActions['action'] ?></small>
+                                                                </div>
+                                                            </td>
+                                                            <td class="" style="padding: 0px;">
+                                                                <div class="table-edit-control">
+                                                                    <small><?php echo simpleDateConversion($caActions['due_date']) ?></small>
+                                                                </div>
+                                                            </td>
+                                                            <td class="" style="padding: 0px;">
+                                                                <div class="table-edit-control">
+                                                                    <small><?php echo simpleDateConversion($caActions['sent_date']) ?></small>
+                                                                </div>
+                                                            </td>
+                                                            
+                                                              <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+                                                            <td class="" style="padding: 0px;">
+                                                                <!--<a class="caServiceComment" data-row-id=" echo $caActions['action_id'] ?>" data-column="comment" data-comment="</?php echo $caActions['comment'] ?>">-->
+                                                                <!--    <i class="fa fa-comment-o" aria-hidden="true"></i>-->
+                                                                <!--</a>-->
+                                                                
+                                                                <a href="editcadates.php?id=<?php echo $caActions['action_id'] ?>">
+                                                                    <i class="fa fa-pencil-square fa-sm " style="padding: 1px"></i>
+                                                                </a>
+                                                            </td>
+                                                            
+                                                            <?php } ?>
+                                                            <td class="" style="padding: 0px;">
+                                                                <?php if (date("Y-m-d") >= $caActions['due_date']) { ?>
+                                                                    <a class="PreviewPDF" data-servicetype="SA-I" data-due="<?php echo simpleDateConversion($caActions['due_date']) ?>" data-action-pdf="<?php echo $caActions['action'] ?>" data-action="<?php echo $caActions['action_id'] ?>" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caActions['service_id'] ?>" data-column="pdf">
+                                                                        <i class="fa fa-file-pdf-o" aria-hidden="true"></i>
+                                                                    </a>
+                                                                <?php } ?>
+                                                            </td>
+                                                            <td class="" style="padding: 0px;">
+                                                                <?php if (date("Y-m-d") >= $caActions['due_date']) { ?>
+                                                                    <a class="caServiceGanerate" data-servicetype="SA-I" data-due="<?php echo simpleDateConversion($caActions['due_date']) ?>" data-action-pdf="<?php echo $caActions['action'] ?>" data-action="<?php echo $caActions['action_id'] ?>" data-service="<?php echo $caActions['service_id'] ?>" data-customer="<?php echo $_GET['customerid'] ?>" data-actiontype="<?php echo $caActions['action'] ?>" data-column="generate">
+                                                                        <i class="fa fa-envelope-o" aria-hidden="true"></i>
+                                                                    </a> 
+                                                                <?php } ?>
+                                                            </td>
+                                                            <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+                                                                <?php
+                                                                if ($caActions["is_deleted"] == 'Y') {
+                                                                    $setDelete1 = "disabled='disabled'";
+                                                                } else {
+                                                                    $setDelete2 = "";
+                                                                }
+                                                                ?>    
+                                                                <td class="" style="padding: 0px;">
+                                                                    <a class="deleteLetterAccount " title="Delete" data-customer='<?php echo $_GET['customerid'] ?>' data-service='<?php echo $caActions['service_id'] ?>' data-action ="<?php echo $caActions['action_id'] ?>" style="float: right; margin-right: 10px" <?php echo $setDelete2; ?>><i class="fa fa-trash"></i></a>
+                                                                </td>
+                                                            <?php } ?>
+                                                        </tr>
+                                                    <?php } ?>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <?php } ?>
+                </div>
+                <?php
+            }
+            if ($service['service_type'] == "SA-I") {
+                if (isset($saiCount['service_done']) && $saiCount['service_done'] == "DONE") {
+                    $class3 = 'sa-i-service-type';
+                    $class4 = "sa-i-service-type";
+                } else if (isset($saiCount['service_done']) && $saiCount['service_done'] == "") {
+                    $class3 = "sa-i-service-type";
+                    $class4 = "";
+                } else {
+                    $class3 = "";
+                    $class4 = "sa-i-service-type";
+                }
+
+                $saIService = "SELECT DISTINCT stsai.sai_id,service, stsai.customer_id, info_update_form, signed_noti_sai, signed_copy_sai, audit_report_sai, auditor_notes_sai, audit_evidance_sai, certificate_print, customer_review_sai, service_sai_status, stsai.audit_date as saiaudit, stsai.auditors as sai_auditors, soai.audit_stage_id, asi.servelance_id, siai.stage_ii_id, crr.crr_id, csi.survey_id, cfp.certificate_id FROM service_type_sai stsai left join stage_oneaudit_id soai on stsai.sai_id = soai.ca_service_id left join servelance_1_id asi on stsai.sai_id = asi.service_id left join stage_ii_audit_id siai on stsai.sai_id = siai.ca_service_id left join cdc_report_review crr on stsai.sai_id = crr.ca_service_id left join customer_survey_id csi on stsai.sai_id = csi.ca_serviceid left join certificate_print cfp on stsai.sai_id = cfp.service_id WHERE stsai.service = :id GROUP BY stsai.sai_id";
+                $statement = $db->prepare($saIService);
+                
+                
+                // echo test 
+                
+                $statement->bindParam(':id', $service["service_id"]);
+                $statement->execute();
+                $saiService = $statement->fetch();
+                
+            
+
+                $saiActionDate = "SELECT MIN(action_id) as action_id, service_id, action, due_date, MAX(sent_date) as sent_date, MAX(is_deleted) as is_deleted FROM ca_service_dates WHERE service_id = :ssiService GROUP BY service_id, action, due_date ORDER BY due_date ASC";
+                $statement = $db->prepare($saiActionDate);
+                $statement->bindParam(':ssiService', $saiService['service']);
+                $statement->execute();
+                $allSaiDates = $statement->fetchAll();
+
+                // Fetch SA-II dates stored against current SA-I service ONLY if SA-I CDC has been saved
+                $nextSaiiServiceDates = array();
+
+                // For old clients, if SA-II date rows already exist for this SA-I but crr_id is empty,
+                // treat it as legacy CDC so that recalculation runs.
+                if ((!isset($saiService['crr_id']) || empty($saiService['crr_id']))) {
+                    $legacySaiiCheckQuery = "SELECT 1 FROM ca_service_dates WHERE service_id = :saiServiceId AND action IN ('Suspension Reminder', 'Suspend Letter', 'Withdrawal Reminder', 'Withdraw Letter') LIMIT 1";
+                    $statement = $db->prepare($legacySaiiCheckQuery);
+                    $statement->bindParam(':saiServiceId', $saiService['service']);
+                    $statement->execute();
+                    $legacySaiiRow = $statement->fetch();
+                    if ($legacySaiiRow) {
+                        $saiService['crr_id'] = 'LEGACY';
+                    }
+                }
+
+                // Check if SA-I's CDC has been saved (crr_id exists in service_type_sai)
+                if (isset($saiService['crr_id']) && !empty($saiService['crr_id'])) {
+                    $saiiActionDatesQuery = "SELECT MIN(action_id) as action_id, service_id, action, due_date, MAX(sent_date) as sent_date, MAX(is_deleted) as is_deleted 
+                                             FROM ca_service_dates 
+                                             WHERE service_id = :saiServiceId 
+                                             AND action IN ('Suspension Reminder', 'Suspend Letter', 'Withdrawal Reminder', 'Withdraw Letter')
+                                             GROUP BY service_id, action, due_date 
+                                             ORDER BY due_date ASC";
+                    $statement = $db->prepare($saiiActionDatesQuery);
+                    $statement->bindParam(':saiServiceId', $saiService['service']);
+                    $statement->execute();
+                    $nextSaiiServiceDates = $statement->fetchAll();
+
+                    // Determine base certification date: first CA CDC -> certification_stage_date
+                    $caCdcQuery = "SELECT MIN(crr.Date) AS first_date FROM cdc_report_review crr 
+                                   INNER JOIN service_type_ca ca ON crr.ca_service_id = ca.ca_id 
+                                   INNER JOIN service s ON ca.service = s.service_id 
+                                   WHERE s.customer_id = :customer_id AND s.service_type = 'CA'";
+                    $statement = $db->prepare($caCdcQuery);
+                    $statement->bindParam(':customer_id', $_GET['customerid']);
+                    $statement->execute();
+                    $caCdcResult = $statement->fetch();
+
+                    $certificationDateQuery = "SELECT certification_stage_date FROM customer_info WHERE id = :customer";
+                    $statement = $db->prepare($certificationDateQuery);
+                    $statement->bindParam(':customer', $_GET['customerid']);
+                    $statement->execute();
+                    $certifyInfo = $statement->fetch();
+
+                    $baseCertDate = '';
+                    if (isset($caCdcResult['first_date']) && !empty($caCdcResult['first_date'])) {
+                        $baseCertDate = $caCdcResult['first_date'];
+                    } else if (isset($certifyInfo['certification_stage_date']) && !empty($certifyInfo['certification_stage_date'])) {
+                        $baseCertDate = $certifyInfo['certification_stage_date'];
+                    }
+
+                    if (!empty($baseCertDate)) {
+                        // Determine cycle index for this SA-I service based on all SA-I services for this customer.
+                        // Use the service table to avoid missing legacy rows and join audit_date if present. If every SA-I
+                        // has a real audit_date, sort by earliest audit_date (then service id). Otherwise, keep service id
+                        // ordering so missing dates do not swap cycles.
+                        $allSaiServicesQuery = "SELECT s.service_id AS service, stsai.audit_date
+                                                 FROM service s
+                                                 LEFT JOIN service_type_sai stsai ON s.service_id = stsai.service
+                                                 WHERE s.customer_id = :customer_id AND s.service_type = 'SA-I'
+                                                 ORDER BY s.service_id ASC";
+                        $statement = $db->prepare($allSaiServicesQuery);
+                        $statement->bindParam(':customer_id', $_GET['customerid']);
+                        $statement->execute();
+                        $allSaiServices = $statement->fetchAll();
+
+                        $orderedSaiServices = $allSaiServices;
+                        if (!empty($allSaiServices)) {
+                            $allSaiHaveAuditDates = true;
+                            foreach ($allSaiServices as $row) {
+                                if (!isset($row['audit_date']) || empty($row['audit_date']) || $row['audit_date'] == '0000-00-00') {
+                                    $allSaiHaveAuditDates = false;
+                                    break;
+                                }
+                            }
+
+                            if ($allSaiHaveAuditDates) {
+                                usort($orderedSaiServices, function($a, $b) {
+                                    if ($a['audit_date'] == $b['audit_date']) {
+                                        return $a['service'] <=> $b['service'];
+                                    }
+                                    return strtotime($a['audit_date']) <=> strtotime($b['audit_date']);
+                                });
+                            }
+                        }
+
+                        $cycleIndex = 0; // 0 = first SA-I (first cycle), 1 = second SA-I (second cycle), etc.
+                        if (!empty($orderedSaiServices)) {
+                            $serviceOrder = array_values(array_column($orderedSaiServices, 'service'));
+                            $foundIndex = array_search($saiService['service'], $serviceOrder);
+                            if ($foundIndex === false) {
+                                // If somehow missing (data mismatch), treat current as latest cycle to avoid reusing first cycle dates
+                                $foundIndex = count($serviceOrder) - 1;
+                            }
+                            $cycleIndex = max(0, (int)$foundIndex);
+                        }
+
+                        $cycleOffset = 36 * max(0, $cycleIndex);
+
+                        // SA-II reminder offsets from baseCertDate + cycleOffset
+                        $saOffsets = array(
+                            'Suspension Reminder' => 23 + $cycleOffset,
+                            'Suspend Letter'      => 24 + $cycleOffset,
+                            'Withdrawal Reminder' => 26 + $cycleOffset,
+                            'Withdraw Letter'     => 28 + $cycleOffset,
+                        );
+
+                        // Build expected due dates
+                        $expectedDates = array();
+                        foreach ($saOffsets as $actionName => $months) {
+                            $dateExpr = $baseCertDate . ' + ' . $months . ' MONTH';
+                            $dateVal = date("Y-m-d", strtotime('-1 day', strtotime($dateExpr)));
+                            $expectedDates[$actionName] = $dateVal;
+                        }
+
+                        // Map existing actions for this SA-I
+                        $existingActions = array();
+                        foreach ($nextSaiiServiceDates as $row) {
+                            $existingActions[$row['action']] = $row['due_date'];
+                        }
+
+                        // Check if any expected action is missing or has different date
+                        $needsFix = false;
+                        foreach ($expectedDates as $actionName => $expectedDate) {
+                            if (!isset($existingActions[$actionName]) || $existingActions[$actionName] != $expectedDate) {
+                                $needsFix = true;
+                                break;
+                            }
+                        }
+
+                        if ($needsFix) {
+                            foreach ($expectedDates as $actionName => $dueDate) {
+                                if (isset($existingActions[$actionName])) {
+                                    $updateSql = "UPDATE ca_service_dates SET due_date = :due_date WHERE service_id = :serviceid AND action = :action";
+                                    $statement = $db->prepare($updateSql);
+                                    $statement->bindParam(':serviceid', $saiService['service']);
+                                    $statement->bindParam(':action', $actionName);
+                                    $statement->bindParam(':due_date', $dueDate);
+                                    $statement->execute();
+                                } else {
+                                    $insertSql = "INSERT INTO ca_service_dates(service_id, action, due_date) VALUES (:serviceid, :action, :due_date)";
+                                    $statement = $db->prepare($insertSql);
+                                    $statement->bindParam(':serviceid', $saiService['service']);
+                                    $statement->bindParam(':action', $actionName);
+                                    $statement->bindParam(':due_date', $dueDate);
+                                    $statement->execute();
+                                }
+                            }
+
+                            $statement = $db->prepare($saiiActionDatesQuery);
+                            $statement->bindParam(':saiServiceId', $saiService['service']);
+                            $statement->execute();
+                            $nextSaiiServiceDates = $statement->fetchAll();
+                        }
+                    }
+                }
+
+                if ($letestService["c_service"] == $saiService['service']) {
+                    $disp = "";
+                } else {
+                    $disp = "none";
+                }
+                ?> 
+                <div class="servicebox-bunch <?php echo $class3 ?>" style="display: ">
+                    <div class="servicebox" style="display: ">
+                        <form id="saiService" action="serviceTypeSAi.php" method="post" enctype="multipart/form-data">
+                            <div class="row sai-service-row" id="service-row" data-id="<?php echo $saiService['sai_id'] ?>">
+                                <div class="col-xs-12 qms_customer_name service_title" style="text-align: center" data-row-id="">
+                                    Service type - SA-I<span class="serviceStatus"></span> 
+                                    <a class="deleteServiceSai" id="deleteServiceSai" data-service="<?php echo $saiService['service'] ?>" data-row-id="<?php echo $saiService['sai_id'] ?>" data-customer="<?php echo $_GET['customerid'] ?>">
+                                        <i class="fa fa-trash-o pull-right " style="color: white; padding-right: 10px;"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="sai-service-desc<?php echo $saiService['sai_id'] ?>" style="display: <?php echo $disp ?>;">
+                                <div class="row" style="padding-top: 10px;">
+                                    <div class="col-xs-3 form-group float-label-control" style="">
+                                        <label>Add to</label> 
+                                        <select class="addService add-to-service" data-id="<?php echo $saiService['sai_id'] ?>" data-column="service_sai_status" name="add-to-service" style="color: black" value="">
+                                            <option value="<?php if (isset($saiService['service_sai_status'])) echo $saiService['service_sai_status'] ?>">
+                                                <?php
+                                                if (isset($saiService['service_sai_status']) && !empty($saiService['service_sai_status'])) {
+                                                    echo $saiService['service_sai_status'];
+                                                } else {
+                                                    echo "Select add to";
+                                                }
+                                                ?>
+                                                <?php foreach ($addToList as $addTo) { ?>
+                                                <option value="<?php echo $addTo['add_to_type'] ?>"><?php echo $addTo['add_to_type'] ?></option>
+                                            <?php } ?>
+                                        </select>
+                                    </div>
+                                    <div class="col-xs-3 form-group float-label-control" style="">
+                                        <label>Audit Date</label> 
+                                        <input class="serviceAuditDate " placeholder="Audit Date" data-id="<?php echo $saiService['service'] ?>" data-service="saiService" data-column="audit_date" name="serviceAuditDate" style="color: black" value="<?php if (isset($saiService["saiaudit"])) echo $saiService["saiaudit"]; ?>" />
+                                    </div>
+                                    <div class="col-xs-3 form-group float-label-control" style="">
+                                        <label>Team Leader, Auditors(s)</label> 
+                                        <input class="sa1Teamleader" placeholder="Team Leader, Auditors(s)" data-id="<?php echo $saiService['service'] ?>" data-service="saiService" data-column="audit_date" name="sa1Teamleader" style="color: black" value="<?php if (isset($saiService["sai_auditors"])) echo $saiService["sai_auditors"]; ?>" />
+                                    </div>
+                                </div>
+                                <div class="servicebox-data" id="servicebox-data">
+                                    <div class="row">
+                                        <div class="col-sm-6">
+                                            <div class="serviceContentCompleted">
+                                                <span>Information updation form</span>
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <div class=" ">
+                                                        <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
+                                                            <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiService['sai_id'] ?>" service-type="SA-I" data-column="info_update_form" name="input-info-updation-sai" class="applicationFormSai input-info-updation-sai<?php echo $saiService['sai_id'] ?>" /> </span> 
+                                                        <?php if (isset($saiService['info_update_form']) && !empty($saiService['info_update_form'])) { ?>
+                                                            <span style="padding-right: 5px"> 
+                                                                <a href="<?php echo $saiService['info_update_form'] ?>" data-id="" download class="customerReviewFileDownload"><i class="fa fa-download"></i></a>
+                                                            </span> 
+                                                        <?php } ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <?php
+                                            $saiJsonFilePath = 'uploads/reviews/data_' . $saiService['sai_id'] . '_' . $_GET['customerid'] . '.json';
+                                            if ((isset($saiService['info_update_review']) && !empty($saiService['info_update_review'])) || file_exists($saiJsonFilePath)) {
+                                                $infoReviewClass = 'serviceContentCompleted';
+                                            } else if (isset($saiService['info_update_form']) && !empty($saiService['info_update_form'])) {
+                                                $infoReviewClass = 'serviceContentwaiting';
+                                            } else {
+                                                $infoReviewClass = 'serviceContent';
+                                            }
+                                            ?>
+                                            <div class="<?php echo $infoReviewClass ?>"><span>Information Updation Review</span>
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <div class=" ">
+                                                        <?php if ((isset($saiService['info_update_review']) && !empty($saiService['info_update_review'])) || file_exists($saiJsonFilePath)) { 
+                                                            $downloadUrl = isset($saiService['info_update_review']) && !empty($saiService['info_update_review']) ? $saiService['info_update_review'] : '#';
+                                                            $downloadClass = isset($saiService['info_update_review']) && !empty($saiService['info_update_review']) ? 'downloadInfoUpdationReview' : 'downloadInfoUpdationReview disabled';
+                                                            ?>
+                                                            <span style="padding-right: 5px">
+                                                                <a class="openInfoUpdationReview pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiService['sai_id'] ?>" title="Review Information Updation" style="padding: 1px 5px;"><i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i></a>
+                                                            </span>
+                                                            <span style="padding-right: 5px">
+                                                                <a class="<?php echo $downloadClass; ?> pull-right" href="<?php echo $downloadUrl; ?>" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiService['sai_id'] ?>" title="Download Information Updation Review" style="padding: 1px 5px;" <?php echo (empty($saiService['info_update_review']) ? 'onclick="return false;"' : '') ?>><i class="fa fa-download fa-lg " style="padding: 3px"></i></a>
+                                                            </span>
+                                                        <?php } else { ?>
+                                                            <span style="padding-right: 5px">
+                                                                <a class="openInfoUpdationReview pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiService['sai_id'] ?>" title="Add Information Updation Review" style="padding: 1px 5px;"><i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i></a>
+                                                            </span>
+                                                        <?php } ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (isset($saiService['audit_stage_id']) && !empty($saiService['audit_stage_id'])) {
+                                                $saiAudNotiClass = "serviceContentCompleted";
+                                            } else {
+                                                $saiAudNotiClass = "serviceContentwaiting";
+                                            }
+                                            ?>
+                                            <div class="<?php echo $saiAudNotiClass ?>">
+                                                <span>Release Audit Notification </span> 
+                                                <?php if (isset($saiService['info_update_form']) && !empty($saiService['info_update_form']) && empty($saiService['audit_stage_id'])) { ?>
+                                                    <a class="createAuditNotification pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service1="<?php echo $saiService['sai_id'] ?>" data-service="<?php echo $crservice['cr_id'] ?>" data-type="service-type-sai" data-row-id="" title="Add Release Audit Notification" style="padding: 1px 5px;">
+                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } ?>
+                                                <?php if (isset($saiService['audit_stage_id']) && !empty($saiService['audit_stage_id'])) { ?>
+                                                    <a class="editAuditNotification pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiService['sai_id'] ?>" data-type="service-type-sai" data-notification="<?php echo $saiService['audit_stage_id'] ?>" title="Add Release Audit Notification" style="padding: 1px 5px;">
+                                                        <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                    <a class="downloadSaiAuditNoti pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $saiService['sai_id'] ?>" data-audit="<?php echo $saiService['audit_stage_id'] ?>" title="Download audit notification" style="padding: 1px 5px;">
+                                                        <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($saiService['audit_stage_id'])) {
+                                                $saiScheduleClass = 'serviceContent';
+                                            } else if (isset($saiService['audit_stage_id']) && !empty($saiService['audit_stage_id']) && empty($saiService['servelance_id'])) {
+                                                $saiScheduleClass = 'serviceContentwaiting';
+                                            } else if (isset($saiService['audit_stage_id']) && !empty($saiService['audit_stage_id']) && isset($saiService['servelance_id']) && !empty($saiService['servelance_id'])) {
+                                                $saiScheduleClass = 'serviceContentCompleted';
+                                            } else {
+                                                $saiScheduleClass = 'serviceContent';
+                                            }
+                                            ?>
+                                            <div class="<?php echo $saiScheduleClass ?>">
+                                                <span>Release SA Audit Plan (SA-I)</span> 
+                                                <?php if (isset($saiService['audit_stage_id']) && !empty($saiService['audit_stage_id']) && empty($saiService['servelance_id'])) { ?>
+                                                    <a class="createStageServelance pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiService['sai_id'] ?>" data-serviceType="SA-1" data-type="service-type-sai" data-row-id="" title="Add SA Schedule (SA-I)" style="padding: 1px 5px;"><i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i></a> 
+                                                <?php } ?>
+                                                <?php if (isset($saiService['servelance_id']) && !empty($saiService['servelance_id'])) { ?>
+                                                    <a class="editStage1Servelance pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiService['sai_id'] ?>" data-row-id="<?php echo $saiService['servelance_id'] ?>" title="Add Release Audit Notification" style="padding: 1px 5px;"><i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i></a> 
+                                                    <a class="downloadStageScheduleSai pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $saiService['sai_id'] ?>" data-schedulei="<?php echo $saiService['servelance_id'] ?>" title="Download Release Audit Notification" style="padding: 1px 5px;"><i class="fa fa-download fa-lg " style="padding: 3px"></i></a> 
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($saiService['servelance_id'])) {
+                                                $saiSignNoti = 'serviceContent';
+                                            } else if (isset($saiService['servelance_id']) && !empty($saiService['servelance_id']) && empty($saiService['signed_noti_sai'])) {
+                                                $saiSignNoti = 'serviceContentwaiting';
+                                            } else if (isset($saiService['servelance_id']) && !empty($saiService['servelance_id']) && isset($saiService['signed_noti_sai']) && !empty($saiService['signed_noti_sai'])) {
+                                                $saiSignNoti = 'serviceContentCompleted';
+                                            } else {
+                                                $saiSignNoti = 'serviceContent';
+                                            }
+                                            ?>
+                                            <div class="<?php echo $saiSignNoti ?>">
+                                                <span>Signed Notification SA I Audit</span>
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <div class=" ">
+                                                        <?php if (isset($saiService['servelance_id']) && !empty($saiService['servelance_id'])) { ?>
+                                                            <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
+                                                                <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiService['sai_id'] ?>" service-type="SA-I" data-column="signed_noti_sai" name="input-signed-noti-sai" class="signedNotiSai input-signed-noti-sai<?php echo $saiService['sai_id'] ?>" />
+                                                            </span> 
+                                                        <?php } ?> 
+                                                        <?php if (isset($saiService['signed_noti_sai']) && !empty($saiService['signed_noti_sai'])) { ?>
+                                                            <span style="padding-right: 5px"> 
+                                                                <a href="<?php echo $saiService['signed_noti_sai'] ?>" data-id="" download class="customerReviewFileDownload"><i class="fa fa-download"></i></a> 
+                                                            </span>
+                                                        <?php } ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($saiService['signed_noti_sai'])) {
+                                                $saiSignedClass = 'serviceContent';
+                                            } else if (isset($saiService['signed_noti_sai']) && !empty($saiService['signed_noti_sai']) && empty($saiService['signed_copy_sai'])) {
+                                                $saiSignedClass = 'serviceContentwaiting';
+                                            } else if (isset($saiService['signed_noti_sai']) && !empty($saiService['signed_noti_sai']) && isset($saiService['signed_copy_sai']) && !empty($saiService['signed_copy_sai'])) {
+                                                $saiSignedClass = 'serviceContentCompleted';
+                                            } else {
+                                                $saiSignedClass = 'serviceContent';
+                                            }
+                                            ?>
+                                            <div class="<?php echo $saiSignedClass ?>"><span>Audit Plan Scanned Copy</span>
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <div class=" ">
+                                                        <?php if (isset($saiService['signed_noti_sai']) && !empty($saiService['signed_noti_sai'])) { ?>
+                                                            <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
+                                                                <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiService['sai_id'] ?>" service-type="SA-I" data-column="signed_copy_sai" name="input-signed-copy-sai" class="signedCopySai input-signed-copy-sai<?php echo $saiService['sai_id'] ?>" />
+                                                            </span> 
+                                                        <?php } ?> 
+                                                        <?php if (isset($saiService['signed_copy_sai']) && !empty($saiService['signed_copy_sai'])) { ?>
+                                                            <span style="padding-right: 5px"> 
+                                                                <a href="<?php echo $saiService['signed_copy_sai'] ?>" data-id="" download class="customerReviewFileDownload"><i class="fa fa-download"></i></a> 
+                                                            </span>
+                                                        <?php } ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($saiService['signed_copy_sai'])) {
+                                                $saiAuditReportClass = 'serviceContent';
+                                            } else if (isset($saiService['signed_copy_sai']) && !empty($saiService['signed_copy_sai']) && empty($saiService['audit_report_sai'])) {
+                                                $saiAuditReportClass = 'serviceContentwaiting';
+                                            } else if (isset($saiService['signed_copy_sai']) && !empty($saiService['signed_copy_sai']) && isset($saiService['audit_report_sai']) && !empty($saiService['audit_report_sai'])) {
+                                                $saiAuditReportClass = 'serviceContentCompleted';
+                                            } else {
+                                                $saiAuditReportClass = 'serviceContent';
+                                            }
+                                            ?>
+                                            <div class="<?php echo $saiAuditReportClass ?>">
+                                                <span>SA - I Audit Report, Summery and Checklists</span>
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <?php if (isset($saiService['signed_copy_sai']) && !empty($saiService['signed_copy_sai'])) { ?>
+                                                        <span class=" image-preview-input fa fa-upload" style="padding-right: 15px"> 
+                                                            <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiService['sai_id'] ?>" service-type="SA-I" data-column="audit_report_sai" name="input-audit-report-sai" class="auditReportSai input-audit-report-sai<?php echo $saiService['sai_id'] ?>" /> 
+                                                        </span> 
+                                                    <?php } ?> 
+                                                    <?php if (isset($saiService['audit_report_sai']) && !empty($saiService['audit_report_sai'])) { ?>
+                                                        <span style="padding-right: 5px"> 
+                                                            <a href="<?php echo $saiService['audit_report_sai'] ?>" data-id="" download class="customerReviewFileDownload"><i class="fa fa-download"></i></a>
+                                                        </span> 
+                                                    <?php } ?>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($saiService['audit_report_sai'])) {
+                                                $saiAuditReportClass = 'serviceContent';
+                                            } else if (isset($saiService['audit_report_sai']) && !empty($saiService['audit_report_sai']) && empty($saiService['auditor_notes_sai'])) {
+                                                $saiAuditReportClass = 'serviceContentwaiting';
+                                            } else if (isset($saiService['audit_report_sai']) && !empty($saiService['audit_report_sai']) && isset($saiService['auditor_notes_sai']) && !empty($saiService['auditor_notes_sai'])) {
+                                                $saiAuditReportClass = 'serviceContentCompleted';
+                                            } else {
+                                                $saiAuditReportClass = 'serviceContent';
+                                            }
+                                            ?>
+                                            <div class="<?php echo $saiAuditReportClass ?>">
+                                                <span>SA - I Auditor Notes</span>
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <?php if (isset($saiService['audit_report_sai']) && !empty($saiService['audit_report_sai'])) { ?>
+                                                        <span class=" image-preview-input fa fa-upload" style="padding-right: 15px"> 
+                                                            <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiService['sai_id'] ?>" service-type="SA-I" data-column="auditor_notes_sai" name="input-auditor-notes-sai" class="auditorNotesSai input-auditor-notes-sai<?php echo $saiService['sai_id'] ?>" /> 
+                                                        </span> 
+                                                    <?php } ?> 
+                                                    <?php if (isset($saiService['auditor_notes_sai']) && !empty($saiService['auditor_notes_sai'])) { ?>
+                                                        <span style="padding-right: 5px"> 
+                                                            <a href="<?php echo $saiService['auditor_notes_sai'] ?>" data-id="" download class="customerReviewFileDownload"><i class="fa fa-download"></i></a>
+                                                        </span> 
+                                                    <?php } ?>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($saiService['auditor_notes_sai'])) {
+                                                $saiNcClsaa = 'serviceContent';
+                                            } else if (isset($saiService['auditor_notes_sai']) && !empty($saiService['auditor_notes_sai']) && empty($saiService['audit_evidance_sai'])) {
+                                                $saiNcClsaa = 'serviceContentwaiting';
+                                            } else if (isset($saiService['auditor_notes_sai']) && !empty($saiService['auditor_notes_sai']) && isset($saiService['audit_evidance_sai']) && !empty($saiService['audit_evidance_sai'])) {
+                                                $saiNcClsaa = 'serviceContentCompleted';
+                                            } else {
+                                                $saiNcClsaa = 'serviceContent';
+                                            }
+                                            ?>
+                                            <div class="<?php echo $saiNcClsaa ?>">
+                                                <span>SA - I Audit NC And evidences of closer
+                                                    <?php if (isset($saiService['audit_evidance_sai']) && !empty($saiService['audit_evidance_sai']) && $saiService['audit_evidance_sai'] == "NONC" && isset($saiService['auditor_notes_sai']) && !empty($saiService['auditor_notes_sai'])) { ?> 
+                                                        <!--                                                    <a class="" title="No NC Flag" style="padding: 1px 5px;">
+                                                                                                                <i class="fa fa-times-circle fa-lg " style="padding: 3px"></i>
+                                                                                                            </a>-->
+                                                        *(No NC)<?php } ?>
+                                                </span>
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <div class=" ">
+                                                        <?php if (isset($saiService['auditor_notes_sai']) && !empty($saiService['auditor_notes_sai']) && empty($saiService['audit_evidance_sai'])) { ?>
+                                                            <span class=" image-preview-input" style="padding-right: 15px"> 
+                                                                <input type="checkbox" class="no_nc_file" name="no_nc_file" data-svctype="SA-1" data-service="<?php echo $saiService['sai_id'] ?>" value="">
+                                                            </span>
+                                                        <?php } ?>
+                                                        <?php if (isset($saiService['audit_evidance_sai']) && !empty($saiService['audit_evidance_sai']) && $saiService['audit_evidance_sai'] == "NONC" && isset($saiService['auditor_notes_sai']) && !empty($saiService['auditor_notes_sai'])) { ?>
+                                                            <span class=" image-preview-input" style="padding-right: 15px"> 
+                                                                <input type="checkbox" class="no_nc_file" name="no_nc_file" data-svctype="SA-1" data-service="<?php echo $saiService['sai_id'] ?>" checked>
+                                                            </span>                                                     
+                                                        <?php } ?>
+                                                        <?php if (isset($saiService['audit_evidance_sai']) && !empty($saiService['audit_evidance_sai']) && isset($saiService['auditor_notes_sai']) && !empty($saiService['auditor_notes_sai']) && $saiService['audit_evidance_sai'] <> "NONC") { ?>
+                                                            <span class=" image-preview-input" style="padding-right: 15px"> 
+                                                                <input type="checkbox" class="no_nc_file" name="no_nc_file" data-svctype="SA-1" data-service="<?php echo $saiService['sai_id'] ?>">
+                                                            </span>                                                     
+                                                        <?php } ?>
+                                                        <?php if (isset($saiService['auditor_notes_sai']) && !empty($saiService['auditor_notes_sai'])) { ?>
+                                                            <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
+                                                                <input type="file"accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiService['sai_id'] ?>" service-type="SA-I" data-column="audit_evidance_sai" name="input-audit-evidance-sai" class="auditEvidanceSai input-audit-evidance-sai<?php echo $saiService['sai_id'] ?>" />
+                                                            </span>
+                                                        <?php } ?>
+                                                        <?php if (isset($saiService['audit_evidance_sai']) && !empty($saiService['audit_evidance_sai']) && $saiService['audit_evidance_sai'] != "NONC" && isset($saiService['auditor_notes_sai']) && !empty($saiService['auditor_notes_sai'])) { ?>                                                    
+                                                            <span style="padding-right: 5px"> 
+                                                                <a href="<?php echo $saiService['audit_evidance_sai'] ?>" data-id="" download class="customerReviewFileDownload"><i class="fa fa-download"></i></a>
+                                                            </span>
+                                                        <?php } ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($saiService['audit_evidance_sai'])) {
+                                                $saiAnexIIClass = 'serviceContent';
+                                            } else if (isset($saiService['audit_evidance_sai']) && !empty($saiService['audit_evidance_sai']) && empty($saiService['stage_ii_id'])) {
+                                                $saiAnexIIClass = 'serviceContentwaiting';
+                                            } else if (isset($saiService['audit_evidance_sai']) && !empty($saiService['audit_evidance_sai']) && isset($saiService['stage_ii_id']) && !empty($saiService['stage_ii_id'])) {
+                                                $saiAnexIIClass = 'serviceContentCompleted';
+                                            } else {
+                                                $saiAnexIIClass = 'serviceContent';
+                                            }
+                                            ?>
+                                            <div class="<?php echo $saiAnexIIClass ?>">
+                                                <span>Review Report (Annex II)- SA - I Audit</span> 
+                                                <?php if ((isset($saiService['audit_evidance_sai']) && !empty($saiService['audit_evidance_sai']) && empty($saiService['stage_ii_id'])) || (isset($saiService['servelance_id']) && empty($saiService['signed_copy_sai']) && empty($saiService['audit_report_sai']) && empty($saiService['auditor_notes_sai']) && empty($saiService['audit_evidance_sai']) && empty($saiService['stage_ii_id']) && (Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin()))) { ?>
+                                                    <a class="stageIIAuditSai pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiService['sai_id'] ?>" data-type="service-type-sai" data-row-id="" title="Add SA Schedule (SA-I)" style="padding: 1px 5px;">
+                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } ?>
+                                                <?php if (isset($saiService['stage_ii_id']) && !empty($saiService['stage_ii_id'])) { ?>
+                                                    <a class="editstageIIAudit2  pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiService['sai_id'] ?>" data-notification="<?php echo $saiService['stage_ii_id'] ?>" title="Add Review Report(Annex II)" style="padding: 1px 5px;">
+                                                        <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                    <a class="downloadAnnexIISai pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $saiService['sai_id'] ?>" data-stage-ii="<?php echo $saiService['stage_ii_id'] ?>" title="Download Review Report (Annex II)" style="padding: 1px 5px;">
+                                                        <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($saiService['stage_ii_id'])) {
+                                                $saiCDCclass = 'serviceContent';
+                                            } else if (isset($saiService['stage_ii_id']) && !empty($saiService['stage_ii_id']) && empty($saiService['crr_id'])) {
+                                                $saiCDCclass = 'serviceContentwaiting';
+                                            } else if (isset($saiService['stage_ii_id']) && !empty($saiService['stage_ii_id']) && isset($saiService['crr_id']) && !empty($saiService['crr_id'])) {
+                                                $saiCDCclass = 'serviceContentCompleted';
+                                            } else {
+                                                $saiCDCclass = 'serviceContent';
+                                            }
+                                            ?>
+                                            <div class="<?php echo $saiCDCclass ?>">
+                                                <span>Review Report - CDC DELIBERATION AND DECISION</span> 
+                                                <?php 
+                                                // Only show CDC button if Review Report (Annex II) - Stage II Audit is submitted (stage_ii_id exists)
+                                                // AND CDC is not yet created (crr_id is empty)
+                                                if (isset($saiService['stage_ii_id']) && !empty($saiService['stage_ii_id']) && empty($saiService['crr_id'])) { ?>                                                
+                                                    <a class="cdcReport pull-right" data-svctype="SA1" data-id="<?php echo $saiService['service'] ?>" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiService['sai_id'] ?>" data-caservice="<?php echo $caservice['ca_id'] ?>" data-service1="<?php echo $crservice['cr_id'] ?>" data-type="service-type-sai" data-row-id="" audit-data="SA-I" title="Add CDC DELIBERATION AND DECISION" style="padding: 1px 5px;">
+                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } else if (isset($saiService['crr_id']) && !empty($saiService['crr_id'])) { ?>
+                                                    <a class="editCDC pull-right" data-svctype="SA1" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiService['sai_id'] ?>" data-notification="<?php echo $saiService['crr_id'] ?>" title="Edit CDC DELIBERATION AND DECISION" style="padding: 1px 5px;">
+                                                        <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                    </a>
+                                                    <a class="sendCdcMail pull-right" data-svctype="SA1" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiService['sai_id'] ?>" data-crr="<?php echo $saiService['crr_id'] ?>" title="Send certificate by email" style="padding: 1px 5px;">
+                                                        <i class="fa fa-envelope fa-lg" style="padding: 3px"></i>
+                                                    </a>
+                                                    <a class="downloadCDCsai pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $saiService['sai_id'] ?>" data-crr="<?php echo $saiService['crr_id'] ?>" title="Download  CDC DELIBERATION AND DECISION" style="padding: 1px 5px;">
+                                                        <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                    </a>
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+<!-- this code is validated by gaurav oli  -->
+
+
+  
+
+
+
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($saiService['crr_id'])) {
+                                                $saiCertify = "serviceContent";
+                                            } else if (isset($saiService['crr_id']) && !empty($saiService['crr_id'])) {
+                                                $saiCertify = "serviceContentCompleted";
+                                            } else {
+                                                $saiCertify = "serviceContent";
+                                            }
+                                            ?>
+                                            <div class="<?php echo $saiCertify; ?>" >
+                                                <span>Certificate Print</span> 
+                                                <?php if (isset($saiService['crr_id']) && !empty($saiService['crr_id'])) { ?>
+                                                    <a class="download-certificate-print pull-right"  data-customer="<?php echo $_GET['customerid'] ?>"  data-service="<?php echo $saiService['sai_id'] ?>" data-id="<?php echo $saiService['service'] ?>" data-certificate="<?php echo !empty($saiService['certificate_id']) ? $saiService['certificate_id'] : '' ?>" data-crr="<?php echo $saiService['crr_id'] ?>" data-row-count="" title="Certificate Print" style="padding: 1px 5px;">
+                                                        <i  class="fa fa-download fa-lg" style="padding: 3px"></i>
+                                                    </a> <?php } ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-sm-6"><?php
+                                            if (empty($saiService['crr_id'])) {
+                                                $saiSurvayClass = 'serviceContent';
+                                            } else if (isset($saiService['crr_id']) && !empty($saiService['crr_id']) && empty($saiService['certificate_print'])) {
+                                                $saiSurvayClass = 'serviceContentwaiting';
+                                            } else if (isset($saiService['certificate_print']) && !empty($saiService['certificate_print'])) {
+                                                $saiSurvayClass = 'serviceContentCompleted';
+                                            } else {
+                                                $saiSurvayClass = 'serviceContent';
+                                            }
+                                            ?>
+                                            <div class="<?php echo $saiSurvayClass ?>">
+                                                <span>Certificate Upload</span>
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <div class=" ">
+                                                        <?php if (isset($saiService['crr_id']) && !empty($saiService['crr_id'])) { ?>
+                                                            <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
+                                                                <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiService['sai_id'] ?>" service-type="SA-I" data-column="certificate_print" name="input-certificate-print-sai" class="auditCertificatePrintSai input-certificate-print-sai<?php echo $saiService['sai_id'] ?>" />
+                                                            </span> 
+                                                        <?php } ?> 
+                                                        <?php if (isset($saiService['certificate_print']) && !empty($saiService['certificate_print'])) { ?>
+                                                            <span style="padding-right: 5px"> <a href="<?php echo $saiService['certificate_print'] ?>" data-id="" download class="customerReviewFileDownload"><i class="fa fa-download"></i></a></span> 
+                                                        <?php } ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6"><?php
+                                            if (empty($saiService['certificate_print'])) {
+                                                $saiSurvayClass = 'serviceContent';
+                                            } else if (isset($saiService['certificate_print']) && !empty($saiService['certificate_print']) && empty($saiService['customer_review_sai'])) {
+                                                $saiSurvayClass = 'serviceContentwaiting';
+                                            } else if (isset($saiService['certificate_print']) && !empty($saiService['certificate_print']) && isset($saiService['customer_review_sai']) && !empty($saiService['customer_review_sai'])) {
+                                                $saiSurvayClass = 'serviceContentCompleted';
+                                            } else {
+                                                $saiSurvayClass = 'serviceContent';
+                                            }
+                                            ?>
+                                            <div class="<?php echo $saiSurvayClass ?>">
+                                                <span>Client Feedback
+                                                    <?php if (isset($saiService['customer_review_sai']) && !empty($saiService['customer_review_sai']) && $saiService['customer_review_sai'] == "NONC" && isset($saiService['certificate_print']) && !empty($saiService['certificate_print'])) { ?> 
+                                                        <!--                                                    <a class="" title="No Client Feedback Flag" style="padding: 1px 5px;">
+                                                                                                                <i class="fa fa-times-circle fa-lg " style="padding: 3px"></i>
+                                                                                                            </a>-->
+                                                        *(No Client Feedback)<?php } ?>
+                                                </span>
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <?php if (isset($saiService['certificate_print']) && !empty($saiService['certificate_print']) && empty($saiService['customer_review_sai'])) { ?>
+                                                        <span class="image-preview-input" style="padding-right: 15px"> 
+                                                            <input type="checkbox" class="no_feedback_file" name="no_feedback_file" data-svctype="SA-I" data-service="<?php echo $saiService['sai_id'] ?>" >
+                                                        </span>
+                                                    <?php } ?>
+                                                    <?php if (isset($saiService['customer_review_sai']) && !empty($saiService['customer_review_sai']) && $saiService['customer_review_sai'] == "NONC" && isset($saiService['certificate_print']) && !empty($saiService['certificate_print'])) { ?>
+                                                        <span class="image-preview-input" style="padding-right: 15px"> 
+                                                            <input type="checkbox" class="no_feedback_file" name="no_feedback_file" data-svctype="SA-I" data-service="<?php echo $saiService['sai_id'] ?>" checked>
+                                                        </span>                                                     
+                                                    <?php } ?>
+                                                    <?php if (isset($saiService['customer_review_sai']) && !empty($saiService['customer_review_sai']) && isset($saiService['certificate_print']) && !empty($saiService['certificate_print']) && $saiService['customer_review_sai'] <> "NONC") { ?>
+                                                        <span class="image-preview-input" style="padding-right: 15px"> 
+                                                            <input type="checkbox" class="no_feedback_file" name="no_feedback_file" data-svctype="SA-I" data-service="<?php echo $saiService['sai_id'] ?>">
+                                                        </span>                                                     
+                                                    <?php } ?>
+                                                    <?php if (isset($saiService['certificate_print']) && !empty($saiService['certificate_print'])) { ?>
+                                                        <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
+                                                            <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiService['sai_id'] ?>" service-type="SA-I" data-column="customer_review_sai" name="input-customer-review-sai" class="auditCustomerReviewSai input-customer-review-sai<?php echo $saiService['sai_id'] ?>" />
+                                                        </span>
+                                                    <?php } ?>
+                                                    <?php if (isset($saiService['customer_review_sai']) && !empty($saiService['customer_review_sai']) && $saiService['customer_review_sai'] != "NONC") { ?>                                                    
+                                                        <span style="padding-right: 5px"> 
+                                                            <a href="<?php echo $saiService['customer_review_sai'] ?>" data-id="" download class="customerReviewFileDownload"><i class="fa fa-download"></i></a>
+                                                        </span> 
+                                                    <?php } ?>
+                                                </div>
+
+                                                <!--                                                <div style="float: right" class="image-preview form-inline">
+                                                <?php if (isset($saiService['certificate_print']) && !empty($saiService['certificate_print'])) { ?>
+                                                                                                                                                                                                                    <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
+                                                                                                                                                                                                                    <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiService['sai_id'] ?>" service-type="SA-I" data-column="customer_review_sai" name="input-customer-review-sai" class="auditCustomerReviewSai input-customer-review-sai<?php echo $saiService['sai_id'] ?>" />
+                                                                                                                                                                                                                    </span> 
+                                                <?php } ?> 
+                                                <?php if (isset($saiService['customer_review_sai']) && !empty($saiService['customer_review_sai'])) { ?>
+                                                                                                                                                                                                                    <span style="padding-right: 5px"> <a href="<?php echo $saiService['customer_review_sai'] ?>" data-id="" download class="customerReviewFileDownload"><i class="fa fa-download"></i></a></span> 
+                                                <?php } ?>
+                                                                                                </div>-->
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-sm-6"><?php
+                                            if (empty($saiService['customer_review_sai'])) {
+                                                $saiSurvayRvClass = 'serviceContent';
+                                            } else if (isset($saiService['customer_review_sai']) && !empty($saiService['customer_review_sai']) && empty($saiService['survey_id'])) {
+                                                $saiSurvayRvClass = 'serviceContentwaiting';
+                                            } else if (isset($saiService['customer_review_sai']) && !empty($saiService['customer_review_sai']) && isset($saiService['survey_id']) && !empty($saiService['survey_id'])) {
+                                                $saiSurvayRvClass = 'serviceContentCompleted';
+                                            } else {
+                                                $saiSurvayRvClass = 'serviceContent';
+                                            }
+                                            ?>
+                                            <div class="<?php echo $saiSurvayRvClass ?>">
+                                                <span>Review Report - Review of feedback</span> 
+                                                <?php if (isset($saiService['customer_review_sai']) && !empty($saiService['customer_review_sai']) && empty($saiService['survey_id'])) { ?>
+                                                    <a class="createCustomerSurvey pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiService['sai_id'] ?>" data-id="<?php echo $saiService['service'] ?>" data-svc="SA-I" data-row-id="" data-row-count="" title="Add Review of feedback" style="padding: 1px 5px;">
+                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i></a> 
+                                                <?php } ?> 
+                                                <?php if (isset($saiService['survey_id']) && !empty($saiService['survey_id'])) { ?>
+                                                    <a class="editCustomerSurvey  pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiService['sai_id'] ?>" data-row-id="<?php echo $saiService['survey_id'] ?>" data-row-count="" title="Update Review of feedback" style="padding: 1px 5px;"><i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i></a> 
+                                                    <a class="downloadSaiSurvey pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $saiService['sai_id'] ?>" data-surveyid="<?php echo $saiService['survey_id'] ?>" title="Download  Review of feedback" style="padding: 1px 5px;"><i class="fa fa-download fa-lg " style="padding: 3px"></i></a> 
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <input type="hidden" class="saiCustomerId" name="saiCustomerId" value="<?php echo $_GET['customerid'] ?>">
+                            </div>
+                        </form>
+                    </div>
+                    <div class="saidates<?php echo $saiService['sai_id'] ?>" style="display: <?php echo $disp ?>;">
+                        <div class="servicebox-bunch">
+                            <div class="servicebox" style="display: ">
+                                <div class="row" id="service-row" class="service-row">
+                                    <div class="col-xs-12 aitf_service_date" style="text-align: center"  data-row-id="">
+                                        LETTERS &amp; ACTIONS OF CLIENT STATUS - for the next service: SA-II<span class="serviceStatus"></span>
+                                    </div>
+                                </div>
+                                <div class="servicebox-data" id="servicebox-data">
+                                    <div class="row">
+                                        <div class="col-xs-12 table-responsive">
+                                            <table class="table table-bordered table-hover table-sortable service_details" id="service_details">
+                                                <thead>
+                                                    <tr>
+                                                        <th class="" width="20%" style="padding: 2px"><small>Action</small></th>
+                                                        <th class="" width="20%" style="padding: 2px"><small>Proposed due on date</small></th>
+                                                        <th class="" width="20%" style="padding: 2px"><small>Sent on date</small></th>
+                                                        
+                                                        <!-- update-->
+                                                        <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+                                                        <th class="" width="4%" style="padding: 2px"><small>Actions</small></th>
+                                                        <?php } ?>
+                                                        <th class="" width="4%" style="padding: 2px"><small>Pdf</small></th>
+                                                        <th class="" width="4%" style="padding: 2px"><small>Generate</small></th>
+                                                        <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+                                                            <th class="" width="4%" style="padding: 2px">
+                                                                <small>Delete</small>
+                                                            </th>
+                                                        <?php } ?>
+
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="">
+                                                    <?php foreach ($nextSaiiServiceDates as $saiiActions) { ?>
+                                                        <tr class=" previousCBData" style="display: ">
+                                                            
+                                                            <!-- 1 actions-->
+                                                            <td class="" style="padding: 0px;">
+                                                                <div class="table-edit-control">
+                                                                    <small><?php echo $saiiActions['action'] ?></small>
+                                                                </div>
+                                                            </td>
+                                                            
+                                                            
+                                                            <!-- due dates from ca_service  dates-->
+                                                            <td class="" style="padding: 0px;">
+                                                                <div class="table-edit-control">
+                                                                    <small><?php echo simpleDateConversion($saiiActions['due_date']) ?></small>
+                                                                </div>
+                                                            </td>
+                                                            
+                                                            <!-- sent date-->
+                                                            <td class="" style="padding: 0px;">
+                                                                <div class="table-edit-control">
+                                                                    <small><?php echo simpleDateConversion($saiiActions['sent_date']) ?></small>
+                                                                </div>
+                                                            </td>
+                                                            <!-- edit / update actions-->
+                                                            
+                                                            <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+                                                            <td class="" style="padding: 0px;">
+                                                                <a href="editcadates.php?id=<?php echo $saiiActions['action_id'] ?>">
+                                                                    <i class="fa fa-pencil-square fa-sm " style="padding: 1px"></i>
+                                                                </a>
+                                                            
+                                                            </td>
+                                                            
+                                                            <?php } ?>
+                                                            <td class="" style="padding: 0px;">
+                                                                <?php
+                                                                //echo date("Y-m-d")."->".$saiiActions['sent_date'];
+                                                                if (date("Y-m-d") >= $saiiActions['due_date']) {
+                                                                    ?> 
+                                                                    <a class="PreviewPDF" data-servicetype="SA-II" data-due="<?php echo simpleDateConversion($saiiActions['due_date']) ?>" data-action-pdf="<?php echo $saiiActions['action'] ?>" data-action="<?php echo $saiiActions['action_id'] ?>" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiiActions['service_id'] ?>" data-column="pdf">
+                                                                        <i class="fa fa-file-pdf-o" aria-hidden="true"></i>
+                                                                    </a>
+                                                                <?php } ?>
+                                                            </td>
+                                                            <td class="" style="padding: 0px;">
+                                                                <?php if (date("Y-m-d") >= $saiiActions['due_date']) { ?>
+                                                                    <a class="caServiceGanerate" data-servicetype="SA-II" data-due="<?php echo simpleDateConversion($saiiActions['due_date']) ?>" data-action-pdf="<?php echo $saiiActions['action'] ?>" data-action="<?php echo $saiiActions['action_id'] ?>" data-service="<?php echo $saiiActions['service_id'] ?>"  data-customer="<?php echo $_GET['customerid'] ?>" data-actiontype="<?php echo $saiiActions['action'] ?>" data-column="generate">
+                                                                        <i class="fa fa-envelope-o" aria-hidden="true"></i>
+                                                                    </a> 
+                                                                <?php } ?>
+                                                            </td>
+                                                            <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+                                                                <?php
+                                                                if ($saiiActions["is_deleted"] == 'Y') {
+                                                                    $setDelete2 = "disabled='disabled'";
+                                                                } else {
+                                                                    $setDelete2 = "";
+                                                                }
+                                                                ?>
+                                                                <td class="" style="padding: 0px;">
+                                                                    <a class="deleteLetterAccount" title="Delete" data-customer='<?php echo $_GET['customerid'] ?>' data-service='<?php echo $saiiActions['service_id'] ?>' data-action ="<?php echo $saiiActions['action_id'] ?>" style="float: right; margin-right: 10px" <?php echo $setDelete2; ?>><i class="fa fa-trash"></i></a>
+                                                                </td>
+                                                            <?php } ?>
+                                                        </tr>
+                                                    <?php } ?>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                
+                
+                <!--Edit Modal -->
+                    <!-- Button trigger modal -->
+                    <!--<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModal">-->
+                    <!--  Launch demo modal-->
+                    <!--</button>-->
+                    
+                    <!-- Modal -->
+                <!--    <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">-->
+                <!--      <div class="modal-dialog">-->
+                <!--        <div class="modal-content">-->
+                <!--          <div class="modal-header">-->
+                <!--            <h5 class="modal-title" id="exampleModalLabel">Modal title</h5>-->
+                <!--            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>-->
+                <!--          </div>-->
+                <!--          <div class="modal-body">-->
+                <!--            ...-->
+                <!--          </div>-->
+                <!--          <div class="modal-footer">-->
+                <!--            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>-->
+                <!--            <button type="button" class="btn btn-primary">Save changes</button>-->
+                <!--          </div>-->
+                <!--        </div>-->
+                <!--      </div>-->
+                <!--    </div>-->
+                <!--Edit modal-->
+                <?php
+            }
+            if ($service['service_type'] == "SA-II") {
+                $saiiid = "SA-II";
+                if (isset($saiiCount['service_done']) && $saiiCount['service_done'] == "DONE") {
+                    $class5 = 'sa-ii-service-type';
+                    $class6 = "sa-ii-service-type";
+                } else if (isset($saiiCount['service_done']) && $saiiCount['service_done'] == "") {
+                    $class5 = "sa-ii-service-type";
+                    $class6 = "";
+                } else {
+                    $class5 = "";
+                    $class6 = "sa-ii-service-type";
+                }
+
+                $saIIService = "SELECT DISTINCT saii.saii_id, service, update_info_saii, signed_noti_saii, signed_copy_saii, audit_report_saii, auditor_notes_saii, certificate_print, audit_evidences_saii,customer_review_saii, service_saii_ststus, saii.audit_date as saiiaudit, saii.auditors as saii_auditor, soi.audit_stage_id, asii.servelance_id, siea.stage_ii_id, crr.crr_id, cusi.survey_id, cfp.certificate_id FROM service_type_saii saii left join stage_oneaudit_id soi on saii.saii_id = soi.ca_service_id left join servelance_1_id asii on saii.saii_id = asii.service_id left join stage_ii_audit_id siea on saii.saii_id = siea.ca_service_id left join cdc_report_review crr on saii.saii_id = crr.ca_service_id left join customer_survey_id cusi on saii.saii_id = cusi.ca_serviceid left join certificate_print cfp on saii.saii_id = cfp.service_id WHERE saii.service = :id GROUP BY saii.saii_id";
+                $statement = $db->prepare($saIIService);
+                $statement->bindParam(':id', $service["service_id"]);
+                $statement->execute();
+                $saiiService = $statement->fetch();
+
+                // Fetch RC dates for SA-II ONLY if SA-II CDC has been saved (crr_id exists)
+                $saiiServiceDates = array();
+
+                // For old clients, if RC date rows already exist for this SA-II but crr_id is empty,
+                // treat it as legacy CDC so that recalculation runs.
+                if ((!isset($saiiService['crr_id']) || empty($saiiService['crr_id']))) {
+                    $legacySaiiRcCheck = "SELECT 1 FROM ca_service_dates WHERE service_id = :id AND action IN ('1st Reminder', '2nd Reminder', 'Expire Letter') LIMIT 1";
+                    $statement = $db->prepare($legacySaiiRcCheck);
+                    $statement->bindParam(':id', $saiiService['service']);
+                    $statement->execute();
+                    $legacySaiiRcRow = $statement->fetch();
+                    if ($legacySaiiRcRow) {
+                        $saiiService['crr_id'] = 'LEGACY';
+                    }
+                }
+
+                if (isset($saiiService['crr_id']) && !empty($saiiService['crr_id'])) {
+                    $saiiServiceDate = "SELECT MIN(action_id) as action_id, service_id, action, due_date, MAX(sent_date) as sent_date, MAX(is_deleted) as is_deleted FROM ca_service_dates WHERE service_id = :id AND action IN ('1st Reminder', '2nd Reminder', 'Expire Letter') GROUP BY service_id, action, due_date ORDER BY due_date ASC";
+                    $statement = $db->prepare($saiiServiceDate);
+                    $statement->bindParam(':id', $saiiService['service']);
+                    $statement->execute();
+                    $saiiServiceDates = $statement->fetchAll();
+
+                    if (!empty($saiiServiceDates)) {
+                        // Use earliest CA CDC date as master certification base date
+                        $caCdcQuery = "SELECT MIN(crr.Date) AS first_date FROM cdc_report_review crr 
+                                       INNER JOIN service_type_ca ca ON crr.ca_service_id = ca.ca_id 
+                                       INNER JOIN service s ON ca.service = s.service_id 
+                                       WHERE s.customer_id = :customer_id AND s.service_type = 'CA'";
+                        $statement = $db->prepare($caCdcQuery);
+                        $statement->bindParam(':customer_id', $_GET['customerid']);
+                        $statement->execute();
+                        $caCdcResult = $statement->fetch();
+
+                        $certificationDateQuery = "SELECT certification_stage_date FROM customer_info WHERE id = :customer";
+                        $statement = $db->prepare($certificationDateQuery);
+                        $statement->bindParam(':customer', $_GET['customerid']);
+                        $statement->execute();
+                        $certifyDate = $statement->fetch();
+
+                        $baseCertDate = '';
+                        if (isset($caCdcResult['first_date']) && !empty($caCdcResult['first_date'])) {
+                            $baseCertDate = $caCdcResult['first_date'];
+                        } else if (isset($certifyDate['certification_stage_date']) && !empty($certifyDate['certification_stage_date'])) {
+                            $baseCertDate = $certifyDate['certification_stage_date'];
+                        }
+
+                        if (!empty($baseCertDate)) {
+                            // Determine cycle index for this SA-II based on all SA-II services for the customer. Join audit_date
+                            // from SA-II table; if all have audit_date, order by it then service id; otherwise keep service id order.
+                            $allSaiiServicesQuery = "SELECT s.service_id AS service, st.audit_date
+                                                     FROM service s
+                                                     LEFT JOIN service_type_saii st ON s.service_id = st.service
+                                                     WHERE s.customer_id = :customer_id AND s.service_type = 'SA-II'
+                                                     ORDER BY s.service_id ASC";
+                            $statement = $db->prepare($allSaiiServicesQuery);
+                            $statement->bindParam(':customer_id', $_GET['customerid']);
+                            $statement->execute();
+                            $allSaiiServices = $statement->fetchAll();
+
+                            $orderedSaiiServices = $allSaiiServices;
+                            if (!empty($allSaiiServices)) {
+                                $allSaiiHaveAuditDates = true;
+                                foreach ($allSaiiServices as $row) {
+                                    if (!isset($row['audit_date']) || empty($row['audit_date']) || $row['audit_date'] == '0000-00-00') {
+                                        $allSaiiHaveAuditDates = false;
+                                        break;
+                                    }
+                                }
+
+                                if ($allSaiiHaveAuditDates) {
+                                    usort($orderedSaiiServices, function($a, $b) {
+                                        if ($a['audit_date'] == $b['audit_date']) {
+                                            return $a['service'] <=> $b['service'];
+                                        }
+                                        return strtotime($a['audit_date']) <=> strtotime($b['audit_date']);
+                                    });
+                                }
+                            }
+
+                            $cycleIndex = 0; // 0 = first SA-II (first cycle), 1 = second SA-II (second cycle), etc.
+                            if (!empty($orderedSaiiServices)) {
+                                $serviceOrder = array_values(array_column($orderedSaiiServices, 'service'));
+                                $foundIndex = array_search($saiiService['service'], $serviceOrder);
+                                if ($foundIndex === false) {
+                                    $foundIndex = count($serviceOrder) - 1;
+                                }
+                                $cycleIndex = max(0, (int)$foundIndex);
+                            }
+
+                            $cycleOffset = 36 * max(0, $cycleIndex);
+
+                            $reminderOffsets = array(
+                                '1st Reminder' => 34 + $cycleOffset,
+                                '2nd Reminder' => 35 + $cycleOffset,
+                                'Expire Letter' => 36 + $cycleOffset,
+                            );
+
+                            $expectedDates = array();
+                            foreach ($reminderOffsets as $actionName => $months) {
+                                $dateExpr = $baseCertDate . ' + ' . $months . ' MONTH';
+                                $dateVal = date("Y-m-d", strtotime('-1 day', strtotime($dateExpr)));
+                                $expectedDates[$actionName] = $dateVal;
+                            }
+
+                            // Map existing actions for this SA-II
+                            $existingActions = array();
+                            foreach ($saiiServiceDates as $row) {
+                                $existingActions[$row['action']] = $row['due_date'];
+                            }
+
+                            $needsFix = false;
+                            foreach ($expectedDates as $actionName => $expectedDate) {
+                                if (!isset($existingActions[$actionName]) || $existingActions[$actionName] != $expectedDate) {
+                                    $needsFix = true;
+                                    break;
+                                }
+                            }
+
+                            if ($needsFix) {
+                                foreach ($expectedDates as $actionName => $dueDate) {
+                                    if (isset($existingActions[$actionName])) {
+                                        $updateSql = "UPDATE ca_service_dates SET due_date = :due_date WHERE service_id = :serviceid AND action = :action";
+                                        $statement = $db->prepare($updateSql);
+                                        $statement->bindParam(':serviceid', $saiiService['service']);
+                                        $statement->bindParam(':action', $actionName);
+                                        $statement->bindParam(':due_date', $dueDate);
+                                        $statement->execute();
+                                    } else {
+                                        $insertSql = "INSERT INTO ca_service_dates(service_id, action, due_date) VALUES (:serviceid, :action, :due_date)";
+                                        $statement = $db->prepare($insertSql);
+                                        $statement->bindParam(':serviceid', $saiiService['service']);
+                                        $statement->bindParam(':action', $actionName);
+                                        $statement->bindParam(':due_date', $dueDate);
+                                        $statement->execute();
+                                    }
+                                }
+
+                                $statement = $db->prepare($saiiServiceDate);
+                                $statement->bindParam(':id', $saiiService['service']);
+                                $statement->execute();
+                                $saiiServiceDates = $statement->fetchAll();
+                            }
+                        }
+                    }
+                }
+
+                if ($letestService["c_service"] == $saiiService['service']) {
+                    $disp = "";
+                } else {
+                    $disp = "none";
+                }
+                ?>
+                <div class="servicebox-bunch <?php echo $class5 ?>" style="display: ">
+                    <div class="servicebox" style="display: ">
+                        <form id="saiiService" action="serviceTypeSAii.php" method="post" enctype="multipart/form-data">
+                            <div class="row saii-service-row" id="service-row" data-id="<?php echo $saiiService['saii_id'] ?>">
+                                <div class="col-xs-12 qms_customer_name service_title" style="text-align: center" data-row-id="">
+                                    Service type - SA-II<span class="serviceStatus"></span>
+                                    <a class="deleteServiceSAII" id="deleteServiceSAII" data-service="<?php echo $saiiService['service'] ?>" data-row-id="<?php echo $saiiService['saii_id'] ?>" data-customer="<?php echo $_GET['customerid'] ?>">
+                                        <i class="fa fa-trash-o pull-right " style="color: white; padding-right: 10px;"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="saii-service-desc<?php echo $saiiService['saii_id'] ?>" style="display: <?php echo $disp ?>;">
+                                <div class="row" style="padding-top: 10px;">
+                                    <div class="col-xs-3 form-group float-label-control" style="">
+                                        <label>Add to</label> 
+                                        <select class="addService add-to-service" data-id="<?php echo $saiiService['saii_id'] ?>" data-column="service_saii_ststus" name="add-to-service" style="color: black" value="">
+                                            <option value="<?php if (isset($saiiService['service_saii_ststus'])) echo $saiiService['service_saii_ststus'] ?>">
+                                                <?php
+                                                if (isset($saiiService['service_saii_ststus']) && !empty($saiiService['service_saii_ststus'])) {
+                                                    echo $saiiService['service_saii_ststus'];
+                                                } else {
+                                                    echo "Select add to";
+                                                }
+                                                ?> 
+                                                <?php foreach ($addToList as $addTo) { ?>
+                                                <option value="<?php echo $addTo['add_to_type'] ?>"><?php echo $addTo['add_to_type'] ?></option>
+                                            <?php } ?>
+                                        </select>
+                                    </div>
+                                    <div class="col-xs-3 form-group float-label-control" style="">
+                                        <label>Audit Date</label> 
+                                        <input class="serviceAuditDate " placeholder="Audit Date" data-id="<?php echo $saiiService['service'] ?>" data-service="saiiService" data-column="audit_date" name="serviceAuditDate" style="color: black" value="<?php if (isset($saiiService["saiiaudit"])) echo $saiiService["saiiaudit"]; ?>" />
+                                    </div>
+                                    <div class="col-xs-3 form-group float-label-control" style="">
+                                        <label>Team Leader, Auditor(s)</label> 
+                                        <input class="servelance2auditors " placeholder="Team Leader, Auditor(s)" data-id="<?php echo $saiiService['service'] ?>" data-service="saiiService" data-column="audit_date" name="servelance2auditors" style="color: black" value="<?php if (isset($saiiService["saii_auditor"])) echo $saiiService["saii_auditor"]; ?>" />
+                                    </div>
+                                </div>
+                                <div class="servicebox-data" id="servicebox-data">
+                                    <div class="row">
+                                        <div class="col-sm-6">
+                                            <div class="serviceContentCompleted"><span>Information updation form</span>
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <div class=" ">
+                                                        <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
+                                                            <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiiService['saii_id'] ?>" service-type="SA-II" data-column="update_info_saii" name="input-saii-form" class="updateSaii input-saii-form<?php echo $saiiService['saii_id'] ?>" /> </span> 
+                                                        <?php if (isset($saiiService['update_info_saii']) && !empty($saiiService['update_info_saii'])) { ?>
+                                                            <span style="padding-right: 5px"> 
+                                                                <a href="<?php echo $saiiService['update_info_saii'] ?>" data-id="" download class="updationFormFileDownload"><i class="fa fa-download"></i></a>
+                                                            </span> 
+                                                        <?php } ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <?php
+                                            $saiiJsonFilePath = 'uploads/reviews/data_' . $saiiService['saii_id'] . '_' . $_GET['customerid'] . '.json';
+                                            if ((isset($saiiService['info_update_review']) && !empty($saiiService['info_update_review'])) || file_exists($saiiJsonFilePath)) {
+                                                $saiiInfoReviewClass = 'serviceContentCompleted';
+                                            } else if (isset($saiiService['update_info_saii']) && !empty($saiiService['update_info_saii'])) {
+                                                $saiiInfoReviewClass = 'serviceContentwaiting';
+                                            } else {
+                                                $saiiInfoReviewClass = 'serviceContent';
+                                            }
+                                            ?>
+                                            <div class="<?php echo $saiiInfoReviewClass ?>"><span>Information Updation Review</span>
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <div class=" ">
+                                                        <?php if ((isset($saiiService['info_update_review']) && !empty($saiiService['info_update_review'])) || file_exists($saiiJsonFilePath)) { ?>
+                                                            <span style="padding-right: 5px">
+                                                                <a class="openInfoUpdationReview pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiiService['saii_id'] ?>" title="Review Information Updation" style="padding: 1px 5px;"><i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i></a>
+                                                            </span>
+                                                            <span style="padding-right: 5px">
+                                                                <a class="downloadInfoUpdationReview pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiiService['saii_id'] ?>" title="Download Information Updation Review" style="padding: 1px 5px;"><i class="fa fa-download fa-lg " style="padding: 3px"></i></a>
+                                                            </span>
+                                                        <?php } else { ?>
+                                                            <span style="padding-right: 5px">
+                                                                <a class="openInfoUpdationReview pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiiService['saii_id'] ?>" title="Add Information Updation Review" style="padding: 1px 5px;"><i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i></a>
+                                                            </span>
+                                                        <?php } ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (isset($saiiService['audit_stage_id']) && !empty($saiiService['audit_stage_id'])) {
+                                                $newClass = "serviceContentCompleted";
+                                            } else {
+                                                $newClass = "serviceContentwaiting";
+                                            }
+                                            ?>
+                                            <div class="<?php echo $newClass ?>"><span>Release Audit Notification</span> 
+                                                <?php if (empty($saiiService['audit_stage_id'])) { ?>
+                                                    <a class="createAuditNotification pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service1="<?php echo $saiiService['saii_id'] ?>" data-service="<?php echo $crservice['cr_id'] ?>" data-row-count="" title="Add Audit Notification" style="padding: 1px 5px;">
+                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } ?>
+                                                <?php if (isset($saiiService['audit_stage_id']) && !empty($saiiService['audit_stage_id'])) { ?>
+                                                    <a class="editAuditNotification pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiiService['saii_id'] ?>" data-notification="<?php echo $saiiService['audit_stage_id'] ?>" title="Update Release Audit Notification" style="padding: 1px 5px;">
+                                                        <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                    <a class="downloadAuditNotification pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $saiiService['saii_id'] ?>" data-audit="<?php echo $saiiService['audit_stage_id'] ?>" title="Download Release Audit Notification" style="padding: 1px 5px;">
+                                                        <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($saiiService['audit_stage_id'])) {
+                                                $newClass = "serviceContent";
+                                            } else if (isset($saiiService['audit_stage_id']) && !empty($saiiService['audit_stage_id']) && empty($saiiService['servelance_id'])) {
+                                                $newClass = "serviceContentwaiting";
+                                            } else if (isset($saiiService['servelance_id']) && !empty($saiiService['servelance_id'])) {
+                                                $newClass = "serviceContentCompleted";
+                                            } else {
+                                                $newClass = "serviceContent";
+                                            }
+                                            ?>
+                                            <div class="<?php echo $newClass ?>">
+                                                <span>Release SA Audit Plan (SA-II)</span>
+                                                <?php if (isset($saiiService['audit_stage_id']) && !empty($saiiService['audit_stage_id']) && empty($saiiService['servelance_id'])) { ?>
+                                                    <a class="servelancestage2 pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiiService['saii_id'] ?>" data-row-id="" data-row-count="" title="Add Release - SA Schedule (SA-II)" style="padding: 1px 5px;">
+                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } if (isset($saiiService['servelance_id']) && !empty($saiiService['servelance_id'])) { ?>
+                                                    <a class="editStage2Servelance pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiiService['saii_id'] ?>" data-row-id="<?php echo $saiiService['servelance_id'] ?>" data-row-count="" title="Add Release - SA Schedule (SA-II)" style="padding: 1px 5px;">
+                                                        <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                    <a class="downloadScheduleStageOneSii pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $saiiService['saii_id'] ?>" data-schedulei="<?php echo $saiiService['servelance_id'] ?>" title="Download Release - SA Schedule (SA-II)" style="padding: 1px 5px;">
+                                                        <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($saiiService['servelance_id'])) {
+                                                $newClass = "serviceContent";
+                                            } else if (isset($saiiService['servelance_id']) && !empty($saiiService['servelance_id']) && empty($saiiService['signed_noti_saii'])) {
+                                                $newClass = "serviceContentwaiting";
+                                            } else if (isset($saiiService['signed_noti_saii']) && !empty($saiiService['signed_noti_saii'])) {
+                                                $newClass = "serviceContentCompleted";
+                                            } else {
+                                                $newClass = "serviceContent";
+                                            }
+                                            ?>
+                                            <div class="<?php echo $newClass ?>">
+                                                <span>Signed Notification SA - II Audit</span>
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <div class="">
+                                                        <?php if (isset($saiiService['audit_stage_id']) && !empty($saiiService['audit_stage_id']) && empty($caservice['signed_noti_saii']) || (isset($saiiService['signed_noti_saii']) && !empty($saiiService['signed_noti_saii']))) { ?>
+                                                            <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
+                                                                <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiiService['saii_id'] ?>" service-type="SA-II" data-column="signed_noti_saii" name="input-signed-form" class="updateSigned input-signed-form<?php echo $saiiService['saii_id'] ?>" />
+                                                            </span> 
+                                                        <?php } ?> 
+                                                        <?php if (isset($saiiService['signed_noti_saii']) && !empty($saiiService['signed_noti_saii'])) { ?>
+                                                            <span style="padding-right: 5px"> 
+                                                                <a href="<?php echo $saiiService['signed_noti_saii'] ?>" download class="signednotisaiiFileDownload">
+                                                                    <i class="fa fa-download"></i>
+                                                                </a>
+                                                            </span> 
+                                                        <?php } ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($saiiService['signed_noti_saii'])) {
+                                                $newClass = "serviceContent";
+                                            } else if (isset($saiiService['signed_noti_saii']) && !empty($saiiService['signed_noti_saii']) && empty($saiiService['signed_copy_saii'])) {
+                                                $newClass = "serviceContentwaiting";
+                                            } else if (isset($saiiService['signed_copy_saii']) && !empty($saiiService['signed_copy_saii'])) {
+                                                $newClass = "serviceContentCompleted";
+                                            } else {
+                                                $newClass = "serviceContent";
+                                            }
+                                            ?>
+                                            <div class="<?php echo $newClass ?>">
+                                                <span>Audit Plan Scanned Copy</span>
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <div class="">
+                                                        <?php if (isset($saiiService['signed_noti_saii']) && !empty($saiiService['signed_noti_saii']) && empty($caservice['signed_copy_saii'])) { ?>
+                                                            <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
+                                                                <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiiService['saii_id'] ?>" service-type="SA-II" data-column="signed_copy_saii" name="input-signedcopy-form" class="updateSignedCopy input-signedcopy-form<?php echo $saiiService['saii_id'] ?>" />
+                                                            </span> 
+                                                        <?php } ?> 
+                                                        <?php if (isset($saiiService['signed_copy_saii']) && !empty($saiiService['signed_copy_saii'])) { ?>
+                                                            <span style="padding-right: 5px"> 
+                                                                <a href="<?php echo $saiiService['signed_copy_saii'] ?>" data-id="" download class="signedcopysaiiFileDownload">
+                                                                    <i class="fa fa-download"></i>
+                                                                </a>
+                                                            </span> 
+                                                        <?php } ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($saiiService['signed_copy_saii'])) {
+                                                $newClass = "serviceContent";
+                                            } else if (isset($saiiService['signed_copy_saii']) && !empty($saiiService['signed_copy_saii']) && empty($saiiService['audit_report_saii'])) {
+                                                $newClass = "serviceContentwaiting";
+                                            } else if (isset($saiiService['audit_report_saii']) && !empty($saiiService['audit_report_saii'])) {
+                                                $newClass = "serviceContentCompleted";
+                                            } else {
+                                                $newClass = "serviceContent";
+                                            }
+                                            ?>
+                                            <div class="<?php echo $newClass ?>">
+                                                <span>SA - II Audit Report, Summery and Checklists</span>
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <div class="">
+                                                        <?php if (isset($saiiService['signed_copy_saii']) && !empty($saiiService['signed_copy_saii']) && empty($caservice['audit_report_saii']) || (isset($saiiService['audit_report_saii']) && !empty($saiiService['audit_report_saii']))) { ?>
+                                                            <span class=" image-preview-input  fa fa-upload"  style="padding-right: 15px"> 
+                                                                <input type="file"  accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiiService['saii_id'] ?>" service-type="SA-II" data-column="audit_report_saii" name="input-auditreport-form" class="updateAuditReport input-auditreport-form<?php echo $saiiService['saii_id'] ?>" />
+                                                            </span> 
+                                                        <?php } ?> 
+                                                        <?php if (isset($saiiService['audit_report_saii']) && !empty($saiiService['audit_report_saii'])) { ?>
+                                                            <span style="padding-right: 5px"> 
+                                                                <a href="<?php echo $saiiService['audit_report_saii'] ?>" data-id="" download class="auditReportFileDownload">
+                                                                    <i class="fa fa-download"></i>
+                                                                </a>
+                                                            </span> 
+                                                        <?php } ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($saiiService['audit_report_saii'])) {
+                                                $newClass = "serviceContent";
+                                            } else if (isset($saiiService['audit_report_saii']) && !empty($saiiService['audit_report_saii']) && empty($saiiService['auditor_notes_saii'])) {
+                                                $newClass = "serviceContentwaiting";
+                                            } else if (isset($saiiService['auditor_notes_saii']) && !empty($saiiService['auditor_notes_saii'])) {
+                                                $newClass = "serviceContentCompleted";
+                                            } else {
+                                                $newClass = "serviceContent";
+                                            }
+                                            ?>
+                                            <div class="<?php echo $newClass ?>">
+                                                <span>SA - II Auditor Notes</span>
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <div class="">
+                                                        <?php if (isset($saiiService['audit_report_saii']) && !empty($saiiService['audit_report_saii']) && empty($caservice['auditor_notes_saii']) || (isset($saiiService['auditor_notes_saii']) && !empty($saiiService['auditor_notes_saii']))) { ?>
+                                                            <span class=" image-preview-input  fa fa-upload"  style="padding-right: 15px"> 
+                                                                <input type="file"  accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiiService['saii_id'] ?>" service-type="SA-II" data-column="auditor_notes_saii" name="input-auditor-notes-saii" class="auditornotessaii input-auditor-notes-saii<?php echo $saiiService['saii_id'] ?>" />
+                                                            </span> 
+                                                        <?php } ?> 
+                                                        <?php if (isset($saiiService['auditor_notes_saii']) && !empty($saiiService['auditor_notes_saii'])) { ?>
+                                                            <span style="padding-right: 5px"> 
+                                                                <a href="<?php echo $saiiService['auditor_notes_saii'] ?>" data-id="" download class="auditReportFileDownload">
+                                                                    <i class="fa fa-download"></i>
+                                                                </a>
+                                                            </span> 
+                                                        <?php } ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($saiiService['auditor_notes_saii'])) {
+                                                $newClass = "serviceContent";
+                                            } else if (isset($saiiService['auditor_notes_saii']) && !empty($saiiService['auditor_notes_saii']) && empty($saiiService['audit_evidences_saii'])) {
+                                                $newClass = "serviceContentwaiting";
+                                            } else if (isset($saiiService['audit_evidences_saii']) && !empty($saiiService['audit_evidences_saii'])) {
+                                                $newClass = "serviceContentCompleted";
+                                            } else {
+                                                $newClass = "serviceContent";
+                                            }
+                                            ?>
+                                            <div class="<?php echo $newClass ?>">
+                                                <span>SA - II Audit NC And evidences of closer
+                                                    <?php if (isset($saiiService['audit_evidences_saii']) && !empty($saiiService['audit_evidences_saii']) && $saiiService['audit_evidences_saii'] == "NONC" && isset($saiiService['auditor_notes_saii']) && !empty($saiiService['auditor_notes_saii'])) { ?> 
+                                                        <!--                                                    <a class="" title="No NC Flag" style="padding: 1px 5px;">
+                                                                                                                <i class="fa fa-times-circle fa-lg " style="padding: 3px"></i>
+                                                                                                            </a>-->
+                                                        *(No NC)<?php } ?>
+                                                </span>
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <div class=" ">
+                                                        <?php if (isset($saiiService['auditor_notes_saii']) && !empty($saiiService['auditor_notes_saii']) && empty($saiiService['audit_evidences_saii'])) { ?>
+                                                            <span class=" image-preview-input" style="padding-right: 15px"> 
+                                                                <input type="checkbox" class="no_nc_file" name="no_nc_file" data-svctype="SA-2" data-service="<?php echo $saiiService['saii_id'] ?>" value="">
+                                                            </span>
+                                                        <?php } ?>
+                                                        <?php if (isset($saiiService['audit_evidences_saii']) && !empty($saiiService['audit_evidences_saii']) && $saiiService['audit_evidences_saii'] == "NONC" && isset($saiiService['auditor_notes_saii']) && !empty($saiiService['auditor_notes_saii'])) { ?>
+                                                            <span class=" image-preview-input" style="padding-right: 15px"> 
+                                                                <input type="checkbox" class="no_nc_file" name="no_nc_file" data-svctype="SA-2" data-service="<?php echo $saiiService['saii_id'] ?>" checked>
+                                                            </span>                                                     
+                                                        <?php } ?>
+                                                        <?php if (isset($saiiService['audit_evidences_saii']) && !empty($saiiService['audit_evidences_saii']) && isset($saiiService['auditor_notes_saii']) && !empty($saiiService['auditor_notes_saii']) && $saiiService['audit_evidences_saii'] <> "NONC") { ?>
+                                                            <span class=" image-preview-input" style="padding-right: 15px"> 
+                                                                <input type="checkbox" class="no_nc_file" name="no_nc_file" data-svctype="SA-2" data-service="<?php echo $saiiService['saii_id'] ?>">
+                                                            </span>                                                     
+                                                        <?php } ?>
+                                                        <?php if (isset($saiiService['auditor_notes_saii']) && !empty($saiiService['auditor_notes_saii'])) { ?>
+                                                            <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
+                                                                <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiiService['saii_id'] ?>" service-type="SA-II" data-column="audit_evidences_saii" name="input-evidences-form" class="updateEvidences input-evidences-form<?php echo $saiiService['saii_id'] ?>" />
+                                                            </span>
+                                                        <?php } ?>
+                                                        <?php if (isset($saiiService['audit_evidences_saii']) && !empty($saiiService['audit_evidences_saii']) && $saiiService['audit_evidences_saii'] != "NONC" && isset($saiiService['auditor_notes_saii']) && !empty($saiiService['auditor_notes_saii'])) { ?>                                                    
+                                                            <span style="padding-right: 5px"> 
+                                                                <a href="<?php echo $saiiService['audit_evidences_saii'] ?>" data-id="" download class="evidencesFileDownload">
+                                                                    <i class="fa fa-download"></i>
+                                                                </a>
+                                                            </span>
+                                                        <?php } ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($saiiService['audit_evidences_saii'])) {
+                                                $newClass = "serviceContent";
+                                            } else if (isset($saiiService['audit_evidences_saii']) && !empty($saiiService['audit_evidences_saii']) && empty($saiiService['stage_ii_id'])) {
+                                                $newClass = "serviceContentwaiting";
+                                            } else if (isset($saiiService['stage_ii_id']) && !empty($saiiService['stage_ii_id'])) {
+                                                $newClass = "serviceContentCompleted";
+                                            } else {
+                                                $newClass = "serviceContent";
+                                            }
+                                            ?>
+                                            <div class="<?php echo $newClass ?>">
+                                                <span>Review Report (Annex II)- SA - II Audit</span> 
+                                                <?php if ((isset($saiiService['audit_evidences_saii']) && !empty($saiiService['audit_evidences_saii']) && empty($saiiService['stage_ii_id'])) || (isset($saiiService['servelance_id']) && empty($saiiService['signed_copy_saii']) && empty($saiiService['audit_report_saii']) && empty($saiiService['auditor_notes_saii']) && empty($saiiService['audit_evidences_saii']) && empty($saiiService['stage_ii_id']) && (Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin()))) { ?>
+                                                    <a class="stageIIAuditSai pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiiService['saii_id'] ?>" data-row-count="" title="Add (Annex II)- SA - II Audit" style="padding: 1px 5px;">
+                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } if (isset($saiiService['stage_ii_id']) && !empty($saiiService['stage_ii_id'])) { ?>
+                                                    <a class="editstageIIAudit2  pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiiService['saii_id'] ?>" data-notification="<?php echo $saiiService['stage_ii_id'] ?>" title="Update (Annex II)- SA - II Audit" style="padding: 1px 5px;">
+                                                        <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                    <a class="downloadAnnexIISii pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $saiiService['saii_id'] ?>" data-stage-ii="<?php echo $saiiService['stage_ii_id'] ?>" title="Download (Annex II)- SA - II Audit" style="padding: 1px 5px;">
+                                                        <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($saiiService['stage_ii_id'])) {
+                                                $newClass = "serviceContent";
+                                            } else if (isset($saiiService['stage_ii_id']) && !empty($saiiService['stage_ii_id']) && empty($saiiService['crr_id'])) {
+                                                $newClass = "serviceContentwaiting";
+                                            } else if (isset($saiiService['crr_id']) && !empty($saiiService['crr_id'])) {
+                                                $newClass = "serviceContentCompleted";
+                                            } else {
+                                                $newClass = "serviceContent";
+                                            }
+                                            ?>
+                                            <div class="<?php echo $newClass ?>">
+                                                <span>Review Report - CDC DELIBERATION AND DECISION </span> 
+                                                <?php 
+                                                // Only show CDC button if Review Report (Annex II) - Stage II Audit is submitted (stage_ii_id exists)
+                                                // AND CDC is not yet created (crr_id is empty)
+                                                if (isset($saiiService['stage_ii_id']) && !empty($saiiService['stage_ii_id']) && empty($saiiService['crr_id'])) { ?>
+                                                    <a class="cdcReport pull-right" data-svctype="SA2" data-id="<?php echo $saiiService['service'] ?>" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiiService['saii_id'] ?>" data-caservice="<?php echo $caservice['ca_id'] ?>" data-service1="<?php echo $crservice['cr_id'] ?>" data-row-count="" audit-data="SA-II" title="CDC DELIBERATION AND DECISION" style="padding: 1px 5px;">
+                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } else if (isset($saiiService['crr_id']) && !empty($saiiService['crr_id'])) { ?>
+                                                    <a class="editCDC pull-right" data-svctype="SA2" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiiService['saii_id'] ?>" data-notification="<?php echo $saiiService['crr_id'] ?>" title="Edit CDC DELIBERATION AND DECISION" style="padding: 1px 5px;">
+                                                        <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                    </a>
+                                                    <a class="sendCdcMail pull-right" data-svctype="SA2" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiiService['saii_id'] ?>" data-crr="<?php echo $saiiService['crr_id'] ?>" title="Send certificate by email" style="padding: 1px 5px;">
+                                                        <i class="fa fa-envelope fa-lg" style="padding: 3px"></i>
+                                                    </a>
+                                                    <a class="downloadCdcSii pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $saiiService['saii_id'] ?>" data-crr="<?php echo $saiiService['crr_id'] ?>" title="Download  CDC DELIBERATION AND DECISION" style="padding: 1px 5px;">
+                                                        <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                    </a>
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($saiiService['crr_id'])) {
+                                                $saiCertifyClass = "serviceContent";
+                                            } else if (isset($saiiService['crr_id']) && !empty($saiiService['crr_id'])) {
+                                                $saiCertifyClass = "serviceContentCompleted";
+                                            } else {
+                                                $saiCertifyClass = "serviceContent";
+                                            }
+                                            ?>
+                                            <div class="<?php echo $saiCertifyClass ?>" >
+                                                <span>Certificate Print</span> 
+                                                <?php if (isset($saiiService['crr_id']) && !empty($saiiService['crr_id'])) { ?>
+                                                    <a class="download-certificate-print pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiiService['saii_id'] ?>" data-id="<?php echo $saiiService['service'] ?>" data-certificate="<?php echo !empty($saiiService['certificate_id']) ? $saiiService['certificate_id'] : '' ?>" data-crr="<?php echo $saiiService['crr_id'] ?>" data-row-count="" title="Certificate Print" style="padding: 1px 5px;">
+                                                        <i class="fa fa-download fa-lg" style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($saiiService['crr_id'])) {
+                                                $newClass = "serviceContent";
+                                            } else if (isset($saiiService['crr_id']) && !empty($saiiService['crr_id']) && empty($saiiService['certificate_print'])) {
+                                                $newClass = "serviceContentwaiting";
+                                            } else if (isset($saiiService['certificate_print']) && !empty($saiiService['certificate_print'])) {
+                                                $newClass = "serviceContentCompleted";
+                                            } else {
+                                                $newClass = "serviceContent";
+                                            }
+                                            ?>
+                                            <div class="<?php echo $newClass ?>">
+                                                <span>Certificate Upload</span>
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <div class="">
+                                                        <?php if (isset($saiiService['crr_id']) && !empty($saiiService['crr_id'])) { ?>
+                                                            <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
+                                                                <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiiService['saii_id'] ?>" service-type="SA-II" data-column="certificate_print" name="input-certificate-print-form" class="updateCertificatePrint input-certificate-print-form<?php echo $saiiService['saii_id'] ?>" />
+                                                            </span> 
+                                                        <?php } ?> 
+                                                        <?php if (isset($saiiService['certificate_print']) && !empty($saiiService['certificate_print'])) { ?>
+                                                            <span style="padding-right: 5px"> 
+                                                                <a href="<?php echo $saiiService['certificate_print'] ?>" data-id="" download class="customerReviewsaiiFileDownload">
+                                                                    <i class="fa fa-download"></i>
+                                                                </a> 
+                                                            </span> 
+                                                        <?php } ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($saiiService['certificate_print'])) {
+                                                $newClass = "serviceContent";
+                                            } else if (isset($saiiService['certificate_print']) && !empty($saiiService['certificate_print']) && empty($saiiService['customer_review_saii'])) {
+                                                $newClass = "serviceContentwaiting";
+                                            } else if (isset($saiiService['customer_review_saii']) && !empty($saiiService['customer_review_saii'])) {
+                                                $newClass = "serviceContentCompleted";
+                                            } else {
+                                                $newClass = "serviceContent";
+                                            }
+                                            ?>
+                                            <div class="<?php echo $newClass ?>">
+                                                <span>Client Feedback
+                                                    <?php if (isset($saiiService['customer_review_saii']) && !empty($saiiService['customer_review_saii']) && $saiiService['customer_review_saii'] == "NONC" && isset($saiiService['certificate_print']) && !empty($saiiService['certificate_print'])) { ?> 
+                                                        <!--                                                    <a class="" title="No Client Feedback Flag" style="padding: 1px 5px;">
+                                                                                                                <i class="fa fa-times-circle fa-lg " style="padding: 3px"></i>
+                                                                                                            </a>-->
+                                                        *(No Client Feedback)<?php } ?>
+                                                </span>
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <?php if (isset($saiiService['certificate_print']) && !empty($saiiService['certificate_print']) && empty($saiiService['customer_review_saii'])) { ?>
+                                                        <span class="image-preview-input" style="padding-right: 15px"> 
+                                                            <input type="checkbox" class="no_feedback_file" name="no_feedback_file" data-svctype="SA-II" data-service="<?php echo $saiiService['saii_id'] ?>" >
+                                                        </span>
+                                                    <?php } ?>
+                                                    <?php if (isset($saiiService['customer_review_saii']) && !empty($saiiService['customer_review_saii']) && $saiiService['customer_review_saii'] == "NONC" && isset($saiiService['certificate_print']) && !empty($saiiService['certificate_print'])) { ?>
+                                                        <span class="image-preview-input" style="padding-right: 15px"> 
+                                                            <input type="checkbox" class="no_feedback_file" name="no_feedback_file" data-svctype="SA-II" data-service="<?php echo $saiiService['saii_id'] ?>" checked>
+                                                        </span>                                                     
+                                                    <?php } ?>
+                                                    <?php if (isset($saiiService['customer_review_saii']) && !empty($saiiService['customer_review_saii']) && isset($saiiService['certificate_print']) && !empty($saiiService['certificate_print']) && $saiiService['customer_review_saii'] <> "NONC") { ?>
+                                                        <span class="image-preview-input" style="padding-right: 15px"> 
+                                                            <input type="checkbox" class="no_feedback_file" name="no_feedback_file" data-svctype="SA-II" data-service="<?php echo $saiiService['saii_id'] ?>">
+                                                        </span>                                                     
+                                                    <?php } ?>
+                                                    <?php if (isset($saiiService['certificate_print']) && !empty($saiiService['certificate_print'])) { ?>
+                                                        <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
+                                                            <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiiService['saii_id'] ?>" service-type="SA-II" data-column="customer_review_saii" name="input-customerreview-form" class="updateCustomerReview input-customerreview-form<?php echo $saiiService['saii_id'] ?>" />
+                                                        </span>
+                                                    <?php } ?>
+                                                    <?php if (isset($saiiService['customer_review_saii']) && !empty($saiiService['customer_review_saii']) && $saiiService['customer_review_saii'] != "NONC") { ?>                                                    
+                                                        <span style="padding-right: 5px"> 
+                                                            <a href="<?php echo $saiiService['customer_review_saii'] ?>" data-id="" download class="customerReviewsaiiFileDownload">
+                                                                <i class="fa fa-download"></i>
+                                                            </a> 
+                                                        </span> 
+                                                    <?php } ?>
+                                                </div>
+
+                                                <!--                                                <div style="float: right" class="image-preview form-inline">
+                                                <?php if (isset($saiiService['certificate_print']) && !empty($saiiService['certificate_print'])) { ?>
+                                                                                                                                                                                                                    <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
+                                                                                                                                                                                                                    <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiiService['saii_id'] ?>" service-type="SA-II" data-column="customer_review_saii" name="input-customerreview-form" class="updateCustomerReview input-customerreview-form<?php echo $saiiService['saii_id'] ?>" />
+                                                                                                                                                                                                                    </span> 
+                                                <?php } ?> 
+                                                <?php if (isset($saiiService['customer_review_saii']) && !empty($saiiService['customer_review_saii'])) { ?>
+                                                                                                                                                                                                                    <span style="padding-right: 5px"> 
+                                                                                                                                                                                                                    <a href="<?php echo $saiiService['customer_review_saii'] ?>" data-id="" download class="customerReviewsaiiFileDownload">
+                                                                                                                                                                                                                    <i class="fa fa-download"></i>
+                                                                                                                                                                                                                    </a> 
+                                                                                                                                                                                                                    </span> 
+                                                <?php } ?>
+                                                                                                </div>-->
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($saiiService['customer_review_saii'])) {
+                                                $newClass = "serviceContent";
+                                            } else if (isset($saiiService['customer_review_saii']) && !empty($saiiService['customer_review_saii']) && empty($saiiService['survey_id'])) {
+                                                $newClass = "serviceContentwaiting";
+                                            } else if (isset($saiiService['survey_id']) && !empty($saiiService['survey_id'])) {
+                                                $newClass = "serviceContentCompleted";
+                                            } else {
+                                                $newClass = "serviceContent";
+                                            }
+                                            ?>
+                                            <div class="<?php echo $newClass ?>">
+                                                <span>Review Report - Review of feedback</span> 
+                                                <?php if (isset($saiiService['customer_review_saii']) && !empty($saiiService['customer_review_saii']) && empty($saiiService['survey_id'])) { ?>
+                                                    <a class="createCustomerSurvey pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiiService['saii_id'] ?>" data-id="<?php echo $saiiService['service'] ?>" data-svc="SA-II" data-row-id="" data-row-count="" title="Add Review of feedback" style="padding: 1px 5px;">
+                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } ?> 
+                                                <?php if (isset($saiiService['survey_id']) && !empty($saiiService['survey_id'])) { ?>
+                                                    <a class="editCustomerSurvey pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiiService['saii_id'] ?>" data-row-id="<?php echo $saiiService['survey_id'] ?>" data-row-count="" title="Update Review of feedback" style="padding: 1px 5px;">
+                                                        <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                    <a class="downloadCustomersatisfactionSii pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $saiiService['saii_id'] ?>" data-surveyid="<?php echo $saiiService['survey_id'] ?>" title="Download  Review of feedback" style="padding: 1px 5px;">
+                                                        <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <input type="hidden" class="saiiCustomerid" name="saiiCustomerid" value="<?php echo $_GET['customerid'] ?>">
+                            </div>
+                        </form>
+                    </div>
+                    <div class="saiidates<?php echo $saiiService['saii_id'] ?>" style="display: <?php echo $disp ?>;">
+                        <div class="servicebox-bunch">
+                            <div class="servicebox" style="display: ">
+                                <div class="row" id="service-row" class="service-row">
+                                    <div class="col-xs-12 aitf_service_date" style="text-align: center" data-row-id="">LETTERS &amp; ACTIONS OF CLIENT STATUS - for the next service: RC
+                                        <span class="serviceStatus"></span>
+                                    </div>
+                                </div>
+                                <div class="servicebox-data" id="servicebox-data">
+                                    <div class="row">
+                                        <div class="col-xs-12 table-responsive">
+                                            <table class="table table-bordered table-hover table-sortable service_details" id="service_details">
+                                                <thead>
+                                                    <tr>
+                                                        <th class="" width="20%" style="padding: 2px"><small>Action</small></th>
+                                                        <th class="" width="20%" style="padding: 2px"><small>Proposed due on date</small>
+                                                        </th>
+                                                        <th class="" width="20%" style="padding: 2px"><small>Sent on date</small>
+                                                        </th>
+                                                         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+                                                        <th class="" width="4%" style="padding: 2px"><small>Actions</small></th>
+                                                        <?php } ?>
+                                                        <th class="" width="4%" style="padding: 2px"><small>Pdf</small></th>
+                                                        <th class="" width="4%" style="padding: 2px"><small>Generate</small>                                                        
+                                                        </th>
+                                                        <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+                                                            <th class="" width="4%" style="padding: 2px">
+                                                                <small>Delete</small>
+                                                            </th>
+                                                        <?php } ?>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="">
+                                                    <?php foreach ($saiiServiceDates as $saiiActions) { ?>
+                                                        <tr class=" previousCBData" style="display: ">
+                                                            <td class="" style="padding: 0px;">
+                                                                <div class="table-edit-control"> <small><?php echo $saiiActions['action'] ?></small>
+                                                                </div>
+                                                            </td>
+                                                            <td class="" style="padding: 0px;">
+                                                                <div class="table-edit-control"><small><?php echo simpleDateConversion($saiiActions['due_date']) ?></small>
+                                                                </div>
+                                                            </td>
+                                                            <td class="" style="padding: 0px;">
+                                                                <div class="table-edit-control"><small><?php echo simpleDateConversion($saiiActions['sent_date']) ?></small>
+                                                                </div>
+                                                            </td>
+                                                            
+                                                             <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+                                                            <td class="" style="padding: 0px;">
+                                                                <!--<a class="saiiServiceComment" data-row-id="</?php echo $saiiActions['action_id'] ?>" data-column="comment" data-comment="</?php echo $saiiActions['comment'] ?>">-->
+                                                                <!--    <i class="fa fa-comment-o" aria-hidden="true"></i>-->
+                                                                <!--</a>-->
+                                                                
+                                                                <a href="editcadates.php?id=<?php echo $saiiActions['action_id'] ?>">
+                                                                    <i class="fa fa-pencil-square fa-sm " style="padding: 1px"></i>
+                                                                </a>
+                                                                
+                                                                
+                                                            </td>
+                                                            
+                                                                                                                        <?php } ?>
+                                                            <td class="" style="padding: 0px;">
+                                                                <?php if (date("Y-m-d") >= $saiiActions['due_date']) { ?>
+                                                                    <a class="PreviewPDF" data-servicetype="SA-II" data-due="<?php echo simpleDateConversion($saiiActions['due_date']) ?>" data-action-pdf="<?php echo $saiiActions['action'] ?>" data-action="<?php echo $saiiActions['action_id'] ?>" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiiActions['service_id'] ?>" data-column="pdf">
+                                                                        <i class="fa fa-file-pdf-o" aria-hidden="true"></i>
+                                                                    </a>
+                                                                <?php } ?>
+                                                            </td>
+                                                            <td class="" style="padding: 0px;">
+                                                                <?php if (date("Y-m-d") >= $saiiActions['due_date']) { ?>
+                                                                    <a class="caServiceGanerate" data-servicetype="SA-II" data-due="<?php echo simpleDateConversion($saiiActions['due_date']) ?>" data-action-pdf="<?php echo $saiiActions['action'] ?>" data-action="<?php echo $saiiActions['action_id'] ?>" data-service="<?php echo $saiiActions['service_id'] ?>" data-customer="<?php echo $_GET['customerid'] ?>" data-actiontype="<?php echo $saiiActions['action'] ?>" data-column="generate">
+                                                                        <i class="fa fa-envelope-o" aria-hidden="true"></i>
+                                                                    </a> 
+                                                                <?php } ?>
+                                                            </td>
+                                                            <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+                                                                <?php
+                                                                if ($saiiActions["is_deleted"] == 'Y') {
+                                                                    $setDelete3 = "disabled";
+                                                                } else {
+                                                                    $setDelete3 = "";
+                                                                }
+                                                                ?>
+                                                                <td class="" style="padding: 0px;">
+                                                                    <a class="deleteLetterAccount" title="Delete" data-customer='<?php echo $_GET['customerid'] ?>' data-service='<?php echo $saiiActions['service_id'] ?>' data-action ="<?php echo $saiiActions['action_id'] ?>" style="float: right; margin-right: 10px" <?php echo $setDelete3; ?>><i class="fa fa-trash"></i></a>
+                                                                </td>
+                                                            <?php } ?>
+                                                        </tr>
+                                                    <?php } ?>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <?php
+            }
+            if ($service['service_type'] == "RC") {
+                if ($rcCount['service_done'] && $rcCount['service_done'] == "DONE") {
+                    $class7 = 'rc-service-type';
+                    $class8 = "rc-service-type";
+                } else if (isset($rcCount['service_done']) && $rcCount['service_done'] == "") {
+                    $class7 = "rc-service-type";
+                    $class8 = "";
+                } else {
+                    $class7 = "";
+                    $class8 = "rc-service-type";
+                }
+
+                $rcService = "SELECT DISTINCT strc.rc_id, service, rc_customer, rc_info_update, rc_application_form, rc_certification_aggrement, rc_signed_noti, rc_signed_copy, rc_audit_report, auditor_notes_rc, rc_audit_evidence, certificate_print, rc_customer_review, service_rc_status, strc.audit_date as rcaudit, strc.auditors as rc_auditors, aoai.audit_stage_id, asi.audit_scheduleii_id, siiai.stage_ii_id,  crr.crr_id, csi.survey_id, cfi.control_id, cf2i.control2_id, cfp.certificate_id FROM service_type_rc strc left join stage_oneaudit_id aoai on strc.rc_id = aoai.ca_service_id  left join audit_scheduleii_id asi on strc.rc_id = asi.`ca_service` left join stage_ii_audit_id siiai on strc.rc_id = siiai.ca_service_id left join cdc_report_review crr on strc.rc_id = crr.ca_service_id left join customer_survey_id csi on strc.rc_id = csi.ca_serviceid left join control_formati_id cfi on strc.rc_id = cfi.caservice_id left join control_formatii_id cf2i on strc.rc_id = cf2i.caservice_id left join certificate_print cfp on strc.rc_id = cfp.service_id WHERE strc.service = :id GROUP BY strc.rc_id";
+                $statement = $db->prepare($rcService);
+                $statement->bindParam(':id', $service["service_id"]);
+                $statement->execute();
+                $rcServiceinfo = $statement->fetch();
+                // Fetch RC next-cycle client-status letters for this RC service
+                $rcServiceActionDates = array();
+                $rcServiceDate = "SELECT MIN(action_id) as action_id, service_id, action, due_date, MAX(sent_date) as sent_date, MAX(is_deleted) as is_deleted
+                                   FROM ca_service_dates
+                                   WHERE service_id = :id
+                                   AND action IN ('Suspension Reminder','Suspend Letter','Withdrawal Reminder','Withdraw Letter')
+                                   GROUP BY service_id, action, due_date
+                                   ORDER BY due_date ASC";
+                $statement = $db->prepare($rcServiceDate);
+                $statement->bindParam(':id', $rcServiceinfo['service']);
+                $statement->execute();
+                $rcServiceActionDates = $statement->fetchAll();
+
+                // Recalculate RC next-cycle letters based on earliest CA CDC date and RC cycle index
+                if (!empty($rcServiceActionDates)) {
+                    // Determine base certification date: first CA CDC -> certification_stage_date
+                    $caCdcQuery = "SELECT MIN(crr.Date) AS first_date FROM cdc_report_review crr
+                                   INNER JOIN service_type_ca ca ON crr.ca_service_id = ca.ca_id
+                                   INNER JOIN service s ON ca.service = s.service_id
+                                   WHERE s.customer_id = :customer_id AND s.service_type = 'CA'";
+                    $statement = $db->prepare($caCdcQuery);
+                    $statement->bindParam(':customer_id', $_GET['customerid']);
+                    $statement->execute();
+                    $caCdcResult = $statement->fetch();
+
+                    $certificationDateQuery = "SELECT certification_stage_date FROM customer_info WHERE id = :customer";
+                    $statement = $db->prepare($certificationDateQuery);
+                    $statement->bindParam(':customer', $_GET['customerid']);
+                    $statement->execute();
+                    $certifyDate = $statement->fetch();
+
+                    $baseCertDate = '';
+                    if (isset($caCdcResult['first_date']) && !empty($caCdcResult['first_date'])) {
+                        $baseCertDate = $caCdcResult['first_date'];
+                    } elseif (isset($certifyDate['certification_stage_date']) && !empty($certifyDate['certification_stage_date'])) {
+                        $baseCertDate = $certifyDate['certification_stage_date'];
+                    }
+
+                    if (!empty($baseCertDate)) {
+                        // Determine cycle index for this RC service based on order of all RC services for the customer
+                        $allRcServicesQuery = "SELECT service FROM service_type_rc WHERE rc_customer = :customer_id ORDER BY service ASC";
+                        $statement = $db->prepare($allRcServicesQuery);
+                        $statement->bindParam(':customer_id', $_GET['customerid']);
+                        $statement->execute();
+                        $allRcServices = $statement->fetchAll();
+
+                        $cycleIndex = 0; // 0 = first RC (first cycle), 1 = second RC (second cycle), etc.
+                        if (!empty($allRcServices)) {
+                            foreach ($allRcServices as $idx => $row) {
+                                if ($row['service'] == $rcServiceinfo['service']) {
+                                    $cycleIndex = $idx;
+                                    break;
+                                }
+                            }
+                        }
+
+                        $cycleOffset = 36 * max(0, $cycleIndex);
+
+                        // RC reminder offsets from baseCertDate + cycleOffset
+                        $rcOffsets = array(
+                            'Suspension Reminder' => 47 + $cycleOffset,
+                            'Suspend Letter'      => 48 + $cycleOffset,
+                            'Withdrawal Reminder' => 50 + $cycleOffset,
+                            'Withdraw Letter'     => 52 + $cycleOffset,
+                        );
+
+                        $expectedDates = array();
+                        foreach ($rcOffsets as $actionName => $months) {
+                            $dateExpr = $baseCertDate . ' + ' . $months . ' MONTH';
+                            $dateVal = date("Y-m-d", strtotime('-1 day', strtotime($dateExpr)));
+                            $expectedDates[$actionName] = $dateVal;
+                        }
+
+                        // Map existing RC actions for this service
+                        $existingActions = array();
+                        foreach ($rcServiceActionDates as $row) {
+                            $existingActions[$row['action']] = $row['due_date'];
+                        }
+
+                        $needsFix = false;
+                        foreach ($expectedDates as $actionName => $expectedDate) {
+                            if (!isset($existingActions[$actionName]) || $existingActions[$actionName] != $expectedDate) {
+                                $needsFix = true;
+                                break;
+                            }
+                        }
+
+                        if ($needsFix) {
+                            foreach ($expectedDates as $actionName => $dueDate) {
+                                if (isset($existingActions[$actionName])) {
+                                    $updateSql = "UPDATE ca_service_dates SET due_date = :due_date WHERE service_id = :serviceid AND action = :action";
+                                    $statement = $db->prepare($updateSql);
+                                    $statement->bindParam(':serviceid', $rcServiceinfo['service']);
+                                    $statement->bindParam(':action', $actionName);
+                                    $statement->bindParam(':due_date', $dueDate);
+                                    $statement->execute();
+                                } else {
+                                    $insertSql = "INSERT INTO ca_service_dates(service_id, action, due_date) VALUES (:serviceid, :action, :due_date)";
+                                    $statement = $db->prepare($insertSql);
+                                    $statement->bindParam(':serviceid', $rcServiceinfo['service']);
+                                    $statement->bindParam(':action', $actionName);
+                                    $statement->bindParam(':due_date', $dueDate);
+                                    $statement->execute();
+                                }
+                            }
+
+                            // Re-fetch updated RC action dates
+                            $statement = $db->prepare($rcServiceDate);
+                            $statement->bindParam(':id', $rcServiceinfo['service']);
+                            $statement->execute();
+                            $rcServiceActionDates = $statement->fetchAll();
+                        }
+                    }
+                }
+                if ($letestService["c_service"] == $rcServiceinfo['service']) {
+                    $disp = "";
+                } else {
+                    $disp = "none";
+                }
+                ?>
+                <div class="servicebox-bunch <?php echo $class7 ?>" style="display:">
+                    <div class="servicebox" style="display: ">
+                        <form id="saiService" action="serviceTypeSAi.php" method="post" enctype="multipart/form-data">
+                            <div class="row rc-service-row" id="service-row" data-id="<?php echo $rcServiceinfo['rc_id'] ?>">
+                                <div class="col-xs-12 qms_customer_name service_title" style="text-align: center" data-row-id="">
+                                    Service type - RC <span class="serviceStatus"></span> 
+                                    <a class="deleteServiceRC" id="deleteServiceRC" data-service="<?php echo $rcServiceinfo['service'] ?>" data-row-id="<?php echo $rcServiceinfo['rc_id'] ?>" data-customer="<?php echo $_GET['customerid'] ?>">
+                                        <i class="fa fa-trash-o pull-right " style="color: white; padding-right: 10px;"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="rc-service-desc<?php echo $rcServiceinfo['rc_id'] ?>" style="display: <?php echo $disp ?>;">
+                                <div class="row" style="padding-top: 10px;">
+                                    <div class="col-xs-3 form-group float-label-control" style="">
+                                        <label>Add to <?php echo $rcServiceinfo['service_rc_status']; ?></label> 
+                                        <select class="addService add-to-service" data-id="<?php echo $rcServiceinfo['rc_id'] ?>" data-column="service_rc_status" name="add-to-service" style="color: black" value="">
+                                            <option value="<?php if (isset($rcServiceinfo['service_rc_status'])) echo $rcServiceinfo['service_rc_status'] ?>">
+                                                <?php
+                                                if (isset($rcServiceinfo['service_rc_status']) && !empty($rcServiceinfo['service_rc_status'])) {
+                                                    echo $rcServiceinfo['service_rc_status'];
+                                                } else {
+                                                    echo "Select add to";
+                                                }
+                                                ?> 
+                                                <?php foreach ($addToList as $addTo) { ?>
+                                                <option value="<?php echo $addTo['add_to_type'] ?>"><?php echo $addTo['add_to_type'] ?></option>
+                                            <?php } ?>
+
+                                        </select>
+                                    </div>
+                                    <div class="col-xs-3 form-group float-label-control" style="">
+                                        <label>Audit Date</label> 
+                                        <input class="serviceAuditDate " placeholder="Audit Date" data-id="<?php echo $rcServiceinfo['service'] ?>" data-service="rcService" data-column="audit_date" name="serviceAuditDate" style="color: black" value="<?php if (isset($rcServiceinfo["rcaudit"])) echo $rcServiceinfo["rcaudit"]; ?>" />
+                                    </div>
+                                    <div class="col-xs-3 form-group float-label-control" style="">
+                                        <label>Team Leader, Auditor(s)</label> 
+                                        <input class="rcTeamLeader " placeholder="Team Leader, Auditor(s)" data-id="<?php echo $rcServiceinfo['service'] ?>" data-service="rcTeamLeader" data-column="audit_date" name="serviceAuditDate" style="color: black" value="<?php if (isset($rcServiceinfo["rc_auditors"])) echo $rcServiceinfo["rc_auditors"]; ?>" />
+                                    </div>
+                                </div>
+                                <div class="servicebox-data" id="servicebox-data">                                    
+                                    <div class="row">                                
+                                        <div class="col-sm-6">
+                                            <div class="serviceContentCompleted">
+                                                <span>Release - Audit Notification </span> 
+                                                <a class="editAuditNotification pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $rcServiceinfo['rc_id'] ?>" data-type="service-type-sai" data-notification="<?php echo $rcServiceinfo['audit_stage_id'] ?>" title="Add Release - Audit Notification" style="padding: 1px 5px;">
+                                                    <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                </a> 
+                                                <a class="downloadRCAuditNoti pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $rcServiceinfo['rc_id'] ?>" data-audit="<?php echo $rcServiceinfo['audit_stage_id'] ?>" title="Download audit notification" style="padding: 1px 5px;">
+                                                    <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                </a> 
+                                            </div>
+                                        </div>
+
+
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (isset($rcServiceinfo['audit_stage_id']) && !empty($rcServiceinfo['audit_stage_id']) && empty($rcServiceinfo['audit_scheduleii_id'])) {
+                                                $rcStage2Class = 'serviceContentwaiting';
+                                            } else if (isset($rcServiceinfo['audit_stage_id']) && !empty($rcServiceinfo['audit_stage_id']) && isset($rcServiceinfo['audit_scheduleii_id']) && !empty($rcServiceinfo['audit_scheduleii_id'])) {
+                                                $rcStage2Class = 'serviceContentCompleted';
+                                            } else {
+                                                $rcStage2Class = 'serviceContent';
+                                            }
+                                            ?>
+                                            <div class="<?php echo $rcStage2Class ?>">
+                                                <span>Release - RC Audit Plan/ Recertification</span> 
+                                                <?php if (isset($rcServiceinfo['audit_stage_id']) && !empty($rcServiceinfo['audit_stage_id']) && empty($rcServiceinfo['audit_scheduleii_id'])) { ?>
+                                                    <a class="createStageIISchedule pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $rcServiceinfo['rc_id'] ?>" data-serviceType="RC" data-type="service-type-rc" data-row-id="" title="Add Stage - II Schedule" style="padding: 1px 5px;">
+                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } ?>
+                                                <?php if (isset($rcServiceinfo['audit_scheduleii_id']) && !empty($rcServiceinfo['audit_scheduleii_id'])) { ?>
+                                                    <a class="editStageiiAudit pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $rcServiceinfo['rc_id'] ?>" data-row-id="<?php echo $rcServiceinfo['audit_scheduleii_id'] ?>" title="Add Release - Audit Notification" style="padding: 1px 5px;">
+                                                        <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                    <a class="downloadStageScheduleRC pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $rcServiceinfo['rc_id'] ?>" data-schedulei="<?php echo $rcServiceinfo['audit_scheduleii_id'] ?>" title="Download Release - Audit Notification" style="padding: 1px 5px;">
+                                                        <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } ?>
+
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                    <div class="row">
+
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($rcServiceinfo['audit_scheduleii_id'])) {
+                                                $rcSignedNotiClass = 'serviceContent';
+                                            } else if (isset($rcServiceinfo['audit_scheduleii_id']) && !empty($rcServiceinfo['audit_scheduleii_id']) && empty($rcServiceinfo['rc_signed_noti'])) {
+                                                $rcSignedNotiClass = 'serviceContentwaiting';
+                                            } else if (isset($rcServiceinfo['audit_scheduleii_id']) && !empty($rcServiceinfo['audit_scheduleii_id']) && isset($rcServiceinfo['rc_signed_noti']) && !empty($rcServiceinfo['rc_signed_noti'])) {
+                                                $rcSignedNotiClass = 'serviceContentCompleted';
+                                            } else {
+                                                $rcSignedNotiClass = 'serviceContent';
+                                            }
+                                            ?>
+                                            <div class="<?php echo $rcSignedNotiClass ?>">
+                                                <span>Signed Notification RC Audit </span>
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <div class=" ">
+                                                        <?php if (isset($rcServiceinfo['audit_scheduleii_id']) && !empty($rcServiceinfo['audit_scheduleii_id'])) { ?>
+                                                            <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
+                                                                <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $rcServiceinfo['rc_id'] ?>" service-type="RC" data-column="rc_signed_noti" name="input-signed-noti-rc" class="signedNotiRc input-signed-noti-rc<?php echo $rcServiceinfo['rc_id'] ?>" />
+                                                            </span> 
+                                                        <?php } ?> 
+                                                        <?php if (isset($rcServiceinfo['rc_signed_noti']) && !empty($rcServiceinfo['rc_signed_noti'])) { ?>
+                                                            <span style="padding-right: 5px"> 
+                                                                <a href="<?php echo $rcServiceinfo['rc_signed_noti'] ?>" data-id="" download class="customerReviewFileDownload">
+                                                                    <i class="fa fa-download"></i>
+                                                                </a>
+                                                            </span> 
+                                                        <?php } ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+
+
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($rcServiceinfo['rc_signed_noti'])) {
+                                                $rcSignCopyClass = 'serviceContent';
+                                            } else if (isset($rcServiceinfo['rc_signed_noti']) && !empty($rcServiceinfo['rc_signed_noti']) && empty($rcServiceinfo['rc_signed_copy'])) {
+                                                $rcSignCopyClass = 'serviceContentwaiting';
+                                            } else if (isset($rcServiceinfo['rc_signed_noti']) && !empty($rcServiceinfo['rc_signed_noti']) && isset($rcServiceinfo['rc_signed_copy']) && !empty($rcServiceinfo['rc_signed_copy'])) {
+                                                $rcSignCopyClass = 'serviceContentCompleted';
+                                            } else {
+                                                $rcSignCopyClass = 'serviceContent';
+                                            }
+                                            ?>
+                                            <div class="<?php echo $rcSignCopyClass ?>">
+                                                <span>Audit Plan Scanned Copy</span>
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <?php if (isset($rcServiceinfo['rc_signed_noti']) && !empty($rcServiceinfo['rc_signed_noti'])) { ?>
+                                                        <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
+                                                            <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $rcServiceinfo['rc_id'] ?>" service-type="RC" data-column="rc_signed_copy" name="input-signed-copy-rc" class="signedCopyRc input-signed-copy-rc<?php echo $rcServiceinfo['rc_id'] ?>" />
+                                                        </span> 
+                                                    <?php } ?> 
+                                                    <?php if (isset($rcServiceinfo['rc_signed_copy']) && !empty($rcServiceinfo['rc_signed_copy'])) { ?>
+                                                        <span style="padding-right: 5px"> 
+                                                            <a href="<?php echo $rcServiceinfo['rc_signed_copy'] ?>" data-id="" download class="customerReviewFileDownload">
+                                                                <i class="fa fa-download"></i>
+                                                            </a>
+                                                        </span>
+                                                    <?php } ?>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">                                
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($rcServiceinfo['rc_signed_copy'])) {
+                                                $rcAudit2Class = 'serviceContent';
+                                            } else if (isset($rcServiceinfo['rc_signed_copy']) && !empty($rcServiceinfo['rc_signed_copy']) && empty($rcServiceinfo['rc_audit_report'])) {
+                                                $rcAudit2Class = 'serviceContentwaiting';
+                                            } else if (isset($rcServiceinfo['rc_signed_copy']) && !empty($rcServiceinfo['rc_signed_copy']) && isset($rcServiceinfo['rc_audit_report']) && !empty($rcServiceinfo['rc_audit_report'])) {
+                                                $rcAudit2Class = 'serviceContentCompleted';
+                                            } else {
+                                                $rcAudit2Class = 'serviceContent';
+                                            }
+                                            ?>
+                                            <div class="<?php echo $rcAudit2Class ?>">
+                                                <span>RC Audit Report, Summery and Checklists/Recertification</span>
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <div class=" ">
+                                                        <?php if (isset($rcServiceinfo['rc_signed_copy']) && !empty($rcServiceinfo['rc_signed_copy'])) { ?>
+                                                            <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
+                                                                <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $rcServiceinfo['rc_id'] ?>" service-type="RC" data-column="rc_audit_report" name="input-audit-report-rc" class="auditReportRc input-audit-report-rc<?php echo $rcServiceinfo['rc_id'] ?>" />
+                                                            </span> 
+                                                        <?php } ?> 
+                                                        <?php if (isset($rcServiceinfo['rc_audit_report']) && !empty($rcServiceinfo['rc_audit_report'])) { ?>
+                                                            <span style="padding-right: 5px"> 
+                                                                <a href="<?php echo $rcServiceinfo['rc_audit_report'] ?>" data-id="" download class="customerReviewFileDownload">
+                                                                    <i class="fa fa-download"></i>
+                                                                </a>
+                                                            </span> 
+                                                        <?php } ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($rcServiceinfo['rc_audit_report'])) {
+                                                $rcAudit2Class = 'serviceContent';
+                                            } else if (isset($rcServiceinfo['rc_audit_report']) && !empty($rcServiceinfo['rc_audit_report']) && empty($rcServiceinfo['auditor_notes_rc'])) {
+                                                $rcAudit2Class = 'serviceContentwaiting';
+                                            } else if (isset($rcServiceinfo['rc_audit_report']) && !empty($rcServiceinfo['rc_audit_report']) && isset($rcServiceinfo['auditor_notes_rc']) && !empty($rcServiceinfo['auditor_notes_rc'])) {
+                                                $rcAudit2Class = 'serviceContentCompleted';
+                                            } else {
+                                                $rcAudit2Class = 'serviceContent';
+                                            }
+                                            ?>
+                                            <div class="<?php echo $rcAudit2Class ?>">
+                                                <span>RC Auditor Notes</span>
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <div class=" ">
+                                                        <?php if (isset($rcServiceinfo['rc_audit_report']) && !empty($rcServiceinfo['rc_audit_report'])) { ?>
+                                                            <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
+                                                                <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $rcServiceinfo['rc_id'] ?>" service-type="RC" data-column="auditor_notes_rc" name="input-auditor-notes-rc" class="auditorNotesRc input-auditor-notes-rc<?php echo $rcServiceinfo['rc_id'] ?>" />
+                                                            </span> 
+                                                        <?php } ?> 
+                                                        <?php if (isset($rcServiceinfo['auditor_notes_rc']) && !empty($rcServiceinfo['auditor_notes_rc'])) { ?>
+                                                            <span style="padding-right: 5px"> 
+                                                                <a href="<?php echo $rcServiceinfo['auditor_notes_rc'] ?>" data-id="" download class="customerReviewFileDownload">
+                                                                    <i class="fa fa-download"></i>
+                                                                </a>
+                                                            </span> 
+                                                        <?php } ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($rcServiceinfo['auditor_notes_rc'])) {
+                                                $rcEvidenceClass = 'serviceContent';
+                                            } else if (isset($rcServiceinfo['auditor_notes_rc']) && !empty($rcServiceinfo['auditor_notes_rc']) && empty($rcServiceinfo['rc_audit_evidence'])) {
+                                                $rcEvidenceClass = 'serviceContentwaiting';
+                                            } else if (isset($rcServiceinfo['auditor_notes_rc']) && !empty($rcServiceinfo['auditor_notes_rc']) && isset($rcServiceinfo['rc_audit_evidence']) && !empty($rcServiceinfo['rc_audit_evidence'])) {
+                                                $rcEvidenceClass = 'serviceContentCompleted';
+                                            } else {
+                                                $rcEvidenceClass = 'serviceContent';
+                                            }
+                                            ?>
+                                            <div class="<?php echo $rcEvidenceClass ?>">
+                                                <span>RC Audit NC And evidence of closer
+                                                    <?php if (isset($rcServiceinfo['rc_audit_evidence']) && !empty($rcServiceinfo['rc_audit_evidence']) && $rcServiceinfo['rc_audit_evidence'] == "NONC" && isset($rcServiceinfo['auditor_notes_rc']) && !empty($rcServiceinfo['auditor_notes_rc'])) { ?> 
+                                                        <!--                                                    <a class="" title="No NC Flag" style="padding: 1px 5px;">
+                                                                                                                <i class="fa fa-times-circle fa-lg " style="padding: 3px"></i>
+                                                                                                            </a>-->
+                                                        *(No NC)<?php } ?>
+                                                </span>
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <div class=" ">
+                                                        <?php if (isset($rcServiceinfo['auditor_notes_rc']) && !empty($rcServiceinfo['auditor_notes_rc']) && empty($rcServiceinfo['rc_audit_evidence'])) { ?>
+                                                            <span class=" image-preview-input" style="padding-right: 15px"> 
+                                                                <input type="checkbox" class="no_nc_file" name="no_nc_file" data-svctype="RC" data-service="<?php echo $rcServiceinfo['rc_id'] ?>" value="">
+                                                            </span>
+                                                        <?php } ?>
+                                                        <?php if (isset($rcServiceinfo['rc_audit_evidence']) && !empty($rcServiceinfo['rc_audit_evidence']) && $rcServiceinfo['rc_audit_evidence'] == "NONC" && isset($rcServiceinfo['auditor_notes_rc']) && !empty($rcServiceinfo['auditor_notes_rc'])) { ?>
+                                                            <span class=" image-preview-input" style="padding-right: 15px"> 
+                                                                <input type="checkbox" class="no_nc_file" name="no_nc_file" data-svctype="RC" data-service="<?php echo $rcServiceinfo['rc_id'] ?>" checked>
+                                                            </span>                                                     
+                                                        <?php } ?>
+                                                        <?php if (isset($rcServiceinfo['rc_audit_evidence']) && !empty($rcServiceinfo['rc_audit_evidence']) && isset($rcServiceinfo['auditor_notes_rc']) && !empty($rcServiceinfo['auditor_notes_rc']) && $rcServiceinfo['rc_audit_evidence'] <> "NONC") { ?>
+                                                            <span class=" image-preview-input" style="padding-right: 15px"> 
+                                                                <input type="checkbox" class="no_nc_file" name="no_nc_file" data-svctype="RC" data-service="<?php echo $rcServiceinfo['rc_id'] ?>">
+                                                            </span>                                                     
+                                                        <?php } ?>
+                                                        <?php if (isset($rcServiceinfo['auditor_notes_rc']) && !empty($rcServiceinfo['auditor_notes_rc'])) { ?>
+                                                            <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
+                                                                <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $rcServiceinfo['rc_id'] ?>" service-type="RC" data-column="rc_audit_evidence" name="input-audit-evidence-rc" class="auditEvidenceRc input-audit-evidence-rc<?php echo $rcServiceinfo['rc_id'] ?>" />
+                                                            </span>
+                                                        <?php } ?>
+                                                        <?php if (isset($rcServiceinfo['rc_audit_evidence']) && !empty($rcServiceinfo['rc_audit_evidence']) && $rcServiceinfo['rc_audit_evidence'] != "NONC" && isset($rcServiceinfo['auditor_notes_rc']) && !empty($rcServiceinfo['auditor_notes_rc'])) { ?>                                                    
+                                                            <span style="padding-right: 5px"> 
+                                                                <a href="<?php echo $rcServiceinfo['rc_audit_evidence'] ?>" data-id="" download class="customerReviewFileDownload">
+                                                                    <i class="fa fa-download"></i>
+                                                                </a>
+                                                            </span>  
+                                                        <?php } ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($rcServiceinfo['rc_audit_evidence'])) {
+                                                $rcAnixClass = 'serviceContent';
+                                            } else if (isset($rcServiceinfo['rc_audit_evidence']) && !empty($rcServiceinfo['rc_audit_evidence']) && empty($rcServiceinfo['stage_ii_id'])) {
+                                                $rcAnixClass = 'serviceContentwaiting';
+                                            } else if (isset($rcServiceinfo['rc_audit_evidence']) && !empty($rcServiceinfo['rc_audit_evidence']) && isset($rcServiceinfo['stage_ii_id']) && !empty($rcServiceinfo['stage_ii_id'])) {
+                                                $rcAnixClass = 'serviceContentCompleted';
+                                            } else {
+                                                $rcAnixClass = 'serviceContent';
+                                            }
+                                            ?>
+                                            <div class="<?php echo $rcAnixClass ?>">
+                                                <span>Review Report (Annex II)- RC Audit</span> 
+                                                <?php if ((isset($rcServiceinfo['rc_audit_evidence']) && !empty($rcServiceinfo['rc_audit_evidence']) && empty($rcServiceinfo['stage_ii_id'])) || (isset($rcServiceinfo['audit_scheduleii_id']) && empty($rcServiceinfo['rc_signed_copy']) && empty($rcServiceinfo['rc_audit_report']) && empty($rcServiceinfo['auditor_notes_rc']) && empty($rcServiceinfo['rc_audit_evidence']) && empty($rcServiceinfo['stage_ii_id']) && (Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin()))) { ?>
+                                                    <a class="stageIIAuditSai pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $rcServiceinfo['rc_id'] ?>" data-row-count="" title="Review Report (Annex II)" style="padding: 1px 5px;">
+                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } ?>
+                                                <?php if (isset($rcServiceinfo['stage_ii_id']) && !empty($rcServiceinfo['stage_ii_id'])) { ?>
+                                                    <a class="editstageIIAudit2  pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $rcServiceinfo['rc_id'] ?>" data-notification="<?php echo $rcServiceinfo['stage_ii_id'] ?>" title="Add Review Report(Annex II)" style="padding: 1px 5px;">
+                                                        <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                    <a class="downloadStageIIAuditRC pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $rcServiceinfo['rc_id'] ?>" data-stage-ii="<?php echo $rcServiceinfo['stage_ii_id'] ?>" title="Download Review Report (Annex II)" style="padding: 1px 5px;">
+                                                        <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($rcServiceinfo['stage_ii_id'])) {
+                                                $rcCDCClass = 'serviceContent';
+                                            } else if (isset($rcServiceinfo['stage_ii_id']) && !empty($rcServiceinfo['stage_ii_id']) && empty($rcServiceinfo['crr_id'])) {
+                                                $rcCDCClass = 'serviceContentwaiting';
+                                            } else if (isset($rcServiceinfo['stage_ii_id']) && !empty($rcServiceinfo['stage_ii_id']) && isset($rcServiceinfo['crr_id']) && !empty($rcServiceinfo['crr_id'])) {
+                                                $rcCDCClass = 'serviceContentCompleted';
+                                            } else {
+                                                $rcCDCClass = 'serviceContent';
+                                            }
+                                            ?>
+                                            <div class="<?php echo $rcCDCClass ?>">
+                                                <span>Review Report - CDC DELIBERATION AND DECISION</span> 
+                                                <?php if ((isset($rcServiceinfo['stage_ii_id']) && !empty($rcServiceinfo['stage_ii_id']) && empty($rcServiceinfo['crr_id']) && !(Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin())) || (!empty($rcServiceinfo['rc_signed_copy']) && !empty($rcServiceinfo['rc_audit_report']) && !empty($rcServiceinfo['auditor_notes_rc']) && !empty($rcServiceinfo['rc_audit_evidence']) && !empty($rcServiceinfo['stage_ii_id']) && empty($rcServiceinfo['crr_id']) && (Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin()))) { ?>
+                                                    <a class="cdcReport pull-right" data-svctype="RC" data-id="<?php echo $rcServiceinfo['service'] ?>" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $rcServiceinfo['rc_id'] ?>" data-service1="<?php echo $crservice['cr_id'] ?>" data-type="service-type-sai" data-row-id="" audit-data="RC" title="Add CDC DELIBERATION AND DECISION" style="padding: 1px 5px;">
+                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } else if (isset($rcServiceinfo['crr_id']) && !empty($rcServiceinfo['crr_id'])) { ?>
+                                                    <a class="editCDCRC pull-right" data-svctype="RC" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $rcServiceinfo['rc_id'] ?>" data-notification="<?php echo $rcServiceinfo['crr_id'] ?>" title="Edit CDC DELIBERATION AND DECISION" style="padding: 1px 5px;">
+                                                        <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                    </a>
+                                                    <a class="sendCdcMail pull-right" data-svctype="RC" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $rcServiceinfo['rc_id'] ?>" data-crr="<?php echo $rcServiceinfo['crr_id'] ?>" title="Send certificate by email" style="padding: 1px 5px;">
+                                                        <i class="fa fa-envelope fa-lg" style="padding: 3px"></i>
+                                                    </a>
+                                                    <a class="downloadCDCRC pull-right" data-customer="<?php echo $_GET['customerid'] ?>"  data-caservice-id="<?php echo $rcServiceinfo['rc_id'] ?>" data-crr="<?php echo $rcServiceinfo['crr_id'] ?>" title="Download  CDC DELIBERATION AND DECISION" style="padding: 1px 5px;">
+                                                        <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($rcServiceinfo['crr_id'])) {
+                                                $rccertClass = "serviceContent";
+                                            } else if (isset($rcServiceinfo['crr_id']) && !empty($rcServiceinfo['crr_id'])) {
+                                                $rccertClass = "serviceContentCompleted";
+                                            } else {
+                                                $rccertClass = "serviceContent";
+                                            }
+                                            ?>
+                                            <div class="<?php echo $rccertClass ?>">
+                                                <span>Certificate Print</span> 
+                                                <?php if (isset($rcServiceinfo['crr_id']) && !empty($rcServiceinfo['crr_id'])) { ?>
+                                                    <a class="download-certificate-print pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $rcServiceinfo['rc_id'] ?>" data-id="<?php echo $rcServiceinfo['service'] ?>" data-certificate="<?php echo !empty($rcServiceinfo['certificate_id']) ? $rcServiceinfo['certificate_id'] : '' ?>" data-crr="<?php echo $rcServiceinfo['crr_id'] ?>" data-row-count="" title="Certificate Print" style="padding: 1px 5px;">
+                                                        <i class="fa fa-download fa-lg" style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($rcServiceinfo['crr_id'])) {
+                                                $rcCustSatisfyClass = 'serviceContent';
+                                            } else if (isset($rcServiceinfo['crr_id']) && !empty($rcServiceinfo['crr_id']) && empty($rcServiceinfo['certificate_print'])) {
+                                                $rcCustSatisfyClass = 'serviceContentwaiting';
+                                            } else if (isset($rcServiceinfo['certificate_print']) && !empty($rcServiceinfo['certificate_print'])) {
+                                                $rcCustSatisfyClass = 'serviceContentCompleted';
+                                            } else {
+                                                $rcCustSatisfyClass = 'serviceContent';
+                                            }
+                                            ?>
+                                            <div class="<?php echo $rcCustSatisfyClass ?>">
+                                                <span>Certificate Upload</span>
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <div class=" ">
+                                                        <?php if (isset($rcServiceinfo['crr_id']) && !empty($rcServiceinfo['crr_id'])) { ?>
+                                                            <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
+                                                                <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $rcServiceinfo['rc_id'] ?>" service-type="RC" data-column="certificate_print" name="input-certificate-upload-rc" class="customerCertificateUploadRc input-certificate-upload-rc<?php echo $rcServiceinfo['rc_id'] ?>" />
+                                                            </span> 
+                                                        <?php } ?> 
+                                                        <?php if (isset($rcServiceinfo['certificate_print']) && !empty($rcServiceinfo['certificate_print'])) { ?>
+                                                            <span style="padding-right: 5px"> 
+                                                                <a href="<?php echo $rcServiceinfo['certificate_print'] ?>" data-id="" download class="customerReviewFileDownload">
+                                                                    <i class="fa fa-download"></i>
+                                                                </a>
+                                                            </span> 
+                                                        <?php } ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($rcServiceinfo['certificate_print'])) {
+                                                $rcCustSatisfyClass = 'serviceContent';
+                                            } else if (isset($rcServiceinfo['certificate_print']) && !empty($rcServiceinfo['certificate_print']) && empty($rcServiceinfo['rc_customer_review'])) {
+                                                $rcCustSatisfyClass = 'serviceContentwaiting';
+                                            } else if (isset($rcServiceinfo['certificate_id']) && !empty($rcServiceinfo['certificate_id']) && isset($rcServiceinfo['rc_customer_review']) && !empty($rcServiceinfo['rc_customer_review'])) {
+                                                $rcCustSatisfyClass = 'serviceContentCompleted';
+                                            } else {
+                                                $rcCustSatisfyClass = 'serviceContent';
+                                            }
+                                            ?>
+                                            <div class="<?php echo $rcCustSatisfyClass ?>">
+                                                <span>Client Feedback
+                                                    <?php if (isset($rcServiceinfo['rc_customer_review']) && !empty($rcServiceinfo['rc_customer_review']) && $rcServiceinfo['rc_customer_review'] == "NONC" && isset($rcServiceinfo['certificate_print']) && !empty($rcServiceinfo['certificate_print'])) { ?> 
+                                                        <!--                                                    <a class="" title="No Client Feedback Flag" style="padding: 1px 5px;">
+                                                                                                                <i class="fa fa-times-circle fa-lg " style="padding: 3px"></i>
+                                                                                                            </a>-->
+                                                        *(No Client Feedback)<?php } ?>
+                                                </span>
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <?php if (isset($rcServiceinfo['certificate_print']) && !empty($rcServiceinfo['certificate_print']) && empty($rcServiceinfo['rc_customer_review'])) { ?>
+                                                        <span class="image-preview-input" style="padding-right: 15px"> 
+                                                            <input type="checkbox" class="no_feedback_file" name="no_feedback_file" data-svctype="RC" data-service="<?php echo $rcServiceinfo['rc_id'] ?>" >
+                                                        </span>
+                                                    <?php } ?>
+                                                    <?php if (isset($rcServiceinfo['rc_customer_review']) && !empty($rcServiceinfo['rc_customer_review']) && $rcServiceinfo['rc_customer_review'] == "NONC" && isset($rcServiceinfo['certificate_print']) && !empty($rcServiceinfo['certificate_print'])) { ?>
+                                                        <span class="image-preview-input" style="padding-right: 15px"> 
+                                                            <input type="checkbox" class="no_feedback_file" name="no_feedback_file" data-svctype="RC" data-service="<?php echo $rcServiceinfo['rc_id'] ?>" checked>
+                                                        </span>                                                     
+                                                    <?php } ?>
+                                                    <?php if (isset($rcServiceinfo['rc_customer_review']) && !empty($rcServiceinfo['rc_customer_review']) && isset($rcServiceinfo['certificate_print']) && !empty($rcServiceinfo['certificate_print']) && $rcServiceinfo['rc_customer_review'] <> "NONC") { ?>
+                                                        <span class="image-preview-input" style="padding-right: 15px"> 
+                                                            <input type="checkbox" class="no_feedback_file" name="no_feedback_file" data-svctype="RC" data-service="<?php echo $rcServiceinfo['rc_id'] ?>">
+                                                        </span>                                                     
+                                                    <?php } ?>
+                                                    <?php if (isset($rcServiceinfo['certificate_print']) && !empty($rcServiceinfo['certificate_print'])) { ?>
+                                                        <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
+                                                            <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $rcServiceinfo['rc_id'] ?>" service-type="RC" data-column="rc_customer_review" name="input-customer-review-rc" class="customerReviewRc input-customer-review-rc<?php echo $rcServiceinfo['rc_id'] ?>" />
+                                                        </span>
+                                                    <?php } ?>
+                                                    <?php if (isset($rcServiceinfo['rc_customer_review']) && !empty($rcServiceinfo['rc_customer_review']) && $rcServiceinfo['rc_customer_review'] != "NONC") { ?>                                                    
+                                                        <span style="padding-right: 5px"> 
+                                                            <a href="<?php echo $rcServiceinfo['rc_customer_review'] ?>" data-id="" download class="customerReviewFileDownload">
+                                                                <i class="fa fa-download"></i>
+                                                            </a>
+                                                        </span> 
+                                                    <?php } ?>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($rcServiceinfo['rc_customer_review'])) {
+                                                $rcReReportClass = 'serviceContent';
+                                            } else if (isset($rcServiceinfo['rc_customer_review']) && !empty($rcServiceinfo['rc_customer_review']) && empty($rcServiceinfo['survey_id'])) {
+                                                $rcReReportClass = 'serviceContentwaiting';
+                                            } else if (isset($rcServiceinfo['rc_customer_review']) && !empty($rcServiceinfo['rc_customer_review']) && isset($rcServiceinfo['survey_id']) && !empty($rcServiceinfo['survey_id'])) {
+                                                $rcReReportClass = 'serviceContentCompleted';
+                                            } else {
+                                                $rcReReportClass = 'serviceContent';
+                                            }
+                                            ?>
+                                            <div class="<?php echo $rcReReportClass ?>">
+                                                <span>Review Report - Review of feedback</span> 
+                                                <?php if (isset($rcServiceinfo['rc_customer_review']) && !empty($rcServiceinfo['rc_customer_review']) && empty($rcServiceinfo['survey_id'])) { ?>
+                                                    <a class="createCustomerSurvey pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $rcServiceinfo['rc_id'] ?>" data-svc="RC" data-row-id="" data-row-count="" title="Add Review of feedback" style="padding: 1px 5px;">
+                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } ?> 
+                                                <?php if (isset($rcServiceinfo['survey_id']) && !empty($rcServiceinfo['survey_id'])) { ?>
+                                                    <a class="editCustomerSurvey pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $rcServiceinfo['rc_id'] ?>" data-row-id="<?php echo $rcServiceinfo['survey_id'] ?>" data-row-count="" title="Update Review of feedback" style="padding: 1px 5px;">
+                                                        <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                    <a class="downloadRCCustomersatiSfaction pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $rcServiceinfo['rc_id'] ?>" data-surveyid="<?php echo $rcServiceinfo['survey_id'] ?>"  title="Download  Review of feedback" style="padding: 1px 5px;">
+                                                        <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($rcServiceinfo['survey_id'])) {
+                                                $rcCF1Class = 'serviceContent';
+                                            } else if (isset($rcServiceinfo['survey_id']) && !empty($rcServiceinfo['survey_id']) && empty($rcServiceinfo['control_id'])) {
+                                                $rcCF1Class = 'serviceContentwaiting';
+                                            } else if (isset($rcServiceinfo['survey_id']) && !empty($rcServiceinfo['survey_id']) && isset($rcServiceinfo['control_id']) && !empty($rcServiceinfo['control_id'])) {
+                                                $rcCF1Class = 'serviceContentCompleted';
+                                            } else {
+                                                $rcCF1Class = 'serviceContent';
+                                            }
+                                            ?>
+                                            <div class="<?php echo $rcCF1Class ?>">
+                                                <span>CONTROL FORMAT -1 (To be filled by AITF-MCL)</span> 
+                                                <?php if (empty($rcServiceinfo['control_id'])) { ?>
+                                                    <a class="createControlFormat1 pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $rcServiceinfo['rc_id'] ?>" title="Add control format 1" style="padding: 1px 5px;">
+                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } ?>
+                                                <?php if (isset($rcServiceinfo['control_id']) && !empty($rcServiceinfo['control_id'])) { ?>
+                                                    <a class="editControlFormat1 pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $rcServiceinfo['rc_id'] ?>" data-row-id="<?php echo $rcServiceinfo['control_id'] ?>" title="Add control format 1" style="padding: 1px 5px;">
+                                                        <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                    <a class="downloadRCControlFormat1 pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $rcServiceinfo['rc_id'] ?>" data-cfi-id="<?php echo $rcServiceinfo['control_id'] ?>" title="Download  control format 1" style="padding: 1px 5px;">
+                                                        <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($rcServiceinfo['control_id'])) {
+                                                $rcCF2Class = 'serviceContent';
+                                            } else if (isset($rcServiceinfo['control_id']) && !empty($rcServiceinfo['control_id']) && empty($rcServiceinfo['control2_id'])) {
+                                                $rcCF2Class = 'serviceContentwaiting';
+                                            } else if (isset($rcServiceinfo['control_id']) && !empty($rcServiceinfo['control_id']) && isset($rcServiceinfo['control2_id']) && !empty($rcServiceinfo['control2_id'])) {
+                                                $rcCF2Class = 'serviceContentCompleted';
+                                            } else {
+                                                $rcCF2Class = 'serviceContent';
+                                            }
+                                            ?>
+                                            <div class="<?php echo $rcCF2Class ?>">
+                                                <span>CONTROL FORMAT -2 (SHC Comments while meeting)</span> 
+                                                <?php if (empty($rcServiceinfo['control2_id'])) { ?>
+                                                    <a class="createControlFormat2 pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $rcServiceinfo['rc_id'] ?>" data-id="<?php echo $rcServiceinfo['service'] ?>" data-row-count="" title="Add control format 2" style="padding: 1px 5px;">
+                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } ?>
+                                                <?php if (isset($rcServiceinfo['control2_id']) && !empty($rcServiceinfo['control2_id'])) { ?>
+                                                    <a class="editControlFormat2 pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $rcServiceinfo['rc_id'] ?>" data-notification="<?php echo $rcServiceinfo['control2_id'] ?>" title="Update control format 2" style="padding: 1px 5px;">
+                                                        <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                    <a class="downloadRCControlFormat2 pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $rcServiceinfo['rc_id'] ?>" data-cf-id="<?php echo $rcServiceinfo['control2_id'] ?>" title="Download  control format 2" style="padding: 1px 5px;">
+                                                        <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="rcdates<?php echo $rcServiceinfo['rc_id'] ?>" style="display: <?php echo $disp ?>;">
+                        <div class="servicebox-bunch">
+                            <div class="servicebox" style="display: ">
+                                <div class="row" id="service-row" class="service-row">
+                                    <div class="col-xs-12 aitf_service_date" style="text-align: center" data-row-id="">LETTERS &amp; ACTIONS OF CLIENT STATUS - for the next service: RC
+                                        <span class="serviceStatus"></span>
+                                    </div>
+                                </div>
+                                <div class="servicebox-data" id="servicebox-data">
+                                    <div class="row">
+                                        <div class="col-xs-12 table-responsive">
+                                            <table class="table table-bordered table-hover table-sortable service_details" id="service_details">
+                                                <thead>
+                                                    <tr>
+                                                        <th class="" width="20%" style="padding: 2px">
+                                                            <small>Action</small>
+                                                        </th>
+                                                        <th class="" width="20%" style="padding: 2px">
+                                                            <small>Proposed due on date</small>
+                                                        </th>
+                                                        <th class="" width="20%" style="padding: 2px">
+                                                            <small>Sent on date</small>
+                                                        </th>
+                                                        
+                                                        <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+                                                        <th class="" width="4%" style="padding: 2px">
+                                                            <small>Actions</small>
+                                                        </th>
+                                                        <?php } ?>
+                                                        <th class="" width="4%" style="padding: 2px">
+                                                            <small>Pdf</small>
+                                                        </th>
+                                                        <th class="" width="4%" style="padding: 2px">
+                                                            <small>Generate</small>
+                                                        </th>
+                                                        <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+                                                            <th class="" width="4%" style="padding: 2px">
+                                                                <small>Delete</small>
+                                                            </th>
+                                                        <?php } ?>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="">
+                                                    <?php foreach ($rcServiceActionDates as $rcActions) { ?>
+                                                        <tr class=" previousCBData" style="display: ">
+                                                            <td class="" style="padding: 0px;">
+                                                                <div class="table-edit-control">
+                                                                    <small><?php echo $rcActions['action'] ?></small>
+                                                                </div>
+                                                            </td>
+                                                            <td class="" style="padding: 0px;">
+                                                                <div class="table-edit-control">
+                                                                    <small><?php echo simpleDateConversion($rcActions['due_date']) ?></small>
+                                                                </div>
+                                                            </td>
+                                                            <td class="" style="padding: 0px;">
+                                                                <div class="table-edit-control">
+                                                                    <small><?php echo simpleDateConversion($rcActions['sent_date']) ?></small>
+                                                                </div>
+                                                            </td>
+                                                            
+                                                            <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+                                                            <td class="" style="padding: 0px;">
+                                                                <!--<a class="rcserviceComment" data-row-id=" echo $rcActions['action_id'] " data-column="comment" data-comment="<?php echo $rcActions['comment'] ?>">-->
+                                                                <!--    <i class="fa fa-comment-o" aria-hidden="true"></i>-->
+                                                                <!--</a>-->
+                                                                <a href="editcadates.php?id=<?php echo $rcActions['action_id'] ?>">
+                                                                    <i class="fa fa-pencil-square fa-sm " style="padding: 1px"></i>
+                                                                </a>
+                                                                
+                                                            </td>
+                                                            
+                                                            <?php } ?>
+                                                            <td class="" style="padding: 0px;">
+                                                                <?php if (date("Y-m-d") >= $rcActions['due_date']) { ?>
+                                                                    <a class="PreviewPDF" data-due="<?php echo simpleDateConversion($rcActions['due_date']) ?>" data-servicetype="RC" data-action-pdf="<?php echo $rcActions['action'] ?>" data-action="<?php echo $rcActions['action_id'] ?>" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $rcActions['service_id'] ?>" data-column="pdf">
+                                                                        <i class="fa fa-file-pdf-o" aria-hidden="true"></i>
+                                                                    </a>
+                                                                <?php } ?>
+                                                            </td>
+                                                            <td class="" style="padding: 0px;">
+                                                                <?php if (date("Y-m-d") >= $rcActions['due_date']) { ?>
+                                                                    <a class="caServiceGanerate" data-servicetype="RC" data-due="<?php echo simpleDateConversion($rcActions['due_date']) ?>" data-action-pdf="<?php echo $rcActions['action'] ?>" data-action="<?php echo $rcActions['action_id'] ?>"  data-service="<?php echo $rcActions['service_id'] ?>" data-customer="<?php echo $_GET['customerid'] ?>" data-actiontype="<?php echo $rcActions['action'] ?>" data-column="generate">
+                                                                        <i class="fa fa-envelope-o" aria-hidden="true"></i>
+                                                                    </a> 
+                                                                <?php } ?>
+                                                            </td>
+                                                            <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+                                                                <?php
+                                                                if ($rcActions["is_deleted"] == 'Y') {
+                                                                    $setDelete4 = "disabled='disabled'";
+                                                                } else {
+                                                                    $setDelete4 = "";
+                                                                }
+                                                                ?>
+                                                                <td class="" style="padding: 0px;">
+                                                                    <a class="deleteLetterAccount" title="Delete" data-customer='<?php echo $_GET['customerid'] ?>' data-service='<?php echo $rcActions['service_id'] ?>' data-action ="<?php echo $rcActions['action_id'] ?>" style="float: right; margin-right: 10px" <?php echo $setDelete4; ?>><i class="fa fa-trash"></i></a>
+                                                                    
+                                                                    
+                                                                </td>
+                                                            <?php } ?>
+                                                        </tr>
+                                                    <?php } ?>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <?php
+            }
+            if ($service['service_type'] == "SP") {
+                if (isset($spCount['service_done']) && $spCount['service_done'] == "DONE") {
+                    $class9 = 'sp-service-type';
+                    $class10 = "sp-service-type";
+                } else if (isset($spCount['service_done']) && $spCount['service_done'] == "") {
+                    $class9 = "sp-service-type";
+                    $class10 = "";
+                } else {
+                    $class9 = "";
+                    $class10 = "sp-service-type";
+                }
+
+                $spService = "SELECT DISTINCT sp.sp_id, sp.service, sp_signed_noti, certificate_option, sp_signed_copy, sp_audit_report, service_sp_status, sp.audit_date as spaudit, sp.auditors as sp_auditors, soi.audit_stage_id, asi.audit_schedule_id, siea.stage_ii_id, crr.crr_id, cfp.certificate_id, ca.id, aggrement_date, aggrement_no FROM service_type_sp sp left join stage_oneaudit_id soi on sp.sp_id = soi.ca_service_id left join audit_schedule_id asi on sp.sp_id = asi.serviceca_id left join stage_ii_audit_id siea on sp.sp_id = siea.ca_service_id left join cdc_report_review crr on sp.sp_id = crr.ca_service_id left join certificate_print cfp on sp.sp_id = cfp.service_id left join certification_aggrement ca on sp.sp_id = ca.service WHERE sp.service = :id GROUP BY sp.sp_id";
+                $statement = $db->prepare($spService);
+                $statement->bindParam(':id', $service["service_id"]);
+                $statement->execute();
+                $spservices = $statement->fetch();
+
+                $allSPServiceAction = "SELECT MIN(action_id) as action_id, service_id, action, due_date, MAX(sent_date) as sent_date, MAX(is_deleted) as is_deleted FROM ca_service_dates WHERE service_id = :id GROUP BY service_id, action, due_date ORDER BY due_date ASC";
+                $statement = $db->prepare($allSPServiceAction);
+                $statement->bindParam(':id', $spservices['service']);
+                $statement->execute();
+                $spServiceActionDates = $statement->fetchAll();
+
+                $lastService = "SELECT service_type FROM `service` WHERE customer_id = :id ORDER BY service_id DESC LIMIT 1 OFFSET 1";
+                $statement = $db->prepare($lastService);
+                $statement->bindParam(':id', $_GET['customerid']);
+                $statement->execute();
+                $beforeSP = $statement->fetch();
+
+                if ($letestService["c_service"] == $spservices['service']) {
+                    $disp = "";
+                } else {
+                    $disp = "none";
+                }
+                ?>
+                <div class="servicebox-bunch <?php echo $class9 ?>" style="display: ">
+                    <div class="servicebox" style="display: ">
+                        <form id="spService" action="serviceTypeSP.php" method="post" enctype="multipart/form-data">
+                            <div class="row sp-service-row" id="service-row" data-id="<?php echo $spservices['sp_id'] ?>">
+                                <div class="col-xs-12 qms_customer_name service_title" style="text-align: center" data-row-id="">
+                                    Service type - SP<span class="serviceStatus"></span>
+                                    <a class="deleteServiceSP" id="deleteServiceSP" data-service="<?php echo $spservices['service'] ?>" data-row-id="<?php echo $spservices['sp_id'] ?>" data-customer="<?php echo $_GET['customerid'] ?>">
+                                        <i class="fa fa-trash-o pull-right " style="color: white; padding-right: 10px;"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="sp-service-desc<?php echo $spservices['sp_id'] ?>" style="display: <?php echo $disp ?>;">
+                                <div class="row" style="padding-top: 10px;">
+                                    <div class="col-xs-3 form-group float-label-control" style="">
+                                        <label>Add to</label> 
+                                        <select class="addService add-to-service" data-id="<?php echo $spservices['sp_id'] ?>" data-column="service_sp_status" name="add-to-service" style="color: black" value="">
+                                            <option value="<?php if (isset($spservices['service_sp_status'])) echo $spservices['service_sp_status'] ?>">
+                                                <?php
+                                                if (isset($spservices['service_sp_status']) && !empty($spservices['service_sp_status'])) {
+                                                    echo $spservices['service_sp_status'];
+                                                } else {
+                                                    echo "Select add to";
+                                                }
+                                                ?> 
+                                                <?php foreach ($addToList as $addTo) { ?>
+                                                <option value="<?php echo $addTo['add_to_type'] ?>"><?php echo $addTo['add_to_type'] ?></option>
+                                            <?php } ?>
+                                        </select>
+                                    </div>
+                                    <div class="col-xs-3 form-group float-label-control" style="">
+                                        <label>Audit Date</label> 
+                                        <input class="serviceAuditDate " placeholder="Audit Date" data-id="<?php echo $spservices['service'] ?>" data-service="spaService" data-column="audit_date" name="serviceAuditDate" style="color: black" value="<?php if (isset($spservices["spaudit"])) echo $spservices["spaudit"]; ?>" />
+                                    </div>
+                                    <div class="col-xs-3 form-group float-label-control" style="">
+                                        <label>Team Leader, Auditor(s)</label> 
+                                        <input class="servicespAuditors" placeholder="Team Leader, Auditor(s)" data-id="<?php echo $spservices['service'] ?>" data-service="spaService" data-column="audit_date" name="servicespAuditors" style="color: black" value="<?php if (isset($spservices["sp_auditors"])) echo $spservices["sp_auditors"]; ?>" />
+                                    </div>
+                                </div>
+                                <div class="servicebox-data" id="servicebox-data">
+                                    <div class="row">
+                                        <div class="col-sm-6">
+                                            <div class="serviceContentCompleted"><span>Release - Audit Notification</span>
+                                                <?php if (isset($spservices['audit_stage_id']) && !empty($spservices['audit_stage_id'])) { ?>
+                                                    <a class="editAuditNotification pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $spservices['sp_id'] ?>" data-notification="<?php echo $spservices['audit_stage_id'] ?>" title="Update Release Audit Notification" style="padding: 1px 5px;">
+                                                        <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                    <a class="downloadAuditNotificationSP pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $spservices['sp_id'] ?>" data-audit="<?php echo $spservices['audit_stage_id'] ?>" title="Download Release Audit Notification" style="padding: 1px 5px;">
+                                                        <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6"><?php
+                                                if (isset($spservices['audit_stage_id']) && !empty($spservices['audit_stage_id']) && empty($spservices['sp_signed_noti'])) {
+                                                    $newClass = "serviceContentwaiting";
+                                                } else if (isset($spservices['sp_signed_noti']) && !empty($spservices['sp_signed_noti'])) {
+                                                    $newClass = "serviceContentCompleted";
+                                                }
+                                                ?>
+                                            <div class="<?php echo $newClass ?>"><span>Signed Notification SP Audit</span>
+                                                <?php if (isset($spservices['sp_signed_noti']) && !empty($spservices['sp_signed_noti']) && $spservices['sp_signed_noti'] == "NONC" && isset($spservices['audit_stage_id']) && !empty($spservices['audit_stage_id'])) { ?> 
+                                                    <a class="" title="No Schedule" style="padding: 1px 5px;">
+                                                        <i class="fa fa-times-circle fa-lg " style="padding: 3px"></i>
+                                                    </a>
+                                                <?php } ?>
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <?php if (isset($spservices['audit_stage_id']) && !empty($spservices['audit_stage_id']) && empty($spservices['sp_signed_noti'])) { ?>
+                                                        <span class="image-preview-input" style="padding-right: 15px"> 
+                                                            <input type="checkbox" class="no_notification_upload_file" name="no_notification_upload_file" data-svctype="SP" data-service="<?php echo $spservices['sp_id'] ?>" value="">
+                                                        </span>
+                                                    <?php } ?>
+                                                    <?php if (isset($spservices['sp_signed_noti']) && !empty($spservices['sp_signed_noti']) && $spservices['sp_signed_noti'] == "NONC" && isset($spservices['audit_stage_id']) && !empty($spservices['audit_stage_id'])) { ?>
+                                                        <span class="image-preview-input" style="padding-right: 15px"> 
+                                                            <input type="checkbox" class="no_notification_upload_file" name="no_notification_upload_file" data-svctype="SP" data-service="<?php echo $spservices['sp_id'] ?>" checked>
+                                                        </span>                                                     
+                                                    <?php } ?>
+                                                    <?php if (isset($spservices['sp_signed_noti']) && !empty($spservices['sp_signed_noti']) && isset($spservices['audit_stage_id']) && !empty($spservices['audit_stage_id']) && $spservices['sp_signed_noti'] <> "NONC") { ?>
+                                                        <span class="image-preview-input" style="padding-right: 15px"> 
+                                                            <input type="checkbox" class="no_notification_upload_file" name="no_notification_upload_file" data-svctype="SP" data-service="<?php echo $spservices['sp_id'] ?>">
+                                                        </span>                                                     
+                                                    <?php } ?>
+                                                    <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px">
+                                                        <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $spservices['sp_id'] ?>" service-type="SP" data-column="sp_signed_noti" name="input-spsigned-form" class="updatespsigned input-spsigned-form<?php echo $spservices['sp_id'] ?>" />
+                                                    </span> 
+                                                    <?php if (isset($spservices['sp_signed_noti']) && !empty($spservices['sp_signed_noti']) && $spservices['sp_signed_noti'] != "NONC") { ?>
+                                                        <span style="padding-right: 5px"> 
+                                                            <a href="<?php echo $spservices['sp_signed_noti'] ?>" data-id="" download class="signednotisaiiFileDownload">
+                                                                <i class="fa fa-download"></i>
+                                                            </a> 
+                                                        </span>
+                                                    <?php } ?>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-sm-6">  
+                                            <?php
+                                            if (empty($spservices['sp_signed_noti'])) {
+                                                $newClass = "serviceContent";
+                                            } else if (isset($spservices['sp_signed_noti']) && !empty($spservices['sp_signed_noti']) && (empty($spservices['id']) && empty($spservices["certificate_option"]))) {
+                                                $newClass = "serviceContentwaiting";
+                                            } else if (isset($spservices['sp_signed_noti']) && !empty($spservices['sp_signed_noti']) && ((isset($spservices['id']) && !empty($spservices['id'])) || (isset($spservices['certificate_option']) && !empty($spservices['certificate_option'])))) {
+                                                $newClass = "serviceContentCompleted";
+                                            } else {
+                                                $newClass = "serviceContent";
+                                            }
+                                            ?>
+                                            <div class="<?php echo $newClass ?>"><span>Certification Agreement</span>
+                                                <?php if (isset($spservices['certificate_option']) && !empty($spservices['certificate_option']) && $spservices['certificate_option'] == "NONC") { ?>
+                                                    <a class="" title="No Certificate" style="padding: 1px 5px;">
+                                                        <i class="fa fa-times-circle fa-lg " style="padding: 3px"></i>
+                                                    </a>
+                                                <?php } ?>
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <?php if (isset($spservices['sp_signed_noti']) && !empty($spservices['sp_signed_noti']) && empty($spservices['id']) && empty($spservices["certificate_option"])) { ?>
+                                                        <span class="image-preview-input" style="padding-right: 15px"> 
+                                                            <input type="checkbox" class="no_certificate_file" name="no_certificate_file" data-svctype="SP" data-service="<?php echo $spservices['sp_id'] ?>" data-cert="" title="No Certification Agreement">
+                                                        </span>
+                                                    <?php } ?>
+                                                    <?php if (isset($spservices['sp_signed_noti']) && !empty($spservices['sp_signed_noti']) && isset($spservices['certificate_option']) && !empty($spservices['certificate_option']) && $spservices['certificate_option'] == "NONC" && empty($spservices['id'])) { ?>
+                                                        <span class="image-preview-input" style="padding-right: 15px"> 
+                                                            <input type="checkbox" class="no_certificate_file" name="no_certificate_file" data-svctype="SP" data-service="<?php echo $spservices['sp_id'] ?>" data-cert="" checked title="Add Certification Agreement">
+                                                        </span>                                                     
+                                                    <?php } ?> 
+                                                    <?php if (isset($spservices['sp_signed_noti']) && !empty($spservices['sp_signed_noti']) && isset($spservices['id']) && !empty($spservices['id'])) { ?>
+                                                        <span class="image-preview-input" style="padding-right: 15px"> 
+                                                            <input type="checkbox" class="no_certificate_file" name="no_certificate_file" data-svctype="SP" data-service="<?php echo $spservices['sp_id'] ?>" data-cert="<?php echo $spservices['id'] ?>" title="Remove Certification Agreement">
+                                                        </span>                                                     
+                                                    <?php } ?> 
+
+                                                    <?php if (isset($spservices['sp_signed_noti']) && !empty($spservices['sp_signed_noti']) && empty($spservices['id']) && empty($spservices["certificate_option"])) { ?>
+                                                        <a class="certificationBtn pull-right" data-customer="<?php echo $_GET["customerid"] ?>" data-service="<?php echo $spservices['sp_id'] ?>"  title="Certification Aggrement" style="padding: 1px 5px;"><i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i></a> 
+                                                    <?php } ?>
+                                                    <?php if (isset($spservices['id']) && !empty($spservices['id'])) { ?>
+                                                        <a class="editcertification pull-right" data-page="customer" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $spservices['sp_id'] ?>" data-certfication="<?php echo $spservices['id'] ?>" title="Edit Certification" style="padding: 1px 5px;"><i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i></a> 
+                                                        <a class="downloadcertificate pull-right" data-customer="<?php echo $_GET['customerid'] ?>"  data-service="<?php echo $spservices['sp_id'] ?>" data-certfication="<?php echo $spservices['id'] ?>" data-servicecount="0" data-filepath="<?php echo isset($spservices['certification_aggrement']) ? $spservices['certification_aggrement'] : ''; ?>" title="Download Certification Agreement" style="padding: 1px 5px;"><i class="fa fa-download fa-lg " style="padding: 3px"></i></a> 
+                                                    <?php } ?>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6"><?php
+                                                    if (empty($spservices['id']) && empty($spservices['certificate_option'])) {
+                                                        $newClass = "serviceContent";
+                                                    } else if ((isset($spservices['id']) && !empty($spservices['id']) || (isset($spservices['certificate_option']) && !empty($spservices['certificate_option']))) && empty($spservices['sp_signed_copy'])) {
+                                                        $newClass = "serviceContentwaiting";
+                                                    } else if (isset($spservices['sp_signed_copy']) && !empty($spservices['sp_signed_copy'])) {
+                                                        $newClass = "serviceContentCompleted";
+                                                    } else {
+                                                        $newClass = "serviceContent";
+                                                    }
+                                                    ?>
+                                            <div class="<?php echo $newClass ?>"><span>Upload Schedule</span>
+                                                <?php if (isset($spservices['sp_signed_copy']) && !empty($spservices['sp_signed_copy']) && $spservices['sp_signed_copy'] == "NONC" && isset($spservices['id']) && !empty($spservices['id'])) { ?> 
+                                                    <a class="" title="No Schedule" style="padding: 1px 5px;">
+                                                        <i class="fa fa-times-circle fa-lg " style="padding: 3px"></i>
+                                                    </a>
+                                                <?php } ?>
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <?php if (isset($spservices['id']) && !empty($spservices['id']) && empty($spservices['sp_signed_copy'])) { ?>
+                                                        <span class="image-preview-input" style="padding-right: 15px"> 
+                                                            <input type="checkbox" class="no_schedule_upload_file" name="no_schedule_upload_file" data-svctype="SP" data-service="<?php echo $spservices['sp_id'] ?>" value="">
+                                                        </span>
+                                                    <?php } ?>
+                                                    <?php if (isset($spservices['sp_signed_copy']) && !empty($spservices['sp_signed_copy']) && $spservices['sp_signed_copy'] == "NONC" && isset($spservices['id']) && !empty($spservices['id'])) { ?>
+                                                        <span class="image-preview-input" style="padding-right: 15px"> 
+                                                            <input type="checkbox" class="no_schedule_upload_file" name="no_schedule_upload_file" data-svctype="SP" data-service="<?php echo $spservices['sp_id'] ?>" checked>
+                                                        </span>                                                     
+                                                    <?php } ?>
+                                                    <?php if (isset($spservices['sp_signed_copy']) && !empty($spservices['sp_signed_copy']) && isset($spservices['id']) && !empty($spservices['id']) && $spservices['sp_signed_copy'] <> "NONC") { ?>
+                                                        <span class="image-preview-input" style="padding-right: 15px"> 
+                                                            <input type="checkbox" class="no_schedule_upload_file" name="no_schedule_upload_file" data-svctype="SP" data-service="<?php echo $spservices['sp_id'] ?>">
+                                                        </span>                                                     
+                                                    <?php } ?>
+                                                    <?php if ((isset($spservices['id']) && !empty($spservices['id']) || (isset($spservices['certificate_option']) && !empty($spservices['certificate_option'])))) { ?>
+                                                        <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
+                                                            <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $spservices['sp_id'] ?>" service-type="SP" data-column="sp_signed_copy" name="input-spcopy-form" class="updateSpCopy input-spcopy-form<?php echo $spservices['sp_id'] ?>" />
+                                                        </span> 
+                                                    <?php } ?> 
+                                                    <?php if (isset($spservices['sp_signed_copy']) && !empty($spservices['sp_signed_copy']) && $spservices['sp_signed_copy'] != "NONC") { ?>
+                                                        <span style="padding-right: 5px"> 
+                                                            <a href="<?php echo $spservices['sp_signed_copy'] ?>" data-id="" download class="signednotisaiiFileDownload">
+                                                                <i class="fa fa-download"></i>
+                                                            </a> 
+                                                        </span>
+                                                    <?php } ?>
+                                                </div>                                                
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-sm-6"><?php
+                                                    if (empty($spservices['sp_signed_copy'])) {
+                                                        $newClass = "serviceContent";
+                                                    } else if (isset($spservices['sp_signed_copy']) && !empty($spservices['sp_signed_copy']) && empty($spservices['sp_audit_report'])) {
+                                                        $newClass = "serviceContentwaiting";
+                                                    } else if (isset($spservices['sp_audit_report']) && !empty($spservices['sp_audit_report'])) {
+                                                        $newClass = "serviceContentCompleted";
+                                                    } else {
+                                                        $newClass = "serviceContent";
+                                                    }
+                                                    ?>
+                                            <div class="<?php echo $newClass ?>">
+                                                <span> Audit Report</span>
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <div class="">
+                                                        <?php if (isset($spservices['sp_signed_copy']) && !empty($spservices['sp_signed_copy']) && empty($caservice['sp_audit_report']) || (isset($spservices['sp_audit_report']) && !empty($spservices['sp_audit_report']))) { ?>
+                                                            <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
+                                                                <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $spservices['sp_id'] ?>" service-type="SP" data-column="sp_audit_report" name="input-spaudit-form" class="updateSpAudit input-spaudit-form<?php echo $spservices['sp_id'] ?>" />
+                                                            </span> 
+                                                        <?php } ?> 
+                                                        <?php if (isset($spservices['sp_audit_report']) && !empty($spservices['sp_audit_report'])) { ?>
+                                                            <span style="padding-right: 5px"> 
+                                                                <a href="<?php echo $spservices['sp_audit_report'] ?>" data-id="" download class="auditReportFileDownload"><i class="fa fa-download"></i></a> 
+                                                            </span>
+                                                        <?php } ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($spservices['sp_audit_report'])) {
+                                                $newClass = "serviceContent";
+                                            } else if (isset($spservices['sp_audit_report']) && !empty($spservices['sp_audit_report']) && empty($spservices['stage_ii_id'])) {
+                                                $newClass = "serviceContentwaiting";
+                                            } else if (isset($spservices['stage_ii_id']) && !empty($spservices['stage_ii_id'])) {
+                                                $newClass = "serviceContentCompleted";
+                                            } else {
+                                                $newClass = "serviceContent";
+                                            }
+                                            ?>
+                                            <div class="<?php echo $newClass ?>">
+                                                <span>Review Report (Annex II)</span>
+                                                <?php if (isset($spservices['sp_audit_report']) && !empty($spservices['sp_audit_report']) && empty($spservices['stage_ii_id'])) { ?>
+                                                    <a class="stageIIAuditSai pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $spservices['sp_id'] ?>" data-row-count="" title="Add  Report (Annex II)" style="padding: 1px 5px;">
+                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } else if (isset($spservices['stage_ii_id']) && !empty($spservices['stage_ii_id'])) { ?>
+                                                    <a class="editstageIIAudit2  pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $spservices['sp_id'] ?>" data-notification="<?php echo $spservices['stage_ii_id'] ?>" title="Update  Report (Annex II)" style="padding: 1px 5px;">
+                                                        <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                    <a class="downloadAnnexIISP pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $spservices['sp_id'] ?>" data-stage-ii="<?php echo $spservices['stage_ii_id'] ?>" title="Download  Report (Annex II)" style="padding: 1px 5px;">
+                                                        <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">                                        
+                                        <div class="col-sm-6" style="">
+                                            <?php
+                                            if (empty($spservices['stage_ii_id'])) {
+                                                $newClass = "serviceContent";
+                                            } else if (isset($spservices['stage_ii_id']) && !empty($spservices['stage_ii_id']) && empty($spservices['crr_id'])) {
+                                                $newClass = "serviceContentwaiting";
+                                            } else if (isset($spservices['crr_id']) && !empty($spservices['crr_id'])) {
+                                                $newClass = "serviceContentCompleted";
+                                            } else {
+                                                $newClass = "serviceContent";
+                                            }
+                                            ?>
+                                            <div class="<?php echo $newClass ?>">
+                                                <span>Review Report - CDC DELIBERATION AND DECISION</span> 
+                                                <?php if (isset($spservices['stage_ii_id']) && !empty($spservices['stage_ii_id']) && empty($spservices['crr_id'])) { ?>
+                                                    <a class="cdcReport pull-right" data-svctype="SP" data-prev=<?php echo $beforeSP; ?> data-id="<?php echo $spservices['service'] ?>" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice="<?php echo $caservice['ca_id'] ?>" data-service="<?php echo $spservices['sp_id'] ?>" data-service1="<?php echo $crservice['cr_id'] ?>" data-row-count="" title="CDC DELIBERATION AND DECISION" style="padding: 1px 5px;">
+                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } else if (isset($spservices['crr_id']) && !empty($spservices['crr_id'])) { ?>
+                                                    <a class="editCDC pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $spservices['sp_id'] ?>" data-notification="<?php echo $spservices['crr_id'] ?>" title="Edit CDC DELIBERATION AND DECISION" style="padding: 1px 5px;">
+                                                        <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                    </a>
+                                                    <a class="downloadCdcSP pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $spservices['sp_id'] ?>" data-crr="<?php echo $spservices['crr_id'] ?>" title="Download  CDC DELIBERATION AND DECISION" style="padding: 1px 5px;">
+                                                        <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6" >
+                                            <?php
+                                            if (empty($spservices['crr_id'])) {
+                                                $rccertClass = "serviceContent";
+                                            } else if (isset($spservices['crr_id']) && !empty($spservices['crr_id'])) {
+                                                $rccertClass = "serviceContentCompleted";
+                                            } else {
+                                                $rccertClass = "serviceContent";
+                                            }
+                                            ?>
+                                            <div class="<?php echo $rccertClass ?>">
+                                                <span>Certificate Print</span> 
+                                                <?php if (isset($spservices['crr_id']) && !empty($spservices['crr_id'])) { ?>
+                                                    <a class="download-certificate-print pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $spservices['sp_id'] ?>" data-id="<?php echo $spservices['service'] ?>" data-certificate="<?php echo !empty($spservices['certificate_id']) ? $spservices['certificate_id'] : '' ?>" data-crr="<?php echo $spservices['crr_id'] ?>" data-row-count="" title="Certificate Print" style="padding: 1px 5px;">
+                                                        <i class="fa fa-download fa-lg" style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">                                        
+                                        <div class="col-sm-6" style="">
+
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <input type="hidden" class="spCustomerId" name="spCustomerId" value="<?php echo $_GET['customerid'] ?>">
+                            </div>
+                        </form>
+                    </div>
+                </div> 
+                <?php
+            }
+            if ($service["service_type"] == "PTR") {
+                $ptrService = "SELECT ptr.prt_id, service, ptr.customer_id, audit_report, service_status, audit_date, soi.audit_stage_id, s1i.servelance_id, siai.stage_i_id FROM service_type_ptr ptr left join stage_oneaudit_id soi on ptr.prt_id = soi.ca_service_id left join servelance_1_id s1i on ptr.prt_id = s1i.service_id left join stage_i_audit_id siai on ptr.prt_id = siai.ca_service_id WHERE ptr.service = :id";
+                $statement = $db->prepare($ptrService);
+                $statement->bindParam(':id', $service["service_id"]);
+                $statement->execute();
+                $ptrservices = $statement->fetch();
+
+                if ($letestService["c_service"] == $ptrservices['service']) {
+                    $disp = "";
+                } else {
+                    $disp = "none";
+                }
+                ?>
+                <div class="servicebox-bunch <?php echo $class1 ?>" style="display: ">
+                    <div class="servicebox">
+                        <form id="caService" action="serviceTypeCA.php" method="post" enctype="multipart/form-data">
+                            <div class="row ptr-service-row" id="service-row" data-id="<?php echo $ptrservices['prt_id'] ?>">
+                                <div class="col-xs-12 qms_customer_name service_title" style="text-align: center" data-row-id="">Service type - PTR<span class="serviceStatus"></span> <!--<a class="saveServiceCA" id="saveServiceCA" data-row-id=""><i class="fa fa-floppy-o pull-right " style="color:white; padding-right:10px; display:"></i></a>-->
+                                    <a class="deleteServicePTR" id="deleteServicePTR" data-service="<?php echo $ptrservices['service'] ?>" data-row-id="<?php echo $ptrservices['prt_id'] ?>" data-customer="<?php echo $_GET['customerid'] ?>"><i class="fa fa-trash-o pull-right " style="color: white; padding-right: 10px;"></i></a>
+                                </div>
+                            </div>
+                            <div class="ptr-service-desc<?php echo $ptrservices['prt_id'] ?>" style="display: <?php echo $disp ?>;">
+                                <div class="row" style="padding-top: 10px; ">
+                                    <div class="col-xs-3 form-group float-label-control" style=""><label>Add to</label> 
+                                        <select class="addService add-to-service" data-id="<?php echo $ptrservices['prt_id'] ?>" data-column="service_ca_status" name="add-to-service" style="color: black" value="">
+                                            <option value="<?php if (isset($ptrservices['service_status'])) echo $ptrservices['service_status'] ?>">
+                                                <?php
+                                                if (isset($ptrservices['service_status']) && !empty($ptrservices['service_status'])) {
+                                                    echo $ptrservices['service_status'];
+                                                } else {
+                                                    echo "Select add to";
+                                                }
+                                                ?> 
+                                                <?php foreach ($addToList as $addTo) { ?>
+                                                <option value="<?php echo $addTo['add_to_type'] ?>"><?php echo $addTo['add_to_type'] ?></option>
+                                            <?php } ?>
+                                        </select>
+                                    </div>
+                                    <div class="col-xs-3 form-group float-label-control" style=""><label>Audit Date</label> 
+                                        <input class="serviceAuditDate " placeholder="Audit Date" data-id="<?php echo $ptrservices['service'] ?>" data-service="caService" data-column="audit_date" name="serviceAuditDate" style="color: black" value="<?php if (isset($ptrservices["audit_date"])) echo $ptrservices["audit_date"]; ?>" />
+                                    </div>
+                                </div>
+                                <div class="servicebox-data" id="servicebox-data ">
+                                    <div class="row">                                
+                                        <div class="col-sm-6">
+                                            <div class="serviceContentCompleted"><span>Notification</span> 
+                                                <?php //if (isset($caservice['assessment_id']) && !empty($caservice['assessment_id']) && empty($caservice['audit_stage_id'])) {            ?>
+        <!--                                                    <a class=" createAuditNotification pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" data-row-count="" title="Add Audit Notification" style="padding: 1px 5px;">
+                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                    </a> -->
+                                                <?php //} else if (isset($caservice['audit_stage_id']) && !empty($caservice['audit_stage_id'])) {            ?>
+                                                <a class="editAuditNotification pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $ptrservices['prt_id'] ?>" data-notification="<?php echo $ptrservices['audit_stage_id'] ?>" title="Edit Audit Notification" style="padding: 1px 5px;">
+                                                    <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                </a> 
+                                                <a class="downloadAuditNotification pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $ptrservices['prt_id'] ?>" data-audit="<?php echo $ptrservices['audit_stage_id'] ?>" title="Download audit notification" style="padding: 1px 5px;">
+                                                    <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                </a> <?php //}                                                                                                          ?>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6"><?php
+                                        if (isset($ptrservices['servelance_id']) && !empty($ptrservices['servelance_id'])) {
+                                            $enterClass = "serviceContentCompleted";
+                                        } else {
+                                            $enterClass = "serviceContentwaiting";
+                                        }
+                                                ?>
+                                            <div class=" <?php echo $enterClass ?>">
+                                                <span>Schedule stage-1</span> 
+                                                <?php if (isset($ptrservices['audit_stage_id']) && !empty($ptrservices['audit_stage_id']) && empty($ptrservices['servelance_id'])) { ?>
+                                                    <a class="createStageServelance pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $ptrservices['prt_id'] ?>" data-serviceType="SA-1" data-type="service-type-sai" data-row-id="" title="Add SA Schedule (SA-I)" style="padding: 1px 5px;"><i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i></a> 
+                                                <?php } ?>
+                                                <?php if (isset($ptrservices['servelance_id']) && !empty($ptrservices['servelance_id'])) { ?>
+                                                    <a class="editStage1Servelance pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $ptrservices['prt_id'] ?>" data-row-id="<?php echo $ptrservices['servelance_id'] ?>" title="Add Release Audit Notification" style="padding: 1px 5px;"><i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i></a> 
+                                                    <a class="downloadStageScheduleSai pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $ptrservices['prt_id'] ?>" data-schedulei="<?php echo $ptrservices['servelance_id'] ?>" title="Download Release Audit Notification" style="padding: 1px 5px;"><i class="fa fa-download fa-lg " style="padding: 3px"></i></a> 
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($ptrservices['servelance_id'])) {
+                                                $ptrSignedClass = 'serviceContent';
+                                            } else if (isset($ptrservices['servelance_id']) && !empty($ptrservices['servelance_id']) && empty($ptrservices['audit_report'])) {
+                                                $ptrSignedClass = 'serviceContentwaiting';
+                                            } else if (isset($ptrservices['servelance_id']) && !empty($ptrservices['servelance_id']) && isset($ptrservices['audit_report']) && !empty($ptrservices['audit_report'])) {
+                                                $ptrSignedClass = 'serviceContentCompleted';
+                                            } else {
+                                                $ptrSignedClass = 'serviceContent';
+                                            }
+                                            ?>
+                                            <div class="<?php echo $ptrSignedClass ?>"><span>Audit report upload</span>
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <div class=" ">
+                                                        <?php if (isset($ptrservices['servelance_id']) && !empty($ptrservices['servelance_id'])) { ?>
+                                                            <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
+                                                                <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $ptrservices['prt_id'] ?>" service-type="PTR" data-column="audit_report" name="input-signed-copy-sai" class="auditreportPTR input-signed-copy-sai<?php echo $ptrservices['prt_id'] ?>" />
+                                                            </span> 
+                                                        <?php } ?> 
+                                                        <?php if (isset($ptrservices['audit_report']) && !empty($ptrservices['audit_report'])) { ?>
+                                                            <span style="padding-right: 5px"> 
+                                                                <a href="<?php echo $ptrservices['audit_report'] ?>" data-id="" download class="customerReviewFileDownload"><i class="fa fa-download"></i></a> 
+                                                            </span>
+                                                        <?php } ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <?php
+                                            if (empty($ptrservices['audit_report'])) {
+                                                $serviceClass = "serviceContent";
+                                            } else if (isset($ptrservices['audit_report']) && !empty($ptrservices['audit_report']) && empty($ptrservices['stage_i_id'])) {
+                                                $serviceClass = "serviceContentwaiting";
+                                            } else if (isset($ptrservices['stage_i_id']) && !empty($ptrservices['stage_i_id']) && isset($ptrservices['audit_report']) && !empty($ptrservices['audit_report'])) {
+                                                $serviceClass = 'serviceContentCompleted';
+                                            } else {
+                                                $serviceClass = "serviceContent";
+                                            }
+                                            ?>
+                                            <div class="<?php echo $serviceClass ?>">
+                                                <span>Audit review Annex-1</span> 
+                                                <?php if (isset($ptrservices['audit_report']) && !empty($ptrservices['audit_report']) && empty($ptrservices['stage_i_id'])) { ?>
+                                                    <a class="auditStage-I pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $ptrservices['prt_id'] ?>" data-row-count="" title="Review Report (Annex I)" style="padding: 1px 5px;">
+                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                <?php } else if (isset($ptrservices['stage_i_id']) && !empty($ptrservices['stage_i_id'])) { ?>
+                                                    <a class="editReviewReport  pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $ptrservices['prt_id'] ?>" data-notification="<?php echo $ptrservices['stage_i_id'] ?>" title="Add Review Report (Annex I)" style="padding: 1px 5px;">
+                                                        <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                    </a> 
+                                                    <a class="downloadAnnexI pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $ptrservices['prt_id'] ?>" data-stageii="<?php echo $ptrservices['stage_i_id'] ?>" title="Download Review Report (Annex I)" style="padding: 1px 5px;">
+                                                        <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                    </a>
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <input type="hidden" class="customerid" id="customerid" name="customerid" value="<?php echo $_GET['customerid'] ?>">
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <?php
+            }
+            if ($service['service_type'] == "TA") {
+                $taService = "SELECT ta.ta_id, ta.service_id, signed_notification, release_schedule, audit_report, review_report, service_status, ta.audit_date as taaudit, ta.auditors as ta_auditors, soi.audit_stage_id, asi.audit_schedule_id, siai.stage_i_id FROM service_type_ta ta left join stage_oneaudit_id soi on ta.ta_id = soi.ca_service_id LEFT JOIN audit_schedule_id asi on ta.ta_id = asi.serviceca_id LEFT JOIN stage_i_audit_id siai on ta.ta_id = siai.ca_service_id WHERE ta.service_id = :id";
+                $statement = $db->prepare($taService);
+                $statement->bindParam(':id', $service["service_id"]);
+                $statement->execute();
+                $taservices = $statement->fetch();
+                if ($letestService["c_service"] == $taservices['service_id']) {
+                    $disp = "";
+                } else {
+                    $disp = "none";
+                }
+                ?>
+                <div class="servicebox-bunch" style="display: ">
+                    <div class="servicebox" style="display: ">
+                        <form id="spService" action="serviceTypeSP.php" method="post" enctype="multipart/form-data">
+                            <div class="row ta-service-row" id="service-row" data-id="<?php echo $taservices['ta_id'] ?>">
+                                <div class="col-xs-12 qms_customer_name service_title" style="text-align: center" data-row-id="">
+                                    Transition Audit<span class="serviceStatus"></span>
+                                    <a class="deleteServiceTA" id="deleteServiceTA" data-service="<?php echo $taservices['service_id'] ?>" data-row-id="<?php echo $taservices['ta_id'] ?>" data-customer="<?php echo $_GET['customerid'] ?>">
+                                        <i class="fa fa-trash-o pull-right " style="color: white; padding-right: 10px;"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="ta-service-desc<?php echo $taservices['ta_id'] ?>" style="display: <?php echo $disp ?>;">
+                                <div class="row" style="padding-top: 10px;">
+                                    <div class="col-xs-3 form-group float-label-control" style="">
+                                        <label>Add to</label> 
+                                        <select class="addService add-to-service" data-id="<?php echo $taservices['ta_id'] ?>" data-column="service_status" name="add-to-service" style="color: black" >
+                                            <option value="<?php if (isset($taservices['service_status'])) echo $taservices['service_status'] ?>">
+                                                <?php
+                                                if (isset($taservices['service_status']) && !empty($taservices['service_status'])) {
+                                                    echo $taservices['service_status'];
+                                                } else {
+                                                    echo "Select add to";
+                                                }
+                                                ?> <?php foreach ($addToList as $addTo) { ?>
+                                                <option value="<?php echo $addTo['add_to_type'] ?>"><?php echo $addTo['add_to_type'] ?></option>
+                                            <?php } ?>
+                                        </select>
+                                    </div>
+                                    <div class="col-xs-3 form-group float-label-control" style="">
+                                        <label>Audit Date</label> 
+                                        <input class="serviceAuditDate " placeholder="Audit Date" data-id="<?php echo $taservices['service_id'] ?>" data-service="spaService" data-column="audit_date" name="serviceAuditDate" style="color: black" value="<?php if (isset($taservices["taaudit"])) echo $taservices["taaudit"]; ?>" />
+                                    </div>
+                                    <div class="col-xs-3 form-group float-label-control" style="">
+                                        <label>Team Leader, Auditor(s)</label> 
+                                        <input class="ta_auditors " placeholder="Team Leader, Auditor(s)" data-id="<?php echo $taservices['service_id'] ?>" data-service="spaService" data-column="audit_date" name="ta_auditors" style="color: black" value="<?php if (isset($taservices["ta_auditors"])) echo $taservices["ta_auditors"]; ?>" />
+                                    </div>
+                                </div>
+                                <div class="servicebox-data" id="servicebox-data">
+                                    <div class="row">
+                                        <div class="col-sm-6">
+                                            <div class="serviceContentCompleted"><span>Release - Audit Notification</span>                                                
+                                                <a class=" editAuditNotification pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $taservices['ta_id'] ?>" data-notification="<?php echo $taservices['audit_stage_id'] ?>" title="Update Release Audit Notification" style="padding: 1px 5px;">
+                                                    <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                </a> 
+                                                <a class="downloadAuditNotificationSP pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $taservices['ta_id'] ?>" data-audit="<?php echo $taservices['audit_stage_id'] ?>" title="Download Release Audit Notification" style="padding: 1px 5px;">
+                                                    <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                </a>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6"><?php
+                                            if (isset($taservices['audit_stage_id']) && !empty($taservices['audit_stage_id']) && empty($taservices['signed_notification'])) {
+                                                $newClass = "serviceContentwaiting";
+                                            } else if (isset($taservices['signed_notification']) && !empty($taservices['signed_notification'])) {
+                                                $newClass = "serviceContentCompleted";
+                                            }
+                                            ?>
+                                            <div class="<?php echo $newClass ?>"><span>Signed Notification</span>
+
+                                                <div style="float: right" class="image-preview form-inline">                                                                                                            
+                                                    <span class="image-preview-input  fa fa-upload" style="padding-right: 15px">
+                                                        <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $taservices['ta_id'] ?>" service-type="TA" data-column="signed_notification" name="input-spsigned-form" class="updatetasigned input-tasigned-form<?php echo $taservices['ta_id'] ?>" />
+                                                    </span>
+                                                    <?php if (isset($taservices['signed_notification']) && !empty($taservices['signed_notification'])) { ?>
+                                                        <span style="padding-right: 5px"> 
+                                                            <a href="<?php echo $taservices['signed_notification'] ?>" data-id="" download class="signednotisaiiFileDownload">
+                                                                <i class="fa fa-download"></i>
+                                                            </a> 
+                                                        </span>
+                                                    <?php } ?>
+                                                </div>
+                                            </div>
+                                        </div>                                        
+                                    </div>
+                                    <div class="row">                                        
+                                        <div class="col-sm-6"><?php
+                                                    if (empty($taservices['signed_notification'])) {
+                                                        $newClass = "serviceContent";
+                                                    } else if (isset($taservices['signed_notification']) && !empty($taservices['signed_notification']) && empty($taservices['audit_schedule_id'])) {
+                                                        $newClass = "serviceContentwaiting";
+                                                    } else if (isset($taservices['audit_schedule_id']) && !empty($taservices['audit_schedule_id'])) {
+                                                        $newClass = "serviceContentCompleted";
+                                                    } else {
+                                                        $newClass = "serviceContent";
+                                                    }
+                                                    ?>
+                                            <div class="<?php echo $newClass ?>"><span>Release - Schedule</span>  
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <?php if (isset($taservices['signed_notification']) && !empty($taservices['signed_notification']) && empty($taservices["audit_schedule_id"])) { ?>
+                                                        <a class="createStageSchedule pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $taservices['ta_id'] ?>" data-serviceType="TA"  data-row-id="" data-row-count="" title="Add Stage - I Schedule" style="padding: 1px 5px;"><i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i></a>                                                             
+                                                    <?php } if (isset($taservices["audit_schedule_id"]) && !empty($taservices["audit_schedule_id"])) { ?>
+                                                        <a class="editStageSchedule pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $taservices['ta_id'] ?>" data-row-id="<?php echo $taservices['audit_schedule_id'] ?>" data-row-count="" title="Edit Schedule" style="padding: 1px 5px;"><i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i></a> 
+                                                        <a class="downloadScheduleStageOne pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $taservices['ta_id'] ?>" data-schedulei="<?php echo $taservices['audit_schedule_id'] ?>" title="Download stage one schedule" style="padding: 1px 5px;"><i class="fa fa-download fa-lg " style="padding: 3px"></i></a>
+                                                    <?php } ?>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6"><?php
+                                                    if (empty($taservices['audit_schedule_id'])) {
+                                                        $newClass = "serviceContent";
+                                                    } else if (isset($taservices['audit_schedule_id']) && !empty($taservices['audit_schedule_id']) && empty($taservices['audit_report'])) {
+                                                        $newClass = "serviceContentwaiting";
+                                                    } else if (isset($taservices['audit_report']) && !empty($taservices['audit_report'])) {
+                                                        $newClass = "serviceContentCompleted";
+                                                    } else {
+                                                        $newClass = "serviceContent";
+                                                    }
+                                                    ?>
+                                            <div class="<?php echo $newClass ?>">
+                                                <span> Audit Report</span>
+                                                <div style="float: right" class="image-preview form-inline">
+                                                    <?php if (isset($taservices['audit_schedule_id']) && !empty($taservices['audit_schedule_id'])) { ?>
+                                                        <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
+                                                            <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $taservices['ta_id'] ?>" service-type="TA" data-column="audit_report" name="input-spcopy-form" class="updatetaCopy input-tacopy-form<?php echo $taservices['ta_id'] ?>" />
+                                                        </span> 
+                                                    <?php } if (isset($taservices['audit_report']) && !empty($taservices['audit_report'])) { ?>
+                                                        <span style="padding-right: 5px">
+                                                            <a href="<?php echo $taservices['audit_report'] ?>" data-id="" download class="signednotisaiiFileDownload">
+                                                                <i class="fa fa-download"></i>
+                                                            </a> 
+                                                        </span>
+                                                    <?php } ?>
+                                                </div>                                                                                                
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-sm-6"><?php
+                                                    if (empty($taservices['audit_report'])) {
+                                                        $newClass = "serviceContent";
+                                                    } else if (isset($taservices['audit_report']) && !empty($taservices['audit_report']) && empty($taservices['stage_i_id'])) {
+                                                        $newClass = "serviceContentwaiting";
+                                                    } else if (isset($taservices['stage_i_id']) && !empty($taservices['stage_i_id'])) {
+                                                        $newClass = "serviceContentCompleted";
+                                                    } else {
+                                                        $newClass = "serviceContent";
+                                                    }
+                                                    ?>
+                                            <div class="<?php echo $newClass ?>">
+                                                <span> Review Report / Decision</span>
+                                                <div style="float: right" class="image-preview form-inline">                                                    
+                                                    <?php if (isset($taservices['audit_report']) && !empty($taservices['audit_report']) && empty($taservices['stage_i_id'])) { ?>
+                                                        <a class="auditStage-I pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $taservices['ta_id'] ?>" data-row-count="" title="Review Report (Annex I)" style="padding: 1px 5px;">
+                                                            <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                        </a> 
+                                                    <?php } else if (isset($taservices['stage_i_id']) && !empty($taservices['stage_i_id'])) { ?>
+                                                        <a class="editReviewReport  pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $taservices['ta_id'] ?>" data-notification="<?php echo $taservices['stage_i_id'] ?>" title="Add Review Report (Annex I)" style="padding: 1px 5px;">
+                                                            <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                        </a> 
+                                                        <a class="downloadAnnexI pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $taservices['ta_id'] ?>" data-stageii="<?php echo $taservices['stage_i_id'] ?>" title="Download Review Report (Annex I)" style="padding: 1px 5px;">
+                                                            <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                        </a>
+                                                    <?php } ?>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>                                    
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div> 
+                <?php
+            }
+        }
+        ?> 
+
+        <div class="servicebox-bunch <?php //echo $class2                                                                                          ?> new-cr-service-add" style="display: none">
+            <div class="servicebox">
+                <form id="caService" action="serviceTypeCA.php" method="post" enctype="multipart/form-data">
+                    <div class="row" id="service-row" class="service-row">
+                        <div class="col-xs-12 qms_customer_name service_title" style="text-align: center" data-row-id="">
+                            Contract Review<span class="serviceStatus"></span> 
+                        </div>
+                    </div>
+                    <div class="servicebox-data" id="servicebox-data">
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <div class="serviceContentwaiting"><span>Application Form </span>
+                                    <div style="float: right" class="image-preview form-inline">
+                                        <div class=" ">
+                                            <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
+                                                <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="" service-type="CR" data-column="application_form" name="input-application-form" class="updateDeta input-application-form" />
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Review - Application</span></div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <div class="serviceContent clickable" onclick="handleCertificateAction('generate')" style="cursor: pointer; padding: 5px; border: 1px solid #ddd; border-radius: 4px; margin: 2px 0; transition: background-color 0.3s;" onmouseover="this.style.backgroundColor='#f5f5f5'" onmouseout="this.style.backgroundColor=''">
+                                    <i class="fa fa-file-text" style="margin-right: 8px;"></i>
+                                    <span>Certification Agreement Generate</span>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="serviceContent clickable" onclick="handleCertificateAction('upload')" style="cursor: pointer; padding: 5px; border: 1px solid #ddd; border-radius: 4px; margin: 2px 0; transition: background-color 0.3s;" onmouseover="this.style.backgroundColor='#f5f5f5'" onmouseout="this.style.backgroundColor=''">
+                                    <i class="fa fa-upload" style="margin-right: 8px;"></i>
+                                    <span>Certification Agreement Upload</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">                            
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Contract Review</span></div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Assessment Planning</span></div>
+                            </div>
+                        </div>                        
+                    </div>
+                    <input type="hidden" class="customerid" id="customerid" name="customerid" value="<?php echo $_GET['customerid'] ?>"></form>
+            </div>
+        </div>
+
+        <!--service type -CA-->
+        <div class="servicebox-bunch <?php //echo $class2                                                                                           ?> new-ca-service-add" style="display: none">
+            <div class="servicebox">
+                <form id="caService" action="serviceTypeCA.php" method="post" enctype="multipart/form-data">
+                    <div class="row" id="service-row" class="service-row">
+                        <div class="col-xs-12 qms_customer_name service_title" style="text-align: center" data-row-id="">
+                            Service type - CA<span class="serviceStatus"></span> 
+                        </div>
+                    </div>
+                    <div class="servicebox-data" id="servicebox-data">                        
+                        <div class="row">                            
+                            <div class="col-sm-6">
+                                <div class="serviceContentwaiting"><span>Release - Notification for Stage - I audit</span>
+                                    <a class="createAuditNotification pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $crservice['cr_id'] ?>" data-svc="CA" data-row-count="" title="Add Audit Notification" style="padding: 1px 5px;">
+                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Release - Stage - I Schedule</span></div>
+                            </div>
+                        </div>
+                        <div class="row">                            
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Audit Plan Scanned Copy</span></div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Stage - I Audit Report </span></div>
+                            </div>
+                        </div>
+                        <div class="row">                            
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Review Report (Annex I)- Stage I Audit</span></div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Release - Notification for Stage - II audit</span></div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Signed Notification Stage II , And Copy of Stage II Schedule </span></div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Stage - II Audit Report, Summery and Checklists</span></div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Stage – II Auditor Notes</span></div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Stage - II Audit NC And evidences of closer</span></div>
+                            </div>
+                        </div>
+
+                        <div class="row">                                                        
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Review Report (Annex II)- Stage II Audit</span></div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Review Report - CDC DELIBERATION AND DECISION</span></div>
+                            </div>
+                        </div>
+                        <div class="row">                                                        
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Certificate Print</span></div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Client Feedback</span></div>
+                            </div>
+                        </div>
+                        <div class="row">                            
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Review Report - Review of feedback </span></div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>CONTROL FORMAT -1 (To be filled by AITF-MCL)</span></div>
+                            </div>
+                        </div>
+                        <div class="row">                            
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>CONTROL FORMAT -2 (SHC Comments while meeting) </span></div>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="hidden" class="customerid" id="customerid" name="customerid" value="<?php echo $_GET['customerid'] ?>"></form>
+            </div>
+        </div>
+        <!--service type -SA-I-->
+
+        <div class="servicebox-bunch <?php //echo $class4                                                                                           ?> new-sai-service" style="display: none">
+            <div class="servicebox" style="display: ">
+                <form id="saiService" action="serviceTypeSAi.php" method="post" enctype="multipart/form-data">
+                    <div class="row" id="service-row" class="service-row">
+                        <div class="col-xs-12 qms_customer_name service_title" style="text-align: center" data-row-id="">
+                            Service type - SA-I<span class="serviceStatus"></span>
+                        </div>
+                    </div>
+                    <div class="servicebox-data" id="servicebox-data">
+                        <div class="row">
+                            <div class="col-sm-12">
+                                <div class="serviceContentwaiting" style="text-align: center;">
+                                    <span>Information updateionform</span>
+                                    <div style="float: right" class="image-preview form-inline">
+                                        <div class=" ">
+                                            <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
+                                                <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="" service-type="SA-I" data-column="application_form" name="input-info-updation-sai" class="applicationFormSai input-info-updation-sai" /> 
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <div class="serviceContent">
+                                    <span>Release Audit Notification</span>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="serviceContent">
+                                    <span>Signed Notification SA I Audit</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <div class="serviceContent">
+                                    <span>Release SA Audit Plan (SA-I)</span>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="serviceContent">
+                                    <span>Audit Plan Scanned Copy</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <div class="serviceContent">
+                                    <span>SA - I Audit Report, Summery and Checklists</span>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="serviceContent">
+                                    <span>SA - I Auditor Notes</span>
+                                </div>
+                            </div>                            
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <div class="serviceContent">
+                                    <span>SA - I Audit NC And evidences of closer</span>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="serviceContent">
+                                    <span>Review Report (Annex I)- SA - I Audit</span>
+                                </div>
+                            </div>
+
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <div class="serviceContent">
+                                    <span>Review Report - CDC DELIBERATION AND DECISION</span>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="serviceContent">
+                                    <span>Certificate Print</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <div class="serviceContent">
+                                    <span>Client Feedback</span>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="serviceContent">
+                                    <span>Review Report - Review of feedback</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="hidden" class="saiCustomerId" name="saiCustomerId" value="<?php echo $_GET['customerid'] ?>"></form>
+            </div>
+        </div>
+
+        <!--Service type -SA-II--> 
+
+        <div class="servicebox-bunch <?php // echo $class6                                                                                           ?> new-saii-service" style="display: none">
+            <div class="servicebox" style="display: ">
+                <form id="saiiService" action="serviceTypeSAii.php" method="post" enctype="multipart/form-data">
+                    <div class="row" id="service-row" class="service-row">
+                        <div class="col-xs-12 qms_customer_name service_title" style="text-align: center" data-row-id="">
+                            Service type - SA-II<span class="serviceStatus"></span> 
+                        </div>
+                    </div>
+                    <div class="servicebox-data" id="servicebox-data">
+                        <div class="row">
+                            <div class="col-sm-12">
+                                <div class="serviceContentwaiting" style="text-align: center;">
+                                    <span>Information updationform</span>
+                                    <div style="float: right" class="image-preview form-inline">
+                                        <div class=" ">
+                                            <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
+                                                <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="" service-type="SA-II" data-column="update_info_saii" name="input-saii-form" class="updateSaii input-saii-form" /> 
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <div class="serviceContent">
+                                    <span>Release Audit Notification</span>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="serviceContent">
+                                    <span>Signed Notification SA - II Audit</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <div class="serviceContent">
+                                    <span>Release SA Audit Plan (SA-II)</span>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="serviceContent">
+                                    <span>Audit Plan Scanned Copy</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <div class="serviceContent">
+                                    <span>SA - II Audit Report, Summery and Checklists</span>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="serviceContent">
+                                    <span>SA - II Auditor Notes</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <div class="serviceContent">
+                                    <span>SA - II Audit NC And evidences of closer</span>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="serviceContent">
+                                    <span>Review Report (Annex II)- SA - II Audit</span>
+                                </div>
+                            </div>
+
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <div class="serviceContent">
+                                    <span>Review Report - CDC DELIBERATION AND DECISION</span>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="serviceContent" >
+                                    <span>Certificate Print</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <div class="serviceContent">
+                                    <span>Review of feedback</span>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="serviceContent">
+                                    <span>Review Report - Review of feedback</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="hidden" class="saiiCustomerid" name="saiiCustomerid" value="<?php echo $_GET['customerid'] ?>">
+                </form>
+            </div>
+        </div>
+
+        <!--service type RC--> 
+        <div class="servicebox-bunch  <?php //echo $class8;                                                                 ?> new-rc-service" style="display: none">
+            <div class="servicebox" style="display: ">
+                <form id="saiService" action="serviceTypeSAi.php" method="post" enctype="multipart/form-data">
+                    <div class="row" id="service-row" class="service-row">
+                        <div class="col-xs-12 qms_customer_name service_title"  style="text-align: center" data-row-id="">
+                            Service type - RC<span class="serviceStatus"></span> 
+                            <a class="deleteService" id="deleteService" data-row-id="">
+                                <i class="fa fa-trash-o pull-right " style="color: white; padding-right: 10px;"></i>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="servicebox-data" id="servicebox-data">
+
+                        <div class="row">                            
+                            <div class="col-sm-6">
+                                <div class="serviceContentwaiting"><span>Release - Audit Notification</span>
+                                    <a class="createAuditNotification pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $crservice['cr_id'] ?>" data-svc="RC" data-type="service-type-rc" data-row-id="" title="Add Release - Audit Notification" style="padding: 1px 5px;">
+                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Signed Notification RC Audit</span></div>
+                            </div>
+                        </div>
+                        <div class="row">                            
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Release - RC Audit Plan/ Recertification</span></div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Audit Plan Scanned Copy</span></div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>RC Audit Report, Summery and Checklists/Recertification</span></div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>RC Auditor Notes</span></div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>RC Audit NC And evidence of closer</span></div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Release - Notification for RC audit</span></div>
+                            </div>                            
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Signed Notification Stage II , And Copy of Stage II Schedule </span></div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Certificate Print</span></div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Review of feedback</span></div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Review Report - Review of feedback</span></div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>CONTROL FORMAT -1 (To be filled by AITF-MCL)</span></div>
+                            </div>                            
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>CONTROL FORMAT -2 (SHC Comments while meeting)</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!--service type -SP--> 
+        <div class="servicebox-bunch <?php //echo $class10                                                               ?> new-sp-service" style="display: none">
+            <div class="servicebox" style="display: ">
+                <form id="spService" action="serviceTypeSP.php" method="post"
+                      enctype="multipart/form-data">
+                    <div class="row" id="service-row" class="service-row">
+                        <div class="col-xs-12 qms_customer_name service_title" style="text-align: center" data-row-id="">
+                            Service type - SP <span class="serviceStatus"></span> 
+                            <a class="saveServiceSP" id="saveServiceSP" data-row-id=""><i class="fa fa-floppy-o pull-right " style="color: white; padding-right: 10px; display: "></i></a> 
+                            <a class="deleteService" id="deleteService" data-row-id=""><i class="fa fa-trash-o pull-right " style="color: white; padding-right: 10px;"></i></a>
+                        </div>
+                    </div>
+                    <div class="servicebox-data" id="servicebox-data">                        
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <div class="serviceContentwaiting"><span>Release - Audit Notification</span>
+                                    <a class=" createAuditNotification pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $crservice['cr_id'] ?>" data-svc="SP" data-row-count="" title="Add Audit Notification" style="padding: 1px 5px;">
+                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Signed Notification SP Audit</span></div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Certification Agreement</span></div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Release - Schedule</span></div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Audit Plan Scanned Copy</span></div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Audit Report</span></div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Review Report (Annex II)</span></div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Review Report - CDC DELIBERATION AND DECISION</span></div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Certificate Print</span></div>
+                            </div>
+                        </div>                        
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="servicebox-bunch <?php ?> new-ta-service" style="display: none">
+            <div class="servicebox" style="display: ">
+                <form id="spService" action="serviceTypeSP.php" method="post"
+                      enctype="multipart/form-data">
+                    <div class="row" id="service-row" class="service-row">
+                        <div class="col-xs-12 qms_customer_name service_title" style="text-align: center" data-row-id="">
+                            Transition Audit <span class="serviceStatus"></span> 
+                            <a class="saveServiceSP" id="saveServiceSP" data-row-id=""><i class="fa fa-floppy-o pull-right " style="color: white; padding-right: 10px; display: "></i></a> 
+                            <a class="deleteService" id="deleteService" data-row-id=""><i class="fa fa-trash-o pull-right " style="color: white; padding-right: 10px;"></i></a>
+                        </div>
+                    </div>
+                    <div class="servicebox-data" id="servicebox-data">                        
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <div class="serviceContentwaiting"><span>Release - Audit Notification</span>
+                                    <a class=" createAuditNotification pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $crservice['cr_id'] ?>" data-svc="TA" data-row-count="" title="Add Audit Notification" style="padding: 1px 5px;">
+                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Signed Notification</span></div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Upload - Schedule</span></div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Audit Report</span></div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Review Report/Decision</span></div>
+                            </div>
+                        </div>                       
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="servicebox-bunch <?php //echo $class2                                               ?> new-ptr-service-add" style="display: none">
+            <div class="servicebox">
+                <form id="caService" action="serviceTypeCA.php" method="post" enctype="multipart/form-data">
+                    <div class="row" id="service-row" class="service-row">
+                        <div class="col-xs-12 qms_customer_name service_title" style="text-align: center" data-row-id="">
+                            Service type - PTR<span class="serviceStatus"></span> 
+                        </div>
+                    </div>
+                    <div class="servicebox-data" id="servicebox-data">
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <div class="serviceContentwaiting"><span>Notification </span>
+                                    <a class=" createAuditNotification pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $crservice['cr_id'] ?>" data-svc="PTR" data-row-count="" title="Add Audit Notification" style="padding: 1px 5px;">
+                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Schedule stage-1</span></div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Audit report upload</span></div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="serviceContent"><span>Audit review Annex-1</span></div>
+                            </div>
+                        </div>                                                
+                    </div>
+                    <input type="hidden" class="customerid" id="customerid" name="customerid" value="<?php echo $_GET['customerid'] ?>"></form>
+            </div>
+        </div>
+
+        <div id="delete-details" style="display: none">
+            <div id="loading-div" class="ui-corner-all">
+                <span style="font-size: 30pt;"><i style="padding: 5px;" class="fa fa-warning text-warning"></i></span>
+                <div><span style="font-size: 11pt; padding: 10px" class="text-primary meeting-cancel-confirm-message">
+                        Are you sure that you want to delete details?</span>
+                </div>
+                <div style="padding: 3px;">
+                    <button title="Click here to delete" class="btn btn-primary btn-round btn-round-sm btn-sm delete-confirm-ok">Ok</button>
+                    <button title="Click here to cancel" class="btn btn-danger  btn-round btn-round-sm btn-sm delete-cancel">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="addCRsvc" style="display: none">
+            <div id="loading-div" class="ui-corner-all">
+                <span style="font-size: 30pt;"><i style="padding: 5px;" class="fa fa-warning text-warning"></i></span>
+                <div><span style="font-size: 11pt; padding: 10px" class="text-primary meeting-cancel-confirm-message">
+                        Please add Contract Review before this service</span>
+                </div>
+                <div style="padding: 3px;">
+                    <button title="Click here to delete" class="btn btn-primary btn-round btn-round-sm btn-sm confirm-ok">Ok</button>
+                    <!--<button title="Click here to cancel" class="btn btn-danger  btn-round btn-round-sm btn-sm delete-cancel">Cancel</button>-->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        // Function to toggle ISO certificate sections
+        function toggleISOSection(headerElement) {
+            var section = headerElement.closest('.iso-cert-section');
+            if (!section) return;
+            
+            var detailsDiv = section.querySelector('.iso-details');
+            
+            if (detailsDiv.style.display === 'none' || detailsDiv.style.display === '') {
+                // Expand
+                detailsDiv.style.display = 'block';
+            } else {
+                // Collapse
+                detailsDiv.style.display = 'none';
+            }
+        }
+        
+        $(function () {
+            $('#certificationDate').datepicker({
+                minDate: '-100Y',
+                maxDate: '+100Y',
+                changeYear: true,
+                changeMonth: true,
+                yearRange: "-20:+100",
+                dateFormat: 'dd.mm.yy',
+                autoclose: true
+            });
+
+            $("#certificationDate").keydown(function (e) {
+                //            e.preventDefault();
+            });
+
+            // Auto-populate certificate details based on certificate number
+            function loadCertificateDetails() {
+                var certNo = '<?php echo isset($clientInfo["certification_no"]) ? trim($clientInfo["certification_no"]) : ""; ?>';
+                
+                console.log('=== LOADING CERTIFICATE DETAILS ===');
+                console.log('Certificate Number:', certNo);
+                
+                if (certNo && certNo.trim() !== '') {
+                    console.log('Making AJAX call to getCertificateDetails.php...');
+                    
+                    $.ajax({
+                        url: 'getCertificateDetails.php',
+                        type: 'GET',
+                        data: { certificateNo: certNo },
+                        dataType: 'json',
+                        cache: false, // Force no cache
+                        success: function(response) {
+                            console.log('=== AJAX SUCCESS ===');
+                            console.log('Full Response:', response);
+                            console.log('Response.success:', response.success);
+                            console.log('Response.data:', response.data);
+                            
+                            if (response.success && response.data) {
+                                // Populate the fields with actual data
+                                if (response.data.standard_name) {
+                                    console.log('Setting Standard Name to:', response.data.standard_name);
+                                    $('#standardName').val(response.data.standard_name);
+                                    console.log('Standard Name field value after set:', $('#standardName').val());
+                                } else {
+                                    console.warn('WARNING: standard_name is empty in response');
+                                }
+                                
+                                if (response.data.issue_date) {
+                                    console.log('Setting Issue Date to:', response.data.issue_date);
+                                    $('#issueDate').val(response.data.issue_date);
+                                } else {
+                                    console.warn('WARNING: issue_date is empty in response');
+                                }
+                                
+                                if (response.data.expire_date) {
+                                    console.log('Setting Expire Date to:', response.data.expire_date);
+                                    $('#expireDate').val(response.data.expire_date);
+                                } else {
+                                    console.warn('WARNING: expire_date is empty in response');
+                                }
+                                
+                                // Update database with fetched values
+                                updateCertificateFields(response.data);
+                                
+                                console.log('=== CERTIFICATE DETAILS LOADED SUCCESSFULLY ===');
+                            } else {
+                                console.error('ERROR: Response success is false or no data');
+                                console.log('Setting fields to empty');
+                                $('#standardName').val('');
+                                $('#issueDate').val('');
+                                $('#expireDate').val('');
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            console.error('=== AJAX ERROR ===');
+                            console.error('Error:', error);
+                            console.error('Status:', status);
+                            console.error('HTTP Status:', xhr.status);
+                            console.error('Response Text:', xhr.responseText);
+                            
+                            // Try to parse response even on error
+                            try {
+                                var errorResponse = JSON.parse(xhr.responseText);
+                                console.log('Parsed error response:', errorResponse);
+                            } catch(e) {
+                                console.error('Could not parse error response as JSON');
+                            }
+                        }
+                    });
+                } else {
+                    console.warn('No certificate number found for this customer');
+                }
+            }
+            
+            // Expose function to window for manual testing
+            window.loadCertificateDetails = loadCertificateDetails;
+            
+            // Update customer_info table with certificate details
+            function updateCertificateFields(data) {
+                var customerId = '<?php echo $_GET['customerid']; ?>';
+                
+                // Update standard name
+                if (data.standard_name) {
+                    $.ajax({
+                        url: 'updateCustomer.php',
+                        type: 'GET',
+                        data: {
+                            id: customerId,
+                            columnName: 'standard_name',
+                            columnValue: data.standard_name
+                        }
+                    });
+                }
+                
+                // Update issue date (convert from dd.mm.yyyy to database format)
+                if (data.issue_date) {
+                    $.ajax({
+                        url: 'updateCustomer.php',
+                        type: 'GET',
+                        data: {
+                            id: customerId,
+                            columnName: 'issue_date',
+                            columnValue: data.issue_date
+                        }
+                    });
+                }
+                
+                // Update expire date
+                if (data.expire_date) {
+                    $.ajax({
+                        url: 'updateCustomer.php',
+                        type: 'GET',
+                        data: {
+                            id: customerId,
+                            columnName: 'expire_date',
+                            columnValue: data.expire_date
+                        }
+                    });
+                }
+            }
+            
+            // Load certificate details when page loads
+            loadCertificateDetails();
+
+            $(".serviceAuditDate").datepicker({
+                minDate: '-100Y',
+                maxDate: '+100Y',
+                changeYear: true,
+                changeMonth: true,
+                yearRange: "-20:+100",
+                dateFormat: 'dd.mm.yy',
+                autoclose: true
+            });
+
+            $(document).on('focus', ".paymentDepositDate", function () {
+                if ($(this).hasClass('hasDatepicker') === false) {
+                    $(this).datepicker({
+                        minDate: '-100Y',
+                        maxDate: '+100Y',
+                        changeYear: true,
+                        changeMonth: true,
+                        yearRange: "-20:+100",
+                        dateFormat: 'dd.mm.yy',
+                        autoclose: true
+                    });
+                }
+            });
+        });
+
+        //file upload progress bar function
+        function _(el) {
+            return document.getElementById(el);
+        }
+
+        function uploadFile() {
+            var file = _("file1").files[0];
+            // alert(file.name+" | "+file.size+" | "+file.type);
+            var formdata = new FormData();
+            formdata.append("file1", file);
+            var ajax = new XMLHttpRequest();
+            ajax.upload.addEventListener("progress", progressHandler, false);
+            ajax.addEventListener("load", completeHandler, false);
+            ajax.addEventListener("error", errorHandler, false);
+            ajax.addEventListener("abort", abortHandler, false);
+            ajax.open("POST", "file_upload_parser.php"); // http://www.developphp.com/video/JavaScript/File-Upload-Progress-Bar-Meter-Tutorial-Ajax-PHP
+            //use file_upload_parser.php from above url
+            ajax.send(formdata);
+        }
+
+        function progressHandler(event) {
+            _("loaded_n_total").innerHTML = "Uploaded " + event.loaded + " bytes of " + event.total;
+            var percent = (event.loaded / event.total) * 100;
+            _("progressBar").value = Math.round(percent);
+            _("status").innerHTML = Math.round(percent) + "% uploaded... please wait";
+        }
+
+        function completeHandler(event) {
+            _("status").innerHTML = event.target.responseText;
+            _("progressBar").value = 0; //wil clear progress bar after successful upload
+        }
+
+        function errorHandler(event) {
+            _("status").innerHTML = "Upload Failed";
+        }
+
+        function abortHandler(event) {
+            _("status").innerHTML = "Upload Aborted";
+        }
+        // progress bar ends here
+
+        function ShowProgressAnimation() {
+            //        alert("called");
+            $("#loading-div-background").show();
+            //        $("#loading-div-background-resend").show();
+        }
+
+        function HideProgressAnimation() {
+            //        alert("called");
+            $("#loading-div-background").hide();
+            //        $("#loading-div-background-resend").show();
+        }
+
+        $actionRowId = "";
+        $actionRowColumn = "";
+        $checkedValue = "";
+
+        $(document).ready(function () {
+            
+            // Initialize comment auto-save functionality
+            console.log('=== INITIALIZING COMMENT AUTO-SAVE ===');
+            var $commentField = $('#add-notes');
+            console.log('Comment field found:', $commentField.length > 0 ? 'YES' : 'NO');
+            
+            if ($commentField.length > 0) {
+                console.log('Comment field ID:', $commentField.attr('id'));
+                console.log('Comment field classes:', $commentField.attr('class'));
+                console.log('Comment field data-column:', $commentField.attr('data-column'));
+                console.log('✓ Comment auto-save is ready');
+                
+                var saveTimeout;
+                var isSaving = false;
+                
+                // Add dedicated event handler for comment field - only on blur and with debounce
+                $commentField.on('blur', function() {
+                    if (isSaving) {
+                        console.log('Already saving, skipping...');
+                        return;
+                    }
+                    
+                    console.log('>>> Comment field blur event triggered <<<');
+                    var commentValue = $(this).val().trim();
+                    var customerId = '<?php echo $_GET['customerid']; ?>';
+                    
+                    console.log('Comment Value Length:', commentValue.length);
+                    console.log('Customer ID:', customerId);
+                    
+                    if (customerId) {
+                        isSaving = true;
+                        var $element = $(this);
+                        var originalBg = $element.css('background-color');
+                        $element.css('background-color', '#fffacd');
+                        
+                        $.ajax({
+                            url: 'updateCustomer.php',
+                            type: 'GET',
+                            cache: false,
+                            data: {
+                                id: customerId,
+                                columnName: 'comment',
+                                columnValue: commentValue
+                            },
+                            success: function(response) {
+                                console.log('RAW Response:', response);
+                                console.log('Response Length:', response.length);
+                                
+                                var trimmedResponse = response.trim().toLowerCase();
+                                console.log('Trimmed Response:', trimmedResponse);
+                                
+                                if (trimmedResponse.indexOf('success') !== -1) {
+                                    console.log('✓ Comment saved successfully to database');
+                                    $element.css('background-color', '#d4edda');
+                                    setTimeout(function() {
+                                        $element.css('background-color', originalBg);
+                                    }, 1500);
+                                } else {
+                                    console.error('✗ Comment save failed. Response:', response);
+                                    $element.css('background-color', '#f8d7da');
+                                    alert('Failed to save comment. Server response: ' + response);
+                                    setTimeout(function() {
+                                        $element.css('background-color', originalBg);
+                                    }, 2000);
+                                }
+                                isSaving = false;
+                            },
+                            error: function(xhr, status, error) {
+                                console.error('✗ AJAX Error:', status, error);
+                                console.error('XHR Status:', xhr.status);
+                                console.error('Response Text:', xhr.responseText);
+                                $element.css('background-color', '#f8d7da');
+                                alert('Error saving comment: ' + error);
+                                setTimeout(function() {
+                                    $element.css('background-color', originalBg);
+                                }, 2000);
+                                isSaving = false;
+                            }
+                        });
+                    }
+                });
+                
+                // Add input event for auto-save after typing stops
+                $commentField.on('input', function() {
+                    clearTimeout(saveTimeout);
+                    var $element = $(this);
+                    saveTimeout = setTimeout(function() {
+                        console.log('Auto-save after typing stopped');
+                        $element.blur().focus();
+                    }, 2000);
+                });
+            } else {
+                console.warn('✗ Comment field not found!');
+            }
+
+            $('.editFinalInvoice').click(function () {
+                $.ajax({
+                    url: "getInvoiceInfo.php",
+                    type: "GET",
+                    dataType: "json",
+                    data: {
+                        invoice: $(this).attr('data-id'),
+                    },
+                    success: function (data)
+                    {
+//                    alert(data[2]['address']);
+//                    $('input[name="finaltaxtype"]').prop('checked', false);
+//                    alert(data[0]['tax_type']);
+                        $("input[value='" + data[0]['tax_type'] + "']").prop('checked', true);
+                        $('.invoiceconsultingFirmName').val(data[2]['id']);
+                        $('.invoiceAddress').val(data[2]['address']);
+                        $('.invoiceDt').val(moment(data[0]['invoice_date']).format('DD.MM.YYYY'));
+                        $(".invoiceState").val(data[0]['state']);
+                        $(".invoiceStateCode").val(data[0]['state_code']);
+                        $('.finalNetPrice').val(data[0]['net_price']);
+                        $('.serviceTax').val(data[0]['svc_tax_code']);
+//                    alert(data[0]['swachh_bharat_cess']);
+                        if (data[0]['tax_type'] == "CGST & SGST") {
+                            $('.finalcgst').val(data[0]['cgst']);
+                            $('.finalsgst').val(data[0]['sgst']);
+                            $('.finaligst').val("");
+                        } else if (data[0]['tax_type'] == "IGST") {
+                            $('.finaligst').val(data[0]['igst']);
+                            $('.finalcgst').val("");
+                            $('.finalsgst').val("");
+                        }
+//                    $(".finaltaxtype").val(data[0]['tax_type']);
+
+                        $('.invoiceCustomerId').val(data[0]['customer_id']);
+                        $('.invoiceFirmId').val(data[0]['firm_id']);
+                        $('.invoiceId').val(data[0]['invoice_id']);
+                        $('.finalserviceAmtTd').empty();
+                        var option1 = "";
+                        var svcs = '<?php echo $svclist ?>';
+                        var services = svcs.split(',');
+                        var serviceLen = services.length;
+                        var max = (Math.max(serviceLen));
+                        for (var key = 0; key < max; key++) {
+//                        alert("in");
+                            var svcname = key <= serviceLen && services[key] != null && services[key] != "" ? services[key] : "";
+                            option1 += '<option value="' + svcname + '">' + svcname + '</option>';
+                        }
+
+                        for (var key in data[1]) {
+                            var option2 = '<option value="' + data[1][key]['service_desc'] + '"selected>' + data[1][key]['service_desc'] + '</option>';
+                            $('.finalserviceAmtTd').append('<div class="row finalRemoveServiceAmtRow">\n\
+                                    <div class="col-sm-8 form-group float-label-control">\n\
+                                    <div class="input-group dropdown">\n\
+                                    <label for="">Service</label>\n\
+                                    <input type="text" class="form-control finalInvoiceService dropdown-toggle" name="finalInvoiceService[]" value="' + data[1][key]['service_desc'] + '" placeholder="Service">\n\
+                                    <ul class="dropdown-menu"><?php foreach ($aitfservices as $service) { ?><li><a href="#" data-value="<?php echo $service["firm_service"] ?>"><?php echo $service["firm_service"] ?></a></li><?php } ?></ul><span role="button" class="input-group-addon dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span class="caret"></span></span></div></div>\n\
+                                    <div class = "col-sm-3 removeSvcAmtVal form-group float-label-control" style = "padding-top:10px;" > \n\
+                                    <label for = "" > Amount </label>\n\
+                                    <input type= "number" name= "finalInvoiceServiceAmt[]" class ="form-control form-group finalInvoiceServiceAmt" id = "finalInvoiceServiceAmt" placeholder = "Amount" value="' + data[1][key]['service_amount'] + '"> </input>\n\
+                                    </div>\n\
+                                    <div class = "col-sm-1 finalRemoveServiceAmtCol form-group float-label-control" style = "padding-top:10px;" >\n\
+                                    <a  class="finalRemoveServiceAmt pull-right" id="finalRemoveServiceAmt" style="cursor: pointer;"><i style="margin-top: 9px;" class="glyphicon glyphicon-remove" title="Remove Service"></i></a>\n\
+                                    </div>\n\
+                                    </div>');
+                        }
+                        $('input[type="text"]').trigger('change');
+                        $('input[type="number"]').trigger('change');
+                        $('#finalinvoiceModal').modal('show');
+                    },
+                    error: function (data, status, err)
+                    {
+                        alert(status);
+                    }
+                });
+            });
+
+            $(".cancelApplication").click(function () {
+                var customerId = $(this).attr('data-id');
+                if (customerId) {
+                    $("#cancelCustomerId").val(customerId);
+                }
+                $('#cancelApplicationModal').modal('show');
+            });
+
+            $(".enableApplication").click(function () {
+                var customerId = $(this).attr('data-id');
+                if (!customerId) {
+                    return;
+                }
+                if (!confirm('Do you want to enable this application again?')) {
+                    return;
+                }
+                var form = $('<form action="enableApplication.php" method="post">' +
+                        '<input type="hidden" name="customer_id" value="' + customerId + '" />' +
+                        '</form>');
+                $('body').append(form);
+                form.submit();
+            });
+
+            $('.viewFinalInvoice').click(function () {
+                var customerID = $(this).attr('data-customer');
+                var firmId = '1';
+                var invoiceid = $(this).attr('data-id');
+                // open popup
+                var url = 'finalInvoicePDF.php'
+                var form = $('<form action="' + url + '" method="post" target="_blank">' +
+                        '<input type="hidden" name="invoiceCustomerId" value="' + customerID + '" />' +
+                        '<input type="hidden" name="invoiceFirmId" value="' + firmId + '" />' +
+                        '<input type="hidden" name="invoiceid" value="' + invoiceid + '" />' +
+                        '</form>');
+                $('body').append(form);
+                form.submit();
+            });
+
+            $(".payment-title").click(function () {
+                //                alert($(this).attr("data-id"));
+                $(".payment-desc").toggle();
+                //            $(".cadates" + svc).toggle();
+            });
+
+            // Handle saveChanges class for auto-saving fields (excluding comment field which has its own handler)
+            $('.saveChanges').not('#add-notes').on('blur change', function() {
+                var $element = $(this);
+                var columnName = $element.attr('data-column');
+                var columnValue = $element.val();
+                var customerId = '<?php echo $_GET['customerid']; ?>';
+                
+                console.log('=== SAVING OTHER FIELD ===');
+                console.log('Column:', columnName);
+                console.log('Value:', columnValue);
+                console.log('Customer ID:', customerId);
+                
+                if (columnName && customerId) {
+                    var originalBg = $element.css('background-color');
+                    $element.css('background-color', '#fffacd');
+                    
+                    $.ajax({
+                        url: 'updateCustomer.php',
+                        type: 'GET',
+                        data: {
+                            id: customerId,
+                            columnName: columnName,
+                            columnValue: columnValue
+                        },
+                        success: function(response) {
+                            console.log('Save response:', response);
+                            
+                            if (response && response.trim().toLowerCase().indexOf('success') !== -1) {
+                                console.log('✓ Field saved successfully');
+                                $element.css('background-color', '#d4edda');
+                                
+                                setTimeout(function() {
+                                    $element.css('background-color', originalBg);
+                                }, 1000);
+                            } else {
+                                console.error('✗ Unexpected response:', response);
+                                $element.css('background-color', '#f8d7da');
+                                alert('Error saving changes: ' + response);
+                                
+                                setTimeout(function() {
+                                    $element.css('background-color', originalBg);
+                                }, 2000);
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            console.error('✗ AJAX Error:', status, error);
+                            $element.css('background-color', '#f8d7da');
+                            alert('Error saving changes: ' + error);
+                            
+                            setTimeout(function() {
+                                $element.css('background-color', originalBg);
+                            }, 2000);
+                        }
+                    });
+                } else {
+                    console.warn('Missing required data - Column:', columnName, 'Customer ID:', customerId);
+                }
+            });
+
+            $(".ptr-service-row").click(function () {
+                //            alert($(this).attr("data-id"));
+                var svc = $(this).attr("data-id");
+                $(".ptr-service-desc" + svc).toggle();
+                //            $(".cadates" + svc).toggle();
+            });
+
+            $(".cr-service-row").click(function () {
+                //                alert($(this).attr("data-id"));
+                var svc = $(this).attr("data-id");
+                $(".cr-service-desc" + svc).toggle();
+                //            $(".cadates" + svc).toggle();
+            });
+
+            $(".ca-service-row").click(function () {
+                //            alert($(this).attr("data-id"));
+                var svc = $(this).attr("data-id");
+                $(".ca-service-desc" + svc).toggle();
+                $(".cadates" + svc).toggle();
+            });
+
+            $(".sai-service-row").click(function () {
+                var svc = $(this).attr("data-id");
+                $(".sai-service-desc" + svc).toggle();
+                $(".saidates" + svc).toggle();
+            });
+
+            $(".saii-service-row").click(function () {
+                var svc = $(this).attr("data-id");
+                $(".saii-service-desc" + svc).toggle();
+                $(".saiidates" + svc).toggle();
+            });
+
+            $(".rc-service-row").click(function () {
+                var svc = $(this).attr("data-id");
+                $(".rc-service-desc" + svc).toggle();
+                $(".rcdates" + svc).toggle();
+            });
+
+            $(".sp-service-row").click(function () {
+                var svc = $(this).attr("data-id");
+                $(".sp-service-desc" + svc).toggle();
+            });
+
+            $(".ta-service-row").click(function () {
+                var svc = $(this).attr("data-id");
+                $(".ta-service-desc" + svc).toggle();
+            });
+
+            $(".no_auditreport_file").click(function () {
+                $servicetype = $(this).attr('data-svctype');
+                $serviceid = $(this).attr("data-service");
+                if ((this).checked) {
+                    $nc = "NONC";
+                    //                alert("checked");
+                    $.ajax({
+                        url: "addComments.php",
+                        //                dataType: "json",
+                        type: 'GET',
+                        data: {
+                            svctype: $servicetype,
+                            svc_id: $serviceid,
+                            nc: $nc
+                        },
+                        success: function (data) {
+                            //                        alert(data);  
+                            $(document).ajaxStop(function () {
+                                location.reload(true);
+                            });
+                        },
+                        error: function (data, status, err) {
+                            alert(status);
+                        }
+                    });
+                } else {
+                    $nc = "";
+                    //                alert("checked");
+                    $.ajax({
+                        url: "addComments.php",
+                        //                dataType: "json",
+                        type: 'GET',
+                        data: {
+                            svctype: $servicetype,
+                            svc_id: $serviceid,
+                            nc: $nc
+                        },
+                        success: function (data) {
+                            //                        alert(data);     
+                            $(document).ajaxStop(function () {
+                                location.reload(true);
+                            });
+                        },
+                        error: function (data, status, err) {
+                            alert(status);
+                        }
+                    });
+                }
+            });
+
+            $(".no_schedule_file").click(function () {
+                $servicetype = $(this).attr('data-svctype');
+                $serviceid = $(this).attr("data-service");
+                if ((this).checked) {
+                    $nc = "NONC";
+                    //                alert("checked");
+                    $.ajax({
+                        url: "addComments.php",
+                        //                dataType: "json",
+                        type: 'GET',
+                        data: {
+                            servictype: $servicetype,
+                            svcid: $serviceid,
+                            nc: $nc
+                        },
+                        success: function (data) {
+                            //                        alert(data);  
+                            $(document).ajaxStop(function () {
+                                location.reload(true);
+                            });
+                        },
+                        error: function (data, status, err) {
+                            alert(status);
+                        }
+                    });
+                } else {
+                    $nc = "";
+                    //                alert("checked");
+                    $.ajax({
+                        url: "addComments.php",
+                        //                dataType: "json",
+                        type: 'GET',
+                        data: {
+                            servictype: $servicetype,
+                            svcid: $serviceid,
+                            nc: $nc
+                        },
+                        success: function (data) {
+                            //                        alert(data);     
+                            $(document).ajaxStop(function () {
+                                location.reload(true);
+                            });
+                        },
+                        error: function (data, status, err) {
+                            alert(status);
+                        }
+                    });
+                }
+            });
+
+            $(".no_schedule_upload_file").click(function () {
+                $servicetype = $(this).attr('data-svctype');
+                $serviceid = $(this).attr("data-service");
+                if ((this).checked) {
+                    $nc = "NONC";
+                    //                alert("checked");
+                    $.ajax({
+                        url: "addComments.php",
+                        //                dataType: "json",
+                        type: 'GET',
+                        data: {
+                            srvc_type: $servicetype,
+                            srvc_id: $serviceid,
+                            nc: $nc
+                        },
+                        success: function (data) {
+                            //                        alert(data);  
+                            $(document).ajaxStop(function () {
+                                location.reload(true);
+                            });
+                        },
+                        error: function (data, status, err) {
+                            alert(status);
+                        }
+                    });
+                } else {
+                    $nc = "";
+                    //                alert("checked");
+                    $.ajax({
+                        url: "addComments.php",
+                        //                dataType: "json",
+                        type: 'GET',
+                        data: {
+                            srvc_type: $servicetype,
+                            srvc_id: $serviceid,
+                            nc: $nc
+                        },
+                        success: function (data) {
+                            //                        alert(data);     
+                            $(document).ajaxStop(function () {
+                                location.reload(true);
+                            });
+                        },
+                        error: function (data, status, err) {
+                            alert(status);
+                        }
+                    });
+                }
+            });
+
+            $(".no_certificate_file").click(function () {
+                $servicetype = $(this).attr('data-svctype');
+                $serviceid = $(this).attr("data-service");
+                $certficate = $(this).attr("data-cert");
+                //                alert($certficate);
+                if ((this).checked) {
+                    $nc = "NONC";
+                    //                alert("checked");
+                    $.ajax({
+                        url: "addComments.php",
+                        //                dataType: "json",
+                        type: 'GET',
+                        data: {
+                            svccert_type: $servicetype,
+                            svccert_id: $serviceid,
+                            nc: $nc,
+                            cert: $certficate,
+                        },
+                        success: function (data) {
+                            //                        alert(data);  
+                            $(document).ajaxStop(function () {
+                                location.reload(true);
+                            });
+                        },
+                        error: function (data, status, err) {
+                            alert(status);
+                        }
+                    });
+                } else {
+                    $nc = "";
+                    //                alert("checked");
+                    $.ajax({
+                        url: "addComments.php",
+                        //                dataType: "json",
+                        type: 'GET',
+                        data: {
+                            svccert_type: $servicetype,
+                            svccert_id: $serviceid,
+                            nc: $nc,
+                            cert: $certficate,
+                        },
+                        success: function (data) {
+                            //                        alert(data);     
+                            $(document).ajaxStop(function () {
+                                location.reload(true);
+                            });
+                        },
+                        error: function (data, status, err) {
+                            alert(status);
+                        }
+                    });
+                }
+            });
+
+            $(".no_notification_upload_file").click(function () {
+                $servicetype = $(this).attr('data-svctype');
+                $serviceid = $(this).attr("data-service");
+                if ((this).checked) {
+                    $nc = "NONC";
+                    //                alert("checked");
+                    $.ajax({
+                        url: "addComments.php",
+                        //                dataType: "json",
+                        type: 'GET',
+                        data: {
+                            svc_type: $servicetype,
+                            svc_id: $serviceid,
+                            nc: $nc
+                        },
+                        success: function (data) {
+                            //                        alert(data);  
+                            $(document).ajaxStop(function () {
+                                location.reload(true);
+                            });
+                        },
+                        error: function (data, status, err) {
+                            alert(status);
+                        }
+                    });
+                } else {
+                    $nc = "";
+                    //                alert("checked");
+                    $.ajax({
+                        url: "addComments.php",
+                        //                dataType: "json",
+                        type: 'GET',
+                        data: {
+                            svc_type: $servicetype,
+                            svc_id: $serviceid,
+                            nc: $nc
+                        },
+                        success: function (data) {
+                            //                        alert(data);     
+                            $(document).ajaxStop(function () {
+                                location.reload(true);
+                            });
+                        },
+                        error: function (data, status, err) {
+                            alert(status);
+                        }
+                    });
+                }
+            });
+
+            $(".no_notification_file").click(function () {
+                $servicetype = $(this).attr('data-svctype');
+                $serviceid = $(this).attr("data-service");
+                if ((this).checked) {
+                    $nc = "NONC";
+                    //                alert("checked");
+                    $.ajax({
+                        url: "addComments.php",
+                        //                dataType: "json",
+                        type: 'GET',
+                        data: {
+                            servietype: $servicetype,
+                            serviceid: $serviceid,
+                            nc: $nc
+                        },
+                        success: function (data) {
+                            //                        alert(data);  
+                            $(document).ajaxStop(function () {
+                                location.reload(true);
+                            });
+                        },
+                        error: function (data, status, err) {
+                            alert(status);
+                        }
+                    });
+                } else {
+                    $nc = "";
+                    //                alert("checked");
+                    $.ajax({
+                        url: "addComments.php",
+                        //                dataType: "json",
+                        type: 'GET',
+                        data: {
+                            servietype: $servicetype,
+                            serviceid: $serviceid,
+                            nc: $nc
+                        },
+                        success: function (data) {
+                            //                        alert(data);     
+                            $(document).ajaxStop(function () {
+                                location.reload(true);
+                            });
+                        },
+                        error: function (data, status, err) {
+                            alert(status);
+                        }
+                    });
+                }
+            });
+
+            $(".no_feedback_file").click(function () {
+                $servicetype = $(this).attr('data-svctype');
+                $serviceid = $(this).attr("data-service");
+                if ((this).checked) {
+                    $nc = "NONC";
+                    //                alert("checked");
+                    $.ajax({
+                        url: "addComments.php",
+                        //                dataType: "json",
+                        type: 'GET',
+                        data: {
+                            svcType: $servicetype,
+                            svcId: $serviceid,
+                            nc: $nc
+                        },
+                        success: function (data) {
+                            //                        alert(data);  
+                            $(document).ajaxStop(function () {
+                                location.reload(true);
+                            });
+                        },
+                        error: function (data, status, err) {
+                            alert(status);
+                        }
+                    });
+                } else {
+                    $nc = "";
+                    //                alert("checked");
+                    $.ajax({
+                        url: "addComments.php",
+                        //                dataType: "json",
+                        type: 'GET',
+                        data: {
+                            svcType: $servicetype,
+                            svcId: $serviceid,
+                            nc: $nc
+                        },
+                        success: function (data) {
+                            //                        alert(data);     
+                            $(document).ajaxStop(function () {
+                                location.reload(true);
+                            });
+                        },
+                        error: function (data, status, err) {
+                            alert(status);
+                        }
+                    });
+                }
+            });
+
+            $(".no_nc_file").click(function () {
+                $servicetype = $(this).attr('data-svctype');
+                $serviceid = $(this).attr("data-service");
+                if ((this).checked) {
+                    $nc = "NONC";
+                    //                alert("checked");
+                    $.ajax({
+                        url: "addComments.php",
+                        //                dataType: "json",
+                        type: 'GET',
+                        data: {
+                            servietype: $servicetype,
+                            serviceid: $serviceid,
+                            nc: $nc
+                        },
+                        success: function (data) {
+                            //                        alert(data);  
+                            $(document).ajaxStop(function () {
+                                location.reload(true);
+                            });
+                        },
+                        error: function (data, status, err) {
+                            alert(status);
+                        }
+                    });
+                } else {
+                    $nc = "";
+                    //                alert("checked");
+                    $.ajax({
+                        url: "addComments.php",
+                        //                dataType: "json",
+                        type: 'GET',
+                        data: {
+                            servietype: $servicetype,
+                            serviceid: $serviceid,
+                            nc: $nc
+                        },
+                        success: function (data) {
+                            //                        alert(data);     
+                            $(document).ajaxStop(function () {
+                                location.reload(true);
+                            });
+                        },
+                        error: function (data, status, err) {
+                            alert(status);
+                        }
+                    });
+                }
+            });
+
+            $(".customer_status").change(function () {
+                $customerstatus = $(this).val();
+                $customer = $(this).attr("data-customer");
+                $.ajax({
+                    url: "addComments.php",
+                    //                dataType: "json",
+                    type: 'GET',
+                    data: {
+                        customerid: $customer,
+                        customerstatus: $customerstatus
+                    },
+                    success: function (data) {
+                        //                    alert(data);
+                    },
+                    error: function (data, status, err) {
+                        alert(status);
+                    }
+                });
+            });
+
+            $(".deleteLetterAccount").click(function () {
+                //            alert($(this).attr("data-customer"));
+                var rowid = $(this).attr("data-action");
+                var customer = $(this).attr("data-customer");
+                var url = 'addComments.php';
+                var form = $('<form action="' + url + '" method="post">' +
+                        '<input type="hidden" name="rowidac" value="' + rowid + '" />' +
+                        '<input type="hidden" name="customer" value="' + customer + '" />' +
+                        '</form>');
+                $('body').append(form);
+                form.submit();
+            });
+
+            $('body').on('click', ".cbComment", function (e) {
+
+                $(".cbId").val($(this).attr("data-row-id"));
+                $(".cbCustomer").val($(this).attr('data-customer'));
+                $('.certificationComment').val($(this).attr('data-comment'));
+                $('.certificationComment').trigger('change');
+                $('#addCertificetionComment').modal("show");
+            });
+
+			function GenerateOrPreviewPDF(customer, service, action, servicetype, letterType, pageAction){
+				var url = 'IntimationDueLetters.php';
+				var form = $('<form action="' + url + '" method="post" target="_blank">' +
+						'<input type="hidden" name="customer" value="' + customer + '" />' +
+						'<input type="hidden" name="service" value="' + service + '" />' +
+						'<input type="hidden" name="action" value="' + action + '" />' +
+						'<input type="hidden" name="servicetype" value="' + servicetype + '" />' +
+						'<input type="hidden" name="lettertype" value="' + letterType + '" />' +
+						'<input type="hidden" name="SourcePage" value="customerAccount.php?customerid=' + customer + '" />' +
+						'<input type="hidden" name="pageAction" value="' + pageAction + '" />' +
+						'</form>');
+				$('body').append(form);
+				form.submit();
+			}
+			
+			$('.PreviewPDF').click(function () {
+				var customer = $(this).attr('data-customer');
+				var service = $(this).attr('data-service');
+				var action = $(this).attr('data-action');
+				var servicetype = $(this).attr("data-servicetype");
+				var lettertype = $(this).attr('data-action-pdf');
+				
+				GenerateOrPreviewPDF(customer,service,action,servicetype,lettertype, "PreviewPDF");
+			});
+
+            $('.caServiceGanerate').click(function () {
+//            alert($(this).attr("data-servicetype"));
+                ShowProgressAnimation();
+                var actiontype = $(this).attr('data-actiontype');
+                var customer = $(this).attr('data-customer');
+                var service = $(this).attr('data-service');
+                var action = $(this).attr('data-action');
+                var servicetype = $(this).attr("data-servicetype");
+                var redirect = "customerAccount";
+//                alert(action);
+                if (actiontype == "1st Reminder" && servicetype == "SA-II") {
+                    var url = 'sendFirstDueSaiiNotification.php';
+                } else if (actiontype == "1st Reminder" || actiontype == "Suspension Reminder") {
+                    var url = 'sendFirstDueNotification.php';
+                } else if (actiontype == "2nd Reminder" && servicetype == "SA-II") {
+                    var url = 'sendReminderDueNotification.php';
+                } else if (actiontype == "2nd Reminder") {
+                    var url = 'suspensionDueNotificationSend.php';
+                } else if (actiontype == "Suspension Letter" || actiontype == "Suspend Letter") {
+                    var url = 'suspentionMail.php';
+                } else if (actiontype == "Withdrawal Reminder" ) {
+                    var url = 'sendReminderDueSaiiNotification.php';
+                }else if (actiontype == "Withdrawal Letter" || actiontype == "Withdraw Letter") {
+                    var url = 'sendWithdrawnDueNotification.php';
+                } else if (actiontype == "Expire Letter" && servicetype == "SA-II") {
+                    var url = 'sendWithdrawnDueSaiiNotification.php';
+                } else {
+                    // Handle unknown action type
+                    alert('Error: Action type "' + actiontype + '" for service type "' + servicetype + '" is not configured. Please contact administrator.');
+                    HideProgressAnimation();
+                    return false;
+                }
+                
+                // Check if URL is defined
+                if (!url || url === 'undefined') {
+                    alert('Error: Cannot process this action. Please contact administrator.');
+                    HideProgressAnimation();
+                    return false;
+                }
+                
+                //            var url = 'sendFirstDueNotification.php';
+                var form = $('<form action="' + url + '" method="post" >' +
+                        '<input type="hidden" name="customer" value="' + customer + '" />' +
+                        '<input type="hidden" name="service" value="' + service + '" />' +
+                        '<input type="hidden" name="acction" value="' + action + '" />' +
+                        '<input type="hidden" name="redirect" value="' + redirect + '" />' +
+                        '<input type="hidden" name="servicetype" value="' + servicetype + '" />' +
+                        '</form>');
+                $('body').append(form);
+                form.submit();
+            });
+
+            var yetVisited = localStorage['visited'];
+            //        alert(yetVisited);
+            if (yetVisited == 'CA') {
+                $('.ca-service-type').show();
+            }
+
+            if (yetVisited == 'SA-I') {
+                $('.sa-i-service-type').show();
+            }
+
+            if (yetVisited == 'SA-II') {
+                $('.sa-ii-service-type').show();
+            }
+
+            if (yetVisited == 'RC') {
+                $('.rc-service-type').show();
+            }
+
+            if (yetVisited == 'SP') {
+                $('.sp-service-type').show();
+            }
+
+            $('.invoiceBtn').click(function () {
+                var companyName = $(this).attr("data-id");
+                var companyAddress = $(this).attr("data-address");
+                $('.invoiceconsultingFirmName').val(companyName);
+                //            alert($('.invoiceconsultingFirmName').val());
+                $('#invoiceAddress').val(companyAddress);
+                $('#consultingFirmName').trigger('change');
+                $('#invoiceAddress').trigger('change');
+                $('#invoiceModal').modal('show');
+            });
+
+            $('.quotationBtn').click(function () {
+                $('#quotation').modal('show');
+            });
+
+            $('.caServiceComment').click(function () {
+                $actionRowId = $(this).attr('data-row-id');
+                $actionRowColumn = $(this).attr('data-column');
+                $('.caServiceCommentAdd').val($(this).attr('data-comment'));
+                //            alert($('.caServiceCommentAdd').val());
+                // Trigger change to textarea
+                $('.caServiceCommentAdd').trigger('change');
+                $('#addCaServiceComment').modal('show');
+            });
+
+            $('.caServiceCommentAdd').change(function (e) {
+                addComments($(this));
+            });
+
+            $('.saiServiceComment').click(function () {
+                $actionRowId = $(this).attr('data-row-id');
+                $actionRowColumn = $(this).attr('data-column');
+                $('.saiServiceCommentAdd').val($(this).attr('data-comment'));
+                //            alert($('.saiServiceCommentAdd').val());
+                // Trigger change to textarea
+                $('.saiServiceCommentAdd').trigger('change');
+                $('#addSaiServiceComment').modal('show');
+            });
+
+            $('.saiServiceCommentAdd').change(function (e) {
+                addComments($(this));
+            });
+
+            $('.saiiServiceComment').click(function () {
+                $actionRowId = $(this).attr('data-row-id');
+                $actionRowColumn = $(this).attr('data-column');
+                $('.saiiServiceCommentAdd').val($(this).attr('data-comment'));
+                //            alert($('.saiiServiceCommentAdd').val());
+                // Trigger change to textarea
+                $('.saiiServiceCommentAdd').trigger('change');
+                $('#addSaiiServiceComment').modal('show');
+            });
+
+            $('.saiiServiceCommentAdd').change(function (e) {
+                addComments($(this));
+            });
+
+            $('.rcserviceComment').click(function () {
+                $actionRowId = $(this).attr('data-row-id');
+                $actionRowColumn = $(this).attr('data-column');
+                $('.rcServiceCommentAdd').val($(this).attr('data-comment'));
+                //            alert($('.rcServiceCommentAdd').val());
+                // Trigger change to textarea
+                $('.rcServiceCommentAdd').trigger('change');
+                $('#addRCServiceComment').modal('show');
+            });
+
+            $('.rcServiceCommentAdd').change(function (e) {
+                addComments($(this));
+            });
+
+            $('.spserviceComment').click(function () {
+                $actionRowId = $(this).attr('data-row-id');
+                $actionRowColumn = $(this).attr('data-column');
+                $('.spServiceCommentAdd').val($(this).attr('data-comment'));
+                //            alert($('.spServiceCommentAdd').val());
+                // Trigger change to textarea
+                $('.spServiceCommentAdd').trigger('change');
+                $('#addSPServiceComment').modal('show');
+            });
+
+            $('.spServiceCommentAdd').change(function () {
+                addComments($(this));
+            });
+
+            function addComments($selector) {
+                $checkedValue = $selector.val();
+                //          alert('hi');
+                $.ajax({
+                    url: "saveComments.php",
+                    //                dataType: "json",
+                    type: 'GET',
+                    data: {
+                        rowId: $actionRowId,
+                        column: $actionRowColumn,
+                        comment: $checkedValue,
+                    },
+                    success: function (data) {
+                        //                    alert(data);
+                    },
+                    error: function (data, status, err) {
+                        alert(status);
+                    }
+                });
+                $selector.removeClass("glowing-border");
+                //           $(this).removeClass("form-group ");
+                $selector.addClass("lookslike-label");
+            }
+
+            $('.consultComment').change(function (e) {
+                saveCunsultComments($(this));
+            });
+
+            $('.deleteServicePTR').click(function () {
+                // alert($(this).attr('data-service'));
+                var caservice = $(this).attr('data-row-id');
+                var customer = $(this).attr('data-customer');
+                var service = $(this).attr('data-service');
+                $('#delete-details').show();
+                $('.delete-confirm-ok').click(function () {
+                    $.ajax({
+                        url: "deleteService.php",
+                        type: "GET",
+                        //                dataType: "json",
+                        data: {
+                            ptr_service_id: caservice,
+                            ptr_customer_id: customer,
+                            service_id: service
+                        },
+                        success: function (data)
+                        {
+                            //                        console.log(data);
+                            //                        //                    alert(data);
+                            $(document).ajaxStop(function () {
+                                location.reload(true);
+                            });
+                        },
+                        error: function (data, status, err)
+                        {
+                            alert(status);
+                        }
+                    });
+                });
+                $('.delete-cancel').click(function () {
+                    $('#delete-details').hide();
+                });
+            });
+
+            $(".deleteServiceCR").click(function () {
+                var caservice = $(this).attr('data-row-id');
+                var customer = $(this).attr('data-customer');
+                var service = $(this).attr('data-service');
+                $('#delete-details').show();
+                $('.delete-confirm-ok').click(function () {
+                    $.ajax({
+                        url: "deleteService.php",
+                        type: "GET",
+                        //                dataType: "json",
+                        data: {
+                            cr_service_id: caservice,
+                            cr_customer_id: customer,
+                            service_id: service,
+                        },
+                        success: function (data)
+                        {
+                            console.log(data);
+                            //                    alert(data);
+                            $(document).ajaxStop(function () {
+                                location.reload(true);
+                            });
+                        },
+                        error: function (data, status, err)
+                        {
+                            alert(status);
+                        }
+                    });
+                });
+                $('.delete-cancel').click(function () {
+                    $('#delete-details').hide();
+                });
+            });
+
+            $('.deleteServiceCA').click(function () {
+                var caservice = $(this).attr('data-row-id');
+                var customer = $(this).attr('data-customer');
+                var service = $(this).attr('data-service');
+                $('#delete-details').show();
+                $('.delete-confirm-ok').click(function () {
+                    $.ajax({
+                        url: "deleteService.php",
+                        type: "GET",
+                        //                dataType: "json",
+                        data: {
+                            ca_service_id: caservice,
+                            ca_customer_id: customer,
+                            service_id: service,
+                        },
+                        success: function (data)
+                        {
+                            console.log(data);
+                            //                    alert(data);
+                            $(document).ajaxStop(function () {
+                                location.reload(true);
+                            });
+                        },
+                        error: function (data, status, err)
+                        {
+                            alert(status);
+                        }
+                    });
+                });
+                $('.delete-cancel').click(function () {
+                    $('#delete-details').hide();
+                });
+            });
+
+            $('.deleteServiceSai').click(function () {
+                // alert($(this).attr('data-service'));
+                var caservice = $(this).attr('data-row-id');
+                var customer = $(this).attr('data-customer');
+                var service = $(this).attr('data-service');
+                $('#delete-details').show();
+                $('.delete-confirm-ok').click(function () {
+                    $.ajax({
+                        url: "deleteService.php",
+                        type: "GET",
+                        //                dataType: "json",
+                        data: {
+                            sai_service_id: caservice,
+                            sai_customer_id: customer,
+                            service_id: service,
+                        },
+                        success: function (data)
+                        {
+                            console.log(data);
+                            //                    alert(data);
+                            $(document).ajaxStop(function () {
+                                location.reload(true);
+                            });
+                        },
+                        error: function (data, status, err)
+                        {
+                            alert(status);
+                        }
+                    });
+                });
+                $('.delete-cancel').click(function () {
+                    $('#delete-details').hide();
+                });
+            });
+
+            $('.deleteServiceSAII').click(function () {
+                //            alert($(this).attr('data-service'));
+                var caservice = $(this).attr('data-row-id');
+                var customer = $(this).attr('data-customer');
+                var service = $(this).attr('data-service');
+                //            alert("ca "+caservice+" -> "+customer);
+                $('#delete-details').show();
+                $('.delete-confirm-ok').click(function () {
+                    $.ajax({
+                        url: "deleteService.php",
+                        type: "GET",
+                        //                dataType: "json",
+                        data: {
+                            saii_service_id: caservice,
+                            saii_customer_id: customer,
+                            service_id: service
+                        },
+                        success: function (data)
+                        {
+                            console.log(data);
+                            //                        alert(data);
+                            $(document).ajaxStop(function () {
+                                location.reload(true);
+                            });
+                        },
+                        error: function (data, status, err)
+                        {
+                            alert(status);
+                        }
+                    });
+                });
+                $('.delete-cancel').click(function () {
+                    $('#delete-details').hide();
+                });
+            });
+
+            $('.deleteServiceRC').click(function () {
+                // alert($(this).attr('data-service'));
+                var caservice = $(this).attr('data-row-id');
+                var customer = $(this).attr('data-customer');
+                var service = $(this).attr('data-service');
+                $('#delete-details').show();
+                $('.delete-confirm-ok').click(function () {
+                    $.ajax({
+                        url: "deleteService.php",
+                        type: "GET",
+                        //                dataType: "json",
+                        data: {
+                            rc_service_id: caservice,
+                            rc_customer_id: customer,
+                            service_id: service
+                        },
+                        success: function (data)
+                        {
+                            console.log(data);
+                            //                        alert(data);
+                            $(document).ajaxStop(function () {
+                                location.reload(true);
+                            });
+                        },
+                        error: function (data, status, err)
+                        {
+                            alert(status);
+                        }
+                    });
+                });
+                $('.delete-cancel').click(function () {
+                    $('#delete-details').hide();
+                });
+            });
+
+            $('.deleteServiceSP').click(function () {
+                // alert($(this).attr('data-service'));
+                var caservice = $(this).attr('data-row-id');
+                var customer = $(this).attr('data-customer');
+                var service = $(this).attr('data-service');
+                $('#delete-details').show();
+                $('.delete-confirm-ok').click(function () {
+                    $.ajax({
+                        url: "deleteService.php",
+                        type: "GET",
+                        //                dataType: "json",
+                        data: {
+                            sp_service_id: caservice,
+                            sp_customer_id: customer,
+                            service_id: service
+                        },
+                        success: function (data)
+                        {
+                            console.log(data);
+                            //                    alert(data);
+                            $(document).ajaxStop(function () {
+                                location.reload(true);
+                            });
+                        },
+                        error: function (data, status, err)
+                        {
+                            alert(status);
+                        }
+                    });
+                });
+                $('.delete-cancel').click(function () {
+                    $('#delete-details').hide();
+                });
+            });
+
+            $(".deleteServiceTA").click(function () {
+                var caservice = $(this).attr('data-row-id');
+                var customer = $(this).attr('data-customer');
+                var service = $(this).attr('data-service');
+                $('#delete-details').show();
+                $('.delete-confirm-ok').click(function () {
+                    $.ajax({
+                        url: "deleteService.php",
+                        type: "GET",
+                        //                dataType: "json",
+                        data: {
+                            ta_service_id: caservice,
+                            ta_customer_id: customer,
+                            service_id: service
+                        },
+                        success: function (data)
+                        {
+                            console.log(data);
+                            //                    alert(data);
+                            $(document).ajaxStop(function () {
+                                location.reload(true);
+                            });
+                        },
+                        error: function (data, status, err)
+                        {
+                            alert(status);
+                        }
+                    });
+                });
+                $('.delete-cancel').click(function () {
+                    $('#delete-details').hide();
+                });
+            });
+
+            //code by appa For certificationBtn
+            $('.certificationBtn').click(function () {
+                var customerId = $(this).attr('data-customer');
+                var serviceId = $(this).attr('data-service');
+                
+                // Clear form fields
+                $('.newRegistrationDate').val('');
+                $('.allotmentNo').val('');
+                $('.certificateid').val('');
+                $('.newCount').val('');
+                
+                // Set hidden fields
+                $('.csId').val(customerId);
+                $('.service').val(serviceId);
+                
+                // Fetch count data for the customer
+                $.ajax({
+                    url: "checkCustomer.php",
+                    type: "GET",
+                    dataType: "json",
+                    data: {
+                        customerId: customerId,
+                        serviceid: serviceId
+                    },
+                    success: function (countData) {
+                        // Set the count if available
+                        if (countData && countData[1] && countData[1].c_id) {
+                            $('.newCount').val(countData[1].c_id);
+                        }
+                        
+                        // Trigger change to update float labels
+                        $('input[type="text"]').trigger('change');
+                        
+                        // Show the certification modal
+                        $('#certificatePrintModal').modal('show');
+                    },
+                    error: function (xhr, status, err) {
+                        alert("Error loading data: " + status);
+                    }
+                });
+            });
+
+// added new handller proposedf jQuery listner inside by Gaurav Oli
+
+            $("body").on("click", ".editcertification", function (e) {
+                e.preventDefault();
+                var customerId = $(this).attr('data-customer');
+                var serviceId = $(this).attr('data-service');
+                var certificationId = $(this).attr('data-certfication');
+                
+                // Set hidden fields for form submission
+                $(".csId").val(customerId);
+                $(".service").val(serviceId);
+                $(".certificateid").val(certificationId);
+                
+                // Fetch existing certification data
+                $.ajax({
+                    url: "checkCustomer.php",
+                    type: "GET",
+                    dataType: "json",
+                    data: {
+                        certId: certificationId,
+                        svceid: serviceId
+                    },
+                    success: function (certData) {
+                        // Populate the modal fields
+                        if (certData && certData.aggrement_date) {
+                            $('.newRegistrationDate').val(moment(certData.aggrement_date).format('DD.MM.YYYY'));
+                        }
+                        if (certData && certData.aggrement_no) {
+                            $('.allotmentNo').val(certData.aggrement_no);
+                        }
+                        
+                        // Fetch count data for the customer
+                        $.ajax({
+                            url: "checkCustomer.php",
+                            type: "GET",
+                            dataType: "json",
+                            data: {
+                                customerId: customerId,
+                                serviceid: serviceId
+                            },
+                            success: function (countData) {
+                                // Set the count if available
+                                if (countData && countData[1] && countData[1].c_id) {
+                                    $('.newCount').val(countData[1].c_id);
+                                }
+                            },
+                            error: function () {
+                                // Continue even if count fetch fails
+                            }
+                        });
+                        
+                        // Trigger change to update float labels
+                        $('input[type="text"]').trigger('change');
+                        
+                        // Show the modal
+                        $('#certificatePrintModal').modal('show');
+                    },
+                    error: function (xhr, status, err) {
+                        alert("Error loading certification data: " + status);
+                    }
+                });
+            });
+            $("body").on("click", ".downloadcertificate", function (e) {
+                e.preventDefault();
+                
+                // Get data attributes for generating the PDF
+                var customerId = $(this).attr('data-customer');
+                var serviceId = $(this).attr('data-service');
+                var certificationId = $(this).attr('data-certfication');
+                var serviceCount = $(this).attr('data-servicecount');
+                
+                console.log('Downloading Certification Agreement PDF - Customer:', customerId, 'Service:', serviceId, 'Certification:', certificationId);
+                
+                // Generate and download the AITF Certification Service Agreement PDF
+                var url = 'Csa.php';
+                var form = $('<form action="' + url + '" method="post" target="_blank">' +
+                        '<input type="hidden" name="csId" value="' + customerId + '" />' +
+                        '<input type="hidden" name="service" value="' + serviceId + '" />' +
+                        '<input type="hidden" name="certification" value="' + certificationId + '" />' +
+                        '<input type="hidden" name="saiicount" value="' + serviceCount + '" />' +
+                        '</form>');
+                $('body').append(form);
+                form.submit();
+                form.remove();
+            });
+
+            // Reset customer modal when it's hidden to ensure clean state
+            $('#customerAdd').on('hidden.bs.modal', function () {
+                console.log('Customer modal closed - resetting form');
+                $('#customerAdd form')[0].reset();
+                $('.addMultipleContact').empty();
+                $('.editCustomerId').val('');
+                $('.customerPersonHidden, .customerContactHidden, .customerContactEmlHidden').val('');
+                $('#companyNameError, #contactEmailError, #contactNoError, #contactPersonError').hide();
+                $('.inputHighlight').removeClass('inputHighlight');
+            });
+            
+            // Add form submission handler to debug and track the save process
+            $('#customerAdd form').on('submit', function(e) {
+                var editId = $('.editCustomerId').val();
+                console.log('=== CUSTOMER FORM SUBMISSION ===');
+                console.log('Edit Customer ID:', editId);
+                console.log('Customer Name:', $('.customerName').val());
+                console.log('Form Action:', $(this).attr('action'));
+                
+                if (editId && editId !== '') {
+                    console.log('✓ EDIT MODE - Customer ID:', editId, 'will be updated');
+                } else {
+                    console.log('✓ ADD MODE - New customer will be created');
+                }
+                
+                // Allow form to submit naturally
+                return true;
+            });
+            
+            $('.editCustomerDetails').click(function () {
+                var customerId = $(this).attr('data-id');
+                
+                // Fetch customer data
+                $.ajax({
+                    url: "getClientInfo.php",
+                    type: "GET",
+                    dataType: "json",
+                    data: {
+                        customerid: customerId
+                    },
+                    success: function (customer) {
+                        if (customer && !customer.error) {
+                            // CRITICAL: Clear the modal form completely first
+                            $('#customerAdd form')[0].reset();
+                            
+                            // Clear any dynamically added contact rows
+                            $('.addMultipleContact').empty();
+                            
+                            // Clear all error messages
+                            $('#companyNameError, #contactEmailError, #contactNoError, #contactPersonError').hide();
+                            $('.inputHighlight').removeClass('inputHighlight');
+                            
+                            // Populate the modal fields
+                            $('.customerName').val(customer.customer_name || '');
+                            $('.gstin_no').val(customer.gstin_no || '');
+                            $('.scope').val(customer.scope || '');
+                            $('.addnotes').val(customer.comment || '');
+                            
+                            // Parse address if it's in the concatenated format
+                            var address = customer.address || '';
+                            var addressParts = address.split(', ');
+                            if (addressParts.length >= 5) {
+                                $('.streetAddress').val(addressParts[0] || '');
+                                $('.city').val(addressParts[1] || '');
+                                $('.state').val(addressParts[2] || '');
+                                $('.postCode').val(addressParts[3] || '');
+                                $('.country').val(addressParts[4] || '');
+                            } else {
+                                $('.streetAddress').val(address);
+                                $('.city').val('');
+                                $('.state').val('');
+                                $('.postCode').val('');
+                                $('.country').val('India');
+                            }
+                            
+                            // Parse contact persons, emails, and phone numbers
+                            var contactPersons = (customer.contact_person || '').split(',');
+                            var emails = (customer.email_id || '').split(',');
+                            var contacts = (customer.contact || '').split(',');
+                            
+                            // Set first contact in the main fields
+                            $('#customerCntctPerson').val(contactPersons[0] ? contactPersons[0].trim() : '');
+                            $('#customerEmail').val(emails[0] ? emails[0].trim() : '');
+                            $('#contactNo').val(contacts[0] ? contacts[0].trim() : '');
+                            
+                            // Set hidden fields for all contacts (will be used on save)
+                            $('.customerPersonHidden').val(customer.contact_person || '');
+                            $('.customerContactEmlHidden').val(customer.email_id || '');
+                            $('.customerContactHidden').val(customer.contact || '');
+                            
+                            // CRITICAL: Set customer ID for update mode
+                            $('.editCustomerId').val(customerId);
+                            
+                            console.log('Edit mode - Customer ID set to:', customerId);
+                            
+                            // Show the modal
+                            $('#customerAdd').modal('show');
+                        } else {
+                            alert('Error: Customer not found');
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        alert('Error loading customer details: ' + error);
+                    }
+                });
+            });
+            
+            $('.deleteCustomerDetails').click(function () {
+                var customerId = $(this).attr('data-id');
+                $('#delete-details').show();
+                $('.delete-confirm-ok').click(function () {
+                    var url = 'updateCustomer.php'
+                    var form = $('<form action="' + url + '" method="post">' +
+                            '<input type="hidden" name="customerId" value="' + customerId + '" />' +
+                            '</form>');
+                    $('body').append(form);
+                    form.submit();
+                });
+                $('.delete-cancel').click(function () {
+                    $('#delete-details').hide();
+                });
+            });
+
+            //add service type CA code by Pallavi  
+
+            $('.updateDeta').change(function (e) {
+                //        alert($('.input-application-form' + service)[0].files[0]);
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                var formData = new FormData();
+                formData.append('file', $('.input-application-form' + service)[0].files[0]);
+                formData.append('customerid', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+                $.ajax({
+                    url: 'serviceTypeCR.php',
+                    type: 'POST',
+                    data: formData,
+                    //                dataType: "json",
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        //                    alert(data);
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        $(document).ajaxStop(function () {
+                            location.reload(true);
+                        });
+                        if (data == 'CA') {
+                            $('.ca-service-type').show();
+                        }
+                    }
+                });
+            });
+
+            $('.updateCertification').change(function (e) {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                var formData = new FormData();
+                formData.append('file', $('.input-certification-agreement' + service)[0].files[0]);
+                formData.append('saiiCustomerid', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+                $.ajax({
+                    url: 'serviceTypeCR.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+//                                                alert(data); 
+                        $(document).ajaxStop(function () {
+                            location.reload(true);
+                        });
+                    }
+                });
+            });
+
+            $('.signedNotificationCA').change(function () {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                var formData = new FormData();
+                //            alert(column);
+                formData.append('file', $('.input-signed-notification' + service)[0].files[0]);
+                formData.append('customerid', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+                $.ajax({
+                    url: 'serviceTypeCA.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        $(document).ajaxStop(function () {
+                            location.reload(true);
+                        });
+                    }
+                });
+            });
+
+            $('.signedCopyAttach').change(function () {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                var formData = new FormData();
+                //            alert(column);
+                formData.append('file', $('.input-signed-copy' + service)[0].files[0]);
+                formData.append('customerid', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+                $.ajax({
+                    url: 'serviceTypeCA.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        $(document).ajaxStop(function () {
+                            location.reload(true);
+                        });
+                    }
+                });
+            });
+
+            $('.signedAuditReport1').change(function () {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                var formData = new FormData();
+                //            alert(column);
+                formData.append('file', $('.input-audit-1report' + service)[0].files[0]);
+                formData.append('customerid', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+                $.ajax({
+                    url: 'serviceTypeCA.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        $(document).ajaxStop(function () {
+                            location.reload(true);
+                        });
+                    }
+                });
+            });
+
+            $('.signedNotiCA2').change(function () {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                var formData = new FormData();
+                //            alert(column);
+                formData.append('file', $('.input-signed-noti2' + service)[0].files[0]);
+                formData.append('customerid', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+                $.ajax({
+                    url: 'serviceTypeCA.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        $(document).ajaxStop(function () {
+                            location.reload(true);
+                        });
+                    }
+                });
+            });
+
+            $('.auditReportStage2').change(function () {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                var formData = new FormData();
+                //            alert(column);
+                formData.append('file', $('.input-audit-report2' + service)[0].files[0]);
+                formData.append('customerid', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+                $.ajax({
+                    url: 'serviceTypeCA.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        $(document).ajaxStop(function () {
+                            location.reload(true);
+                        });
+                    }
+                });
+            });
+
+            $('.auditornotes').change(function () {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                var formData = new FormData();
+                //            alert(column);
+                formData.append('file', $('.input-auditor-notes' + service)[0].files[0]);
+                formData.append('customerid', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+                $.ajax({
+                    url: 'serviceTypeCA.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        $(document).ajaxStop(function () {
+                            location.reload(true);
+                        });
+                    }
+                });
+            });
+
+            $('.auditNcII').change(function () {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                var formData = new FormData();
+                //            alert(column);
+                formData.append('file', $('.input-nc-ii' + service)[0].files[0]);
+                formData.append('customerid', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+                $.ajax({
+                    url: 'serviceTypeCA.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        $(document).ajaxStop(function () {
+                            location.reload(true);
+                        });
+                    }
+                });
+            });
+
+            $('.certificatePrint').change(function () {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                var formData = new FormData();
+                //            alert(column);
+                formData.append('file', $('.input-certificate-print' + service)[0].files[0]);
+                formData.append('customerid', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+                $.ajax({
+                    url: 'serviceTypeCA.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        $(document).ajaxStop(function () {
+                            location.reload(true);
+                        });
+                    }
+                });
+            });
+
+            $('.customerReview').change(function () {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                var formData = new FormData();
+                //            alert(column);
+                formData.append('file', $('.input-customer-review' + service)[0].files[0]);
+                formData.append('customerid', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+                $.ajax({
+                    url: 'serviceTypeCA.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        $(document).ajaxStop(function () {
+                            location.reload(true);
+                        });
+                    }
+                });
+            });
+
+            $('.downloadAuditApp').click(function () {
+                var auditId = $(this).attr('data-audit');
+                var url = 'auditApplication.php';
+                var form = $('<form action="' + url + '" method="post" target="_blank" >' +
+                        '<input type="hidden" name="auditid" value="' + auditId + '" />' +
+                        '</form>');
+                $('body').append(form);
+                form.submit();
+            });
+
+            $('.downloadContractReview').click(function () {
+                var contractid = $(this).attr('data-contract');
+                var customer = $(this).attr('data-customer');
+                var url = 'ContractReview1.php';
+                var form = $('<form action="' + url + '" method="post" target="_blank" >' +
+                        '<input type="hidden" name="contractid" value="' + contractid + '" />' +
+                        '<input type="hidden" name="customer" value="' + customer + '" />' +
+                        '</form>');
+                $('body').append(form);
+                form.submit();
+            });
+
+            // Assessment Planning handlers
+            $(document).on('click', '.addAssessmentPlanning', function () {
+                var serviceId = $(this).attr('data-service');
+                var customerId = $(this).attr('data-customer');
+                
+                console.log("Opening Assessment Planning - Customer:", customerId, "Service:", serviceId);
+                
+                // Reset the form
+                $('#assessmentModal form')[0].reset();
+                
+                // Set the correct hidden field names
+                $('.assessmentUserId').val(customerId);
+                $('.assessmentServiceId').val(serviceId);
+                $('.assessmentId').val('');
+                
+                console.log("Set hidden fields - UserId:", $('.assessmentUserId').val(), "ServiceId:", $('.assessmentServiceId').val());
+                
+                // Load client data
+                $.ajax({
+                    url: "getClientInfo.php",
+                    type: "GET",
+                    dataType: "json",
+                    data: {
+                        customid: customerId,
+                        svcID: serviceId
+                    },
+                    success: function (data) {
+                        $('.appClient').val(data[0]['customer_name']);
+                        $('.refNo').val(data[3]['aggrement_no']);
+                        $('.assessmentLocation').val(data[0]['address']);
+                        $('.assessmentPlaningIafCode').val(data[2]['iaf_code']);
+                        $('.assessmentNace').val(data[2]['nace_codes']);
+                        $('.assessmentNaceClass').val(data[2]['nace_class']);
+                        $('.certRequirement').val(data[1]['certification']);
+                        $(".assessmentBusiness").val(data[1]["proposed_scope"]);
+                        $('input[type="text"]').trigger('change');
+                        $('.assessmentLocation').trigger('change');
+                        
+                        $('#assessmentModal').modal('show');
+                        
+                        // Initialize date pickers for Assessment Planning form
+                        setTimeout(function() {
+                            if (!$('.assessmentImplementationDate').hasClass('hasDatepicker')) {
+                                $('.assessmentImplementationDate').datepicker({
+                                    dateFormat: 'dd.mm.yy',
+                                    changeMonth: true,
+                                    changeYear: true,
+                                    minDate: '-100Y',
+                                    maxDate: '+10Y',
+                                    showButtonPanel: true
+                                });
+                            }
+                            if (!$('.assessmentDate').hasClass('hasDatepicker')) {
+                                $('.assessmentDate').datepicker({
+                                    dateFormat: 'dd.mm.yy',
+                                    changeMonth: true,
+                                    changeYear: true,
+                                    minDate: '-100Y',
+                                    maxDate: '+10Y',
+                                    showButtonPanel: true
+                                });
+                            }
+                            if (!$('.assessmentCertValidity').hasClass('hasDatepicker')) {
+                                $('.assessmentCertValidity').datepicker({
+                                    dateFormat: 'dd.mm.yy',
+                                    changeMonth: true,
+                                    changeYear: true,
+                                    minDate: '-100Y',
+                                    maxDate: '+10Y',
+                                    showButtonPanel: true
+                                });
+                            }
+                        }, 100);
+                    },
+                    error: function (xhr, status, err) {
+                        console.error("Error loading client data:", status);
+                        $('#assessmentModal').modal('show');
+                        
+                        // Initialize date pickers even if data loading fails
+                        setTimeout(function() {
+                            $('.assessmentImplementationDate, .assessmentDate, .assessmentCertValidity').each(function() {
+                                if (!$(this).hasClass('hasDatepicker')) {
+                                    $(this).datepicker({
+                                        dateFormat: 'dd.mm.yy',
+                                        changeMonth: true,
+                                        changeYear: true,
+                                        minDate: '-100Y',
+                                        maxDate: '+10Y',
+                                        showButtonPanel: true
+                                    });
+                                }
+                            });
+                        }, 100);
+                    }
+                });
+            });
+
+            // RESTORED ORIGINAL WORKING LOGIC - Like the pattern above  
+            $(document).on('click', '.editAssessmentPlanning', function (e) {
+                e.preventDefault();
+                
+                var assessmentId = $(this).attr('data-assessment');
+                var customerId = $(this).attr('data-customer');
+                var serviceId = $(this).attr('data-service');
+                
+                console.log('Loading Assessment Planning for editing - ID:', assessmentId);
+                
+                // Follow same pattern as above - load data first, then show modal
+                $.ajax({
+                    url: "getAssessmentPlanning.php",
+                    type: "GET", 
+                    dataType: "json",
+                    data: {
+                        assessmentId: assessmentId
+                    },
+                    success: function(data) {
+                        // Set hidden fields
+                        $('.assessmentUserId').val(customerId);
+                        $('.assessmentServiceId').val(serviceId);
+                        $('.assessmentId').val(assessmentId);
+                        
+                        // Populate ALL form fields
+                        $('.appClient').val(data['app_client_name'] || '');
+                        $('.refNo').val(data['app_client_ref'] || '');
+                        $('.assessmentLocation').val(data['location'] || '');
+                        $('.assessmentBusiness').val(data['business'] || '');
+                        $('.certRequirement').val(data['cert_standard'] || '');
+                        $('.assessmentPlaningIafCode').val(data['iaf_code'] || '');
+                        $('.assessmentNace').val(data['nace_code'] || '');
+                        $('.assessmentNaceClass').val(data['nace_class'] || '');
+                        $('.assessmentCertReq').val(data['defined_cert_req'] || '');
+                        $('.assessmentAppStandard').val(data['app_standard_diff'] || '');
+                        $('.assessmentSpecialAspects').val(data['special_aspects'] || '');
+                        $('.assessmentCertBody').val(data['certification_body'] || '');
+                        $('.assessmentIafCode').val(data['aif_scope'] || '');
+                        
+                        // Handle dates
+                        if (data['cert_validatity'] && data['cert_validatity'] != '0000-00-00') {
+                            $('.assessmentCertValidity').val(moment(data['cert_validatity']).format('DD.MM.YYYY'));
+                        }
+                        if (data['qms_implementation_date'] && data['qms_implementation_date'] != '0000-00-00') {
+                            $('.assessmentImplementationDate').val(moment(data['qms_implementation_date']).format('DD.MM.YYYY'));
+                        }
+                        if (data['date'] && data['date'] != '0000-00-00') {
+                            $('.assessmentDate').val(moment(data['date']).format('DD.MM.YYYY'));
+                        }
+                        
+                        $('.assessmentRenewal').val(data['renewal_delay'] || '');
+                        $('.assessmentQmsScope').val(data['qms_scope'] || '');
+                        $('.assessmentPersonnel').val(data['assessment_personnel'] || '');
+                        $('.assessmentTechnicalExpert').val(data['need_technical_expert'] || '');
+                        $('.assessmentAvailability').val(data['availability'] || '');
+                        $('.assessmentLogisticArrangement').val(data['logistic_arrangement'] || '');
+                        $('.assessmentInterestConflict').val(data['conflict_interest'] || '');
+                        $('.audit_response').val(data['client_instructions'] || '');
+                        $('.assessmentComment').val(data['assessment_comment'] || '');
+                        $('.assessmentEffectEmp').val(data['no_of_employes'] || '');
+                        $('.assessmentManDays').val(data['auditor_man_days'] || '');
+                        $('.assessmentLeadAuditor').val(data['lead_auditor'] || '');
+                        $('.assessmentTechExpert').val(data['technical_expert'] || '');
+                        $('.assessmentVerifiedBy').val(data['verified_by'] || '');
+                        
+                        // Handle checkboxes
+                        $('.modification').prop('checked', false);
+                        if (data['modification']) {
+                            $('.modification[value="' + data['modification'] + '"]').prop('checked', true);
+                        }
+                        $('.leadAuditor').prop('checked', data['lead_auditor_code'] && data['lead_auditor_code'].trim() != "");
+                        
+                        // Store auditors data - will be set AFTER modal shows
+                        console.log('Auditors from DB:', data['auditors']);
+                        console.log('Code Auditors from DB:', data['code_auditor']);
+                        
+                        // Store auditors data for additional auditors to be added after modal shows
+                        var auditorsData = {
+                            auditors: data['auditors'] || '',
+                            codeAuditor: data['code_auditor'] || ''
+                        };
+                        
+                        // Proposed dates
+                        $('.assessmentDicRevPropDate').val(data['document_review_date'] || '');
+                        $('.assessmentStageIPropDate').val(data['stage_1_date'] || '');
+                        $('.assessmentStageIIPropDate').val(data['stage_2_audit_date'] || '');
+                        $('.assessmentRecertPropDate').val(data['if_recertification_date'] || '');
+                        $('.assessmentStageIReason').val(data['recommended_reason'] || '');
+                        
+                        // Trigger changes and show modal - SAME AS WORKING PATTERN
+                        $('input[type="text"]').trigger('change');
+                        $('.assessmentLocation').trigger('change');
+                        
+                        $('#assessmentModal').modal('show');
+                        
+                        // Initialize date pickers and populate ALL auditors AFTER modal is shown
+                        setTimeout(function() {
+                            // Clear additional auditors container
+                            $('.multipleCodeAuditor').empty();
+                            
+                            if (auditorsData.auditors && auditorsData.auditors.trim() != '') {
+                                var auditors = auditorsData.auditors.split(', ');
+                                var codeAuditors = [];
+                                if (auditorsData.codeAuditor && auditorsData.codeAuditor.trim() != '') {
+                                    codeAuditors = auditorsData.codeAuditor.split(',');
+                                }
+                                
+                                console.log('Setting all auditors after modal shown:', auditors);
+                                
+                                // Set FIRST auditor in main dropdown
+                                if (auditors[0] && auditors[0].trim() != '') {
+                                    var firstAuditor = auditors[0].trim();
+                                    console.log('Setting first auditor in main dropdown:', firstAuditor);
+                                    $('.assessmentAuditors').val(firstAuditor);
+                                    $('.codeAuditor').prop('checked', codeAuditors[0] && codeAuditors[0].trim() != "");
+                                    console.log('First auditor value set to:', $('.assessmentAuditors').val());
+                                    
+                                    // Trigger change to ensure float label works
+                                    $('.assessmentAuditors').trigger('change');
+                                }
+                                
+                                console.log('Adding additional auditors (index 1+):', auditors.slice(1));
+                                
+                                // Add additional auditors dynamically (starting from index 1)
+                                for (var i = 1; i < auditors.length; i++) {
+                                    if (auditors[i] && auditors[i].trim() != '') {
+                                        var optionHtml = '<option value="" disabled>Choose Auditors</option>';
+                                        $('.assessmentAuditors option').each(function() {
+                                            var optVal = $(this).val();
+                                            var optText = $(this).text();
+                                            if (optVal && optVal.trim() != '') {
+                                                var selected = (optVal.trim() === auditors[i].trim()) ? 'selected' : '';
+                                                optionHtml += '<option value="' + optVal + '" ' + selected + '>' + optText + '</option>';
+                                            }
+                                        });
+                                        
+                                        var isCodeAuditor = codeAuditors[i] && codeAuditors[i].trim() != "";
+                                        var checkedAttr = isCodeAuditor ? 'checked' : '';
+                                        
+                                        var auditorRow = '<div class="row newCodeAuditorParent" style="">' +
+                                            '<div class="col-sm-6 form-group float-label-control">' +
+                                            '<label>Auditor</label>' +
+                                            '<select class="assessmentAuditors form-control" name="assessmentAuditors">' +
+                                            optionHtml +
+                                            '</select>' +
+                                            '</div>' +
+                                            '<div class="col-sm-3" align="">' +
+                                            'Code Auditor<span> <input class="codeAuditor" type="checkbox" name="codeAuditor" value="Auditors" ' + checkedAttr + '></span>' +
+                                            '</div>' +
+                                            '<div class="col-sm-3 deleteCodeAuditorParent" align="">' +
+                                            '<a class="removeCodeAuditor" style="float: right" title="Remove Auditors"><i class="fa fa-remove"></i></a>' +
+                                            '</div>' +
+                                            '</div>';
+                                        
+                                        $('.multipleCodeAuditor').append(auditorRow);
+                                    }
+                                }
+                            }
+                            
+                            // Initialize datepickers
+                            if (!$('.assessmentImplementationDate').hasClass('hasDatepicker')) {
+                                $('.assessmentImplementationDate').datepicker({
+                                    dateFormat: 'dd.mm.yy',
+                                    changeMonth: true,
+                                    changeYear: true,
+                                    minDate: '-100Y',
+                                    maxDate: '+10Y',
+                                    showButtonPanel: true
+                                });
+                            }
+                            if (!$('.assessmentDate').hasClass('hasDatepicker')) {
+                                $('.assessmentDate').datepicker({
+                                    dateFormat: 'dd.mm.yy',
+                                    changeMonth: true,
+                                    changeYear: true,
+                                    minDate: '-100Y',
+                                    maxDate: '+10Y',
+                                    showButtonPanel: true
+                                });
+                            }
+                            if (!$('.assessmentCertValidity').hasClass('hasDatepicker')) {
+                                $('.assessmentCertValidity').datepicker({
+                                    dateFormat: 'dd.mm.yy',
+                                    changeMonth: true,
+                                    changeYear: true,
+                                    minDate: '-100Y',
+                                    maxDate: '+10Y',
+                                    showButtonPanel: true
+                                });
+                            }
+                        }, 200);
+                    },
+                    error: function (xhr, status, err) {
+                        console.error("Error loading assessment data:", status);
+                        $('#assessmentModal').modal('show');
+                        
+                        // Initialize date pickers even if data loading fails
+                        setTimeout(function() {
+                            $('.assessmentImplementationDate, .assessmentDate, .assessmentCertValidity').each(function() {
+                                if (!$(this).hasClass('hasDatepicker')) {
+                                    $(this).datepicker({
+                                        dateFormat: 'dd.mm.yy',
+                                        changeMonth: true,
+                                        changeYear: true,
+                                        minDate: '-100Y',
+                                        maxDate: '+10Y',
+                                        showButtonPanel: true
+                                    });
+                                }
+                            });
+                        }, 100);
+                    }
+                });
+            });
+
+            // editAssessmentPlanning handler is in assessmentPlanningModal.php with correct field mappings
+
+            $(document).on('click', '.downloadAssessmentPlanning', function () {
+                var assessmentId = $(this).attr('data-assessment');
+                var customerId = $(this).attr('data-customer');
+                
+                console.log('Downloading Assessment Planning PDF for:', assessmentId);
+                
+                var url = 'AssessmentPlanning.php';
+                var form = $('<form action="' + url + '" method="post" target="_blank" >' +
+                        '<input type="hidden" name="assessmentId" value="' + assessmentId + '" />' +
+                        '<input type="hidden" name="customer" value="' + customerId + '" />' +
+                        '</form>');
+                $('body').append(form);
+                form.submit();
+            });
+
+            $('.downloadAuditNotification').click(function () {
+                //            alert($(this).attr('data-customer'));
+                var auditid = $(this).attr('data-audit');
+                var service = $(this).attr('data-caservice-id');
+                var customer = $(this).attr('data-customer');
+                var url = 'AuditNotificationandAssignment.php';
+                var form = $('<form action="' + url + '" method="post" target="_blank" >' +
+                        '<input type="hidden" name="auditid" value="' + auditid + '" />' +
+                        '<input type="hidden" name="serviceid" value="' + service + '" />' +
+                        '<input type="hidden" name="customerid" value="' + customer + '" />' +
+                        '</form>');
+                $('body').append(form);
+                form.submit();
+            });
+
+            $('.downloadAnnexI').click(function () {
+                //alert($(this).attr('data-stageii'));
+                var stageiid = $(this).attr('data-stageii');
+                //alert(stageiid);
+                var customer = $(this).attr('data-customer');
+                var url = 'F7.32Anex-1.php';
+                var form = $('<form action="' + url + '" method="post" target="_blank" >' +
+                        '<input type="hidden" name="stageiid" value="' + stageiid + '" />' +
+                        '<input type="hidden" name="customer" value="' + customer + '" />' +
+                        '</form>');
+                $('body').append(form);
+                form.submit();
+            });
+
+            $('.downloadNotiStageII').click(function () {
+                var auditnotiid = $(this).attr('data-noti-id');
+                var service = $(this).attr('data-caservice-id');
+                var customer = $(this).attr('data-customer');
+                var url = 'SurveillanceAudit2.php';
+                var form = $('<form action="' + url + '" method="post" target="_blank" >' +
+                        '<input type="hidden" name="auditnotiid" value="' + auditnotiid + '" />' +
+                        '<input type="hidden" name="serviceid" value="' + service + '" />' +
+                        '<input type="hidden" name="customerid" value="' + customer + '" />' +
+                        '</form>');
+                $('body').append(form);
+                form.submit();
+            });
+
+            $('.downloadScheduleStageOne').click(function () {
+                var auditscheduleid = $(this).attr('data-schedulei');
+                var service = $(this).attr('data-caservice-id');
+                var customer = $(this).attr('data-customer');
+                var url = 'AuditSchedule.php';
+                var form = $('<form action="' + url + '" method="post" target="_blank" >' +
+                        '<input type="hidden" name="auditscheduleid" value="' + auditscheduleid + '" />' +
+                        '<input type="hidden" name="serviceid" value="' + service + '" />' +
+                        '<input type="hidden" name="customerid" value="' + customer + '" />' +
+                        '</form>');
+                $('body').append(form);
+                form.submit();
+            });
+
+            $('.downloadAnnexII').click(function () {
+                //alert($(this).attr('data-stage-ii'));
+                var stage_ii_id = $(this).attr('data-stage-ii');
+                //alert(stage_ii_id);
+                var customer = $(this).attr('data-customer');
+                var url = 'F7.32Anex-2.php';
+                var form = $('<form action="' + url + '" method="post" target="_blank" >' +
+                        '<input type="hidden" name="stage_ii_id" value="' + stage_ii_id + '" />' +
+                        '<input type="hidden" name="customer" value="' + customer + '" />' +
+                        '</form>');
+                $('body').append(form);
+                form.submit();
+            });
+
+            //download CDC DELIBERATION AND DECISION By Appa
+            $(document).on('click', '.downloadCdc', function () {
+                console.log('=== CA CDC Download Clicked ===');
+                var crr_id = $(this).attr('data-crr');
+                var customer_id = $(this).attr('data-customer');
+                console.log('crr_id:', crr_id);
+                console.log('customer_id:', customer_id);
+                
+                if (!crr_id) {
+                    alert('Error: crr_id is missing!');
+                    console.error('Missing crr_id');
+                    return false;
+                }
+                
+                var url = 'cdcRecomendation.php';
+                var form = $('<form action="' + url + '" method="post" target="_blank" >' +
+                        '<input type="hidden" name="crr_id" value="' + crr_id + '" />' +
+                        '<input type="hidden" name="customer_Id" value="' + customer_id + '" />' +
+                        '</form>');
+                console.log('Form HTML:', form.html());
+                $('body').append(form);
+                form.submit();
+                console.log('Form submitted successfully');
+            });
+
+            $(document).on('click', '.sendCdcMail', function () {
+                var $btn = $(this);
+                var payload = {
+                    customer: $btn.data('customer'),
+                    service: $btn.data('service'),
+                    crr: $btn.data('crr'),
+                    svctype: $btn.data('svctype')
+                };
+
+                if (!payload.crr) {
+                    alert('CDC reference is missing. Please save CDC first.');
+                    return false;
+                }
+
+                // Confirm before sending
+                if (!window.confirm('Are you sure you want to send the certificate email?')) {
+                    return false;
+                }
+
+                // Build lightweight overlay with spinner and staged text
+                var overlayId = 'cdc-mail-overlay';
+                var $existingOverlay = $('#' + overlayId);
+                if ($existingOverlay.length === 0) {
+                    var spinnerStyle = '<style id="cdc-mail-style">\
+                        #cdc-mail-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.35);z-index:9999;display:flex;align-items:center;justify-content:center;}\
+                        .cdc-mail-box{background:#fff;padding:18px 22px;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.2);min-width:260px;text-align:center;font-family:inherit;}\
+                        .cdc-mail-spinner{width:34px;height:34px;border:3px solid #e0e0e0;border-top-color:#007bff;border-radius:50%;animation:cdc-spin 0.9s linear infinite;margin:0 auto 10px auto;}\
+                        @keyframes cdc-spin{to{transform:rotate(360deg);}}\
+                    </style>';
+                    $('head').append(spinnerStyle);
+
+                    var overlayHtml = '<div id="' + overlayId + '"><div class="cdc-mail-box">' +
+                        '<div class="cdc-mail-spinner"></div>' +
+                        '<div class="cdc-mail-text">Please wait, fetching certificate number...</div>' +
+                        '</div></div>';
+                    $('body').append(overlayHtml);
+                }
+
+                var $overlay = $('#' + overlayId);
+                var $text = $overlay.find('.cdc-mail-text');
+                $text.text('Please wait, fetching certificate number...');
+                $overlay.show();
+
+                // After 2s update message to sending
+                var sendingTimer = setTimeout(function () {
+                    $text.text('Sending certificate to client...');
+                }, 2000);
+
+                $btn.prop('disabled', true).addClass('disabled');
+
+                $.ajax({
+                    url: 'sendCdcMail.php',
+                    type: 'POST',
+                    data: payload,
+                    dataType: 'json'
+                }).done(function (res) {
+                    if (res && res.success) {
+                        alert(res.message || 'Certificate email sent successfully');
+                    } else {
+                        alert((res && res.message) ? res.message : 'Unable to send email right now.');
+                    }
+                }).fail(function () {
+                    alert('Unable to send email right now.');
+                }).always(function () {
+                    $btn.prop('disabled', false).removeClass('disabled');
+                    clearTimeout(sendingTimer);
+                    $('#' + overlayId).hide();
+                });
+            });
+
+            $('.downloadCustomersatisfaction').click(function () {
+                //alert($(this).attr('data-cf-id'));
+                var survey_id = $(this).attr('data-surveyid');
+                //alert(control2_id);
+                var customer = $(this).attr('data-customer');
+                var url = 'CustomerSatisfaction.php';
+                var form = $('<form action="' + url + '" method="post" target="_blank" >' +
+                        '<input type="hidden" name="survey_id" value="' + survey_id + '" />' +
+                        '<input type="hidden" name="customer" value="' + customer + '" />' +
+                        '</form>');
+                $('body').append(form);
+                form.submit();
+            });
+
+            $('.downloadControlFormat1').click(function () {
+                //alert($(this).attr('data-cf-id'));
+                var control_id = $(this).attr('data-cfi-id');
+                //alert(control2_id);
+                var customer = $(this).attr('data-customer');
+                var url = 'ControlFormat-1.php';
+                var form = $('<form action="' + url + '" method="post" target="_blank" >' +
+                        '<input type="hidden" name="control_id" value="' + control_id + '" />' +
+                        '<input type="hidden" name="customer" value="' + customer + '" />' +
+                        '</form>');
+                $('body').append(form);
+                form.submit();
+            });
+
+            //       code by Appa to ad control format 2        
+
+            $('.downloadControlFormat2').click(function () {
+                //alert($(this).attr('data-cf-id'));
+                var control2_id = $(this).attr('data-cf-id');
+                //alert(control2_id);
+                var customer = $(this).attr('data-customer');
+                var url = 'ControlFormat-2.php';
+                var form = $('<form action="' + url + '" method="post" target="_blank" >' +
+                        '<input type="hidden" name="control2_id" value="' + control2_id + '" />' +
+                        '<input type="hidden" name="customer" value="' + customer + '" />' +
+                        '</form>');
+                $('body').append(form);
+                form.submit();
+            });
+
+            //add service type sai code by Pallavi
+
+            $('.applicationFormSai').change(function () {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                var formData = new FormData();
+                //            alert(column);
+                formData.append('file', $('.input-info-updation-sai' + service)[0].files[0]);
+                formData.append('customerid', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+                $.ajax({
+                    url: 'serviceTypeSAi.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        location.reload(true);
+                    }
+                });
+            });
+
+            $('.signedNotiSai').change(function () {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                var formData = new FormData();
+                //            alert(column);
+                formData.append('file', $('.input-signed-noti-sai' + service)[0].files[0]);
+                formData.append('customerid', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+                $.ajax({
+                    url: 'serviceTypeSAi.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        location.reload(true);
+                    }
+                });
+            });
+
+            $(".auditreportPTR").change(function () {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                var formData = new FormData();
+                //            alert(column);
+                formData.append('file', $('.input-signed-copy-sai' + service)[0].files[0]);
+                formData.append('customerid', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+                $.ajax({
+                    url: 'serviceTypePTR.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        location.reload(true);
+                    }
+                });
+            });
+
+            $('.signedCopySai').change(function () {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                var formData = new FormData();
+                //            alert(column);
+                formData.append('file', $('.input-signed-copy-sai' + service)[0].files[0]);
+                formData.append('customerid', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+                $.ajax({
+                    url: 'serviceTypeSAi.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        location.reload(true);
+                    }
+                });
+            });
+
+            $('.auditReportSai').change(function () {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                var formData = new FormData();
+                //            alert(column);
+                formData.append('file', $('.input-audit-report-sai' + service)[0].files[0]);
+                formData.append('customerid', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+                $.ajax({
+                    url: 'serviceTypeSAi.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        location.reload(true);
+                    }
+                });
+            });
+
+            $('.auditorNotesSai').change(function () {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                var formData = new FormData();
+                //            alert(column);
+                formData.append('file', $('.input-auditor-notes-sai' + service)[0].files[0]);
+                formData.append('customerid', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+                $.ajax({
+                    url: 'serviceTypeSAi.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        location.reload(true);
+                    }
+                });
+            });
+
+            $('.auditEvidanceSai').change(function () {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                var formData = new FormData();
+                //            alert(column);
+                formData.append('file', $('.input-audit-evidance-sai' + service)[0].files[0]);
+                formData.append('customerid', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+                $.ajax({
+                    url: 'serviceTypeSAi.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        location.reload(true);
+                    }
+                });
+            });
+
+            $('.auditCertificatePrintSai').change(function () {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                var formData = new FormData();
+                //            alert(column);
+                formData.append('file', $('.input-certificate-print-sai' + service)[0].files[0]);
+                formData.append('customerid', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+                $.ajax({
+                    url: 'serviceTypeSAi.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        location.reload(true);
+                    }
+                });
+            });
+
+            $('.auditCustomerReviewSai').change(function () {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                var formData = new FormData();
+                //            alert(column);
+                formData.append('file', $('.input-customer-review-sai' + service)[0].files[0]);
+                formData.append('customerid', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+                $.ajax({
+                    url: 'serviceTypeSAi.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        location.reload(true);
+                    }
+                });
+            });
+
+            $('.downloadSaiAuditNoti').click(function () {
+                //            alert($(this).attr('data-customer'));
+                var auditid = $(this).attr('data-audit');
+                var service = $(this).attr('data-caservice-id');
+                var customer = $(this).attr('data-customer');
+                var url = 'AuditNotificationandAssignment.php';
+                var form = $('<form action="' + url + '" method="post" target="_blank" >' +
+                        '<input type="hidden" name="auditid" value="' + auditid + '" />' +
+                        '<input type="hidden" name="serviceid" value="' + service + '" />' +
+                        '<input type="hidden" name="customerid" value="' + customer + '" />' +
+                        '</form>');
+                $('body').append(form);
+                form.submit();
+            });
+
+            $('.editStageScheduleSai').click(function () {
+                $('.schedule-service-id-edit').val($(this).attr('data-service'));
+                $('.schedule-customer-id-edit').val($(this).attr('data-customer'));
+                $('.schedule-audit-id-edit').val($(this).attr('data-row-id'));
+                $.ajax({
+                    url: "contractDetails.php",
+                    type: "GET",
+                    dataType: "json",
+                    data: {
+                        scheduleId: $(this).attr('data-row-id'),
+                        serviceID: $(this).attr('data-service'),
+                    },
+                    success: function (data)
+                    {
+                        //                    alert(data);
+                        $('.scheduleClientNameEdit').val(data[0]['client_name']);
+                        $('.scheduleRefNoEdit').val(data[0]['ref_no']);
+                        $('.scheduleAddressEdit').val(data[0]['schedule_address']);
+                        $('.scheduleContactPersonEdit').val(data[0]['schedule_contact_person']);
+                        $('.scheduleScopeEdit').val(data[0]['schedule_scope']);
+                        $('.scheduleAppStandardEdit').val(data[0]['schedule_app_standard']);
+                        $('.scheduleIAFcodeEdit').val(data[0]['schedule_aifcode']);
+                        $('.scheduleAuditTypeEdit').val(data[0]['schedule_audit_type']);
+                        $('.scheduleMandaysEdit').val(data[0]['schedule_mandays']);
+                        if (data[0]['schedule_audit_date'] == "" || data[0]['schedule_audit_date'] == null)
+                            $schedule_audit_date = "";
+                        else
+                            $schedule_audit_date = moment(data[0]['schedule_audit_date']).format('DD.MM.YYYY');
+                        $('.scheduleAuditDateEdit').val($schedule_audit_date);
+                        $('.scheduleAuditorEdit').val(data[0]['schedule_auditors']);
+                        $('.editstageiFormNo').val(data[0]['stage_i_form']);
+                        $('.editstageiRev').val(data[0]['stage_i_rev']);
+                        if (data[0]['stage_i_date'] == "" || data[0]['stage_i_date'] == null)
+                            $stage_i_date = "";
+                        else
+                            $stage_i_date = moment(data[0]['stage_i_date']).format('DD.MM.YYYY');
+                        $('.editstageiRevDate').val($stage_i_date);
+                        $('.editstageiIsue').val(data[0]['stage_i_isue']);
+                        if (data[0]['stage_i_isuedate'] == "" || data[0]['stage_i_isuedate'] == null)
+                            $stage_i_isuedate = "";
+                        else
+                            $stage_i_isuedate = moment(data[0]['stage_i_isuedate']).format('DD.MM.YYYY');
+                        $('.editstageiIsueDate').val($stage_i_isuedate);
+                        $('.editSchedules').empty();
+                        for (var key in data[1]) {
+                            if (data[1][key]['schedule_dates'] == "" || data[1][key]['schedule_dates'] == null)
+                                $schedule_dates = "";
+                            else
+                                $schedule_dates = moment(data[1][key]['schedule_dates']).format('DD.MM.YYYY');
+                            $('.editSchedules').append(' <div class="row " style=""> \n\
+                                                        <div class="col-sm-12 form-group float-label-control">\n\
+                                                        <label>Activity:</label>\n\
+                                                        <textarea type="text" data-row-id="" class="scheduleActivityEdit" id="scheduleActivityEdit" name="scheduleActivityEdit" value="" placeholder="Activity">' + data[1][key]['schedule_activity'] + '</textarea>\n\
+                                                        </div>\n\
+                                                        </div>\n\
+                                                        <div class="row " style=""> \n\
+                                                        <div class="col-sm-4 form-group float-label-control">\n\
+                                                        <label>Date(s):</label>\n\
+                                                        <input type="text" data-row-id="" class="scheduleDateEdit" name="scheduleDateEdit" id="scheduleDateEdit" value="' + $schedule_dates + '" placeholder="Date"/>\n\
+                                                        </div>\n\
+                                                        <div class="col-sm-4 form-group float-label-control">\n\
+                                                        <label>Time:</label>\n\
+                                                        <input type="time" data-row-id="" class="scheduleTimeEdit" name="scheduleTimeEdit" value="' + data[1][key]['schedule_time'] + '" placeholder="Time"/>\n\
+                                                        </div>\n\
+                                                        <div class="col-sm-4 form-group float-label-control">\n\
+                                                        <label>Auditor:</label>  \n\
+                                                        <input type="text" data-row-id="" class="scheduleAuditorEditCs" id="scheduleAuditorEditCs" name="scheduleAuditorEditCs" value="' + data[1][key]['schedule_auditors'] + '" placeholder="Auditor">                         \n\
+                                                        </div>\n\
+                                                                            </div>');
+                        }
+
+                        $('input[type="text"]').trigger('change');
+                        //                    $('textarea').trigger('change');
+
+                        $('#scheduleStageIEdit').modal('show');
+                    },
+                    error: function (data, status, err)
+                    {
+                        alert(status);
+                    }
+                });
+            });
+
+            $('.downloadStageScheduleSai').click(function () {
+                var auditscheduleid = $(this).attr('data-schedulei');
+                var service = $(this).attr('data-caservice-id');
+                var customer = $(this).attr('data-customer');
+                var url = 'Servelance1.php';
+                var form = $('<form action="' + url + '" method="post" target="_blank" >' +
+                        '<input type="hidden" name="auditnotiid" value="' + auditscheduleid + '" />' +
+                        '<input type="hidden" name="serviceid" value="' + service + '" />' +
+                        '<input type="hidden" name="customerid" value="' + customer + '" />' +
+                        '</form>');
+                $('body').append(form);
+                form.submit();
+            });
+
+            $('.downloadAnnexIISai').click(function () {
+                //alert($(this).attr('data-stage-ii'));
+                var stage_ii_id = $(this).attr('data-stage-ii');
+                //alert(stage_ii_id);
+                var customer = $(this).attr('data-customer');
+                var url = 'F7.32Anex-2.php';
+                var form = $('<form action="' + url + '" method="post" target="_blank" >' +
+                        '<input type="hidden" name="stage_ii_id" value="' + stage_ii_id + '" />' +
+                        '<input type="hidden" name="customer" value="' + customer + '" />' +
+                        '</form>');
+                $('body').append(form);
+                form.submit();
+            });
+
+            //        $('.createCDC').click(function () {
+            //            $('.service_Id').val($(this).attr('data-service'));
+            //            $('.customer_Id').val($(this).attr('data-customer'));
+            //            $('.uni_serviceid').val($(this).attr('data-id'));
+            //            $('#cdcModel').modal('show');
+            //            $('.update_cdc').hide();
+            //        }); 
+            
+            // Convert database service type format to JavaScript expected format
+            function convertServiceType(svcType) {
+                if (svcType === 'SA-I' || svcType === 'SA-1') {
+                    return 'SA1';
+                } else if (svcType === 'SA-II' || svcType === 'SA-2') {
+                    return 'SA2';
+                }
+                return svcType;
+            }
+            
+            $('.editCDC').click(function () {
+                console.log('=== Edit CDC Button Clicked ===');
+                console.log('Button element:', this);
+                console.log('All data attributes:', $(this).data());
+                
+                var svcType = $(this).attr('data-svctype');
+                console.log('data-svctype attribute:', svcType);
+                
+                if (!svcType || svcType === '') {
+                    svcType = 'CA'; // Default fallback
+                    console.log('Service type was empty, using default: CA');
+                }
+                
+                var customerId = $(this).attr('data-customer');
+                console.log('Edit CDC clicked - Service Type (original):', svcType, 'Customer ID:', customerId);
+                svcType = convertServiceType(svcType); // Convert SA-I to SA1, SA-II to SA2
+                console.log('Edit CDC clicked - Service Type (converted):', svcType);
+                window.$cdcbyservice = svcType; // Set global variable for cdcModal.php
+                console.log('window.$cdcbyservice set to:', window.$cdcbyservice);
+                if (typeof updateBaseCustomerId === 'function') {
+                    updateBaseCustomerId(customerId);
+                }
+                $('.service_Id').val($(this).attr('data-service'));
+                $('.customer_Id').val(customerId);
+                $('.crr_Id').val($(this).attr('data-notification'));
+                $('.servicetype').val(svcType);
+
+                $.ajax({
+                    url: "reviewReportData.php",
+                    type: "GET",
+                    dataType: "json",
+                    data: {
+                        crr_Id: $(this).attr('data-notification'),
+                        service: $(this).attr('data-service')
+                    },
+                    success: function (response)
+                    {
+                        // reviewReportData.php returns an array,
+                        // CDC core data is at index 0, stage audit dates at indexes 5 and 6
+                        var data = response[0] || response;
+                        var stage1 = (Array.isArray(response) && response[5]) ? response[5] : {};
+                        var stage2 = (Array.isArray(response) && response[6]) ? response[6] : {};
+                        
+                        $('.file_No').val(data['file_no']);
+                        $('.audited_Organisation').val(data['audit_organization']);
+                        $('.address').val(data['address']);
+                        $('.product_service').val(data['product_service']);
+                        $('.iaf_nace').val(data['iaf_nacf']);
+                        $('.exclusion').val(data['exclusion']);
+                        //$('.audit_dateII').val(data['audit_dateII']);
+                        
+                        // Populate audit date - prefer saved CDC audit_date/audit_dateII,
+                        // then fall back to stage audit_dates for old clients
+                        var $audit_date_value = "";
+
+                        function addCandidate(list, value) {
+                            if (!value) return;
+                            var s = String(value).trim();
+                            if (s === '' || s.toLowerCase() === 'invalid date' || s.toLowerCase() === 'null') return;
+                            list.push(s);
+                        }
+
+                        var candidates = [];
+                        addCandidate(candidates, data['audit_date']);
+                        addCandidate(candidates, data['audit_dateII']);
+                        // Stage I and Stage II audit dates from stage_oneaudit_id and stage_twoaudit_id
+                        addCandidate(candidates, stage1['audit_dates']);
+                        addCandidate(candidates, stage2['audit_dates']);
+
+                        if (candidates.length > 0) {
+                            var primary = candidates[0];
+                            var savedAuditDate = primary;
+
+                            // Use global CDC service type set earlier (CA, SA1, SA2, RC, SP, ...)
+                            var svcForDate = (typeof window.$cdcbyservice !== 'undefined') ? window.$cdcbyservice : '';
+
+                            if (svcForDate === 'SA1' || svcForDate === 'SA2' || svcForDate === 'RC') {
+                                // For SA-I / SA-II / RC, handle common "dd.mm.yy" / "dd.mm.yyyy" formats explicitly
+                                // without letting moment guess month/day order.
+                                var dotPattern = /^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{2,4})$/;
+                                var match = dotPattern.exec(primary);
+                                if (match) {
+                                    var d = ('0' + match[1]).slice(-2);
+                                    var mo = ('0' + match[2]).slice(-2);
+                                    var y = match[3];
+                                    if (y.length === 2) {
+                                        // Assume 20xx for two-digit years
+                                        y = '20' + y;
+                                    }
+                                    savedAuditDate = d + '.' + mo + '.' + y;
+                                } else {
+                                    // Fallback: strict parsing with known day-month-year formats
+                                    var mStrict = moment(primary, [
+                                        moment.ISO_8601,
+                                        'DD.MM.YYYY',
+                                        'DD.MM.YY',
+                                        'DD-MM-YYYY',
+                                        'DD/MM/YYYY'
+                                    ], true);
+                                    if (mStrict.isValid()) {
+                                        savedAuditDate = mStrict.format('DD.MM.YYYY');
+                                    }
+                                }
+                            } else {
+                                // Existing behaviour for CA, RC, SP, etc.
+                                var m = moment(primary);
+                                if (m.isValid()) {
+                                    savedAuditDate = m.format('DD.MM.YYYY');
+                                }
+                            }
+
+                            $audit_date_value = savedAuditDate;
+                        } else {
+                            $audit_date_value = "";
+                        }
+
+                        $('.audit_date_CDC').val($audit_date_value);
+                        
+                        if (data['audit_dateII'] == "" || data['audit_dateII'] == null)
+                            $audit_dateII = "";
+                        else
+                            $audit_dateII = moment(data['audit_dateII']).format('DD.MM.YYYY');
+                        $('.audit_dateII').val($audit_dateII);
+                        $application_received_date = $audit_dateII;
+                        if (data['application_received_date'] && data['application_received_date'] !== "")
+                            $application_received_date = moment(data['application_received_date']).format('DD.MM.YYYY');
+                        $('.application_received_date').val($application_received_date);
+                        $('.audit_type').val(data['audit_type']);
+                        $('.covered_for').val(data['covered_for']);
+                        $('.accreditation').val(data['accreditation']);
+                        $('.lead_auditor').val(data['lead_auditor']);
+                        $('.technical_expert').val(data['technical_expert']);
+                        $('.auditors').val(data['auditors']);
+                        // Populate individual CDC member dropdowns
+                        var reviewer1 = data['reviewer_1'] || '';
+                        var reviewer2 = data['reviewer_2'] || '';
+                        var grantedBy = data['granted_by'] || '';
+
+                        var $rev1 = $('.reviewer-1');
+                        var $rev2 = $('.reviewer-2');
+                        var $grantedBy = $('.granted-by');
+
+                        $rev1.val(reviewer1);
+                        if (reviewer1 !== '' && $rev1.val() !== reviewer1) {
+                            $rev1.append($('<option></option>').val(reviewer1).text(reviewer1));
+                            $rev1.val(reviewer1);
+                        }
+
+                        $rev2.val(reviewer2);
+                        if (reviewer2 !== '' && $rev2.val() !== reviewer2) {
+                            $rev2.append($('<option></option>').val(reviewer2).text(reviewer2));
+                            $rev2.val(reviewer2);
+                        }
+
+                        $grantedBy.val(grantedBy);
+                        if (grantedBy !== '' && $grantedBy.val() !== grantedBy) {
+                            $grantedBy.append($('<option></option>').val(grantedBy).text(grantedBy));
+                            $grantedBy.val(grantedBy);
+                        }
+
+                        $('.system_during').val(data['system_during']);
+                        $('.comments_if_any').val(data['comments_if_any']);
+                        $('.system_complaint').val(data['system_complainte']); // Database field has extra 'e', form field doesn't
+                        
+                        // Populate Assessment Date (prefer server-formatted value when available)
+                        var rawAssDate = data['assDate_formatted'] || data['assDate'];
+                        if (!rawAssDate || rawAssDate === '0000-00-00' || rawAssDate === '0000-00-00 00:00:00' || String(rawAssDate).toLowerCase() === 'null') {
+                            $assDate = "";
+                        } else {
+                            // First try strict parsing with common formats
+                            var mAss = moment(rawAssDate, [
+                                moment.ISO_8601,
+                                'YYYY-MM-DD',
+                                'DD.MM.YYYY',
+                                'DD-MM-YYYY',
+                                'DD/MM/YYYY'
+                            ], true);
+                            if (mAss.isValid()) {
+                                $assDate = mAss.format('DD.MM.YYYY');
+                            } else {
+                                // Fallback: let moment guess the format (closer to PHP strtotime behaviour)
+                                var mAssLoose = moment(rawAssDate);
+                                if (mAssLoose.isValid()) {
+                                    $assDate = mAssLoose.format('DD.MM.YYYY');
+                                } else {
+                                    $assDate = "";
+                                }
+                            }
+                        }
+
+                        // Final fallback: if Assessment date is still empty, use CDC Date (Date field)
+                        if ((!$assDate || $assDate === "") && data['Date']) {
+                            var mAssFallback = moment(data['Date']);
+                            if (mAssFallback.isValid()) {
+                                $assDate = mAssFallback.format('DD.MM.YYYY');
+                            }
+                        }
+
+                        $('.assDate').val($assDate);
+                        
+                        // Populate Audit Performance fields
+                        $('.ncval').val(data['ncval'] || '');
+                        $('.ofival').val(data['ofival'] || '');
+                        $('.oplus').val(data['oplusval'] || '');
+                        
+                        // Clear all checkboxes first
+                        $('.checkm1, .checkm2, .checkm3, .checkrev1, .checkrev2, .checkrev3, .check1, .check2, .check3').prop('checked', false);
+                        
+                        // Populate CDC Member 1 checkboxes (Audit processes satisfactorily completed)
+                        if (data['rev1_yes'] == 'Yes') {
+                            $('#checkrev1_yes').prop('checked', true);
+                        } else if (data['rev1_yes'] == 'No') {
+                            $('#checkrev1_no').prop('checked', true);
+                        }
+                        
+                        // Populate CDC Member 1 checkboxes (Complied as per Annex I)
+                        if (data['rev2_yes'] == 'Yes') {
+                            $('#checkrev2_yes').prop('checked', true);
+                        } else if (data['rev2_yes'] == 'No') {
+                            $('#checkrev2_no').prop('checked', true);
+                        } else if (data['rev2_yes'] == 'N.A.') {
+                            $('#checkrev2_na').prop('checked', true);
+                        }
+                        
+                        // Populate CDC Member 1 status checkboxes (Granted/Not-Granted)
+                        $('.checkm1[value = "' + data["review_1_granting"] + '"]').prop('checked', true);
+                        
+                        // Populate CDC Member 2 checkboxes
+                        if (data['yes1'] == 'Yes') {
+                            $('#check1_yes').prop('checked', true);
+                        } else if (data['yes1'] == 'No') {
+                            $('#check1_no').prop('checked', true);
+                        }
+                        if (data['yes2'] == 'Yes') {
+                            $('#check2_yes').prop('checked', true);
+                        } else if (data['yes2'] == 'No') {
+                            $('#check2_no').prop('checked', true);
+                        }
+                        if (data['yes3'] == 'Yes') {
+                            $('#check3_yes').prop('checked', true);
+                        } else if (data['yes3'] == 'No') {
+                            $('#check3_no').prop('checked', true);
+                        }
+                        
+                        // Populate CDC Member 2 comments
+                        $('.comments_if_any_2nd_review').val(data['comments_if_any_2nd_review'] || data['review_2_comment'] || '');
+                        
+                        // Populate CDC Member 2 status checkboxes (Granted/Not-Granted)
+                        $('.checkm2[value = "' + data["review_2_granting"] + '"]').prop('checked', true);
+                        
+                        // Populate CDC Member 3 checkboxes (Certification criteria have been met)
+                        if (data['rev3_yes'] == 'Yes') {
+                            $('#checkrev3_yes').prop('checked', true);
+                        } else if (data['rev3_yes'] == 'No') {
+                            $('#checkrev3_no').prop('checked', true);
+                        }
+                        
+                        // Populate CDC Member 3 status checkboxes (Granted/Not-Granted)
+                        $('.checkm3[value = "' + data["cdc_status"] + '"]').prop('checked', true);
+                        if ($('.checkm3[value = "' + data["cdc_status"] + '"]').prop('checked', true).val() != "") {
+                            $("input.checkm3").removeAttr("disabled");
+                        }
+                        
+                        $('.comments').val(data['comments']);
+                        
+                        if (data['Date'] == "" || data['Date'] == null)
+                            $Date = "";
+                        else
+                            $Date = moment(data['Date']).format('DD.MM.YYYY');
+                        $('.Date').val($Date);
+                        
+                        // Legacy fields for single FOR OFFICE USE section (backwards compatibility)
+                        $('.certificateNo').val(data['certificateNo']);
+                        $('.revCdc').val(data['revCdc']);
+                        if (data['revDatecdc'] == "" || data['revDatecdc'] == null)
+                            $revDatecdc = "";
+                        else
+                            $revDatecdc = moment(data['revDatecdc']).format('DD.MM.YYYY');
+                        $('.revDatecdc').val($revDatecdc);
+                        if (data['expiredate'] == "" || data['expiredate'] == null)
+                            $expiredate = "";
+                        else
+                            $expiredate = moment(data['expiredate']).format('DD.MM.YYYY');
+                        $('.expiredate').val($expiredate);
+                        if (data['periodicalaudit'] == "" || data['periodicalaudit'] == null)
+                            $periodicalaudit = "";
+                        else
+                            $periodicalaudit = moment(data['periodicalaudit']).format('DD.MM.YYYY');
+                        $('.periodicalaudit').val($periodicalaudit);
+                        $('.nextaudittype').val(data['next_audit_type'] || data['audit_type'] || '');
+                        $('.periodicalAuditcoment').val(data['periodical_audit_comment'] || data['comments'] || '');
+                        
+                        // CRITICAL FIX: For existing clients with multiple ISO standards, ensure sections are created for each ISO
+                        // Parse ISO standards from covered_for field to determine required number of sections
+                        var coveredFor = data['covered_for'] || '';
+                        var isoStandards = [];
+                        
+                        if (coveredFor && coveredFor.trim() !== '') {
+                            console.log('Parsing ISO standards from covered_for:', coveredFor);
+                            
+                            // Use the same parsing logic as getIsoEntries function in cdcModal.php
+                            if (typeof getIsoEntries === 'function') {
+                                isoStandards = getIsoEntries(coveredFor);
+                            } else {
+                                // Fallback: simple comma-based split
+                                isoStandards = coveredFor.split(',').map(function(s) { return s.trim(); }).filter(function(s) { return s.length > 0; });
+                            }
+                            
+                            console.log('Parsed ISO standards:', isoStandards, 'Count:', isoStandards.length);
+                        }
+                        
+                        // Populate FOR OFFICE USE section with office_use array data (response[7])
+                        if (response[7] && Array.isArray(response[7]) && response[7].length > 0) {
+                            console.log('Populating office use sections from saved data:', response[7]);
+                            // Set flag to skip auto-population since we have saved data
+                            $('#cdcOfficeContainer').data('skipAutoPopulate', true);
+                            // Use the populateCdcOfficeUseSections function defined in cdcModal.php
+                            if (typeof populateCdcOfficeUseSections === 'function') {
+                                populateCdcOfficeUseSections(response[7]);
+                            }
+                        } else if (isoStandards.length > 1) {
+                            // CRITICAL FIX: If no saved office_use data but multiple ISO standards exist,
+                            // create sections for each ISO standard (same logic as new clients)
+                            console.log('No saved office_use data but multiple ISO standards detected:', isoStandards.length);
+                            console.log('Creating sections for each ISO standard:', isoStandards);
+                            
+                            if (typeof ensureCdcOfficeSections === 'function') {
+                                ensureCdcOfficeSections(isoStandards);
+                                
+                                // Label each section with its ISO standard
+                                var container = $('#cdcOfficeContainer');
+                                var sections = container.find('.CdcOffice');
+                                
+                                // Get the base certificate number from legacy data for auto-increment
+                                var baseCertificateNo = data['certificateNo'] || '';
+                                
+                                sections.each(function(index) {
+                                    if (index < isoStandards.length) {
+                                        var $section = $(this);
+                                        var isoLabel = isoStandards[index];
+                                        
+                                        $section.attr('data-iso-index', index);
+                                        $section.data('iso-index', index);
+                                        $section.find('.isoIndexField').val(index);
+                                        $section.find('.isoLabelField').val(isoLabel);
+                                        
+                                        // Show title with ISO label if multiple standards
+                                        var titleRow = $section.find('.cdc-office-title');
+                                        if (isoStandards.length > 1) {
+                                            titleRow.show();
+                                            titleRow.find('.cdc-office-iso-label').text(isoLabel);
+                                        } else {
+                                            titleRow.hide();
+                                        }
+                                        
+                                        // Auto-populate certificate number with increment for old clients
+                                        if (baseCertificateNo && baseCertificateNo.trim() !== '') {
+                                            var certNo = baseCertificateNo;
+                                            
+                                            if (index > 0) {
+                                                // For subsequent sections, increment the last digit(s)
+                                                var certNoStr = baseCertificateNo.toString();
+                                                var match = certNoStr.match(/^(.*)(\d+)$/);
+                                                
+                                                if (match) {
+                                                    var prefix = match[1];
+                                                    var number = parseInt(match[2], 10);
+                                                    var newNumber = number + index;
+                                                    
+                                                    // Preserve leading zeros
+                                                    var originalLength = match[2].length;
+                                                    var newNumberStr = newNumber.toString();
+                                                    while (newNumberStr.length < originalLength) {
+                                                        newNumberStr = '0' + newNumberStr;
+                                                    }
+                                                    
+                                                    certNo = prefix + newNumberStr;
+                                                    console.log('Old client: Auto-incremented certificate', index, ':', baseCertificateNo, '->', certNo);
+                                                }
+                                            }
+                                            
+                                            $section.find('.certificateNo').val(certNo);
+                                        }
+                                        
+                                        $section.show();
+                                        console.log('Created and configured section', index, 'for ISO:', isoLabel);
+                                    }
+                                });
+                                
+                                $('#cdcOfficeContainer').show();
+                                console.log('Created', sections.length, 'office use sections for existing client with multiple ISO standards');
+                            }
+                        }
+                        
+                        $('input[type="text"]').trigger('change');
+                        $('.address').trigger('change');
+                        $('.save_cdcPdf').hide();
+                        $('#cdcModel').modal('show');
+                        
+                        // Auto-populate certificate number for SA1, SA2, RC from CA service
+                        if (typeof autoPopulateCertificates === 'function') {
+                            console.log('Calling autoPopulateCertificates for service type:', svcType);
+                            setTimeout(function() {
+                                autoPopulateCertificates(false);
+                            }, 300);
+                        }
+                        
+                        validateCDC();
+                    },
+                    error: function (data, status, err)
+                    {
+                        alert(status);
+                    }
+                });
+            });
+
+            // REMOVED: Conflicting CDC edit handler - cdcModal.php has the correct one
+            // The handler in cdcModal.php uses proper event delegation and correct data structure
+
+            $('.downloadCDCsai').click(function () {
+                var crr_id = $(this).attr('data-crr');
+                var customer_id = $(this).attr('data-customer');
+                var ca_service_id = $(this).attr('data-caservice-id');
+                
+                // Fetch CDC data from database before generating PDF
+                $.ajax({
+                    url: "reviewReportData.php",
+                    type: "GET",
+                    dataType: "json",
+                    data: {
+                        crr_Id: crr_id,
+                        service: ca_service_id
+                    },
+                    success: function (data) {
+                        var url = 'cdcRecomendation.php';
+                        var form = $('<form action="' + url + '" method="post" target="_blank"></form>');
+                        
+                        // Add all required fields for PDF generation
+                        form.append('<input type="hidden" name="crr_id" value="' + crr_id + '" />');
+                        form.append('<input type="hidden" name="crr_Id" value="' + crr_id + '" />');
+                        form.append('<input type="hidden" name="customer_Id" value="' + customer_id + '" />');
+                        form.append('<input type="hidden" name="service_Id" value="' + ca_service_id + '" />');
+                        form.append('<input type="hidden" name="uni_serviceid" value="' + (data.uni_serviceid || '') + '" />');
+                        form.append('<input type="hidden" name="servicetype" value="' + (data.servicetype || 'SA1') + '" />');
+                        form.append('<input type="hidden" name="file_No" value="' + (data.file_no || '') + '" />');
+                        form.append('<input type="hidden" name="audited_Organisation" value="' + (data.audit_organization || '') + '" />');
+                        form.append('<input type="hidden" name="address" value="' + (data.address || '') + '" />');
+                        form.append('<input type="hidden" name="product_service" value="' + (data.product_service || '') + '" />');
+                        form.append('<input type="hidden" name="iaf_nace" value="' + (data.iaf_nacf || '') + '" />');
+                        form.append('<input type="hidden" name="exclusion" value="' + (data.exclusion || '') + '" />');
+                        form.append('<input type="hidden" name="audit_type" value="' + (data.audit_type || '') + '" />');
+                        form.append('<input type="hidden" name="audit_date_CDC" value="' + (data.audit_date || '') + '" />');
+                        form.append('<input type="hidden" name="audit_dateII" value="' + (data.audit_dateII || '') + '" />');
+                        form.append('<input type="hidden" name="application_received_date" value="' + (data.application_received_date || data.audit_dateII || '') + '" />');
+                        form.append('<input type="hidden" name="covered_for" value="' + (data.covered_for || '') + '" />');
+                        form.append('<input type="hidden" name="accreditation" value="' + (data.accreditation || '') + '" />');
+                        form.append('<input type="hidden" name="lead_auditor" value="' + (data.lead_auditor || '') + '" />');
+                        form.append('<input type="hidden" name="technical_expert" value="' + (data.technical_expert || '') + '" />');
+                        form.append('<input type="hidden" name="any_ther" value="' + (data.any_ther || '') + '" />');
+                        form.append('<input type="hidden" name="auditors" value="' + (data.auditors || '') + '" />');
+                        form.append('<input type="hidden" name="assDate" value="' + (data.assDate || '') + '" />');
+                        form.append('<input type="hidden" name="reviewer-1" value="' + (data.reviewer_1 || '') + '" />');
+                        form.append('<input type="hidden" name="reviewer-2" value="' + (data.reviewer_2 || '') + '" />');
+                        form.append('<input type="hidden" name="granted-by" value="' + (data.granted_by || '') + '" />');
+                        form.append('<input type="hidden" name="Date" value="' + (data.Date || '') + '" />');
+                        form.append('<input type="hidden" name="system_during" value="' + (data.system_during || '') + '" />');
+                        form.append('<input type="hidden" name="system_complainte" value="' + (data.system_complainte || '') + '" />');
+                        
+                        // Checkboxes
+                        if (data.rev1_yes == 'Yes') form.append('<input type="hidden" name="checkrev1_yes" value="Yes" />');
+                        else if (data.rev1_yes == 'No') form.append('<input type="hidden" name="checkrev1_no" value="No" />');
+                        if (data.rev2_yes == 'Yes') form.append('<input type="hidden" name="checkrev2_yes" value="Yes" />');
+                        else if (data.rev2_yes == 'No') form.append('<input type="hidden" name="checkrev2_no" value="No" />');
+                        else if (data.rev2_yes == 'N.A.') form.append('<input type="hidden" name="checkrev2_na" value="N.A." />');
+                        
+                        form.append('<input type="hidden" name="comments_if_any" value="' + (data.comments_if_any || '') + '" />');
+                        
+                        if (data.review_1_granting == 'Granted') form.append('<input type="hidden" name="cdc-status-mem1-g" value="Granted" />');
+                        else if (data.review_1_granting == 'Not-Granted') form.append('<input type="hidden" name="cdc-status-mem1-n" value="Not-Granted" />');
+                        
+                        if (data.yes1 == 'Yes') form.append('<input type="hidden" name="check1_yes" value="Yes" />');
+                        else if (data.yes1 == 'No') form.append('<input type="hidden" name="check1_no" value="No" />');
+                        if (data.yes2 == 'Yes') form.append('<input type="hidden" name="check2_yes" value="Yes" />');
+                        else if (data.yes2 == 'No') form.append('<input type="hidden" name="check2_no" value="No" />');
+                        if (data.yes3 == 'Yes') form.append('<input type="hidden" name="check3_yes" value="Yes" />');
+                        else if (data.yes3 == 'No') form.append('<input type="hidden" name="check3_no" value="No" />');
+                        
+                        form.append('<input type="hidden" name="comments_if_any_2nd_review" value="' + (data.review_2_comment || '') + '" />');
+                        
+                        if (data.review_2_granting == 'Granted') form.append('<input type="hidden" name="cdc-status-mem2-g" value="Granted" />');
+                        else if (data.review_2_granting == 'Not-Granted') form.append('<input type="hidden" name="cdc-status-mem2-n" value="Not-Granted" />');
+                        
+                        if (data.rev3_yes == 'Yes') form.append('<input type="hidden" name="checkrev3_yes" value="Yes" />');
+                        else if (data.rev3_yes == 'No') form.append('<input type="hidden" name="checkrev3_no" value="No" />');
+                        
+                        if (data.cdc_status == 'Granted') form.append('<input type="hidden" name="cdc-status-mem3-g" value="Granted" />');
+                        else if (data.cdc_status == 'Not-Granted') form.append('<input type="hidden" name="cdc-status-mem3-n" value="Not-Granted" />');
+                        
+                        form.append('<input type="hidden" name="comments" value="' + (data.comments || '') + '" />');
+                        form.append('<input type="hidden" name="date-restore1" value="' + (data.rc_audit_date || '') + '" />');
+                        form.append('<input type="hidden" name="date-restore2" value="' + (data.rc_restore_date || '') + '" />');
+                        form.append('<input type="hidden" name="ncval" value="' + (data.ncval || '') + '" />');
+                        form.append('<input type="hidden" name="ofival" value="' + (data.ofival || '') + '" />');
+                        form.append('<input type="hidden" name="oplus" value="' + (data.oplusval || '') + '" />');
+                        form.append('<input type="hidden" name="certificateNo" value="' + (data.certificateNo || '') + '" />');
+                        form.append('<input type="hidden" name="revCdc" value="' + (data.revCdc || '') + '" />');
+                        form.append('<input type="hidden" name="revDatecdc" value="' + (data.revDatecdc || '') + '" />');
+                        form.append('<input type="hidden" name="nextaudittype" value="' + (data.next_audit_type || '') + '" />');
+                        form.append('<input type="hidden" name="expiredate" value="' + (data.expiredate || '') + '" />');
+                        form.append('<input type="hidden" name="periodicalaudit" value="' + (data.periodicalaudit || '') + '" />');
+                        form.append('<input type="hidden" name="periodicalAuditcoment" value="' + (data.periodical_audit_comment || '') + '" />');
+                        
+                        if (data.office_use && Array.isArray(data.office_use)) {
+                            data.office_use.forEach(function(office, index) {
+                                form.append('<input type="hidden" name="office_use[' + index + '][iso_index]" value="' + (office.iso_index || index) + '" />');
+                                form.append('<input type="hidden" name="office_use[' + index + '][iso_label]" value="' + (office.iso_label || '') + '" />');
+                                form.append('<input type="hidden" name="office_use[' + index + '][rev_date]" value="' + (office.rev_date || '') + '" />');
+                                form.append('<input type="hidden" name="office_use[' + index + '][rev_no]" value="' + (office.rev_no || '') + '" />');
+                                form.append('<input type="hidden" name="office_use[' + index + '][certificate_no]" value="' + (office.certificate_no || '') + '" />');
+                                form.append('<input type="hidden" name="office_use[' + index + '][audit_type]" value="' + (office.audit_type || '') + '" />');
+                                form.append('<input type="hidden" name="office_use[' + index + '][expire_date]" value="' + (office.expire_date || '') + '" />');
+                                form.append('<input type="hidden" name="office_use[' + index + '][periodical_audit]" value="' + (office.periodical_audit || '') + '" />');
+                                form.append('<input type="hidden" name="office_use[' + index + '][comments]" value="' + (office.comments || '') + '" />');
+                            });
+                        }
+                        
+                        $('body').append(form);
+                        form.submit();
+                    },
+                    error: function (xhr, status, err) {
+                        alert('Error loading CDC data: ' + status);
+                        console.error('CDC Download Error:', err);
+                    }
+                });
+            });
+
+            $('.createSaiSurvey').click(function () {
+                $('.survey-service-id').val($(this).attr('data-service'));
+                $('.survey-customer-id').val($(this).attr('data-customer'));
+                $('#customerSurvey').modal('show');
+            });
+
+            $('.editSaiSurvey').click(function () {
+                //alert($(this).attr('data-row-id'));
+                $.ajax({
+                    url: "contractDetails.php",
+                    type: "GET",
+                    dataType: "json",
+                    data: {
+                        survay_id: $(this).attr('data-row-id'),
+                        survay_service: $(this).attr('data-service'),
+                        //                    survay_customer: $(this).attr('data-customer'),
+                    },
+                    success: function (data)
+                    {
+                        //                    alert(data);
+                        $('.auditorRating').empty();
+
+                        $('.survay-id').val(data[0]['survey_id']);
+                        $('.survey-service-id').val(data[0]['ca_serviceid']);
+                        $('.survey-customer-id').val(data[0]['customer_ca']);
+                        $('.auditOrg').val(data[0]['auditer_org']);
+                        $('.surveyDate').val(data[0]['survey_date']);
+                        $('.survayAuditDates').val(data[0]['audit_conducted_date']);
+                        $('.auditImparted').val(data[0]['survey_imparted']);
+                        $('.auditingQuality').val(data[0]['auditing_quality']);
+                        $('.auditingPercent').val(data[0]['auditing_percent']);
+                        $('.auditingResult').val(data[0]['auditing_result']);
+                        $('.partiallyRanking').val(data[0]['audit_ranking_good']);
+                        $('.notExcellentRanking').val(data[0]['audit_ranking_bad']);
+                        $('.auditorRanking').val(data[0]['individual_ranking']);
+                        $('.satisfactionRating').val(data[0]['mgmt_satisfaction']);
+                        $('.satisfactionPercent').val(data[0]['mgmt_percent']);
+                        $('.satisfactionResult').val(data[0]['mgmt_result']);
+                        $('.satisfactionRanking').val(data[0]['mgmt_ranking_good']);
+                        $('.notSatisfactionRanking').val(data[0]['mgmt_ranking_bad']);
+                        $('.survayFormNo').val(data[0]['mgmt_formno']);
+                        $('.survayRev').val(data[0]['mgmt_rev']);
+                        if (data[0]['mgmt_revdate'] == "" || data[0]['mgmt_revdate'] == null)
+                            $mgmt_revdate = "";
+                        else
+                            $mgmt_revdate = moment(data[0]['mgmt_revdate']).format('DD.MM.YYYY');
+                        $('.survayRevDate').val($mgmt_revdate);
+                        $('.survayIsue').val(data[0]['mgmt_isue']);
+                        if (data[0]['mgmt_isuedate'] == "" || data[0]['mgmt_isuedate'] == null)
+                            $mgmt_isuedate = "";
+                        else
+                            $mgmt_isuedate = moment(data[0]['mgmt_isuedate']).format('DD.MM.YYYY');
+                        $('.survayIsueDate').val($mgmt_isuedate);
+                        $('.initial-cert[value = "' + data[0]["initial_cert"] + '"]').prop('checked', true);
+
+                        for (var key in data[1]) {
+                            $('.auditorRating').append('<div class="row ">\n\
+                                                    <div class="col-xs-6 form-group float-label-control" style="padding-top: 12px">\n\
+                                                    <label>Lead Auditor/Auditor/Technical Expert Details</label>\n\
+                                                    <input type="text" class="leadAuditor" id="leadAuditor" name="leadAuditor" value="' + data[1][key]['lead_auditor'] + '" placeholder="Lead Auditor/Auditor/Technical Expert Details">\n\
+                                                    </div>\n\
+                                                    <div class="col-xs-3 form-group float-label-control" style="padding-top: 12px">\n\
+                                                    <label>Result</label>\n\
+                                                    <input type="text" class="leadResult" id="leadResult" name="leadResult" value="' + data[1][key]['result'] + '" placeholder="Result" > \n\
+                                                    </div>\n\
+                                                    <div class="col-xs-3 form-group float-label-control" style="padding-top: 12px">\n\
+                                                    <label>Action Recommended</label>\n\
+                                                    <select name="recommendedAction" class="form-control recommendedAction" id="recommendedAction" >\n\
+                                                    <option value="' + data[1][key]['action'] + '">' + data[1][key]['action'] + '</option>\n\
+                                                    <option value="Yes">Yes</option>\n\
+                                                    <option value="No">No</option>\n\
+                                                    </select>\n\
+                                                    </div>\n\
+                                                                            </div>');
+                        }
+                        $('input[type="text"]').trigger('change');
+                        //                    $('textarea').trigger('change');
+                        $('.addCustomerSurveyPdf').hide();
+                        $('#customerSurvey').modal('show');
+                    },
+                    error: function (data, status, err)
+                    {
+                        alert(status);
+                    }
+                });
+            });
+
+            $('.downloadSaiSurvey').click(function () {
+                //alert($(this).attr('data-cf-id'));
+                var survey_id = $(this).attr('data-surveyid');
+                //alert(control2_id);
+                var customer = $(this).attr('data-customer');
+                var url = 'CustomerSatisfaction.php';
+                var form = $('<form action="' + url + '" method="post" target="_blank" >' +
+                        '<input type="hidden" name="survey_id" value="' + survey_id + '" />' +
+                        '<input type="hidden" name="customer" value="' + customer + '" />' +
+                        '</form>');
+                $('body').append(form);
+                form.submit();
+            });
+
+            //        service type RC insert update code by Pallavi
+
+            $('.infoUpdateRc').change(function () {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                var formData = new FormData();
+                //            alert(column);
+                formData.append('file', $('.input-info-updation-rc' + service)[0].files[0]);
+                formData.append('customerid', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+                $.ajax({
+                    url: 'serviceTypeRC.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        location.reload(true);
+                    }
+                });
+            });
+
+            $('.applicationFormRc').change(function () {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                var formData = new FormData();
+                //            alert(column);
+                formData.append('file', $('.input-appiication-form-rc' + service)[0].files[0]);
+                formData.append('customerid', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+                $.ajax({
+                    url: 'serviceTypeRC.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        location.reload(true);
+                    }
+                });
+            });
+
+            $('.reCertifyRc').change(function () {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                var formData = new FormData();
+                //            alert(column);
+                formData.append('file', $('.input-re-certify-rc' + service)[0].files[0]);
+                formData.append('customerid', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+                $.ajax({
+                    url: 'serviceTypeRC.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        location.reload(true);
+                    }
+                });
+            });
+
+            $('.signedNotiRc').change(function () {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                var formData = new FormData();
+                //            alert(column);
+                formData.append('file', $('.input-signed-noti-rc' + service)[0].files[0]);
+                formData.append('customerid', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+                $.ajax({
+                    url: 'serviceTypeRC.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        location.reload(true);
+                    }
+                });
+            });
+
+            $('.signedCopyRc').change(function () {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                var formData = new FormData();
+                //            alert(column);
+                formData.append('file', $('.input-signed-copy-rc' + service)[0].files[0]);
+                formData.append('customerid', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+                $.ajax({
+                    url: 'serviceTypeRC.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        location.reload(true);
+                    }
+                });
+            });
+
+            $('.auditReportRc').change(function () {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                var formData = new FormData();
+                //            alert(column);
+                formData.append('file', $('.input-audit-report-rc' + service)[0].files[0]);
+                formData.append('customerid', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+                $.ajax({
+                    url: 'serviceTypeRC.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        location.reload(true);
+                    }
+                });
+            });
+
+            $('.auditorNotesRc').change(function () {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                var formData = new FormData();
+                formData.append('file', $('.input-auditor-notes-rc' + service)[0].files[0]);
+                formData.append('customerid', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+                $.ajax({
+                    url: 'serviceTypeRC.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        location.reload(true);
+                    }
+                });
+            });
+
+            $('.auditEvidenceRc').change(function () {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                var formData = new FormData();
+                //            alert(column);
+                formData.append('file', $('.input-audit-evidence-rc' + service)[0].files[0]);
+                formData.append('customerid', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+                $.ajax({
+                    url: 'serviceTypeRC.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        location.reload(true);
+                    }
+                });
+            });
+
+            $('.customerCertificateUploadRc').change(function () {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                var formData = new FormData();
+                //            alert(column);
+                formData.append('file', $('.input-certificate-upload-rc' + service)[0].files[0]);
+                formData.append('customerid', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+                $.ajax({
+                    url: 'serviceTypeRC.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        location.reload(true);
+                    }
+                });
+            });
+
+            $('.customerReviewRc').change(function () {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                var formData = new FormData();
+                //            alert(column);
+                formData.append('file', $('.input-customer-review-rc' + service)[0].files[0]);
+                formData.append('customerid', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+                $.ajax({
+                    url: 'serviceTypeRC.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        location.reload(true);
+                    }
+                });
+            });
+
+            $('.createRCAuditApp').click(function () {
+                //            alert($(this).attr('data-caservice-id'));
+                $('.serviceId').val($(this).attr('data-caservice-id'));
+                $('.customerId').val($(this).attr('data-customer'));
+                $.ajax({
+                    url: "getAuditApplication.php",
+                    type: "GET",
+                    dataType: "json",
+                    data: {
+                        auditCountId: "1",
+                    },
+                    success: function (data)
+                    {
+                        //                    alert(data);
+                        $('#auditApplication').modal('show');
+                    },
+                    error: function (data, status, err)
+                    {
+                        alert(status);
+                    }
+                });
+                //            alert($('.serviceId').val());            
+            });
+
+            $('.editRCAuditApp').click(function () {
+                var customerid = $(this).attr('data-customer');
+
+                $.ajax({
+                    url: "getAuditApplication.php",
+                    type: "GET",
+                    dataType: "json",
+                    data: {
+                        auditAppId: $(this).attr('data-audit'),
+                    },
+                    success: function (data)
+                    {
+                        //                    alert(data['audit_id']); 
+                        $('.customerId').val(customerid);
+                        $('.auditId').val(data['audit_id']);
+                        var review_date;
+                        if (data['review_date'] == "" || data['review_date'] == null)
+                            review_date = "";
+                        else
+                            review_date = moment(data['review_date']).format('DD.MM.YYYY');
+                        $('.review_date').val(data['review_date']);
+
+                        if (data['application_date'] == "" || data['application_date'] == null)
+                            $application_date = "";
+                        else
+                            $application_date = moment(data['application_date']).format('DD.MM.YYYY');
+                        $('.applicationDate').val($application_date);
+                        $('.orgName').val(data['org_name']);
+                        $('.legalStatus').val(data['legal_status']);
+                        $('.industryClassify').val(data['industury_classfication']);
+                        $('.legalPart').val(data['legal_group']);
+                        $('.locationUnderAudit').val(data['n_location']);
+                        $('.employees').val(data['n_employee']);
+                        $('.shifts').val(data['n_shift']);
+                        $('.product').val(data['product']);
+                        $('.processes').val(data['process']);
+                        $('.certificationStandard').val(data['certification']);
+                        $('.accreditation').val(data['accereditation_requirement']);
+                        $('.consultancyServices').val(data['consultancy_services']);
+                        $('.exclusionClauses').val(data['standard_clauses']);
+                        $('.technicalArea').val(data['technical_area']);
+                        $('.legalObligations').val(data['legal_obligation']);
+                        $('.conflictInterest').val(data['conflict_interest']);
+                        $('.statutoryRequirement').val(data['statutory_requirement']);
+                        $('.customerRequirement').val(data['customer_requirement']);
+                        $('.organizationService').val(data['org_involved']);
+                        $('.otherRequirement').val(data['other_requirement']);
+                        $('.assessmentCertification').val(data['assessment_certification']);
+                        $('.adequateResource').val(data['adequate_resource']);
+                        $('.productService').val(data['product_service']);
+                        $('.scope').val(data['scope']);
+                        $('.competentTeam').val(data['competent_team']);
+                        $('.standardClause').val(data['standard_clause']);
+                        $('.riskStatutory').val(data['risk_statutory']);
+                        $('.risk_conflict').val(data['riskConflict']);
+                        $('.conclusion').val(data['conclusion']);
+                        $('.multisiteEligibility').val(data['multisite_eligibility']);
+                        $('.assessment_standard').val(data['assessmentStandard']);
+                        $('.aif-code').val(data['aif_code']);
+                        $('.review-accreditation').val(data['review_accredition']);
+                        $('.proposed-scope').val(data['proposed_scope']);
+                        $('.proposed-month').val(data['proposed_month']);
+                        $('.man-days-required').val(data['man_day_req']);
+                        $('.designingDevelopment').val(data['reducing_factor']);
+                        $('.justificationReduction').val(data['justification_reducing']);
+                        $('.additive-factor').val(data['additive_factor']);
+                        $('.actual-effective').val(data['actual_effective']);
+                        $('.technical-expert').val(data['technical_req']);
+                        $('.travel-logistics').val(data['travel_logistic']);
+                        $('.applicationAmount').val(data['refundable_amount']);
+                        $('.documentationReview').val(data['audit_stage_i']);
+                        $('.certificationRecertification').val(data['audit_stage_iI']);
+                        $('.initialAssessment').val(data['initial_assessment']);
+                        $('.maintenanceCertification').val(data['certification_maintenance']);
+                        $('.allotmentAgreement').val(data['aggrement_allotment']);
+                        $('.anyComment').val(data['comment']);
+                        $('.formNo').val(data['form_no']);
+                        $('.rev').val(data['rev']);
+                        if (data['date'] == "" || data['date'] == null)
+                            $date = "";
+                        else
+                            $date = moment(data['date']).format('DD.MM.YYYY');
+                        $('.revDate').val($date);
+                        $('.isue').val(data['isue']);
+                        if (data['isuedate'] == "" || data['isuedate'] == null)
+                            $isuedate = "";
+                        else
+                            $isuedate = moment(data['isuedate']).format('DD.MM.YYYY');
+                        $('.isueDate').val(isuedate);
+
+                        $('input[type="text"]').trigger('change');
+                        $('input[type="number"]').trigger('change');
+                        //                    $('textarea').trigger('change');
+                        //                    $('.Generate').hide();
+                        $('#auditApplication').modal('show');
+                    },
+                    error: function (data, status, err)
+                    {
+                        alert(status);
+                    }
+                });
+            });
+
+            $('.downloadRCAuditApp').click(function () {
+                var auditId = $(this).attr('data-audit');
+                var url = 'auditApplication.php';
+                var form = $('<form action="' + url + '" method="post" target="_blank" >' +
+                        '<input type="hidden" name="auditid" value="' + auditId + '" />' +
+                        '</form>');
+                $('body').append(form);
+                form.submit();
+            });
+
+            $('.downloadRCContractReview').click(function () {
+                var contractid = $(this).attr('data-contract');
+                var customer = $(this).attr('data-customer');
+                var url = 'ContractReview1.php';
+                var form = $('<form action="' + url + '" method="post" target="_blank" >' +
+                        '<input  type="hidden" name="contractid" value="' + contractid + '" />' +
+                        '<input type="hidden" name="customer" value="' + customer + '" />' +
+                        '</form>');
+                $('body').append(form);
+                form.submit();
+            });
+
+            $('.downloadRCAuditNoti').click(function () {
+                //            alert($(this).attr('data-customer'));
+                var auditid = $(this).attr('data-audit');
+                var service = $(this).attr('data-caservice-id');
+                var customer = $(this).attr('data-customer');
+                var url = 'AuditNotificationandAssignment.php';
+                var form = $('<form action="' + url + '" method="post" target="_blank" >' +
+                        '<input type="hidden" name="auditid" value="' + auditid + '" />' +
+                        '<input type="hidden" name="serviceid" value="' + service + '" />' +
+                        '<input type="hidden" name="customerid" value="' + customer + '" />' +
+                        '</form>');
+                $('body').append(form);
+                form.submit();
+            });
+
+            $('.editStageScheduleRC').click(function () {
+                $('.schedule-service-id-edit').val($(this).attr('data-service'));
+                $('.schedule-customer-id-edit').val($(this).attr('data-customer'));
+                $('.schedule-audit-id-edit').val($(this).attr('data-row-id'));
+                $.ajax({
+                    url: "contractDetails.php",
+                    type: "GET",
+                    dataType: "json",
+                    data: {
+                        scheduleId: $(this).attr('data-row-id'),
+                        serviceID: $(this).attr('data-service'),
+                    },
+                    success: function (data)
+                    {
+                        //                    alert(data);
+                        $('.scheduleClientNameEdit').val(data[0]['client_name']);
+                        $('.scheduleRefNoEdit').val(data[0]['ref_no']);
+                        $('.scheduleAddressEdit').val(data[0]['schedule_address']);
+                        $('.scheduleContactPersonEdit').val(data[0]['schedule_contact_person']);
+                        $('.scheduleScopeEdit').val(data[0]['schedule_scope']);
+                        $('.scheduleAppStandardEdit').val(data[0]['schedule_app_standard']);
+                        $('.scheduleIAFcodeEdit').val(data[0]['schedule_aifcode']);
+                        $('.scheduleAuditTypeEdit').val(data[0]['schedule_audit_type']);
+                        $('.scheduleMandaysEdit').val(data[0]['schedule_mandays']);
+                        if (data[0]['schedule_audit_date'] == "" || data[0]['schedule_audit_date'] == null)
+                            $schedule_audit_date = "";
+                        else
+                            $schedule_audit_date = moment(data[0]['schedule_audit_date']).format('DD.MM.YYYY');
+                        $('.scheduleAuditDateEdit').val($schedule_audit_date);
+                        $('.scheduleAuditorEdit').val(data[0]['schedule_auditors']);
+                        $('.editstageiFormNo').val(data[0]['stage_i_form']);
+                        $('.editstageiRev').val(data[0]['stage_i_rev']);
+                        if (data[0]['stage_i_date'] == "" || data[0]['stage_i_date'] == null)
+                            $stage_i_date = "";
+                        else
+                            $stage_i_date = moment(data[0]['stage_i_date']).format('DD.MM.YYYY');
+                        $('.editstageiRevDate').val($stage_i_date);
+                        $('.editstageiIsue').val(data[0]['stage_i_isue']);
+                        if (data[0]['stage_i_isuedate'] == "" || data[0]['stage_i_isuedate'] == null)
+                            $stage_i_isuedate = "";
+                        else
+                            $stage_i_isuedate = moment(data[0]['stage_i_isuedate']).format('DD.MM.YYYY');
+                        $('.editstageiIsueDate').val($stage_i_isuedate);
+                        $('.editSchedules').empty();
+                        for (var key in data[1]) {
+                            if (data[1][key]['schedule_dates'] == "" || data[1][key]['schedule_dates'] == null)
+                                $schedule_dates = "";
+                            else
+                                $schedule_dates = moment(data[1][key]['schedule_dates']).format('DD.MM.YYYY');
+                            $('.editSchedules').append(' <div class="row " style=""> \n\
+                                                        <div class="col-sm-12 form-group float-label-control">\n\
+                                                        <label>Activity:</label>\n\
+                                                        <textarea type="text" data-row-id="" class="scheduleActivityEdit" id="scheduleActivityEdit" name="scheduleActivityEdit" value="" placeholder="Activity">' + data[1][key]['schedule_activity'] + '</textarea>\n\
+                                                        </div>\n\
+                                                        </div>\n\
+                                                        <div class="row " style=""> \n\
+                                                        <div class="col-sm-4 form-group float-label-control">\n\
+                                                        <label>Date(s):</label>\n\
+                                                        <input type="text" data-row-id="" class="scheduleDateEdit" name="scheduleDateEdit" id="scheduleDateEdit" value="' + $schedule_dates + '" placeholder="Date"/>\n\
+                                                        </div>\n\
+                                                        <div class="col-sm-4 form-group float-label-control">\n\
+                                                        <label>Time:</label>\n\
+                                                        <input type="time" data-row-id="" class="scheduleTimeEdit" name="scheduleTimeEdit" value="' + data[1][key]['schedule_time'] + '" placeholder="Time"/>\n\
+                                                        </div>\n\
+                                                        <div class="col-sm-4 form-group float-label-control">\n\
+                                                        <label>Auditor:</label>  \n\
+                                                        <input type="text" data-row-id="" class="scheduleAuditorEditCs" id="scheduleAuditorEditCs" name="scheduleAuditorEditCs" value="' + data[1][key]['schedule_auditors'] + '" placeholder="Auditor">                         \n\
+                                                        </div>\n\
+                                                                            </div>');
+                        }
+
+                        $('input[type="text"]').trigger('change');
+                        //                    $('textarea').trigger('change');
+
+                        $('#scheduleStageIEdit').modal('show');
+                    },
+                    error: function (data, status, err)
+                    {
+                        alert(status);
+                    }
+                });
+            });
+
+            $('.downloadStageScheduleRC').click(function () {
+                var auditscheduleid = $(this).attr('data-schedulei');
+                var service = $(this).attr('data-caservice-id');
+                var customer = $(this).attr('data-customer');
+                var url = 'SurveillanceAudit2.php';
+                var form = $('<form action="' + url + '" method="post" target="_blank" >' +
+                        '<input type="hidden" name="auditnotiid" value="' + auditscheduleid + '" />' +
+                        '<input type="hidden" name="serviceid" value="' + service + '" />' +
+                        '<input type="hidden" name="customerid" value="' + customer + '" />' +
+                        '</form>');
+                $('body').append(form);
+                form.submit();
+            });
+
+            $('.editstageIIAuditRC ').click(function () {
+                // alert($(this).attr('data-notification'));
+                $('.service_Id_Edit').val($(this).attr('data-service'));
+                $('.customer_Id_Edit').val($(this).attr('data-customer'));
+                $('.review_report_id').val($(this).attr('data-notification'));
+
+                $.ajax({
+                    url: "reviewReportData.php",
+                    type: "GET",
+                    dataType: "json",
+                    data: {
+                        report_Id: $(this).attr('data-notification'),
+                        service_id: $(this).attr('data-service')
+                    },
+                    success: function (data)
+                    {
+                        //alert(data);
+                        $('.auditOrganisationIIEdit').val(data[0]['audit_Organisation']);
+                        if (data['audit_dates'] == "" || data['audit_dates'] == null)
+                            $audit_dates = "";
+                        else
+                            $audit_dates = moment(data['audit_dates']).format('DD.MM.YYYY');
+                        $('.auditDateIIEdit').val($audit_dates);
+                        $('.leadAuditorIIEdit').val(data[0]['lead_auditor']);
+                        $('.referenceNumberIIEdit').val(data[0]['reference_number']);
+
+                        $('.editauditInpard[value = "' + data[0]["initial"] + '"]').prop('checked', true);
+                        $('.editacceptedII[value = "' + data[0]["accepted"] + '"]').prop('checked', true);
+                        $('.formNo2').val(data[0]['form_no']);
+                        $('.rev2').val(data[0]['rev']);
+                        if (data['date_rev'] == "" || data['date_rev'] == null)
+                            $date_rev = "";
+                        else
+                            $date_rev = moment(data['date_rev']).format('DD.MM.YYYY');
+                        $('.revDateII2').val($date_rev);
+                        $('.isueEdit2').val(data[0]['issue']);
+                        if (data['date_issue'] == "" || data['date_issue'] == null)
+                            $date_issue = "";
+                        else
+                            $date_issue = moment(data['date_issue']).format('DD.MM.YYYY');
+                        $('.isueDateIIEdit').val($date_issue);
+                        $('.ReviewerCommentsEdit').val(data[0]['reviewer_comments']);
+
+                        $('.editstageII').empty();
+                        for (var key in data[1]) {
+                            // var option= data[1][key]['audit_response_ii'] ;
+
+                            $('.editstageII').append('  <div class="row" style=""> \n\
+                     <div class="col-xs-6 audit_aspectII "> \n\
+                   <font size="2">' + data[1][key]['audit_aspect_ii'] + '</font> \n\
+                   </div> \n\
+                    <div class="col-xs-3 form-group float-label-control"> \n\
+                                                    <select name="audit_responseII" class="form-control audit_responseII_Edit" id="audit_responseII"> \n\
+                                                        <option value="' + data[1][key]['audit_response_ii'] + '">' + data[1][key]['audit_response_ii'] + '</option> \n\
+                                                        <option value="Yes">Yes</option> \n\
+                                                        <option value="No">No</option> \n\
+                                                        <option value="NA">NA</option> \n\
+                                                    </select> \n\
+                                                </div> \n\
+                       <div class="col-xs-3 form-group float-label-control"> \n\
+                    <label></label> \n\
+                      <input type="text" class="remarkII_Edit" id="remarkII" name="remarkII" value="' + data[1][key]['remark_ii'] + '" placeholder="IF ANY"  > \n\
+                    </div> \n\
+                    <input type="hidden" class="audit_aspect_hiddenII_Edit" name="audit_aspect_hiddenII" value="' + data[1][key]['audit_aspect_ii'] + '" >  \n\
+                   <input type="hidden" class="audit_id" name="audit_id" value="' + data[1][key]['id_ii'] + '" >  \n\
+                                                                            </div> \n\
+                                                                            <br>');
+                        }
+                        $('input[type="text"]').trigger('change');
+                        //                    $('textarea').trigger('change');
+                        $('#updatestageII').modal('show');
+                    },
+                    error: function (data, status, err)
+                    {
+                        alert(status);
+                    }
+                });
+            });
+
+            $('.downloadStageIIAuditRC').click(function () {
+                //alert($(this).attr('data-stage-ii'));
+                var stage_ii_id = $(this).attr('data-stage-ii');
+                //alert(stage_ii_id);
+                var customer = $(this).attr('data-customer');
+                var url = 'F7.32Anex-2.php';
+                var form = $('<form action="' + url + '" method="post" target="_blank" >' +
+                        '<input type="hidden" name="stage_ii_id" value="' + stage_ii_id + '" />' +
+                        '<input type="hidden" name="customer" value="' + customer + '" />' +
+                        '</form>');
+                $('body').append(form);
+                form.submit();
+            });
+
+            $('.createCDCRC').click(function () {
+                $('.service_Id').val($(this).attr('data-service'));
+                $('.customer_Id').val($(this).attr('data-customer'));
+                $('.uni_serviceid').val($(this).attr('data-id'));
+                $('#cdcModel').modal('show');
+            });
+
+            $('.editCDCRC').click(function () {
+                var svcType = $(this).attr('data-svctype') || 'RC';
+                var customerId = $(this).attr('data-customer');
+                var serviceId = $(this).attr('data-service');
+                console.log('Edit CDC RC clicked - Service Type (original):', svcType, 'Customer ID:', customerId);
+                svcType = convertServiceType(svcType); // Convert SA-I to SA1, SA-II to SA2
+                console.log('Edit CDC RC clicked - Service Type (converted):', svcType);
+                window.$cdcbyservice = svcType; // Set global variable for cdcModal.php
+                if (typeof updateBaseCustomerId === 'function') {
+                    updateBaseCustomerId(customerId);
+                }
+                $('.service_Id').val(serviceId);
+                $('.customer_Id').val(customerId);
+                $('.crr_Id').val($(this).attr('data-notification'));
+                $('.servicetype').val(svcType);
+
+                $.ajax({
+                    url: "reviewReportData.php",
+                    type: "GET",
+                    dataType: "json",
+                    data: {
+                        crr_Id: $(this).attr('data-notification'),
+                        service: serviceId
+                    },
+                    success: function (response)
+                    {
+                        // reviewReportData.php returns an array, CDC data is at index 0
+                        var data = response[0] || response;
+                        
+                        $('.file_No').val(data['file_no']);
+                        $('.audited_Organisation').val(data['audit_organization']);
+                        $('.address').val(data['address']);
+                        $('.product_service').val(data['product_service']);
+                        $('.iaf_nace').val(data['iaf_nacf']);
+                        $('.exclusion').val(data['exclusion']);
+                        //$('.audit_dateII').val(data['audit_dateII']);
+                        
+                        // Populate audit date - prefer CDC audit_date, with safe fallbacks for legacy/old data
+                        var $audit_date_value = "";
+                        var rawAuditDate = data['audit_date'];
+                        var rawAuditDateII = data['audit_dateII'];
+
+                        // Treat literal string "null" (from older saves) as empty
+                        if (typeof rawAuditDate === 'string' && rawAuditDate.trim().toLowerCase() === 'null') {
+                            rawAuditDate = '';
+                        }
+                        if (typeof rawAuditDateII === 'string' && rawAuditDateII.trim().toLowerCase() === 'null') {
+                            rawAuditDateII = '';
+                        }
+
+                        if (rawAuditDate && rawAuditDate !== "" && rawAuditDate !== null && rawAuditDate !== 'Invalid date') {
+                            // Try to parse as a single date; if that fails, keep the original string (for multi-date values)
+                            var _cdcAuditDate = moment(rawAuditDate);
+                            if (_cdcAuditDate.isValid()) {
+                                $audit_date_value = _cdcAuditDate.format('DD.MM.YYYY');
+                            } else {
+                                $audit_date_value = rawAuditDate;
+                            }
+                        } else if (rawAuditDateII && rawAuditDateII !== "" && rawAuditDateII !== null && rawAuditDateII !== 'Invalid date') {
+                            var _cdcAuditDateII = moment(rawAuditDateII);
+                            if (_cdcAuditDateII.isValid()) {
+                                $audit_date_value = _cdcAuditDateII.format('DD.MM.YYYY');
+                            } else {
+                                $audit_date_value = rawAuditDateII;
+                            }
+                        }
+                        $('.audit_date_CDC').val($audit_date_value);
+                        
+                        if (data['audit_dateII'] == "" || data['audit_dateII'] == null)
+                            $audit_dateII = "";
+                        else
+                            $audit_dateII = moment(data['audit_dateII']).format('DD.MM.YYYY');
+                        $('.audit_dateII').val($audit_dateII);
+                        $application_received_date = $audit_dateII;
+                        if (data['application_received_date'] && data['application_received_date'] !== "")
+                            $application_received_date = moment(data['application_received_date']).format('DD.MM.YYYY');
+                        $('.application_received_date').val($application_received_date);
+                        $('.audit_type').val(data['audit_type']);
+                        $('.covered_for').val(data['covered_for']);
+                        $('.accreditation').val(data['accreditation']);
+                        $('.lead_auditor').val(data['lead_auditor']);
+                        $('.technical_expert').val(data['technical_expert']);
+                        $('.auditors').val(data['auditors']);
+                        // Populate individual CDC member dropdowns
+                        $('.reviewer-1').val(data['reviewer_1']);
+                        $('.reviewer-2').val(data['reviewer_2']);
+                        $('.granted-by').val(data['granted_by']);
+                        $('.system_during').val(data['system_during']);
+                        $('.comments_if_any').val(data['comments_if_any']);
+                        $('.system_complaint').val(data['system_complainte']); // Database field has extra 'e', form field doesn't
+                        
+                        // Populate Assessment Date
+                        if (data['assDate'] == "" || data['assDate'] == null)
+                            $assDate = "";
+                        else
+                            $assDate = moment(data['assDate']).format('DD.MM.YYYY');
+                        $('.assDate').val($assDate);
+                        
+                        // Populate Audit Performance fields
+                        $('.ncval').val(data['ncval'] || '');
+                        $('.ofival').val(data['ofival'] || '');
+                        $('.oplus').val(data['oplusval'] || '');
+                        
+                        // Clear all checkboxes first
+                        $('.checkm1, .checkm2, .checkm3, .checkrev1, .checkrev2, .checkrev3, .check1, .check2, .check3').prop('checked', false);
+                        
+                        // Populate CDC Member 1 checkboxes (Audit processes satisfactorily completed)
+                        if (data['rev1_yes'] == 'Yes') {
+                            $('#checkrev1_yes').prop('checked', true);
+                        } else if (data['rev1_yes'] == 'No') {
+                            $('#checkrev1_no').prop('checked', true);
+                        }
+                        
+                        // Populate CDC Member 1 checkboxes (Complied as per Annex I)
+                        if (data['rev2_yes'] == 'Yes') {
+                            $('#checkrev2_yes').prop('checked', true);
+                        } else if (data['rev2_yes'] == 'No') {
+                            $('#checkrev2_no').prop('checked', true);
+                        } else if (data['rev2_yes'] == 'N.A.') {
+                            $('#checkrev2_na').prop('checked', true);
+                        }
+                        
+                        // Populate CDC Member 1 status checkboxes (Granted/Not-Granted)
+                        $('.checkm1[value = "' + data["review_1_granting"] + '"]').prop('checked', true);
+                        
+                        // Populate CDC Member 2 checkboxes
+                        if (data['yes1'] == 'Yes') {
+                            $('#check1_yes').prop('checked', true);
+                        } else if (data['yes1'] == 'No') {
+                            $('#check1_no').prop('checked', true);
+                        }
+                        if (data['yes2'] == 'Yes') {
+                            $('#check2_yes').prop('checked', true);
+                        } else if (data['yes2'] == 'No') {
+                            $('#check2_no').prop('checked', true);
+                        }
+                        if (data['yes3'] == 'Yes') {
+                            $('#check3_yes').prop('checked', true);
+                        } else if (data['yes3'] == 'No') {
+                            $('#check3_no').prop('checked', true);
+                        }
+                        
+                        // Populate CDC Member 2 comments
+                        $('.comments_if_any_2nd_review').val(data['comments_if_any_2nd_review'] || data['review_2_comment'] || '');
+                        
+                        // Populate CDC Member 2 status checkboxes (Granted/Not-Granted)
+                        $('.checkm2[value = "' + data["review_2_granting"] + '"]').prop('checked', true);
+                        
+                        // Populate CDC Member 3 checkboxes (Certification criteria have been met)
+                        if (data['rev3_yes'] == 'Yes') {
+                            $('#checkrev3_yes').prop('checked', true);
+                        } else if (data['rev3_yes'] == 'No') {
+                            $('#checkrev3_no').prop('checked', true);
+                        }
+                        
+                        // Populate CDC Member 3 status checkboxes (Granted/Not-Granted)
+                        $('.checkm3[value = "' + data["cdc_status"] + '"]').prop('checked', true);
+                        if ($('.checkm3[value = "' + data["cdc_status"] + '"]').prop('checked', true).val() != "") {
+                            $("input.checkm3").removeAttr("disabled");
+                        }
+                        
+                        $('.comments').val(data['comments']);
+                        
+                        if (data['Date'] == "" || data['Date'] == null)
+                            $Date = "";
+                        else
+                            $Date = moment(data['Date']).format('DD.MM.YYYY');
+                        $('.Date').val($Date);
+                        
+                        // Legacy fields for single FOR OFFICE USE section (backwards compatibility)
+                        $('.certificateNo').val(data['certificateNo']);
+                        $('.revCdc').val(data['revCdc']);
+                        if (data['revDatecdc'] == "" || data['revDatecdc'] == null)
+                            $revDatecdc = "";
+                        else
+                            $revDatecdc = moment(data['revDatecdc']).format('DD.MM.YYYY');
+                        $('.revDatecdc').val($revDatecdc);
+                        if (data['expiredate'] == "" || data['expiredate'] == null)
+                            $expiredate = "";
+                        else
+                            $expiredate = moment(data['expiredate']).format('DD.MM.YYYY');
+                        $('.expiredate').val($expiredate);
+                        if (data['periodicalaudit'] == "" || data['periodicalaudit'] == null)
+                            $periodicalaudit = "";
+                        else
+                            $periodicalaudit = moment(data['periodicalaudit']).format('DD.MM.YYYY');
+                        $('.periodicalaudit').val($periodicalaudit);
+                        $('.nextaudittype').val(data['next_audit_type'] || data['audit_type'] || '');
+                        $('.periodicalAuditcoment').val(data['periodical_audit_comment'] || data['comments'] || '');
+                        
+                        // CRITICAL FIX: For existing clients with multiple ISO standards, ensure sections are created for each ISO
+                        // Parse ISO standards from covered_for field to determine required number of sections
+                        var coveredFor = data['covered_for'] || '';
+                        var isoStandards = [];
+                        
+                        if (coveredFor && coveredFor.trim() !== '') {
+                            console.log('RC: Parsing ISO standards from covered_for:', coveredFor);
+                            
+                            // Use the same parsing logic as getIsoEntries function in cdcModal.php
+                            if (typeof getIsoEntries === 'function') {
+                                isoStandards = getIsoEntries(coveredFor);
+                            } else {
+                                // Fallback: simple comma-based split
+                                isoStandards = coveredFor.split(',').map(function(s) { return s.trim(); }).filter(function(s) { return s.length > 0; });
+                            }
+                            
+                            console.log('RC: Parsed ISO standards:', isoStandards, 'Count:', isoStandards.length);
+                        }
+                        
+                        // Populate FOR OFFICE USE section with office_use array data (response[7])
+                        if (response[7] && Array.isArray(response[7]) && response[7].length > 0) {
+                            console.log('RC: Populating office use sections from saved data:', response[7]);
+                            // Set flag to skip auto-population since we have saved data
+                            $('#cdcOfficeContainer').data('skipAutoPopulate', true);
+                            // Use the populateCdcOfficeUseSections function defined in cdcModal.php
+                            if (typeof populateCdcOfficeUseSections === 'function') {
+                                populateCdcOfficeUseSections(response[7]);
+                            }
+                        } else if (isoStandards.length > 1) {
+                            // CRITICAL FIX: If no saved office_use data but multiple ISO standards exist,
+                            // create sections for each ISO standard (same logic as new clients)
+                            console.log('RC: No saved office_use data but multiple ISO standards detected:', isoStandards.length);
+                            console.log('RC: Creating sections for each ISO standard:', isoStandards);
+                            
+                            if (typeof ensureCdcOfficeSections === 'function') {
+                                ensureCdcOfficeSections(isoStandards);
+                                
+                                // Label each section with its ISO standard
+                                var container = $('#cdcOfficeContainer');
+                                var sections = container.find('.CdcOffice');
+                                
+                                // Get the base certificate number from legacy data for auto-increment
+                                var baseCertificateNo = data['certificateNo'] || '';
+                                
+                                sections.each(function(index) {
+                                    if (index < isoStandards.length) {
+                                        var $section = $(this);
+                                        var isoLabel = isoStandards[index];
+                                        
+                                        $section.attr('data-iso-index', index);
+                                        $section.data('iso-index', index);
+                                        $section.find('.isoIndexField').val(index);
+                                        $section.find('.isoLabelField').val(isoLabel);
+                                        
+                                        // Show title with ISO label if multiple standards
+                                        var titleRow = $section.find('.cdc-office-title');
+                                        if (isoStandards.length > 1) {
+                                            titleRow.show();
+                                            titleRow.find('.cdc-office-iso-label').text(isoLabel);
+                                        } else {
+                                            titleRow.hide();
+                                        }
+                                        
+                                        // Auto-populate certificate number with increment for old clients
+                                        if (baseCertificateNo && baseCertificateNo.trim() !== '') {
+                                            var certNo = baseCertificateNo;
+                                            
+                                            if (index > 0) {
+                                                // For subsequent sections, increment the last digit(s)
+                                                var certNoStr = baseCertificateNo.toString();
+                                                var match = certNoStr.match(/^(.*)(\d+)$/);
+                                                
+                                                if (match) {
+                                                    var prefix = match[1];
+                                                    var number = parseInt(match[2], 10);
+                                                    var newNumber = number + index;
+                                                    
+                                                    // Preserve leading zeros
+                                                    var originalLength = match[2].length;
+                                                    var newNumberStr = newNumber.toString();
+                                                    while (newNumberStr.length < originalLength) {
+                                                        newNumberStr = '0' + newNumberStr;
+                                                    }
+                                                    
+                                                    certNo = prefix + newNumberStr;
+                                                    console.log('RC Old client: Auto-incremented certificate', index, ':', baseCertificateNo, '->', certNo);
+                                                }
+                                            }
+                                            
+                                            $section.find('.certificateNo').val(certNo);
+                                        }
+                                        
+                                        $section.show();
+                                        console.log('RC: Created and configured section', index, 'for ISO:', isoLabel);
+                                    }
+                                });
+                                
+                                $('#cdcOfficeContainer').show();
+                                console.log('RC: Created', sections.length, 'office use sections for existing client with multiple ISO standards');
+                            }
+                        }
+                        
+                        $('input[type="text"]').trigger('change');
+                        $('.address').trigger('change');
+                        $('.save_cdcPdf').hide();
+                        
+                        // For RC services, fetch the merged ISO list (CA+SA+RC) for decision blocks
+                        if (svcType === 'RC') {
+                            $.ajax({
+                                url: "getClientInfo.php",
+                                type: "GET",
+                                dataType: "json",
+                                data: {
+                                    cdccustomer_ID: customerId,
+                                    cdcservice_ID: serviceId
+                                },
+                                success: function(clientData) {
+                                    if (clientData && clientData[1] && clientData[1]['merged_iso_list']) {
+                                        window.rcMergedIsoList = clientData[1]['merged_iso_list'];
+                                        console.log('Edit CDC RC - Loaded merged ISO list:', window.rcMergedIsoList);
+                                    }
+                                },
+                                error: function() {
+                                    console.log('Edit CDC RC - Could not fetch merged ISO list');
+                                }
+                            });
+                        }
+                        
+                        $('#cdcModel').modal('show');
+                    },
+                    error: function (data, status, err)
+                    {
+                        alert(status);
+                    }
+                });
+            });
+
+            $(document).on('click', '.downloadCDCRC', function () {
+                console.log('=== RC CDC Download Clicked ===');
+                var crr_id = $(this).attr('data-crr');
+                var customer_id = $(this).attr('data-customer');
+                console.log('crr_id:', crr_id);
+                console.log('customer_id:', customer_id);
+                
+                if (!crr_id) {
+                    alert('Error: crr_id is missing!');
+                    console.error('Missing crr_id');
+                    return false;
+                }
+                
+                var url = 'cdcRecomendation.php';
+                var form = $('<form action="' + url + '" method="post" target="_blank" >' +
+                        '<input type="hidden" name="crr_id" value="' + crr_id + '" />' +
+                        '<input type="hidden" name="customer_Id" value="' + customer_id + '" />' +
+                        '</form>');
+                console.log('Form HTML:', form.html());
+                $('body').append(form);
+                form.submit();
+                console.log('Form submitted successfully');
+            });
+
+            $('.createRCCustomerSurvey').click(function () {
+                $('.survey-service-id').val($(this).attr('data-service'));
+                $('.survey-customer-id').val($(this).attr('data-customer'));
+                $('#customerSurvey').modal('show');
+            });
+
+            $('.editRCCustomerSurvey').click(function () {
+                //            alert($(this).attr('data-row-id'));
+                $.ajax({
+                    url: "contractDetails.php",
+                    type: "GET",
+                    dataType: "json",
+                    data: {
+                        survay_id: $(this).attr('data-row-id'),
+                        survay_service: $(this).attr('data-service'),
+                        //                    survay_customer: $(this).attr('data-customer'),
+                    },
+                    success: function (data)
+                    {
+                        //                    alert(data);                                            
+                        $('.auditorRating').empty();
+
+                        $('.survay-id').val(data[0]['survey_id']);
+                        $('.survey-service-id').val(data[0]['ca_serviceid']);
+                        $('.survey-customer-id').val(data[0]['customer_ca']);
+                        $('.auditOrg').val(data[0]['auditer_org']);
+                        $('.surveyDate').val(data[0]['survey_date']);
+                        $('.survayAuditDates').val(data[0]['audit_conducted_date']);
+                        $('.auditImparted').val(data[0]['survey_imparted']);
+                        $('.auditingQuality').val(data[0]['auditing_quality']);
+                        $('.auditingPercent').val(data[0]['auditing_percent']);
+                        $('.auditingResult').val(data[0]['auditing_result']);
+                        $('.partiallyRanking').val(data[0]['audit_ranking_good']);
+                        $('.notExcellentRanking').val(data[0]['audit_ranking_bad']);
+                        $('.auditorRanking').val(data[0]['individual_ranking']);
+                        $('.satisfactionRating').val(data[0]['mgmt_satisfaction']);
+                        $('.satisfactionPercent').val(data[0]['mgmt_percent']);
+                        $('.satisfactionResult').val(data[0]['mgmt_result']);
+                        $('.satisfactionRanking').val(data[0]['mgmt_ranking_good']);
+                        $('.notSatisfactionRanking').val(data[0]['mgmt_ranking_bad']);
+                        $('.survayFormNo').val(data[0]['mgmt_formno']);
+                        $('.survayRev').val(data[0]['mgmt_rev']);
+                        if (data[0]['mgmt_revdate'] == "" || data[0]['mgmt_revdate'] == null)
+                            $mgmt_revdate = "";
+                        else
+                            $mgmt_revdate = moment(data[0]['mgmt_revdate']).format('DD.MM.YYYY');
+                        $('.survayRevDate').val($mgmt_revdate);
+                        $('.survayIsue').val(data[0]['mgmt_isue']);
+                        if (data[0]['mgmt_isuedate'] == "" || data[0]['mgmt_isuedate'] == null)
+                            $mgmt_isuedate = "";
+                        else
+                            $mgmt_isuedate = moment(data[0]['mgmt_isuedate']).format('DD.MM.YYYY');
+                        $('.survayIsueDate').val($mgmt_isuedate);
+                        $('.initial-cert[value = "' + data[0]["initial_cert"] + '"]').prop('checked', true);
+                        //                    if (data[0]['initial_cert'] != "" && data[0]['initial_cert'] != null && data[0]['initial_cert'] == 'true') {
+                        //                        $("#initial-cert").prop("checked", true);
+                        //                    }
+                        //                    if (data[0]['re_cert'] != "" && data[0]['re_cert'] != null && data[0]['re_cert'] == 'true') {
+                        //                        $("#re-cert").prop("checked", true);
+                        //                    }
+                        //                    if (data[0]['extension'] != "" && data[0]['extension'] != null && data[0]['extension'] == 'true') {
+                        //                        $("#extension").prop("checked", true);
+                        //                    }
+                        //                    if (data[0]['audit_scope'] != "" && data[0]['audit_scope'] != null && data[0]['audit_scope'] == 'true') {
+                        //                        $("#audit_scope").prop("checked", true);
+                        //                    }
+                        //                    if (data[0]['audit_site'] != "" && data[0]['audit_site'] != null && data[0]['audit_site'] == 'true') {
+                        //                        $("#audit-site").prop("checked", true);
+                        //                    }
+                        //                    if (data[0]['surveillance'] != "" && data[0]['surveillance'] != null && data[0]['surveillance'] == 'true') {
+                        //                        $("#surveillance").prop("checked", true);
+                        //                    }
+
+                        for (var key in data[1]) {
+                            $('.auditorRating').append('<div class="row ">\n\
+                                                    <div class="col-xs-6 form-group float-label-control" style="padding-top: 12px">\n\
+                                                    <label>Lead Auditor/Auditor/Technical Expert Details</label>\n\
+                                                    <input type="text" class="leadAuditor" id="leadAuditor" name="leadAuditor" value="' + data[1][key]['lead_auditor'] + '" placeholder="Lead Auditor/Auditor/Technical Expert Details">\n\
+                                                    </div>\n\
+                                                    <div class="col-xs-3 form-group float-label-control" style="padding-top: 12px">\n\
+                                                    <label>Result</label>\n\
+                                                    <input type="text" class="leadResult" id="leadResult" name="leadResult" value="' + data[1][key]['result'] + '" placeholder="Result" > \n\
+                                                    </div>\n\
+                                                    <div class="col-xs-3 form-group float-label-control" style="padding-top: 12px">\n\
+                                                    <label>Action Recommended</label>\n\
+                                                    <select name="recommendedAction" class="form-control recommendedAction" id="recommendedAction" >\n\
+                                                    <option value="' + data[1][key]['action'] + '">' + data[1][key]['action'] + '</option>\n\
+                                                    <option value="Yes">Yes</option>\n\
+                                                    <option value="No">No</option>\n\
+                                                    </select>\n\
+                                                    </div>\n\
+                                                                            </div>');
+                        }
+                        $('input[type="text"]').trigger('change');
+                        //                    $('textarea').trigger('change');
+                        $('.addCustomerSurveyPdf').hide();
+                        $('#customerSurvey').modal('show');
+                    },
+                    error: function (data, status, err)
+                    {
+                        alert(status);
+                    }
+                });
+            });
+
+            $('.downloadRCCustomersatisfaction').click(function () {
+                //alert($(this).attr('data-cf-id'));
+                var survey_id = $(this).attr('data-surveyid');
+                //alert(control2_id);
+                var customer = $(this).attr('data-customer');
+                var url = 'CustomerSatisfaction.php';
+                var form = $('<form action="' + url + '" method="post" target="_blank" >' +
+                        '<input type="hidden" name="survey_id" value="' + survey_id + '" />' +
+                        '<input type="hidden" name="customer" value="' + customer + '" />' +
+                        '</form>');
+                $('body').append(form);
+                form.submit();
+            });
+
+            $('.createControlFormat1').click(function () {
+                $('.control-format-service').val($(this).attr('data-service'));
+                $('.control-format-customer').val($(this).attr('data-customer'));
+                
+                var customerId = $(this).attr('data-customer');
+                window.currentControlFormatCustomerId = customerId; // Store for modal event
+                
+                $.ajax({
+                    url: "getClientInfo.php",
+                    type: "GET",
+                    dataType: "json",
+                    data: {
+                        customerid: customerId,
+                    },
+                    success: function (data)
+                    {
+                        $('.controlFormat1ClientName').val(data['customer_name']);
+                        $('.controlFormat1Address').val(data['address']);
+                        window.currentControlFormatData = data; // Store for modal event
+
+                        $('#controlFormat1').modal('show');
+                    },
+                    error: function (data, status, err)
+                    {
+                        alert(status);
+                    }
+                });
+            });
+
+            $('.createRCControlFormat1').click(function () {
+                $('.control-format-service').val($(this).attr('data-service'));
+                $('.control-format-customer').val($(this).attr('data-customer'));
+                
+                var customerId = $(this).attr('data-customer');
+                window.currentControlFormatCustomerId = customerId; // Store for modal event
+                
+                $.ajax({
+                    url: "getClientInfo.php",
+                    type: "GET",
+                    dataType: "json",
+                    data: {
+                        customerid: customerId,
+                    },
+                    success: function (data)
+                    {
+                        $('.controlFormat1ClientName').val(data['customer_name']);
+                        $('.controlFormat1Address').val(data['address']);
+                        window.currentControlFormatData = data; // Store for modal event
+
+                        $('#controlFormat1').modal('show');
+                    },
+                    error: function (data, status, err)
+                    {
+                        alert(status);
+                    }
+                });
+            });
+            
+            // Fetch certificates AFTER modal is shown
+            $('#controlFormat1').on('shown.bs.modal', function() {
+                if (!window.currentControlFormatCustomerId) return;
+                
+                var customerId = window.currentControlFormatCustomerId;
+                var data = window.currentControlFormatData || {};
+                
+                console.log('Control Format 1 Modal Shown - Fetching certificates for:', customerId);
+                console.log('Container exists:', $('#certificateNumbersContainer').length);
+                
+                $.ajax({
+                    url: "getCACertificateNumber.php",
+                    type: "GET",
+                    dataType: "json",
+                    data: {
+                        customerId: customerId
+                    },
+                    success: function(certData) {
+                        console.log('Certificate data received:', certData);
+                        console.log('certData.success:', certData.success);
+                        console.log('certData.count:', certData.count);
+                        console.log('certData.certificates:', certData.certificates);
+                        
+                        $('#certificateNumbersContainer').empty();
+                        
+                        if (certData.success && certData.count > 0 && certData.certificates) {
+                            console.log('✓ Creating', certData.count, 'certificate fields');
+                            certData.certificates.forEach(function(cert, index) {
+                                console.log('Adding certificate', (index + 1), ':', cert.certificate_no);
+                                var certField = '<div class="form-group float-label-control" style="margin-bottom: 10px;">' +
+                                    '<label>Certificate No. ' + (certData.count > 1 ? (index + 1) : '') + ':</label>' +
+                                    '<input type="text" class="controlFormat1RefNo" name="controlFormat1RefNo[]" ' +
+                                    'placeholder="Certificate No.:" value="' + (cert.certificate_no || '') + '" required>' +
+                                    '</div>';
+                                $('#certificateNumbersContainer').append(certField);
+                            });
+                        } else {
+                            console.log('No certificates found or API failed, using fallback');
+                            var certNo = (data && data['certification_no']) ? data['certification_no'] : '';
+                            var certField = '<div class="form-group float-label-control">' +
+                                '<label>Certificate No.:</label>' +
+                                '<input type="text" class="controlFormat1RefNo" name="controlFormat1RefNo" ' +
+                                'placeholder="Certificate No.:" value="' + certNo + '" required>' +
+                                '</div>';
+                            $('#certificateNumbersContainer').append(certField);
+                        }
+                        
+                        // Trigger change event to activate float labels
+                        setTimeout(function() {
+                            $('input[type="text"]').trigger('change');
+                        }, 100);
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error fetching certificates:', status, error);
+                        console.error('Response text:', xhr.responseText);
+                        $('#certificateNumbersContainer').empty();
+                        var certField = '<div class="form-group float-label-control">' +
+                            '<label>Certificate No.:</label>' +
+                            '<input type="text" class="controlFormat1RefNo" name="controlFormat1RefNo" ' +
+                            'placeholder="Certificate No.:" value="" required>' +
+                            '</div>';
+                        $('#certificateNumbersContainer').append(certField);
+                        $('input[type="text"]').trigger('change');
+                    }
+                });
+            });
+
+            $('.editControlFormat1').click(function () {
+                var customerId = $(this).attr('data-customer');
+                
+                $.ajax({
+                    url: "contractDetails.php",
+                    type: "GET",
+                    dataType: "json",
+                    data: {
+                        control_Id: $(this).attr('data-row-id'),
+                        serviceId: $(this).attr('data-service'),
+                    },
+                    success: function (data)
+                    {
+                        $('.control-format-id').val(data[0]['control_id']);
+                        $('.control-format-customer').val(data[0]['customer_id']);
+                        $('.control-format-service').val(data[0]['caservice_id']);
+                        $('.controlFormat1ClientName').val(data[0]['control_client']);
+                        $('.controlFormat1Address').val(data[0]['control_address']);
+                        $('.controlFormat1CertDate').val(data[0]['control_date']);
+                        
+                        // Store for modal event
+                        window.currentControlFormatCustomerId = customerId || data[0]['customer_id'];
+                        window.currentControlFormatData = data[0];
+                        
+                        $('#controlFormat1').modal('show');
+                    },
+                    error: function (data, status, err)
+                    {
+                        alert(status);
+                    }
+                });
+            });
+
+            $('.editRCControlFormat1').click(function () {
+                var customerId = $(this).attr('data-customer');
+                
+                $.ajax({
+                    url: "contractDetails.php",
+                    type: "GET",
+                    dataType: "json",
+                    data: {
+                        control_Id: $(this).attr('data-row-id'),
+                        serviceId: $(this).attr('data-service'),
+                    },
+                    success: function (data)
+                    {
+                        //                    alert(data);
+                        $('.control-format-id').val(data[0]['control_id']);
+                        $('.control-format-customer').val(data[0]['customer_id']);
+                        $('.control-format-service').val(data[0]['caservice_id']);
+                        $('.controlFormat1ClientName').val(data[0]['control_client']);
+                        $('.controlFormat1Address').val(data[0]['control_address']);
+                        $('.controlFormat1CertDate').val(data[0]['control_date']);
+                        
+                        // Fetch certificate numbers for this customer
+                        var actualCustomerId = customerId || data[0]['customer_id'];
+                        $.ajax({
+                            url: "getCACertificateNumber.php",
+                            type: "GET",
+                            dataType: "json",
+                            data: {
+                                customerId: actualCustomerId
+                            },
+                            success: function(certData) {
+                                $('#certificateNumbersContainer').empty();
+                                
+                                if (certData.success && certData.count > 0) {
+                                    // Create a field for each certificate
+                                    certData.certificates.forEach(function(cert, index) {
+                                        var certField = '<div class="form-group float-label-control" style="margin-bottom: 10px;">' +
+                                            '<label>Certificate No. ' + (index + 1) + ':</label>' +
+                                            '<input type="text" class="controlFormat1RefNo" name="controlFormat1RefNo[]" ' +
+                                            'placeholder="Certificate No.:" value="' + cert.certificate_no + '" required>' +
+                                            '</div>';
+                                        $('#certificateNumbersContainer').append(certField);
+                                    });
+                                } else {
+                                    // Fallback: Check if control_ref_no has comma-separated values
+                                    var certNo = data[0]['control_ref_no'] || '';
+                                    if (certNo && certNo.indexOf(',') !== -1) {
+                                        // Multiple certificates separated by comma
+                                        var certNumbers = certNo.split(',');
+                                        certNumbers.forEach(function(cert, index) {
+                                            cert = cert.trim();
+                                            if (cert) {
+                                                var certField = '<div class="form-group float-label-control" style="margin-bottom: 10px;">' +
+                                                    '<label>Certificate No. ' + (index + 1) + ':</label>' +
+                                                    '<input type="text" class="controlFormat1RefNo" name="controlFormat1RefNo[]" ' +
+                                                    'placeholder="Certificate No.:" value="' + cert + '" required>' +
+                                                    '</div>';
+                                                $('#certificateNumbersContainer').append(certField);
+                                            }
+                                        });
+                                    } else {
+                                        // Single certificate
+                                        var certField = '<div class="form-group float-label-control">' +
+                                            '<label>Certificate No.:</label>' +
+                                            '<input type="text" class="controlFormat1RefNo" name="controlFormat1RefNo" ' +
+                                            'placeholder="Certificate No.:" value="' + certNo + '" required>' +
+                                            '</div>';
+                                        $('#certificateNumbersContainer').append(certField);
+                                    }
+                                }
+                                
+                                $('input[type="text"]').trigger('change');
+                            },
+                            error: function() {
+                                // Fallback to single field on error
+                                $('#certificateNumbersContainer').empty();
+                                var certField = '<div class="form-group float-label-control">' +
+                                    '<label>Certificate No.:</label>' +
+                                    '<input type="text" class="controlFormat1RefNo" name="controlFormat1RefNo" ' +
+                                    'placeholder="Certificate No.:" value="' + (data[0]['control_ref_no'] || '') + '" required>' +
+                                    '</div>';
+                                $('#certificateNumbersContainer').append(certField);
+                                $('input[type="text"]').trigger('change');
+                            }
+                        });
+
+                        $('.editdiv').empty();
+                        for (var key in data[1]) {
+                            var srno = data[1][key]['control_sr'];
+                            if (srno != null && srno != "" && srno == 1) {
+                                $('.editdiv').append('<div class="row" ><div class="col-sm-12"><strong>' + data[1][key]['control_title'] + '</strong></div></div>');
+                            }
+
+                            $('.editdiv').append('<div class="row" >\n\
+                                    <div class="col-sm-12">\n\
+                                        <span>' + data[1][key]['control_question'] + '</span>\n\
+                                    </div>\n\
+                                    <input type="hidden" class="hiddenQuestion" name="hiddenQuestion" value="' + data[1][key]['control_question'] + '">\n\
+                                    <input type="hidden" class="hiddensrno" name="hiddensrno" value="' + data[1][key]['control_sr'] + '">\n\
+                                    <input type="hidden" class="hiddentitle" name="hiddentitle" value="' + data[1][key]['control_title'] + '">\n\
+                                </div>\n\
+                                <div class="row" style="padding-top: 12px" >\n\
+                                    <div class="col-sm-3 form-group float-label-control">\n\
+                                        <label>Comments</label>\n\
+                                        <input type="text" class="controlFormat1Comment" id="controlFormat1Comment" name="controlFormat1Comment" value="' + data[1][key]['comments'] + '" placeholder="Comments">\n\
+                                    </div>\n\
+                                    <div class="col-sm-3 form-group float-label-control">\n\
+                                        <label>Risk, if any</label>\n\
+                                        <input type="text" class="controlFormat1Risk" id="controlFormat1Risk" name="controlFormat1Risk" value="' + data[1][key]['risks'] + '" placeholder="Risk, if any">\n\
+                                    </div>\n\
+                                    <div class="col-sm-3 form-group float-label-control">\n\
+                                        <label>Degree of Risk</label>\n\
+                                        <input type="text" class="controlFormat1RiskDegree" id="controlFormat1RiskDegree" name="controlFormat1RiskDegree" value="' + data[1][key]['risk_degree'] + '" placeholder="Degree of Risk">\n\
+                                    </div>\n\
+                                    <div class="col-sm-3 form-group float-label-control">\n\
+                                        <label>Controls</label>\n\
+                                        <input type="text" class="controlFormat1Controls" id="controlFormat1Controls" name="controlFormat1Controls" value="' + data[1][key]['controls'] + '" placeholder="Controls">\n\
+                                    </div>\n\
+                                                                            </div>');
+                        }
+                        $('input[type="text"]').trigger('change');
+                        //                    $('textarea').trigger('change');
+                        $('.addControlFormat1Pdf').hide();
+                        $('#controlFormat1').modal('show');
+                    },
+                    error: function (data, status, err)
+                    {
+                        alert(status);
+                    }
+                });
+            });
+
+            $('.downloadRCControlFormat1').click(function () {
+                //alert($(this).attr('data-cf-id'));
+                var control_id = $(this).attr('data-cfi-id');
+                //alert(control2_id);
+                var customer = $(this).attr('data-customer');
+                var url = 'ControlFormat-1.php';
+                var form = $('<form action="' + url + '" method="post" target="_blank" >' +
+                        '<input type="hidden" name="control_id" value="' + control_id + '" />' +
+                        '<input type="hidden" name="customer" value="' + customer + '" />' +
+                        '</form>');
+                $('body').append(form);
+                form.submit();
+            });
+
+            $('.createControlFormat2').click(function () {
+                $('.control-format2-service').val($(this).attr('data-service'));
+                $('.control-format2-customer').val($(this).attr('data-customer'));
+                
+                var customerId = $(this).attr('data-customer');
+                window.currentControlFormat2CustomerId = customerId; // Store for modal event
+                
+                $.ajax({
+                    url: "getClientInfo.php",
+                    type: "GET",
+                    dataType: "json",
+                    data: {
+                        customerid: customerId,
+                    },
+                    success: function (data)
+                    {
+                        $('.controlFormat2ClientName').val(data['customer_name']);
+                        $('.controlFormat2Address').val(data['address']);
+                        window.currentControlFormat2Data = data; // Store for modal event
+
+                        $('#controlFormat2').modal('show');
+                        $('.updateControlFormat2').hide();
+                    },
+                    error: function (data, status, err)
+                    {
+                        alert(status);
+                    }
+                });
+            });
+
+            $('.createRCControlFormat2').click(function () {
+                $('.control-format2-service').val($(this).attr('data-service'));
+                $('.control-format2-customer').val($(this).attr('data-customer'));
+                
+                var actualCustomerId = $(this).attr('data-customer');
+                window.currentControlFormat2CustomerId = actualCustomerId; // Store for modal event
+
+                $.ajax({
+                    url: "getClientInfo.php",
+                    type: "GET",
+                    dataType: "json",
+                    data: {
+                        customerid: actualCustomerId,
+                    },
+                    success: function (data)
+                    {
+                        $('.controlFormat2ClientName').val(data['customer_name']);
+                        $('.controlFormat2Address').val(data['address']);
+                        window.currentControlFormat2Data = data; // Store for modal event
+
+                        $('#controlFormat2').modal('show');
+                        $('.updateControlFormat2').hide();
+                    },
+                    error: function (data, status, err)
+                    {
+                        alert(status);
+                    }
+                });
+            });
+
+            $('.editControlFormat2').click(function () {
+                var customerId = $(this).attr('data-customer');
+                
+                $.ajax({
+                    url: "contractDetails.php",
+                    type: "GET",
+                    dataType: "json",
+                    data: {
+                        control2_Id: $(this).attr('data-notification'),
+                        serviceId: $(this).attr('data-service'),
+                    },
+                    success: function (data)
+                    {
+                        $('.control-format2-id').val(data[0]['control2_id']);
+                        $('.control-format2-customer').val(data[0]['customer_id']);
+                        $('.control-format2-service').val(data[0]['caservice_id']);
+                        $('.controlFormat2ClientName').val(data[0]['control2_client']);
+                        $('.controlFormat2Address').val(data[0]['control2_address']);
+                        $('.controlFormat2CertDate').val(data[0]['control2_date']);
+                        
+                        // Store for modal event
+                        window.currentControlFormat2CustomerId = customerId || data[0]['customer_id'];
+                        window.currentControlFormat2Data = data[0];
+                        
+                        $('#controlFormat2').modal('show');
+                        $('.updateControlFormat2').show();
+                    },
+                    error: function (data, status, err)
+                    {
+                        alert(status);
+                    }
+                });
+            });
+            
+            // Fetch certificates AFTER Control Format 2 modal is shown
+            $('#controlFormat2').on('shown.bs.modal', function() {
+                if (!window.currentControlFormat2CustomerId) return;
+                
+                var customerId = window.currentControlFormat2CustomerId;
+                var data = window.currentControlFormat2Data || {};
+                
+                console.log('Control Format 2 Modal Shown - Fetching certificates for:', customerId);
+                console.log('Container2 exists:', $('#certificateNumbersContainer2').length);
+                
+                $.ajax({
+                    url: "getCACertificateNumber.php",
+                    type: "GET",
+                    data: {
+                        customerId: customerId
+                    },
+                    success: function(response) {
+                        console.log('Control Format 2: Raw response:', response);
+                        console.log('Control Format 2: Response type:', typeof response);
+                        
+                        // Parse if string
+                        var certData = typeof response === 'string' ? JSON.parse(response) : response;
+                        
+                        console.log('Control Format 2: Certificate data received:', certData);
+                        console.log('Control Format 2: certData.success:', certData.success);
+                        console.log('Control Format 2: certData.count:', certData.count);
+                        console.log('Control Format 2: certData.certificates:', certData.certificates);
+                        $('#certificateNumbersContainer2').empty();
+                        
+                        if (certData.success && certData.count > 0) {
+                            console.log('Control Format 2: ✓ Creating', certData.count, 'certificate fields');
+                            certData.certificates.forEach(function(cert, index) {
+                                console.log('Adding certificate', (index + 1), ':', cert.certificate_no);
+                                var certField = '<div class="form-group float-label-control" style="margin-bottom: 10px;">' +
+                                    '<label>Certificate No. ' + (certData.count > 1 ? (index + 1) : '') + ':</label>' +
+                                    '<input type="text" class="controlFormat2RefNo" name="controlFormat2RefNo[]" ' +
+                                    'placeholder="Certificate No.:" value="' + cert.certificate_no + '" required>' +
+                                    '</div>';
+                                $('#certificateNumbersContainer2').append(certField);
+                            });
+                        } else {
+                            console.log('Control Format 2: No certificates found, using fallback');
+                            var certNo = data['certification_no'] || '';
+                            var certField = '<div class="form-group float-label-control">' +
+                                '<label>Certificate No.:</label>' +
+                                '<input type="text" class="controlFormat2RefNo" name="controlFormat2RefNo" ' +
+                                'placeholder="Certificate No.:" value="' + certNo + '" required>' +
+                                '</div>';
+                            $('#certificateNumbersContainer2').append(certField);
+                        }
+                        
+                        $('input[type="text"]').trigger('change');
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Control Format 2: Error fetching certificates:', status, error);
+                        $('#certificateNumbersContainer2').empty();
+                        var certField = '<div class="form-group float-label-control">' +
+                            '<label>Certificate No.:</label>' +
+                            '<input type="text" class="controlFormat2RefNo" name="controlFormat2RefNo" ' +
+                            'placeholder="Certificate No.:" value="" required>' +
+                            '</div>';
+                        $('#certificateNumbersContainer2').append(certField);
+                        $('input[type="text"]').trigger('change');
+                    }
+                });
+            });
+
+            $('.editRCControlFormat2').click(function () {
+
+                $.ajax({
+                    url: "contractDetails.php",
+                    type: "GET",
+                    dataType: "json",
+                    data: {
+                        control2_id: $(this).attr('data-notification'),
+                        service2_Id: $(this).attr('data-service')
+                    },
+                    success: function (data)
+                    {
+                        //                    alert(data[0]['control_id']);
+                        $('.editControl2').empty();
+                        $('.controlFormat2ClientName').val(data[0]['control2_client']);
+                        $('.controlFormat2RefNo').val(data[0]['control2_ref_no']);
+                        $('.controlFormat2Address').val(data[0]['control2_address']);
+                        if (data['control2_date'] == "" || data['control2_date'] == null)
+                            $control2_date = "";
+                        else
+                            $control2_date = moment(data['control2_date']).format('DD.MM.YYYY');
+                        $('.controlFormat2CertDate').val($control2_date);
+                        $('.control-format2-service').val(data[0]['caservice_id']);
+                        $('.control-format2-customer').val(data[0]['customer_id']);
+                        $('.control-format2-id').val(data[0]['control2_id']);
+
+                        for (var key in data[1]) {
+                            var srnum = data[1][key]['control2_sr'];
+                            if (srnum != null && srnum != "" && srnum == 1) {
+                                $('.editControl2').append('<div class="row" ><div class="col-sm-12"><strong>' + data[1][key]['control2_title'] + '</strong></div></div>');
+                            }
+
+                            $('.editControl2').append('<div class="row" >\n\
+                                    <div class="col-sm-12">\n\
+                                        <span>' + data[1][key]['control2_question'] + '</span>\n\
+                                </div>\n\
+                                    <input type="hidden" class="hiddenQuestion2" name="hiddenQuestion2" value="' + data[1][key]['control2_question'] + '">\n\
+                                    <input type="hidden" class="hiddensrno2" name="hiddensrno2" value="' + data[1][key]['control2_sr'] + '">\n\
+                                    <input type="hidden" class="hiddentitle2" name="hiddentitle2" value="' + data[1][key]['control2_title'] + '">\n\
+                                    <input type="hidden" class="controlidhidden" name="controlidhidden" value="' + data[1][key]['control_format2_id'] + '">\n\
+                                        </div>\n\
+                                <div class="row" style="padding-top: 12px" >\n\
+                                    <div class="col-sm-3 form-group float-label-control">\n\
+                                        <label>Comments</label>\n\
+                                        <input type="text" class="controlFormat2Comment" id="controlFormat2Comment" name="controlFormat2Comment" placeholder="Comments" value="' + data[1][key]['comments2'] + '">\n\
+                                    </div>\n\
+                                    <div class="col-sm-3 form-group float-label-control">\n\
+                                        <label>Risk, if any</label>\n\
+                                        <input type="text" class="controlFormat2Risk" id="controlFormat2Risk" name="controlFormat2Risk" placeholder="controlFormat2Risk, if any" value="' + data[1][key]['risks2'] + '">\n\
+                                    </div>\n\
+                                    <div class="col-sm-3 form-group float-label-control">\n\
+                                        <label>Degree of Risk</label>\n\
+                                        <input type="text" class="controlFormat2RiskDegree" id="controlFormat2RiskDegree" name="controlFormat2RiskDegree" placeholder="Degree of Risk" value="' + data[1][key]['risk_degree2'] + '">\n\
+                                    </div>\n\
+                                    <div class="col-sm-3 form-group float-label-control">\n\
+                                        <label>Controls</label>\n\
+                                        <input type="text" class="ControlsEdit" id="controlFormat2Controls" name="controlFormat2Controls" placeholder="controlFormat2Controls" value="' + data[1][key]['controls2'] + '">\n\
+                                    </div>\n\
+                                                                            </div>');
+                        }
+                        $('input[type="text"]').trigger('change');
+                        //                    $('textarea').trigger('change');
+                        $('.pdfControlFormat2').hide();
+                        $('#controlFormat2').modal('show');
+                        $('.addControlFormat2').hide();
+                    },
+                    error: function (data, status, err)
+                    {
+                        alert(status);
+                    }
+                });
+            });
+
+            $('.downloadRCControlFormat2').click(function () {
+                //alert($(this).attr('data-cf-id'));
+                var control2_id = $(this).attr('data-cf-id');
+                //alert(control2_id);
+                var customer = $(this).attr('data-customer');
+                var url = 'ControlFormat-2.php';
+                var form = $('<form action="' + url + '" method="post" target="_blank" >' +
+                        '<input type="hidden" name="control2_id" value="' + control2_id + '" />' +
+                        '<input type="hidden" name="customer" value="' + customer + '" />' +
+                        '</form>');
+                $('body').append(form);
+                form.submit();
+            });
+
+            //code by Appp for SERVICE TYPE –SA-II information updationform     
+            $('.updateSaii').change(function (e) {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                // alert(id);
+                var formData = new FormData();
+                formData.append('file', $('.input-saii-form' + service)[0].files[0]);
+                formData.append('dataid', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+
+                $.ajax({
+                    url: 'serviceTypeSAii.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        location.reload(true);
+                    }
+                });
+            });
+
+            $('.updateSigned').change(function (e) {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                //alert(service);
+                var formData = new FormData();
+                formData.append('file', $('.input-signed-form' + service)[0].files[0]);
+                formData.append('dataid', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+                $.ajax({
+                    url: 'serviceTypeSAii.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        location.reload(true);
+                    }
+                });
+            });
+
+            $('.updateSignedCopy').change(function (e) {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                //alert(service);
+                var formData = new FormData();
+                formData.append('file', $('.input-signedcopy-form' + service)[0].files[0]);
+                formData.append('dataid', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+                $.ajax({
+                    url: 'serviceTypeSAii.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        location.reload(true);
+                    }
+                });
+            });
+
+            $('.updateAuditReport').change(function (e) {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                //alert(service);
+                var formData = new FormData();
+                formData.append('file', $('.input-auditreport-form' + service)[0].files[0]);
+                formData.append('dataid', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+                $.ajax({
+                    url: 'serviceTypeSAii.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        location.reload(true);
+                    }
+                });
+            });
+
+            $('.auditornotessaii').change(function (e) {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                //alert(service);
+                var formData = new FormData();
+                formData.append('file', $('.input-auditor-notes-saii' + service)[0].files[0]);
+                formData.append('dataid', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+                $.ajax({
+                    url: 'serviceTypeSAii.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        location.reload(true);
+                    }
+                });
+            });
+
+            $('.updateEvidences').change(function (e) {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                //alert(service);
+                var formData = new FormData();
+                formData.append('file', $('.input-evidences-form' + service)[0].files[0]);
+                formData.append('dataid', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+                $.ajax({
+                    url: 'serviceTypeSAii.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        location.reload(true);
+                    }
+                });
+            });
+
+            $('.updateCertificatePrint').change(function (e) {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                //alert(service);
+                var formData = new FormData();
+                formData.append('file', $('.input-certificate-print-form' + service)[0].files[0]);
+                formData.append('dataid', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+                $.ajax({
+                    url: 'serviceTypeSAii.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        location.reload(true);
+                    }
+                });
+            });
+
+            $('.updateCustomerReview').change(function (e) {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                //alert(service);
+                var formData = new FormData();
+                formData.append('file', $('.input-customerreview-form' + service)[0].files[0]);
+                formData.append('dataid', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+                $.ajax({
+                    url: 'serviceTypeSAii.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        location.reload(true);
+                    }
+                });
+            });
+
+            $('.editStageScheduleSii').click(function () {
+                $('.schedule-service-id-edit').val($(this).attr('data-service'));
+                $('.schedule-customer-id-edit').val($(this).attr('data-customer'));
+                $('.schedule-audit-id-edit').val($(this).attr('data-row-id'));
+                $.ajax({
+                    url: "contractDetails.php",
+                    type: "GET",
+                    dataType: "json",
+                    data: {
+                        scheduleId: $(this).attr('data-row-id'),
+                        serviceID: $(this).attr('data-service'),
+                    },
+                    success: function (data)
+                    {
+                        //                    alert(data);
+                        $('.scheduleClientNameEdit').val(data[0]['client_name']);
+                        $('.scheduleRefNoEdit').val(data[0]['ref_no']);
+                        $('.scheduleAddressEdit').val(data[0]['schedule_address']);
+                        $('.scheduleContactPersonEdit').val(data[0]['schedule_contact_person']);
+                        $('.scheduleScopeEdit').val(data[0]['schedule_scope']);
+                        $('.scheduleAppStandardEdit').val(data[0]['schedule_app_standard']);
+                        $('.scheduleIAFcodeEdit').val(data[0]['schedule_aifcode']);
+                        $('.scheduleAuditTypeEdit').val(data[0]['schedule_audit_type']);
+                        $('.scheduleMandaysEdit').val(data[0]['schedule_mandays']);
+                        if (data[0]['schedule_audit_date'] == "" || data[0]['schedule_audit_date'] == null)
+                            $schedule_audit_date = "";
+                        else
+                            $schedule_audit_date = moment(data[0]['schedule_audit_date']).format('DD.MM.YYYY');
+                        $('.scheduleAuditDateEdit').val($schedule_audit_date);
+                        $('.scheduleAuditorEdit').val(data[0]['schedule_auditors']);
+                        $('.editstageiFormNo').val(data[0]['stage_i_form']);
+                        $('.editstageiRev').val(data[0]['stage_i_rev']);
+                        if (data[0]['stage_i_date'] == "" || data[0]['stage_i_date'] == null)
+                            $stage_i_date = "";
+                        else
+                            $stage_i_date = moment(data[0]['stage_i_date']).format('DD.MM.YYYY');
+                        $('.editstageiRevDate').val($stage_i_date);
+                        $('.editstageiIsue').val(data[0]['stage_i_isue']);
+                        if (data[0]['stage_i_isuedate'] == "" || data[0]['stage_i_isuedate'] == null)
+                            $stage_i_isuedate = "";
+                        else
+                            $stage_i_isuedate = moment(data[0]['stage_i_isuedate']).format('DD.MM.YYYY');
+                        $('.editstageiIsueDate').val($stage_i_isuedate);
+                        $('.editSchedules').empty();
+                        for (var key in data[1]) {
+                            if (data[1][key]['schedule_dates'] == "" || data[1][key]['schedule_dates'] == null)
+                                $schedule_dates = "";
+                            else
+                                $schedule_dates = moment(data[1][key]['schedule_dates']).format('DD.MM.YYYY');
+                            $('.editSchedules').append(' <div class="row " style=""> \n\
+                                                        <div class="col-sm-12 form-group float-label-control">\n\
+                                                        <label>Activity:</label>\n\
+                                                        <textarea type="text" data-row-id="" class="scheduleActivityEdit" id="scheduleActivityEdit" name="scheduleActivityEdit" value="" placeholder="Activity">' + data[1][key]['schedule_activity'] + '</textarea>\n\
+                                                        </div>\n\
+                                                        </div>\n\
+                                                        <div class="row " style=""> \n\
+                                                        <div class="col-sm-4 form-group float-label-control">\n\
+                                                        <label>Date(s):</label>\n\
+                                                        <input type="text" data-row-id="" class="scheduleDateEdit" name="scheduleDateEdit" id="scheduleDateEdit" value="' + $schedule_dates + '" placeholder="Date"/>\n\
+                                                        </div>\n\
+                                                        <div class="col-sm-4 form-group float-label-control">\n\
+                                                        <label>Time:</label>\n\
+                                                        <input type="time" data-row-id="" class="scheduleTimeEdit" name="scheduleTimeEdit" value="' + data[1][key]['schedule_time'] + '" placeholder="Time"/>\n\
+                                                        </div>\n\
+                                                        <div class="col-sm-4 form-group float-label-control">\n\
+                                                        <label>Auditor:</label>  \n\
+                                                        <input type="text" data-row-id="" class="scheduleAuditorEditCs" id="scheduleAuditorEditCs" name="scheduleAuditorEditCs" value="' + data[1][key]['schedule_auditors'] + '" placeholder="Auditor">                         \n\
+                                                        </div>\n\
+                                                                            </div>');
+                        }
+
+                        $('input[type="text"]').trigger('change');
+                        //                    $('textarea').trigger('change');
+
+                        $('#scheduleStageIEdit').modal('show');
+                    },
+                    error: function (data, status, err)
+                    {
+                        alert(status);
+                    }
+                });
+            });
+
+            $('.downloadScheduleStageOneSii').click(function () {
+                var auditscheduleid = $(this).attr('data-schedulei');
+                var service = $(this).attr('data-caservice-id');
+                var customer = $(this).attr('data-customer');
+                var url = 'Servelance2.php';
+                var form = $('<form action="' + url + '" method="post" target="_blank" >' +
+                        '<input type="hidden" name="auditnotiid" value="' + auditscheduleid + '" />' +
+                        '<input type="hidden" name="serviceid" value="' + service + '" />' +
+                        '<input type="hidden" name="customerid" value="' + customer + '" />' +
+                        '</form>');
+                $('body').append(form);
+                form.submit();
+            });
+
+            $('.downloadAnnexIISii').click(function () {
+                //alert($(this).attr('data-stage-ii'));
+                var stage_ii_id = $(this).attr('data-stage-ii');
+                //alert(stage_ii_id);
+                var customer = $(this).attr('data-customer');
+                var url = 'F7.32Anex-2.php';
+                var form = $('<form action="' + url + '" method="post" target="_blank" >' +
+                        '<input type="hidden" name="stage_ii_id" value="' + stage_ii_id + '" />' +
+                        '<input type="hidden" name="customer" value="' + customer + '" />' +
+                        '</form>');
+                $('body').append(form);
+                form.submit();
+            });
+
+            $(document).off('click.customerAccount', '.cdcReportSii');
+            $(document).on('click.customerAccount', '.cdcReportSii', function () {
+                $('.service_Id').val($(this).attr('data-service'));
+                $('.customer_Id').val($(this).attr('data-customer'));
+                $('.uni_serviceid').val($(this).attr('data-id'));
+                $('#cdcModel').modal('show');
+                $('.update_cdc').hide();
+            });
+
+            $(document).on('click', '.downloadCdcSii', function () {
+                console.log('=== SA-II CDC Download Clicked ===');
+                var crr_id = $(this).attr('data-crr');
+                var customer_id = $(this).attr('data-customer');
+                console.log('crr_id:', crr_id);
+                console.log('customer_id:', customer_id);
+                
+                if (!crr_id) {
+                    alert('Error: crr_id is missing!');
+                    console.error('Missing crr_id');
+                    return false;
+                }
+                
+                var url = 'cdcRecomendation.php';
+                var form = $('<form action="' + url + '" method="post" target="_blank" >' +
+                        '<input type="hidden" name="crr_id" value="' + crr_id + '" />' +
+                        '<input type="hidden" name="customer_Id" value="' + customer_id + '" />' +
+                        '</form>');
+                console.log('Form HTML:', form.html());
+                $('body').append(form);
+                form.submit();
+                console.log('Form submitted successfully');
+            });
+
+            //        $('.createCustomerSurveySii').click(function () {
+            //            $('.survey-service-id').val($(this).attr('data-service'));
+            //            $('.survey-customer-id').val($(this).attr('data-customer'));
+            //            $('#customerSurvey').modal('show');
+            //        });
+
+            $('.editCustomerSurveySii').click(function () {
+                //            alert($(this).attr('data-row-id'));
+                $.ajax({
+                    url: "contractDetails.php",
+                    type: "GET",
+                    dataType: "json",
+                    data: {
+                        survay_id: $(this).attr('data-row-id'),
+                        survay_service: $(this).attr('data-service'),
+                        //                    survay_customer: $(this).attr('data-customer'),
+                    },
+                    success: function (data)
+                    {
+                        //                    alert(data);
+                        $('.auditorRating').empty();
+
+                        $('.survay-id').val(data[0]['survey_id']);
+                        $('.survey-service-id').val(data[0]['ca_serviceid']);
+                        $('.survey-customer-id').val(data[0]['customer_ca']);
+                        $('.auditOrg').val(data[0]['auditer_org']);
+                        if (data[0]['survey_date'] == "" || data[0]['survey_date'] == null)
+                            $survey_date = "";
+                        else
+                            $survey_date = moment(data[0]['survey_date']).format('DD.MM.YYYY');
+                        $('.surveyDate').val($survey_date);
+                        if (data[0]['audit_conducted_date'] == "" || data[0]['audit_conducted_date'] == null)
+                            $audit_conducted_date = "";
+                        else
+                            $audit_conducted_date = moment(data[0]['audit_conducted_date']).format('DD.MM.YYYY');
+                        $('.survayAuditDates').val($audit_conducted_date);
+                        $('.auditImparted').val(data[0]['survey_imparted']);
+                        $('.auditingQuality').val(data[0]['auditing_quality']);
+                        $('.auditingPercent').val(data[0]['auditing_percent']);
+                        $('.auditingResult').val(data[0]['auditing_result']);
+                        $('.partiallyRanking').val(data[0]['audit_ranking_good']);
+                        $('.notExcellentRanking').val(data[0]['audit_ranking_bad']);
+                        $('.auditorRanking').val(data[0]['individual_ranking']);
+                        $('.satisfactionRating').val(data[0]['mgmt_satisfaction']);
+                        $('.satisfactionPercent').val(data[0]['mgmt_percent']);
+                        $('.satisfactionResult').val(data[0]['mgmt_result']);
+                        $('.satisfactionRanking').val(data[0]['mgmt_ranking_good']);
+                        $('.notSatisfactionRanking').val(data[0]['mgmt_ranking_bad']);
+                        $('.survayFormNo').val(data[0]['mgmt_formno']);
+                        $('.survayRev').val(data[0]['mgmt_rev']);
+                        if (data[0]['mgmt_revdate'] == "" || data[0]['mgmt_revdate'] == null)
+                            $mgmt_revdate = "";
+                        else
+                            $mgmt_revdate = moment(data[0]['mgmt_revdate']).format('DD.MM.YYYY');
+                        $('.survayRevDate').val($mgmt_revdate);
+                        $('.survayIsue').val(data[0]['mgmt_isue']);
+                        if (data[0]['mgmt_isuedate'] == "" || data[0]['mgmt_isuedate'] == null)
+                            $mgmt_isuedate = "";
+                        else
+                            $mgmt_isuedate = moment(data[0]['mgmt_isuedate']).format('DD.MM.YYYY');
+                        $('.survayIsueDate').val($mgmt_isuedate);
+                        $('.initial-cert[value = "' + data[0]["initial_cert"] + '"]').prop('checked', true);
+                        //                    if (data[0]['initial_cert'] != "" && data[0]['initial_cert'] != null && data[0]['initial_cert'] == 'true') {
+                        //                        $("#initial-cert").prop("checked", true);
+                        //                    }
+                        //                    if (data[0]['re_cert'] != "" && data[0]['re_cert'] != null && data[0]['re_cert'] == 'true') {
+                        //                        $("#re-cert").prop("checked", true);
+                        //                    }
+                        //                    if (data[0]['extension'] != "" && data[0]['extension'] != null && data[0]['extension'] == 'true') {
+                        //                        $("#extension").prop("checked", true);
+                        //                    }
+                        //                    if (data[0]['audit_scope'] != "" && data[0]['audit_scope'] != null && data[0]['audit_scope'] == 'true') {
+                        //                        $("#audit_scope").prop("checked", true);
+                        //                    }
+                        //                    if (data[0]['audit_site'] != "" && data[0]['audit_site'] != null && data[0]['audit_site'] == 'true') {
+                        //                        $("#audit-site").prop("checked", true);
+                        //                    }
+                        //                    if (data[0]['surveillance'] != "" && data[0]['surveillance'] != null && data[0]['surveillance'] == 'true') {
+                        //                        $("#surveillance").prop("checked", true);
+                        //                    }
+
+                        for (var key in data[1]) {
+                            $('.auditorRating').append('<div class="row ">\n\
+                                                    <div class="col-xs-6 form-group float-label-control" style="padding-top: 12px">\n\
+                                                    <label>Lead Auditor/Auditor/Technical Expert Details</label>\n\
+                                                    <input type="text" class="leadAuditor" id="leadAuditor" name="leadAuditor" value="' + data[1][key]['lead_auditor'] + '" placeholder="Lead Auditor/Auditor/Technical Expert Details">\n\
+                                                    </div>\n\
+                                                    <div class="col-xs-3 form-group float-label-control" style="padding-top: 12px">\n\
+                                                    <label>Result</label>\n\
+                                                    <input type="text" class="leadResult" id="leadResult" name="leadResult" value="' + data[1][key]['result'] + '" placeholder="Result" > \n\
+                                                    </div>\n\
+                                                    <div class="col-xs-3 form-group float-label-control" style="padding-top: 12px">\n\
+                                                    <label>Action Recommended</label>\n\
+                                                    <select name="recommendedAction" class="form-control recommendedAction" id="recommendedAction" >\n\
+                                                    <option value="' + data[1][key]['action'] + '">' + data[1][key]['action'] + '</option>\n\
+                                                    <option value="Yes">Yes</option>\n\
+                                                    <option value="No">No</option>\n\
+                                                    </select>\n\
+                                                    </div>\n\
+                                                                            </div>');
+                        }
+                        $('input[type="text"]').trigger('change');
+                        //                    $('textarea').trigger('change');
+                        $('.addCustomerSurveyPdf').hide();
+                        $('#customerSurvey').modal('show');
+                    },
+                    error: function (data, status, err)
+                    {
+                        alert(status);
+                    }
+                });
+            });
+
+            $('.downloadCustomersatisfactionSii').click(function () {
+                //alert($(this).attr('data-cf-id'));
+                var survey_id = $(this).attr('data-surveyid');
+                //alert(control2_id);
+                var customer = $(this).attr('data-customer');
+                var url = 'CustomerSatisfaction.php';
+                var form = $('<form action="' + url + '" method="post" target="_blank" >' +
+                        '<input type="hidden" name="survey_id" value="' + survey_id + '" />' +
+                        '<input type="hidden" name="customer" value="' + customer + '" />' +
+                        '</form>');
+                $('body').append(form);
+                form.submit();
+            });
+
+            // code by Pallavi
+
+            $('.updatetaReviewReport').change(function (e) {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                // alert(id);
+                var formData = new FormData();
+                formData.append('file', $('.input-tareview-form' + service)[0].files[0]);
+                formData.append('customerId', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+
+                $.ajax({
+                    url: 'serviceTypeTA.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        location.reload(true);
+                    }
+                });
+            });
+
+            $('.updatetaAuditReport').change(function (e) {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                // alert(id);
+                var formData = new FormData();
+                formData.append('file', $('.input-taaudit-form' + service)[0].files[0]);
+                formData.append('customerId', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+
+                $.ajax({
+                    url: 'serviceTypeTA.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        location.reload(true);
+                    }
+                });
+            });
+
+            $('.updatetaCopy').change(function (e) {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                // alert(id);
+                var formData = new FormData();
+                formData.append('file', $('.input-tacopy-form' + service)[0].files[0]);
+                formData.append('customerId', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+
+                $.ajax({
+                    url: 'serviceTypeTA.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        location.reload(true);
+                    }
+                });
+            });
+
+            $('.updatetasigned').change(function (e) {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                // alert(id);
+                var formData = new FormData();
+                formData.append('file', $('.input-tasigned-form' + service)[0].files[0]);
+                formData.append('customerId', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+
+                $.ajax({
+                    url: 'serviceTypeTA.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        location.reload(true);
+                    }
+                });
+            });
+
+            //code by appa for SERVICE TYPE –SP
+            $('.updatespsigned').change(function (e) {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                //                alert(id+" -> "+column+" -> "+service+" -> "+serviceType);
+                var formData = new FormData();
+                formData.append('file', $('.input-spsigned-form' + service)[0].files[0]);
+                formData.append('spCustomerId', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+
+                $.ajax({
+                    url: 'serviceTypeSP.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                                            alert(data);
+                        location.reload(true);
+                    },
+                    error: function (data, status, err)
+                    {
+                        alert(status);
+                    }
+                });
+            });
+
+            $('.updateSpCopy').change(function (e) {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                //alert(service);
+                var formData = new FormData();
+                formData.append('file', $('.input-spcopy-form' + service)[0].files[0]);
+                formData.append('spCustomerId', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+                $.ajax({
+                    url: 'serviceTypeSP.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        location.reload(true);
+                    }
+                });
+            });
+
+            $('.updateSpAudit').change(function (e) {
+                ShowProgressAnimation();
+                var id = $(this).attr('data-id');
+                var column = $(this).attr('data-column');
+                var service = $(this).attr('data-service');
+                var serviceType = $(this).attr('service-type');
+                //alert(column);
+                var formData = new FormData();
+                formData.append('file', $('.input-spaudit-form' + service)[0].files[0]);
+                formData.append('spCustomerId', id);
+                formData.append('dataColumn', column);
+                formData.append('dataService', service);
+                formData.append('serviceType', serviceType);
+                $.ajax({
+                    url: 'serviceTypeSP.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // tell jQuery not to process the data
+                    contentType: false, // tell jQuery not to set contentType
+                    success: function (data) {
+                        HideProgressAnimation();
+                        localStorage['visited'] = data;
+                        console.log(data);
+                        //                    alert(data);
+                        location.reload(true);
+                    }
+                });
+            });
+
+            $('.downloadAuditNotificationSP').click(function () {
+                //            alert($(this).attr('data-customer'));
+                var auditid = $(this).attr('data-audit');
+                var service = $(this).attr('data-caservice-id');
+                var customer = $(this).attr('data-customer');
+                var url = 'AuditNotificationandAssignment.php';
+                var form = $('<form action="' + url + '" method="post" target="_blank" >' +
+                        '<input type="hidden" name="auditid" value="' + auditid + '" />' +
+                        '<input type="hidden" name="serviceid" value="' + service + '" />' +
+                        '<input type="hidden" name="customerid" value="' + customer + '" />' +
+                        '</form>');
+                $('body').append(form);
+                form.submit();
+            });
+
+            $('.editStageScheduleSP').click(function () {
+                $('.schedule-service-id-edit').val($(this).attr('data-service'));
+                $('.schedule-customer-id-edit').val($(this).attr('data-customer'));
+                $('.schedule-audit-id-edit').val($(this).attr('data-row-id'));
+                $.ajax({
+                    url: "contractDetails.php",
+                    type: "GET",
+                    dataType: "json",
+                    data: {
+                        scheduleId: $(this).attr('data-row-id'),
+                        serviceID: $(this).attr('data-service'),
+                    },
+                    success: function (data)
+                    {
+                        //                    alert(data);
+                        $('.scheduleClientNameEdit').val(data[0]['client_name']);
+                        $('.scheduleRefNoEdit').val(data[0]['ref_no']);
+                        $('.scheduleAddressEdit').val(data[0]['schedule_address']);
+                        $('.scheduleContactPersonEdit').val(data[0]['schedule_contact_person']);
+                        $('.scheduleScopeEdit').val(data[0]['schedule_scope']);
+                        $('.scheduleAppStandardEdit').val(data[0]['schedule_app_standard']);
+                        $('.scheduleIAFcodeEdit').val(data[0]['schedule_aifcode']);
+                        $('.scheduleAuditTypeEdit').val(data[0]['schedule_audit_type']);
+                        $('.scheduleMandaysEdit').val(data[0]['schedule_mandays']);
+                        if (data[0]['schedule_audit_date'] == "" || data[0]['schedule_audit_date'] == null)
+                            $schedule_audit_date = "";
+                        else
+                            $schedule_audit_date = moment(data[0]['schedule_audit_date']).format('DD.MM.YYYY');
+                        $('.scheduleAuditDateEdit').val($schedule_audit_date);
+                        $('.scheduleAuditorEdit').val(data[0]['schedule_auditors']);
+                        $('.editstageiFormNo').val(data[0]['stage_i_form']);
+                        $('.editstageiRev').val(data[0]['stage_i_rev']);
+                        if (data[0]['stage_i_date'] == "" || data[0]['stage_i_date'] == null)
+                            $stage_i_date = "";
+                        else
+                            $stage_i_date = moment(data[0]['stage_i_date']).format('DD.MM.YYYY');
+                        $('.editstageiRevDate').val($stage_i_date);
+                        $('.editstageiIsue').val(data[0]['stage_i_isue']);
+                        if (data[0]['stage_i_isuedate'] == "" || data[0]['stage_i_isuedate'] == null)
+                            $stage_i_isuedate = "";
+                        else
+                            $stage_i_isuedate = moment(data[0]['stage_i_isuedate']).format('DD.MM.YYYY');
+                        $('.editstageiIsueDate').val($stage_i_isuedate);
+                        $('.editSchedules').empty();
+                        for (var key in data[1]) {
+                            if (data[1][key]['schedule_dates'] == "" || data[1][key]['schedule_dates'] == null)
+                                $schedule_dates = "";
+                            else
+                                $schedule_dates = moment(data[1][key]['schedule_dates']).format('DD.MM.YYYY');
+                            $('.editSchedules').append('<tr class="schedule_subsection_edit previousCBData" id="cb_subsection_0" style="display: ">\n\
+                                                        <td class="" width="20%" style="padding:2px;">\n\
+                                                        <div class="table-edit-control">\n\
+                                                        <input type="text" data-row-id="" class="scheduleDateEdit" name="scheduleDateEdit" value="' + data[1][key]['schedule_dates'] + '" placeholder="" />\n\
+                                                        </div>\n\
+                                                        </td>\n\
+                                                        <td class="" width="20%" style="padding:2px;">\n\
+                                                        <div class="table-edit-control">\n\
+                                                        <input type="time" data-row-id="" class="scheduleTimeEdit" id="scheduleTimeEdit" name="scheduleTimeEdit" value="' + $schedule_dates + '" placeholder="" />\n\
+                                                        </div>\n\
+                                                        </td>\n\
+                                                        <td class="" width="20%" style="padding:2px;">\n\
+                                                        <div class="table-edit-control">\n\
+                                                        <textarea type="text" data-row-id="" class="scheduleActivityEdit" id="scheduleActivityEdit" name="scheduleActivityEdit" value="' + data[1][key]['schedule_activity'] + '" placeholder=""></textarea>\n\
+                                                        </div>\n\
+                                                        </td>\n\
+                                                        <td class="" width="20%" style="padding:2px;">\n\
+                                                        <div class="table-edit-control">\n\
+                                                        <input type="text" data-row-id="" class="scheduleAuditorEdit" id="scheduleAuditorEdit" name="scheduleAuditorEdit" value="' + data[1][key]['schedule_auditors'] + '" placeholder="">\n\
+                                                        </div>\n\
+                                                        </td>\n\
+                                                                            </tr>');
+                        }
+
+                        $('input[type="text"]').trigger('change');
+                        //                    $('textarea').trigger('change');
+
+                        $('#scheduleStageIEdit').modal('show');
+                    },
+                    error: function (data, status, err)
+                    {
+                        alert(status);
+                    }
+                });
+            });
+
+            $('.downloadScheduleStageOneSP').click(function () {
+                var auditscheduleid = $(this).attr('data-schedulei');
+                var service = $(this).attr('data-caservice-id');
+                var customer = $(this).attr('data-customer');
+                var url = 'AuditSchedule.php';
+                var form = $('<form action="' + url + '" method="post" target="_blank" >' +
+                        '<input type="hidden" name="auditscheduleid" value="' + auditscheduleid + '" />' +
+                        '<input type="hidden" name="serviceid" value="' + service + '" />' +
+                        '<input type="hidden" name="customerid" value="' + customer + '" />' +
+                        '</form>');
+                $('body').append(form);
+                form.submit();
+            });
+
+            $('.downloadAnnexIISP').click(function () {
+                //alert($(this).attr('data-stage-ii'));
+                var stage_ii_id = $(this).attr('data-stage-ii');
+                //alert(stage_ii_id);
+                var customer = $(this).attr('data-customer');
+                var url = 'F7.32Anex-2.php';
+                var form = $('<form action="' + url + '" method="post" target="_blank" >' +
+                        '<input type="hidden" name="stage_ii_id" value="' + stage_ii_id + '" />' +
+                        '<input type="hidden" name="customer" value="' + customer + '" />' +
+                        '</form>');
+                $('body').append(form);
+                form.submit();
+            });
+
+            $('.cdcReportSP').click(function () {
+                $('.service_Id').val($(this).attr('data-service'));
+                $('.customer_Id').val($(this).attr('data-customer'));
+                $('.uni_serviceid').val($(this).attr('data-id'));
+                $('.audit_type').val($(this).attr('audit-data'));
+                $('#cdcModel').modal('show');
+                $('.update_cdc').hide();
+            });
+
+            $('.downloadCdcSP').click(function () {
+                var crr_id = $(this).attr('data-crr');
+                var customer_id = $(this).attr('data-customer');
+                var ca_service_id = $(this).attr('data-caservice-id');
+                
+                $.ajax({
+                    url: "reviewReportData.php",
+                    type: "GET",
+                    dataType: "json",
+                    data: { crr_Id: crr_id, service: ca_service_id },
+                    success: function (response) {
+                        // reviewReportData.php returns array: [crrData, rev1date, rev2date, customerDetailsx, customerDetailsy, customerDetailsz, customerDetailsz1, officeUseEntries]
+                        var data = response[0] || {};
+                        var officeUseData = response[7] || [];
+                        var form = $('<form action="cdcRecomendation.php" method="post" target="_blank"></form>');
+                        form.append('<input type="hidden" name="crr_id" value="' + crr_id + '" />');
+                        form.append('<input type="hidden" name="crr_Id" value="' + crr_id + '" />');
+                        form.append('<input type="hidden" name="customer_Id" value="' + customer_id + '" />');
+                        form.append('<input type="hidden" name="service_Id" value="' + ca_service_id + '" />');
+                        form.append('<input type="hidden" name="uni_serviceid" value="' + (data.uni_serviceid || '') + '" />');
+                        form.append('<input type="hidden" name="servicetype" value="' + (data.servicetype || 'SP') + '" />');
+                        form.append('<input type="hidden" name="file_No" value="' + (data.file_no || '') + '" />');
+                        form.append('<input type="hidden" name="audited_Organisation" value="' + (data.audit_organization || '') + '" />');
+                        form.append('<input type="hidden" name="address" value="' + (data.address || '') + '" />');
+                        form.append('<input type="hidden" name="product_service" value="' + (data.product_service || '') + '" />');
+                        form.append('<input type="hidden" name="iaf_nace" value="' + (data.iaf_nacf || '') + '" />');
+                        form.append('<input type="hidden" name="exclusion" value="' + (data.exclusion || '') + '" />');
+                        form.append('<input type="hidden" name="audit_type" value="' + (data.audit_type || '') + '" />');
+                        form.append('<input type="hidden" name="audit_date_CDC" value="' + (data.audit_date || '') + '" />');
+                        form.append('<input type="hidden" name="audit_dateII" value="' + (data.audit_dateII || '') + '" />');
+                        form.append('<input type="hidden" name="application_received_date" value="' + (data.application_received_date || data.audit_dateII || '') + '" />');
+                        form.append('<input type="hidden" name="covered_for" value="' + (data.covered_for || '') + '" />');
+                        form.append('<input type="hidden" name="accreditation" value="' + (data.accreditation || '') + '" />');
+                        form.append('<input type="hidden" name="lead_auditor" value="' + (data.lead_auditor || '') + '" />');
+                        form.append('<input type="hidden" name="technical_expert" value="' + (data.technical_expert || '') + '" />');
+                        form.append('<input type="hidden" name="any_ther" value="' + (data.any_ther || '') + '" />');
+                        form.append('<input type="hidden" name="auditors" value="' + (data.auditors || '') + '" />');
+                        form.append('<input type="hidden" name="assDate" value="' + (data.assDate || '') + '" />');
+                        form.append('<input type="hidden" name="reviewer-1" value="' + (data.reviewer_1 || '') + '" />');
+                        form.append('<input type="hidden" name="reviewer-2" value="' + (data.reviewer_2 || '') + '" />');
+                        form.append('<input type="hidden" name="granted-by" value="' + (data.granted_by || '') + '" />');
+                        form.append('<input type="hidden" name="Date" value="' + (data.Date || '') + '" />');
+                        form.append('<input type="hidden" name="system_during" value="' + (data.system_during || '') + '" />');
+                        form.append('<input type="hidden" name="system_complainte" value="' + (data.system_complainte || '') + '" />');
+                        if (data.rev1_yes == 'Yes') form.append('<input type="hidden" name="checkrev1_yes" value="Yes" />');
+                        else if (data.rev1_yes == 'No') form.append('<input type="hidden" name="checkrev1_no" value="No" />');
+                        if (data.rev2_yes == 'Yes') form.append('<input type="hidden" name="checkrev2_yes" value="Yes" />');
+                        else if (data.rev2_yes == 'No') form.append('<input type="hidden" name="checkrev2_no" value="No" />');
+                        else if (data.rev2_yes == 'N.A.') form.append('<input type="hidden" name="checkrev2_na" value="N.A." />');
+                        form.append('<input type="hidden" name="comments_if_any" value="' + (data.comments_if_any || '') + '"/> ');
+                        if (data.review_1_granting == 'Granted') form.append('<input type="hidden" name="cdc-status-mem1-g" value="Granted" />');
+                        else if (data.review_1_granting == 'Not-Granted') form.append('<input type="hidden" name="cdc-status-mem1-n" value="Not-Granted" />');
+                        if (data.yes1 == 'Yes') form.append('<input type="hidden" name="check1_yes" value="Yes" />');
+                        else if (data.yes1 == 'No') form.append('<input type="hidden" name="check1_no" value="No" />');
+                        if (data.yes2 == 'Yes') form.append('<input type="hidden" name="check2_yes" value="Yes" />');
+                        else if (data.yes2 == 'No') form.append('<input type="hidden" name="check2_no" value="No" />');
+                        if (data.yes3 == 'Yes') form.append('<input type="hidden" name="check3_yes" value="Yes" />');
+                        else if (data.yes3 == 'No') form.append('<input type="hidden" name="check3_no" value="No" />');
+                        form.append('<input type="hidden" name="comments_if_any_2nd_review" value="' + (data.review_2_comment || '') + '" />');
+                        if (data.review_2_granting == 'Granted') form.append('<input type="hidden" name="cdc-status-mem2-g" value="Granted" />');
+                        else if (data.review_2_granting == 'Not-Granted') form.append('<input type="hidden" name="cdc-status-mem2-n" value="Not-Granted" />');
+                        if (data.rev3_yes == 'Yes') form.append('<input type="hidden" name="checkrev3_yes" value="Yes" />');
+                        else if (data.rev3_yes == 'No') form.append('<input type="hidden" name="checkrev3_no" value="No" />');
+                        if (data.cdc_status == 'Granted') form.append('<input type="hidden" name="cdc-status-mem3-g" value="Granted" />');
+                        else if (data.cdc_status == 'Not-Granted') form.append('<input type="hidden" name="cdc-status-mem3-n" value="Not-Granted" />');
+                        form.append('<input type="hidden" name="comments" value="' + (data.comments || '') + '" />');
+                        form.append('<input type="hidden" name="date-restore1" value="' + (data.rc_audit_date || '') + '" />');
+                        form.append('<input type="hidden" name="date-restore2" value="' + (data.rc_restore_date || '') + '" />');
+                        form.append('<input type="hidden" name="ncval" value="' + (data.ncval || '') + '" />');
+                        form.append('<input type="hidden" name="ofival" value="' + (data.ofival || '') + '" />');
+                        form.append('<input type="hidden" name="oplus" value="' + (data.oplusval || '') + '" />');
+                        form.append('<input type="hidden" name="certificateNo" value="' + (data.certificateNo || '') + '" />');
+                        form.append('<input type="hidden" name="revCdc" value="' + (data.revCdc || '') + '" />');
+                        form.append('<input type="hidden" name="revDatecdc" value="' + (data.revDatecdc || '') + '" />');
+                        form.append('<input type="hidden" name="nextaudittype" value="' + (data.next_audit_type || '') + '" />');
+                        form.append('<input type="hidden" name="expiredate" value="' + (data.expiredate || '') + '" />');
+                        form.append('<input type="hidden" name="periodicalaudit" value="' + (data.periodicalaudit || '') + '" />');
+                        form.append('<input type="hidden" name="periodicalAuditcoment" value="' + (data.periodical_audit_comment || '') + '" />');
+                        if (officeUseData && Array.isArray(officeUseData)) {
+                            officeUseData.forEach(function(office, index) {
+                                form.append('<input type="hidden" name="office_use[' + index + '][iso_index]" value="' + (office.iso_index || index) + '" />');
+                                form.append('<input type="hidden" name="office_use[' + index + '][iso_label]" value="' + (office.iso_label || '') + '" />');
+                                form.append('<input type="hidden" name="office_use[' + index + '][rev_date]" value="' + (office.rev_date || '') + '" />');
+                                form.append('<input type="hidden" name="office_use[' + index + '][rev_no]" value="' + (office.rev_no || '') + '" />');
+                                form.append('<input type="hidden" name="office_use[' + index + '][certificate_no]" value="' + (office.certificate_no || '') + '" />');
+                                form.append('<input type="hidden" name="office_use[' + index + '][audit_type]" value="' + (office.audit_type || '') + '" />');
+                                form.append('<input type="hidden" name="office_use[' + index + '][expire_date]" value="' + (office.expire_date || '') + '" />');
+                                form.append('<input type="hidden" name="office_use[' + index + '][periodical_audit]" value="' + (office.periodical_audit || '') + '" />');
+                                form.append('<input type="hidden" name="office_use[' + index + '][comments]" value="' + (office.comments || '') + '" />');
+                            });
+                        }
+                        $('body').append(form);
+                        form.submit();
+                    },
+                    error: function (xhr, status, err) {
+                        alert('Error loading CDC data: ' + status);
+                        console.error('CDC Download Error:', err);
+                    }
+                });
+            });
+
+            $(document.body).on('click', '.cbAddLink', function () {
+                //             alert($(this).data("row-count"));
+                $newCount = 0;
+                $rowCB = $(this).data("row-count");
+                //            alert($rowCB);
+                if ($rowCB == "") {
+                    $rowCB = 1;
+                }
+                //            alert("$rowCB -> " + $rowCB);
+                //            $rowId = 1;
+                //                    if($rowId==""){
+                //                        $newCount=1;
+                //                    }
+                //            alert("$rowId" + $rowId);
+                $count = $rowCB + 1;
+                //            alert("in");
+                var table = document.getElementById("service_details");
+                var row = table.insertRow($count);
+                $(this).data("row-count", $rowCB + 1);
+                //            $('.cbAddLinkForAdmin[data-row-id="' + $rowId + '"]').data("row-count", $rowCB + 1);
+                //            alert($(this).data("row-count"));
+                var cell1 = row.insertCell(0);
+                var cell2 = row.insertCell(1);
+                var cell3 = row.insertCell(2);
+                var cell4 = row.insertCell(3);
+                var cell5 = row.insertCell(4);
+                var cell6 = row.insertCell(5);
+                var cell7 = row.insertCell(6);
+                //                var cell8 = row.insertCell(7);
+                //            var cell8 = row.insertCell(7);
+                //            var cell9 = row.insertCell(8);
+                cell1.style.padding = "0px";
+                cell2.style.padding = "0px";
+                cell3.style.padding = "0px";
+                cell4.style.padding = "0px";
+                cell5.style.padding = "0px";
+                cell6.style.padding = "0px";
+                cell7.style.padding = "0px";
+                //                cell8.style.padding = "0px";
+                //            cell9.style.padding = "0px";
+                cell1.innerHTML = '<div class="table-edit-control"><label></label><input type="text" data-row-id="" class="serviceTypeName" name="serviceTypeName" placeholder="" /></div>';
+                cell2.innerHTML = '<div class="table-edit-control"><label></label><input type="number" min="1" data-row-id="" class="serviceAmountDecided" name="serviceAmountDecided" placeholder="" /></div>';
+                cell3.innerHTML = '<div class="table-edit-control"><label></label><input type="number" min="1" data-row-id="" class="servicePaymentReceived" name="servicePaymentReceived" placeholder="" /></div>';
+                cell4.innerHTML = '<div class="table-edit-control"><label></label><input type="text" data-row-id="" class="paymentDepositDate"  name="paymentDepositDate" placeholder="" /></div>';
+                cell5.innerHTML = '<div class="table-edit-control"><label></label><input type="text" data-row-id="" class="serviceChequeDetails" name="serviceChequeDetails" placeholder="" /></div>';
+                cell6.innerHTML = '<div class="table-edit-control"><label></label><input type="text" data-row-id="" class="serviceBalance" name="serviceBalance" readonly="" placeholder="" /></div><input type="hidden" data-row-id="" class="row-id" id="row-id" name="row-id" value="">';
+                cell7.innerHTML = '<div class="table-edit-control"><label></label></div>';
+                //            cell8.innerHTML = '<a class="cbComment" data-row-id="' + $rowId + '"><i class="fa fa-comment-o" aria-hidden="true"></i></a><input type="hidden" class="cb-row-id" id="cb-row-id" name="cb-row-id" data-row-id="' + $rowId + '" value="">';
+                row.className = "cb_subsection";
+                //            $tmpCbCount = $tmpCbCount + 1;             $(this).data("row-count", $count);
+
+                //            alert("out");
+
+            });
+
+            $(document).off('focus.customerAccount', '.info-review-date');
+            $(document).on('focus.customerAccount', '.info-review-date', function () {
+                if (!$(this).hasClass('hasDatepicker')) {
+                    $(this).datepicker({
+                        dateFormat: 'dd.mm.yy',
+                        changeMonth: true,
+                        changeYear: true,
+                        minDate: '-100Y',
+                        maxDate: '+10Y',
+                        showButtonPanel: true
+                    }).datepicker('show');
+                }
+            });
+
+            $(document).off('click.customerAccount', '.openInfoUpdationReview');
+            $(document).on('click.customerAccount', '.openInfoUpdationReview', function () {
+                var serviceId = $(this).attr('data-service');
+                var customerId = $(this).attr('data-customer');
+                var $modal = $('#informationUpdationReviewModal');
+                var formElement = $modal.find('#informationUpdationReviewForm')[0];
+
+                if (formElement && typeof formElement.reset === 'function') {
+                    formElement.reset();
+                }
+
+                $modal.find('.info-review-service-id').val(serviceId);
+                $modal.find('.info-review-customer-id').val(customerId);
+                
+                // Check if this is an edit (pencil icon) by checking if it has a sibling download button
+                var isEdit = $(this).closest('.image-preview').find('.downloadInfoUpdationReview').length > 0;
+                
+                if (isEdit) {
+                    // Load saved data if available (for edit mode)
+                    $.ajax({
+                        url: 'getInfoUpdationReview.php',
+                        type: 'GET',
+                        data: { serviceId: serviceId, customerId: customerId },
+                        dataType: 'json',
+                        success: function (data) {
+                            console.log('Loaded data:', data);
+                            if (data && !data.error) {
+                                // Populate form fields with saved data
+                                $modal.find('input[name="info_form_received_date"]').val(data.info_form_received_date || '');
+                                $modal.find('input[name="company_change"][value="' + data.company_change + '"]').prop('checked', true);
+                                $modal.find('textarea[name="company_change_details"]').val(data.company_change_details || '');
+                                $modal.find('input[name="ownership_change"][value="' + data.ownership_change + '"]').prop('checked', true);
+                                $modal.find('textarea[name="ownership_change_details"]').val(data.ownership_change_details || '');
+                                $modal.find('input[name="legal_status_change"][value="' + data.legal_status_change + '"]').prop('checked', true);
+                                $modal.find('textarea[name="legal_status_change_details"]').val(data.legal_status_change_details || '');
+                                $modal.find('input[name="address_change"][value="' + data.address_change + '"]').prop('checked', true);
+                                $modal.find('textarea[name="address_change_details"]').val(data.address_change_details || '');
+                                $modal.find('input[name="employee_change"][value="' + data.employee_change + '"]').prop('checked', true);
+                                $modal.find('textarea[name="employee_change_details"]').val(data.employee_change_details || '');
+                                $modal.find('input[name="communication_change"][value="' + data.communication_change + '"]').prop('checked', true);
+                                $modal.find('textarea[name="communication_change_details"]').val(data.communication_change_details || '');
+                                $modal.find('input[name="activity_change"][value="' + data.activity_change + '"]').prop('checked', true);
+                                $modal.find('textarea[name="activity_change_details"]').val(data.activity_change_details || '');
+                                $modal.find('textarea[name="review_comments"]').val(data.review_comments || '');
+                                $modal.find('input[name="reviewer_name"]').val(data.reviewer_name || '');
+                                $modal.find('input[name="review_date"]').val(data.review_date || '');
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            console.error('Error loading data:', error);
+                        }
+                    });
+                }
+                
+                $modal.find('input[type="text"], textarea').trigger('change');
+                $modal.modal('show');
+            });
+
+            // Add download handler for Information Updation Review PDF
+            $(document).off('click.downloadInfoReview', '.downloadInfoUpdationReview');
+            $(document).on('click.downloadInfoReview', '.downloadInfoUpdationReview', function (e) {
+                e.preventDefault();
+                
+                var serviceId = $(this).attr('data-service');
+                var customerId = $(this).attr('data-customer');
+                
+                // Check if we have valid service and customer IDs
+                if (!serviceId || !customerId) {
+                    alert('No data available to download');
+                    return false;
+                }
+                
+                console.log('Downloading PDF for service:', serviceId, 'customer:', customerId);
+                
+                // Open download URL in new window
+                window.open('downloadInfoUpdationReview.php?service=' + serviceId + '&customer=' + customerId, '_blank');
+            });
+
+            $(".addAuditApp").click(function () {
+                var customerID = $(this).attr('data-id');
+                alert(customerID);
+                var url = 'addAuditApplication.php';
+                var form = $('<form action="' + url + '" method="post">' +
+                        '<input type="hidden" name="customerId" value="' + customerID + '" />' +
+                        '</form>');
+                $('body').append(form);
+                form.submit();
+            });
+
+            $('.service-type').change(function () {
+                $svctype = '<?php echo $letestServiceType["service_type"]; ?>';
+                //            alert($svctype);
+                if ($('.service-type').val() == "1") {
+                    if ($svctype == "CR") {
+                        $('.new-ca-service-add').show();
+                    } else {
+                        $("#addCRsvc").show();
+                        $(".confirm-ok").click(function () {
+                            $("#addCRsvc").hide();
+                        });
+                    }
+                    //                $('.sa-i-service-type').hide();
+                    //                $('.sa-ii-service-type').hide();
+                    //                $('.rc-service-type').hide();
+                    //                $('.sp-service-type').hide();
+                }
+                if ($('.service-type').val() == "2") {
+                    //                $('.sa-i-service-type').show();
+                    $(".new-sai-service").show();
+                    //                $('.ca-service-type').hide();
+                    //                $('.sa-ii-service-type').hide();
+                    //                $('.rc-service-type').hide();
+                    //                $('.sp-service-type').hide();
+                }
+                if ($('.service-type').val() == "3") {
+                    //                $('.sa-ii-service-type').show();
+                    $(".new-saii-service").show();
+                    //                $('.sa-i-service-type').hide();
+                    //                $('.ca-service-type').hide();
+                    //                $('.rc-service-type').hide();
+                    //                $('.sp-service-type').hide();
+                }
+                if ($('.service-type').val() == "4") {
+                    //                $('.rc-service-type').show();
+                    if ($svctype == "CR") {
+                        $(".new-rc-service").show();
+                    } else {
+                        $("#addCRsvc").show();
+                        $(".confirm-ok").click(function () {
+                            $("#addCRsvc").hide();
+                        });
+                    }
+                    //                $('.sa-ii-service-type').hide();
+                    //                $('.sa-i-service-type').hide();
+                    //                $('.ca-service-type').hide();
+                    //                $('.sp-service-type').hide();
+                }
+                if ($('.service-type').val() == "5") {
+                    //                $('.sp-service-type').show();
+                    $(".new-sp-service").show();
+                    //                $('.rc-service-type').hide();
+                    //                $('.sa-ii-service-type').hide();
+                    //                $('.sa-i-service-type').hide();
+                    //                $('.ca-service-type').hide();
+                }
+                if ($('.service-type').val() == "6") {
+                    $('.new-cr-service-add').show();
+                    //                $('.sa-i-service-type').hide();
+                    //                $('.sa-ii-service-type').hide();
+                    //                $('.rc-service-type').hide();
+                    //                $('.sp-service-type').hide();
+                }
+                if ($('.service-type').val() == "7") {
+                    if ($svctype == "CR") {
+                        $('.new-ptr-service-add').show();
+                    } else {
+                        $("#addCRsvc").show();
+                        $(".confirm-ok").click(function () {
+                            $("#addCRsvc").hide();
+                        });
+                    }
+                    //                $('.sa-i-service-type').hide();
+                    //                $('.sa-ii-service-type').hide();
+                    //                $('.rc-service-type').hide();
+                    //                $('.sp-service-type').hide();
+                }
+                if ($('.service-type').val() == "8") {
+                    $('.new-ta-service').show();
+                    //                $('.sa-i-service-type').hide();
+                    //                $('.sa-ii-service-type').hide();
+                    //                $('.rc-service-type').hide();
+                    //                $('.sp-service-type').hide();
+                }
+            });
+
+            $("#menu-toggle").click(function (e) {
+                e.preventDefault();
+                $("#wrapper").toggleClass("active");
+                $(".container").toggleClass("active");
+                table.draw();
+            });
+
+        });
+
+        $(".infoDelete").click(function () {
+            var payrowid = $(this).attr('data-row-id');
+            $('#delete-details').show();
+            $('.delete-confirm-ok').click(function () {
+                $.ajax({
+                    url: "addPayment.php",
+                    type: "GET",
+                    //                    dataType: "json",
+                    data: {
+                        paymentID: payrowid,
+                    },
+                    success: function (data)
+                    {
+                        $(".pamentrow" + payrowid).hide();
+                        //                        alert(data);
+                        $('#delete-details').hide();
+                    }
+                });
+            });
+            $('.delete-cancel').click(function () {
+                $('#delete-details').hide();
+            });
+        });
+
+        $(".invoiceStatus").click(function () {
+            $invid = $(this).attr("data-row-id");
+            //            alert($(this).attr("data-row-id"));
+            if ($(this).is(":checked")) {
+                //                alert("checked");
+                $.ajax({
+                    url: "addPayment.php",
+                    type: "GET",
+                    //                    dataType: "json",
+                    data: {
+                        invid: $invid,
+                    },
+                    success: function (data)
+                    {
+                        //                        $(".pamentrow" + payrowid).hide();
+                        //                        alert(data);
+                        //                        $('#delete-details').hide();
+                    }
+                });
+            } else {
+                //                alert("un-checked");
+                $.ajax({
+                    url: "addPayment.php",
+                    type: "GET",
+                    //                    dataType: "json",
+                    data: {
+                        inv_id: $invid,
+                    },
+                    success: function (data)
+                    {
+                        //                        $(".pamentrow" + payrowid).hide();
+                        //                        alert(data);
+                        //                        $('#delete-details').hide();
+                    }
+                });
+            }
+        });
+
+        $('.savePayment').click(function () {
+            //        alert($(this).attr('data-row-id'));
+            var paymentID = $(this).attr('data-row-id');
+            var customerID = '<?php echo $_GET['customerid'] ?>';
+
+            var serviceTypeArray = [];
+            $(".serviceTypeName").each(function () {
+                //            alert($(".serviceTypeName").val());
+                serviceTypeArray.push($(this).val());
+            });
+            var serviceTypeDetails = serviceTypeArray.join("~");
+
+            var serviceAmountArray = [];
+            $(".serviceAmountDecided").each(function () {
+                serviceAmountArray.push($(this).val());
+            });
+            var serviceAmountDetails = serviceAmountArray.join("~");
+
+            var paymentReceivedArray = [];
+            $(".servicePaymentReceived").each(function () {
+                paymentReceivedArray.push($(this).val());
+            });
+            var paymentReceivedDetails = paymentReceivedArray.join("~");
+
+            var depositDateArray = [];
+            $(".paymentDepositDate").each(function () {
+                //            alert($(".paymentDepositDate").val());
+                depositDateArray.push($(this).val());
+            });
+            var depositDateDetails = depositDateArray.join("~");
+
+            var serviceChequeArray = [];
+            $(".serviceChequeDetails").each(function () {
+                serviceChequeArray.push($(this).val());
+            });
+            var serviceChequeDetails = serviceChequeArray.join("~");
+
+            var rowidArray = [];
+            $(".row-id").each(function () {
+                rowidArray.push($(this).val());
+            });
+            var rowidDetails = rowidArray.join("~");
+
+            var infoDeleteArray = [];
+            //            $('.infoDelete').each(function () {
+            //                if ($(this).is(":checked"))
+            //                    infoDeleteArray.push($(this).val());
+            //            });
+            var dltRowDetails = "";
+            //        alert(depositDateDetails);
+            $.ajax({
+                url: "addPayment.php",
+                // dataType: "json",
+                type: 'GET',
+                data: {
+                    serviceType: serviceTypeDetails,
+                    decidedAmount: serviceAmountDetails,
+                    paymentReceived: paymentReceivedDetails,
+                    depositDate: depositDateDetails,
+                    chequeDetails: serviceChequeDetails,
+                    customer: customerID,
+                    payid: paymentID,
+                    rowids: rowidDetails,
+                    dltRows: dltRowDetails,
+                },
+                success: function (data) {
+                    //                alert(data);
+                    console.log(data);
+                    $(document).ajaxStop(function () {
+                        location.reload(true);
+                    });
+                },
+                error: function (data, status, err) {
+                    alert(status);
+                    // alert("Error " + status + "err " + err + " data " + JSON.stringify(data));
+                    //                    alert("There was error while saving data. Please refresh page to see if values are saved or contact support team");
+                }
+            });
+
+        });
+
+            $(document).off('submit.customerAccount', '#informationUpdationReviewForm');
+            $(document).on('submit.customerAccount', '#informationUpdationReviewForm', function (e) {
+                e.preventDefault();
+                
+                var formData = new FormData(this);
+                formData.append('action', 'saveInfoUpdationReview');
+                var serviceId = $('input[name="info_review_service_id"]').val();
+                var customerId = $('input[name="info_review_customer_id"]').val();
+                
+                $.ajax({
+                    url: 'saveInfoUpdationReview.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    dataType: 'json', // Expect JSON response
+                    success: function (response) {
+                        console.log('Response:', response); // Debug log
+                        if (response && response.success) {
+                            // Find the icon container for this specific service
+                            var $iconLink = $('.openInfoUpdationReview[data-service="' + serviceId + '"]');
+                            var $iconContainer = $iconLink.parent();
+                            
+                            // Check if this was a plus icon (new entry)
+                            var wasPlus = $iconLink.find('i').hasClass('fa-plus-circle');
+                            
+                            if (wasPlus) {
+                                // Change plus icon to pencil icon
+                                $iconLink.find('i').removeClass('fa-plus-circle').addClass('fa-pencil-square');
+                                $iconLink.attr('title', 'Review Information Updation');
+                                
+                                // Add download icon after pencil icon (without disabled class)
+                                var downloadHtml = '<span style="padding-right: 5px">' +
+                                    '<a class="downloadInfoUpdationReview pull-right" ' +
+                                    'data-customer="' + customerId + '" data-service="' + serviceId + '" ' +
+                                    'title="Download Information Updation Review" style="padding: 1px 5px;">' +
+                                    '<i class="fa fa-download fa-lg " style="padding: 3px"></i></a></span>';
+                                
+                                $iconLink.parent().after(downloadHtml);
+                            }
+                            
+                            // Change the section color to blue by updating the CSS class
+                            // Find the parent div that contains the serviceContent class
+                            var $sectionDiv = $iconLink.closest('div[class*="serviceContent"]');
+                            
+                            // Remove existing service content classes and add completed class
+                            $sectionDiv.removeClass('serviceContent serviceContentwaiting');
+                            $sectionDiv.addClass('serviceContentCompleted');
+                            
+                            $('#informationUpdationReviewModal').modal('hide');
+                            alert('Review saved successfully!');
+                            
+                            // Don't reload the page - UI is already updated
+                        } else {
+                            alert('Error saving review: ' + (response.error || 'Unknown error'));
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        console.error('Error response:', xhr.responseText);
+                        console.error('Status:', status);
+                        console.error('Error:', error);
+                        
+                        // Try to parse error response
+                        var errorMessage = 'Error saving review: ';
+                        try {
+                            var errorData = JSON.parse(xhr.responseText);
+                            errorMessage += errorData.error || error;
+                        } catch (e) {
+                            // If response is not JSON, show the HTML error
+                            if (xhr.responseText.length > 200) {
+                                errorMessage += 'Server error. Check console for details.';
+                                console.error('Full error response:', xhr.responseText);
+                            } else {
+                                errorMessage += xhr.responseText || error;
+                            }
+                        }
+                        alert(errorMessage);
+                    }
+                });
+            });
+
+    
+    // Simple click handler for Certificate Agreement Generate link
+    document.addEventListener('DOMContentLoaded', function() {
+        var link = document.getElementById('certificateAgreementLink');
+        if (link) {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                alert('Certificate Agreement Generate was clicked!');
+                console.log('Certificate Agreement Generate clicked');
+                
+                // You can add more functionality here
+                // For example, open a modal or navigate to another page
+            });
+        } else {
+            console.error('Could not find element with ID: certificateAgreementLink');
+        }
+    });
+    
+    // Debug: Check if jQuery is loaded
+    console.log('jQuery version:', $.fn.jquery);
+    
+    // Debug: Check if the element exists
+    $(document).ready(function() {
+        console.log('Document ready, checking for .open-certificate-form elements...');
+        console.log('Found', $('.open-certificate-form').length, 'elements with class .open-certificate-form');
+        
+        // Make sure the element is visible and clickable
+        $('.open-certificate-form').css({
+            'cursor': 'pointer',
+            'color': 'blue',
+            'text-decoration': 'underline'
+        });
+    });
+    
+    // Simple click handler with event delegation
+    $(document).on('click', '.open-certificate-form', function(e) {
+        console.log('Certificate Agreement link clicked!');
+        e.preventDefault();
+        
+        // Show a simple alert to confirm the click is working
+        alert('Certificate Agreement link was clicked!');
+        
+        // Create a simple test modal
+        var testModal = $(
+            '<div class="modal" id="testModal" tabindex="-1" role="dialog" style="display: block; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">' +
+            '  <div style="background-color: #fefefe; margin: 15% auto; padding: 20px; width: 80%; max-width: 500px;">' +
+            '    <h3>Test Modal</h3>' +
+            '    <p>If you can see this, the click handler is working!</p>' +
+            '    <button id="closeTestModal" style="padding: 5px 15px; margin-top: 10px;">Close</button>' +
+            '  </div>' +
+            '</div>'
+        );
+        
+        // Remove any existing test modals
+        $('#testModal').remove();
+        
+        // Add the test modal to the page
+        $('body').append(testModal);
+        
+        // Close button handler
+        $('#closeTestModal').on('click', function() {
+            $('#testModal').remove();
+        });
+    });
+    
+    // Handle Certificate Agreement actions (generate/upload)
+    function handleCertificateAction(action) {
+        console.log('Certificate Agreement action:', action);
+        
+        // Add visual feedback
+        const elements = document.querySelectorAll('.serviceContent.clickable');
+        elements.forEach(el => {
+            el.style.backgroundColor = '#f0f8ff'; // Light blue background
+            setTimeout(() => {
+                el.style.backgroundColor = ''; // Revert after 300ms
+            }, 300);
+        });
+
+        // Show appropriate message based on action
+        if (action === 'generate') {
+            alert('Opening Certificate Agreement Generation...');
+            // Add your generate functionality here
+            // For example: window.location.href = 'generate_certificate.php';
+        } else if (action === 'upload') {
+            alert('Opening Certificate Agreement Upload...');
+            // Add your upload functionality here
+            // For example: document.getElementById('fileInput').click();
+        }
+    }
+    
+    </script>
+
+    <style>
+        .btn-circle {
+            width: 30px;
+            height: 30px;
+            text-align: center;
+            padding: 6px 0;
+            font-size: 12px;
+            line-height: 1.428571429;
+            border-radius: 15px;
+        }
+
+        #loading-div-background {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background: rgba(255, 255, 255, 0.5);
+            width: 100%;
+            height: 100%;
+        }
+
+        #loading-div {
+            width: 300px;
+            height: 150px;
+            background-color: #fff;
+            color: #1468b3;
+            border: 5px solid #1468b3;
+            text-align: center;
+            color: #202020;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            margin-left: -150px;
+            margin-top: -100px;
+            -webkit-border-radius: 5px;
+            -moz-border-radius: 5px;
+            border-radius: 5px;
+            opacity: 1.0;
+            behavior: url("/css/pie/PIE.htc"); /* HANDLES IE */
+        }
+
+        #loading-div-user-info {
+            width: 350px;
+            background-color: #fff;
+            color: #1468b3;
+            border: 1px solid gray;
+            color: #202020;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            margin-left: -150px;
+            margin-top: -100px;
+            -webkit-border-radius: 5px;
+            -moz-border-radius: 5px;
+            border-radius: 5px;
+            opacity: 1.0;
+            behavior: url("/css/pie/PIE.htc"); /* HANDLES IE */
+        }
+
+        #loading-div-background-resend {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background: rgba(255, 255, 255, 0.5);
+            width: 100%;
+            height: 100%;
+        }
+
+        #loading-div-background-meetedit {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background: rgba(255, 255, 255, 0.5);
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+ 

@@ -1,0 +1,25 @@
+<span style="text-align:justify;">
+<pre>Ref: &&customer_unique_id                                         Date:&&due_date </pre>
+
+<span>TO, </span>
+<br><b>&&customer_customer_name</b> 
+<br>&&customer_address
+<br>
+<br>Kind Attn:- &&customer_contact_person
+<br>
+<br><b>Subject:</b> &&servicedesc
+<br>
+<br><span>Dear &&customer_contact_person, </span>
+<br><br>
+<span>We would like to draw your attention to the Suspension letter that was sent dated &&PrevDueDate.</span>
+<br><br><span>As per procedural requirements and contract agreement, surveillance audit shall be conducted before 12 months intervals from the date of the certification registration.</span> 
+<br><br><span>Your organization has not conducted surveillance within the due date hence certification is now in suspension, if the suspension is not revoked before the date of &&NextDueDate, your ISO certificate will be permanently withdrawn.</span>
+<br><br><span>Inform us immediately for conducting the audit to revoke the suspension and avoid permanently canceling your certificate.</span>
+<br><br>
+<span>Kindly contact us if any more clarification or information needed.</span>
+<br><br><br>
+<br><span>Thanks & regards,</span>
+<br>AITF Management Certification Ltd.
+<br>(Technical Operational Staff)
+<br> PH- 9422011836 / 37
+</font></p></span>

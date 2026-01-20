@@ -1,0 +1,6 @@
+[03-Sep-2020 10:00:45 UTC] PHP Notice:  Undefined variable: email_adress_reciever in /home/aitfgroup/public_html/perfect-learn/contactUS.php on line 82
+[03-Sep-2020 10:00:45 UTC] PHP Notice:  Undefined variable: name_of_your_site in /home/aitfgroup/public_html/perfect-learn/contactUS.php on line 83
+[15-Sep-2020 10:25:49 UTC] PHP Notice:  Undefined variable: email_adress_reciever in /home/aitfgroup/public_html/perfect-learn/contactUS.php on line 82
+[15-Sep-2020 10:25:49 UTC] PHP Notice:  Undefined variable: name_of_your_site in /home/aitfgroup/public_html/perfect-learn/contactUS.php on line 83
+[15-Sep-2020 10:28:11 UTC] PHP Notice:  Undefined variable: email_adress_reciever in /home/aitfgroup/public_html/perfect-learn/contactUS.php on line 82
+[15-Sep-2020 10:28:11 UTC] PHP Notice:  Undefined variable: name_of_your_site in /home/aitfgroup/public_html/perfect-learn/contactUS.php on line 83

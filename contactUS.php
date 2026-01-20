@@ -1,0 +1,1167 @@
+<?php
+$successMsg = '';
+$errorMsg = '';
+$formData = [
+    'name' => '',
+    'email' => '',
+    'mobile' => '',
+    'company' => '',
+    'about' => '',
+    'services' => []
+];
+$serviceOptions = [
+    'ISO 9001',
+    'ISO 45001',
+    'ISO 14001'
+];
+$mailConfig = [
+    'host' => 'smtp.gmail.com',
+    'port' => 587,
+    'secure' => 'tls',
+    'username' => 'gauravoli777@gmail.com', // same account used for intimation letters
+    'password' => 'mezfslphhrielhpq', // replace with the Gmail App Password for this account
+    'from_name' => 'AITF Website'
+];
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $formData['name'] = trim($_POST['name'] ?? '');
+    $formData['email'] = trim($_POST['email'] ?? '');
+    $formData['mobile'] = trim($_POST['mobile'] ?? '');
+    $companyPost = isset($_POST['company']) ? $_POST['company'] : '';
+    $formData['company'] = is_string($companyPost) ? trim($companyPost) : '';
+    $formData['about'] = trim($_POST['about'] ?? '');
+    $formData['services'] = isset($_POST['services']) && is_array($_POST['services'])
+        ? array_values(array_intersect($serviceOptions, $_POST['services']))
+        : [];
+
+    if (
+        $formData['name'] === '' ||
+        $formData['email'] === '' ||
+        $formData['mobile'] === '' ||
+        $formData['company'] === '' ||
+        $formData['about'] === '' ||
+        empty($formData['services'])
+    ) {
+        $errorMsg = 'Please fill in all required fields (name, email, mobile, company, about, services).';
+    } elseif (!filter_var($formData['email'], FILTER_VALIDATE_EMAIL)) {
+        $errorMsg = 'Please enter a valid email address.';
+    } elseif (!preg_match('/^[0-9]{10,15}$/', preg_replace('/\D/', '', $formData['mobile']))) {
+        $errorMsg = 'Please enter a valid mobile number (10-15 digits).';
+    } else {
+        require __DIR__ . '/PHPMailer/PHPMailerAutoload.php';
+
+        // Resolve SMTP host with graceful fallback to avoid getaddrinfo failures
+        $smtpPrimaryHost = $mailConfig['host'];
+        $smtpResolved = @gethostbyname($smtpPrimaryHost);
+        $smtpHosts = [];
+        $dnsFailed = ($smtpResolved === $smtpPrimaryHost);
+        if (!$dnsFailed && $smtpResolved) {
+            $smtpHosts[] = $smtpResolved; // prefer resolved IPv4
+            $smtpHosts[] = $smtpPrimaryHost; // keep original hostname second
+            $smtpHosts[] = 'smtp.googlemail.com';
+        } else {
+            // DNS failed: use static Gmail IPv4 list only (no hostnames) to bypass resolution
+            $smtpHosts = [
+                '64.233.184.108',
+                '64.233.184.109',
+                '64.233.184.26'
+            ];
+        }
+        $smtpHostList = implode(';', array_unique($smtpHosts));
+
+        $mail = new PHPMailer;
+        $mail->isSMTP();
+        // Debug to PHP error log only (not shown to users)
+        $mail->SMTPDebug = 2;
+        $mail->Debugoutput = 'error_log';
+        $mail->Host = $smtpHostList;
+        $mail->Hostname = $smtpPrimaryHost;
+        $mail->Port = $mailConfig['port'];
+        $mail->SMTPAuth = true;
+        $mail->SMTPSecure = $mailConfig['secure'];
+        $mail->Username = $mailConfig['username'];
+        $mail->Password = $mailConfig['password'];
+        $mail->CharSet = 'UTF-8';
+        $mail->SMTPOptions = [
+            'ssl' => [
+                'verify_peer' => false,
+                'verify_peer_name' => false,
+                'allow_self_signed' => true
+            ]
+        ];
+        $mail->setFrom($mailConfig['username'], $mailConfig['from_name']);
+        $mail->addReplyTo($formData['email'], $formData['name']);
+        $mail->addAddress('gauravoli777@gmail.com', 'AITF Team');
+        $mail->Subject = 'New Contact Enquiry from Website';
+        $servicesText = implode(', ', $formData['services']);
+        $mobileClean = preg_replace('/\D+/', '', $formData['mobile']);
+        $body = "
+            <h3>New enquiry received from website contact form</h3>
+            <p><strong>Name:</strong> {$formData['name']}<br>
+            <strong>Email:</strong> {$formData['email']}<br>
+            <strong>Mobile:</strong> {$mobileClean}<br>
+            <strong>Company:</strong> {$formData['company']}<br>
+            <strong>Services Interested:</strong> {$servicesText}</p>
+            <p><strong>About the client / requirement:</strong><br>" . nl2br(htmlspecialchars($formData['about'], ENT_QUOTES, 'UTF-8')) . "</p>
+        ";
+        $mail->isHTML(true);
+        $mail->Body = $body;
+        $mail->AltBody = "Name: {$formData['name']}\nEmail: {$formData['email']}\nMobile: {$mobileClean}\nCompany: {$formData['company']}\nServices: {$servicesText}\nAbout:\n{$formData['about']}";
+
+        $primaryOk = $mail->send();
+
+        if ($primaryOk) {
+            // Send thank-you to sender
+            $confirm = new PHPMailer;
+            $confirm->isSMTP();
+            $confirm->SMTPDebug = 0;
+            $confirm->Host = $smtpHostList;
+            $confirm->Hostname = $smtpPrimaryHost;
+            $confirm->Port = $mailConfig['port'];
+            $confirm->SMTPAuth = true;
+            $confirm->SMTPSecure = $mailConfig['secure'];
+            $confirm->Username = $mailConfig['username'];
+            $confirm->Password = $mailConfig['password'];
+            $confirm->CharSet = 'UTF-8';
+            $confirm->SMTPOptions = $mail->SMTPOptions;
+            $confirm->setFrom($mailConfig['username'], 'AITF Team');
+            $confirm->addAddress($formData['email'], $formData['name']);
+            $confirm->Subject = 'Thank you for contacting AITF';
+            $confirmBody = "
+                <p>Hi {$formData['name']},</p>
+                <p>Thank you for reaching out. We’ve received your enquiry and will get back to you shortly.</p>
+                <p><strong>Summary you submitted:</strong><br>
+                Services: {$servicesText}<br>
+                Mobile: {$mobileClean}<br>
+                Company: {$formData['company']}<br>
+                About: " . nl2br(htmlspecialchars($formData['about'], ENT_QUOTES, 'UTF-8')) . "</p>
+                <p>Regards,<br>AITF Team</p>
+            ";
+            $confirm->isHTML(true);
+            $confirm->Body = $confirmBody;
+            $confirm->AltBody = "Hi {$formData['name']},\n\nThank you for reaching out. We’ve received your enquiry and will get back to you shortly.\n\nSummary:\nServices: {$servicesText}\nMobile: {$mobileClean}\nCompany: {$formData['company']}\nAbout: {$formData['about']}\n\nRegards,\nAITF Team";
+            $confirmOk = $confirm->send();
+
+            $successMsg = $confirmOk
+                ? 'Thank you! We will get back to you shortly.'
+                : 'Thank you! We received your enquiry, but could not send confirmation to your email.';
+            $formData = ['name' => '', 'email' => '', 'mobile' => '', 'about' => '', 'services' => []];
+        } else {
+            $primaryErr = $mail->ErrorInfo;
+            // Try SSL/465 fallback (matches many shared hosts)
+            $mail->smtpClose();
+            $mail->Port = 465;
+            $mail->SMTPSecure = 'ssl';
+            $fallbackOk = $mail->send();
+
+            if ($fallbackOk) {
+                // Send thank-you to sender
+                $confirm = new PHPMailer;
+                $confirm->isSMTP();
+                $confirm->SMTPDebug = 0;
+                $confirm->Host = $smtpHostList;
+                $confirm->Hostname = $smtpPrimaryHost;
+                $confirm->Port = $mailConfig['port'];
+                $confirm->SMTPAuth = true;
+                $confirm->SMTPSecure = $mailConfig['secure'];
+                $confirm->Username = $mailConfig['username'];
+                $confirm->Password = $mailConfig['password'];
+                $confirm->CharSet = 'UTF-8';
+                $confirm->SMTPOptions = $mail->SMTPOptions;
+                $confirm->setFrom($mailConfig['username'], 'AITF Team');
+                $confirm->addAddress($formData['email'], $formData['name']);
+                $confirm->Subject = 'Thank you for contacting AITF';
+                $confirmBody = "
+                    <p>Hi {$formData['name']},</p>
+                    <p>Thank you for reaching out. We’ve received your enquiry and will get back to you shortly.</p>
+                    <p><strong>Summary you submitted:</strong><br>
+                    Services: {$servicesText}<br>
+                    Mobile: {$mobileClean}<br>
+                    Company: {$formData['company']}<br>
+                    About: " . nl2br(htmlspecialchars($formData['about'], ENT_QUOTES, 'UTF-8')) . "</p>
+                    <p>Regards,<br>AITF Team</p>
+                ";
+                $confirm->isHTML(true);
+                $confirm->Body = $confirmBody;
+                $confirm->AltBody = "Hi {$formData['name']},\n\nThank you for reaching out. We’ve received your enquiry and will get back to you shortly.\n\nSummary:\nServices: {$servicesText}\nMobile: {$mobileClean}\nCompany: {$formData['company']}\nAbout: {$formData['about']}\n\nRegards,\nAITF Team";
+                $confirmOk = $confirm->send();
+
+                $successMsg = $confirmOk
+                    ? 'Thank you! We will get back to you shortly.'
+                    : 'Thank you! We received your enquiry, but could not send confirmation to your email.';
+                $formData = ['name' => '', 'email' => '', 'mobile' => '', 'about' => '', 'services' => []];
+            } else {
+                $errorMsg = 'Mail error: ' . $primaryErr . ' | Fallback: ' . $mail->ErrorInfo;
+            }
+        }
+    }
+}
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <?php include './headSource.php'; ?>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>Contact Us - AITF Management Certification</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f1419;
+            color: #e7e9ea;
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        /* Hero Section */
+        .contact-hero {
+            background: linear-gradient(180deg, #1a2332 0%, #0f1419 100%);
+            padding: 120px 20px 80px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .contact-hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(ellipse at center, rgba(29, 155, 240, 0.1) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .hero-content {
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero-content h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            color: #ffffff;
+            margin-bottom: 20px;
+            letter-spacing: -1px;
+        }
+
+        .hero-content p {
+            font-size: 1.25rem;
+            color: #8899a6;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Quick Contact Strip */
+        .quick-strip {
+            background: #192734;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding: 20px 0;
+        }
+
+        .quick-strip-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: center;
+            gap: 60px;
+            flex-wrap: wrap;
+        }
+
+        .quick-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            text-decoration: none;
+            color: #e7e9ea;
+            transition: all 0.3s ease;
+        }
+
+        .quick-item:hover {
+            color: #1d9bf0;
+        }
+
+        .quick-item i {
+            width: 45px;
+            height: 45px;
+            background: linear-gradient(135deg, #1d9bf0, #1a8cd8);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: white;
+        }
+
+        .quick-item span {
+            font-size: 0.85rem;
+            color: #8899a6;
+            display: block;
+        }
+
+        .quick-item strong {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        /* Main Container */
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 60px 20px;
+        }
+
+        /* Contact Grid */
+        .contact-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+        }
+
+        @media (max-width: 900px) {
+            .contact-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Cards */
+        .card {
+            background: #192734;
+            border-radius: 20px;
+            padding: 40px;
+            border: 1px solid rgba(255,255,255,0.08);
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+            backdrop-filter: blur(4px);
+        }
+
+        .card:hover {
+            border-color: rgba(29, 155, 240, 0.3);
+            transform: translateY(-5px);
+            box-shadow: 0 16px 36px rgba(29,155,240,0.18);
+        }
+
+        .alert {
+            margin-bottom: 20px;
+            padding: 15px 18px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+
+        .alert-success {
+            background: rgba(76, 175, 80, 0.12);
+            border: 1px solid rgba(76, 175, 80, 0.4);
+            color: #a5e1b6;
+        }
+
+        .alert-error {
+            background: rgba(244, 67, 54, 0.12);
+            border: 1px solid rgba(244, 67, 54, 0.4);
+            color: #f28b82;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .card-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #1d9bf0, #1a8cd8);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            color: white;
+        }
+
+        .card-header h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        /* Contact Items */
+        .contact-item {
+            display: flex;
+            gap: 20px;
+            padding: 20px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            transition: all 0.3s ease;
+        }
+
+        .contact-item:last-child {
+            border-bottom: none;
+        }
+
+        .contact-item:hover {
+            padding-left: 10px;
+        }
+
+        .contact-item-icon {
+            width: 50px;
+            height: 50px;
+            background: rgba(29, 155, 240, 0.15);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #1d9bf0;
+            font-size: 20px;
+            flex-shrink: 0;
+            transition: all 0.3s ease;
+        }
+
+        .contact-item:hover .contact-item-icon {
+            background: #1d9bf0;
+            color: white;
+        }
+
+        .contact-item-content h4 {
+            font-size: 0.9rem;
+            color: #8899a6;
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+
+        .contact-item-content p,
+        .contact-item-content a {
+            font-size: 1rem;
+            color: #e7e9ea;
+            text-decoration: none;
+            line-height: 1.6;
+        }
+
+        .contact-item-content a:hover {
+            color: #1d9bf0;
+        }
+
+        /* Business Hours */
+        .hours-section {
+            margin-top: 30px;
+            padding-top: 25px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .hours-section h3 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.1rem;
+            color: #ffffff;
+            margin-bottom: 20px;
+        }
+
+        .hours-section h3 i {
+            color: #1d9bf0;
+        }
+
+        .hours-list {
+            list-style: none;
+        }
+
+        .hours-list li {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-size: 0.95rem;
+        }
+
+        .hours-list li:last-child {
+            border-bottom: none;
+        }
+
+        .hours-list li span:first-child {
+            color: #8899a6;
+        }
+
+        .hours-list li span:last-child {
+            color: #e7e9ea;
+            font-weight: 500;
+        }
+
+        /* Email Card */
+        .email-card {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .email-icon-large {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, #1d9bf0, #1a8cd8);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 30px;
+            font-size: 40px;
+            color: white;
+            box-shadow: 0 20px 40px rgba(29, 155, 240, 0.3);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .email-card h3 {
+            font-size: 1.8rem;
+            color: #ffffff;
+            margin-bottom: 15px;
+        }
+
+        .email-card p {
+            color: #8899a6;
+            font-size: 1rem;
+            max-width: 350px;
+            margin: 0 auto 30px;
+        }
+
+        .email-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            background: linear-gradient(135deg, #1d9bf0, #1a8cd8);
+            color: white;
+            padding: 16px 40px;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(29, 155, 240, 0.3);
+            position: relative;
+            z-index: 100;
+        }
+
+        .email-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(29, 155, 240, 0.4);
+            color: white;
+        }
+
+        .email-note {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 25px;
+            color: #8899a6;
+            font-size: 0.9rem;
+        }
+
+        .email-note i {
+            color: #1d9bf0;
+        }
+
+        /* Social Links */
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 35px;
+            padding-top: 30px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .social-link {
+            width: 50px;
+            height: 50px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #8899a6;
+            font-size: 20px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .social-link:hover {
+            background: #1d9bf0;
+            color: white;
+            transform: translateY(-3px);
+        }
+
+        /* Map Section */
+        .map-section {
+            margin-top: 60px;
+        }
+
+        .map-card {
+            background: #192734;
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .map-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .map-header h3 {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.3rem;
+            color: #ffffff;
+        }
+
+        .map-header h3 i {
+            color: #1d9bf0;
+        }
+
+        .map-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(29, 155, 240, 0.15);
+            color: #1d9bf0;
+            padding: 10px 20px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .map-btn:hover {
+            background: #1d9bf0;
+            color: white;
+        }
+
+        .map-container {
+            border-radius: 15px;
+            overflow: hidden;
+            height: 350px;
+        }
+
+        .map-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* Form */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 16px;
+            width: 100%;
+        }
+
+        .form-grid.full {
+            grid-template-columns: 1fr;
+        }
+
+        .form-control {
+            width: 100%;
+            background: #111820;
+            border: 1px solid rgba(255,255,255,0.08);
+            color: #e7e9ea;
+            padding: 14px 16px;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.35);
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #1d9bf0;
+            box-shadow: 0 0 0 3px rgba(29, 155, 240, 0.15);
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #cfd3d7;
+            font-weight: 600;
+        }
+
+        .services-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .service-chip {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 10px 12px;
+            color: #e7e9ea;
+            cursor: pointer;
+            transition: border-color 0.25s ease, transform 0.2s ease, box-shadow 0.25s ease;
+        }
+
+        .service-chip:hover {
+            border-color: #1d9bf0;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 18px rgba(29,155,240,0.15);
+        }
+
+        .service-chip input {
+            accent-color: #1d9bf0;
+            width: 18px;
+            height: 18px;
+        }
+
+        .submit-btn {
+            background: linear-gradient(135deg, #1d9bf0, #1a8cd8);
+            color: white;
+            padding: 16px;
+            border: none;
+            border-radius: 14px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
+            box-shadow: 0 12px 30px rgba(29, 155, 240, 0.35);
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 16px 36px rgba(29, 155, 240, 0.45);
+            filter: brightness(1.05);
+        }
+
+        .form-note {
+            color: #8899a6;
+            font-size: 0.95rem;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        /* Submit overlay */
+        .submit-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 20, 25, 0.72);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 16px;
+            color: #e7e9ea;
+            font-weight: 600;
+            letter-spacing: 0.2px;
+            z-index: 2000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .submit-overlay.show {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .loader-ring {
+            width: 54px;
+            height: 54px;
+            border: 4px solid rgba(255,255,255,0.16);
+            border-top-color: #1d9bf0;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            box-shadow: 0 0 0 1px rgba(255,255,255,0.04);
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Floating Contact */
+        .floating-contact {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 15px;
+        }
+
+        .floating-options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+        }
+
+        .floating-contact.active .floating-options {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .floating-option {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: white;
+            text-decoration: none;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+        }
+
+        .floating-option:hover {
+            transform: scale(1.1);
+        }
+
+        .floating-option.whatsapp { background: #25D366; }
+        .floating-option.phone { background: #1d9bf0; }
+        .floating-option.email { background: #EA4335; }
+
+        .floating-btn {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #1d9bf0, #1a8cd8);
+            border-radius: 50%;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(29, 155, 240, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .floating-btn:hover {
+            transform: scale(1.1);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero-content h1 {
+                font-size: 2.5rem;
+            }
+
+            .hero-content p {
+                font-size: 1.1rem;
+            }
+
+            .quick-strip-inner {
+                gap: 30px;
+            }
+
+            .card {
+                padding: 30px;
+            }
+
+            .email-card h3 {
+                font-size: 1.5rem;
+            }
+
+            .contact-hero {
+                padding: 100px 20px 60px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .hero-content h1 {
+                font-size: 2rem;
+            }
+
+            .quick-strip-inner {
+                flex-direction: column;
+                gap: 20px;
+                align-items: center;
+            }
+
+            .main-container {
+                padding: 40px 15px;
+            }
+
+            .card {
+                padding: 25px;
+            }
+
+            .services-list {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <?php include './headerSource.php'; ?>
+
+    <!-- Hero Section -->
+    <section class="contact-hero">
+        <div class="hero-content">
+            <h1>Lets Start Conversation</h1>
+            <p>We're here to help and answer any questions you might have. Reach out and we'll respond as soon as possible.</p>
+        </div>
+    </section>
+
+    <!-- Quick Contact Strip -->
+    <div class="quick-strip">
+        <div class="quick-strip-inner">
+            <a href="tel:+919881691012" class="quick-item" onclick="window.location.href='tel:+919881691012';">
+                <i class="fas fa-phone-alt"></i>
+                <div>
+                    <span>Call Us</span>
+                    <strong>+91 9881691012</strong>
+                </div>
+            </a>
+            <a href="https://mail.google.com/mail/?view=cm&fs=1&to=aitfindia@gmail.com&su=Inquiry from AITF Website" target="_blank" class="quick-item">
+                <i class="fas fa-envelope"></i>
+                <div>
+                    <span>Email Us</span>
+                    <strong>aitfindia@gmail.com</strong>
+                </div>
+            </a>
+            <a href="https://wa.me/919881691012" class="quick-item" target="_blank">
+                <i class="fab fa-whatsapp"></i>
+                <div>
+                    <span>WhatsApp</span>
+                    <strong>Chat Now</strong>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main-container">
+        <?php if ($successMsg): ?>
+            <div class="alert alert-success"><?php echo htmlspecialchars($successMsg, ENT_QUOTES, 'UTF-8'); ?></div>
+        <?php elseif ($errorMsg): ?>
+            <div class="alert alert-error"><?php echo htmlspecialchars($errorMsg, ENT_QUOTES, 'UTF-8'); ?></div>
+        <?php endif; ?>
+
+        <div class="contact-grid">
+            <!-- Contact Information -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-address-card"></i>
+                    </div>
+                    <h2>Contact Information</h2>
+                </div>
+
+                <div class="contact-item">
+                    <div class="contact-item-icon">
+                        <i class="fas fa-map-marker-alt"></i>
+                    </div>
+                    <div class="contact-item-content">
+                        <h4>Our Location</h4>
+                        <p>Devi Indrayani Wing B 26,<br>Gat No. 382+3+4/1, Near IT Park,<br>Talwade, Pune - 411 062<br>Maharashtra, India</p>
+                    </div>
+                </div>
+
+                <div class="contact-item">
+                    <div class="contact-item-icon">
+                        <i class="fas fa-phone-alt"></i>
+                    </div>
+                    <div class="contact-item-content">
+                        <h4>Phone Number</h4>
+                        <a href="tel:+919881691012" onclick="window.location.href='tel:+919881691012';">+91 9881691012</a>
+                    </div>
+                </div>
+
+                <div class="contact-item">
+                    <div class="contact-item-icon">
+                        <i class="fas fa-envelope"></i>
+                    </div>
+                    <div class="contact-item-content">
+                        <h4>Email Address</h4>
+                        <a href="https://mail.google.com/mail/?view=cm&fs=1&to=aitfindia@gmail.com" target="_blank">aitfindia@gmail.com</a>
+                    </div>
+                </div>
+
+                <div class="contact-item">
+                    <div class="contact-item-icon">
+                        <i class="fas fa-globe"></i>
+                    </div>
+                    <div class="contact-item-content">
+                        <h4>Website</h4>
+                        <a href="https://www.aitf.co.in" target="_blank">www.aitf.co.in</a>
+                    </div>
+                </div>
+
+                <div class="hours-section">
+                    <h3><i class="far fa-clock"></i> Business Hours</h3>
+                    <ul class="hours-list">
+                        <li><span>Friday - Wednesday</span><span>9:30 AM - 6:30 PM</span></li>
+                        <li><span>Thursday</span><span>9:30 AM - 2:30 PM</span></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Email Card -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-paper-plane"></i>
+                    </div>
+                    <h2>Contact Form</h2>
+                </div>
+                <form method="post">
+                    <div class="form-grid">
+                        <div>
+                            <label class="form-label" for="name">Name*</label>
+                            <input class="form-control" type="text" id="name" name="name" value="<?php echo htmlspecialchars($formData['name'], ENT_QUOTES, 'UTF-8'); ?>" required>
+                        </div>
+                        <div>
+                            <label class="form-label" for="email">Email*</label>
+                            <input class="form-control" type="email" id="email" name="email" value="<?php echo htmlspecialchars($formData['email'], ENT_QUOTES, 'UTF-8'); ?>" required>
+                        </div>
+                        <div>
+                            <label class="form-label" for="company">Company Name*</label>
+                            <input class="form-control" type="text" id="company" name="company" value="<?php echo htmlspecialchars($formData['company'], ENT_QUOTES, 'UTF-8'); ?>" required>
+                        </div>
+                        <div>
+                            <label class="form-label" for="mobile">Mobile Number*</label>
+                            <input class="form-control" type="text" id="mobile" name="mobile" value="<?php echo htmlspecialchars($formData['mobile'], ENT_QUOTES, 'UTF-8'); ?>" placeholder="+91 9881691012" required>
+                        </div>
+                        <div>
+                            <label class="form-label">Services Interested In*</label>
+                            <div class="services-list">
+                                <?php foreach ($serviceOptions as $service): ?>
+                                    <label class="service-chip">
+                                        <input type="checkbox" name="services[]" value="<?php echo htmlspecialchars($service, ENT_QUOTES, 'UTF-8'); ?>" <?php echo in_array($service, $formData['services']) ? 'checked' : ''; ?>>
+                                        <span><?php echo htmlspecialchars($service, ENT_QUOTES, 'UTF-8'); ?></span>
+                                    </label>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                        <div class="form-grid full">
+                            <div>
+                                <label class="form-label" for="about">Tell us about yourself / your requirement*</label>
+                                <textarea class="form-control" id="about" name="about" rows="5" required><?php echo htmlspecialchars($formData['about'], ENT_QUOTES, 'UTF-8'); ?></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 18px;">
+                        <button type="submit" class="submit-btn">Send Message</button>
+                        <div class="form-note">You will see a confirmation once your enquiry is sent. We typically respond within 24 hours.</div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Map Section -->
+        <div class="map-section">
+            <div class="map-card">
+                <div class="map-header">
+                    <h3><i class="fas fa-map-marked-alt"></i> Find Us on Map</h3>
+                    <a href="https://www.google.com/maps?q=Devi+Indrayani+Wing+B+26,+Gat+No.+382%2B3%2B4%2F1,+Near+IT+Park,+Talwade,+Pune,+Maharashtra+411062" target="_blank" class="map-btn">
+                        <i class="fas fa-external-link-alt"></i>
+                        Open in Google Maps
+                    </a>
+                </div>
+                <div class="map-container">
+                    <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3781.137254814841!2d73.75876431489376!3d18.63032438734261!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bc2b9e5f5c0f42f%3A0x4d7b7b3d9e6c7f8a!2sTalwade%2C%20Pune%2C%20Maharashtra%20411062!5e0!3m2!1sen!2sin!4v1640000000000!5m2!1sen!2sin" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Floating Contact Button -->
+    <div class="floating-contact" id="floatingContact">
+        <div class="floating-options">
+            <a href="https://wa.me/919881691012" class="floating-option whatsapp" target="_blank" title="WhatsApp">
+                <i class="fab fa-whatsapp"></i>
+            </a>
+            <a href="tel:+919881691012" class="floating-option phone" title="Call" onclick="window.location.href='tel:+919881691012';">
+                <i class="fas fa-phone-alt"></i>
+            </a>
+            <a href="https://mail.google.com/mail/?view=cm&fs=1&to=aitfindia@gmail.com" class="floating-option email" title="Email" target="_blank">
+                <i class="fas fa-envelope"></i>
+            </a>
+        </div>
+        <button class="floating-btn" id="floatingBtn">
+            <i class="fas fa-comment-dots"></i>
+        </button>
+    </div>
+
+    <div class="submit-overlay" id="submitOverlay" aria-live="polite" aria-busy="true">
+        <div class="loader-ring" aria-hidden="true"></div>
+        <div>Sending your query to AITF...</div>
+    </div>
+
+    <?php include './footerSource.php'; ?>
+
+    <script>
+        // Floating contact toggle
+        const floatingBtn = document.getElementById('floatingBtn');
+        const floatingContact = document.getElementById('floatingContact');
+        
+        floatingBtn.addEventListener('click', () => {
+            floatingContact.classList.toggle('active');
+        });
+
+        // Close on outside click - but not for email button
+        document.addEventListener('click', (e) => {
+            if (!floatingContact.contains(e.target) && !e.target.closest('.email-btn')) {
+                floatingContact.classList.remove('active');
+            }
+        });
+
+        // Show loader on submit
+        const contactForm = document.querySelector('form');
+        const submitOverlay = document.getElementById('submitOverlay');
+        const submitBtn = document.querySelector('.submit-btn');
+
+        if (contactForm && submitOverlay && submitBtn) {
+            contactForm.addEventListener('submit', () => {
+                submitOverlay.classList.add('show');
+                submitBtn.dataset.originalText = submitBtn.textContent;
+                submitBtn.textContent = 'Sending...';
+                submitBtn.disabled = true;
+            });
+
+            window.addEventListener('pageshow', () => {
+                submitOverlay.classList.remove('show');
+                submitBtn.disabled = false;
+                if (submitBtn.dataset.originalText) {
+                    submitBtn.textContent = submitBtn.dataset.originalText;
+                }
+            });
+        }
+    </script>
+</body>
+</html>
