@@ -1,3 +1,6 @@
+
+
+
 <?php
 //include_once 'site_header_end.php';
 
@@ -28,5 +31,3 @@ try{
 		echo  $e->getMessage();
 	// 	$e->getTraceAsString()	
 	}
-
-

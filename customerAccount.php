@@ -8,17 +8,17 @@
     date_default_timezone_set('Asia/Kolkata');
     
     // Manage current customer context without exposing customerid in the URL
-    // 1) If called via POST (from dashboard or other lists), store the id in session and redirect to clean /account URL
+    // 1) If called via POST (from dashboard or other lists), store the id in session and redirect back to this page
     if (isset($_POST['customerid']) && !empty($_POST['customerid'])) {
         $_SESSION['current_customer_id'] = (int) $_POST['customerid'];
-        header("Location: account");
+        header("Location: customerAccount.php");
         exit;
     }
 
-    // 2) Legacy links: customerAccount.php?customerid=123 -> store in session and redirect to /account
+    // 2) Legacy links: customerAccount.php?customerid=123 -> store in session and redirect to this page (clean URL)
     if (isset($_GET['customerid']) && !empty($_GET['customerid']) && strpos($_SERVER['REQUEST_URI'], 'customerAccount.php') !== false) {
         $_SESSION['current_customer_id'] = (int) $_GET['customerid'];
-        header("Location: account");
+        header("Location: customerAccount.php");
         exit;
     }
 
