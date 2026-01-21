@@ -30,6 +30,9 @@ require_once('tcpdf_include.php');
 include_once './dbConnect.php';
 date_default_timezone_set('Asia/Kolkata');
 
+// buffer output to avoid TCPDF header issues if any notices/whitespace are emitted
+ob_start();
+
 // Extend the TCPDF class to create custom Header and Footer
 class MYPDF extends TCPDF {
 
@@ -312,12 +315,15 @@ $pdf->writeHTML($html, true, false, true, false, '');
 $fileName = $lettertype . ".pdf";
 
 if($PageAction == "PreviewPDF"){
+	if (ob_get_length()) {
+		ob_end_clean();
+	}
 	$pdf->Output($fileName, 'I');
 }
 else if($PageAction == "SendMail"){
-	//echo '<script>alert("Mail functionality is not yet coded.")</script>';
 	require 'PHPMailer/PHPMailerAutoload.php';
-	
+	$isAjaxRequest = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
+
 	$mailBody = '<html><body><p>Dear Sir / Maam,</p>'
 		. $mailBodyPart
 		. '<p>Thanks,</p>'
@@ -326,14 +332,18 @@ else if($PageAction == "SendMail"){
 	$subject = $servicedesc .' - '. $customer['customer_name'];
 	$contactEmail = explode(',',$customer['email_id']);
 	$isMailSend = 0;
-	
+	$response = array('success' => false, 'message' => '');
+
 	$fileSufix = date("YmdHis") . "_" . $customer_id;
 	$fullFilePath = __DIR__ . '/notification/' . $fileSufix . $fileName;	
+	if (ob_get_length()) {
+		ob_end_clean();
+	}
 	$pdf->Output($fullFilePath, 'F');
-	
+
 	$mail = new PHPMailer;
 	$mail->isSMTP();
-	$mail->SMTPDebug = 2;
+	$mail->SMTPDebug = 0;
 	$mail->Host='smtp.gmail.com';
 	$mail->Port=587;
 	$mail->SMTPAuth=true;
@@ -345,13 +355,13 @@ else if($PageAction == "SendMail"){
 			'allow_self_signed' => true
 		)
 	);
-	
+
 	$mail->Username='aitfintimation@gmail.com';
 	// Gmail App Password provided for intimation account
-	$mail->Password='grvbsdotegpyheib';
+	$mail->Password='rcfducomzcmminpx';
 	$mail->setFrom('aitfintimation@gmail.com', 'AITF Intimation');
-$mail->addReplyTo('aitfintimation@gmail.com', 'AITF Intimation');
-	
+$mail->addReplyTo('aitfmcl@gmail.com', 'AITF Intimation');
+
 	$mail->addCC('aitfintimation@gmail.com');
 	foreach($contactEmail as $e)
 	{
@@ -361,18 +371,24 @@ $mail->addReplyTo('aitfintimation@gmail.com', 'AITF Intimation');
 	$mail->Subject=$subject;
 	$mail->Body=$mailBody;
 	$mail->AddAttachment($fullFilePath , $fileName);
-	
+
 	if(!$mail->send()) {
 		$isMailSend = 0;
-		
+		$response['message'] = 'Mailer Error: ' . $mail->ErrorInfo;
 	} else {
-		$isMailSend = 1;		
+		$isMailSend = 1;
 	}
-	
+
 	//check if mail send successfully
 	if($isMailSend == 0)
 	{
-		echo 'Mailer Error: ' . $mail->ErrorInfo;
+		if ($isAjaxRequest) {
+			header('Content-Type: application/json');
+			echo json_encode($response);
+			exit;
+		} else {
+			echo $response['message'];
+		}
 	}
 	else if($isMailSend == 1)
 	{
@@ -381,7 +397,15 @@ $mail->addReplyTo('aitfintimation@gmail.com', 'AITF Intimation');
 		$statement->bindParam(":id",$actionId);
 		$statement->bindParam(":date", date("Y-m-d"));
 		$statement->execute();
-		echo '<script> localStorage.setItem("isMailSend", "Completed"); window.close(); </script>';
+		$response['success'] = true;
+		$response['message'] = 'Mail sent successfully.';
+		if ($isAjaxRequest) {
+			header('Content-Type: application/json');
+			echo json_encode($response);
+			exit;
+		} else {
+			echo '<script> localStorage.setItem("isMailSend", "Completed"); window.close(); </script>';
+		}
 	}
 		
 	

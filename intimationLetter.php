@@ -78,6 +78,27 @@
 
     <div id="page-content-wrapper">
 
+        <div id="sendStatusToast" class="alert" style="display:none; position: fixed; top: 20px; right: 20px; z-index: 1051; min-width: 260px;">
+        </div>
+
+        <div class="modal fade" id="sendConfirmModal" tabindex="-1" role="dialog" aria-labelledby="sendConfirmTitle">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header" style="background:#053c6d; color: #fff;">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                        <h4 class="modal-title" id="sendConfirmTitle">Send Intimation Letter</h4>
+                    </div>
+                    <div class="modal-body">
+                        <p style="font-size:15px; color:#333; margin-bottom: 0;">Are you sure you want to send this letter to the client?</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-warning" id="confirmSendBtn">Yes, Send</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div id="loading-div-background" >
             <div id="loading-div" class="ui-corner-all text-center">
                 <h1><i class="fa fa-spinner fa-spin" ></i></h1>
@@ -326,10 +347,21 @@
 
 <script type="text/javascript" >
     function ShowProgressAnimation() {
-        $("#loading-div-background").show();
+        $("#loading-div-background").fadeIn(150);
     }
     function HideProgressAnimation() {
-        $("#loading-div-background").hide();
+        $("#loading-div-background").fadeOut(150);
+    }
+
+    function showToast(message, isSuccess) {
+        var $toast = $('#sendStatusToast');
+        $toast.removeClass('alert-success alert-danger');
+        $toast.addClass(isSuccess ? 'alert-success' : 'alert-danger');
+        $toast.html(message);
+        $toast.fadeIn(200);
+        setTimeout(function(){
+            $toast.fadeOut(200);
+        }, 3500);
     }
 
 	function GenerateOrPreviewPDF(customer, service, action, servicetype, letterType, pageAction){
@@ -358,40 +390,47 @@
 	});
 	
 	$('.SendMailToCust').click(function () {
-		var customer = $(this).attr('data-customer');
-		var service = $(this).attr('data-service');
-		var action = $(this).attr('data-action');
-		var servicetype = $(this).attr("data-servicetype");
-		var lettertype = $(this).attr("data-letterType");
-		
-		localStorage.setItem("isMailSend", "Initiating");
-		ShowProgressAnimation();
-		
-		GenerateOrPreviewPDF(customer,service,action,servicetype,lettertype, "SendMail");
-		
-		var isMailSendVal = localStorage.getItem("isMailSend");
-		var iCnt = 0;
-		while(isMailSendVal=="Initiating" && iCnt < 4)
-		{
-			sleep(3000);
-			isMailSendVal = localStorage.getItem("isMailSend");
-			iCnt = iCnt + 1;
-		}
-		localStorage.removeItem("isMailSend");
-		HideProgressAnimation();
-		
-		document.location.reload(true);
+		pendingSendPayload = {
+			customer: $(this).attr('data-customer'),
+			service: $(this).attr('data-service'),
+			action: $(this).attr('data-action'),
+			servicetype: $(this).attr('data-servicetype'),
+			lettertype: $(this).attr('data-letterType')
+		};
+		$('#sendConfirmModal').modal('show');
 	});
-	
-	function sleep(milliseconds) {
-            let timeStart = new Date().getTime();
-            while (true) {
-                let elapsedTime = new Date().getTime() - timeStart;
-                if (elapsedTime > milliseconds) {
-                    break;
-                }
-            }
-        }
+
+	$('#confirmSendBtn').click(function(){
+		if(!pendingSendPayload){ return; }
+		$('#sendConfirmModal').modal('hide');
+		ShowProgressAnimation();
+		var payload = $.extend({}, pendingSendPayload, {
+			SourcePage: 'intimationLetter.php',
+			pageAction: 'SendMail'
+		});
+		$.ajax({
+			url: 'IntimationDueLetters.php',
+			type: 'POST',
+			data: payload,
+			dataType: 'json'
+		}).done(function(res){
+			HideProgressAnimation();
+			if(res && res.success){
+				showToast('Letter sent successfully.', true);
+				setTimeout(function(){ location.reload(); }, 800);
+			} else {
+				var msg = (res && res.message) ? res.message : 'Unable to send mail. Please try again.';
+				showToast(msg, false);
+			}
+		}).fail(function(xhr){
+			HideProgressAnimation();
+			var msg = 'Unable to send mail. Please try again.';
+			if(xhr && xhr.responseText){
+				msg = xhr.responseText;
+			}
+			showToast(msg, false);
+		});
+	});
 	
 	$('.SendSuspensionReminderPDF').click(function () {
 		ShowProgressAnimation();
