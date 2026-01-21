@@ -344,7 +344,7 @@ else if($PageAction == "SendMail"){
 	$mail = new PHPMailer;
 	$mail->isSMTP();
 	$mail->SMTPDebug = 0;
-	$mail->Host='smtp.gmail.com';
+	$mail->Host='smtp.gmail.com;smtp.googlemail.com;64.233.184.108;64.233.184.109;64.233.184.26';
 	$mail->Port=587;
 	$mail->SMTPAuth=true;
 	$mail->SMTPSecure='tls';
@@ -375,8 +375,16 @@ else if($PageAction == "SendMail"){
 	$mail->AddAttachment($fullFilePath , $fileName);
 
 	if(!$mail->send()) {
-		$isMailSend = 0;
-		$response['message'] = 'Mailer Error: ' . $mail->ErrorInfo;
+		// try SSL:465 fallback in case 587/tls blocked
+		$mail->smtpClose();
+		$mail->Port = 465;
+		$mail->SMTPSecure = 'ssl';
+		if(!$mail->send()) {
+			$isMailSend = 0;
+			$response['message'] = 'Mailer Error: ' . $mail->ErrorInfo;
+		} else {
+			$isMailSend = 1;
+		}
 	} else {
 		$isMailSend = 1;
 	}
