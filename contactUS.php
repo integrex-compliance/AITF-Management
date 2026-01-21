@@ -15,7 +15,7 @@ $serviceOptions = [
     'ISO 14001'
 ];
 $mailConfig = [
-    'host' => 'smtp.gmail.com',
+    'host' => 'smtp.gmail.com;smtp.googlemail.com',
     'port' => 587,
     'secure' => 'tls',
     'smtp_auth' => true,
@@ -98,6 +98,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $mail->AltBody = "Name: {$formData['name']}\nEmail: {$formData['email']}\nMobile: {$mobileClean}\nCompany: {$formData['company']}\nServices: {$servicesText}\nAbout:\n{$formData['about']}";
 
         $primaryOk = $mail->send();
+        if (!$primaryOk) {
+            $primaryErr = $mail->ErrorInfo;
+            $mail->smtpClose();
+            $mail->SMTPSecure = 'ssl';
+            $mail->Port = 465;
+            $primaryOk = $mail->send();
+            if (!$primaryOk) {
+                $errorMsg = 'Mail error: ' . $primaryErr . ' | Fallback: ' . $mail->ErrorInfo;
+            }
+        }
 
         if ($primaryOk) {
             // Send thank-you to sender

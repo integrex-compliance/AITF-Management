@@ -88,7 +88,7 @@ try {
 
     // SMTP config: Gmail TLS
     $mailConfig = [
-        'host'       => 'smtp.gmail.com',
+        'host'       => 'smtp.gmail.com;smtp.googlemail.com',
         'port'       => 587,
         'secure'     => 'tls',
         'smtp_auth'  => true,
@@ -135,7 +135,16 @@ try {
             . '<p>Client: <strong>' . htmlspecialchars($customer['customer_name']) . '</strong></p>'
             . '<p>The certificate PDF is attached for your reference.</p>';
         $clientMailer->addAttachment($tmpFile, 'Certificate.pdf');
-        $clientMailer->send();
+        if (!$clientMailer->send()) {
+            $primaryErr = $clientMailer->ErrorInfo;
+            $clientMailer->smtpClose();
+            $clientMailer->SMTPSecure = 'ssl';
+            $clientMailer->Port = 465;
+            $clientMailer->send(); // if this fails, ErrorInfo will carry last
+            if ($clientMailer->ErrorInfo) {
+                throw new Exception('Client mail failed: ' . $primaryErr . ' | Fallback: ' . $clientMailer->ErrorInfo);
+            }
+        }
     } catch (Exception $e) {
         @unlink($tmpFile);
         echo json_encode(['success' => false, 'message' => 'Client mail failed: ' . $e->getMessage()]);
@@ -153,7 +162,16 @@ try {
             . '<p>Client emails: ' . htmlspecialchars(implode(', ', $clientEmails)) . '</p>'
             . '<p>The certificate PDF is attached.</p>';
         $adminMailer->addAttachment($tmpFile, 'Certificate.pdf');
-        $adminMailer->send();
+        if (!$adminMailer->send()) {
+            $primaryErr = $adminMailer->ErrorInfo;
+            $adminMailer->smtpClose();
+            $adminMailer->SMTPSecure = 'ssl';
+            $adminMailer->Port = 465;
+            $adminMailer->send();
+            if ($adminMailer->ErrorInfo) {
+                throw new Exception('Admin mail failed: ' . $primaryErr . ' | Fallback: ' . $adminMailer->ErrorInfo);
+            }
+        }
     } catch (Exception $e) {
         @unlink($tmpFile);
         echo json_encode(['success' => false, 'message' => 'Admin mail failed: ' . $e->getMessage()]);
