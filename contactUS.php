@@ -15,9 +15,9 @@ $serviceOptions = [
     'ISO 14001'
 ];
 $mailConfig = [
-    'host' => 'localhost',
-    'port' => 25,
-    'secure' => '', // no SSL/TLS
+    'host' => 'smtp.gmail.com',
+    'port' => 587,
+    'secure' => 'tls',
     'smtp_auth' => true,
     'username' => 'aitfmcl@gmail.com',
     'password' => 'opwuzmftxpzmwyjy',

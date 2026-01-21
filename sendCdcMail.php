@@ -86,11 +86,11 @@ try {
 
     $adminEmail = 'gauravoli777@gmail.com'; // admin notification mailbox (can be changed later)
 
-    // SMTP config per requirement: localhost:25, no auth, no SSL
+    // SMTP config: Gmail TLS
     $mailConfig = [
-        'host'       => 'localhost',
-        'port'       => 25,
-        'secure'     => '',
+        'host'       => 'smtp.gmail.com',
+        'port'       => 587,
+        'secure'     => 'tls',
         'smtp_auth'  => true,
         'username'   => 'aitfmcl@gmail.com',
         'password'   => 'opwuzmftxpzmwyjy',
