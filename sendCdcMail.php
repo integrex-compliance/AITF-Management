@@ -86,38 +86,29 @@ try {
 
     $adminEmail = 'gauravoli777@gmail.com'; // admin notification mailbox (can be changed later)
 
-    // Build SMTP host list with resolution fallback (mirrors contactUS)
-    $smtpPrimaryHost = 'smtp.gmail.com';
-    $smtpResolved = @gethostbyname($smtpPrimaryHost);
-    $smtpHosts = [];
-    $dnsFailed = ($smtpResolved === $smtpPrimaryHost);
-    if (!$dnsFailed && $smtpResolved) {
-        $smtpHosts[] = $smtpResolved; // prefer resolved IPv4
-        $smtpHosts[] = $smtpPrimaryHost;
-        $smtpHosts[] = 'smtp.googlemail.com';
-    } else {
-        // DNS failed: static Gmail IPv4 list
-        $smtpHosts = [
-            '64.233.184.108',
-            '64.233.184.109',
-            '64.233.184.26'
-        ];
-    }
-    $smtpHostList = implode(';', array_unique($smtpHosts));
+    // SMTP config per requirement: localhost:25, no auth, no SSL
+    $mailConfig = [
+        'host'       => 'localhost',
+        'port'       => 25,
+        'secure'     => '',
+        'smtp_auth'  => true,
+        'username'   => 'aitfmcl@gmail.com',
+        'password'   => 'opwuzmftxpzmwyjy',
+        'from_email' => 'aitfmcl@gmail.com', // use an email where you manage DNS/SPF
+        'from_name'  => 'AITF Website'
+    ];
 
-    $smtpUsername = 'gauravoli777@gmail.com';
-    $smtpPassword = 'mezfslphhrielhpq';
-    $fromName     = 'AITF Website ';
-
-    $configureSmtp = function (PHPMailer $mailer, $hostList, $primaryHost, $port, $secure, $username, $password, $fromName) {
+    $configureSmtp = function (PHPMailer $mailer, array $cfg) {
         $mailer->isSMTP();
-        $mailer->SMTPAuth = true;
-        $mailer->SMTPSecure = $secure;
-        $mailer->Host = $hostList;
-        $mailer->Hostname = $primaryHost;
-        $mailer->Port = $port;
-        $mailer->Username = $username;
-        $mailer->Password = $password;
+        $mailer->Host = $cfg['host'];
+        $mailer->Hostname = $cfg['host'];
+        $mailer->Port = $cfg['port'];
+        $mailer->SMTPAuth = $cfg['smtp_auth'];
+        $mailer->SMTPSecure = $cfg['secure'];
+        if ($cfg['smtp_auth']) {
+            $mailer->Username = $cfg['username'];
+            $mailer->Password = $cfg['password'];
+        }
         $mailer->CharSet = 'UTF-8';
         $mailer->SMTPOptions = [
             'ssl' => [
@@ -126,46 +117,25 @@ try {
                 'allow_self_signed' => true
             ]
         ];
-        $mailer->setFrom($username, $fromName);
+        $mailer->setFrom($cfg['from_email'] ?: 'no-reply@localhost', $cfg['from_name']);
         $mailer->isHTML(true);
-        $mailer->SMTPDebug = 0; // keep silent for UI; logs can be enabled if needed
-    };
-
-    $sendWithFallback = function (PHPMailer $mailer, callable $builder) use ($configureSmtp, $smtpHostList, $smtpPrimaryHost, $smtpUsername, $smtpPassword, $fromName) {
-        // Primary: TLS 587
-        $configureSmtp($mailer, $smtpHostList, $smtpPrimaryHost, 587, 'tls', $smtpUsername, $smtpPassword, $fromName);
-        $builder();
-        if ($mailer->send()) {
-            return true;
-        }
-        $primaryErr = $mailer->ErrorInfo;
-        // Fallback: SSL 465
-        $mailer->smtpClose();
-        $configureSmtp($mailer, $smtpHostList, $smtpPrimaryHost, 465, 'ssl', $smtpUsername, $smtpPassword, $fromName);
-        $builder(true); // allow builder to skip re-adding recipients/attachments when false
-        if ($mailer->send()) {
-            return true;
-        }
-        throw new Exception($primaryErr . ' | Fallback: ' . $mailer->ErrorInfo);
+        $mailer->SMTPDebug = 0; // keep silent for UI; enable if needed
+        $mailer->Timeout = 15;
     };
 
     // Send to client
     $clientMailer = new PHPMailer(true);
     try {
-        $builder = function ($isFallback = false) use ($clientMailer, $clientEmails, $customer, $tmpFile) {
-            if (!$isFallback) {
-                // Only add recipients/attachments once
-                foreach ($clientEmails as $eml) {
-                    $clientMailer->addAddress($eml, $customer['customer_name']);
-                }
-                $clientMailer->Subject = 'Certificate Received - ' . $customer['customer_name'];
-                $clientMailer->Body    = '<p>Congratulations, your certificate has been received.</p>'
-                    . '<p>Client: <strong>' . htmlspecialchars($customer['customer_name']) . '</strong></p>'
-                    . '<p>The certificate PDF is attached for your reference.</p>';
-                $clientMailer->addAttachment($tmpFile, 'Certificate.pdf');
-            }
-        };
-        $sendWithFallback($clientMailer, $builder);
+        $configureSmtp($clientMailer, $mailConfig);
+        foreach ($clientEmails as $eml) {
+            $clientMailer->addAddress($eml, $customer['customer_name']);
+        }
+        $clientMailer->Subject = 'Certificate Received - ' . $customer['customer_name'];
+        $clientMailer->Body    = '<p>Congratulations, your certificate has been received.</p>'
+            . '<p>Client: <strong>' . htmlspecialchars($customer['customer_name']) . '</strong></p>'
+            . '<p>The certificate PDF is attached for your reference.</p>';
+        $clientMailer->addAttachment($tmpFile, 'Certificate.pdf');
+        $clientMailer->send();
     } catch (Exception $e) {
         @unlink($tmpFile);
         echo json_encode(['success' => false, 'message' => 'Client mail failed: ' . $e->getMessage()]);
@@ -175,18 +145,15 @@ try {
     // Send to admin
     $adminMailer = new PHPMailer(true);
     try {
-        $builder = function ($isFallback = false) use ($adminMailer, $adminEmail, $customer, $clientEmails, $tmpFile) {
-            if (!$isFallback) {
-                $adminMailer->addAddress($adminEmail, 'Admin');
-                $adminMailer->Subject = 'Client certificate sent - ' . $customer['customer_name'];
-                $adminMailer->Body    = '<p>Certificate mail was sent to client.</p>'
-                    . '<p>Client: <strong>' . htmlspecialchars($customer['customer_name']) . '</strong></p>'
-                    . '<p>Client emails: ' . htmlspecialchars(implode(', ', $clientEmails)) . '</p>'
-                    . '<p>The certificate PDF is attached.</p>';
-                $adminMailer->addAttachment($tmpFile, 'Certificate.pdf');
-            }
-        };
-        $sendWithFallback($adminMailer, $builder);
+        $configureSmtp($adminMailer, $mailConfig);
+        $adminMailer->addAddress($adminEmail, 'Admin');
+        $adminMailer->Subject = 'Client certificate sent - ' . $customer['customer_name'];
+        $adminMailer->Body    = '<p>Certificate mail was sent to client.</p>'
+            . '<p>Client: <strong>' . htmlspecialchars($customer['customer_name']) . '</strong></p>'
+            . '<p>Client emails: ' . htmlspecialchars(implode(', ', $clientEmails)) . '</p>'
+            . '<p>The certificate PDF is attached.</p>';
+        $adminMailer->addAttachment($tmpFile, 'Certificate.pdf');
+        $adminMailer->send();
     } catch (Exception $e) {
         @unlink($tmpFile);
         echo json_encode(['success' => false, 'message' => 'Admin mail failed: ' . $e->getMessage()]);

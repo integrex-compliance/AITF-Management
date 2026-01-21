@@ -15,11 +15,13 @@ $serviceOptions = [
     'ISO 14001'
 ];
 $mailConfig = [
-    'host' => 'smtp.gmail.com',
-    'port' => 587,
-    'secure' => 'tls',
-    'username' => 'gauravoli777@gmail.com', // same account used for intimation letters
-    'password' => 'mezfslphhrielhpq', // replace with the Gmail App Password for this account
+    'host' => 'localhost',
+    'port' => 25,
+    'secure' => '', // no SSL/TLS
+    'smtp_auth' => true,
+    'username' => 'aitfmcl@gmail.com',
+    'password' => 'opwuzmftxpzmwyjy',
+    'from_email' => 'aitfmcl@gmail.com', // use an email where you manage DNS/SPF
     'from_name' => 'AITF Website'
 ];
 
@@ -50,37 +52,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         require __DIR__ . '/PHPMailer/PHPMailerAutoload.php';
 
-        // Resolve SMTP host with graceful fallback to avoid getaddrinfo failures
-        $smtpPrimaryHost = $mailConfig['host'];
-        $smtpResolved = @gethostbyname($smtpPrimaryHost);
-        $smtpHosts = [];
-        $dnsFailed = ($smtpResolved === $smtpPrimaryHost);
-        if (!$dnsFailed && $smtpResolved) {
-            $smtpHosts[] = $smtpResolved; // prefer resolved IPv4
-            $smtpHosts[] = $smtpPrimaryHost; // keep original hostname second
-            $smtpHosts[] = 'smtp.googlemail.com';
-        } else {
-            // DNS failed: use static Gmail IPv4 list only (no hostnames) to bypass resolution
-            $smtpHosts = [
-                '64.233.184.108',
-                '64.233.184.109',
-                '64.233.184.26'
-            ];
-        }
-        $smtpHostList = implode(';', array_unique($smtpHosts));
+        $fromEmail = $mailConfig['from_email'] ?: 'no-reply@localhost';
 
         $mail = new PHPMailer;
         $mail->isSMTP();
         // Debug to PHP error log only (not shown to users)
         $mail->SMTPDebug = 2;
         $mail->Debugoutput = 'error_log';
-        $mail->Host = $smtpHostList;
-        $mail->Hostname = $smtpPrimaryHost;
+        $mail->Host = $mailConfig['host'];
+        $mail->Hostname = $mailConfig['host'];
         $mail->Port = $mailConfig['port'];
-        $mail->SMTPAuth = true;
+        $mail->SMTPAuth = $mailConfig['smtp_auth'];
         $mail->SMTPSecure = $mailConfig['secure'];
-        $mail->Username = $mailConfig['username'];
-        $mail->Password = $mailConfig['password'];
+        if ($mailConfig['smtp_auth']) {
+            $mail->Username = $mailConfig['username'];
+            $mail->Password = $mailConfig['password'];
+        }
         $mail->CharSet = 'UTF-8';
         $mail->Timeout = 15; // fail fast if SMTP blocked/slow
         $mail->SMTPKeepAlive = false;
@@ -91,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'allow_self_signed' => true
             ]
         ];
-        $mail->setFrom($mailConfig['username'], $mailConfig['from_name']);
+        $mail->setFrom($fromEmail, $mailConfig['from_name']);
         $mail->addReplyTo($formData['email'], $formData['name']);
         $mail->addAddress('gauravoli777@gmail.com', 'AITF Team');
         $mail->Subject = 'New Contact Enquiry from Website';
@@ -117,18 +104,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $confirm = new PHPMailer;
             $confirm->isSMTP();
             $confirm->SMTPDebug = 0;
-            $confirm->Host = $smtpHostList;
-            $confirm->Hostname = $smtpPrimaryHost;
+            $confirm->Host = $mailConfig['host'];
+            $confirm->Hostname = $mailConfig['host'];
             $confirm->Port = $mailConfig['port'];
-            $confirm->SMTPAuth = true;
+            $confirm->SMTPAuth = $mailConfig['smtp_auth'];
             $confirm->SMTPSecure = $mailConfig['secure'];
-            $confirm->Username = $mailConfig['username'];
-            $confirm->Password = $mailConfig['password'];
+            if ($mailConfig['smtp_auth']) {
+                $confirm->Username = $mailConfig['username'];
+                $confirm->Password = $mailConfig['password'];
+            }
             $confirm->CharSet = 'UTF-8';
             $confirm->Timeout = 15;
             $confirm->SMTPKeepAlive = false;
             $confirm->SMTPOptions = $mail->SMTPOptions;
-            $confirm->setFrom($mailConfig['username'], 'AITF Team');
+            $confirm->setFrom($fromEmail, 'AITF Team');
             $confirm->addAddress($formData['email'], $formData['name']);
             $confirm->Subject = 'Thank you for contacting AITF';
             $confirmBody = "
@@ -151,52 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 : 'Thank you! We received your enquiry, but could not send confirmation to your email.';
             $formData = ['name' => '', 'email' => '', 'mobile' => '', 'about' => '', 'services' => []];
         } else {
-            $primaryErr = $mail->ErrorInfo;
-            // Try SSL/465 fallback (matches many shared hosts)
-            $mail->smtpClose();
-            $mail->Port = 465;
-            $mail->SMTPSecure = 'ssl';
-            $fallbackOk = $mail->send();
-
-            if ($fallbackOk) {
-                // Send thank-you to sender
-                $confirm = new PHPMailer;
-                $confirm->isSMTP();
-                $confirm->SMTPDebug = 0;
-                $confirm->Host = $smtpHostList;
-                $confirm->Hostname = $smtpPrimaryHost;
-                $confirm->Port = $mailConfig['port'];
-                $confirm->SMTPAuth = true;
-                $confirm->SMTPSecure = $mailConfig['secure'];
-                $confirm->Username = $mailConfig['username'];
-                $confirm->Password = $mailConfig['password'];
-                $confirm->CharSet = 'UTF-8';
-                $confirm->SMTPOptions = $mail->SMTPOptions;
-                $confirm->setFrom($mailConfig['username'], 'AITF Team');
-                $confirm->addAddress($formData['email'], $formData['name']);
-                $confirm->Subject = 'Thank you for contacting AITF';
-                $confirmBody = "
-                    <p>Hi {$formData['name']},</p>
-                    <p>Thank you for reaching out. We’ve received your enquiry and will get back to you shortly.</p>
-                    <p><strong>Summary you submitted:</strong><br>
-                    Services: {$servicesText}<br>
-                    Mobile: {$mobileClean}<br>
-                    Company: {$formData['company']}<br>
-                    About: " . nl2br(htmlspecialchars($formData['about'], ENT_QUOTES, 'UTF-8')) . "</p>
-                    <p>Regards,<br>AITF Team</p>
-                ";
-                $confirm->isHTML(true);
-                $confirm->Body = $confirmBody;
-                $confirm->AltBody = "Hi {$formData['name']},\n\nThank you for reaching out. We’ve received your enquiry and will get back to you shortly.\n\nSummary:\nServices: {$servicesText}\nMobile: {$mobileClean}\nCompany: {$formData['company']}\nAbout: {$formData['about']}\n\nRegards,\nAITF Team";
-                $confirmOk = $confirm->send();
-
-                $successMsg = $confirmOk
-                    ? 'Thank you! We will get back to you shortly.'
-                    : 'Thank you! We received your enquiry, but could not send confirmation to your email.';
-                $formData = ['name' => '', 'email' => '', 'mobile' => '', 'about' => '', 'services' => []];
-            } else {
-                $errorMsg = 'Mail error: ' . $primaryErr . ' | Fallback: ' . $mail->ErrorInfo;
-            }
+            $errorMsg = 'Mail error: ' . $mail->ErrorInfo;
         }
     }
 }

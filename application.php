@@ -6,12 +6,14 @@ $error_message = '';
 $applications = [];
 
 $mailConfig = [
-    'host' => 'smtp.gmail.com',
-    'port' => 587,
-    'secure' => 'tls',
-    'username' => 'gauravoli777@gmail.com', // same account as Contact Us
-    'password' => 'mezfslphhrielhpq',       // Gmail App Password
-    'from_name' => 'AITF Team'
+    'host' => 'localhost',
+    'port' => 25,
+    'secure' => '', // no SSL/TLS
+    'smtp_auth' => true,
+    'username' => 'aitfmcl@gmail.com',
+    'password' => 'opwuzmftxpzmwyjy',
+    'from_email' => 'aitfmcl@gmail.com', // use an email where you manage DNS/SPF
+    'from_name' => 'AITF Website'
 ];
 
 if (isset($db)) {
@@ -317,40 +319,24 @@ if (isset($db)) {
                             ]
                         ];
 
-                        // Resolve SMTP host with graceful fallback to avoid getaddrinfo failures
-                        $smtpPrimaryHost = $mailConfig['host'];
-                        $smtpResolved = @gethostbyname($smtpPrimaryHost);
-                        $smtpHosts = [];
-                        $dnsFailed = ($smtpResolved === $smtpPrimaryHost);
-                        if (!$dnsFailed && $smtpResolved) {
-                            $smtpHosts[] = $smtpResolved; // prefer resolved IPv4
-                            $smtpHosts[] = $smtpPrimaryHost; // keep original hostname second
-                            $smtpHosts[] = 'smtp.googlemail.com';
-                        } else {
-                            // DNS failed: use static Gmail IPv4 list only (no hostnames) to bypass resolution
-                            $smtpHosts = [
-                                '64.233.184.108',
-                                '64.233.184.109',
-                                '64.233.184.26'
-                            ];
-                        }
-                        $smtpHostList = implode(';', array_unique($smtpHosts));
-
                         // Admin notification
                         $adminMail = new PHPMailer;
                     $adminMail->isSMTP();
                     $adminMail->SMTPDebug = 2; // log to php error_log only
                     $adminMail->Debugoutput = 'error_log';
-                    $adminMail->Host = $smtpHostList;
-                    $adminMail->Hostname = $smtpPrimaryHost;
+                    $adminMail->Host = $mailConfig['host'];
+                    $adminMail->Hostname = $mailConfig['host'];
                     $adminMail->Port = $mailConfig['port'];
-                    $adminMail->SMTPAuth = true;
+                    $adminMail->SMTPAuth = $mailConfig['smtp_auth'];
                     $adminMail->SMTPSecure = $mailConfig['secure'];
-                    $adminMail->Username = $mailConfig['username'];
-                    $adminMail->Password = $mailConfig['password'];
+                    if ($mailConfig['smtp_auth']) {
+                        $adminMail->Username = $mailConfig['username'];
+                        $adminMail->Password = $mailConfig['password'];
+                    }
                     $adminMail->CharSet = 'UTF-8';
                         $adminMail->SMTPOptions = $smtpOptions;
-                        $adminMail->setFrom($mailConfig['username'], $mailConfig['from_name']);
+                        $adminMail->Timeout = 15;
+                        $adminMail->setFrom($mailConfig['from_email'] ?: 'no-reply@localhost', $mailConfig['from_name']);
                         $adminMail->addAddress('gauravoli777@gmail.com', 'AITF Team');
                         $adminMail->Subject = 'New Audit Application Submitted - ' . $org_name;
 
@@ -379,15 +365,7 @@ if (isset($db)) {
                     }
                     $adminSent = $adminMail->send();
                     if (!$adminSent) {
-                        error_log('Audit admin mail error (TLS/587): ' . $adminMail->ErrorInfo);
-                        // fallback to SSL/465
-                        $adminMail->smtpClose();
-                        $adminMail->Port = 465;
-                        $adminMail->SMTPSecure = 'ssl';
-                        $adminSent = $adminMail->send();
-                        if (!$adminSent) {
-                            error_log('Audit admin mail error (SSL/465): ' . $adminMail->ErrorInfo);
-                        }
+                        error_log('Audit admin mail error: ' . $adminMail->ErrorInfo);
                     }
 
                         // Applicant thank-you email
@@ -396,16 +374,18 @@ if (isset($db)) {
                         $clientMail->isSMTP();
                         $clientMail->SMTPDebug = 2; // log to php error_log only
                         $clientMail->Debugoutput = 'error_log';
-                        $clientMail->Host = $smtpHostList;
-                        $clientMail->Hostname = $smtpPrimaryHost;
+                        $clientMail->Host = $mailConfig['host'];
+                        $clientMail->Hostname = $mailConfig['host'];
                         $clientMail->Port = $mailConfig['port'];
-                        $clientMail->SMTPAuth = true;
+                        $clientMail->SMTPAuth = $mailConfig['smtp_auth'];
                         $clientMail->SMTPSecure = $mailConfig['secure'];
-                        $clientMail->Username = $mailConfig['username'];
-                        $clientMail->Password = $mailConfig['password'];
+                        if ($mailConfig['smtp_auth']) {
+                            $clientMail->Username = $mailConfig['username'];
+                            $clientMail->Password = $mailConfig['password'];
+                        }
                         $clientMail->CharSet = 'UTF-8';
                         $clientMail->SMTPOptions = $smtpOptions;
-                        $clientMail->setFrom($mailConfig['username'], 'AITF Team');
+                        $clientMail->setFrom($mailConfig['from_email'] ?: 'no-reply@localhost', 'AITF Team');
                         $clientMail->addAddress($email, $contact_person);
                         $clientMail->Subject = 'Thank you for applying';
                             $clientBody = "<p style=\"font-family:Arial,sans-serif; font-size:14px;\">Hi " . htmlspecialchars($contact_person, ENT_QUOTES, 'UTF-8') . ",</p>"
@@ -420,14 +400,7 @@ if (isset($db)) {
                         }
                         $clientSent = $clientMail->send();
                         if (!$clientSent) {
-                            error_log('Audit client mail error (TLS/587): ' . $clientMail->ErrorInfo);
-                            $clientMail->smtpClose();
-                            $clientMail->Port = 465;
-                            $clientMail->SMTPSecure = 'ssl';
-                            $clientSent = $clientMail->send();
-                            if (!$clientSent) {
-                                error_log('Audit client mail error (SSL/465): ' . $clientMail->ErrorInfo);
-                            }
+                            error_log('Audit client mail error: ' . $clientMail->ErrorInfo);
                         }
                         }
                     } catch (Exception $mailEx) {
