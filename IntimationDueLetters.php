@@ -360,7 +360,9 @@ else if($PageAction == "SendMail"){
 	// Gmail App Password provided for intimation account
 	$mail->Password='rcfducomzcmminpx';
 	$mail->setFrom('aitfintimation@gmail.com', 'AITF Intimation');
-$mail->addReplyTo('aitfmcl@gmail.com', 'AITF Intimation');
+	$mail->addReplyTo('aitfmcl@gmail.com', 'AITF Intimation');
+	$mail->Timeout = 15; // fail fast on unreachable SMTP
+	$mail->SMTPKeepAlive = false;
 
 	$mail->addCC('aitfintimation@gmail.com');
 	foreach($contactEmail as $e)

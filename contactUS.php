@@ -82,6 +82,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $mail->Username = $mailConfig['username'];
         $mail->Password = $mailConfig['password'];
         $mail->CharSet = 'UTF-8';
+        $mail->Timeout = 15; // fail fast if SMTP blocked/slow
+        $mail->SMTPKeepAlive = false;
         $mail->SMTPOptions = [
             'ssl' => [
                 'verify_peer' => false,
@@ -123,6 +125,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $confirm->Username = $mailConfig['username'];
             $confirm->Password = $mailConfig['password'];
             $confirm->CharSet = 'UTF-8';
+            $confirm->Timeout = 15;
+            $confirm->SMTPKeepAlive = false;
             $confirm->SMTPOptions = $mail->SMTPOptions;
             $confirm->setFrom($mailConfig['username'], 'AITF Team');
             $confirm->addAddress($formData['email'], $formData['name']);
