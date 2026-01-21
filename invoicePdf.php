@@ -1,6 +1,6 @@
 <?php
 
-
+/**
  * @package com.tecnick.tcpdf
  * @abstract TCPDF - Example: Custom Header and Footer
  * @author Nicola Asuni
@@ -10,6 +10,11 @@
 require_once('tcpdf_include.php');
 include_once './dbConnect.php';
 date_default_timezone_set('Asia/Kolkata');
+// Buffer any stray output to avoid breaking TCPDF output
+while (ob_get_level() > 0) {
+    ob_end_clean();
+}
+ob_start();
 
 $invoiceid = "";
 $total_amt = "";
@@ -26,11 +31,20 @@ $sgst = "";
 $igst = "";
 $gsts = "";
 $firmSign = "";
+$signaturePath = '';
+
+$customerId = '';
+if (!empty($_POST['invoiceconsultingFirmName'])) {
+    $customerId = $_POST['invoiceconsultingFirmName'];
+} elseif (!empty($_POST['invoiceCustomerId'])) {
+    $customerId = $_POST['invoiceCustomerId'];
+}
+
 
 
 $customer = "SELECT * FROM customer_info WHERE id = :id";
 $statement = $db->prepare($customer);
-$statement->bindParam(':id', $_POST['invoiceconsultingFirmName']);
+$statement->bindParam(':id', $customerId);
 $statement->execute();
 $customerInfo = $statement->fetch();
 
@@ -60,7 +74,7 @@ if (isset($_POST['invoiceId']) && !empty($_POST['invoiceId'])) {
             . "`igst`= :igst,`cgst`= :cgst,`sgst`= :sgst,`tax_type`= :taxtype,`final_amount`= :totalAmt WHERE `invoice_id` = :id";
     $statement = $db->prepare($invoiceUpdate);
     $statement->bindParam(':id', $invoiceid);
-    $statement->bindParam(':customer', $_POST["invoiceconsultingFirmName"]);
+    $statement->bindParam(':customer', $customerId);
     $statement->bindParam(':date', date("Y-m-d", strtotime($_POST['invoiceDt'])));
     $statement->bindParam(':state', $_POST['invoiceState']);
     $statement->bindParam(':statecode', $_POST['invoiceStateCode']);
@@ -177,7 +191,7 @@ if (isset($_POST['invoiceId']) && !empty($_POST['invoiceId'])) {
             . " cgst,  sgst, tax_type, final_amount) VALUES (:customer, :profarma_prefix, :invoiceNo, :date, :state, :statecode,"
             . ":netprice, :igst, :cgst, :sgst, :taxtype, :totalAmt);";
     $statement = $db->prepare($invoice);
-    $statement->bindParam(':customer', $_POST['invoiceCustomerId']);
+    $statement->bindParam(':customer', $customerId);
     $statement->bindParam(':profarma_prefix', $firmInfo['profarma_prefix']);
     $statement->bindParam(':invoiceNo', $firmInfo['firm_invoice_no']);
     $statement->bindParam(':date', $invoiceDate);
@@ -228,6 +242,17 @@ if (isset($_POST['invoiceId']) && !empty($_POST['invoiceId'])) {
     $stateCode = $_POST["invoiceStateCode"];
 }
 
+// Resolve signature image path if the file exists
+if (!empty($firmSign)) {
+    $candidate = $firmSign;
+    if (!file_exists($candidate)) {
+        $candidate = __DIR__ . '/' . ltrim($firmSign, '/\\');
+    }
+    if (file_exists($candidate)) {
+        $signaturePath = str_replace('\\', '/', $candidate);
+    }
+}
+
 // Extend the TCPDF class to create custom Header and Footer
 class MYPDF extends TCPDF {
 
@@ -241,7 +266,9 @@ class MYPDF extends TCPDF {
         // Logo
         // Logo
         $image_file = K_PATH_IMAGES . 'aitf.jpg';
-        $this->Image($image_file, 17, 5, 40, '', 'JPEG', '', 'T', false, 300, '', false, false, 0, false, false, false);
+        if (file_exists($image_file)) {
+            $this->Image($image_file, 17, 5, 40, '', 'JPEG', '', 'T', false, 300, '', false, false, 0, false, false, false);
+        }
         // Set font
         $this->SetFont('helvetica', 'B', 17.5);
         // Title
@@ -384,7 +411,7 @@ $html = '
     Web – www.aitf.co.in <br/> 
     </td>
     <td style="text-align:right;border-bottom:0.1px solid white"><b>AITF MANAGEMENT CERTIFICATION LIMITED.</b><br/>
-    <img src="' . $firmSign . '" alt="logo" height="50" width="90"><br/>
+    ' . ($signaturePath !== '' ? '<img src="' . $signaturePath . '" alt="logo" height="50" width="90"><br/>' : '') . '
     Administrator
     </td>
     </tr>
@@ -394,6 +421,9 @@ $html = '
 $pdf->writeHTML($html, true, false, true, false, '');
 
 //Close and output PDF document
+while (ob_get_level() > 0) {
+    ob_end_clean();
+}
 $pdf->Output('Proforma Invoice.pdf', 'I');
 
 
