@@ -1,5 +1,11 @@
 <?php
 
+// Prevent premature output that breaks PDF headers
+error_reporting(E_ALL & ~E_DEPRECATED & ~E_WARNING & ~E_NOTICE);
+ini_set('display_errors', 0);
+ob_start();
+session_start();
+
 //============================================================+
 // File name   : example_003.php
 // Begin       : 2008-03-04
@@ -27,7 +33,6 @@
 // Include the main TCPDF library (search for installation path).
 require_once('tcpdf_include.php');
 
-session_start();
 include_once './dbConnect.php';
 date_default_timezone_set('Asia/Kolkata');
 $control2_client = "";
@@ -502,6 +507,11 @@ financial or other pressures to compromise impartiality?
 $pdf->writeHTML($html, true, false, true, false, '');
 
 //Close and output PDF document
+if (ob_get_length()) {
+    ob_end_clean();
+} else {
+    @ob_end_clean();
+}
 $pdf->Output('CONTROLFORMAT-2.pdf', 'I');
 
 //============================================================+

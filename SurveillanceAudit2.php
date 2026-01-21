@@ -1,12 +1,10 @@
 <?php
-// Suppress notices and warnings for PDF generation
-error_reporting(E_ERROR | E_PARSE);
+// Prevent premature output that breaks PDF headers
+error_reporting(E_ALL & ~E_DEPRECATED & ~E_WARNING & ~E_NOTICE);
 ini_set('display_errors', 0);
-
 // Start output buffering to catch any output before PDF
 ob_start();
-
-
+session_start();
 
 /**
  * Creates an example PDF TEST document using TCPDF
@@ -18,8 +16,6 @@ ob_start();
 // Include the main TCPDF library (search for installation path).
 require_once('tcpdf_include.php');
 // code by Pallavi to display pdf
-
-session_start();
 include_once './dbConnect.php';
 date_default_timezone_set('Asia/Kolkata');
 
@@ -331,6 +327,11 @@ $html = '<br>
 $pdf->writeHTML($html, true, false, true, false, '');
 
 //Close and output PDF document
+if (ob_get_length()) {
+    ob_end_clean();
+} else {
+    @ob_end_clean();
+}
 $pdf->Output('AuditSchedule_2.pdf', 'I');
 
 //============================================================+

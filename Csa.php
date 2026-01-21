@@ -1,5 +1,11 @@
 <?php
 
+// Prevent premature output that breaks PDF headers
+error_reporting(E_ALL & ~E_DEPRECATED & ~E_WARNING & ~E_NOTICE);
+ini_set('display_errors', 0);
+ob_start();
+session_start();
+
 //============================================================+
 // File name   : example_003.php
 // Begin       : 2008-03-04
@@ -1029,7 +1035,12 @@ $html = '<br><p  style="text-align: justify; text-justify: inter-word;">
 $pdf->writeHTML($html, true, false, true, false, '');
 
 //Close and output PDF document
-$pdf->Output('Csa.pdf', 'I');
+if (ob_get_length()) {
+    ob_end_clean();
+} else {
+    @ob_end_clean();
+}
+$pdf->Output('CSA.pdf', 'I');
 
 //============================================================+
 // END OF FILE

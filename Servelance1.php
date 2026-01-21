@@ -1,6 +1,10 @@
 <?php
 
-
+// Prevent premature output that breaks PDF headers
+error_reporting(E_ALL & ~E_DEPRECATED & ~E_WARNING & ~E_NOTICE);
+ini_set('display_errors', 0);
+ob_start();
+session_start();
 
 /**
  * Creates an example PDF TEST document using TCPDF
@@ -13,7 +17,6 @@
 require_once('tcpdf_include.php');
 // code by Pallavi to display pdf
 
-session_start();
 include_once './dbConnect.php';
 date_default_timezone_set('Asia/Kolkata');
 //echo $_POST['auditnotiid'];
@@ -317,5 +320,10 @@ $html = '<br>
 $pdf->writeHTML($html, true, false, true, false, '');
 
 //Close and output PDF document
+if (ob_get_length()) {
+    ob_end_clean();
+} else {
+    @ob_end_clean();
+}
 $pdf->Output('Schedule_1stSurveillanceAudit.pdf', 'I');
 
