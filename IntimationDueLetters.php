@@ -347,11 +347,12 @@ else if($PageAction == "SendMail"){
 	);
 	
 	$mail->Username='aitfintimation@gmail.com';
-	$mail->Password='intimation@123';
-	$mail->setFrom('aitfintimation@gmail.com');
-	$mail->addReplyTo('aitfintimation@gmail.com');
+	// Gmail App Password provided for intimation account
+	$mail->Password='grvbsdotegpyheib';
+	$mail->setFrom('aitfintimation@gmail.com', 'AITF Intimation');
+$mail->addReplyTo('aitfintimation@gmail.com', 'AITF Intimation');
 	
-	$mail->addCC('aitfmcl@gmail.com');
+	$mail->addCC('aitfintimation@gmail.com');
 	foreach($contactEmail as $e)
 	{
 		if($e != NULL) $mail->AddAddress($e);

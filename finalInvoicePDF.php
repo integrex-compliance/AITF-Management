@@ -28,6 +28,11 @@
 require_once('tcpdf_include.php');
 include_once './dbConnect.php';
 date_default_timezone_set('Asia/Kolkata');
+// Ensure no stray output breaks PDF headers
+while (ob_get_level() > 0) {
+    ob_end_clean();
+}
+ob_start();
 
 $invoiceid = "";
 $total_amt = "";
@@ -40,6 +45,7 @@ $swachBharat = "";
 $krushiKalyan = "";
 $gsts = "";
 $firmSign = "";
+$signaturePath = '';
 
 $customer = "SELECT * FROM customer_info WHERE id = :id";
 $statement = $db->prepare($customer);
@@ -52,6 +58,17 @@ $statement = $db->prepare($consultingFirm);
 $statement->execute();
 $firmInfo = $statement->fetch();
 $firmSign = $firmInfo["signature"];
+
+// Resolve signature image path if the file exists
+if (!empty($firmSign)) {
+    $candidate = $firmSign;
+    if (!file_exists($candidate)) {
+        $candidate = __DIR__ . '/' . ltrim($firmSign, '/\\');
+    }
+    if (file_exists($candidate)) {
+        $signaturePath = str_replace('\\', '/', $candidate);
+    }
+}
 
 
 
@@ -357,7 +374,7 @@ $html = '
     Web – www.aitf.co.in <br/> 
     </td>
     <td style="text-align:right;border-bottom:0.1px solid white"><b>AITF MANAGEMENT CERTIFICATION LIMITED.</b><br/>
-    <img src="' . $firmSign . '" alt="logo" height="50" width="90"><br/>
+    ' . ($signaturePath !== '' ? '<img src="' . $signaturePath . '" alt="logo" height="50" width="90"><br/>' : '') . '
     Administrator
     </td>
     </tr>
@@ -367,6 +384,9 @@ $html = '
 $pdf->writeHTML($html, true, false, true, false, '');
 
 //Close and output PDF document
+while (ob_get_level() > 0) {
+    ob_end_clean();
+}
 $pdf->Output('Final Invoice.pdf', 'I');
 
 //============================================================+
