@@ -15,9 +15,9 @@ $serviceOptions = [
     'ISO 14001'
 ];
 $mailConfig = [
-    'host' => 'smtp.gmail.com',
-    'port' => 587,
-    'secure' => 'tls',
+   'host' => 'smtp.gmail.com',
+    'port' => 465,              // CHANGE: GoDaddy allows 465 (SSL) more often than 587
+    'secure' => 'ssl',          // CHANGE: Must match port 465
     'smtp_auth' => true,
     'username' => 'aitfmcl@gmail.com',
     'password' => 'opwuzmftxpzmwyjy',
