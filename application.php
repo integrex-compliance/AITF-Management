@@ -872,6 +872,29 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
             .form-card {
                 padding: 20px 15px;
             }
+            
+            /* Header responsive adjustments */
+            .section[style*="background: linear-gradient"] h1 {
+                font-size: 2.5rem !important;
+            }
+            
+            .section[style*="background: linear-gradient"] p {
+                font-size: 1rem !important;
+            }
+            
+            .section[style*="background: linear-gradient"] {
+                padding: 140px 0 40px !important;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .section[style*="background: linear-gradient"] h1 {
+                font-size: 2rem !important;
+            }
+            
+            .section[style*="background: linear-gradient"] {
+                padding: 120px 0 40px !important;
+            }
         }
     </style>
 </head>
@@ -882,27 +905,22 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
     </head>
     
     <!-- Online Form Header -->
-    <div class="section" style="padding: 60px 0 30px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);">
+    <div class="section" style="padding: 180px 0 60px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); position: relative;">
         <div class="container">
             <div class="row justify-content-center">
                 <div class="col-lg-10">
                     <div style="text-align: center;">
-                        <h1 style="color: #fff; font-size: 2.2rem; font-weight: 700; margin-bottom: 15px;">Online Application Form</h1>
-                        <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem; max-width: 700px; margin: 0 auto 10px; line-height: 1.6;">
+                        <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem; margin-bottom: 20px; line-height: 1.6;">
                             Please fill out the form below to submit your application for certification.
                         </p>
-    <div class="decorative-shape shape-1"></div>
-    <div class="decorative-shape shape-2"></div>
-    
-    <div class="section margin-top_80 animate-up" style="animation-delay: 0.1s">
-        <div class="container">
-            <div class="row justify-content-center">
-                <div class="col-lg-10">
-                    <div class="text-center">
-                        <div class="section-header">
-                            <h2>APPLICATION FORM</h2>
-                            <p class="mt-4" style="color: #98b7a475;">Begin your journey to ISO Certification with our streamlined application process. <br>Fill the form below and take the first step towards excellence.</p>
-                        </div>                        
+                        <h1 style="color: #fff; font-size: 3.5rem; font-weight: 800; margin-bottom: 25px; text-transform: uppercase; letter-spacing: 2px; position: relative; display: inline-block;">
+                            APPLICATION FORM
+                            <span style="display: block; width: 80px; height: 4px; background: linear-gradient(90deg, #2196F3, #00BCD4); margin: 15px auto 0; border-radius: 2px;"></span>
+                        </h1>
+                        <p style="color: rgba(255,255,255,0.8); font-size: 1.2rem; max-width: 700px; margin: 25px auto 0; line-height: 1.8;">
+                            Begin your journey to ISO Certification with our streamlined application process.<br>
+                            Fill the form below and take the first step towards excellence.
+                        </p>
                     </div>
                 </div>
             </div>
@@ -1490,47 +1508,46 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
         <div class="container" style="max-width: 100%; width: 100%; padding: 0 15px;">
             <div class="row justify-content-center" style="margin: 0 auto; max-width: 1200px; width: 100%;">
                 <div class="col-12">
-                    <div class="form-card" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 15px; padding: 40px; width: 100%;">
-                        <h3 class="text-center mb-4" style="color: #fff; font-size: 2rem; font-weight: 700;">ISO Certification Application</h3>
-                        <p class="text-center" style="color: rgba(255,255,255,0.9); font-size: 1.1rem; line-height: 1.8; max-width: 800px; margin: 0 auto 30px;">
-                            Our dedicated team is ready to assist you through every step of the ISO certification process. 
-                            After downloading and filling out the application form, please submit it through our portal or 
-                            email it to our support team for further assistance.
+                    <div class="form-card" style="background: #f8f9fa; border: 1px solid #e5e7eb; border-radius: 15px; padding: 40px; width: 100%;">
+                        <h3 class="text-center mb-4" style="color: #1a1a2e; font-size: 2rem; font-weight: 700;">ISO Certification Application</h3>
+                        <p class="text-center" style="color: #4a5568; font-size: 1.1rem; line-height: 1.8; max-width: 800px; margin: 0 auto 30px;">
+                           Our dedicated team is available to support you at every stage of the ISO certification process.
+If you are completing the application offline, please download our Audit Application Form. After filling it out, submit the form through our portal or email it to our support team for further assistance.
                         </p>
                         
-                        <!-- Additional Information -->
+                        
                         <div class="row mt-5">
                             <div class="col-md-4 mb-4">
                                 <a href="contactUS.php" style="text-decoration: none; display: block; height: 100%;">
-                                    <div class="text-center p-4" style="background: rgba(108, 99, 255, 0.1); border-radius: 12px; height: 100%; transition: all 0.3s ease; border: 1px solid transparent;}">
+                                    <div class="text-center p-4" style="background: #ffffff; border-radius: 12px; height: 100%; transition: all 0.3s ease; border: 1px solid #e5e7eb; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                                         <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #6c63ff, #4a90e2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; transition: all 0.3s ease;">
                                             <i class="fa fa-phone" style="font-size: 1.5rem; color: white;"></i>
                                         </div>
-                                        <h5 style="color: #fff; font-weight: 600; margin-bottom: 10px;">Need Help?</h5>
-                                        <p style="color: rgba(255,255,255,0.8); font-size: 0.95rem; margin-bottom: 0;">Contact our support team for any questions about the application process.</p>
+                                        <h5 style="color: #1a1a2e; font-weight: 600; margin-bottom: 10px;">Need Help?</h5>
+                                        <p style="color: #4a5568; font-size: 0.95rem; margin-bottom: 0;">Contact our support team for any questions about the application process.</p>
                                     </div>
                                 </a>
                             </div>
                             
                             <div class="col-md-4 mb-4">
-                                <div class="text-center p-4" style="background: rgba(108, 99, 255, 0.1); border-radius: 12px; height: 100%;">
-                                   <a href="contactUS.php">    <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #6c63ff, #4a90e2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
+                                <div class="text-center p-4" style="background: #ffffff; border-radius: 12px; height: 100%; border: 1px solid #e5e7eb; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                   <a href="contactUS.php" style="text-decoration: none;">    <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #6c63ff, #4a90e2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
                                         <i class="fa fa-clock-o" style="font-size: 1.5rem; color: white;"></i>
                                     </div>
-                                    <h5 style="color: #fff; font-weight: 600; margin-bottom: 10px;">Processing Time</h5>
-                                    <p style="color: rgba(255,255,255,0.8); font-size: 0.95rem; margin-bottom: 0;">Applications are typically processed within 2-3 business days of submission.</p>
+                                    <h5 style="color: #1a1a2e; font-weight: 600; margin-bottom: 10px;">Processing Time</h5>
+                                    <p style="color: #4a5568; font-size: 0.95rem; margin-bottom: 0;">Applications are typically processed within 2-3 business days of submission.</p>
                                 </div></a>
                                 
                              
                             </div>
                             
                             <div class="col-md-4 mb-4">
-                                <div class="text-center p-4" style="background: rgba(108, 99, 255, 0.1); border-radius: 12px; height: 100%;">
-                                   <a href="contactUS.php">   <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #6c63ff, #4a90e2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
+                                <div class="text-center p-4" style="background: #ffffff; border-radius: 12px; height: 100%; border: 1px solid #e5e7eb; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                   <a href="contactUS.php" style="text-decoration: none;">   <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #6c63ff, #4a90e2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
                                         <i class="fa fa-envelope" style="font-size: 1.5rem; color: white;"></i>
                                     </div>
-                                    <h5 style="color: #fff; font-weight: 600; margin-bottom: 10px;">Email Support</h5>
-                                    <p style="color: rgba(255,255,255,0.8); font-size: 0.95rem; margin-bottom: 0;">Send your completed forms to: <a href="mailto:aitfindia@gmail.com" style="color: #f1f0f4f7; text-decoration: none;">aitfindia@gmail.com</a></p>
+                                    <h5 style="color: #1a1a2e; font-weight: 600; margin-bottom: 10px;">Email Support</h5>
+                                    <p style="color: #4a5568; font-size: 0.95rem; margin-bottom: 0;">Send your completed forms to: <a href="mailto:aitfindia@gmail.com" style="color: #2563eb; text-decoration: none; font-weight: 500;">aitfindia@gmail.com</a></p>
                                 </div></a>
                                 
                               

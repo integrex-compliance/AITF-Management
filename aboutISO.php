@@ -15,8 +15,11 @@
             --light: #f8fafc;      /* Light text */
             --glass: rgba(30, 58, 138, 0.2);
             --glass-border: rgba(99, 102, 241, 0.3);
-            --text: #e0f2fe;       /* Light blue text */
-            --text-secondary: #bfdbfe;  /* Slightly darker for secondary text */
+            --text-primary: #ffffff;       /* White primary text */
+            --text-secondary: #e2e8f0;  /* Light gray for secondary text */
+            --text-muted: #94a3b8;     /* Muted text color */
+            --card-bg: rgba(255, 255, 255, 0.95);  /* Semi-transparent white card */
+            --card-text: #1e293b;     /* Dark text on cards */
         }
         
         * {
@@ -28,7 +31,7 @@
         body {
             background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
             font-family: 'Poppins', sans-serif;
-            color: var(--text);
+            color: #ffffff;
             min-height: 100vh;
             line-height: 1.8;
             overflow-x: hidden;
@@ -102,7 +105,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: linear-gradient(135deg, rgba(30, 58, 138, 0.8) 0%, rgba(30, 64, 175, 0.9) 100%);
+            background: linear-gradient(135deg, rgba(30, 58, 138, 0.6) 0%, rgba(30, 64, 175, 0.7) 100%);
             z-index: -1;
         }
 
@@ -116,26 +119,23 @@
         .section-title h1 {
             font-size: 4rem;
             font-weight: 800;
-            background: linear-gradient(45deg, #fff, #e0e0e0);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            color: #ffffff;
             text-transform: uppercase;
             letter-spacing: 2px;
             margin-bottom: 20px;
-            text-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            font-weight: 800;
-            color: white;
+            text-shadow: 0 4px 8px rgba(0,0,0,0.4);
             margin-bottom: 1.5rem;
             line-height: 1.2;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         
         .section-title p {
             font-size: 1.25rem;
-            color: #e5e7eb;
+            color: #ffffff;
             max-width: 800px;
             margin: 0 auto;
-            opacity: 0.9;
+            opacity: 0.95;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            font-weight: 500;
         }
 
         .container {
@@ -180,8 +180,10 @@
 
         .card-body p {
             margin-bottom: 1.25rem;
-            color: #4b5563;
-            line-height: 1.7;
+            color: #1e293b;
+            line-height: 1.8;
+            font-weight: 400;
+            font-size: 1.1rem;
         }
 
         .card-body ul {
@@ -194,8 +196,10 @@
             padding: 0.75rem 0;
             padding-left: 2rem;
             position: relative;
-            color: #4b5563;
-            border-bottom: 1px solid #f3f4f6;
+            color: #1e293b;
+            border-bottom: 1px solid #f1f5f9;
+            font-weight: 400;
+            font-size: 1.05rem;
         }
 
         .card-body li:before {
@@ -214,12 +218,13 @@
         }
 
         .feature-box {
-            background: white;
+            background: #ffffff;
             border-radius: 0.75rem;
             padding: 2rem;
             text-align: center;
             transition: all 0.3s ease;
-            border: 1px solid #e5e7eb;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         }
 
         .feature-box:hover {
@@ -235,15 +240,15 @@
         }
         .feature-icon p, .feature-icon li {
             font-size: 1.15rem;
-            line-height: 1.9;
+            line-height: 1.8;
             margin-bottom: 1.4rem;
-            color: #3b82f6;  /* Blue text color */
+            color: #1e293b;
             font-weight: 500;
             letter-spacing: 0.3px;
         }
 
         .feature-box p {
-            color: #4b5563;
+            color: #1e293b;
             font-size: 1rem;
             line-height: 1.7;
             font-weight: 500;
@@ -251,10 +256,10 @@
         
         /* Glassmorphism Card */
         .card {
-            background: rgba(15, 23, 42, 0.7);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
-            border: 1px solid var(--glass-border);
+            background: #ffffff;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid #e2e8f0;
             border-radius: 20px;
             padding: 40px;
             margin: 30px auto;
@@ -263,8 +268,8 @@
             position: relative;
             overflow: hidden;
             z-index: 1;
-            color: #e2e8f0;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            color: #1e293b;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
         }
         
         .card::before {
@@ -291,22 +296,18 @@
         }
         
         .card-body {
-            font-size: 1.1rem;
-            line-height: 1.9;
-            color: #3b82f6;  /* Blue text color for card body */
+            font-size: 1.15rem;
+            line-height: 1.8;
+            color: #1e293b;
         }
         
         .card-header {
             font-size: 2.2rem;
             font-weight: 700;
             margin-bottom: 2rem;
-            color: var(--primary);
-            background: linear-gradient(90deg, var(--primary), var(--accent));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            color: #1e293b;
             position: relative;
             display: inline-block;
-            text-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
         }
         
         .card-header i {
@@ -371,7 +372,7 @@
         }
         
         .benefit-header h4 {
-            color: #1a3a6a;
+            color: var(--primary-dark);
             margin: 0;
             font-size: 1.4rem;
             font-weight: 600;
@@ -395,21 +396,23 @@
         
         .benefit-body li:before {
             content: '✓';
-            color: #2c7be5;
+            color: var(--primary);
             font-weight: bold;
             position: absolute;
             left: 0;
         }
         
         .cta-section {
-            background: linear-gradient(135deg, rgba(108, 99, 255, 0.1), rgba(74, 144, 226, 0.1));
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(37, 99, 235, 0.25));
             padding: 3.5rem;
             border-radius: 20px;
             text-align: center;
             margin: 5rem 0 2rem;
             position: relative;
             overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
         }
         
         .cta-section::before {
@@ -419,7 +422,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: linear-gradient(135deg, rgba(108, 99, 255, 0.1), rgba(74, 144, 226, 0.2));
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(37, 99, 235, 0.2));
             z-index: -1;
             border-radius: 20px;
         }
@@ -617,14 +620,14 @@
                         <div class="feature-icon">
                             <i class="fas fa-handshake"></i>
                         </div>
-                        <h3>Consensus-Based</h3>
+                        <h3 style="color: #1e293b; font-size: 1.5rem; font-weight: 600; margin-bottom: 1rem;">Consensus-Based</h3>
                         <p>Standards developed through global consensus among industry experts</p>
                     </div>
                 </div>
             </div>
             <div class="row justify-content-center">
                 <div class="col-lg-10">
-                    <p style="color: #3b82f6 !important; font-weight: 500;">
+                    <p style="color: #ffffff !important; font-weight: 500; font-size: 1.1rem; line-height: 1.8; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">
                         With members from 167 national standards bodies, ISO has published over 24,000 International Standards covering almost every industry, from technology and food safety to agriculture and healthcare. These standards help businesses increase productivity while minimizing errors and waste, enable products to enter new markets, and facilitate free and fair global trade.
                     </p>
                 </div>
@@ -642,7 +645,7 @@
                     We provide comprehensive ISO certification services designed to help organizations implement, maintain, and continuously improve their management systems in line with international standards. Our systematic approach ensures that your organization not only achieves certification but also realizes tangible business benefits through enhanced operational efficiency, improved risk management, and increased stakeholder confidence.
                 </p>
                 
-                <h3 class="section-subtitle">ISO 9001:2015 - Quality Management</h3>
+                <h3 class="section-subtitle" style="color: #1e293b; font-size: 1.8rem; font-weight: 600; margin-bottom: 1.5rem;">ISO 9001:2015 - Quality Management</h3>
                 <p>
                     ISO 9001 is the international standard that specifies requirements for a quality management system (QMS). Organizations use the standard to demonstrate the ability to consistently provide products and services that meet customer and regulatory requirements. 
                 </p>
@@ -656,7 +659,7 @@
                         <div class="feature-icon">
                             <i class="fas fa-search"></i>
                         </div>
-                        <h3>Gap Analysis</h3>
+                        <h3 style="color: #1e293b; font-size: 1.5rem; font-weight: 600; margin-bottom: 1rem;">Gap Analysis</h3>
                         <p>We begin with a thorough assessment of your current processes and systems to identify gaps against ISO requirements.</p>
                     </div>
                     
@@ -664,7 +667,7 @@
                         <div class="feature-icon">
                             <i class="fas fa-file-alt"></i>
                         </div>
-                        <h3>Documentation</h3>
+                        <h3 style="color: #1e293b; font-size: 1.5rem; font-weight: 600; margin-bottom: 1rem;">Documentation</h3>
                         <p>Our experts help you develop and implement the necessary documentation and procedures to meet ISO standards.</p>
                     </div>
                     
@@ -672,7 +675,7 @@
                         <div class="feature-icon">
                             <i class="fas fa-cogs"></i>
                         </div>
-                        <h3>Implementation</h3>
+                        <h3 style="color: #1e293b; font-size: 1.5rem; font-weight: 600; margin-bottom: 1rem;">Implementation</h3>
                         <p>We guide you through the implementation process, ensuring all requirements are properly addressed and integrated into your operations.</p>
                     </div>
                     
@@ -680,7 +683,7 @@
                         <div class="feature-icon">
                             <i class="fas fa-graduation-cap"></i>
                         </div>
-                        <h3>Training</h3>
+                        <h3 style="color: #1e293b; font-size: 1.5rem; font-weight: 600; margin-bottom: 1rem;">Training</h3>
                         <p>Comprehensive training programs to ensure your team understands and can maintain the ISO management system.</p>
                     </div>
                     
@@ -688,7 +691,7 @@
                         <div class="feature-icon">
                             <i class="fas fa-clipboard-check"></i>
                         </div>
-                        <h3>Internal Audit</h3>
+                        <h3 style="color: #1e293b; font-size: 1.5rem; font-weight: 600; margin-bottom: 1rem;">Internal Audit</h3>
                         <p>We conduct thorough internal audits to verify the effectiveness of your management system before the certification audit.</p>
                     </div>
                     
@@ -696,20 +699,20 @@
                         <div class="feature-icon">
                             <i class="fas fa-award"></i>
                         </div>
-                        <h3>Certification</h3>
+                        <h3 style="color: #1e293b; font-size: 1.5rem; font-weight: 600; margin-bottom: 1rem;">Certification</h3>
                         <p>We assist you through the certification process with an accredited certification body to achieve your ISO certification.</p>
                     </div>
                 </div>
                 
-                <h3 class="section-subtitle">Benefits of ISO Certification</h3>
+                <h3 class="section-subtitle" style="color: #1e293b; font-size: 1.8rem; font-weight: 600; margin-bottom: 1.5rem;">Benefits of ISO Certification</h3>
                 <div class="benefit-body">
                     <ul>
-                        <li style="color: #3b82f6 !important; font-weight: 500;">Provides the means for documenting the company's experience in a structured manner to establish a systematic working environment</li>
-                        <li style="color: #3b82f6 !important; font-weight: 500;">Helps to maintain consistency in quality & product services</li>
-                        <li style="color: #3b82f6 !important; font-weight: 500;">Brings clarity & transparency to duties & responsibilities</li>
-                        <li style="color: #3b82f6 !important; font-weight: 500;">Improves traceability in the organization</li>
-                        <li style="color: #3b82f6 !important; font-weight: 500;">Reduces failure & process costs</li>
-                        <li style="color: #3b82f6 !important; font-weight: 500;">Improves relationships between employees</li>
+                        <li style="color: #1e293b !important; font-weight: 500; font-size: 1.05rem; line-height: 1.6;">Provides the means for documenting the company's experience in a structured manner to establish a systematic working environment</li>
+                        <li style="color: #1e293b !important; font-weight: 500; font-size: 1.05rem; line-height: 1.6;">Helps to maintain consistency in quality & product services</li>
+                        <li style="color: #1e293b !important; font-weight: 500; font-size: 1.05rem; line-height: 1.6;">Brings clarity & transparency to duties & responsibilities</li>
+                        <li style="color: #1e293b !important; font-weight: 500; font-size: 1.05rem; line-height: 1.6;">Improves traceability in the organization</li>
+                        <li style="color: #1e293b !important; font-weight: 500; font-size: 1.05rem; line-height: 1.6;">Reduces failure & process costs</li>
+                        <li style="color: #1e293b !important; font-weight: 500; font-size: 1.05rem; line-height: 1.6;">Improves relationships between employees</li>
                     </ul>
                 </div>
                 
