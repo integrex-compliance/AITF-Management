@@ -15,10 +15,10 @@ $serviceOptions = [
     'ISO 14001'
 ];
 $mailConfig = [
-    'host' => 'localhost',
-    'port' => 25,
-    'secure' => '',
-    'smtp_auth' => false,
+    'host' => 'smtp.gmail.com',
+    'port' => 587,
+    'secure' => 'tls',
+    'smtp_auth' => true,
     'username' => 'aitfmcl@gmail.com',
     'password' => 'opwuzmftxpzmwyjy',
     'from_email' => 'aitfmcl@gmail.com', // domain you manage (per GoDaddy guidance)
@@ -56,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $mail = new PHPMailer;
         $mail->isSMTP();
-        $mail->SMTPAutoTLS = false; // GoDaddy: no TLS on port 25
+        $mail->SMTPAutoTLS = true;
         // Debug to PHP error log only (not shown to users)
         $mail->SMTPDebug = 2;
         $mail->Debugoutput = 'error_log';
@@ -111,7 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Send thank-you to sender
             $confirm = new PHPMailer;
             $confirm->isSMTP();
-            $confirm->SMTPAutoTLS = false;
+            $confirm->SMTPAutoTLS = true;
             $confirm->SMTPDebug = 0;
             $confirm->Host = $mailConfig['host'];
             $confirm->Hostname = $mailConfig['host'];

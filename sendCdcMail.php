@@ -86,12 +86,12 @@ try {
 
     $adminEmail = 'gauravoli777@gmail.com'; // admin notification mailbox (can be changed later)
 
-    // SMTP config: GoDaddy shared (no auth, no TLS, port 25)
+    // SMTP config: Gmail TLS
     $mailConfig = [
-        'host'       => 'localhost',
-        'port'       => 25,
-        'secure'     => '',
-        'smtp_auth'  => false,
+        'host'       => 'smtp.gmail.com',
+        'port'       => 587,
+        'secure'     => 'tls',
+        'smtp_auth'  => true,
         'username'   => 'aitfmcl@gmail.com',
         'password'   => 'opwuzmftxpzmwyjy',
         'from_email' => 'aitfmcl@gmail.com', // use an email where you manage DNS/SPF
@@ -100,7 +100,7 @@ try {
 
     $configureSmtp = function (PHPMailer $mailer, array $cfg) {
         $mailer->isSMTP();
-        $mailer->SMTPAutoTLS = false; // GoDaddy: no TLS on port 25
+        $mailer->SMTPAutoTLS = true;
         $mailer->Host = $cfg['host'];
         $mailer->Hostname = $cfg['host'];
         $mailer->Port = $cfg['port'];
