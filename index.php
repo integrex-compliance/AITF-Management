@@ -577,8 +577,8 @@ session_start();
                             clearInterval(deleteInterval);
                             aitfElement.removeClass('deleting-animation');
                             
-                            // Restart the cycle
-                            setTimeout(typeAnimation, 500);
+                            // Start typing immediately without delay
+                            typeAnimation();
                         }
                     }, 150);
                 }
