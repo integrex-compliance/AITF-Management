@@ -6,10 +6,10 @@ $error_message = '';
 $applications = [];
 
 $mailConfig = [
-    'host' => 'smtp.gmail.com',
-    'port' => 587,
-    'secure' => 'tls',
-    'smtp_auth' => true,
+    'host' => 'localhost',
+    'port' => 25,
+    'secure' => '',
+    'smtp_auth' => false,
     'username' => 'aitfmcl@gmail.com',
     'password' => 'opwuzmftxpzmwyjy',
     'from_email' => 'aitfmcl@gmail.com', // use an email where you manage DNS/SPF
@@ -322,6 +322,7 @@ if (isset($db)) {
                         // Admin notification
                         $adminMail = new PHPMailer;
                     $adminMail->isSMTP();
+                    $adminMail->SMTPAutoTLS = false; // GoDaddy: no TLS on port 25
                     $adminMail->SMTPDebug = 2; // log to php error_log only
                     $adminMail->Debugoutput = 'error_log';
                     $adminMail->Host = $mailConfig['host'];
@@ -372,6 +373,7 @@ if (isset($db)) {
                         if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
                             $clientMail = new PHPMailer;
                         $clientMail->isSMTP();
+                        $clientMail->SMTPAutoTLS = false; // GoDaddy: no TLS on port 25
                         $clientMail->SMTPDebug = 2; // log to php error_log only
                         $clientMail->Debugoutput = 'error_log';
                         $clientMail->Host = $mailConfig['host'];

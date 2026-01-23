@@ -15,10 +15,10 @@ $serviceOptions = [
     'ISO 14001'
 ];
 $mailConfig = [
-    'host' => 'smtp.gmail.com;smtp.googlemail.com',
-    'port' => 587,
-    'secure' => 'tls',
-    'smtp_auth' => true,
+    'host' => 'localhost',
+    'port' => 25,
+    'secure' => '',
+    'smtp_auth' => false,
     'username' => 'aitfmcl@gmail.com',
     'password' => 'opwuzmftxpzmwyjy',
     'from_email' => 'aitfmcl@gmail.com', // use an email where you manage DNS/SPF
@@ -56,6 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $mail = new PHPMailer;
         $mail->isSMTP();
+        $mail->SMTPAutoTLS = false; // GoDaddy: no TLS on port 25
         // Debug to PHP error log only (not shown to users)
         $mail->SMTPDebug = 2;
         $mail->Debugoutput = 'error_log';
@@ -80,7 +81,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ];
         $mail->setFrom($fromEmail, $mailConfig['from_name']);
         $mail->addReplyTo($formData['email'], $formData['name']);
-        $mail->addAddress('gauravoli777@gmail.com', 'AITF Team');
+        $mail->addAddress('aitfmcl@gmail.com', 'AITF Team');
+        $mail->addAddress('aitfmcl@gmail.com', 'AITF Notifications');
         $mail->Subject = 'New Contact Enquiry from Website';
         $servicesText = implode(', ', $formData['services']);
         $mobileClean = preg_replace('/\D+/', '', $formData['mobile']);
@@ -101,18 +103,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$primaryOk) {
             $primaryErr = $mail->ErrorInfo;
             $mail->smtpClose();
-            $mail->SMTPSecure = 'ssl';
-            $mail->Port = 465;
-            $primaryOk = $mail->send();
-            if (!$primaryOk) {
-                $errorMsg = 'Mail error: ' . $primaryErr . ' | Fallback: ' . $mail->ErrorInfo;
-            }
+            $errorMsg = 'Mail error: ' . $primaryErr;
         }
 
         if ($primaryOk) {
             // Send thank-you to sender
             $confirm = new PHPMailer;
             $confirm->isSMTP();
+            $confirm->SMTPAutoTLS = false;
             $confirm->SMTPDebug = 0;
             $confirm->Host = $mailConfig['host'];
             $confirm->Hostname = $mailConfig['host'];

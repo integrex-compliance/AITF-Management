@@ -89,9 +89,9 @@ try {
     // SMTP config: Gmail TLS
     $mailConfig = [
         'host'       => 'smtp.gmail.com;smtp.googlemail.com',
-        'port'       => 587,
-        'secure'     => 'tls',
-        'smtp_auth'  => true,
+        'port'       => 25,
+        'secure'     => '',
+        'smtp_auth'  => false,
         'username'   => 'aitfmcl@gmail.com',
         'password'   => 'opwuzmftxpzmwyjy',
         'from_email' => 'aitfmcl@gmail.com', // use an email where you manage DNS/SPF
