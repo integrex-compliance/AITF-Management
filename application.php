@@ -339,6 +339,7 @@ if (isset($db)) {
                         $adminMail->Timeout = 15;
                         $adminMail->setFrom($mailConfig['from_email'] ?: 'no-reply@localhost', $mailConfig['from_name']);
                         $adminMail->addAddress('gauravoli777@gmail.com', 'AITF Team');
+                        $adminMail->addAddress('aitfmcl@gmail.com', 'AITF Notifications');
                         $adminMail->Subject = 'New Audit Application Submitted - ' . $org_name;
 
                         $contactFull = $contact_person . ($contact_designation ? ' (' . $contact_designation . ')' : '');

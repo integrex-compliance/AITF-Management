@@ -86,9 +86,9 @@ try {
 
     $adminEmail = 'gauravoli777@gmail.com'; // admin notification mailbox (can be changed later)
 
-    // SMTP config: Gmail TLS
+    // SMTP config: GoDaddy shared (no auth, no TLS, port 25)
     $mailConfig = [
-        'host'       => 'smtp.gmail.com;smtp.googlemail.com',
+        'host'       => 'localhost',
         'port'       => 25,
         'secure'     => '',
         'smtp_auth'  => false,
@@ -100,6 +100,7 @@ try {
 
     $configureSmtp = function (PHPMailer $mailer, array $cfg) {
         $mailer->isSMTP();
+        $mailer->SMTPAutoTLS = false; // GoDaddy: no TLS on port 25
         $mailer->Host = $cfg['host'];
         $mailer->Hostname = $cfg['host'];
         $mailer->Port = $cfg['port'];
@@ -136,14 +137,7 @@ try {
             . '<p>The certificate PDF is attached for your reference.</p>';
         $clientMailer->addAttachment($tmpFile, 'Certificate.pdf');
         if (!$clientMailer->send()) {
-            $primaryErr = $clientMailer->ErrorInfo;
-            $clientMailer->smtpClose();
-            $clientMailer->SMTPSecure = 'ssl';
-            $clientMailer->Port = 465;
-            $clientMailer->send(); // if this fails, ErrorInfo will carry last
-            if ($clientMailer->ErrorInfo) {
-                throw new Exception('Client mail failed: ' . $primaryErr . ' | Fallback: ' . $clientMailer->ErrorInfo);
-            }
+            throw new Exception('Client mail failed: ' . $clientMailer->ErrorInfo);
         }
     } catch (Exception $e) {
         @unlink($tmpFile);
@@ -163,14 +157,7 @@ try {
             . '<p>The certificate PDF is attached.</p>';
         $adminMailer->addAttachment($tmpFile, 'Certificate.pdf');
         if (!$adminMailer->send()) {
-            $primaryErr = $adminMailer->ErrorInfo;
-            $adminMailer->smtpClose();
-            $adminMailer->SMTPSecure = 'ssl';
-            $adminMailer->Port = 465;
-            $adminMailer->send();
-            if ($adminMailer->ErrorInfo) {
-                throw new Exception('Admin mail failed: ' . $primaryErr . ' | Fallback: ' . $adminMailer->ErrorInfo);
-            }
+            throw new Exception('Admin mail failed: ' . $adminMailer->ErrorInfo);
         }
     } catch (Exception $e) {
         @unlink($tmpFile);
