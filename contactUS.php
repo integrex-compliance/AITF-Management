@@ -21,7 +21,7 @@ $mailConfig = [
     'smtp_auth' => false,
     'username' => 'aitfmcl@gmail.com',
     'password' => 'opwuzmftxpzmwyjy',
-    'from_email' => 'aitfmcl@gmail.com', // use an email where you manage DNS/SPF
+    'from_email' => 'aitfmcl@gmail.com', // domain you manage (per GoDaddy guidance)
     'from_name' => 'AITF Website'
 ];
 
@@ -80,6 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]
         ];
         $mail->setFrom($fromEmail, $mailConfig['from_name']);
+        $mail->Sender = $fromEmail;
         $mail->addReplyTo($formData['email'], $formData['name']);
         $mail->addAddress('aitfmcl@gmail.com', 'AITF Team');
         $mail->addAddress('aitfmcl@gmail.com', 'AITF Notifications');
@@ -126,6 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $confirm->SMTPKeepAlive = false;
             $confirm->SMTPOptions = $mail->SMTPOptions;
             $confirm->setFrom($fromEmail, 'AITF Team');
+            $confirm->Sender = $fromEmail;
             $confirm->addAddress($formData['email'], $formData['name']);
             $confirm->Subject = 'Thank you for contacting AITF';
             $confirmBody = "
@@ -146,7 +148,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $successMsg = $confirmOk
                 ? 'Thank you! We will get back to you shortly.'
                 : 'Thank you! We received your enquiry, but could not send confirmation to your email.';
-            $formData = ['name' => '', 'email' => '', 'mobile' => '', 'about' => '', 'services' => []];
+            $formData = ['name' => '', 'email' => '', 'mobile' => '', 'company' => '', 'about' => '', 'services' => []];
         } else {
             $errorMsg = 'Mail error: ' . $mail->ErrorInfo;
         }
