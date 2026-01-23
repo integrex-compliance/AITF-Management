@@ -137,7 +137,15 @@ try {
             . '<p>The certificate PDF is attached for your reference.</p>';
         $clientMailer->addAttachment($tmpFile, 'Certificate.pdf');
         if (!$clientMailer->send()) {
-            throw new Exception('Client mail failed: ' . $clientMailer->ErrorInfo);
+            $primaryErr = $clientMailer->ErrorInfo;
+            $clientMailer->smtpClose();
+            $clientMailer->SMTPSecure = 'ssl';
+            $clientMailer->Port = 465;
+            $clientMailer->SMTPAutoTLS = false;
+            $clientMailer->send();
+            if ($clientMailer->ErrorInfo) {
+                throw new Exception('Client mail failed: ' . $primaryErr . ' | Fallback: ' . $clientMailer->ErrorInfo);
+            }
         }
     } catch (Exception $e) {
         @unlink($tmpFile);
@@ -157,7 +165,15 @@ try {
             . '<p>The certificate PDF is attached.</p>';
         $adminMailer->addAttachment($tmpFile, 'Certificate.pdf');
         if (!$adminMailer->send()) {
-            throw new Exception('Admin mail failed: ' . $adminMailer->ErrorInfo);
+            $primaryErr = $adminMailer->ErrorInfo;
+            $adminMailer->smtpClose();
+            $adminMailer->SMTPSecure = 'ssl';
+            $adminMailer->Port = 465;
+            $adminMailer->SMTPAutoTLS = false;
+            $adminMailer->send();
+            if ($adminMailer->ErrorInfo) {
+                throw new Exception('Admin mail failed: ' . $primaryErr . ' | Fallback: ' . $adminMailer->ErrorInfo);
+            }
         }
     } catch (Exception $e) {
         @unlink($tmpFile);

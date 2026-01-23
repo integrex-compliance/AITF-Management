@@ -367,7 +367,15 @@ if (isset($db)) {
                     }
                     $adminSent = $adminMail->send();
                     if (!$adminSent) {
-                        error_log('Audit admin mail error: ' . $adminMail->ErrorInfo);
+                        $primaryErr = $adminMail->ErrorInfo;
+                        $adminMail->smtpClose();
+                        $adminMail->SMTPSecure = 'ssl';
+                        $adminMail->Port = 465;
+                        $adminMail->SMTPAutoTLS = false;
+                        $adminSent = $adminMail->send();
+                        if (!$adminSent) {
+                            error_log('Audit admin mail error: ' . $primaryErr . ' | Fallback: ' . $adminMail->ErrorInfo);
+                        }
                     }
 
                         // Applicant thank-you email
@@ -403,7 +411,15 @@ if (isset($db)) {
                         }
                         $clientSent = $clientMail->send();
                         if (!$clientSent) {
-                            error_log('Audit client mail error: ' . $clientMail->ErrorInfo);
+                            $primaryErr = $clientMail->ErrorInfo;
+                            $clientMail->smtpClose();
+                            $clientMail->SMTPSecure = 'ssl';
+                            $clientMail->Port = 465;
+                            $clientMail->SMTPAutoTLS = false;
+                            $clientSent = $clientMail->send();
+                            if (!$clientSent) {
+                                error_log('Audit client mail error: ' . $primaryErr . ' | Fallback: ' . $clientMail->ErrorInfo);
+                            }
                         }
                         }
                     } catch (Exception $mailEx) {

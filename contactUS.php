@@ -104,7 +104,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$primaryOk) {
             $primaryErr = $mail->ErrorInfo;
             $mail->smtpClose();
-            $errorMsg = 'Mail error: ' . $primaryErr;
+            // Fallback to SSL/465 if 587/TLS blocked
+            $mail->SMTPSecure = 'ssl';
+            $mail->Port = 465;
+            $mail->SMTPAutoTLS = false;
+            $primaryOk = $mail->send();
+            if (!$primaryOk) {
+                $errorMsg = 'Mail error: ' . $primaryErr . ' | Fallback: ' . $mail->ErrorInfo;
+            }
         }
 
         if ($primaryOk) {
