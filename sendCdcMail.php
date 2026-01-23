@@ -84,7 +84,7 @@ try {
         exit;
     }
 
-    $adminEmail = 'gauravoli777@gmail.com'; // admin notification mailbox (can be changed later)
+    $adminEmail = 'aitfmcl@gmail.com'; // admin notification mailbox (can be changed later)
 
     // SMTP config: Gmail TLS
     $mailConfig = [

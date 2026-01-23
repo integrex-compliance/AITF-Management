@@ -503,6 +503,21 @@ session_start();
                 padding: 0 4px;
                 line-height: 1;
             }
+
+            /* Typing Animation Styles for AITF */
+            .aitf-typing {
+                display: inline-block;
+                position: relative;
+                font-weight: bold;
+            }
+
+            .red-char {
+                color: #dc2626;
+            }
+
+            .blue-char {
+                color: #032887ff;
+            }
         </style>
     </head>
 
@@ -521,6 +536,59 @@ session_start();
             $('.login-error-close').on('click', function () {
                 $('#login-error-banner').fadeOut(200);
             });
+
+            // AITF Typing Animation
+            function animateAITF() {
+                const aitfElement = $('#aitf-text');
+                
+                function typeAnimation() {
+                    aitfElement.html('');
+                    aitfElement.removeClass('deleting-animation').addClass('typing-animation');
+                    
+                    let text = 'AITF';
+                    let colors = {'A': 'red-char', 'I': 'blue-char', 'T': 'blue-char', 'F': 'red-char'};
+                    let index = 0;
+                    const typeInterval = setInterval(() => {
+                        if (index < text.length) {
+                            let char = text[index];
+                            let colorClass = colors[char];
+                            aitfElement.append(`<span class="${colorClass}">${char}</span>`);
+                            index++;
+                        } else {
+                            clearInterval(typeInterval);
+                            aitfElement.removeClass('typing-animation');
+                            
+                            // Wait a bit, then start deleting
+                            setTimeout(deleteAnimation, 1000);
+                        }
+                    }, 200);
+                }
+                
+                function deleteAnimation() {
+                    aitfElement.addClass('deleting-animation');
+                    
+                    let spans = aitfElement.find('span');
+                    let index = spans.length - 1;
+                    const deleteInterval = setInterval(() => {
+                        if (index >= 0) {
+                            $(spans[index]).remove();
+                            index--;
+                        } else {
+                            clearInterval(deleteInterval);
+                            aitfElement.removeClass('deleting-animation');
+                            
+                            // Restart the cycle
+                            setTimeout(typeAnimation, 500);
+                        }
+                    }, 150);
+                }
+                
+                // Start the typing animation
+                typeAnimation();
+            }
+            
+            // Start the animation when page loads
+            setTimeout(animateAITF, 500);
 
             // jQuery code
             //////////////////////// Prevent closing from click inside dropdown
@@ -585,7 +653,7 @@ session_start();
         <div class="container">
             <div class="hero-content">
                 <div class="hero-text" style="margin-top: 20px;">
-                    <h1 style="margin-top: 0;">Welcome to AITF</h1>
+                    <h1 style="margin-top: 0;">Welcome to <span class="aitf-typing typing-animation" id="aitf-text">AITF</span></h1>
                     <h2>Your Trusted Certification Partner</h2>
                     <div class="hero-highlights" style="flex-wrap: nowrap;">
                         <span class="highlight-badge">
@@ -634,7 +702,7 @@ session_start();
                                 <i class="fas fa-check"></i>
                             </div>
                             <div class="cert-details">
-                                <span class="cert-code">ISO 9001</span>
+                                <span class="cert-code">ISO <span class="iso-number" data-text="9001" data-color="#ff6b6b">9001</span></span>
                                 <span class="cert-name">QMS</span>
                             </div>
                             <div class="cert-status">
@@ -649,7 +717,7 @@ session_start();
                                 <i class="fas fa-check"></i>
                             </div>
                             <div class="cert-details">
-                                <span class="cert-code">ISO 45001</span>
+                                <span class="cert-code">ISO <span class="iso-number" data-text="45001" data-color="#4ecdc4">45001</span></span>
                                 <span class="cert-name">OHSMS</span>
                             </div>
                             <div class="cert-status">
@@ -664,7 +732,7 @@ session_start();
                                 <i class="fas fa-check"></i>
                             </div>
                             <div class="cert-details">
-                                <span class="cert-code">ISO 14001</span>
+                                <span class="cert-code">ISO <span class="iso-number" data-text="14001" data-color="#ffe66d">14001</span></span>
                                 <span class="cert-name">EMS</span>
                             </div>
                             <div class="cert-status">
@@ -1555,10 +1623,39 @@ session_start();
 
                     .cert-code {
                         display: block;
-                        font-weight: 700;
+                        font-weight: 900;
                         color: #2d3748;
-                        font-size: 14px;
+                        font-size: 18px;
                         margin-bottom: 2px;
+                    }
+                    
+                    .iso-number {
+                        font-weight: 900;
+                        position: relative;
+                    }
+                    
+                    .iso-number[data-color="#ff6b6b"] {
+                        color: #ff6b6b;
+                    }
+                    
+                    .iso-number[data-color="#4ecdc4"] {
+                        color: #4ecdc4;
+                    }
+                    
+                    .iso-number[data-color="#ffe66d"] {
+                        color: #ffe66d;
+                    }
+                    
+                    .iso-number.typing::after {
+                        content: '|';
+                        position: absolute;
+                        right: -8px;
+                        animation: blink 0.7s infinite;
+                    }
+                    
+                    @keyframes blink {
+                        0%, 50% { opacity: 1; }
+                        51%, 100% { opacity: 0; }
                     }
 
                     .cert-name {
@@ -1571,19 +1668,44 @@ session_start();
                     .cert-status {
                         display: flex;
                         align-items: center;
-                        font-size: 12px;
-                        color: #48bb78;
-                        font-weight: 500;
+                        justify-content: center;
+                        font-size: 11px;
+                        color: #10b981;
+                        font-weight: 700;
+                        background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 25%, #6d28d9 50%, #7c3aed 75%, #8b5cf6 100%);
+                        background-size: 200% 200%;
+                        border: 2px solid rgba(255, 255, 255, 0.3);
+                        border-radius: 25px;
+                        padding: 8px 16px;
+                        cursor: pointer;
+                        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                        box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4), 0 0 20px rgba(139, 92, 246, 0.2);
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
+                        position: relative;
+                        overflow: hidden;
                     }
 
                     .status-dot {
                         display: inline-block;
-                        width: 8px;
-                        height: 8px;
-                        background: #48bb78;
+                        width: 10px;
+                        height: 10px;
+                        background: white;
                         border-radius: 50%;
-                        margin-right: 6px;
-                        animation: pulse 2s infinite;
+                        margin-right: 8px;
+                        box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+                        animation: statusPulse 2s infinite;
+                    }
+                    
+                    @keyframes statusPulse {
+                        0%, 100% {
+                            transform: scale(1);
+                            opacity: 1;
+                        }
+                        50% {
+                            transform: scale(1.2);
+                            opacity: 0.8;
+                        }
                     }
 
                     .dashboard-footer {
@@ -1715,11 +1837,34 @@ session_start();
                         }
                         
                         .cert-code {
-                            font-size: 13px;
+                            font-size: 16px;
+                            font-weight: 900;
                         }
                         
                         .cert-name {
                             font-size: 11px;
+                        }
+                        
+                        .cert-status:hover {
+                            transform: translateY(-3px) scale(1.05);
+                            box-shadow: 0 8px 25px rgba(139, 92, 246, 0.6), 0 0 30px rgba(139, 92, 246, 0.4);
+                            background-position: 100% 100%;
+                            border-color: rgba(255, 255, 255, 0.5);
+                        }
+                        
+                        .cert-status::before {
+                            content: '';
+                            position: absolute;
+                            top: 0;
+                            left: -100%;
+                            width: 100%;
+                            height: 100%;
+                            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+                            transition: left 0.6s;
+                        }
+                        
+                        .cert-status:hover::before {
+                            left: 100%;
                         }
                     }
                 </style>
@@ -1742,6 +1887,52 @@ session_start();
                         
                         // Initial update
                         updateTimestamp();
+                        
+                        // Test alert to check if JS runs
+                        console.log('JavaScript is running!');
+                        
+                        // Very simple typing effect - test version
+                        function animateNumber(element, text, color) {
+                            console.log('Starting animation for:', text);
+                            element.style.color = color;
+                            let currentText = '';
+                            let typing = true;
+                            
+                            function animate() {
+                                if (typing) {
+                                    if (currentText.length < text.length) {
+                                        currentText += text[currentText.length];
+                                        element.textContent = currentText;
+                                        setTimeout(animate, 200);
+                                    } else {
+                                        typing = false;
+                                        setTimeout(animate, 1500);
+                                    }
+                                } else {
+                                    if (currentText.length > 0) {
+                                        currentText = currentText.slice(0, -1);
+                                        element.textContent = currentText;
+                                        setTimeout(animate, 100);
+                                    } else {
+                                        typing = true;
+                                        setTimeout(animate, 500);
+                                    }
+                                }
+                            }
+                            
+                            animate();
+                        }
+                        
+                        // Start immediately - don't wait for load
+                        const iso9001 = document.querySelector('[data-text="9001"]');
+                        const iso45001 = document.querySelector('[data-text="45001"]');
+                        const iso14001 = document.querySelector('[data-text="14001"]');
+                        
+                        console.log('Elements found:', iso9001, iso45001, iso14001);
+                        
+                        if (iso9001) animateNumber(iso9001, '9001', '#ff6b6b');
+                        if (iso45001) animateNumber(iso45001, '45001', '#4ecdc4');
+                        if (iso14001) animateNumber(iso14001, '14001', '#ffe66d');
                         
                         // Update time every minute
                         setInterval(() => {
