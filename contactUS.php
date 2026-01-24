@@ -15,13 +15,13 @@ $serviceOptions = [
     'ISO 14001'
 ];
 $mailConfig = [
-   'host' => 'smtp.gmail.com',
-    'port' => 465,              // CHANGE: GoDaddy allows 465 (SSL) more often than 587
-    'secure' => 'ssl',          // CHANGE: Must match port 465
+    'host' => 'smtpout.secureserver.net', // GoDaddy outbound SMTP
+    'port' => 587,
+    'secure' => 'tls',
     'smtp_auth' => true,
-    'username' => 'aitfmcl@gmail.com',
-    'password' => 'opwuzmftxpzmwyjy',
-    'from_email' => 'aitfmcl@gmail.com', // domain you manage (per GoDaddy guidance)
+    'username' => 'certification@aitf.co.in',
+    'password' => 'foroffice@aitf1122',
+    'from_email' => 'certification@aitf.co.in',
     'from_name' => 'AITF Website'
 ];
 
@@ -56,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $mail = new PHPMailer;
         $mail->isSMTP();
-        $mail->SMTPAutoTLS = true;
+        $mail->SMTPAutoTLS = true; // STARTTLS on 587
         // Debug to PHP error log only (not shown to users)
         $mail->SMTPDebug = 2;
         $mail->Debugoutput = 'error_log';
@@ -82,8 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $mail->setFrom($fromEmail, $mailConfig['from_name']);
         $mail->Sender = $fromEmail;
         $mail->addReplyTo($formData['email'], $formData['name']);
-        $mail->addAddress('aitfmcl@gmail.com', 'AITF Team');
-        $mail->addAddress('aitfmcl@gmail.com', 'AITF Notifications');
+        $mail->addAddress('certification@aitf.co.in', 'AITF Certification');
         $mail->Subject = 'New Contact Enquiry from Website';
         $servicesText = implode(', ', $formData['services']);
         $mobileClean = preg_replace('/\D+/', '', $formData['mobile']);
@@ -118,7 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Send thank-you to sender
             $confirm = new PHPMailer;
             $confirm->isSMTP();
-            $confirm->SMTPAutoTLS = true;
+            $confirm->SMTPAutoTLS = true; // STARTTLS on 587
             $confirm->SMTPDebug = 0;
             $confirm->Host = $mailConfig['host'];
             $confirm->Hostname = $mailConfig['host'];
@@ -912,11 +911,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <strong>+91 9881691012</strong>
                 </div>
             </a>
-            <a href="https://mail.google.com/mail/?view=cm&fs=1&to=aitfindia@gmail.com&su=Inquiry from AITF Website" target="_blank" class="quick-item">
+            <a href="mailto:certification@aitf.co.in" target="_blank" class="quick-item">
                 <i class="fas fa-envelope"></i>
                 <div>
                     <span>Email Us</span>
-                    <strong>aitfindia@gmail.com</strong>
+                    <strong>certification@aitf.co.in</strong>
                 </div>
             </a>
             <a href="https://wa.me/919881691012" class="quick-item" target="_blank">
@@ -973,7 +972,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     <div class="contact-item-content">
                         <h4>Email Address</h4>
-                        <a href="https://mail.google.com/mail/?view=cm&fs=1&to=aitfindia@gmail.com" target="_blank">aitfindia@gmail.com</a>
+                        <a href="mailto:certification@aitf.co.in" target="_blank">certification@aitf.co.in</a>
                     </div>
                 </div>
 

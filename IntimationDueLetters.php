@@ -343,9 +343,10 @@ else if($PageAction == "SendMail"){
 
 	$mail = new PHPMailer;
 	$mail->isSMTP();
+	$mail->SMTPAutoTLS = true; // STARTTLS on 587
 	$mail->SMTPDebug = 2; // log to error_log
 	$mail->Debugoutput = 'error_log';
-	$mail->Host = 'smtp.gmail.com;smtp.googlemail.com';
+	$mail->Host = 'smtpout.secureserver.net';
 	$mail->Port = 587;
 	$mail->SMTPAuth = true;
 	$mail->SMTPSecure = 'tls';
@@ -357,15 +358,14 @@ else if($PageAction == "SendMail"){
 		)
 	);
 
-	$mail->Username='aitfintimation@gmail.com';
-	// Gmail App Password provided for intimation account
-	$mail->Password='rcfducomzcmminpx';
-	$mail->setFrom('aitfintimation@gmail.com', 'AITF Intimation');
-	$mail->addReplyTo('aitfmcl@gmail.com', 'AITF Intimation');
+	$mail->Username='certification@aitf.co.in';
+	$mail->Password='foroffice@aitf1122';
+	$mail->setFrom('certification@aitf.co.in', 'AITF Intimation');
+	$mail->addReplyTo('certification@aitf.co.in', 'AITF Intimation');
 	$mail->Timeout = 15; // fail fast on unreachable SMTP
 	$mail->SMTPKeepAlive = false;
 
-	$mail->addCC('aitfintimation@gmail.com');
+	$mail->addCC('certification@aitf.co.in');
 	foreach($contactEmail as $e)
 	{
 		if($e != NULL) $mail->AddAddress($e);
@@ -376,11 +376,12 @@ else if($PageAction == "SendMail"){
 	$mail->AddAttachment($fullFilePath , $fileName);
 
 	if(!$mail->send()) {
-		// Try SSL 465 fallback if TLS/587 blocked
+		// Try SSL/465 fallback if STARTTLS/587 blocked
 		$primaryErr = $mail->ErrorInfo;
 		$mail->smtpClose();
 		$mail->Port = 465;
 		$mail->SMTPSecure = 'ssl';
+		$mail->SMTPAutoTLS = false;
 		if(!$mail->send()) {
 			$isMailSend = 0;
 			$response['message'] = 'Mailer Error: ' . $primaryErr . ' | Fallback: ' . $mail->ErrorInfo;

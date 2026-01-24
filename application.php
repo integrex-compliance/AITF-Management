@@ -6,13 +6,13 @@ $error_message = '';
 $applications = [];
 
 $mailConfig = [
-    'host' => 'smtp.gmail.com',
+    'host' => 'smtpout.secureserver.net',
     'port' => 587,
     'secure' => 'tls',
     'smtp_auth' => true,
-    'username' => 'aitfmcl@gmail.com',
-    'password' => 'opwuzmftxpzmwyjy',
-    'from_email' => 'aitfmcl@gmail.com', // use an email where you manage DNS/SPF
+    'username' => 'certification@aitf.co.in',
+    'password' => 'foroffice@aitf1122',
+    'from_email' => 'certification@aitf.co.in',
     'from_name' => 'AITF Website'
 ];
 
@@ -322,7 +322,7 @@ if (isset($db)) {
                         // Admin notification
                         $adminMail = new PHPMailer;
                     $adminMail->isSMTP();
-                    $adminMail->SMTPAutoTLS = true;
+                    $adminMail->SMTPAutoTLS = false; // using SMTPS on 465
                     $adminMail->SMTPDebug = 2; // log to php error_log only
                     $adminMail->Debugoutput = 'error_log';
                     $adminMail->Host = $mailConfig['host'];
@@ -338,8 +338,9 @@ if (isset($db)) {
                         $adminMail->SMTPOptions = $smtpOptions;
                         $adminMail->Timeout = 15;
                         $adminMail->setFrom($mailConfig['from_email'] ?: 'no-reply@localhost', $mailConfig['from_name']);
-                        $adminMail->addAddress('gauravoli777@gmail.com', 'AITF Team');
-                        $adminMail->addAddress('aitfmcl@gmail.com', 'AITF Notifications');
+                        $adminMail->addAddress('certification@aitf.co.in', 'AITF Certification');
+                        $adminMail->addCC('gauravoli777@gmail.com', 'AITF Team');
+                        $adminMail->addCC('aitfmcl@gmail.com', 'AITF Notifications');
                         $adminMail->Subject = 'New Audit Application Submitted - ' . $org_name;
 
                         $contactFull = $contact_person . ($contact_designation ? ' (' . $contact_designation . ')' : '');
@@ -369,9 +370,9 @@ if (isset($db)) {
                     if (!$adminSent) {
                         $primaryErr = $adminMail->ErrorInfo;
                         $adminMail->smtpClose();
-                        $adminMail->SMTPSecure = 'ssl';
-                        $adminMail->Port = 465;
-                        $adminMail->SMTPAutoTLS = false;
+                        $adminMail->SMTPSecure = 'tls';
+                        $adminMail->Port = 587;
+                        $adminMail->SMTPAutoTLS = true;
                         $adminSent = $adminMail->send();
                         if (!$adminSent) {
                             error_log('Audit admin mail error: ' . $primaryErr . ' | Fallback: ' . $adminMail->ErrorInfo);
@@ -382,7 +383,7 @@ if (isset($db)) {
                         if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
                             $clientMail = new PHPMailer;
                         $clientMail->isSMTP();
-                        $clientMail->SMTPAutoTLS = true;
+                        $clientMail->SMTPAutoTLS = false; // using SMTPS on 465
                         $clientMail->SMTPDebug = 2; // log to php error_log only
                         $clientMail->Debugoutput = 'error_log';
                         $clientMail->Host = $mailConfig['host'];
@@ -413,9 +414,9 @@ if (isset($db)) {
                         if (!$clientSent) {
                             $primaryErr = $clientMail->ErrorInfo;
                             $clientMail->smtpClose();
-                            $clientMail->SMTPSecure = 'ssl';
-                            $clientMail->Port = 465;
-                            $clientMail->SMTPAutoTLS = false;
+                            $clientMail->SMTPSecure = 'tls';
+                            $clientMail->Port = 587;
+                            $clientMail->SMTPAutoTLS = true;
                             $clientSent = $clientMail->send();
                             if (!$clientSent) {
                                 error_log('Audit client mail error: ' . $primaryErr . ' | Fallback: ' . $clientMail->ErrorInfo);
