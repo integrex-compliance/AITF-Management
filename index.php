@@ -669,7 +669,7 @@ session_start();
                             </div>
                         </span>
                     </div>
-                    <p class="hero-description">Empowering organizations through accredited, authentic, impartial, and ethical certification services for quality management standards such as QMS, EMS, and OHSMS.</p>
+                    <p class="hero-description">Empowering organizations through accredited, authentic, impartial, and ethical certification services for management standards such as QMS, EMS, and OHSMS.</p>
                     <div class="hero-cta" style="width: 100%; justify-content: flex-end; margin-top: 20px;">
                         <a href="text/audit_application_form.pdf" class="cta-button secondary " style="margin-left: auto;" download>
                             <i class="fas fa-arrow-down"></i>
@@ -2680,8 +2680,8 @@ session_start();
                         <div class="slide-icon">
                             <i class="fa fa-shield-halved"></i>
                         </div>
-                        <h3>SAFETY MANAGEMENT SYSTEM</h3>
-                        <p class="slide-description">Provides a structured approach to workplace safety, reducing risks and ensuring employee well-being under ISO 45001.</p>
+                        <h3>OCCUPATIONAL HEALTH &amp; SAFETY MANAGEMENT SYSTEM (OHSMS)</h3>
+                        <p class="slide-description">Builds a robust OH&S framework to reduce risks, protect employee well-being, and drive continual improvement under ISO 45001.</p>
                         <a href="contactUs.php" class="slider-btn">APPLY NOW <i class="fa fa-arrow-right"></i></a>
                     </div>
                 </div>

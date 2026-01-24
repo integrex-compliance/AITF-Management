@@ -1053,13 +1053,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="map-card">
                 <div class="map-header">
                     <h3><i class="fas fa-map-marked-alt"></i> Find Us on Map</h3>
-                    <a href="https://www.google.com/maps?q=Devi+Indrayani+Wing+B+26,+Gat+No.+382%2B3%2B4%2F1,+Near+IT+Park,+Talwade,+Pune,+Maharashtra+411062" target="_blank" class="map-btn">
+                    <a href="https://maps.app.goo.gl/4iXYZXQyoWEsnAcs5" target="_blank" class="map-btn">
                         <i class="fas fa-external-link-alt"></i>
                         Open in Google Maps
                     </a>
                 </div>
                 <div class="map-container">
-                    <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3781.137254814841!2d73.75876431489376!3d18.63032438734261!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bc2b9e5f5c0f42f%3A0x4d7b7b3d9e6c7f8a!2sTalwade%2C%20Pune%2C%20Maharashtra%20411062!5e0!3m2!1sen!2sin!4v1640000000000!5m2!1sen!2sin" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                    <iframe src="https://www.google.com/maps?q=Devi+Indrayani+Wing+B+26,+Gat+No.+382+3+4/1,+Near+IT+Park,+Talwade,+Pune+411062&output=embed" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
                 </div>
             </div>
         </div>
