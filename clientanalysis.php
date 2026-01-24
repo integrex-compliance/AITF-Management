@@ -23,6 +23,64 @@
     $statement->execute();
     $allUsers = $statement->fetchAll();
 
+    // Handler lookup
+    $handlerMap = array();
+    foreach ($allUsers as $handlerRow) {
+        $handlerMap[$handlerRow['id']] = $handlerRow['handler_name'];
+    }
+
+    // Collect customer ids for batch queries
+    $customerIds = array();
+    foreach ($listOfCustomer as $c) {
+        $customerIds[] = $c['id'];
+    }
+
+    $serviceMap = array();
+    $serviceNonSpMap = array();
+    $dueMap = array();
+    $paymentMap = array();
+
+    if (!empty($customerIds)) {
+        $inPlaceholders = implode(',', array_fill(0, count($customerIds), '?'));
+
+        // Latest service per customer
+        $sqlLatestService = "SELECT s.* FROM service s INNER JOIN (SELECT customer_id, MAX(service_id) AS max_sid FROM service WHERE customer_id IN ($inPlaceholders) GROUP BY customer_id) t ON s.customer_id = t.customer_id AND s.service_id = t.max_sid";
+        $stmt = $db->prepare($sqlLatestService);
+        $stmt->execute($customerIds);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $serviceMap[$row['customer_id']] = $row;
+        }
+
+        // Latest non-SP service id per customer (for due dates)
+        $sqlNonSpService = "SELECT s.customer_id, s.service_id FROM service s INNER JOIN (SELECT customer_id, MAX(service_id) AS max_sid FROM service WHERE service_type <> 'SP' AND customer_id IN ($inPlaceholders) GROUP BY customer_id) t ON s.customer_id = t.customer_id AND s.service_id = t.max_sid";
+        $stmt = $db->prepare($sqlNonSpService);
+        $stmt->execute($customerIds);
+        $serviceIdsForDates = array();
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $serviceNonSpMap[$row['customer_id']] = $row['service_id'];
+            $serviceIdsForDates[] = $row['service_id'];
+        }
+
+        // Due dates for latest non-SP service
+        if (!empty($serviceIdsForDates)) {
+            $ph = implode(',', array_fill(0, count($serviceIdsForDates), '?'));
+            $sqlDates = "SELECT service_id, action, due_date FROM ca_service_dates WHERE service_id IN ($ph) AND action IN ('Suspension Letter','Withdrawal Letter','Expire Letter')";
+            $stmt = $db->prepare($sqlDates);
+            $stmt->execute($serviceIdsForDates);
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $dueMap[$row['service_id']][$row['action']] = $row['due_date'];
+            }
+        }
+
+        // Payments per customer
+        $sqlPayments = "SELECT customer_id, SUM(balance) as balancesum FROM payment_system WHERE customer_id IN ($inPlaceholders) GROUP BY customer_id";
+        $stmt = $db->prepare($sqlPayments);
+        $stmt->execute($customerIds);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $paymentMap[$row['customer_id']] = $row['balancesum'];
+        }
+    }
+
 //    $allCustomers = "SELECT ci.id, customer_name, unique_id, audit_status, address, contact, email_id, scope, aif_nace, svc.service_id, service_type, service_status, svcdt.action, due_date, sent_date, svcdt.comment FROM customer_info ci left join service svc on ci.id = svc.customer_id left join ca_service_dates svcdt on svc.service_id = svcdt.service_id where is_deleted <> :status ";
 //    $statement = $db->prepare($allCustomers);
 //    $statement->bindParam(":status", $ststus);
@@ -113,25 +171,15 @@
                                 $count = 0;
                                 foreach ($listOfCustomer as $customer) {
                                     $count = $count + 1;
-                                    $serviceDetails = "SELECT * FROM service WHERE customer_id = " . $customer['id'] . " and service_id = (select max(service_id) from service where customer_id= " . $customer['id'] . ")";
-                                    $statement = $db->prepare($serviceDetails);
-                                    $statement->execute();
-                                    $serviceInfo = $statement->fetch();
-
-                                    $dueDate = "SELECT * FROM ca_service_dates where service_id = (select max(service_id) from service where service_type <> 'SP' and customer_id = " . $customer['id'] . ") and action = 'Suspension Letter'";
-                                    $statement = $db->prepare($dueDate);
-                                    $statement->execute();
-                                    $dueInfo = $statement->fetch();
-
-                                    $sentDate = "SELECT * FROM ca_service_dates where service_id = (select max(service_id) from service where service_type <> 'SP' and customer_id=" . $customer['id'] . ") and action = 'Withdrawal Letter'";
-                                    $statement = $db->prepare($sentDate);
-                                    $statement->execute();
-                                    $sentInfo = $statement->fetch();
-
-                                    $payDetails = "SELECT SUM(balance) as balancesum FROM payment_system WHERE customer_id = " . $customer['id'] . " ";
-                                    $statement = $db->prepare($payDetails);
-                                    $statement->execute();
-                                    $payInfo = $statement->fetch();
+                                    $serviceInfo = isset($serviceMap[$customer['id']]) ? $serviceMap[$customer['id']] : array();
+                                    $sid = isset($serviceNonSpMap[$customer['id']]) ? $serviceNonSpMap[$customer['id']] : null;
+                                    $dueInfo = $sentInfo = $dueInfoex = array();
+                                    if ($sid && isset($dueMap[$sid])) {
+                                        $dueInfo['due_date'] = isset($dueMap[$sid]['Suspension Letter']) ? $dueMap[$sid]['Suspension Letter'] : null;
+                                        $dueInfoex['due_date'] = isset($dueMap[$sid]['Expire Letter']) ? $dueMap[$sid]['Expire Letter'] : null;
+                                        $sentInfo['due_date'] = isset($dueMap[$sid]['Withdrawal Letter']) ? $dueMap[$sid]['Withdrawal Letter'] : null;
+                                    }
+                                    $payInfo = array('balancesum' => isset($paymentMap[$customer['id']]) ? $paymentMap[$customer['id']] : null);
                                     ?>  
                                     <tr class="customerAccount" data-id="<?php echo $customer['id']; ?>">
 <!--                                        <td data-name="name" >
@@ -172,13 +220,9 @@
                                         </td>
                                         <td> 
                                             <?php
-                                            if (isset($customer["handler"]) && !empty($customer["handler"])) {
-                                                $sql = "SELECT * FROM `handler` WHERE `id` = " . $customer["handler"];
-                                                $statement = $db->prepare($sql);
-                                                $statement->execute();
-                                                $userabb = $statement->fetch();
+                                            if (isset($customer["handler"]) && !empty($customer["handler"]) && isset($handlerMap[$customer['handler']])) {
                                                 ?>
-                                                <small><?php echo $userabb["handler_name"]; ?></small>
+                                                <small><?php echo $handlerMap[$customer['handler']]; ?></small>
                                             <?php } ?>
                                         </td>
                                     </tr>
@@ -380,18 +424,47 @@
     });
 
     var table = $('#client-analysis-list').DataTable({
-//            "scrollY": "450px",
-//        "sScrollX": "100%",
-//        "scrollY": '110vh',
+        "sScrollX": "100%",
+        "scrollY": '70vh',
         "scrollCollapse": true,
-        "paging": false,
+        "paging": true,
+        "pageLength": 50,
+        "deferRender": true,
         "ordering": false,
         "lengthChange": false,
-//            "pageLength": 10,
-        "paging": false,
-
+        "columnDefs": [
+            {
+                "width": "1%",
+                "targets": 0
+            },
+            {
+                "width": "15%",
+                "targets": 1
+            },
+            {
+                "width": "10%",
+                "targets": 2
+            },
+            {
+                "width": "12%",
+                "targets": 3
+            },
+            {
+                "width": "10%",
+                "targets": 4
+            },
+            {
+                "width": "10%",
+                "targets": 5
+            },
+            {
+                "width": "10%",
+                "targets": 6
+            },
+        ]
     });
     table.columns.adjust().draw();
+    });
 
     $('.service-type, .filterFromDate, .filterToDate').change(function () {
         var fromDate = $(".filterFromDate").val();

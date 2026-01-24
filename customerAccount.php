@@ -560,24 +560,26 @@
             <div class="row" style="">
                 <div class="top_qms_page">
                     <div class="row">
-                        <div class="col-sm-12 qms_customer_name <?php if ($clientInfo['audit_status'] === 'Application canceled') echo 'canceled-client-header'; ?>">
+                        <div class="col-sm-12 qms_customer_name <?php if ($clientInfo['audit_status'] === 'Application canceled') echo 'canceled-client-header'; ?>" style="display: flex; align-items: center; gap: 8px;">
                             <span><i class="fa fa-building"></i></span>
-                            <?php echo $clientInfo['customer_name']; ?>
-                            <a  class="editCustomerDetails" style="color: white; padding-left: 550px;" data-id="<?php echo $clientInfo['id'] ?>" title="Edit client details">
-                                <span><i class="fa fa-edit"></i></span>
-                            </a> 
-                            <a class="deleteCustomerDetails" style="color: white; padding-right: 10px;" data-id="<?php echo $clientInfo['id'] ?>" title="Delete customer details">
-                                <span><i class="fa fa-trash-o"></i></span>
-                            </a>
-                            <?php if ($clientInfo['audit_status'] === 'Application canceled') { ?>
-                                <a class="enableApplication" style="color: white; padding-right: 10px;" data-id="<?php echo $clientInfo['id'] ?>" title="Enable application">
-                                    <span><i class="fa fa-undo"></i></span>
+                            <span style="flex: 1 1 auto;"><?php echo $clientInfo['customer_name']; ?></span>
+                            <div style="margin-left: auto; display: flex; align-items: center; gap: 10px;">
+                                <a  class="editCustomerDetails" style="color: white;" data-id="<?php echo $clientInfo['id'] ?>" title="Edit client details">
+                                    <span><i class="fa fa-edit"></i></span>
+                                </a> 
+                                <a class="deleteCustomerDetails" style="color: white;" data-id="<?php echo $clientInfo['id'] ?>" title="Delete customer details">
+                                    <span><i class="fa fa-trash-o"></i></span>
                                 </a>
-                            <?php } else { ?>
-                                <a class="cancelApplication" style="color: white; padding-right: 10px;" data-id="<?php echo $clientInfo['id'] ?>" title="Cancel application">
-                                    <span><i class="fa fa-ban"></i></span>
-                                </a>
-                            <?php } ?>
+                                <?php if ($clientInfo['audit_status'] === 'Application canceled') { ?>
+                                    <a class="enableApplication" style="color: white;" data-id="<?php echo $clientInfo['id'] ?>" title="Enable application">
+                                        <span><i class="fa fa-undo"></i></span>
+                                    </a>
+                                <?php } else { ?>
+                                    <a class="cancelApplication" style="color: white;" data-id="<?php echo $clientInfo['id'] ?>" title="Cancel application">
+                                        <span><i class="fa fa-ban"></i></span>
+                                    </a>
+                                <?php } ?>
+                            </div>
                         </div>
                     </div>
                     <div class="row" style="padding-top: 50px;">

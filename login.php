@@ -8,56 +8,38 @@ include 'utility.php';
 
 if (isset($_POST['useremail']) && !empty($_POST['useremail']) && isset($_POST['password']) && !empty($_POST['password'])) {
     try {
-        $selectUserEmail = "SELECT count(*) as user from user where email_id = :email";
-        
-        $statement = $db->prepare($selectUserEmail);
-        $statement->bindParam(":email", $_POST['useremail']);
+        // Single query fetch instead of count + fetch
+        $userLogin = "SELECT user_id, user_name, abbreviation, email_id, password, role FROM user WHERE email_id = :useremail LIMIT 1";
+        $statement = $db->prepare($userLogin);
+        $statement->bindParam(':useremail', $_POST['useremail']);
         $statement->execute();
-        $rowUserCount = $statement->fetch();
-        //print_r($rowUserCount); exit;
-        if ($rowUserCount['user'] > 0) {
-            $userLogin = "SELECT user_id, user_name, abbreviation, email_id, password, role FROM user WHERE email_id = :useremail";
-            $statement = $db->prepare($userLogin);
-            $statement->bindParam(':useremail', $_POST['useremail']);
-            $statement->execute();
-            $row = $statement->fetch();
+        $row = $statement->fetch();
 
-//            if ($_POST['password'] == $row['password']) 
-            if (password_verify($_POST['password'], $row['password'])) {
-                $_SESSION['username'] = $row['user_name'];
-                $_SESSION['id'] = $row['user_id'];
-                $_SESSION['role'] = $row['role'];
-                $_SESSION['abbrevation'] = $row['abbreviation'];
-//                echo $_SESSION['role']; die;
-                if (Utitlity::checkForUserAdmin()) {
-                    header("Location: homePage.php");
-                }
-                if (Utitlity::checkForOfficeStaff()) {
-//                    echo $_SESSION['role'];
-                    header("Location: homePage.php");
-                }
-                if (Utitlity::checkForUserConsultant()) {
-                    header("Location: auditPlanning.php");
-                }
-                if (Utitlity::checkForUserFinance()) {
-                    header("Location: paymentPage.php");
-                }
-                if (Utitlity::checkForUserMarketing()) {
-                    header("Location: marketingPage.php");
-                }
-                if (Utitlity::checkForMainAdmin()) {
-                    header("Location: homePage.php");
-                }
-//                if(Utitlity::checkForUserConsultant()){
-//                    header("Location: homePage.php");
-//                }
-            } else {
-                // Invalid credentials: mark login error in session and redirect to clean login URL
-                $_SESSION['login_error'] = true;
-                header("Location: index.php");
+        if ($row && password_verify($_POST['password'], $row['password'])) {
+            $_SESSION['username'] = $row['user_name'];
+            $_SESSION['id'] = $row['user_id'];
+            $_SESSION['role'] = $row['role'];
+            $_SESSION['abbrevation'] = $row['abbreviation'];
+            if (Utitlity::checkForUserAdmin()) {
+                header("Location: homePage.php");
+            }
+            if (Utitlity::checkForOfficeStaff()) {
+                header("Location: homePage.php");
+            }
+            if (Utitlity::checkForUserConsultant()) {
+                header("Location: auditPlanning.php");
+            }
+            if (Utitlity::checkForUserFinance()) {
+                header("Location: paymentPage.php");
+            }
+            if (Utitlity::checkForUserMarketing()) {
+                header("Location: marketingPage.php");
+            }
+            if (Utitlity::checkForMainAdmin()) {
+                header("Location: homePage.php");
             }
         } else {
-            // Unknown email: treat as login error without exposing details in URL
+            // Invalid credentials: mark login error in session and redirect to clean login URL
             $_SESSION['login_error'] = true;
             header("Location: index.php");
         }
@@ -71,31 +53,22 @@ if (isset($_POST['useremail']) && !empty($_POST['useremail']) && isset($_POST['p
     try {
         $input = preg_replace("/[^a-zA-Z]+/", "", $_POST["clientemail"]);
         $input = strtoupper($input);
-        $customercount = "SELECT COUNT(*) AS client FROM `customer_info` WHERE unique_id = :clientpassword";
-        $statement = $db->prepare($customercount);
-//        $statement->bindParam(':clientemail', $_POST['clientemail']);
+        // Single fetch instead of count + fetch
+        $customer = "SELECT * FROM `customer_info` WHERE unique_id = :clientpassword LIMIT 1";
+        $statement = $db->prepare($customer);
         $statement->bindParam(':clientpassword', $_POST['clientcid']);
         $statement->execute();
-        $clientc = $statement->fetch();
-//        echo $clientc['client']; 
-        if ($clientc['client'] == 1) {
-            $customer = "SELECT * FROM `customer_info` WHERE unique_id = :clientpassword ";
-            $statement = $db->prepare($customer);
-//            $statement->bindParam(':clientemail', $_POST['clientemail']);
-            $statement->bindParam(':clientpassword', $_POST['clientcid']);
-            $statement->execute();
-            $customerinfo = $statement->fetch();
-
+        $customerinfo = $statement->fetch();
+//        echo $customerinfo['customer_name'];
+        if ($customerinfo) {
             $input1 = preg_replace("/[^a-zA-Z]+/", "", $customerinfo['customer_name']);
             $input1 = strtoupper($input1);
-//            echo $input . " -> " . $input1;
 
             if (strpos($input1, $input) !== false) {
                 $_SESSION['username'] = $customerinfo['customer_name'];
                 $_SESSION['id'] = $customerinfo['id'];
                 $_SESSION['role'] = "client";
                 $_SESSION['uniqueid'] = $customerinfo['unique_id'];
-//            echo $_SESSION['customername'];
                 header("Location: clientportal.php");
             } else {
                 // Invalid client login: show generic error banner without query params

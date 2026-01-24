@@ -16,6 +16,100 @@
     $statement = $db->prepare($services);
     $statement->execute();
     $servicesTypes = $statement->fetchAll();
+
+    // Batch preload subtype, survey, and CDC data to avoid per-row queries
+    $serviceIdsByType = [
+        'CA' => [], 'SA-I' => [], 'SA-II' => [], 'RC' => [], 'SP' => []
+    ];
+    foreach ($listOfCustomer as $c) {
+        if (isset($serviceIdsByType[$c['service_type']])) {
+            $serviceIdsByType[$c['service_type']][] = $c['service_id'];
+        }
+    }
+
+    $loadMap = function($table, $serviceCol, $filterIds) use (&$db) {
+        if (empty($filterIds)) return [];
+        $ph = implode(',', array_fill(0, count($filterIds), '?'));
+        $sql = "SELECT * FROM {$table} WHERE {$serviceCol} IN ($ph)";
+        $stmt = $db->prepare($sql);
+        $stmt->execute($filterIds);
+        $out = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $out[$r[$serviceCol]] = $r;
+        }
+        return $out;
+    };
+
+    $caMap = $loadMap('service_type_ca', 'service', $serviceIdsByType['CA']);
+    $saiMap = $loadMap('service_type_sai', 'service', $serviceIdsByType['SA-I']);
+    $saiiMap = $loadMap('service_type_saii', 'service', $serviceIdsByType['SA-II']);
+    $rcMap = $loadMap('service_type_rc', 'service', $serviceIdsByType['RC']);
+    $spMap = $loadMap('service_type_sp', 'service', $serviceIdsByType['SP']);
+
+    // Collect all subtype ids for survey/cdc lookups
+    $subtypeIds = [];
+    foreach ([$caMap, $saiMap, $saiiMap, $rcMap, $spMap] as $m) {
+        foreach ($m as $row) {
+            // each map keyed by service, contains its own primary id
+            $subtypeIds[] = reset(array_diff_key($row, ['service' => null])); // unused, will override below
+        }
+    }
+    // Better: pull explicit ids
+    $subtypeIds = array_merge(
+        array_column($caMap, 'ca_id'),
+        array_column($saiMap, 'sai_id'),
+        array_column($saiiMap, 'saii_id'),
+        array_column($rcMap, 'rc_id'),
+        array_column($spMap, 'sp_id')
+    );
+    $subtypeIds = array_filter($subtypeIds, function($v){ return $v !== null && $v !== ''; });
+
+    // customer_survey_id map: ca_serviceid => survey_id
+    $surveyIdMap = [];
+    if (!empty($subtypeIds)) {
+        $ph = implode(',', array_fill(0, count($subtypeIds), '?'));
+        $sqlSurveyIds = "SELECT ca_serviceid, survey_id FROM customer_survey_id WHERE ca_serviceid IN ($ph)";
+        $stmt = $db->prepare($sqlSurveyIds);
+        $stmt->execute($subtypeIds);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $surveyIdMap[$r['ca_serviceid']] = $r['survey_id'];
+        }
+    }
+
+    // customer_survey aggregated: survayid => ['auditors'=>string, 'marks'=>string]
+    $surveyAgg = [];
+    $surveyIds = array_values(array_filter($surveyIdMap));
+    if (!empty($surveyIds)) {
+        $ph = implode(',', array_fill(0, count($surveyIds), '?'));
+        $sqlSurvey = "SELECT survayid, lead_auditor, marks FROM customer_survey WHERE survayid IN ($ph)";
+        $stmt = $db->prepare($sqlSurvey);
+        $stmt->execute($surveyIds);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $sid = $r['survayid'];
+            if (!isset($surveyAgg[$sid])) {
+                $surveyAgg[$sid] = ['auditors' => [], 'marks' => []];
+            }
+            $surveyAgg[$sid]['auditors'][] = $r['lead_auditor'];
+            $surveyAgg[$sid]['marks'][] = $r['marks'];
+        }
+        // implode to strings
+        foreach ($surveyAgg as $sid => $vals) {
+            $surveyAgg[$sid]['auditors'] = implode(', ', array_filter($vals['auditors']));
+            $surveyAgg[$sid]['marks'] = implode(', ', array_filter($vals['marks']));
+        }
+    }
+
+    // cdc_report_review map: ca_service_id => row
+    $cdcMap = [];
+    if (!empty($subtypeIds)) {
+        $ph = implode(',', array_fill(0, count($subtypeIds), '?'));
+        $sqlCdc = "SELECT * FROM cdc_report_review WHERE ca_service_id IN ($ph)";
+        $stmt = $db->prepare($sqlCdc);
+        $stmt->execute($subtypeIds);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $cdcMap[$r['ca_service_id']] = $r;
+        }
+    }
     ?>
 
     <!-- Sidebar -->
@@ -91,368 +185,78 @@
                             <tbody>
                                 <?php
                                 foreach ($listOfCustomer as $customer) {
-                                    if ($customer["service_type"] == "CA") {
-                                        $sql1 = "SELECT * FROM `service_type_ca` where service = :service";
-                                        $statement = $db->prepare($sql1);
-                                        $statement->bindParam(":service", $customer["service_id"]);
-                                        $statement->execute();
-                                        $caserviceid = $statement->fetch();
+                                    $svcId = $customer['service_id'];
+                                    $svcType = $customer['service_type'];
 
-                                        $sql2 = "SELECT * FROM `customer_survey_id` WHERE `ca_serviceid` = :svce";
-                                        $statement = $db->prepare($sql2);
-                                        $statement->bindParam(":svce", $caserviceid["ca_id"]);
-                                        $statement->execute();
-                                        $ca_cdc = $statement->fetch();
-
-                                        $sql02 = "SELECT * FROM `customer_survey` where survayid = :survayid";
-                                        $statement = $db->prepare($sql02);
-                                        $statement->bindParam(":survayid", $ca_cdc["survey_id"]);
-                                        $statement->execute();
-                                        $cdc_survay = $statement->fetchAll();
-                                        $survayAuditor = "";
-                                        $survayMarks = "";
-                                        foreach ($cdc_survay as $survay) {
-                                            $survayAuditor = $survayAuditor . $survay["lead_auditor"] . ", ";
-                                            $survayMarks = $survayMarks . $survay["marks"] . ", ";
-                                        }
-
-                                        $sql002 = "SELECT * FROM `cdc_report_review` WHERE `ca_service_id` = :svce";
-                                        $statement = $db->prepare($sql002);
-                                        $statement->bindParam(":svce", $caserviceid["ca_id"]);
-                                        $statement->execute();
-                                        $ca_cdcval = $statement->fetch();
-                                        $caauditdate = explode(',', $caserviceid['stage2_audit']);
-                                        if ($ca_cdcval) {
-                                            ?>
-                                            <tr class="customerAccount" data-id="<?php echo $customer['id'] ?>"  >
-                                                <td  data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $customer['customer_name'] ?></a></small>
-                                                </td>
-                                                <td  data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $customer["service_type"] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <span><?php echo simpleDateConversion($customer["audit_date"]); ?>~</span><small><a ><?php echo simpleDateConversion($customer["audit_date"]) ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $ca_cdc['auditing_quality'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $ca_cdc['mgmt_satisfaction'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $survayAuditor; ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $survayMarks; ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $ca_cdc['aggregate'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $ca_cdcval['ncval'] ?></a></small>
-                                                </td>
-                                                <td  data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $ca_cdcval['ofival'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $ca_cdcval['oplusval'] ?></a></small>
-                                                </td>                                                
-                                            </tr>
-                                            <?php
-                                        }
-                                    } else if ($customer["service_type"] == "SA-I") {
-                                        $sql1 = "SELECT * FROM service_type_sai WHERE service = :service";
-                                        $statement = $db->prepare($sql1);
-                                        $statement->bindParam(":service", $customer["service_id"]);
-                                        $statement->execute();
-                                        $saiserviceid = $statement->fetch();
-
-                                        $sql2 = "SELECT * FROM `customer_survey_id` WHERE `ca_serviceid` = :svce";
-                                        $statement = $db->prepare($sql2);
-                                        $statement->bindParam(":svce", $saiserviceid["sai_id"]);
-                                        $statement->execute();
-                                        $sai_cdc = $statement->fetch();
-
-                                        $sql02 = "SELECT * FROM `customer_survey` where survayid = :survayid";
-                                        $statement = $db->prepare($sql02);
-                                        $statement->bindParam(":survayid", $sai_cdc["survey_id"]);
-                                        $statement->execute();
-                                        $cdc_survay = $statement->fetchAll();
-                                        $survayAuditor = "";
-                                        $survayMarks = "";
-                                        foreach ($cdc_survay as $survay) {
-                                            $survayAuditor = $survayAuditor . $survay["lead_auditor"] . ", ";
-                                            $survayMarks = $survayMarks . $survay["marks"] . ", ";
-                                        }
-
-                                        $sql002 = "SELECT * FROM `cdc_report_review` WHERE `ca_service_id` = :svce";
-                                        $statement = $db->prepare($sql002);
-                                        $statement->bindParam(":svce", $saiserviceid["sai_id"]);
-                                        $statement->execute();
-                                        $sai_cdcval = $statement->fetch();
-
-                                        $saiauditdate = explode(',', $saiserviceid['audit_date']);
-
-                                        if ($sai_cdcval) {
-                                            ?>
-                                            <tr class="customerAccount" data-id="<?php echo $customer['id'] ?>"  >
-                                                <td  data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $customer['customer_name'] ?></a></small>
-                                                </td>
-                                                <td  data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $customer["service_type"] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <span><?php echo simpleDateConversion($customer["audit_date"]); ?>~</span><small><a ><?php echo simpleDateConversion($customer["audit_date"]) ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $sai_cdc['auditing_quality'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $sai_cdc['mgmt_satisfaction'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $survayAuditor; ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $survayMarks; ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $sai_cdc['aggregate'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $sai_cdcval['ncval'] ?></a></small>
-                                                </td>
-                                                <td  data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $sai_cdcval['ofival'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $sai_cdcval['oplusval'] ?></a></small>
-                                                </td>                                               
-                                            </tr>
-                                            <?php
-                                        }
-                                    } else if ($customer["service_type"] == "SA-II") {
-                                        $sql1 = "SELECT * FROM service_type_saii WHERE service = :service";
-                                        $statement = $db->prepare($sql1);
-                                        $statement->bindParam(":service", $customer["service_id"]);
-                                        $statement->execute();
-                                        $saiiserviceid = $statement->fetch();
-
-                                        $sql2 = "SELECT * FROM `customer_survey_id` WHERE `ca_serviceid` = :svce";
-                                        $statement = $db->prepare($sql2);
-                                        $statement->bindParam(":svce", $saiiserviceid["saii_id"]);
-                                        $statement->execute();
-                                        $saii_cdc = $statement->fetch();
-
-                                        $sql02 = "SELECT * FROM `customer_survey` where survayid = :survayid";
-                                        $statement = $db->prepare($sql02);
-                                        $statement->bindParam(":survayid", $saii_cdc["survey_id"]);
-                                        $statement->execute();
-                                        $cdc_survay = $statement->fetchAll();
-                                        $survayAuditor = "";
-                                        $survayMarks = "";
-
-                                        foreach ($cdc_survay as $survay) {
-                                            $survayAuditor = $survayAuditor . $survay["lead_auditor"] . ", ";
-                                            $survayMarks = $survayMarks . $survay["marks"] . ", ";
-                                        }
-
-                                        $sql002 = "SELECT * FROM `cdc_report_review` WHERE `ca_service_id` = :svce";
-                                        $statement = $db->prepare($sql002);
-                                        $statement->bindParam(":svce", $saiiserviceid["saii_id"]);
-                                        $statement->execute();
-                                        $saii_cdcval = $statement->fetch();
-
-                                        $saiiauditdate = explode(',', $saiiserviceid['audit_date']);
-
-                                        if ($saii_cdcval) {
-                                            ?>
-                                            <tr class="customerAccount" data-id="<?php echo $customer['id'] ?>"  >
-                                                <td  data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $customer['customer_name'] ?></a></small>
-                                                </td>
-                                                <td  data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $customer["service_type"] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <span><?php echo simpleDateConversion($customer["audit_date"]); ?>~</span><small><a ><?php echo simpleDateConversion($customer["audit_date"]) ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $saii_cdc['auditing_quality'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $saii_cdc['mgmt_satisfaction'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $survayAuditor; ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $survayMarks; ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $saii_cdc['aggregate'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $saii_cdcval['ncval'] ?></a></small>
-                                                </td>
-                                                <td  data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $saii_cdcval['ofival'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $saii_cdcval['oplusval'] ?></a></small>
-                                                </td>                                               
-                                            </tr>
-                                            <?php
-                                        }
-                                    } else if ($customer["service_type"] == "RC") {
-                                        $sql1 = "SELECT * FROM service_type_rc WHERE service = :service";
-                                        $statement = $db->prepare($sql1);
-                                        $statement->bindParam(":service", $customer["service_id"]);
-                                        $statement->execute();
-                                        $rcserviceid = $statement->fetch();
-
-                                        $sql2 = "SELECT * FROM `customer_survey_id` WHERE `ca_serviceid` = :svce";
-                                        $statement = $db->prepare($sql2);
-                                        $statement->bindParam(":svce", $rcserviceid["rc_id"]);
-                                        $statement->execute();
-                                        $rc_cdc = $statement->fetch();
-
-                                        $sql02 = "SELECT * FROM `customer_survey` where survayid = :survayid";
-                                        $statement = $db->prepare($sql02);
-                                        $statement->bindParam(":survayid", $rc_cdc["survey_id"]);
-                                        $statement->execute();
-                                        $cdc_survay = $statement->fetchAll();
-                                        $survayAuditor = "";
-                                        $survayMarks = "";
-
-                                        foreach ($cdc_survay as $survay) {
-                                            $survayAuditor = $survayAuditor . $survay["lead_auditor"] . ", ";
-                                            $survayMarks = $survayMarks . $survay["marks"] . ", ";
-                                        }
-
-                                        $sql002 = "SELECT * FROM `cdc_report_review` WHERE `ca_service_id` = :svce";
-                                        $statement = $db->prepare($sql002);
-                                        $statement->bindParam(":svce", $rcserviceid["rc_id"]);
-                                        $statement->execute();
-                                        $rc_cdcval = $statement->fetch();
-
-                                        $rcauditdate = explode(',', $rcserviceid['audit_date']);
-
-                                        if ($rc_cdcval) {
-                                            ?>
-                                            <tr class="customerAccount" data-id="<?php echo $customer['id'] ?>"  >
-                                                <td  data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $customer['customer_name'] ?></a></small>
-                                                </td>
-                                                <td  data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $customer["service_type"] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <span><?php echo simpleDateConversion($customer["audit_date"]); ?>~</span><small><a ><?php echo simpleDateConversion($customer["audit_date"]) ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $rc_cdc['auditing_quality'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $rc_cdc['mgmt_satisfaction'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $survayAuditor; ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $survayMarks; ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $rc_cdc['aggregate'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $rc_cdcval['ncval'] ?></a></small>
-                                                </td>
-                                                <td  data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $rc_cdcval['ofival'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $rc_cdcval['oplusval'] ?></a></small>
-                                                </td>                                                
-                                            </tr>
-                                            <?php
-                                        }
-                                    } else if ($customer["service_type"] == "SP") {
-                                        $sql1 = "SELECT * FROM service_type_sp WHERE service = :service";
-                                        $statement = $db->prepare($sql1);
-                                        $statement->bindParam(":service", $customer["service_id"]);
-                                        $statement->execute();
-                                        $spserviceid = $statement->fetch();
-
-                                        $sql2 = "SELECT * FROM `customer_survey_id` WHERE `ca_serviceid` = :svce";
-                                        $statement = $db->prepare($sql2);
-                                        $statement->bindParam(":svce", $spserviceid["sp_id"]);
-                                        $statement->execute();
-                                        $sp_cdc = $statement->fetch();
-
-                                        $sql02 = "SELECT * FROM `customer_survey` where survayid = :survayid";
-                                        $statement = $db->prepare($sql02);
-                                        $statement->bindParam(":survayid", $ca_cdc["survey_id"]);
-                                        $statement->execute();
-                                        $cdc_survay = $statement->fetchAll();
-                                        $survayAuditor = "";
-                                        $survayMarks = "";
-
-                                        foreach ($cdc_survay as $survay) {
-                                            $survayAuditor = $survayAuditor . $survay["lead_auditor"] . ", ";
-                                            $survayMarks = $survayMarks . $survay["marks"] . ", ";
-                                        }
-
-                                        $sql002 = "SELECT * FROM `cdc_report_review` WHERE `ca_service_id` = :svce";
-                                        $statement = $db->prepare($sql002);
-                                        $statement->bindParam(":svce", $spserviceid["sp_id"]);
-                                        $statement->execute();
-                                        $sp_cdcval = $statement->fetch();
-
-                                        $spauditdate = explode(',', $spserviceid['audit_date']);
-
-                                        if ($sp_cdcval) {
-                                            ?>
-                                            <tr class="customerAccount" data-id="<?php echo $customer['id'] ?>"  >
-                                                <td  data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $customer['customer_name'] ?></a></small>
-                                                </td>
-                                                <td  data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $customer["service_type"] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <span><?php echo simpleDateConversion($customer["audit_date"]); ?>~</span><small><a ><?php echo simpleDateConversion($customer["audit_date"]) ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $sp_cdc['auditing_quality'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $sp_cdc['mgmt_satisfaction'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $survayAuditor; ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $survayMarks; ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $sp_cdc['aggregate'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $sp_cdcval['ncval'] ?></a></small>
-                                                </td>
-                                                <td  data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $sp_cdcval['ofival'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $sp_cdcval['oplusval'] ?></a></small>
-                                                </td>                                               
-                                            </tr>
-                                            <?php
-                                        }
+                                    // pick subtype row based on service_type
+                                    if ($svcType == 'CA') {
+                                        $sub = isset($caMap[$svcId]) ? $caMap[$svcId] : null;
+                                    } elseif ($svcType == 'SA-I') {
+                                        $sub = isset($saiMap[$svcId]) ? $saiMap[$svcId] : null;
+                                    } elseif ($svcType == 'SA-II') {
+                                        $sub = isset($saiiMap[$svcId]) ? $saiiMap[$svcId] : null;
+                                    } elseif ($svcType == 'RC') {
+                                        $sub = isset($rcMap[$svcId]) ? $rcMap[$svcId] : null;
+                                    } elseif ($svcType == 'SP') {
+                                        $sub = isset($spMap[$svcId]) ? $spMap[$svcId] : null;
+                                    } else {
+                                        $sub = null;
                                     }
+
+                                    if (!$sub) { continue; }
+
+                                    // subtype ids
+                                    $subId = null;
+                                    if ($svcType == 'CA') $subId = $sub['ca_id'];
+                                    else if ($svcType == 'SA-I') $subId = $sub['sai_id'];
+                                    else if ($svcType == 'SA-II') $subId = $sub['saii_id'];
+                                    else if ($svcType == 'RC') $subId = $sub['rc_id'];
+                                    else if ($svcType == 'SP') $subId = $sub['sp_id'];
+
+                                    if (!$subId) { continue; }
+
+                                    $surveyId = isset($surveyIdMap[$subId]) ? $surveyIdMap[$subId] : null;
+                                    $agg = isset($surveyAgg[$surveyId]) ? $surveyAgg[$surveyId] : ['auditors' => '', 'marks' => ''];
+                                    $cdc = isset($cdcMap[$subId]) ? $cdcMap[$subId] : null;
+                                    if (!$cdc) { continue; }
+
+                                    ?>
+                                    <tr class="customerAccount" data-id="<?php echo $customer['id'] ?>"  >
+                                        <td  data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                            <small><a ><?php echo $customer['customer_name'] ?></a></small>
+                                        </td>
+                                        <td  data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                            <small><a ><?php echo $svcType ?></a></small>
+                                        </td>
+                                        <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                            <span><?php echo simpleDateConversion($customer["audit_date"]); ?>~</span><small><a ><?php echo simpleDateConversion($customer["audit_date"]) ?></a></small>
+                                        </td>
+                                        <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                            <small><a ><?php echo $cdc['auditing_quality'] ?></a></small>
+                                        </td>
+                                        <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                            <small><a ><?php echo $cdc['mgmt_satisfaction'] ?></a></small>
+                                        </td>
+                                        <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                            <small><a ><?php echo $agg['auditors']; ?></a></small>
+                                        </td>
+                                        <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                            <small><a ><?php echo $agg['marks']; ?></a></small>
+                                        </td>
+                                        <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                            <small><a ><?php echo $cdc['aggregate'] ?></a></small>
+                                        </td>
+                                        <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                            <small><a ><?php echo $cdc['ncval'] ?></a></small>
+                                        </td>
+                                        <td  data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                            <small><a ><?php echo $cdc['ofival'] ?></a></small>
+                                        </td>
+                                        <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                            <small><a ><?php echo $cdc['oplusval'] ?></a></small>
+                                        </td>                                               
+                                    </tr>
+                                    <?php
                                 }
                                 ?>
                             </tbody>
@@ -463,13 +267,6 @@
         </div>
     </div>
 </div>
-
-    <script type="text/javascript" src="https://cdn.datatables.net/buttons/1.5.1/js/dataTables.buttons.min.js"></script>
-    <script type="text/javascript" src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.flash.min.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
-    <script type="text/javascript" src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.html5.min.js"></script>
-    <script type="text/javascript" src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.print.min.js"></script>
-    <link media="all" type="text/css" rel="stylesheet" href="https://cdn.datatables.net/buttons/1.5.1/css/buttons.dataTables.min.css">
 
     <script type="text/javascript">
 
@@ -609,17 +406,13 @@
             });
 
             var table = $('#tab_customer_list').DataTable({
-//            "sScrollX": "100%",
                 "scrollY": '70vh',
                 "scrollCollapse": true,
-                "paging": false,
+                "paging": true,
+                "pageLength": 50,
                 "ordering": false,
                 "lengthChange": false,
-//            "pageLength": 10,
-                "paging": false,
-                "buttons": [
-                    'excel'
-                ],
+                "deferRender": true,
                 "columnDefs": [
                     {
                         orderable: false,

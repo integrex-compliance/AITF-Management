@@ -414,6 +414,35 @@
         align-self: stretch !important;
         background: linear-gradient(180deg, transparent 0%, #cbd5e1 20%, #cbd5e1 80%, transparent 100%) !important;
         margin: 15px 0 !important;
+        position: relative !important;
+        overflow: hidden !important;
+        transition: all 0.4s ease !important;
+        opacity: 0.3 !important;
+    }
+    
+    /* Animated vertical divider effect */
+    .dropdown-divider-vertical::before {
+        content: '' !important;
+        position: absolute !important;
+        top: -100% !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        background: linear-gradient(180deg, transparent 0%, rgba(59, 130, 246, 0.6) 50%, transparent 100%) !important;
+        opacity: 0 !important;
+        transition: all 0.3s ease !important;
+    }
+    
+    .dropdown-content:hover .dropdown-divider-vertical {
+        background: linear-gradient(180deg, transparent 0%, #3b82f6 20%, #3b82f6 80%, transparent 100%) !important;
+        box-shadow: 0 0 8px rgba(59, 130, 246, 0.4) !important;
+        opacity: 1 !important;
+    }
+    
+    .dropdown-content:hover .dropdown-divider-vertical::before {
+        opacity: 1 !important;
+        animation: verticalDividerGlow 3s ease-in-out infinite !important;
+        background: linear-gradient(180deg, transparent 0%, rgba(255, 255, 255, 0.8) 50%, transparent 100%) !important;
     }
     
     /* Horizontal Divider with Plus */
@@ -422,12 +451,45 @@
         align-items: center !important;
         justify-content: center !important;
         padding: 8px 0 !important;
+        position: relative !important;
+        overflow: visible !important;
     }
     
     .dropdown-divider-horizontal .divider-line {
         flex: 1 !important;
         height: 1px !important;
         background: linear-gradient(90deg, transparent 0%, #cbd5e1 10%, #cbd5e1 90%, transparent 100%) !important;
+        position: relative !important;
+        overflow: hidden !important;
+        transition: all 0.4s ease !important;
+        opacity: 0.3 !important;
+    }
+    
+    /* Animated horizontal divider effect */
+    .dropdown-divider-horizontal .divider-line::before {
+        content: '' !important;
+        position: absolute !important;
+        left: -100% !important;
+        top: 0 !important;
+        width: 100% !important;
+        height: 2px !important;
+        background: linear-gradient(90deg, transparent 0%, rgba(59, 130, 246, 0.8) 50%, transparent 100%) !important;
+        opacity: 0 !important;
+        transition: all 0.3s ease !important;
+    }
+    
+    .dropdown-content:hover .dropdown-divider-horizontal .divider-line {
+        background: linear-gradient(90deg, transparent 0%, #3b82f6 10%, #3b82f6 90%, transparent 100%) !important;
+        height: 2px !important;
+        box-shadow: 0 0 6px rgba(59, 130, 246, 0.3) !important;
+        opacity: 1 !important;
+    }
+    
+    .dropdown-content:hover .dropdown-divider-horizontal .divider-line::before {
+        opacity: 1 !important;
+        animation: horizontalDividerSlide 4s ease-in-out infinite !important;
+        height: 3px !important;
+        background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.9) 50%, transparent 100%) !important;
     }
     
     .dropdown-divider-horizontal .divider-plus {
@@ -442,13 +504,46 @@
         background: #eff6ff !important;
         border-radius: 50% !important;
         border: 1px solid #dbeafe !important;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        position: relative !important;
+        overflow: hidden !important;
+        z-index: 10 !important;
+    }
+    
+    /* Pulsing effect for plus icon */
+    .dropdown-divider-horizontal .divider-plus::before {
+        content: '' !important;
+        position: absolute !important;
+        top: 50% !important;
+        left: 50% !important;
+        width: 100% !important;
+        height: 100% !important;
+        background: rgba(59, 130, 246, 0.2) !important;
+        border-radius: 50% !important;
+        transform: translate(-50%, -50%) scale(0) !important;
+        opacity: 0 !important;
         transition: all 0.3s ease !important;
     }
     
     .dropdown-content:hover .dropdown-divider-horizontal .divider-plus {
-        transform: rotate(90deg) !important;
-        background: #3b82f6 !important;
+        transform: rotate(90deg) scale(1.1) !important;
+        background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
         color: #fff !important;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4), 0 0 20px rgba(59, 130, 246, 0.2) !important;
+        border-color: #3b82f6 !important;
+    }
+    
+    .dropdown-content:hover .dropdown-divider-horizontal .divider-plus::before {
+        opacity: 1 !important;
+        animation: plusIconPulse 3s ease-in-out infinite !important;
+        background: rgba(255, 255, 255, 0.3) !important;
+        transform: translate(-50%, -50%) scale(1.5) !important;
+    }
+    
+    /* Add active state for click interaction */
+    .dropdown-divider-horizontal .divider-plus:active {
+        transform: rotate(90deg) scale(0.95) !important;
+        box-shadow: 0 2px 8px rgba(59, 130, 246, 0.6) !important;
     }
     
     .dropdown-section-icon {
@@ -568,6 +663,50 @@
         to {
             opacity: 1;
             transform: translateX(0);
+        }
+    }
+    
+    /* Divider Animations */
+    @keyframes verticalDividerGlow {
+        0% {
+            top: -100%;
+            opacity: 0;
+        }
+        50% {
+            opacity: 1;
+        }
+        100% {
+            top: 100%;
+            opacity: 0;
+        }
+    }
+    
+    @keyframes horizontalDividerSlide {
+        0% {
+            left: -100%;
+            opacity: 0;
+        }
+        50% {
+            opacity: 1;
+        }
+        100% {
+            left: 100%;
+            opacity: 0;
+        }
+    }
+    
+    @keyframes plusIconPulse {
+        0% {
+            transform: translate(-50%, -50%) scale(0);
+            opacity: 1;
+        }
+        50% {
+            transform: translate(-50%, -50%) scale(1.2);
+            opacity: 0.6;
+        }
+        100% {
+            transform: translate(-50%, -50%) scale(1.5);
+            opacity: 0;
         }
     }
     

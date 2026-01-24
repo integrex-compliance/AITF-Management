@@ -19,6 +19,73 @@
     $statement = $db->prepare($services);
     $statement->execute();
     $servicesTypes = $statement->fetchAll();
+
+    // Batch preload mappings to avoid per-row queries
+    $serviceIdsByType = [
+        'CA' => [], 'SA-I' => [], 'SA-II' => [], 'RC' => [], 'SP' => []
+    ];
+
+    foreach ($listOfCustomer as $c) {
+        if (isset($serviceIdsByType[$c['service_type']])) {
+            $serviceIdsByType[$c['service_type']][] = $c['service_id'];
+        }
+    }
+
+    $caServiceIdMap = [];
+    $caServiceIds = [];
+    // Helper to load subtype tables
+    $loadSubtype = function($table, $col, $serviceIds) use (&$db) {
+        if (empty($serviceIds)) return [];
+        $placeholders = implode(',', array_fill(0, count($serviceIds), '?'));
+        $sql = "SELECT {$col} AS subtype_id, service FROM {$table} WHERE service IN ($placeholders)";
+        $stmt = $db->prepare($sql);
+        $stmt->execute($serviceIds);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    };
+
+    foreach ([
+        ['type' => 'CA', 'table' => 'service_type_ca', 'col' => 'ca_id'],
+        ['type' => 'SA-I', 'table' => 'service_type_sai', 'col' => 'sai_id'],
+        ['type' => 'SA-II', 'table' => 'service_type_saii', 'col' => 'saii_id'],
+        ['type' => 'RC', 'table' => 'service_type_rc', 'col' => 'rc_id'],
+        ['type' => 'SP', 'table' => 'service_type_sp', 'col' => 'sp_id'],
+    ] as $cfg) {
+        $rows = $loadSubtype($cfg['table'], $cfg['col'], $serviceIdsByType[$cfg['type']]);
+        foreach ($rows as $row) {
+            $caServiceIdMap[$row['service']] = $row['subtype_id'];
+            $caServiceIds[] = $row['subtype_id'];
+        }
+    }
+
+    // Load CDC reviews for all subtype ids at once
+    $cdcMap = [];
+    if (!empty($caServiceIds)) {
+        $placeholders = implode(',', array_fill(0, count($caServiceIds), '?'));
+        $sqlCdc = "SELECT * FROM cdc_report_review WHERE ca_service_id IN ($placeholders)";
+        $stmt = $db->prepare($sqlCdc);
+        $stmt->execute($caServiceIds);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $cdcMap[$row['ca_service_id']] = $row;
+        }
+    }
+
+    // Office certificate numbers for fallback
+    $officeCertMap = [];
+    if (!empty($cdcMap)) {
+        $crrIds = array_column($cdcMap, 'crr_id');
+        $crrIds = array_filter($crrIds, function($v){ return $v !== null && $v !== ''; });
+        if (!empty($crrIds)) {
+            $placeholders = implode(',', array_fill(0, count($crrIds), '?'));
+            $sqlOffice = "SELECT crr_id, certificate_no FROM cdc_report_review_office_use WHERE crr_id IN ($placeholders) AND certificate_no IS NOT NULL AND certificate_no != '' ORDER BY iso_index ASC";
+            $stmt = $db->prepare($sqlOffice);
+            $stmt->execute($crrIds);
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                if (!isset($officeCertMap[$row['crr_id']])) {
+                    $officeCertMap[$row['crr_id']] = $row['certificate_no'];
+                }
+            }
+        }
+    }
     ?>
 
     <!-- Sidebar -->
@@ -97,342 +164,61 @@
                                 $count = 0;
                                 foreach ($listOfCustomer as $customer) {
                                     $count = $count + 1;
-                                    if ($customer["service_type"] == "CA") {
-                                        $sql1 = "SELECT ca_id FROM `service_type_ca` where service = :service";
-                                        $statement = $db->prepare($sql1);
-                                        $statement->bindParam(":service", $customer["service_id"]);
-                                        $statement->execute();
-                                        $serviceid = $statement->fetch();
+                                    $subtypeId = isset($caServiceIdMap[$customer['service_id']]) ? $caServiceIdMap[$customer['service_id']] : null;
+                                    if (!$subtypeId || !isset($cdcMap[$subtypeId])) {
+                                        continue;
+                                    }
 
-                                        $sql2 = "SELECT * FROM `cdc_report_review` WHERE `ca_service_id` = :svce";
-                                        $statement = $db->prepare($sql2);
-                                        $statement->bindParam(":svce", $serviceid["ca_id"]);
-                                        $statement->execute();
-                                        $ca_cdc = $statement->fetch();
-                                        if ($ca_cdc) {
-                                            $rawIssueDate = $ca_cdc['revDatecdc'];
-                                            if ($rawIssueDate == "" || $rawIssueDate == "0000-00-00") {
-                                                $rawIssueDate = $ca_cdc['Date'];
-                                            }
-                                            $issueDateConverted = simpleDateConversion($rawIssueDate);
-                                            $issueDateVisible = ($rawIssueDate == "" || $rawIssueDate == "0000-00-00") ? "" : $issueDateConverted;
-                                            $certificateNo = $ca_cdc['certificateNo'];
-                                            if ($certificateNo == "" || $certificateNo === null) {
-                                                $certOfficeStmt = $db->prepare("SELECT certificate_no FROM cdc_report_review_office_use WHERE crr_id = :crrId AND certificate_no IS NOT NULL AND certificate_no != '' ORDER BY iso_index ASC LIMIT 1");
-                                                $certOfficeStmt->bindParam(":crrId", $ca_cdc['crr_id']);
-                                                $certOfficeStmt->execute();
-                                                $officeCert = $certOfficeStmt->fetch(PDO::FETCH_ASSOC);
-                                                if ($officeCert && !empty($officeCert['certificate_no'])) {
-                                                    $certificateNo = $officeCert['certificate_no'];
-                                                }
-                                            }
-                                            ?>
-                                            <tr class="customerAccount <?php echo ($customer['audit_status'] === 'Application canceled') ? 'canceled-row' : ''; ?>" data-id="<?php echo $customer['id'] ?>">
-            <!--                                                <td  data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $count; ?></a></small>
-                                                </td>-->
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $certificateNo ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $ca_cdc['revCdc'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $customer["service_type"] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo simpleDateConversion($ca_cdc['Date']) ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><span><?php echo $issueDateConverted; ?>~</span><a ><?php echo $issueDateVisible; ?></a></small>
-                                                </td>
-                                                <td  data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $customer['customer_name'] ?></a><br><a ><?php echo $customer['address'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $ca_cdc['accreditation'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $customer['aif_nace'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $ca_cdc['product_service'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $customer['contact_person'] ?></a><br><a ><?php echo $customer['email_id'] ?></a></small>
-                                                </td>
-                                            </tr>
-                                            <?php
-                                        }
-                                    } if ($customer["service_type"] == "SA-I") {
-                                        $sql1 = "SELECT sai_id FROM service_type_sai WHERE service = :service";
-                                        $statement = $db->prepare($sql1);
-                                        $statement->bindParam(":service", $customer["service_id"]);
-                                        $statement->execute();
-                                        $serviceid = $statement->fetch();
-
-                                        $sql2 = "SELECT * FROM `cdc_report_review` WHERE `ca_service_id` = :svce";
-                                        $statement = $db->prepare($sql2);
-                                        $statement->bindParam(":svce", $serviceid["sai_id"]);
-                                        $statement->execute();
-                                        $ca_cdc = $statement->fetch();
-                                        if ($ca_cdc) {
-                                            $rawIssueDate = $ca_cdc['revDatecdc'];
-                                            if ($rawIssueDate == "" || $rawIssueDate == "0000-00-00") {
-                                                $rawIssueDate = $ca_cdc['Date'];
-                                            }
-                                            $issueDateConverted = simpleDateConversion($rawIssueDate);
-                                            $issueDateVisible = ($rawIssueDate == "" || $rawIssueDate == "0000-00-00") ? "" : $issueDateConverted;
-                                            $certificateNo = $ca_cdc['certificateNo'];
-                                            if ($certificateNo == "" || $certificateNo === null) {
-                                                $certOfficeStmt = $db->prepare("SELECT certificate_no FROM cdc_report_review_office_use WHERE crr_id = :crrId AND certificate_no IS NOT NULL AND certificate_no != '' ORDER BY iso_index ASC LIMIT 1");
-                                                $certOfficeStmt->bindParam(":crrId", $ca_cdc['crr_id']);
-                                                $certOfficeStmt->execute();
-                                                $officeCert = $certOfficeStmt->fetch(PDO::FETCH_ASSOC);
-                                                if ($officeCert && !empty($officeCert['certificate_no'])) {
-                                                    $certificateNo = $officeCert['certificate_no'];
-                                                }
-                                            }
-                                            ?>
-                                            <tr class="customerAccount <?php echo ($customer['audit_status'] === 'Application canceled') ? 'canceled-row' : ''; ?>" data-id="<?php echo $customer['id'] ?>" >
-            <!--                                                <td  data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $count; ?></a></small>
-                                                </td>-->
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $certificateNo ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $ca_cdc['revCdc'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $customer["service_type"] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo simpleDateConversion($ca_cdc['Date']) ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><span><?php echo $issueDateConverted; ?>~</span><a ><?php echo $issueDateVisible; ?></a></small>
-                                                </td>
-                                                <td  data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $customer['customer_name'] ?></a><br><a ><?php echo $customer['address'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $ca_cdc['accreditation'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $customer['aif_nace'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $ca_cdc['product_service'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $customer['contact_person'] ?></a><br><a ><?php echo $customer['email_id'] ?></a></small>
-                                                </td>
-                                            </tr>
-                                            <?php
-                                        }
-                                    } if ($customer["service_type"] == "SA-II") {
-                                        $sql1 = "SELECT saii_id FROM service_type_saii WHERE service = :service";
-                                        $statement = $db->prepare($sql1);
-                                        $statement->bindParam(":service", $customer["service_id"]);
-                                        $statement->execute();
-                                        $serviceid = $statement->fetch();
-
-                                        $sql2 = "SELECT * FROM `cdc_report_review` WHERE `ca_service_id` = :svce";
-                                        $statement = $db->prepare($sql2);
-                                        $statement->bindParam(":svce", $serviceid["saii_id"]);
-                                        $statement->execute();
-                                        $ca_cdc = $statement->fetch();
-                                        if ($ca_cdc) {
-                                            $rawIssueDate = $ca_cdc['revDatecdc'];
-                                            if ($rawIssueDate == "" || $rawIssueDate == "0000-00-00") {
-                                                $rawIssueDate = $ca_cdc['Date'];
-                                            }
-                                            $issueDateConverted = simpleDateConversion($rawIssueDate);
-                                            $issueDateVisible = ($rawIssueDate == "" || $rawIssueDate == "0000-00-00") ? "" : $issueDateConverted;
-                                            $certificateNo = $ca_cdc['certificateNo'];
-                                            if ($certificateNo == "" || $certificateNo === null) {
-                                                $certOfficeStmt = $db->prepare("SELECT certificate_no FROM cdc_report_review_office_use WHERE crr_id = :crrId AND certificate_no IS NOT NULL AND certificate_no != '' ORDER BY iso_index ASC LIMIT 1");
-                                                $certOfficeStmt->bindParam(":crrId", $ca_cdc['crr_id']);
-                                                $certOfficeStmt->execute();
-                                                $officeCert = $certOfficeStmt->fetch(PDO::FETCH_ASSOC);
-                                                if ($officeCert && !empty($officeCert['certificate_no'])) {
-                                                    $certificateNo = $officeCert['certificate_no'];
-                                                }
-                                            }
-                                            ?>  
-                                            <tr class="customerAccount <?php echo ($customer['audit_status'] === 'Application canceled') ? 'canceled-row' : ''; ?>" data-id="<?php echo $customer['id'] ?>" >
-            <!--                                                <td  data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $count; ?></a></small>
-                                                </td>-->
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $certificateNo ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $ca_cdc['revCdc'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $customer["service_type"] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo simpleDateConversion($ca_cdc['Date']) ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><span><?php echo $issueDateConverted; ?>~</span><a ><?php echo $issueDateVisible; ?></a></small>
-                                                </td>
-                                                <td  data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $customer['customer_name'] ?></a><br><a ><?php echo $customer['address'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $ca_cdc['accreditation'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $customer['aif_nace'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $ca_cdc['product_service'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $customer['contact_person'] ?></a><br><a ><?php echo $customer['email_id'] ?></a></small>
-                                                </td>
-                                            </tr>
-                                            <?php
-                                        }
-                                    } if ($customer["service_type"] == "RC") {
-                                        $sql1 = "SELECT rc_id FROM service_type_rc WHERE service = :service";
-                                        $statement = $db->prepare($sql1);
-                                        $statement->bindParam(":service", $customer["service_id"]);
-                                        $statement->execute();
-                                        $serviceid = $statement->fetch();
-
-                                        $sql2 = "SELECT * FROM `cdc_report_review` WHERE `ca_service_id` = :svce";
-                                        $statement = $db->prepare($sql2);
-                                        $statement->bindParam(":svce", $serviceid["rc_id"]);
-                                        $statement->execute();
-                                        $ca_cdc = $statement->fetch();
-                                        if ($ca_cdc) {
-                                            $rawIssueDate = $ca_cdc['revDatecdc'];
-                                            if ($rawIssueDate == "" || $rawIssueDate == "0000-00-00") {
-                                                $rawIssueDate = $ca_cdc['Date'];
-                                            }
-                                            $issueDateConverted = simpleDateConversion($rawIssueDate);
-                                            $issueDateVisible = ($rawIssueDate == "" || $rawIssueDate == "0000-00-00") ? "" : $issueDateConverted;
-                                            $certificateNo = $ca_cdc['certificateNo'];
-                                            if ($certificateNo == "" || $certificateNo === null) {
-                                                $certOfficeStmt = $db->prepare("SELECT certificate_no FROM cdc_report_review_office_use WHERE crr_id = :crrId AND certificate_no IS NOT NULL AND certificate_no != '' ORDER BY iso_index ASC LIMIT 1");
-                                                $certOfficeStmt->bindParam(":crrId", $ca_cdc['crr_id']);
-                                                $certOfficeStmt->execute();
-                                                $officeCert = $certOfficeStmt->fetch(PDO::FETCH_ASSOC);
-                                                if ($officeCert && !empty($officeCert['certificate_no'])) {
-                                                    $certificateNo = $officeCert['certificate_no'];
-                                                }
-                                            }
-                                            ?>
-                                            <tr class="customerAccount <?php echo ($customer['audit_status'] === 'Application canceled') ? 'canceled-row' : ''; ?>" data-id="<?php echo $customer['id'] ?>" >
-            <!--                                                <td  data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $count; ?></a></small>
-                                                </td>-->
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $certificateNo ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $ca_cdc['revCdc'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $customer["service_type"] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo simpleDateConversion($ca_cdc['Date']) ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><span><?php echo $issueDateConverted; ?>~</span><a ><?php echo $issueDateVisible; ?></a></small>
-                                                </td>
-                                                <td  data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $customer['customer_name'] ?></a><br><a ><?php echo $customer['address'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $ca_cdc['accreditation'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $customer['aif_nace'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $ca_cdc['product_service'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $customer['contact_person'] ?></a><br><a ><?php echo $customer['email_id'] ?></a></small>
-                                                </td>
-                                            </tr>
-                                            <?php
-                                        }
-                                    } if ($customer["service_type"] == "SP") {
-                                        $sql1 = "SELECT sp_id FROM service_type_sp WHERE service = :service";
-                                        $statement = $db->prepare($sql1);
-                                        $statement->bindParam(":service", $customer["service_id"]);
-                                        $statement->execute();
-                                        $serviceid = $statement->fetch();
-
-                                        $sql2 = "SELECT * FROM `cdc_report_review` WHERE `ca_service_id` = :svce";
-                                        $statement = $db->prepare($sql2);
-                                        $statement->bindParam(":svce", $serviceid["sp_id"]);
-                                        $statement->execute();
-                                        $ca_cdc = $statement->fetch();
-                                        if ($ca_cdc) {
-                                            $rawIssueDate = $ca_cdc['revDatecdc'];
-                                            if ($rawIssueDate == "" || $rawIssueDate == "0000-00-00") {
-                                                $rawIssueDate = $ca_cdc['Date'];
-                                            }
-                                            $issueDateConverted = simpleDateConversion($rawIssueDate);
-                                            $issueDateVisible = ($rawIssueDate == "" || $rawIssueDate == "0000-00-00") ? "" : $issueDateConverted;
-                                            $certificateNo = $ca_cdc['certificateNo'];
-                                            if ($certificateNo == "" || $certificateNo === null) {
-                                                $certOfficeStmt = $db->prepare("SELECT certificate_no FROM cdc_report_review_office_use WHERE crr_id = :crrId AND certificate_no IS NOT NULL AND certificate_no != '' ORDER BY iso_index ASC LIMIT 1");
-                                                $certOfficeStmt->bindParam(":crrId", $ca_cdc['crr_id']);
-                                                $certOfficeStmt->execute();
-                                                $officeCert = $certOfficeStmt->fetch(PDO::FETCH_ASSOC);
-                                                if ($officeCert && !empty($officeCert['certificate_no'])) {
-                                                    $certificateNo = $officeCert['certificate_no'];
-                                                }
-                                            }
-                                            ?>
-                                            <tr class="customerAccount <?php echo ($customer['audit_status'] === 'Application canceled') ? 'canceled-row' : ''; ?>" data-id="<?php echo $customer['id'] ?>"  >
-            <!--                                                <td  data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $count; ?></a></small>
-                                                </td>-->
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $certificateNo ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $ca_cdc['revCdc'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $customer["service_type"] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo simpleDateConversion($ca_cdc['Date']) ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><span><?php echo $issueDateConverted; ?>~</span><a ><?php echo $issueDateVisible; ?></a></small>
-                                                </td>
-                                                <td  data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $customer['customer_name'] ?></a><br><a ><?php echo $customer['address'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $ca_cdc['accreditation'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $customer['aif_nace'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $ca_cdc['product_service'] ?></a></small>
-                                                </td>
-                                                <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                    <small><a ><?php echo $customer['contact_person'] ?></a><br><a ><?php echo $customer['email_id'] ?></a></small>
-                                                </td>
-                                            </tr>
-                                            <?php
+                                    $ca_cdc = $cdcMap[$subtypeId];
+                                    $rawIssueDate = $ca_cdc['revDatecdc'];
+                                    if ($rawIssueDate == "" || $rawIssueDate == "0000-00-00") {
+                                        $rawIssueDate = $ca_cdc['Date'];
+                                    }
+                                    $issueDateConverted = simpleDateConversion($rawIssueDate);
+                                    $issueDateVisible = ($rawIssueDate == "" || $rawIssueDate == "0000-00-00") ? "" : $issueDateConverted;
+                                    $certificateNo = $ca_cdc['certificateNo'];
+                                    if ($certificateNo == "" || $certificateNo === null) {
+                                        if (isset($officeCertMap[$ca_cdc['crr_id']])) {
+                                            $certificateNo = $officeCertMap[$ca_cdc['crr_id']];
                                         }
                                     }
+                                    ?>
+                                    <tr class="customerAccount <?php echo ($customer['audit_status'] === 'Application canceled') ? 'canceled-row' : ''; ?>" data-id="<?php echo $customer['id'] ?>" >
+        <!--                                                <td  data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                                <small><a ><?php echo $count; ?></a></small>
+                                            </td>-->
+                                        <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                            <small><a ><?php echo $certificateNo ?></a></small>
+                                        </td>
+                                        <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                            <small><a ><?php echo $ca_cdc['revCdc'] ?></a></small>
+                                        </td>
+                                        <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                            <small><a ><?php echo $customer["service_type"] ?></a></small>
+                                        </td>
+                                        <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                            <small><a ><?php echo simpleDateConversion($ca_cdc['Date']) ?></a></small>
+                                        </td>
+                                        <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                            <small><span><?php echo $issueDateConverted; ?>~</span><a ><?php echo $issueDateVisible; ?></a></small>
+                                        </td>
+                                        <td  data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                            <small><a ><?php echo $customer['customer_name'] ?></a><br><a ><?php echo $customer['address'] ?></a></small>
+                                        </td>
+                                        <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                            <small><a ><?php echo $ca_cdc['accreditation'] ?></a></small>
+                                        </td>
+                                        <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                            <small><a ><?php echo $customer['aif_nace'] ?></a></small>
+                                        </td>
+                                        <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                            <small><a ><?php echo $ca_cdc['product_service'] ?></a></small>
+                                        </td>
+                                        <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                            <small><a ><?php echo $customer['contact_person'] ?></a><br><a ><?php echo $customer['email_id'] ?></a></small>
+                                        </td>
+                                    </tr>
+                                    <?php
                                 }
                                 ?>
                             </tbody>
@@ -442,13 +228,6 @@
             </div>
         </div>
     </div>
-    <script type="text/javascript" src="https://cdn.datatables.net/buttons/1.5.1/js/dataTables.buttons.min.js"></script>
-    <script type="text/javascript" src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.flash.min.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
-    <script type="text/javascript" src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.html5.min.js"></script>
-    <script type="text/javascript" src="https://cdn.datatables.net/buttons/1.5.1/js/buttons.print.min.js"></script>
-    <link media="all" type="text/css" rel="stylesheet" href="https://cdn.datatables.net/buttons/1.5.1/css/buttons.dataTables.min.css">
-
     <script type="text/javascript">
 
         function compareMinDates(filterDate, rowDate) {

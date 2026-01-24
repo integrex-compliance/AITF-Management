@@ -23,6 +23,64 @@
     $statement->execute();
     $allUsers = $statement->fetchAll();
 
+    // Build handler lookup to avoid per-row queries
+    $handlerMap = array();
+    foreach ($allUsers as $handlerRow) {
+        $handlerMap[$handlerRow['id']] = $handlerRow['handler_name'];
+    }
+
+    // Collect customer ids for batch queries
+    $customerIds = array();
+    foreach ($listOfCustomer as $c) {
+        $customerIds[] = $c['id'];
+    }
+
+    $serviceMap = array();
+    $serviceNonSpMap = array();
+    $dueMap = array();
+    $paymentMap = array();
+
+    if (!empty($customerIds)) {
+        $inPlaceholders = implode(',', array_fill(0, count($customerIds), '?'));
+
+        // Latest service per customer (any type)
+        $sqlLatestService = "SELECT s.* FROM service s INNER JOIN (SELECT customer_id, MAX(service_id) AS max_sid FROM service WHERE customer_id IN ($inPlaceholders) GROUP BY customer_id) t ON s.customer_id = t.customer_id AND s.service_id = t.max_sid";
+        $stmt = $db->prepare($sqlLatestService);
+        $stmt->execute($customerIds);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $serviceMap[$row['customer_id']] = $row;
+        }
+
+        // Latest non-SP service_id per customer for due dates
+        $sqlNonSpService = "SELECT s.customer_id, s.service_id FROM service s INNER JOIN (SELECT customer_id, MAX(service_id) AS max_sid FROM service WHERE service_type <> 'SP' AND customer_id IN ($inPlaceholders) GROUP BY customer_id) t ON s.customer_id = t.customer_id AND s.service_id = t.max_sid";
+        $stmt = $db->prepare($sqlNonSpService);
+        $stmt->execute($customerIds);
+        $serviceIdsForDates = array();
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $serviceNonSpMap[$row['customer_id']] = $row['service_id'];
+            $serviceIdsForDates[] = $row['service_id'];
+        }
+
+        // Due dates for the latest non-SP service
+        if (!empty($serviceIdsForDates)) {
+            $inServiceIds = implode(',', array_fill(0, count($serviceIdsForDates), '?'));
+            $sqlDates = "SELECT service_id, action, due_date FROM ca_service_dates WHERE service_id IN ($inServiceIds) AND action IN ('Suspension Letter','Expire Letter','Withdrawal Letter')";
+            $stmt = $db->prepare($sqlDates);
+            $stmt->execute($serviceIdsForDates);
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $dueMap[$row['service_id']][$row['action']] = $row['due_date'];
+            }
+        }
+
+        // Payments per customer
+        $sqlPayments = "SELECT customer_id, SUM(balance) as payment_due FROM payment_system WHERE customer_id IN ($inPlaceholders) GROUP BY customer_id";
+        $stmt = $db->prepare($sqlPayments);
+        $stmt->execute($customerIds);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $paymentMap[$row['customer_id']] = $row['payment_due'];
+        }
+    }
+
 
     ?>
 
@@ -104,30 +162,20 @@
                                 $count = 0;
                                 foreach ($listOfCustomer as $customer) {
                                     $count = $count + 1;
-                                    $serviceDetails = "SELECT * FROM service WHERE customer_id = " . $customer['id'] . " and service_id = (select max(service_id) from service where customer_id= " . $customer['id'] . ")";
-                                    $statement = $db->prepare($serviceDetails);
-                                    $statement->execute();
-                                    $serviceInfo = $statement->fetch();
+                                    // Latest service for this customer
+                                    $serviceInfo = isset($serviceMap[$customer['id']]) ? $serviceMap[$customer['id']] : array();
 
-                                    $dueDate = "SELECT * FROM ca_service_dates where service_id = (select max(service_id) from service where service_type <> 'SP' and customer_id = " . $customer['id'] . ") and action = 'Suspension Letter'";
-                                    $statement = $db->prepare($dueDate);
-                                    $statement->execute();
-                                    $dueInfo = $statement->fetch();
-                                    
-                                    $dueDateex = "SELECT * FROM ca_service_dates where service_id = (select max(service_id) from service where service_type <> 'SP' and customer_id = " . $customer['id'] . ") and action = 'Expire Letter'";
-                                    $statement = $db->prepare($dueDateex);
-                                    $statement->execute();
-                                    $dueInfoex = $statement->fetch();
+                                    // Due dates from pre-fetched map
+                                    $dueInfo = $dueInfoex = $sentInfo = array();
+                                    $sid = isset($serviceNonSpMap[$customer['id']]) ? $serviceNonSpMap[$customer['id']] : null;
+                                    if ($sid && isset($dueMap[$sid])) {
+                                        $dueInfo['due_date'] = isset($dueMap[$sid]['Suspension Letter']) ? $dueMap[$sid]['Suspension Letter'] : null;
+                                        $dueInfoex['due_date'] = isset($dueMap[$sid]['Expire Letter']) ? $dueMap[$sid]['Expire Letter'] : null;
+                                        $sentInfo['due_date'] = isset($dueMap[$sid]['Withdrawal Letter']) ? $dueMap[$sid]['Withdrawal Letter'] : null;
+                                    }
 
-                                    $sentDate = "SELECT * FROM ca_service_dates where service_id = (select max(service_id) from service where service_type <> 'SP' and customer_id=" . $customer['id'] . ") and action = 'Withdrawal Letter'";
-                                    $statement = $db->prepare($sentDate);
-                                    $statement->execute();
-                                    $sentInfo = $statement->fetch();
-
-                                    $payDetails = "SELECT sum(balance) as payment_due FROM payment_system group by customer_id having customer_id = " . $customer['id'] . " ";
-                                    $statement = $db->prepare($payDetails);
-                                    $statement->execute();
-                                    $payInfo = $statement->fetch();
+                                    // Payment due from map
+                                    $payInfo = array('payment_due' => isset($paymentMap[$customer['id']]) ? $paymentMap[$customer['id']] : null);
                                     ?>
                                     <tr id='addr<?php echo $customer['id'] ?>' class="<?php echo ($customer['audit_status'] === 'Application canceled') ? 'canceled-row' : ''; ?>">
                                         <td data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
@@ -158,12 +206,8 @@
                                             <div class="float-label-control">                                                
                                                 <select class="form-control setHandler" data-id="<?php echo $customer['id'] ?>" name="setHandler" style="color: black">
                                                     <?php
-                                                    if (isset($customer["handler"]) && !empty($customer["handler"])) {
-                                                        $sql = "SELECT * FROM `handler` WHERE `id` = " . $customer["handler"];
-                                                        $statement = $db->prepare($sql);
-                                                        $statement->execute();
-                                                        $userabb = $statement->fetch();
-                                                        ?> <option value="<?php echo $customer["handler"]; ?>"><?php echo $userabb["handler_name"]; ?></option> <?php } else {
+                                                    if (isset($customer["handler"]) && !empty($customer["handler"]) && isset($handlerMap[$customer["handler"]])) {
+                                                        ?> <option value="<?php echo $customer["handler"]; ?>"><?php echo $handlerMap[$customer["handler"]]; ?></option> <?php } else {
                                                         ?> <option value="">Hand</option> <?php }
                                                     ?>                                                    
                                                     <?php foreach ($allUsers as $users) { ?>

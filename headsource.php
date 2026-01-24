@@ -34,12 +34,12 @@
 	<script src="js/outer/popper.min.js"></script>
     <script src="js/outer/bootstrap.min.js"></script>
     <!-- ALL PLUGINS -->
-    <script src="js/outer/jquery.magnific-popup.min.js"></script>
-    <script src="js/outer/jquery.pogo-slider.min.js"></script>
-    <script src="js/outer/slider-index.js"></script>
-    <script src="js/outer/smoothscroll.js"></script>
-    <script src="js/outer/form-validator.min.js"></script>
-    <script src="js/outer/contact-form-script.js"></script>
-    <script src="js/outer/isotope.min.js"></script>
-    <script src="js/outer/images-loded.min.js"></script>
-    <script src="js/outer/custom.js"></script>
+    <script src="js/outer/jquery.magnific-popup.min.js" defer></script>
+    <script src="js/outer/jquery.pogo-slider.min.js" defer></script>
+    <script src="js/outer/slider-index.js" defer></script>
+    <script src="js/outer/smoothscroll.js" defer></script>
+    <script src="js/outer/form-validator.min.js" defer></script>
+    <script src="js/outer/contact-form-script.js" defer></script>
+    <script src="js/outer/isotope.min.js" defer></script>
+    <script src="js/outer/images-loded.min.js" defer></script>
+    <script src="js/outer/custom.js" defer></script>

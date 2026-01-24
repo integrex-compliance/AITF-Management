@@ -26,6 +26,37 @@
     $statement = $db->prepare($auditors);
     $statement->execute();
     $auditorsList = $statement->fetchAll();
+
+    // Batch preload service subtype data to avoid per-row queries
+    $serviceIdsByType = [
+        'CA' => [], 'SA-I' => [], 'SA-II' => [], 'RC' => [], 'SP' => []
+    ];
+    foreach ($allMarketingInfo as $row) {
+        if (isset($serviceIdsByType[$row['service_type']])) {
+            $serviceIdsByType[$row['service_type']][] = $row['service_id'];
+        }
+    }
+
+    $caMap = $saiMap = $saiiMap = $rcMap = $spMap = [];
+
+    $loadMap = function($table, $serviceCol, $filterIds) use (&$db) {
+        if (empty($filterIds)) return [];
+        $ph = implode(',', array_fill(0, count($filterIds), '?'));
+        $sql = "SELECT * FROM {$table} WHERE {$serviceCol} IN ($ph)";
+        $stmt = $db->prepare($sql);
+        $stmt->execute($filterIds);
+        $out = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $out[$r[$serviceCol]] = $r;
+        }
+        return $out;
+    };
+
+    $caMap = $loadMap('service_type_ca', 'service', $serviceIdsByType['CA']);
+    $saiMap = $loadMap('service_type_sai', 'service', $serviceIdsByType['SA-I']);
+    $saiiMap = $loadMap('service_type_saii', 'service', $serviceIdsByType['SA-II']);
+    $rcMap = $loadMap('service_type_rc', 'service', $serviceIdsByType['RC']);
+    $spMap = $loadMap('service_type_sp', 'service', $serviceIdsByType['SP']);
     ?>
 
     <style>
@@ -109,11 +140,8 @@
                                     $auditrDetails = "";
                                     $auditDateDetails = "";
                                     if ($marketingDetail["service_type"] == "CA") {
-                                        $caSVC = "SELECT audit_date, stage1_auditor, stage2_audit, stage2_auditor FROM `service_type_ca`WHERE service = :svcid";
-                                        $statement = $db->prepare($caSVC);
-                                        $statement->bindParam(":svcid", $marketingDetail['service_id']);
-                                        $statement->execute();
-                                        $auditDetails = $statement->fetch();
+                                        $auditDetails = isset($caMap[$marketingDetail['service_id']]) ? $caMap[$marketingDetail['service_id']] : null;
+                                        if (!$auditDetails) { continue; }
                                         $auditdates1 = explode(',', $auditDetails["audit_date"]);
                                         ?>
                                         <tr id='addr<?php echo $marketingDetail['id'] ?>' class="" >
@@ -168,12 +196,8 @@
                                             <?php
                                         }
                                     } else if ($marketingDetail["service_type"] == "SA-I") {
-                                        $saiSVC = "SELECT audit_date, auditors FROM `service_type_sai` WHERE service = :svcid";
-                                        $statement = $db->prepare($saiSVC);
-                                        $statement->bindParam(":svcid", $marketingDetail['service_id']);
-                                        $statement->execute();
-                                        $auditDetails = $statement->fetch();
-                                       
+                                        $auditDetails = isset($saiMap[$marketingDetail['service_id']]) ? $saiMap[$marketingDetail['service_id']] : null;
+                                        if (!$auditDetails) { continue; }
                                         ?>
                                         <tr id='addr<?php echo $marketingDetail['id'] ?>' class="" >
                                             <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
@@ -200,12 +224,8 @@
                                         </tr>
                                         <?php
                                     }  else if ($marketingDetail["service_type"] == "SA-II") {
-                                        $saiiSVC = "SELECT audit_date, auditors FROM `service_type_saii` WHERE service = :svcid";
-                                        $statement = $db->prepare($saiiSVC);
-                                        $statement->bindParam(":svcid", $marketingDetail['service_id']);
-                                        $statement->execute();
-                                        $auditDetails = $statement->fetch();
-                                        
+                                        $auditDetails = isset($saiiMap[$marketingDetail['service_id']]) ? $saiiMap[$marketingDetail['service_id']] : null;
+                                        if (!$auditDetails) { continue; }
                                         ?>
                                         <tr id='addr<?php echo $marketingDetail['id'] ?>' class="" >
                                             <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
@@ -232,11 +252,8 @@
                                         </tr>
                                         <?php
                                     } else if ($marketingDetail["service_type"] == "RC") {
-                                        $rcSVC = "SELECT audit_date, auditors FROM `service_type_rc` WHERE service = :svcid";
-                                        $statement = $db->prepare($rcSVC);
-                                        $statement->bindParam(":svcid", $marketingDetail['service_id']);
-                                        $statement->execute();
-                                        $auditDetails = $statement->fetch();
+                                        $auditDetails = isset($rcMap[$marketingDetail['service_id']]) ? $rcMap[$marketingDetail['service_id']] : null;
+                                        if (!$auditDetails) { continue; }
                                         ?>
                                         <tr id='addr<?php echo $marketingDetail['id'] ?>' class="" >
                                             <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
@@ -263,11 +280,8 @@
                                         </tr>
                                         <?php
                                     } else if ($marketingDetail["service_type"] == "SP") {
-                                        $spSVC = "SELECT audit_date, auditors FROM `service_type_sp` WHERE service = :svcid";
-                                        $statement = $db->prepare($spSVC);
-                                        $statement->bindParam(":svcid", $marketingDetail['service_id']);
-                                        $statement->execute();
-                                        $auditDetails = $statement->fetch();
+                                        $auditDetails = isset($spMap[$marketingDetail['service_id']]) ? $spMap[$marketingDetail['service_id']] : null;
+                                        if (!$auditDetails) { continue; }
                                         ?>
                                         <tr id='addr<?php echo $marketingDetail['id'] ?>' class="" >
                                             <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">

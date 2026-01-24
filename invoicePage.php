@@ -24,6 +24,31 @@
     $statement->execute();
     $firmInfo = $statement->fetch();
 
+    // Batch-load invoice services to avoid per-row queries
+    $proformaSvcMap = array();
+    if (!empty($proformaDetails)) {
+        $proformaIds = array_column($proformaDetails, 'invoice_id');
+        $placeholders = implode(',', array_fill(0, count($proformaIds), '?'));
+        $svcSql = "SELECT invoice_ids, service_desc FROM invoice_services WHERE invoice_ids IN ($placeholders)";
+        $stmtSvc = $db->prepare($svcSql);
+        $stmtSvc->execute($proformaIds);
+        foreach ($stmtSvc->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $proformaSvcMap[$row['invoice_ids']][] = $row['service_desc'];
+        }
+    }
+
+    $finalSvcMap = array();
+    if (!empty($finalDetails)) {
+        $finalIds = array_column($finalDetails, 'invoice_id');
+        $placeholders = implode(',', array_fill(0, count($finalIds), '?'));
+        $svcSql = "SELECT invoice_ids, service_desc FROM invoice_services WHERE invoice_ids IN ($placeholders)";
+        $stmtSvc = $db->prepare($svcSql);
+        $stmtSvc->execute($finalIds);
+        foreach ($stmtSvc->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $finalSvcMap[$row['invoice_ids']][] = $row['service_desc'];
+        }
+    }
+
     //query
     ?>
     <style>
@@ -243,16 +268,9 @@
                                                 <?php
                                                 $count = 0;
                                                 foreach ($proformaDetails as $proforma) {
-                                                    $invsvc = "SELECT * FROM `invoice_services` where invoice_ids = :id";
-                                                    $statement = $db->prepare($invsvc);
-                                                    $statement->bindParam(":id", $proforma["invoice_id"]);
-                                                    $statement->execute();
-                                                    $svcs = $statement->fetchAll();
                                                     $perticuler1 = "";
-                                                    if ($svcs) {
-                                                        foreach ($svcs as $svc) {
-                                                            $perticuler1 = $perticuler1 . $svc["service_desc"] . ", ";
-                                                        }
+                                                    if (isset($proformaSvcMap[$proforma['invoice_id']])) {
+                                                        $perticuler1 = implode(', ', $proformaSvcMap[$proforma['invoice_id']]);
                                                     }
                                                     $count = $count + 1;
                                                     ?>
@@ -366,16 +384,9 @@
                                                 <?php
                                                 $count = 0;
                                                 foreach ($finalDetails as $final) {
-                                                    $invsvc = "SELECT * FROM `invoice_services` where invoice_ids = :id";
-                                                    $statement = $db->prepare($invsvc);
-                                                    $statement->bindParam(":id", $final["invoice_id"]);
-                                                    $statement->execute();
-                                                    $svcs = $statement->fetchAll();
                                                     $perticuler2 = "";
-                                                    if ($svcs) {
-                                                        foreach ($svcs as $svc) {
-                                                            $perticuler2 = $perticuler2 . $svc["service_desc"] . ", ";
-                                                        }
+                                                    if (isset($finalSvcMap[$final['invoice_id']])) {
+                                                        $perticuler2 = implode(', ', $finalSvcMap[$final['invoice_id']]);
                                                     }
                                                     $count = $count + 1;
                                                     ?>
@@ -843,8 +854,25 @@
             e.preventDefault();
             $("#wrapper").toggleClass("active");
             $(".container").toggleClass("active");
-            table.draw();
         });
+
+        // Enable DataTables with paging to reduce render cost; guard against reinit
+        if ($.fn.DataTable) {
+            if (!$.fn.DataTable.isDataTable('#table_proforma_invoice')) {
+                $("#table_proforma_invoice").DataTable({
+                    pageLength: 50,
+                    deferRender: true,
+                    lengthChange: false
+                });
+            }
+            if (!$.fn.DataTable.isDataTable('#table_final_invoice')) {
+                $("#table_final_invoice").DataTable({
+                    pageLength: 50,
+                    deferRender: true,
+                    lengthChange: false
+                });
+            }
+        }
 
         $('.finalInvoice').click(function () {
             var invoice = $(this).attr('data-id');
