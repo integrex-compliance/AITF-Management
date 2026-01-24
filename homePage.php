@@ -422,15 +422,14 @@
     });
 
     var table = $('#tab_customer_list').DataTable({
-//            "scrollY": "450px",
         "sScrollX": "100%",
         "scrollY": '70vh',
         "scrollCollapse": true,
-        "paging": false,
+        "paging": true,
+        "pageLength": 50,
+        "deferRender": true,
         "ordering": false,
         "lengthChange": false,
-//            "pageLength": 10,
-        "paging": false,
         "columnDefs": [
             {
                 "width": "1%",
@@ -469,7 +468,6 @@
                 "targets": 9
             },
         ]
-                //        "paging":         false
     });
     table.columns.adjust().draw();
 
