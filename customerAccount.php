@@ -1767,9 +1767,9 @@
                                                     <a class="editCDC pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" data-notification="<?php echo $caservice['crr_id'] ?>" title="Edit CDC DELIBERATION AND DECISION" style="padding: 1px 5px;">
                                                         <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
                                                     </a>
-                                                    <a class="sendCdcMail pull-right" data-svctype="CA" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" data-crr="<?php echo $caservice['crr_id'] ?>" title="Send certificate by email" style="padding: 1px 5px;">
+                                                    <!-- <a class="sendCdcMail pull-right" data-svctype="CA" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" data-crr="<?php echo $caservice['crr_id'] ?>" title="Send certificate by email" style="padding: 1px 5px;">
                                                         <i class="fa fa-envelope fa-lg" style="padding: 3px"></i>
-                                                    </a>
+                                                    </a> -->
                                                     <a class="downloadCdc pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $caservice['ca_id'] ?>" data-crr="<?php echo $caservice['crr_id'] ?>" title="Download  CDC DELIBERATION AND DECISION" style="padding: 1px 5px;"><i class="fa fa-download fa-lg " style="padding: 3px"></i></a> 
                                                 <?php } ?>
                                             </div>
@@ -2637,9 +2637,9 @@
                                                     <a class="editCDC pull-right" data-svctype="SA1" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiService['sai_id'] ?>" data-notification="<?php echo $saiService['crr_id'] ?>" title="Edit CDC DELIBERATION AND DECISION" style="padding: 1px 5px;">
                                                         <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
                                                     </a>
-                                                    <a class="sendCdcMail pull-right" data-svctype="SA1" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiService['sai_id'] ?>" data-crr="<?php echo $saiService['crr_id'] ?>" title="Send certificate by email" style="padding: 1px 5px;">
+                                                    <!-- <a class="sendCdcMail pull-right" data-svctype="SA1" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiService['sai_id'] ?>" data-crr="<?php echo $saiService['crr_id'] ?>" title="Send certificate by email" style="padding: 1px 5px;">
                                                         <i class="fa fa-envelope fa-lg" style="padding: 3px"></i>
-                                                    </a>
+                                                    </a> -->
                                                     <a class="downloadCDCsai pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $saiService['sai_id'] ?>" data-crr="<?php echo $saiService['crr_id'] ?>" title="Download  CDC DELIBERATION AND DECISION" style="padding: 1px 5px;">
                                                         <i class="fa fa-download fa-lg " style="padding: 3px"></i>
                                                     </a>
@@ -3481,9 +3481,9 @@
                                                     <a class="editCDC pull-right" data-svctype="SA2" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiiService['saii_id'] ?>" data-notification="<?php echo $saiiService['crr_id'] ?>" title="Edit CDC DELIBERATION AND DECISION" style="padding: 1px 5px;">
                                                         <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
                                                     </a>
-                                                    <a class="sendCdcMail pull-right" data-svctype="SA2" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiiService['saii_id'] ?>" data-crr="<?php echo $saiiService['crr_id'] ?>" title="Send certificate by email" style="padding: 1px 5px;">
+                                                    <!-- <a class="sendCdcMail pull-right" data-svctype="SA2" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiiService['saii_id'] ?>" data-crr="<?php echo $saiiService['crr_id'] ?>" title="Send certificate by email" style="padding: 1px 5px;">
                                                         <i class="fa fa-envelope fa-lg" style="padding: 3px"></i>
-                                                    </a>
+                                                    </a> -->
                                                     <a class="downloadCdcSii pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $saiiService['saii_id'] ?>" data-crr="<?php echo $saiiService['crr_id'] ?>" title="Download  CDC DELIBERATION AND DECISION" style="padding: 1px 5px;">
                                                         <i class="fa fa-download fa-lg " style="padding: 3px"></i>
                                                     </a>
@@ -4210,9 +4210,9 @@
                                                     <a class="editCDCRC pull-right" data-svctype="RC" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $rcServiceinfo['rc_id'] ?>" data-notification="<?php echo $rcServiceinfo['crr_id'] ?>" title="Edit CDC DELIBERATION AND DECISION" style="padding: 1px 5px;">
                                                         <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
                                                     </a>
-                                                    <a class="sendCdcMail pull-right" data-svctype="RC" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $rcServiceinfo['rc_id'] ?>" data-crr="<?php echo $rcServiceinfo['crr_id'] ?>" title="Send certificate by email" style="padding: 1px 5px;">
+                                                    <!-- <a class="sendCdcMail pull-right" data-svctype="RC" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $rcServiceinfo['rc_id'] ?>" data-crr="<?php echo $rcServiceinfo['crr_id'] ?>" title="Send certificate by email" style="padding: 1px 5px;">
                                                         <i class="fa fa-envelope fa-lg" style="padding: 3px"></i>
-                                                    </a>
+                                                    </a> -->
                                                     <a class="downloadCDCRC pull-right" data-customer="<?php echo $_GET['customerid'] ?>"  data-caservice-id="<?php echo $rcServiceinfo['rc_id'] ?>" data-crr="<?php echo $rcServiceinfo['crr_id'] ?>" title="Download  CDC DELIBERATION AND DECISION" style="padding: 1px 5px;">
                                                         <i class="fa fa-download fa-lg " style="padding: 3px"></i>
                                                     </a> 
@@ -6832,56 +6832,35 @@
 			});
 
             $('.caServiceGanerate').click(function () {
-//            alert($(this).attr("data-servicetype"));
-                ShowProgressAnimation();
                 var actiontype = $(this).attr('data-actiontype');
                 var customer = $(this).attr('data-customer');
                 var service = $(this).attr('data-service');
                 var action = $(this).attr('data-action');
                 var servicetype = $(this).attr("data-servicetype");
-                var redirect = "customerAccount";
-//                alert(action);
-                if (actiontype == "1st Reminder" && servicetype == "SA-II") {
-                    var url = 'sendFirstDueSaiiNotification.php';
-                } else if (actiontype == "1st Reminder" || actiontype == "Suspension Reminder") {
-                    var url = 'sendFirstDueNotification.php';
-                } else if (actiontype == "2nd Reminder" && servicetype == "SA-II") {
-                    var url = 'sendReminderDueNotification.php';
-                } else if (actiontype == "2nd Reminder") {
-                    var url = 'suspensionDueNotificationSend.php';
-                } else if (actiontype == "Suspension Letter" || actiontype == "Suspend Letter") {
-                    var url = 'suspentionMail.php';
-                } else if (actiontype == "Withdrawal Reminder" ) {
-                    var url = 'sendReminderDueSaiiNotification.php';
-                }else if (actiontype == "Withdrawal Letter" || actiontype == "Withdraw Letter") {
-                    var url = 'sendWithdrawnDueNotification.php';
-                } else if (actiontype == "Expire Letter" && servicetype == "SA-II") {
-                    var url = 'sendWithdrawnDueSaiiNotification.php';
-                } else {
-                    // Handle unknown action type
-                    alert('Error: Action type "' + actiontype + '" for service type "' + servicetype + '" is not configured. Please contact administrator.');
-                    HideProgressAnimation();
+
+                if (!confirm('Are you sure you want to send this mail to the client?')) {
                     return false;
                 }
-                
-                // Check if URL is defined
-                if (!url || url === 'undefined') {
-                    alert('Error: Cannot process this action. Please contact administrator.');
-                    HideProgressAnimation();
-                    return false;
-                }
-                
-                //            var url = 'sendFirstDueNotification.php';
-                var form = $('<form action="' + url + '" method="post" >' +
-                        '<input type="hidden" name="customer" value="' + customer + '" />' +
-                        '<input type="hidden" name="service" value="' + service + '" />' +
-                        '<input type="hidden" name="acction" value="' + action + '" />' +
-                        '<input type="hidden" name="redirect" value="' + redirect + '" />' +
-                        '<input type="hidden" name="servicetype" value="' + servicetype + '" />' +
-                        '</form>');
-                $('body').append(form);
-                form.submit();
+
+                ShowProgressAnimation();
+                // Reuse unified PDF+Mail generator with updated templates
+                GenerateOrPreviewPDF(customer, service, action, servicetype, actiontype, "SendMail");
             });
+
+            // Watch for mail status set by IntimationDueLetters.php (opened in new tab/window)
+            setInterval(function(){
+                var mailStatus = localStorage.getItem('isMailSend');
+                if(!mailStatus){ return; }
+
+                HideProgressAnimation();
+                if(mailStatus === 'Completed'){
+                    alert('Mail sent successfully.');
+                } else {
+                    alert(mailStatus);
+                }
+                localStorage.removeItem('isMailSend');
+                location.reload();
+            }, 1200);
 
             var yetVisited = localStorage['visited'];
             //        alert(yetVisited);

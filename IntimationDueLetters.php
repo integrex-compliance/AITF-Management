@@ -117,7 +117,17 @@ if ($lettertype == "Suspension Reminder") {
 	$servicedesc = "Surveillance audit due";
 	$htmlFormatFilePath = "./Initimation_PDF_Formats/SuspensionReminder.txt";
 	$pdfTitle = "Sureillance Audit Due";
-	$mailBodyPart = "<p>Your First Surveillance Audit has been due, please find herewith an attachment of reminder letter.</p><br>";
+	$mailBodyPart = '<p>Hi ' . htmlspecialchars($customer['customer_name'], ENT_QUOTES, 'UTF-8') . ',</p>'
+        . '<p>This is to inform you that your management system certificate is <strong>approaching its expiry date</strong>, as per our records.</p>'
+        . '<p>To ensure continuity of certification, you are required to <strong>inform us immediately</strong> so that the necessary <strong>audit can be planned and conducted within the stipulated timeline</strong>.</p>'
+        . '<p>Please note that <strong>all relevant details regarding the due audit, scope, and validity period are clearly mentioned in the attached Due Letter</strong> for your reference.</p>'
+        . '<p>We request you to review the attached document carefully and confirm your availability at the earliest to avoid any lapse in certification.</p>'
+        . '<p>If you have already initiated communication regarding this matter, please consider this email as a reminder.</p>'
+        . '<p>For any clarification or coordination, feel free to reply to this email.</p>'
+        . '<p>Warm regards,<br><strong>AITF Team</strong><br>Assessment Department<br>AITF</p>'
+        . '<p>📧 <a href="mailto:certification@aitf.co.in">certification@aitf.co.in</a><br>'
+        . '📧 <a href="mailto:aitfmcl@gmail.com">aitfmcl@gmail.com</a><br>'
+        . '🌐 <a href="http://www.aitf.in">www.aitf.in</a></p>';
 	
 	//build require parameters
 	$reg_date = date("d.m.Y", strtotime($customer['certification_stage_date']));
@@ -324,11 +334,15 @@ else if($PageAction == "SendMail"){
 	require 'PHPMailer/PHPMailerAutoload.php';
 	$isAjaxRequest = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
 
-	$mailBody = '<html><body><p>Dear Sir / Maam,</p>'
-		. $mailBodyPart
-		. '<p>Thanks,</p>'
-		. '<br>AITF-MCL'
-		. '<body></html>';
+	if ($lettertype == "Suspension Reminder") {
+        $mailBody = '<html><body>' . $mailBodyPart . '</body></html>';
+    } else {
+        $mailBody = '<html><body><p>Dear Sir / Maam,</p>'
+            . $mailBodyPart
+            . '<p>Thanks,</p>'
+            . '<br>AITF-MCL'
+            . '<body></html>';
+    }
 	$subject = $servicedesc .' - '. $customer['customer_name'];
 	$contactEmail = explode(',',$customer['email_id']);
 	$isMailSend = 0;
@@ -400,7 +414,7 @@ else if($PageAction == "SendMail"){
 			echo json_encode($response);
 			exit;
 		} else {
-			echo $response['message'];
+			echo '<script> localStorage.setItem("isMailSend", ' . json_encode('Failed: ' . ($response['message'] ?? 'Mailer Error')) . '); window.close(); </script>';
 		}
 	}
 	else if($isMailSend == 1)

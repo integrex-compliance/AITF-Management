@@ -137,18 +137,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $confirm->addAddress($formData['email'], $formData['name']);
             $confirm->Subject = 'Thank you for contacting AITF';
             $confirmBody = "
-                <p>Hi {$formData['name']},</p>
-                <p>Thank you for reaching out. We’ve received your enquiry and will get back to you shortly.</p>
-                <p><strong>Summary you submitted:</strong><br>
-                Services: {$servicesText}<br>
-                Mobile: {$mobileClean}<br>
-                Company: {$formData['company']}<br>
-                About: " . nl2br(htmlspecialchars($formData['about'], ENT_QUOTES, 'UTF-8')) . "</p>
-                <p>Regards,<br>AITF Team</p>
+                <p>Dear {$formData['name']},</p>
+                <p>Thank you for contacting AITF.</p>
+                <p>We acknowledge receipt of your enquiry and appreciate your interest in our assessment and certification services. Our team is currently reviewing the details shared by you and will contact you shortly with the relevant information or next steps.</p>
+                <p>If you have any additional details to provide or require urgent assistance, please feel free to reply to this email.</p>
+                <p>Thank you for considering AITF as your assessment and certification partner.</p>
+                <p>Warm regards,<br>
+                AITF Team<br>
+                Client Support Desk<br>
+                AITF – Assessment &amp; Institute for Technical Forum<br>
+                Email: <a href=\"mailto:support@aitf.co.in\">certification@aitf.co.in</a><br>
+                Website: <a href=\"http://www.aitf.co.in\" target=\"_blank\" rel=\"noopener\">www.aitf.co.in</a></p>
             ";
             $confirm->isHTML(true);
             $confirm->Body = $confirmBody;
-            $confirm->AltBody = "Hi {$formData['name']},\n\nThank you for reaching out. We’ve received your enquiry and will get back to you shortly.\n\nSummary:\nServices: {$servicesText}\nMobile: {$mobileClean}\nCompany: {$formData['company']}\nAbout: {$formData['about']}\n\nRegards,\nAITF Team";
+            $confirm->AltBody = "Dear {$formData['name']},\n\nThank you for contacting AITF.\n\nWe acknowledge receipt of your enquiry and appreciate your interest in our assessment and certification services. Our team is currently reviewing the details shared by you and will contact you shortly with the relevant information or next steps.\n\nIf you have any additional details to provide or require urgent assistance, please feel free to reply to this email.\n\nThank you for considering AITF as your assessment and certification partner.\n\nWarm regards,\nAITF Team\nClient Support Desk\nAITF - Assessment & Institute for Technical Forum\nEmail: support@aitf.co.in\nWebsite: www.aitf.co.in";
             $confirmOk = $confirm->send();
 
             $successMsg = $confirmOk
