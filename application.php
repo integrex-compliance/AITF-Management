@@ -209,9 +209,10 @@ if (isset($db)) {
                         }
                     }
                 }
+            }
 
-                try {
-                    $insertSql = "INSERT INTO online_audit_applications (
+            try {
+                $insertSql = "INSERT INTO online_audit_applications (
                     org_name, site_address, office_address, contact_person, contact_designation,
                     phone, email, website, gstin, legal_status,
                     branch_offices, branch_details, legal_obligations_applicable, legal_obligations,
@@ -418,7 +419,6 @@ if (isset($db)) {
                                 $clientMail->smtpClose();
                             }
                         }
-                        }
                     } catch (Exception $mailEx) {
                         // Mail failures should not block submission
                     }
@@ -430,7 +430,6 @@ if (isset($db)) {
                 }
             }
         }
-    }
 
     try {
         $stmt = $db->query("SELECT id, org_name, contact_person, email, phone, DATE_FORMAT(created_at, '%d-%m-%Y %H:%i') AS created_at FROM online_audit_applications ORDER BY created_at DESC LIMIT 50");
