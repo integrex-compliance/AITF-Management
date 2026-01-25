@@ -577,7 +577,7 @@
             <button class="category-pill active" data-category="all">All Categories</button>
             <button class="category-pill" data-category="certification">Certification Process</button>
             <button class="category-pill" data-category="iso">ISO Certification</button>
-            <button class="category-pill" data-category="audit">Audit & Compliance</button>
+            <button class="category-pill" data-category="audit">Audit & Assessment</button>
             <button class="category-pill" data-category="general">General</button>
         </div>
 
@@ -691,7 +691,7 @@
         <div class="faq-section">
             <h2 class="section-title">
                 <i class="fas fa-clipboard-check"></i>
-                Audit & Compliance
+                Audit & Assessment
             </h2>
             
             <div class="faq-item" data-category="audit">
@@ -767,7 +767,7 @@
         <div class="faq-section">
             <h2 class="section-title">
                 <i class="fas fa-clipboard-check"></i>
-                Audit & Compliance
+                Audit & Assessment
             </h2>
             
             <div class="faq-item" data-category="audit">

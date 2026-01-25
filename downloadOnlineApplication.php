@@ -578,9 +578,17 @@ $html .= '<table border="1" cellpadding="3" cellspacing="0" class="form-table">'
 $pdf->writeHTML($html, true, false, true, false, '');
 
 $filename = 'Application_Form_' . $application['id'] . '.pdf';
+
+// Clear any previous output to avoid TCPDF header errors
+if (ob_get_length()) {
+    ob_end_clean();
+}
+
 $pdfContent = $pdf->Output($filename, $outputDest);
 
 if ($outputDest === 'S') {
     return $pdfContent;
 }
+
+exit;
 

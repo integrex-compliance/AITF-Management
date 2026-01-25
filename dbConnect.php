@@ -1,6 +1,3 @@
-
-
-
 <?php
 //include_once 'site_header_end.php';
 
@@ -27,6 +24,7 @@ try{
 }
 catch(Exception $e)
 {
-	echo $e->getMessage();
+	error_log($e->getMessage());
+	$db = null;
 // 	$e->getTraceAsString()	
 }
