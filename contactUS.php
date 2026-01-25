@@ -15,10 +15,11 @@ $serviceOptions = [
     'ISO 14001'
 ];
 $mailConfig = [
-    'host' => 'smtpout.secureserver.net', 
-    'port' => 587,
-    'secure' => 'tls',
-    'smtp_auth' => true,
+    // Per hosting guidance: localhost:25, no SSL, no auth
+    'host' => 'localhost',
+    'port' => 25,
+    'secure' => '',
+    'smtp_auth' => false,
     'username' => 'certification@aitf.co.in',
     'password' => 'foroffice@aitf1122',
     'from_email' => 'certification@aitf.co.in',
@@ -54,16 +55,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $fromEmail = $mailConfig['from_email'] ?: 'no-reply@localhost';
 
-        // Try multiple provider-supported ports/hosts; keep timeouts low to avoid long blocks on live
+        // Hosting guidance: prefer localhost:25 no auth, then relay-hosting:25 no auth, then smtpout with auth
         $attempts = [
-            ['host' => $mailConfig['host'], 'port' => $mailConfig['port'], 'secure' => $mailConfig['secure'], 'autotls' => true,  'auth' => true],   // 587 TLS
-            ['host' => $mailConfig['host'], 'port' => 465,  'secure' => 'ssl', 'autotls' => false, 'auth' => true],                                  // 465 SSL
-            ['host' => $mailConfig['host'], 'port' => 25,   'secure' => '',    'autotls' => false, 'auth' => true],                                   // 25 auth
-            ['host' => $mailConfig['host'], 'port' => 2525, 'secure' => '',    'autotls' => false, 'auth' => true],                                   // 2525 (some hosting stacks)
-            ['host' => $mailConfig['host'], 'port' => 3535, 'secure' => '',    'autotls' => false, 'auth' => true],                                   // 3535 alt
-            ['host' => $mailConfig['host'], 'port' => 80,   'secure' => '',    'autotls' => false, 'auth' => true],                                   // 80 alt
+            ['host' => 'localhost', 'port' => 25, 'secure' => '', 'autotls' => false, 'auth' => false],                                               // local MTA
             ['host' => 'relay-hosting.secureserver.net', 'port' => 25, 'secure' => '', 'autotls' => false, 'auth' => false],                          // GoDaddy relay (no auth)
-            ['host' => 'localhost', 'port' => 25, 'secure' => '', 'autotls' => false, 'auth' => false],                                               // Local MTA if available
+            ['host' => 'smtpout.secureserver.net', 'port' => 25, 'secure' => '', 'autotls' => false, 'auth' => true],                                 // smtpout plain/auth
+            ['host' => 'smtpout.secureserver.net', 'port' => 587, 'secure' => 'tls', 'autotls' => true, 'auth' => true],                              // smtpout TLS
+            ['host' => 'smtpout.secureserver.net', 'port' => 465, 'secure' => 'ssl', 'autotls' => false, 'auth' => true],                             // smtpout SSL
         ];
 
         $applySmtpConfig = function(PHPMailer $mailer, array $cfg) use ($mailConfig) {
@@ -95,6 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $mail = new PHPMailer;
         $mail->setFrom($fromEmail, $mailConfig['from_name']);
         $mail->Sender = $fromEmail;
+        $mail->addCustomHeader('Return-Path', $fromEmail);
         $mail->addReplyTo($formData['email'], $formData['name']);
         $mail->addAddress('certification@aitf.co.in', 'AITF Certification');
         $mail->Subject = 'New Contact Enquiry from Website';
@@ -123,7 +122,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $successfulAttempt = $attempt;
                 break;
             }
-            $primaryErrs[] = '[' . $attempt['host'] . ':' . $attempt['port'] . ' secure=' . ($attempt['secure'] ?: 'none') . ' auth=' . ($attempt['auth'] ? 'yes' : 'no') . '] ' . $mail->ErrorInfo;
+            $errLine = '[' . $attempt['host'] . ':' . $attempt['port'] . ' secure=' . ($attempt['secure'] ?: 'none') . ' auth=' . ($attempt['auth'] ? 'yes' : 'no') . '] ' . $mail->ErrorInfo;
+            $primaryErrs[] = $errLine;
+            error_log('CONTACT MAIL SEND FAIL: ' . $errLine);
             $mail->smtpClose();
         }
         if (!$primaryOk) {
@@ -136,6 +137,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $applySmtpConfig($confirm, $successfulAttempt ?: $attempts[0]);
             $confirm->setFrom($fromEmail, 'AITF Team');
             $confirm->Sender = $fromEmail;
+            $confirm->addCustomHeader('Return-Path', $fromEmail);
             $confirm->addAddress($formData['email'], $formData['name']);
             $confirm->Subject = 'Thank you for contacting AITF';
             $confirmBody = "
