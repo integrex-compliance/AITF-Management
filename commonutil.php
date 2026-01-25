@@ -7,6 +7,34 @@ include_once './dbConnect.php';
  * and open the template in the editor.
  */
 date_default_timezone_set('Asia/Kolkata');
+
+// Common date helpers (duplicated from header.php for standalone scripts)
+if (!function_exists('simpleDateConversion')) {
+    function simpleDateConversion($inputStr) {
+        if ($inputStr === '') {
+            return '';
+        }
+        $parts = explode('-', $inputStr);
+        if (count($parts) > 2) {
+            return $parts[2] . '.' . $parts[1] . '.' . $parts[0];
+        }
+        return $inputStr;
+    }
+}
+
+if (!function_exists('getFlatDate')) {
+    function getFlatDate($inputStr) {
+        if ($inputStr === '') {
+            return '';
+        }
+        $parts = explode('-', $inputStr);
+        if (count($parts) > 2) {
+            return $parts[0] . $parts[1] . $parts[2];
+        }
+        return $inputStr;
+    }
+}
+
 class Utitlity {
     static function compress($source, $destination, $quality) {
         $info = getimagesize($source);

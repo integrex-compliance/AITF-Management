@@ -15,7 +15,7 @@ $serviceOptions = [
     'ISO 14001'
 ];
 $mailConfig = [
-    'host' => 'smtpout.secureserver.net', // GoDaddy outbound SMTP
+    'host' => 'smtpout.secureserver.net', 
     'port' => 587,
     'secure' => 'tls',
     'smtp_auth' => true,
@@ -54,31 +54,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $fromEmail = $mailConfig['from_email'] ?: 'no-reply@localhost';
 
-        $mail = new PHPMailer;
-        $mail->isSMTP();
-        $mail->SMTPAutoTLS = true; // STARTTLS on 587
-        // Debug to PHP error log only (not shown to users)
-        $mail->SMTPDebug = 2;
-        $mail->Debugoutput = 'error_log';
-        $mail->Host = $mailConfig['host'];
-        $mail->Hostname = $mailConfig['host'];
-        $mail->Port = $mailConfig['port'];
-        $mail->SMTPAuth = $mailConfig['smtp_auth'];
-        $mail->SMTPSecure = $mailConfig['secure'];
-        if ($mailConfig['smtp_auth']) {
-            $mail->Username = $mailConfig['username'];
-            $mail->Password = $mailConfig['password'];
-        }
-        $mail->CharSet = 'UTF-8';
-        $mail->Timeout = 15; // fail fast if SMTP blocked/slow
-        $mail->SMTPKeepAlive = false;
-        $mail->SMTPOptions = [
-            'ssl' => [
-                'verify_peer' => false,
-                'verify_peer_name' => false,
-                'allow_self_signed' => true
-            ]
+        $attempts = [
+            ['host' => $mailConfig['host'], 'port' => $mailConfig['port'], 'secure' => $mailConfig['secure'], 'autotls' => true],
+            ['host' => $mailConfig['host'], 'port' => 465, 'secure' => 'ssl', 'autotls' => false],
+            ['host' => $mailConfig['host'], 'port' => 3535, 'secure' => '', 'autotls' => false],
+            ['host' => $mailConfig['host'], 'port' => 80, 'secure' => '', 'autotls' => false],
         ];
+
+        $applySmtpConfig = function(PHPMailer $mailer, array $cfg) use ($mailConfig) {
+            $mailer->isSMTP();
+            $mailer->SMTPDebug = 0; // keep logs clean on production
+            $mailer->Debugoutput = 'error_log';
+            $mailer->Host = $cfg['host'];
+            $mailer->Hostname = $cfg['host'];
+            $mailer->Port = $cfg['port'];
+            $mailer->SMTPAuth = $mailConfig['smtp_auth'];
+            $mailer->SMTPSecure = $cfg['secure'] ?: false;
+            $mailer->SMTPAutoTLS = $cfg['autotls'];
+            if ($mailConfig['smtp_auth']) {
+                $mailer->Username = $mailConfig['username'];
+                $mailer->Password = $mailConfig['password'];
+            }
+            $mailer->CharSet = 'UTF-8';
+            $mailer->Timeout = 12;
+            $mailer->SMTPKeepAlive = false;
+            $mailer->SMTPOptions = [
+                'ssl' => [
+                    'verify_peer' => false,
+                    'verify_peer_name' => false,
+                    'allow_self_signed' => true
+                ]
+            ];
+        };
+
+        $mail = new PHPMailer;
         $mail->setFrom($fromEmail, $mailConfig['from_name']);
         $mail->Sender = $fromEmail;
         $mail->addReplyTo($formData['email'], $formData['name']);
@@ -99,39 +108,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $mail->Body = $body;
         $mail->AltBody = "Name: {$formData['name']}\nEmail: {$formData['email']}\nMobile: {$mobileClean}\nCompany: {$formData['company']}\nServices: {$servicesText}\nAbout:\n{$formData['about']}";
 
-        $primaryOk = $mail->send();
-        if (!$primaryOk) {
-            $primaryErr = $mail->ErrorInfo;
-            $mail->smtpClose();
-            // Fallback to SSL/465 if 587/TLS blocked
-            $mail->SMTPSecure = 'ssl';
-            $mail->Port = 465;
-            $mail->SMTPAutoTLS = false;
+        $primaryOk = false;
+        $primaryErrs = [];
+        $successfulAttempt = null;
+        foreach ($attempts as $attempt) {
+            $applySmtpConfig($mail, $attempt);
             $primaryOk = $mail->send();
-            if (!$primaryOk) {
-                $errorMsg = 'Mail error: ' . $primaryErr . ' | Fallback: ' . $mail->ErrorInfo;
+            if ($primaryOk) {
+                $successfulAttempt = $attempt;
+                break;
             }
+            $primaryErrs[] = $mail->ErrorInfo;
+            $mail->smtpClose();
+        }
+        if (!$primaryOk) {
+            $errorMsg = 'Mail error: ' . implode(' | ', array_filter($primaryErrs));
         }
 
         if ($primaryOk) {
             // Send thank-you to sender
             $confirm = new PHPMailer;
-            $confirm->isSMTP();
-            $confirm->SMTPAutoTLS = true; // STARTTLS on 587
-            $confirm->SMTPDebug = 0;
-            $confirm->Host = $mailConfig['host'];
-            $confirm->Hostname = $mailConfig['host'];
-            $confirm->Port = $mailConfig['port'];
-            $confirm->SMTPAuth = $mailConfig['smtp_auth'];
-            $confirm->SMTPSecure = $mailConfig['secure'];
-            if ($mailConfig['smtp_auth']) {
-                $confirm->Username = $mailConfig['username'];
-                $confirm->Password = $mailConfig['password'];
-            }
-            $confirm->CharSet = 'UTF-8';
-            $confirm->Timeout = 15;
-            $confirm->SMTPKeepAlive = false;
-            $confirm->SMTPOptions = $mail->SMTPOptions;
+            $applySmtpConfig($confirm, $successfulAttempt ?: $attempts[0]);
             $confirm->setFrom($fromEmail, 'AITF Team');
             $confirm->Sender = $fromEmail;
             $confirm->addAddress($formData['email'], $formData['name']);
