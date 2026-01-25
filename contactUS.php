@@ -54,11 +54,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $fromEmail = $mailConfig['from_email'] ?: 'no-reply@localhost';
 
+        // Try multiple provider-supported ports/hosts; keep timeouts low to avoid long blocks on live
         $attempts = [
-            ['host' => $mailConfig['host'], 'port' => $mailConfig['port'], 'secure' => $mailConfig['secure'], 'autotls' => true],
-            ['host' => $mailConfig['host'], 'port' => 465, 'secure' => 'ssl', 'autotls' => false],
-            ['host' => $mailConfig['host'], 'port' => 3535, 'secure' => '', 'autotls' => false],
-            ['host' => $mailConfig['host'], 'port' => 80, 'secure' => '', 'autotls' => false],
+            ['host' => $mailConfig['host'], 'port' => $mailConfig['port'], 'secure' => $mailConfig['secure'], 'autotls' => true,  'auth' => true],   // 587 TLS
+            ['host' => $mailConfig['host'], 'port' => 465,  'secure' => 'ssl', 'autotls' => false, 'auth' => true],                                  // 465 SSL
+            ['host' => $mailConfig['host'], 'port' => 25,   'secure' => '',    'autotls' => false, 'auth' => true],                                   // 25 auth
+            ['host' => $mailConfig['host'], 'port' => 2525, 'secure' => '',    'autotls' => false, 'auth' => true],                                   // 2525 (some hosting stacks)
+            ['host' => $mailConfig['host'], 'port' => 3535, 'secure' => '',    'autotls' => false, 'auth' => true],                                   // 3535 alt
+            ['host' => $mailConfig['host'], 'port' => 80,   'secure' => '',    'autotls' => false, 'auth' => true],                                   // 80 alt
+            ['host' => 'relay-hosting.secureserver.net', 'port' => 25, 'secure' => '', 'autotls' => false, 'auth' => false],                          // GoDaddy relay (no auth)
+            ['host' => 'localhost', 'port' => 25, 'secure' => '', 'autotls' => false, 'auth' => false],                                               // Local MTA if available
         ];
 
         $applySmtpConfig = function(PHPMailer $mailer, array $cfg) use ($mailConfig) {
@@ -68,15 +73,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $mailer->Host = $cfg['host'];
             $mailer->Hostname = $cfg['host'];
             $mailer->Port = $cfg['port'];
-            $mailer->SMTPAuth = $mailConfig['smtp_auth'];
+            $mailer->SMTPAuth = $cfg['auth'];
             $mailer->SMTPSecure = $cfg['secure'] ?: false;
             $mailer->SMTPAutoTLS = $cfg['autotls'];
-            if ($mailConfig['smtp_auth']) {
+            if ($cfg['auth']) {
                 $mailer->Username = $mailConfig['username'];
                 $mailer->Password = $mailConfig['password'];
             }
             $mailer->CharSet = 'UTF-8';
-            $mailer->Timeout = 12;
+            $mailer->Timeout = 8;
             $mailer->SMTPKeepAlive = false;
             $mailer->SMTPOptions = [
                 'ssl' => [
@@ -118,7 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $successfulAttempt = $attempt;
                 break;
             }
-            $primaryErrs[] = $mail->ErrorInfo;
+            $primaryErrs[] = '[' . $attempt['host'] . ':' . $attempt['port'] . ' secure=' . ($attempt['secure'] ?: 'none') . ' auth=' . ($attempt['auth'] ? 'yes' : 'no') . '] ' . $mail->ErrorInfo;
             $mail->smtpClose();
         }
         if (!$primaryOk) {
