@@ -319,25 +319,35 @@ if (isset($db)) {
                             ]
                         ];
 
+                        $attempts = [
+                            ['host' => 'localhost', 'port' => 25, 'secure' => '', 'autotls' => false, 'auth' => false],
+                            ['host' => 'relay-hosting.secureserver.net', 'port' => 25, 'secure' => '', 'autotls' => false, 'auth' => false],
+                        ];
+
+                        $applySmtpConfig = function(PHPMailer $mailer, array $cfg) use ($mailConfig, $smtpOptions) {
+                            $mailer->isSMTP();
+                            $mailer->SMTPDebug = 0;
+                            $mailer->Debugoutput = 'error_log';
+                            $mailer->Host = $cfg['host'];
+                            $mailer->Hostname = $cfg['host'];
+                            $mailer->Port = $cfg['port'];
+                            $mailer->SMTPAuth = $cfg['auth'];
+                            $mailer->SMTPSecure = $cfg['secure'] ?: false;
+                            $mailer->SMTPAutoTLS = $cfg['autotls'];
+                            if ($cfg['auth']) {
+                                $mailer->Username = $mailConfig['username'];
+                                $mailer->Password = $mailConfig['password'];
+                            }
+                            $mailer->CharSet = 'UTF-8';
+                            $mailer->SMTPOptions = $smtpOptions;
+                            $mailer->Timeout = 8;
+                        };
+
                         // Admin notification
                         $adminMail = new PHPMailer;
-                    $adminMail->isSMTP();
-                    $adminMail->SMTPAutoTLS = false; // using SMTPS on 465
-                    $adminMail->SMTPDebug = 2; // log to php error_log only
-                    $adminMail->Debugoutput = 'error_log';
-                    $adminMail->Host = $mailConfig['host'];
-                    $adminMail->Hostname = $mailConfig['host'];
-                    $adminMail->Port = $mailConfig['port'];
-                    $adminMail->SMTPAuth = $mailConfig['smtp_auth'];
-                    $adminMail->SMTPSecure = $mailConfig['secure'];
-                    if ($mailConfig['smtp_auth']) {
-                        $adminMail->Username = $mailConfig['username'];
-                        $adminMail->Password = $mailConfig['password'];
-                    }
-                    $adminMail->CharSet = 'UTF-8';
-                        $adminMail->SMTPOptions = $smtpOptions;
-                        $adminMail->Timeout = 15;
                         $adminMail->setFrom($mailConfig['from_email'] ?: 'no-reply@localhost', $mailConfig['from_name']);
+                        $adminMail->Sender = $mailConfig['from_email'] ?: 'no-reply@localhost';
+                        $adminMail->addCustomHeader('Return-Path', $mailConfig['from_email'] ?: 'no-reply@localhost');
                         $adminMail->addAddress('certification@aitf.co.in', 'AITF Certification');
                         $adminMail->addCC('gauravoli777@gmail.com', 'AITF Team');
                         $adminMail->addCC('aitfmcl@gmail.com', 'AITF Notifications');
@@ -361,45 +371,31 @@ if (isset($db)) {
                             . '</table>';
 
                         $adminMail->isHTML(true);
-                    $adminMail->Body = $adminBody;
-                    $adminMail->AltBody = "Online audit application submitted via AITF website. Audit application form is attached for verification.\nOrganization: $org_name\nContact: $contactFull\nPhone: $phone\nEmail: $email\nSite address: $site_address\nOffice address: $office_address\nWebsite: $website\nStandards applied for: $standard_applied\nGSTIN: $gstin";
-                    if ($pdfContent !== '') {
-                        $adminMail->addStringAttachment($pdfContent, $pdfFilename, 'base64', 'application/pdf');
-                    }
-                    $adminSent = $adminMail->send();
-                    if (!$adminSent) {
-                        $primaryErr = $adminMail->ErrorInfo;
-                        $adminMail->smtpClose();
-                        $adminMail->SMTPSecure = 'tls';
-                        $adminMail->Port = 587;
-                        $adminMail->SMTPAutoTLS = true;
-                        $adminSent = $adminMail->send();
-                        if (!$adminSent) {
-                            error_log('Audit admin mail error: ' . $primaryErr . ' | Fallback: ' . $adminMail->ErrorInfo);
+                        $adminMail->Body = $adminBody;
+                        $adminMail->AltBody = "Online audit application submitted via AITF website. Audit application form is attached for verification.\nOrganization: $org_name\nContact: $contactFull\nPhone: $phone\nEmail: $email\nSite address: $site_address\nOffice address: $office_address\nWebsite: $website\nStandards applied for: $standard_applied\nGSTIN: $gstin";
+                        if ($pdfContent !== '') {
+                            $adminMail->addStringAttachment($pdfContent, $pdfFilename, 'base64', 'application/pdf');
                         }
-                    }
+
+                        $adminSent = false;
+                        foreach ($attempts as $attempt) {
+                            $applySmtpConfig($adminMail, $attempt);
+                            $adminSent = $adminMail->send();
+                            if ($adminSent) {
+                                break;
+                            }
+                            error_log('Audit admin mail SMTP fail: [' . $attempt['host'] . ':' . $attempt['port'] . ' secure=' . ($attempt['secure'] ?: 'none') . ' auth=' . ($attempt['auth'] ? 'yes' : 'no') . '] ' . $adminMail->ErrorInfo);
+                            $adminMail->smtpClose();
+                        }
 
                         // Applicant thank-you email
                         if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
                             $clientMail = new PHPMailer;
-                        $clientMail->isSMTP();
-                        $clientMail->SMTPAutoTLS = false; // using SMTPS on 465
-                        $clientMail->SMTPDebug = 2; // log to php error_log only
-                        $clientMail->Debugoutput = 'error_log';
-                        $clientMail->Host = $mailConfig['host'];
-                        $clientMail->Hostname = $mailConfig['host'];
-                        $clientMail->Port = $mailConfig['port'];
-                        $clientMail->SMTPAuth = $mailConfig['smtp_auth'];
-                        $clientMail->SMTPSecure = $mailConfig['secure'];
-                        if ($mailConfig['smtp_auth']) {
-                            $clientMail->Username = $mailConfig['username'];
-                            $clientMail->Password = $mailConfig['password'];
-                        }
-                        $clientMail->CharSet = 'UTF-8';
-                        $clientMail->SMTPOptions = $smtpOptions;
-                        $clientMail->setFrom($mailConfig['from_email'] ?: 'no-reply@localhost', 'AITF Team');
-                        $clientMail->addAddress($email, $contact_person);
-                        $clientMail->Subject = 'Thank you for applying';
+                            $clientMail->setFrom($mailConfig['from_email'] ?: 'no-reply@localhost', 'AITF Team');
+                            $clientMail->Sender = $mailConfig['from_email'] ?: 'no-reply@localhost';
+                            $clientMail->addCustomHeader('Return-Path', $mailConfig['from_email'] ?: 'no-reply@localhost');
+                            $clientMail->addAddress($email, $contact_person);
+                            $clientMail->Subject = 'Thank you for your application - AITF';
                             $clientBody = "<p style=\"font-family:Arial,sans-serif; font-size:14px;\">Hi " . htmlspecialchars($contact_person, ENT_QUOTES, 'UTF-8') . ",</p>"
                                 . "<p style=\"font-family:Arial,sans-serif; font-size:14px; margin:8px 0;\">Thank you for choosing AITF.</p>"
                                 . "<p style=\"font-family:Arial,sans-serif; font-size:14px; margin:8px 0;\">We confirm that we have successfully received your <strong>Audit Application Form</strong>. Our assessment team is currently reviewing the details submitted by you.</p>"
@@ -409,21 +405,17 @@ if (isset($db)) {
                                 . "<p style=\"font-family:Arial,sans-serif; font-size:14px; margin:8px 0;\">If you have any questions in the meantime, feel free to reply to this email. Our team will be happy to assist you.</p>"
                                 . "<p style=\"font-family:Arial,sans-serif; font-size:14px; margin:8px 0;\">Warm regards,<br><strong>AITF Team</strong><br>Assessment Department<br>AITF<br><br>📧 <a href=\"mailto:certification@aitf.co.in\">certification@aitf.co.in</a><br>📧 <a href=\"mailto:aitfmcl@gmail.com\">aitfmcl@gmail.com</a><br>🌐 <a href=\"http://www.aitf.in\" target=\"_blank\" rel=\"noopener\">www.aitf.in</a></p>";
                             $clientMail->isHTML(true);
-                        $clientMail->Body = $clientBody;
-                        $clientMail->AltBody = "Hi $contact_person,\n\nThank you for choosing AITF.\n\nWe confirm that we have successfully received your Audit Application Form. Our assessment team is currently reviewing the details submitted by you.\n\nOnce the verification process is completed, our team will contact you to guide you through the next steps of the audit process.\n\nApplication Summary:\nOrganization Name: $org_name\nContact Number: $phone\nEmail Address: $email\nApplied Assessment: $standard_applied\n\nA copy of your submitted Audit Application Form is attached for your reference.\n\nIf you have any questions in the meantime, feel free to reply to this email. Our team will be happy to assist you.\n\nWarm regards,\nAITF Team\nAssessment Department\nAITF\n\ncertification@aitf.co.in\naitfmcl@gmail.com\nwww.aitf.in";
-                        if ($pdfContent !== '') {
-                            $clientMail->addStringAttachment($pdfContent, $pdfFilename, 'base64', 'application/pdf');
-                        }
-                        $clientSent = $clientMail->send();
-                        if (!$clientSent) {
-                            $primaryErr = $clientMail->ErrorInfo;
-                            $clientMail->smtpClose();
-                            $clientMail->SMTPSecure = 'tls';
-                            $clientMail->Port = 587;
-                            $clientMail->SMTPAutoTLS = true;
-                            $clientSent = $clientMail->send();
-                            if (!$clientSent) {
-                                error_log('Audit client mail error: ' . $primaryErr . ' | Fallback: ' . $clientMail->ErrorInfo);
+                            $clientMail->Body = $clientBody;
+                            $clientMail->AltBody = "Dear $contact_person,\n\nThank you for submitting your audit application to AITF.\nWe have received your application and will review it.\n\nRegards,\nAITF Team";
+
+                            foreach ($attempts as $attempt) {
+                                $applySmtpConfig($clientMail, $attempt);
+                                $clientSent = $clientMail->send();
+                                if ($clientSent) {
+                                    break;
+                                }
+                                error_log('Audit client mail SMTP fail: [' . $attempt['host'] . ':' . $attempt['port'] . ' secure=' . ($attempt['secure'] ?: 'none') . ' auth=' . ($attempt['auth'] ? 'yes' : 'no') . '] ' . $clientMail->ErrorInfo);
+                                $clientMail->smtpClose();
                             }
                         }
                         }

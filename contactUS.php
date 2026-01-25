@@ -15,11 +15,10 @@ $serviceOptions = [
     'ISO 14001'
 ];
 $mailConfig = [
-    // Per hosting guidance: localhost:25, no SSL, no auth
-    'host' => 'localhost',
-    'port' => 25,
-    'secure' => '',
-    'smtp_auth' => false,
+    'host' => 'smtpout.secureserver.net', 
+    'port' => 587,
+    'secure' => 'tls',
+    'smtp_auth' => true,
     'username' => 'certification@aitf.co.in',
     'password' => 'foroffice@aitf1122',
     'from_email' => 'certification@aitf.co.in',
@@ -55,13 +54,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $fromEmail = $mailConfig['from_email'] ?: 'no-reply@localhost';
 
-        // Hosting guidance: prefer localhost:25 no auth, then relay-hosting:25 no auth, then smtpout with auth
+        // GoDaddy shared hosting relay: localhost:25, no auth, no SSL
         $attempts = [
-            ['host' => 'localhost', 'port' => 25, 'secure' => '', 'autotls' => false, 'auth' => false],                                               // local MTA
-            ['host' => 'relay-hosting.secureserver.net', 'port' => 25, 'secure' => '', 'autotls' => false, 'auth' => false],                          // GoDaddy relay (no auth)
-            ['host' => 'smtpout.secureserver.net', 'port' => 25, 'secure' => '', 'autotls' => false, 'auth' => true],                                 // smtpout plain/auth
-            ['host' => 'smtpout.secureserver.net', 'port' => 587, 'secure' => 'tls', 'autotls' => true, 'auth' => true],                              // smtpout TLS
-            ['host' => 'smtpout.secureserver.net', 'port' => 465, 'secure' => 'ssl', 'autotls' => false, 'auth' => true],                             // smtpout SSL
+            ['host' => 'localhost', 'port' => 25, 'secure' => '', 'autotls' => false, 'auth' => false],
+            ['host' => 'relay-hosting.secureserver.net', 'port' => 25, 'secure' => '', 'autotls' => false, 'auth' => false],
         ];
 
         $applySmtpConfig = function(PHPMailer $mailer, array $cfg) use ($mailConfig) {

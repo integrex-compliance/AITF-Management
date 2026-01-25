@@ -357,13 +357,13 @@ else if($PageAction == "SendMail"){
 
 	$mail = new PHPMailer;
 	$mail->isSMTP();
-	$mail->SMTPAutoTLS = true; // STARTTLS on 587
-	$mail->SMTPDebug = 2; // log to error_log
+	$mail->SMTPAutoTLS = false;
+	$mail->SMTPDebug = 0; // keep logs clean
 	$mail->Debugoutput = 'error_log';
-	$mail->Host = 'smtpout.secureserver.net';
-	$mail->Port = 587;
-	$mail->SMTPAuth = true;
-	$mail->SMTPSecure = 'tls';
+	$mail->Host = 'localhost';
+	$mail->Port = 25;
+	$mail->SMTPAuth = false;
+	$mail->SMTPSecure = false;
 	$mail->SMTPOptions = array(
 		'ssl' => array(
 			'verify_peer' => false,
@@ -372,11 +372,10 @@ else if($PageAction == "SendMail"){
 		)
 	);
 
-	$mail->Username='certification@aitf.co.in';
-	$mail->Password='foroffice@aitf1122';
 	$mail->setFrom('certification@aitf.co.in', 'AITF Intimation');
 	$mail->addReplyTo('certification@aitf.co.in', 'AITF Intimation');
-	$mail->Timeout = 15; // fail fast on unreachable SMTP
+	$mail->addCustomHeader('Return-Path', 'certification@aitf.co.in');
+	$mail->Timeout = 8; // shorter timeout
 	$mail->SMTPKeepAlive = false;
 
 	$mail->addCC('certification@aitf.co.in');
@@ -390,18 +389,8 @@ else if($PageAction == "SendMail"){
 	$mail->AddAttachment($fullFilePath , $fileName);
 
 	if(!$mail->send()) {
-		// Try SSL/465 fallback if STARTTLS/587 blocked
-		$primaryErr = $mail->ErrorInfo;
-		$mail->smtpClose();
-		$mail->Port = 465;
-		$mail->SMTPSecure = 'ssl';
-		$mail->SMTPAutoTLS = false;
-		if(!$mail->send()) {
-			$isMailSend = 0;
-			$response['message'] = 'Mailer Error: ' . $primaryErr . ' | Fallback: ' . $mail->ErrorInfo;
-		} else {
-			$isMailSend = 1;
-		}
+		$isMailSend = 0;
+		$response['message'] = 'Mailer Error: ' . $mail->ErrorInfo;
 	} else {
 		$isMailSend = 1;
 	}
