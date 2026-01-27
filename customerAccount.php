@@ -1767,9 +1767,9 @@
                                                     <a class="editCDC pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" data-notification="<?php echo $caservice['crr_id'] ?>" title="Edit CDC DELIBERATION AND DECISION" style="padding: 1px 5px;">
                                                         <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
                                                     </a>
-                                                    <!-- <a class="sendCdcMail pull-right" data-svctype="CA" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" data-crr="<?php echo $caservice['crr_id'] ?>" title="Send certificate by email" style="padding: 1px 5px;">
+                                                    <a class="sendCdcMail pull-right" data-svctype="CA" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" data-crr="<?php echo $caservice['crr_id'] ?>" title="Send certificate by email" style="padding: 1px 5px;">
                                                         <i class="fa fa-envelope fa-lg" style="padding: 3px"></i>
-                                                    </a> -->
+                                                    </a>
                                                     <a class="downloadCdc pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $caservice['ca_id'] ?>" data-crr="<?php echo $caservice['crr_id'] ?>" title="Download  CDC DELIBERATION AND DECISION" style="padding: 1px 5px;"><i class="fa fa-download fa-lg " style="padding: 3px"></i></a> 
                                                 <?php } ?>
                                             </div>

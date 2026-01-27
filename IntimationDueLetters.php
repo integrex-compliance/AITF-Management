@@ -378,21 +378,73 @@ else if($PageAction == "SendMail"){
 	$mail->Timeout = 8; // shorter timeout
 	$mail->SMTPKeepAlive = false;
 
-	$mail->addCC('certification@aitf.co.in');
+	// Send email to client first
+	$clientMail = new PHPMailer;
+	$clientMail->isSMTP();
+	$clientMail->SMTPAutoTLS = false;
+	$clientMail->SMTPDebug = 0; // keep logs clean
+	$clientMail->Debugoutput = 'error_log';
+	$clientMail->Host = 'localhost';
+	$clientMail->Port = 25;
+	$clientMail->SMTPAuth = false;
+	$clientMail->SMTPSecure = false;
+	$clientMail->SMTPOptions = array(
+		'ssl' => array(
+			'verify_peer' => false,
+			'verify_peer_name' => false,
+			'allow_self_signed' => true
+		)
+	);
+
+	$clientMail->setFrom('certification@aitf.co.in', 'AITF Intimation');
+	$clientMail->addReplyTo('certification@aitf.co.in', 'AITF Intimation');
+	$clientMail->addCustomHeader('Return-Path', 'certification@aitf.co.in');
+	$clientMail->Timeout = 8; // shorter timeout
+	$clientMail->SMTPKeepAlive = false;
+
 	foreach($contactEmail as $e)
 	{
-		if($e != NULL) $mail->AddAddress($e);
+		if($e != NULL) $clientMail->AddAddress($e);
 	}
-	$mail->isHTML(true);
-	$mail->Subject=$subject;
-	$mail->Body=$mailBody;
-	$mail->AddAttachment($fullFilePath , $fileName);
+	$clientMail->isHTML(true);
+	$clientMail->Subject=$subject;
+	$clientMail->Body=$mailBody;
+	$clientMail->AddAttachment($fullFilePath , $fileName);
 
-	if(!$mail->send()) {
+	if(!$clientMail->send()) {
 		$isMailSend = 0;
-		$response['message'] = 'Mailer Error: ' . $mail->ErrorInfo;
+		$response['message'] = 'Mailer Error: ' . $clientMail->ErrorInfo;<div class=""></div>
 	} else {
 		$isMailSend = 1;
+		
+		// Send simple email to office
+		$officeMail = new PHPMailer;
+		$officeMail->isSMTP();
+		$officeMail->SMTPAutoTLS = false;
+		$officeMail->SMTPDebug = 0;
+		$officeMail->Debugoutput = 'error_log';
+		$officeMail->Host = 'localhost';
+		$officeMail->Port = 25;
+		$officeMail->SMTPAuth = false;
+		$officeMail->SMTPSecure = false;
+		$officeMail->SMTPOptions = array(
+			'ssl' => array(
+				'verify_peer' => false,
+				'verify_peer_name' => false,
+				'allow_self_signed' => true
+			)
+		);
+
+		$officeMail->setFrom('certification@aitf.co.in', 'AITF Intimation');
+		$officeMail->addReplyTo('certification@aitf.co.in', 'AITF Intimation');
+		$officeMail->addCustomHeader('Return-Path', 'certification@aitf.co.in');
+		$officeMail->Timeout = 8;
+		$officeMail->SMTPKeepAlive = false;
+		$officeMail->addAddress('certification@aitf.co.in');
+		$officeMail->isHTML(true);
+		$officeMail->Subject = 'Letter Sent Confirmation';
+		$officeMail->Body = '<html><body>Following letter has sent to ' . htmlspecialchars($customer['customer_name'], ENT_QUOTES, 'UTF-8') . '</body></html>';
+		$officeMail->send();
 	}
 
 	//check if mail send successfully

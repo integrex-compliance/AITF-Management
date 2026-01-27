@@ -162,7 +162,7 @@
     $statement->execute();
     $rcAuditReportPending = $statement->fetchAll();
 
-    $rcAuditorNotest = "SELECT rc.rc_id, service, rc_customer, auditor_notes_rc, ci.customer_name FROM service_type_rc rc LEFT JOIN customer_info ci on rc.rc_customer = ci.id WHERE auditor_notes_rc like '%scanning%' and is_deleted = 'NO' ORDER BY ci.customer_name";
+    $rcAuditorNotes = "SELECT rc.rc_id, service, rc_customer, auditor_notes_rc, ci.customer_name FROM service_type_rc rc LEFT JOIN customer_info ci on rc.rc_customer = ci.id WHERE auditor_notes_rc like '%scanning%' and is_deleted = 'NO' ORDER BY ci.customer_name";
     $statement = $db->prepare($rcAuditorNotes);
     $statement->execute();
     $rcAuditorNotesPending = $statement->fetchAll();

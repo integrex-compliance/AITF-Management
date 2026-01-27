@@ -46,56 +46,115 @@ try {
         $certifyId = (int) $certRow['certificate_id'];
     }
 
-    // Generate certificate PDF using existing generator; capture output as file
-    $tmpFile = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'cdc_cert_' . uniqid() . '.pdf';
-    $pdfContent = '';
-    
-    // Prepare POST variables expected by CertificatePrintPdf.php
-    $originalPost = $_POST;
-    $_POST['crr_id']   = $crrId;
-    $_POST['customer'] = $customerId;
-    $_POST['service']  = $serviceId;
-    if ($certifyId) {
-        $_POST['certify_id'] = $certifyId;
+    // Generate certificate PDFs (one per ISO entry) for mail attachments
+    $attachments = [];
+
+    // Fetch ISO entries for this CDC (if any)
+    $isoEntries = [];
+    $isoStmt = $db->prepare('SELECT iso_index, iso_label, certificate_no FROM cdc_report_review_office_use WHERE crr_id = :crr ORDER BY iso_index ASC');
+    $isoStmt->bindParam(':crr', $crrId, PDO::PARAM_INT);
+    $isoStmt->execute();
+    $isoEntries = $isoStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // If no ISO entries found, fall back to single generation
+    if (!$isoEntries || !is_array($isoEntries) || count($isoEntries) === 0) {
+        $isoEntries = [["iso_index" => null, "iso_label" => null, "certificate_no" => null]];
     }
 
-    ob_start();
-    include './CertificatePrintPdf.php';
-    $pdfContent = ob_get_clean();
+    foreach ($isoEntries as $isoEntry) {
+        $tmpFile = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'cdc_cert_' . uniqid() . '.pdf';
+        $pdfContent = '';
 
-    // Restore POST
-    $_POST = $originalPost;
+        // Prepare POST variables expected by CertificatePrintPdf.php
+        $originalPost = $_POST;
+        $_POST['crr_id']   = $crrId;
+        $_POST['customer'] = $customerId;
+        $_POST['service']  = $serviceId;
+        $_POST['use_bg']   = 1; // apply background only for mailed certificates
+        if ($certifyId) {
+            $_POST['certify_id'] = $certifyId;
+        }
+        if (isset($isoEntry['iso_index']) && $isoEntry['iso_index'] !== null && $isoEntry['iso_index'] !== '') {
+            $_POST['iso_index'] = $isoEntry['iso_index'];
+        }
+        if (isset($isoEntry['iso_label']) && $isoEntry['iso_label'] !== '') {
+            $_POST['iso_label'] = $isoEntry['iso_label'];
+        }
 
-    if (empty($pdfContent)) {
-        echo json_encode(['success' => false, 'message' => 'Failed to generate certificate PDF.']);
-        exit;
+        try {
+            ob_start();
+            include './CertificatePrintPdf.php';
+            $pdfContent = ob_get_clean();
+        } catch (Throwable $genEx) {
+            @ob_end_clean();
+            error_log('CDC MAIL: PDF generation failed for ISO ' . ($isoEntry['iso_label'] ?? '') . ' - ' . $genEx->getMessage());
+            $_POST = $originalPost;
+            continue;
+        }
+
+        // Restore POST
+        $_POST = $originalPost;
+
+        if (empty($pdfContent)) {
+            error_log('CDC MAIL: Empty PDF content for ISO ' . ($isoEntry['iso_label'] ?? '')); 
+            continue; // skip this attachment if generation failed
+        }
+
+        if (file_put_contents($tmpFile, $pdfContent) === false) {
+            error_log('CDC MAIL: Failed to write PDF for ISO ' . ($isoEntry['iso_label'] ?? '') . ' at ' . $tmpFile);
+            continue; // skip if cannot write
+        }
+
+        // Build a friendly filename
+        $labelPart = '';
+        if (!empty($isoEntry['iso_label'])) {
+            $labelPart = preg_replace('/[^A-Za-z0-9._-]+/', '_', $isoEntry['iso_label']);
+        }
+        $certNoPart = '';
+        if (!empty($isoEntry['certificate_no'])) {
+            $certNoPart = preg_replace('/[^A-Za-z0-9._-]+/', '_', $isoEntry['certificate_no']);
+        }
+        $fileName = 'Certificate';
+        if ($labelPart !== '') {
+            $fileName .= '_' . $labelPart;
+        }
+        if ($certNoPart !== '') {
+            $fileName .= '_' . $certNoPart;
+        }
+        $fileName .= '.pdf';
+
+        $attachments[] = ['path' => $tmpFile, 'name' => $fileName];
     }
 
-    if (file_put_contents($tmpFile, $pdfContent) === false) {
-        echo json_encode(['success' => false, 'message' => 'Unable to write certificate PDF.']);
+    if (empty($attachments)) {
+        echo json_encode(['success' => false, 'message' => 'Failed to generate certificate PDF(s).']);
         exit;
     }
 
     // Email recipients
     $clientEmails = array_filter(array_map('trim', explode(',', (string) $customer['email_id'])));
     if (empty($clientEmails)) {
-        @unlink($tmpFile);
+        foreach ($attachments as $att) {
+        if (isset($att['path']) && file_exists($att['path'])) {
+            @unlink($att['path']);
+        }
+    }
         echo json_encode(['success' => false, 'message' => 'No client email found to send certificate.']);
         exit;
     }
 
-    $adminEmail = 'aitfmcl@gmail.com'; // admin notification mailbox (can be changed later)
+    $adminEmail = 'certification@aitf.co.in'; // admin/office mailbox
 
-    // SMTP config: Gmail TLS
+    // SMTP config: use certification@aitf.co.in (same as application form)
     $mailConfig = [
-        'host'       => 'smtp.gmail.com',
+        'host'       => 'smtpout.secureserver.net',
         'port'       => 587,
         'secure'     => 'tls',
         'smtp_auth'  => true,
-        'username'   => 'aitfmcl@gmail.com',
-        'password'   => 'opwuzmftxpzmwyjy',
-        'from_email' => 'aitfmcl@gmail.com', // use an email where you manage DNS/SPF
-        'from_name'  => 'AITF Website'
+        'username'   => 'certification@aitf.co.in',
+        'password'   => 'foroffice@aitf1122',
+        'from_email' => 'certification@aitf.co.in',
+        'from_name'  => 'AITF Certification Team'
     ];
 
     $configureSmtp = function (PHPMailer $mailer, array $cfg) {
@@ -124,6 +183,10 @@ try {
         $mailer->Timeout = 15;
     };
 
+    // Prepare standard list for email body
+    $standardList = array_filter(array_map(function($r){ return isset($r['iso_label']) ? trim($r['iso_label']) : ''; }, $isoEntries));
+    $standardDisplay = $standardList ? implode(', ', $standardList) : 'ISO certificate';
+
     // Send to client
     $clientMailer = new PHPMailer(true);
     try {
@@ -131,11 +194,17 @@ try {
         foreach ($clientEmails as $eml) {
             $clientMailer->addAddress($eml, $customer['customer_name']);
         }
-        $clientMailer->Subject = 'Certificate Received - ' . $customer['customer_name'];
-        $clientMailer->Body    = '<p>Congratulations, your certificate has been received.</p>'
-            . '<p>Client: <strong>' . htmlspecialchars($customer['customer_name']) . '</strong></p>'
-            . '<p>The certificate PDF is attached for your reference.</p>';
-        $clientMailer->addAttachment($tmpFile, 'Certificate.pdf');
+        $clientMailer->Subject = 'Certificate Issued - ' . $customer['customer_name'];
+        $clientMailer->Body    = '<p>Dear ' . htmlspecialchars($customer['customer_name']) . ',</p>'
+            . '<p>Greetings from AITF Management Certification Limited.</p>'
+            . '<p>We are pleased to inform you that your ISO ' . htmlspecialchars($standardDisplay) . ' certificate has been successfully issued.</p>'
+            . '<p>Please find the certificate attached for your reference. The certificate is valid as per the defined scope and validity dates mentioned therein.</p>'
+            . '<p>Thank you for your cooperation.</p>'
+            . '<p>Warm regards,<br><strong>AITF Certification Team</strong><br>AITF Management Certification Limited<br>Devi Indrayani, Wing B-26,<br>Near IT Park, Talawade,<br>Pune – 411062, Maharashtra, India</p>'
+            . '<p>Website: <a href="http://www.aitf.co.in">www.aitf.co.in</a><br>Phone: +91 94220 11836 / +91 94220 11837</p>';
+        foreach ($attachments as $att) {
+            $clientMailer->addAttachment($att['path'], $att['name']);
+        }
         if (!$clientMailer->send()) {
             $primaryErr = $clientMailer->ErrorInfo;
             $clientMailer->smtpClose();
@@ -162,8 +231,11 @@ try {
         $adminMailer->Body    = '<p>Certificate mail was sent to client.</p>'
             . '<p>Client: <strong>' . htmlspecialchars($customer['customer_name']) . '</strong></p>'
             . '<p>Client emails: ' . htmlspecialchars(implode(', ', $clientEmails)) . '</p>'
-            . '<p>The certificate PDF is attached.</p>';
-        $adminMailer->addAttachment($tmpFile, 'Certificate.pdf');
+            . '<p>Standard(s): ' . htmlspecialchars($standardDisplay) . '</p>'
+            . '<p>The certificate PDF(s) are attached.</p>';
+        foreach ($attachments as $att) {
+            $adminMailer->addAttachment($att['path'], $att['name']);
+        }
         if (!$adminMailer->send()) {
             $primaryErr = $adminMailer->ErrorInfo;
             $adminMailer->smtpClose();

@@ -69,15 +69,12 @@ date_default_timezone_set('Asia/Kolkata');
  * @param string $currentAuditType Current audit type (CA, SA-I, SA-II, RC)
  * @return int The cycle number (1, 2, 3, ...)
  */
-function determineCycleNumber($completedRcCount, $currentAuditType)
-{
-    $currentAuditType = strtoupper(trim($currentAuditType));
-    
-    // If current service is RC, it belongs to cycle (completedRcCount + 1)
-    // If current service is CA/SA-I/SA-II, it belongs to cycle (completedRcCount + 1)
-    // Because after an RC completes, the NEXT SA-I starts a new cycle
-    
-    return max(1, $completedRcCount + 1);
+if (!function_exists('determineCycleNumber')) {
+    function determineCycleNumber($completedRcCount, $currentAuditType)
+    {
+        $currentAuditType = strtoupper(trim($currentAuditType));
+        return max(1, $completedRcCount + 1);
+    }
 }
 
 /**
@@ -90,98 +87,93 @@ function determineCycleNumber($completedRcCount, $currentAuditType)
  * @param int $currentCaServiceId Current ca_service_id
  * @return int Cycle index (0 = first cycle, 1 = second cycle, etc.)
  */
-function countCompletedRCs(PDO $db, $customerId, $currentAuditType, $currentCaServiceId, $currentCdcDate)
-{
-    $cycleIndex = 0;
-    $currentAuditType = strtoupper(trim($currentAuditType));
-    $currentCaServiceId = (int)$currentCaServiceId;
-    
-    // If we don't have a valid customer or service mapping, stay in first cycle
-    if (empty($customerId) || $currentCaServiceId <= 0) {
-        return 0;
-    }
-
-    try {
-        // First get the service_id from the correct service_type table
-        $currentServiceId = 0;
-        $svcQuery = null;
-
-        if ($currentAuditType === 'CA') {
-            $svcQuery = "SELECT service FROM service_type_ca WHERE ca_id = :ca_id";
-        } elseif ($currentAuditType === 'SA-I') {
-            $svcQuery = "SELECT service FROM service_type_sai WHERE sai_id = :ca_id";
-        } elseif ($currentAuditType === 'SA-II') {
-            $svcQuery = "SELECT service FROM service_type_saii WHERE saii_id = :ca_id";
-        } elseif ($currentAuditType === 'RC') {
-            $svcQuery = "SELECT service FROM service_type_rc WHERE rc_id = :ca_id";
-        }
-
-        if ($svcQuery !== null) {
-            $stmt = $db->prepare($svcQuery);
-            $stmt->bindParam(':ca_id', $currentCaServiceId, PDO::PARAM_INT);
-            $stmt->execute();
-            $svcRow = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if ($svcRow && isset($svcRow['service'])) {
-                $currentServiceId = (int)$svcRow['service'];
-            }
-        }
-
-        if ($currentServiceId === 0) {
+if (!function_exists('countCompletedRCs')) {
+    function countCompletedRCs(PDO $db, $customerId, $currentAuditType, $currentCaServiceId, $currentCdcDate)
+    {
+        $cycleIndex = 0;
+        $currentAuditType = strtoupper(trim($currentAuditType));
+        $currentCaServiceId = (int)$currentCaServiceId;
+        
+        if (empty($customerId) || $currentCaServiceId <= 0) {
             return 0;
         }
 
-        // Use same logic as customerAccount.php
-        if ($currentAuditType === 'SA-I') {
-            // Get all SA-I services for this customer, ordered by service_id
-            $allQuery = "SELECT service FROM service_type_sai WHERE customer_id = :cust ORDER BY service ASC";
-            $stmt = $db->prepare($allQuery);
-            $stmt->bindParam(':cust', $customerId, PDO::PARAM_INT);
-            $stmt->execute();
-            $allServices = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        try {
+            $currentServiceId = 0;
+            $svcQuery = null;
 
-            foreach ($allServices as $idx => $row) {
-                if ((int)$row['service'] === $currentServiceId) {
-                    $cycleIndex = $idx;
-                    break;
+            if ($currentAuditType === 'CA') {
+                $svcQuery = "SELECT service FROM service_type_ca WHERE ca_id = :ca_id";
+            } elseif ($currentAuditType === 'SA-I') {
+                $svcQuery = "SELECT service FROM service_type_sai WHERE sai_id = :ca_id";
+            } elseif ($currentAuditType === 'SA-II') {
+                $svcQuery = "SELECT service FROM service_type_saii WHERE saii_id = :ca_id";
+            } elseif ($currentAuditType === 'RC') {
+                $svcQuery = "SELECT service FROM service_type_rc WHERE rc_id = :ca_id";
+            }
+
+            if ($svcQuery !== null) {
+                $stmt = $db->prepare($svcQuery);
+                $stmt->bindParam(':ca_id', $currentCaServiceId, PDO::PARAM_INT);
+                $stmt->execute();
+                $svcRow = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($svcRow && isset($svcRow['service'])) {
+                    $currentServiceId = (int)$svcRow['service'];
                 }
             }
-        } elseif ($currentAuditType === 'SA-II') {
-            // Get all SA-II services for this customer
-            $allQuery = "SELECT service FROM service_type_saii WHERE customer_id = :cust ORDER BY service ASC";
-            $stmt = $db->prepare($allQuery);
-            $stmt->bindParam(':cust', $customerId, PDO::PARAM_INT);
-            $stmt->execute();
-            $allServices = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            foreach ($allServices as $idx => $row) {
-                if ((int)$row['service'] === $currentServiceId) {
-                    $cycleIndex = $idx;
-                    break;
+            if ($currentServiceId === 0) {
+                return 0;
+            }
+
+            if ($currentAuditType === 'SA-I') {
+                $allQuery = "SELECT service FROM service_type_sai WHERE customer_id = :cust ORDER BY service ASC";
+                $stmt = $db->prepare($allQuery);
+                $stmt->bindParam(':cust', $customerId, PDO::PARAM_INT);
+                $stmt->execute();
+                $allServices = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                foreach ($allServices as $idx => $row) {
+                    if ((int)$row['service'] === $currentServiceId) {
+                        $cycleIndex = $idx;
+                        break;
+                    }
+                }
+            } elseif ($currentAuditType === 'SA-II') {
+                $allQuery = "SELECT service FROM service_type_saii WHERE customer_id = :cust ORDER BY service ASC";
+                $stmt = $db->prepare($allQuery);
+                $stmt->bindParam(':cust', $customerId, PDO::PARAM_INT);
+                $stmt->execute();
+                $allServices = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                foreach ($allServices as $idx => $row) {
+                    if ((int)$row['service'] === $currentServiceId) {
+                        $cycleIndex = $idx;
+                        break;
+                    }
+                }
+            } elseif ($currentAuditType === 'RC') {
+                $allQuery = "SELECT service_id FROM service WHERE customer_id = :cust AND service_type = 'RC' ORDER BY service_id ASC";
+                $stmt = $db->prepare($allQuery);
+                $stmt->bindParam(':cust', $customerId, PDO::PARAM_INT);
+                $stmt->execute();
+                $allServices = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                foreach ($allServices as $idx => $row) {
+                    if ((int)$row['service_id'] === $currentServiceId) {
+                        $cycleIndex = $idx;
+                        break;
+                    }
                 }
             }
-        } elseif ($currentAuditType === 'RC') {
-            // Get all RC services for this customer
-            $allQuery = "SELECT service_id FROM service WHERE customer_id = :cust AND service_type = 'RC' ORDER BY service_id ASC";
-            $stmt = $db->prepare($allQuery);
-            $stmt->bindParam(':cust', $customerId, PDO::PARAM_INT);
-            $stmt->execute();
-            $allServices = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            foreach ($allServices as $idx => $row) {
-                if ((int)$row['service_id'] === $currentServiceId) {
-                    $cycleIndex = $idx;
-                    break;
-                }
-            }
+        } catch (Exception $e) {
+            $cycleIndex = 0;
         }
-        // For CA, cycleIndex stays 0 (first cycle)
-
-    } catch (Exception $e) {
-        $cycleIndex = 0;
+        
+        return $cycleIndex;
     }
-    
-    return $cycleIndex;
 }
 
 /**
@@ -191,16 +183,16 @@ function countCompletedRCs(PDO $db, $customerId, $currentAuditType, $currentCaSe
  * @param int $cycleNumber The cycle number (1, 2, 3, ...)
  * @return DateTime The start date of that cycle
  */
-function getCycleStartDate(DateTime $caCdcDate, int $cycleNumber)
-{
-    $cycleStart = clone $caCdcDate;
-    $monthsToAdd = ($cycleNumber - 1) * 36;
-    
-    if ($monthsToAdd > 0) {
-        $cycleStart->modify('+' . $monthsToAdd . ' months');
+if (!function_exists('getCycleStartDate')) {
+    function getCycleStartDate(DateTime $caCdcDate, int $cycleNumber)
+    {
+        $cycleStart = clone $caCdcDate;
+        $monthsToAdd = ($cycleNumber - 1) * 36;
+        if ($monthsToAdd > 0) {
+            $cycleStart->modify('+' . $monthsToAdd . ' months');
+        }
+        return $cycleStart;
     }
-    
-    return $cycleStart;
 }
 
 /**
@@ -211,105 +203,92 @@ function getCycleStartDate(DateTime $caCdcDate, int $cycleNumber)
  * @param string $auditType Current audit type (CA, SA-I, SA-II, RC)
  * @return array [nextAssessmentDate, validityUntilDate, nextAuditLabel]
  */
-function computeCertificateCycleDates($caCdcDateStr, $cycleNumber, $auditType)
-{
-    if (empty($caCdcDateStr)) {
-        return [null, null, ''];
-    }
+if (!function_exists('computeCertificateCycleDates')) {
+    function computeCertificateCycleDates($caBaseDateStr, $cycleNumber, $auditType)
+    {
+        if (empty($caBaseDateStr)) {
+            return [null, null, ''];
+        }
 
-    try {
-        $caCdcDate = new DateTime($caCdcDateStr);
-    } catch (Exception $e) {
-        return [null, null, ''];
-    }
+        try {
+            $caCdcDate = new DateTime($caBaseDateStr);
+        } catch (Exception $e) {
+            return [null, null, ''];
+        }
 
-    $auditType = strtoupper(trim($auditType));
-    $cycleNumber = max(1, (int)$cycleNumber);
-    
-    // Get the start date of the current cycle
-    $cycleStart = getCycleStartDate($caCdcDate, $cycleNumber);
-    
-    // Validity is ALWAYS cycle_start + 36 months - 1 day (same for all audit types in a cycle)
-    $validityDate = clone $cycleStart;
-    $validityDate->modify('+36 months');
-    $validityDate->modify('-1 day');
-    
-    // Next assessment date and label based on audit type
-    $nextAssessmentDate = clone $cycleStart;
-    $nextAuditLabel = '';
-    
-    switch ($auditType) {
-        case 'CA':
-            // CA → next is 1st Surveillance (cycle_start + 12 months - 1 day)
-            $nextAssessmentDate->modify('+12 months');
-            $nextAssessmentDate->modify('-1 day');
-            $nextAuditLabel = '1st surveillance';
-            break;
-            
-        case 'SA-I':
-            // SA-I → next is 2nd Surveillance (cycle_start + 24 months - 1 day)
-            $nextAssessmentDate->modify('+24 months');
-            $nextAssessmentDate->modify('-1 day');
-            $nextAuditLabel = '2nd surveillance';
-            break;
-            
-        case 'SA-II':
-            // SA-II → next is Re-Certification (cycle_start + 36 months - 1 day)
-            $nextAssessmentDate->modify('+36 months');
-            $nextAssessmentDate->modify('-1 day');
-            $nextAuditLabel = 'Re-Certification';
-            break;
-            
-        case 'RC':
-            // RC → next is 1st Surveillance of NEXT cycle
-            // Next cycle start = current cycle start + 36 months
-            // 1st Surveillance = next cycle start + 12 months - 1 day
-            $nextCycleStart = clone $cycleStart;
-            $nextCycleStart->modify('+36 months');
-            $nextAssessmentDate = clone $nextCycleStart;
-            $nextAssessmentDate->modify('+12 months');
-            $nextAssessmentDate->modify('-1 day');
-            $nextAuditLabel = '1st surveillance';
-            
-            // For RC, validity extends to end of NEXT cycle
-            $validityDate = clone $nextCycleStart;
-            $validityDate->modify('+36 months');
-            $validityDate->modify('-1 day');
-            break;
-            
-        default:
-            // Default to 1st surveillance
-            $nextAssessmentDate->modify('+12 months');
-            $nextAssessmentDate->modify('-1 day');
-            $nextAuditLabel = '1st surveillance';
-    }
+        $auditType = strtoupper(trim($auditType));
+        $cycleNumber = max(1, (int)$cycleNumber);
+        
+        $cycleStart = getCycleStartDate($caCdcDate, $cycleNumber);
+        
+        $validityDate = clone $cycleStart;
+        $validityDate->modify('+36 months');
+        $validityDate->modify('-1 day');
+        
+        $nextAssessmentDate = clone $cycleStart;
+        $nextAuditLabel = '';
+        
+        switch ($auditType) {
+            case 'CA':
+                $nextAssessmentDate->modify('+12 months');
+                $nextAssessmentDate->modify('-1 day');
+                $nextAuditLabel = '1st surveillance';
+                break;
+            case 'SA-I':
+                $nextAssessmentDate->modify('+24 months');
+                $nextAssessmentDate->modify('-1 day');
+                $nextAuditLabel = '2nd surveillance';
+                break;
+            case 'SA-II':
+                $nextAssessmentDate->modify('+36 months');
+                $nextAssessmentDate->modify('-1 day');
+                $nextAuditLabel = 'Re-Certification';
+                break;
+            case 'RC':
+                $nextCycleStart = clone $cycleStart;
+                $nextCycleStart->modify('+36 months');
+                $nextAssessmentDate = clone $nextCycleStart;
+                $nextAssessmentDate->modify('+12 months');
+                $nextAssessmentDate->modify('-1 day');
+                $nextAuditLabel = '1st surveillance';
+                $validityDate = clone $nextCycleStart;
+                $validityDate->modify('+36 months');
+                $validityDate->modify('-1 day');
+                break;
+            default:
+                $nextAssessmentDate->modify('+12 months');
+                $nextAssessmentDate->modify('-1 day');
+                $nextAuditLabel = '1st surveillance';
+        }
 
-    return [$nextAssessmentDate, $validityDate, $nextAuditLabel];
+        return [$nextAssessmentDate, $validityDate, $nextAuditLabel];
+    }
 }
 
-function resolveNextAuditType($auditType, $nextAuditTypeRaw)
-{
-    $auditType = strtoupper(trim((string) $auditType));
-    $nextAuditTypeRaw = strtoupper(trim((string) $nextAuditTypeRaw));
+if (!function_exists('resolveNextAuditType')) {
+    function resolveNextAuditType($auditType, $nextAuditTypeRaw)
+    {
+        $auditType = strtoupper(trim((string) $auditType));
+        $nextAuditTypeRaw = strtoupper(trim((string) $nextAuditTypeRaw));
 
-    $validStages = ['CA', 'SA-I', 'SA-II', 'RC'];
+        $validStages = ['CA', 'SA-I', 'SA-II', 'RC'];
 
-    if (in_array($nextAuditTypeRaw, $validStages, true)) {
-        return $nextAuditTypeRaw;
-    }
+        if (in_array($nextAuditTypeRaw, $validStages, true)) {
+            return $nextAuditTypeRaw;
+        }
 
-    // Derive next stage if not provided
-    switch ($auditType) {
-        case 'CA':
-            return 'SA-I';
-        case 'SA-I':
-            return 'SA-II';
-        case 'SA-II':
-            return 'RC';
-        case 'RC':
-            return 'SA-I';
-        default:
-            return $auditType;
+        switch ($auditType) {
+            case 'CA':
+                return 'SA-I';
+            case 'SA-I':
+                return 'SA-II';
+            case 'SA-II':
+                return 'RC';
+            case 'RC':
+                return 'SA-I';
+            default:
+                return $auditType;
+        }
     }
 }
 
@@ -609,6 +588,7 @@ if (strlen($certifyInfo['customer_address']) > 29 && strlen($certifyInfo['custom
 }
 
 // Extend the TCPDF class to create custom Header and Footer
+if (!class_exists('MYPDF')) {
 class MYPDF extends TCPDF {
 
     protected $processId = 0;
@@ -649,6 +629,7 @@ class MYPDF extends TCPDF {
 //        $this->Cell(0, 10, 'Page '.$this->getAliasNumPage().'/'.$this->getAliasNbPages(), 0, false, 'C', 0, '', 0, false, 'T', 'M');
     }
 
+}
 }
 
 // create new PDF document
@@ -702,6 +683,77 @@ if ($cdcInfo['next_audit_type'] == 'SA-II') {
 
 // add a page
 $pdf->AddPage();
+
+// Set certificate background using provided JPG/PNG/PDF (prefer images for reliability)
+// Only apply background when explicitly requested (e.g., mail flow sets use_bg=1)
+$useBg = isset($_POST['use_bg']) && (int)$_POST['use_bg'] === 1;
+$certBgJpg = __DIR__ . '/aitfImages/cert.jpg';
+$certBgPng = __DIR__ . '/aitfImages/cert_bg.png'; // optional pre-converted asset
+$certBgPdf = __DIR__ . '/aitfImages/cert bg.pdf';
+$certBgPath = null;
+$imgType = '';
+
+// Normalize paths for TCPDF on Windows (forward slashes)
+if ($useBg) {
+    if (file_exists($certBgJpg)) {
+        $certBgJpg = str_replace('\\', '/', realpath($certBgJpg));
+    }
+    if (file_exists($certBgPng)) {
+        $certBgPng = str_replace('\\', '/', realpath($certBgPng));
+    }
+    if (file_exists($certBgPdf)) {
+        $certBgPdf = str_replace('\\', '/', realpath($certBgPdf));
+    }
+}
+
+// 1) Prefer JPG if provided
+if ($useBg && $certBgJpg && file_exists($certBgJpg) && is_readable($certBgJpg)) {
+    $certBgPath = $certBgJpg;
+    $imgType = 'JPG';
+}
+
+// 2) Else PNG asset if present
+if ($useBg && !$certBgPath && $certBgPng && file_exists($certBgPng) && is_readable($certBgPng)) {
+    $certBgPath = $certBgPng;
+    $imgType = 'PNG';
+}
+
+// 3) Else convert PDF first page to PNG if Imagick available
+if ($useBg && !$certBgPath && $certBgPdf && file_exists($certBgPdf) && is_readable($certBgPdf) && extension_loaded('imagick')) {
+    try {
+        $im = new Imagick();
+        $im->setResolution(300, 300);
+        $im->readImage($certBgPdf . '[0]');
+        $im->setImageFormat('png');
+        $tmpPng = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'cert_bg_' . md5($certBgPdf . filemtime($certBgPdf)) . '.png';
+        if (!file_exists($tmpPng)) {
+            $im->writeImage($tmpPng);
+        }
+        $certBgPath = $tmpPng;
+        $imgType = 'PNG';
+    } catch (Exception $e) {
+        $certBgPath = null; // will fall back below
+        error_log('CERT BG: imagick conversion failed: ' . $e->getMessage());
+    }
+}
+
+// 4) Else fall back to PDF directly (TCPDF can render if GhostScript/Imagick available)
+if ($useBg && !$certBgPath && $certBgPdf && file_exists($certBgPdf) && is_readable($certBgPdf)) {
+    $certBgPath = $certBgPdf;
+    $imgType = ''; // let TCPDF auto-detect PDF
+}
+
+if ($useBg && $certBgPath && file_exists($certBgPath)) {
+    $bMargin = $pdf->getBreakMargin();
+    $auto_page_break = $pdf->getAutoPageBreak();
+    $pdf->SetAutoPageBreak(false, 0);
+    $pdf->Image($certBgPath, 0, 0, $pdf->getPageWidth(), $pdf->getPageHeight(), $imgType ?: '', '', '', false, 300, '', false, false, 0, true, false, false);
+    $pdf->SetAutoPageBreak($auto_page_break, $bMargin);
+    $pdf->setPageMark();
+} else if ($useBg) {
+    error_log('CERT BG: background file not applied. Checked PNG=' . ($certBgPng ?? '') . ' PDF=' . ($certBgPdf ?? ''));
+}
+
 $html = '<br><br><br><br><p  style="text-align: center; text-justify: inter-word;"><font size="16" text-align: center;><b>Certification Awarded to</b></font><br><br>
         <font size="19" text-align: center;><b>' . $certifyInfo['customer_name'] . '</b></font>
         <br>
