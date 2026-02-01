@@ -30,6 +30,16 @@ require_once('tcpdf_include.php');
 include_once './dbConnect.php';
 date_default_timezone_set('Asia/Kolkata');
 
+$mailConfig = [
+    'host' => 'smtpout.secureserver.net',
+    'port' => 587,
+    'secure' => 'tls',
+    'username' => 'certification@aitf.co.in',
+    'password' => 'foroffice@aitf1122',
+    'from_email' => 'certification@aitf.co.in',
+    'from_name' => 'AITF Intimation'
+];
+
 // buffer output to avoid TCPDF header issues if any notices/whitespace are emitted
 ob_start();
 
@@ -112,13 +122,16 @@ if (isset($_POST['action']) && !empty($_POST['action'])) {
 $LetterParamJSON = new stdClass();
 $LetterParamJSON->dummyValue = "";
 $mailBodyPart = "";
+$letterDisplayName = $lettertype;
+$statusWord = 'pending action';
 
 if ($lettertype == "Suspension Reminder") {
 	$servicedesc = "Surveillance audit due";
 	$htmlFormatFilePath = "./Initimation_PDF_Formats/SuspensionReminder.txt";
 	$pdfTitle = "Sureillance Audit Due";
-	$mailBodyPart = '<p>Hi ' . htmlspecialchars($customer['customer_name'], ENT_QUOTES, 'UTF-8') . ',</p>'
-        . '<p>This is to inform you that your management system certificate is <strong>approaching its expiry date</strong>, as per our records.</p>'
+	$letterDisplayName = 'Suspension Reminder';
+	$statusWord = 'suspension';
+	$mailBodyPart = '<p>This is to inform you that your management system certificate is <strong>approaching its expiry date</strong>, as per our records.</p>'
         . '<p>To ensure continuity of certification, you are required to <strong>inform us immediately</strong> so that the necessary <strong>audit can be planned and conducted within the stipulated timeline</strong>.</p>'
         . '<p>Please note that <strong>all relevant details regarding the due audit, scope, and validity period are clearly mentioned in the attached Due Letter</strong> for your reference.</p>'
         . '<p>We request you to review the attached document carefully and confirm your availability at the earliest to avoid any lapse in certification.</p>'
@@ -148,7 +161,8 @@ else if ($lettertype == "Suspend Letter") {
     $servicedesc = "Suspension of ISO 9001 Certificate";
 	$htmlFormatFilePath = "./Initimation_PDF_Formats/SuspendLetter.txt";
 	$pdfTitle = "Sureillance Suspension letter";
-	$mailBodyPart = "<p>Your Suspension Of ISO 9001 Certificate has been sent, please find an attachment.</p><br>";
+	$letterDisplayName = 'Suspend Letter';
+	$statusWord = 'suspension';
 	
 	//build require parameters
 	$NextDueDate = date("d.m.Y", strtotime('+4 month', strtotime($date)));
@@ -168,7 +182,8 @@ else if($lettertype == "Withdrawal Reminder"){
 	$servicedesc = "Reminder for Withdrawal of ISO 9001 Certificate";
 	$htmlFormatFilePath = "./Initimation_PDF_Formats/WithdrawalReminder.txt";
 	$pdfTitle = "Sureillance Withdrawal Reminder";
-	$mailBodyPart = "<p>Your ISO 9001 Certificate is about to Withdraw, please find an attachment.</p><br>";
+	$letterDisplayName = 'Withdrawal Reminder';
+	$statusWord = 'withdrawal review';
 	
 	//build require parameters
 	$NextDueDate = date("d.m.Y", strtotime('+2 month', strtotime($date)));
@@ -188,7 +203,8 @@ else if($lettertype == "Withdraw Letter"){
 	$servicedesc = "Withdrawn Of ISO 9001 Certificate";
 	$htmlFormatFilePath = "./Initimation_PDF_Formats/WithdrawalLetter.txt";
 	$pdfTitle = "Sureillance Withdrawal Letter";
-	$mailBodyPart = "<p>Your withdrawn Of ISO 9001 Certificate has been sent, please find an attachment.</p><br>";
+	$letterDisplayName = 'Withdraw Letter';
+	$statusWord = 'withdrawal';
 	
 	//build require parameters
 	$PrevDueDate = date("d.m.Y", strtotime('-2 month', strtotime($date)));
@@ -206,7 +222,8 @@ else if($lettertype == "1st Reminder"){
 	$servicedesc = "1st Reminder for Recertification audit due";
 	$htmlFormatFilePath = "./Initimation_PDF_Formats/FirstRCReminder.txt";
 	$pdfTitle = "1st RC Reminder";
-	$mailBodyPart = "<p>Your ISO 9001 Certificate is about to expire, please find an attachment.</p><br>";
+	$letterDisplayName = '1st Reminder';
+	$statusWord = 'recertification reminder';
 	
 	//build require parameters
 	$reg_date = date("d.m.Y", strtotime($customer['certification_stage_date']));
@@ -227,7 +244,8 @@ else if($lettertype == "2nd Reminder"){
 	$servicedesc = "2nd Reminder for Recertification audit due";
 	$htmlFormatFilePath = "./Initimation_PDF_Formats/SecondRCReminder.txt";
 	$pdfTitle = "2nd RC Reminder";
-	$mailBodyPart = "<p>Your ISO 9001 Certificate is about to expire, please find an attachment.</p><br>";
+	$letterDisplayName = '2nd Reminder';
+	$statusWord = 'recertification reminder';
 	
 	//build require parameters
 	$PrevDueDate = date("d.m.Y", strtotime('-1 month', strtotime($date)));
@@ -247,7 +265,9 @@ else if($lettertype == "Expire Letter"){
 	$servicedesc = "Expiry of ISO certification";
 	$htmlFormatFilePath = "./Initimation_PDF_Formats/ExpireLetter.txt";
 	$pdfTitle = "Expire Letter";
-	$mailBodyPart = "<p>Your ISO 9001 Certificate is expired, please find an attachment.</p><br>";
+	$letterDisplayName = 'Expire Letter';
+	$statusWord = 'expired status';
+
 	
 	//build require parameters
 	$PrevPrevDueDate = date("d.m.Y", strtotime('-2 month', strtotime($date)));
@@ -324,6 +344,20 @@ $pdf->AddPage();
 $pdf->writeHTML($html, true, false, true, false, '');
 $fileName = $lettertype . ".pdf";
 
+// Unified mail body (letter-specific name/status applied)
+$clientNameSafe = htmlspecialchars($customer['customer_name'], ENT_QUOTES, 'UTF-8');
+$letterNameSafe = htmlspecialchars($letterDisplayName, ENT_QUOTES, 'UTF-8');
+$attachmentNameSafe = htmlspecialchars($fileName, ENT_QUOTES, 'UTF-8');
+$statusWordSafe = htmlspecialchars($statusWord, ENT_QUOTES, 'UTF-8');
+$mailBodyPart = '<p>Dear ' . $clientNameSafe . ',</p>'
+    . '<p>We would like to inform you that your ISO certification is currently under <strong>' . $statusWordSafe . '</strong> due to pending certification requirements.</p>'
+    . '<p>Please find the attached <strong>' . $letterNameSafe . '</strong> for complete details, including the reason and the actions needed.</p>'
+    . '<p>Kindly review the letter and share your <strong>corrective action plan with supporting documents</strong> within the mentioned timeline. Once we receive and verify the required information, we will move ahead accordingly.</p>'
+    . '<p>If you have already completed the necessary actions, please ignore this email and send us the relevant documents for our review.</p>'
+    . '<p>We look forward to your support in resolving this at the earliest.</p>'
+    . '<p>Sincerely,<br>AITF Certification</p>'
+    . '<p>Attachment: ' . $attachmentNameSafe . '</p>';
+
 if($PageAction == "PreviewPDF"){
 	if (ob_get_length()) {
 		ob_end_clean();
@@ -334,15 +368,7 @@ else if($PageAction == "SendMail"){
 	require 'PHPMailer/PHPMailerAutoload.php';
 	$isAjaxRequest = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
 
-	if ($lettertype == "Suspension Reminder") {
-        $mailBody = '<html><body>' . $mailBodyPart . '</body></html>';
-    } else {
-        $mailBody = '<html><body><p>Dear Sir / Maam,</p>'
-            . $mailBodyPart
-            . '<p>Thanks,</p>'
-            . '<br>AITF-MCL'
-            . '<body></html>';
-    }
+		$mailBody = '<html><body>' . $mailBodyPart . '</body></html>';
 	$subject = $servicedesc .' - '. $customer['customer_name'];
 	$contactEmail = explode(',',$customer['email_id']);
 	$isMailSend = 0;
@@ -355,16 +381,7 @@ else if($PageAction == "SendMail"){
 	}
 	$pdf->Output($fullFilePath, 'F');
 
-	$mail = new PHPMailer;
-	$mail->isSMTP();
-	$mail->SMTPAutoTLS = false;
-	$mail->SMTPDebug = 0; // keep logs clean
-	$mail->Debugoutput = 'error_log';
-	$mail->Host = 'localhost';
-	$mail->Port = 25;
-	$mail->SMTPAuth = false;
-	$mail->SMTPSecure = false;
-	$mail->SMTPOptions = array(
+	$smtpOptions = array(
 		'ssl' => array(
 			'verify_peer' => false,
 			'verify_peer_name' => false,
@@ -372,36 +389,37 @@ else if($PageAction == "SendMail"){
 		)
 	);
 
-	$mail->setFrom('certification@aitf.co.in', 'AITF Intimation');
-	$mail->addReplyTo('certification@aitf.co.in', 'AITF Intimation');
-	$mail->addCustomHeader('Return-Path', 'certification@aitf.co.in');
-	$mail->Timeout = 8; // shorter timeout
-	$mail->SMTPKeepAlive = false;
+	$attempts = array(
+		array('host' => $mailConfig['host'], 'port' => $mailConfig['port'], 'secure' => $mailConfig['secure'], 'autotls' => true, 'auth' => true),
+		array('host' => 'localhost', 'port' => 25, 'secure' => '', 'autotls' => false, 'auth' => false),
+		array('host' => 'relay-hosting.secureserver.net', 'port' => 25, 'secure' => '', 'autotls' => false, 'auth' => false),
+	);
+
+	$applySmtpConfig = function(PHPMailer $mailer, array $cfg) use ($mailConfig, $smtpOptions) {
+		$mailer->isSMTP();
+		$mailer->SMTPDebug = 0;
+		$mailer->Debugoutput = 'error_log';
+		$mailer->Host = $cfg['host'];
+		$mailer->Hostname = $cfg['host'];
+		$mailer->Port = $cfg['port'];
+		$mailer->SMTPAuth = $cfg['auth'];
+		$mailer->SMTPSecure = $cfg['secure'] ?: false;
+		$mailer->SMTPAutoTLS = $cfg['autotls'];
+		if ($cfg['auth']) {
+			$mailer->Username = $mailConfig['username'];
+			$mailer->Password = $mailConfig['password'];
+		}
+		$mailer->SMTPOptions = $smtpOptions;
+		$mailer->CharSet = 'UTF-8';
+		$mailer->Timeout = 8;
+		$mailer->SMTPKeepAlive = false;
+	};
 
 	// Send email to client first
 	$clientMail = new PHPMailer;
-	$clientMail->isSMTP();
-	$clientMail->SMTPAutoTLS = false;
-	$clientMail->SMTPDebug = 0; // keep logs clean
-	$clientMail->Debugoutput = 'error_log';
-	$clientMail->Host = 'localhost';
-	$clientMail->Port = 25;
-	$clientMail->SMTPAuth = false;
-	$clientMail->SMTPSecure = false;
-	$clientMail->SMTPOptions = array(
-		'ssl' => array(
-			'verify_peer' => false,
-			'verify_peer_name' => false,
-			'allow_self_signed' => true
-		)
-	);
-
-	$clientMail->setFrom('certification@aitf.co.in', 'AITF Intimation');
-	$clientMail->addReplyTo('certification@aitf.co.in', 'AITF Intimation');
-	$clientMail->addCustomHeader('Return-Path', 'certification@aitf.co.in');
-	$clientMail->Timeout = 8; // shorter timeout
-	$clientMail->SMTPKeepAlive = false;
-
+	$clientMail->setFrom($mailConfig['from_email'], $mailConfig['from_name']);
+	$clientMail->addReplyTo($mailConfig['from_email'], $mailConfig['from_name']);
+	$clientMail->addCustomHeader('Return-Path', $mailConfig['from_email']);
 	foreach($contactEmail as $e)
 	{
 		if($e != NULL) $clientMail->AddAddress($e);
@@ -411,40 +429,57 @@ else if($PageAction == "SendMail"){
 	$clientMail->Body=$mailBody;
 	$clientMail->AddAttachment($fullFilePath , $fileName);
 
-	if(!$clientMail->send()) {
+	$clientSent = false;
+	$clientErrors = array();
+	$successfulAttempt = null;
+	foreach ($attempts as $attempt) {
+		$applySmtpConfig($clientMail, $attempt);
+		$clientSent = $clientMail->send();
+		if ($clientSent) {
+			$successfulAttempt = $attempt;
+			break;
+		}
+		$clientErrors[] = '[' . $attempt['host'] . ':' . $attempt['port'] . ' secure=' . ($attempt['secure'] ?: 'none') . ' auth=' . ($attempt['auth'] ? 'yes' : 'no') . '] ' . $clientMail->ErrorInfo;
+		error_log('INTIMATION CLIENT MAIL FAIL: ' . end($clientErrors));
+		$clientMail->smtpClose();
+	}
+
+	if(!$clientSent) {
 		$isMailSend = 0;
-		$response['message'] = 'Mailer Error: ' . $clientMail->ErrorInfo;<div class=""></div>
+		$response['message'] = 'Mailer Error: ' . implode(' | ', $clientErrors);
 	} else {
 		$isMailSend = 1;
 		
 		// Send simple email to office
 		$officeMail = new PHPMailer;
-		$officeMail->isSMTP();
-		$officeMail->SMTPAutoTLS = false;
-		$officeMail->SMTPDebug = 0;
-		$officeMail->Debugoutput = 'error_log';
-		$officeMail->Host = 'localhost';
-		$officeMail->Port = 25;
-		$officeMail->SMTPAuth = false;
-		$officeMail->SMTPSecure = false;
-		$officeMail->SMTPOptions = array(
-			'ssl' => array(
-				'verify_peer' => false,
-				'verify_peer_name' => false,
-				'allow_self_signed' => true
-			)
-		);
-
-		$officeMail->setFrom('certification@aitf.co.in', 'AITF Intimation');
-		$officeMail->addReplyTo('certification@aitf.co.in', 'AITF Intimation');
-		$officeMail->addCustomHeader('Return-Path', 'certification@aitf.co.in');
-		$officeMail->Timeout = 8;
-		$officeMail->SMTPKeepAlive = false;
+		$officeMail->setFrom($mailConfig['from_email'], $mailConfig['from_name']);
+		$officeMail->addReplyTo($mailConfig['from_email'], $mailConfig['from_name']);
+		$officeMail->addCustomHeader('Return-Path', $mailConfig['from_email']);
 		$officeMail->addAddress('certification@aitf.co.in');
 		$officeMail->isHTML(true);
 		$officeMail->Subject = 'Letter Sent Confirmation';
-		$officeMail->Body = '<html><body>Following letter has sent to ' . htmlspecialchars($customer['customer_name'], ENT_QUOTES, 'UTF-8') . '</body></html>';
-		$officeMail->send();
+		$officeRecipients = implode(', ', array_filter($contactEmail));
+		$officeMail->addAttachment($fullFilePath, $fileName);
+		$officeMail->Body = '<html><body>'
+			. '<p>Client letter sent successfully.</p>'
+			. '<p><strong>Customer:</strong> ' . htmlspecialchars($customer['customer_name'], ENT_QUOTES, 'UTF-8') . '<br>'
+			. '<strong>Recipients:</strong> ' . htmlspecialchars($officeRecipients, ENT_QUOTES, 'UTF-8') . '<br>'
+			. '<strong>Subject:</strong> ' . htmlspecialchars($subject, ENT_QUOTES, 'UTF-8') . '</p>'
+			. '<p><strong>Message sent to client:</strong></p>'
+			. $mailBody
+			. '<p>Attached: ' . htmlspecialchars($fileName, ENT_QUOTES, 'UTF-8') . '</p>'
+			. '</body></html>';
+
+		$officeSent = false;
+		foreach ($attempts as $attempt) {
+			$applySmtpConfig($officeMail, $attempt);
+			$officeSent = $officeMail->send();
+			if ($officeSent) {
+				break;
+			}
+			error_log('INTIMATION OFFICE MAIL FAIL: [' . $attempt['host'] . ':' . $attempt['port'] . ' secure=' . ($attempt['secure'] ?: 'none') . ' auth=' . ($attempt['auth'] ? 'yes' : 'no') . '] ' . $officeMail->ErrorInfo);
+			$officeMail->smtpClose();
+		}
 	}
 
 	//check if mail send successfully
@@ -462,8 +497,9 @@ else if($PageAction == "SendMail"){
 	{
 		$mailSend = "UPDATE ca_service_dates SET sent_date = :date, status = 'sent' WHERE  action_id  = :id";
 		$statement = $db->prepare($mailSend);
-		$statement->bindParam(":id",$actionId);
-		$statement->bindParam(":date", date("Y-m-d"));
+		$sentDate = date("Y-m-d");
+		$statement->bindParam(":id", $actionId);
+		$statement->bindParam(":date", $sentDate);
 		$statement->execute();
 		$response['success'] = true;
 		$response['message'] = 'Mail sent successfully.';
@@ -472,7 +508,7 @@ else if($PageAction == "SendMail"){
 			echo json_encode($response);
 			exit;
 		} else {
-			echo '<script> localStorage.setItem("isMailSend", "Completed"); window.close(); </script>';
+			echo '<script> localStorage.setItem("isMailSend", ' . json_encode($response['message']) . '); window.close(); </script>';
 		}
 	}
 		
