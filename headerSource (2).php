@@ -2,7 +2,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>-->
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.bundle.min.js" type="text/javascript"></script>
+<!-- Required JS: jQuery → Popper → Bootstrap -->
+<script src="js/outer/jquery.min.js"></script>
+<script src="js/outer/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" type="text/javascript"></script>
 <style type="text/css">
     @media all and (min-width: 992px) {
         /*.navbar{ padding-top: 0; padding-bottom: 0; }*/
