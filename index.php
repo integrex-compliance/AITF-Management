@@ -1873,16 +1873,22 @@ session_start();
                     document.addEventListener('DOMContentLoaded', function() {
                         const updateTime = document.querySelector('.update-time');
                         const refreshBtn = document.querySelector('.refresh-btn');
+                        if (!updateTime) {
+                            console.warn('update-time element not found; skipping timestamp update.');
+                            return;
+                        }
                         
                         function updateTimestamp() {
                             const now = new Date();
                             updateTime.textContent = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                             
                             // Add a visual feedback for refresh
-                            refreshBtn.innerHTML = '<i class="fas fa-check"></i> Updated';
-                            setTimeout(() => {
-                                refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh';
-                            }, 2000);
+                            if (refreshBtn) {
+                                refreshBtn.innerHTML = '<i class="fas fa-check"></i> Updated';
+                                setTimeout(() => {
+                                    refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh';
+                                }, 2000);
+                            }
                         }
                         
                         // Initial update
