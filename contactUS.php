@@ -1025,7 +1025,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <input class="form-control" type="text" id="mobile" name="mobile" value="<?php echo htmlspecialchars($formData['mobile'], ENT_QUOTES, 'UTF-8'); ?>" placeholder="+91 9881691012" required>
                         </div>
                         <div>
-                            <label class="form-label">Services Interested In*</label>
+                            <label class="form-label"> Select Services Interested In*</label>
                             <div class="services-list">
                                 <?php foreach ($serviceOptions as $service): ?>
                                     <label class="service-chip">
