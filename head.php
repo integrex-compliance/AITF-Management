@@ -1,5 +1,7 @@
 <?php
 ?>
+<link rel="shortcut icon" href="aitfImages/aitfasset/updatedfavicon.png" type="image/png">
+<link rel="apple-touch-icon" href="aitfImages/aitfasset/updatedfavicon.png">
 <link media="all" type="text/css" rel="stylesheet" href="css/bootstrap/css/bootstrap.min.css">
 <script src="js/moment.min.js"></script>
 <script src="css/bootstrap/js/jquery.min.js"></script>
