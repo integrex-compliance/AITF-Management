@@ -11,8 +11,8 @@
     <meta name="author" content="">
 
     <!-- Site Icons -->
-    <link rel="shortcut icon" href="aitfImages/fav.ico" type="aitfImages/fav.ico" />
-    <link rel="apple-touch-icon" href="#" />
+    <link rel="shortcut icon" href="aitfImages/aitfasset/updatedfavicon.png" type="image/png" />
+    <link rel="apple-touch-icon" href="aitfImages/aitfasset/updatedfavicon.png" />
 
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="css/outer/bootstrap.min.css" />
