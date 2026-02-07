@@ -1,10 +1,5 @@
+---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/aitfgroup/public_html/
-    - /bin/rsync -rlvz --delete \
-      --no-perms --no-owner --no-group \
-      --exclude 'uploads/' \
-      --exclude 'notification/' \
-      --exclude '.git/' \
-      ./ $DEPLOYPATH
-0
+    - export DEPLOYPATH=/home/aitfgroup/public_html
+    - /bin/cp -R * $DEPLOYPATH
