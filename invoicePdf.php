@@ -53,6 +53,17 @@ $statement = $db->prepare($consultingFirm);
 $statement->execute();
 $firmInfo = $statement->fetch();
 $firmSign = $firmInfo["signature"];
+
+// Update to use PNG signature if JPG doesn't exist
+if (!empty($firmSign) && !file_exists(__DIR__ . '/' . $firmSign)) {
+    $pngVersion = str_replace('.jpg', '.png', $firmSign);
+    if (file_exists(__DIR__ . '/' . $pngVersion)) {
+        $firmSign = $pngVersion;
+        // Update database to use PNG version
+        $updateSign = $db->prepare("UPDATE consulting_firm SET signature = ? WHERE firm_id = '1'");
+        $updateSign->execute([$firmSign]);
+    }
+}
 if (isset($_POST['invoiceId']) && !empty($_POST['invoiceId'])) {
     $invoiceid = $_POST['invoiceId'];
     if ($_POST["taxtype"] == "IGST") {
@@ -246,11 +257,46 @@ if (isset($_POST['invoiceId']) && !empty($_POST['invoiceId'])) {
 if (!empty($firmSign)) {
     $candidate = $firmSign;
     if (!file_exists($candidate)) {
+        // Try relative path from document root
+        $documentRoot = rtrim($_SERVER['DOCUMENT_ROOT'], '/\\');
+        $candidate = $documentRoot . '/' . ltrim($firmSign, '/\\');
+    }
+    if (!file_exists($candidate)) {
+        // Try relative path from current directory
+        $candidate = __DIR__ . '/' . $firmSign;
+    }
+    if (!file_exists($candidate)) {
+        // Try without leading slash from current directory
         $candidate = __DIR__ . '/' . ltrim($firmSign, '/\\');
     }
+    if (!file_exists($candidate)) {
+        // Try to extract filename and look in signatures directory
+        $filename = basename($firmSign);
+        $candidate = __DIR__ . '/uploads/signatures/' . $filename;
+    }
+    if (!file_exists($candidate)) {
+        // Try PNG version if original was JPG
+        if (pathinfo($firmSign, PATHINFO_EXTENSION) == 'jpg') {
+            $pngFile = pathinfo($firmSign, PATHINFO_FILENAME) . '.png';
+            $candidate = __DIR__ . '/uploads/invoiceSign/' . $pngFile;
+        }
+    }
+    if (!file_exists($candidate)) {
+        // Try any available signature file from signatures directory as fallback
+        $signaturesDir = __DIR__ . '/uploads/signatures/';
+        if (is_dir($signaturesDir)) {
+            $files = glob($signaturesDir . '*.{jpg,png}', GLOB_BRACE);
+            if (!empty($files)) {
+                $candidate = $files[0]; // Use first available signature
+            }
+        }
+    }
     if (file_exists($candidate)) {
+        // Convert to proper URL format for TCPDF
         $signaturePath = str_replace('\\', '/', $candidate);
     }
+    // Debug: Log signature path resolution (remove in production)
+    error_log("Signature Debug - Original: $firmSign, Final Path: " . ($signaturePath ?? 'NOT FOUND'));
 }
 
 // Extend the TCPDF class to create custom Header and Footer
@@ -411,7 +457,7 @@ $html = '
     Web – www.aitf.co.in <br/> 
     </td>
     <td style="text-align:right;border-bottom:0.1px solid white"><b>AITF MANAGEMENT CERTIFICATION LIMITED.</b><br/>
-    ' . ($signaturePath !== '' ? '<img src="' . $signaturePath . '" alt="logo" height="50" width="90"><br/>' : '') . '
+    ' . (!empty($signaturePath) && file_exists($signaturePath) ? '<img src="' . $signaturePath . '" alt="signature" height="50" width="90"><br/>' : '') . '
     Administrator
     </td>
     </tr>

@@ -7,3 +7,4 @@ deployment:
       --exclude 'notification/' \
       --exclude '.git/' \
       ./ $DEPLOYPATH
+0

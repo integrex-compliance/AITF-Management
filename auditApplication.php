@@ -9,7 +9,7 @@ session_start();
 //============================================================+
 // File name   : example_003.php
 // Begin       : 2008-03-04
-// Last Update : 2013-05-14
+// Last Update : 2013-05-14g
 //
 // Description : Example 003 for TCPDF class
 //               Custom Header and Footer
