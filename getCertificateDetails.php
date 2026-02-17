@@ -17,13 +17,14 @@ if (isset($_GET['certificateNo']) && !empty($_GET['certificateNo'])) {
         $certNo = trim($_GET['certificateNo']);
         error_log("Looking for certificate: " . $certNo);
         
-        // First, try to get from customer_info itself (scope field)
+        // First, try to get from cdc_report_review_office_use (most accurate mapping for certificate_no -> ISO label)
         $sql0 = "SELECT 
-                    ci.scope as standard_name,
-                    ci.certification_stage_date as issue_date,
-                    NULL as expire_date
-                FROM customer_info ci
-                WHERE ci.certification_no = :certNo
+                    cu.iso_label as standard_name,
+                    cu.rev_date as issue_date,
+                    cu.expire_date as expire_date
+                FROM cdc_report_review_office_use cu
+                WHERE cu.certificate_no = :certNo
+                ORDER BY cu.id DESC
                 LIMIT 1";
         
         $statement0 = $db->prepare($sql0);
@@ -32,7 +33,7 @@ if (isset($_GET['certificateNo']) && !empty($_GET['certificateNo'])) {
         $certData = $statement0->fetch(PDO::FETCH_ASSOC);
         
         if ($certData && !empty($certData['standard_name'])) {
-            error_log("Found certificate data in customer_info table");
+            error_log("Found certificate data in cdc_report_review_office_use table");
         } else {
             $certData = null;
         }
@@ -220,12 +221,12 @@ if (isset($_GET['certificateNo']) && !empty($_GET['certificateNo'])) {
             }
         }
         
-        // Try certificate_print table as fallback
+        // Try certificate_print table as fallback (dates only; do not treat scope as standard name)
         if (!$certData) {
             error_log("Trying certificate_print table");
             
             $sql2 = "SELECT 
-                        cp.certificate_scope as standard_name,
+                        '' as standard_name,
                         cp.registration_date as issue_date,
                         cp.valid_until as expire_date
                     FROM certificate_print cp

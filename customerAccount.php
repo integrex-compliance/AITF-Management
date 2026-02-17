@@ -5870,10 +5870,6 @@
                                 } else {
                                     console.warn('WARNING: expire_date is empty in response');
                                 }
-                                
-                                // Update database with fetched values
-                                updateCertificateFields(response.data);
-                                
                                 console.log('=== CERTIFICATE DETAILS LOADED SUCCESSFULLY ===');
                             } else {
                                 console.error('ERROR: Response success is false or no data');
