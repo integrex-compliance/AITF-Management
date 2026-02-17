@@ -650,7 +650,7 @@
                         <div class="col-sm-6">
                             <div class="row" style="padding: 5px; padding-left: 20px">
                                 <div class="col-sm-10 ">
-                                    <textarea name="add-notes" style="color: black; background-color: #e3eaf3; border: none" rows="10" cols="50" class="form-group notebox saveChanges" data-column="comment" id="add-notes" placeholder="Add Notes"><?php
+                                    <textarea name="add-notes" style="color: black; background-color: #e3eaf3; border: none" rows="10" cols="50" class="form-group notebox saveChanges" data-column="comment" id="add-notes" placeholder="Add Notes" readonly><?php
                                         if (isset($clientInfo['comment'])) {
                                             $comment = trim($clientInfo['comment']);
                                             // Remove unwanted text like 'yhnj' and other gibberish
@@ -659,6 +659,9 @@
                                             echo $comment;
                                         }
                                         ?></textarea>
+                                    <div style="display: flex; justify-content: flex-end; margin-top: 6px;">
+                                        <button type="button" class="btn btn-xs btn-info" id="editSaveCommentBtn">Edit</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -6034,29 +6037,32 @@
 
         $(document).ready(function () {
             
-            // Initialize comment auto-save functionality
-            console.log('=== INITIALIZING COMMENT AUTO-SAVE ===');
+            // Initialize comment edit/save functionality
+            console.log('=== INITIALIZING COMMENT EDIT/SAVE ===');
             var $commentField = $('#add-notes');
+            var $commentBtn = $('#editSaveCommentBtn');
             console.log('Comment field found:', $commentField.length > 0 ? 'YES' : 'NO');
             
-            if ($commentField.length > 0) {
+            if ($commentField.length > 0 && $commentBtn.length > 0) {
                 console.log('Comment field ID:', $commentField.attr('id'));
                 console.log('Comment field classes:', $commentField.attr('class'));
                 console.log('Comment field data-column:', $commentField.attr('data-column'));
-                console.log('✓ Comment auto-save is ready');
+                console.log('✓ Comment edit/save is ready');
                 
-                var saveTimeout;
                 var isSaving = false;
+                var isEditing = false;
                 
-                // Add dedicated event handler for comment field - only on blur and with debounce
-                $commentField.on('blur', function() {
+                $commentField.prop('readonly', true);
+                $commentBtn.text('Edit');
+                
+                function saveComment() {
                     if (isSaving) {
                         console.log('Already saving, skipping...');
                         return;
                     }
                     
-                    console.log('>>> Comment field blur event triggered <<<');
-                    var commentValue = $(this).val().trim();
+                    console.log('>>> Saving comment <<<');
+                    var commentValue = $commentField.val();
                     var customerId = '<?php echo $_GET['customerid']; ?>';
                     
                     console.log('Comment Value Length:', commentValue.length);
@@ -6064,9 +6070,9 @@
                     
                     if (customerId) {
                         isSaving = true;
-                        var $element = $(this);
-                        var originalBg = $element.css('background-color');
-                        $element.css('background-color', '#fffacd');
+                        var originalBg = $commentField.css('background-color');
+                        $commentField.css('background-color', '#fffacd');
+                        $commentBtn.prop('disabled', true);
                         
                         $.ajax({
                             url: 'updateCustomer.php',
@@ -6085,44 +6091,54 @@
                                 console.log('Trimmed Response:', trimmedResponse);
                                 
                                 if (trimmedResponse.indexOf('success') !== -1) {
-                                    console.log('✓ Comment saved successfully to database');
-                                    $element.css('background-color', '#d4edda');
+                                    console.log(' Comment saved successfully to database');
+                                    $commentField.css('background-color', '#d4edda');
                                     setTimeout(function() {
-                                        $element.css('background-color', originalBg);
+                                        $commentField.css('background-color', originalBg);
                                     }, 1500);
+                                    
+                                    isEditing = false;
+                                    $commentField.prop('readonly', true);
+                                    $commentBtn.text('Edit');
                                 } else {
                                     console.error('✗ Comment save failed. Response:', response);
-                                    $element.css('background-color', '#f8d7da');
+                                    $commentField.css('background-color', '#f8d7da');
                                     alert('Failed to save comment. Server response: ' + response);
                                     setTimeout(function() {
-                                        $element.css('background-color', originalBg);
+                                        $commentField.css('background-color', originalBg);
                                     }, 2000);
                                 }
                                 isSaving = false;
+                                $commentBtn.prop('disabled', false);
                             },
                             error: function(xhr, status, error) {
                                 console.error('✗ AJAX Error:', status, error);
                                 console.error('XHR Status:', xhr.status);
                                 console.error('Response Text:', xhr.responseText);
-                                $element.css('background-color', '#f8d7da');
+                                $commentField.css('background-color', '#f8d7da');
                                 alert('Error saving comment: ' + error);
                                 setTimeout(function() {
-                                    $element.css('background-color', originalBg);
+                                    $commentField.css('background-color', originalBg);
                                 }, 2000);
                                 isSaving = false;
+                                $commentBtn.prop('disabled', false);
                             }
                         });
                     }
-                });
+                }
                 
-                // Add input event for auto-save after typing stops
-                $commentField.on('input', function() {
-                    clearTimeout(saveTimeout);
-                    var $element = $(this);
-                    saveTimeout = setTimeout(function() {
-                        console.log('Auto-save after typing stopped');
-                        $element.blur().focus();
-                    }, 2000);
+                $commentBtn.on('click', function() {
+                    if (isSaving) return;
+                    
+                    if (!isEditing) {
+                        isEditing = true;
+                        $commentField.prop('readonly', false);
+                        $commentBtn.text('Save');
+                        $commentField.focus();
+                        return;
+                    }
+                    
+                    saveComment();
                 });
             } else {
                 console.warn('✗ Comment field not found!');

@@ -30,7 +30,7 @@ $fullAddress = implode(', ', $addressParts);
 
 if (isset($_POST['editCustomerId']) && !empty($_POST['editCustomerId'])) {
     try {
-        $string = str_replace(' ', '', $_POST['addnotes']);
+        $string = isset($_POST['addnotes']) ? trim($_POST['addnotes']) : '';
         $updateCustomer = "UPDATE customer_info SET customer_name = :name, gstin_no = :gstinno, address = :address, contact_person = :person, contact = :contact, email_id = :email, scope = :scope, comment = :comment WHERE id = :id";
         $statement = $db->prepare($updateCustomer);
         $statement->bindParam(':name', $_POST['customerName']);
@@ -51,7 +51,7 @@ if (isset($_POST['editCustomerId']) && !empty($_POST['editCustomerId'])) {
     if (isset($_POST['customerName']) && !empty($_POST['customerName']) ) {
         try {
 //            echo "comment value -> ".$_POST['comments']."comment value -> "; die;
-            $string = str_replace(' ', '', $_POST['addnotes']);
+            $string = isset($_POST['addnotes']) ? trim($_POST['addnotes']) : '';
             $customerAdd = "INSERT INTO customer_info (customer_name, gstin_no, address, contact_person, contact, email_id, scope, comment) VALUES (:name,:gstinno,:address,:person,:contact,:email,:scope,:comment);";
             $statement = $db->prepare($customerAdd);
             $statement->bindParam(':name', $_POST['customerName']);
