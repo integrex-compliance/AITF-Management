@@ -16,9 +16,9 @@ session_start();
                 justify-content: center;
                 padding: 80px 16px 60px;
                 background: 
-                    radial-gradient(circle at 20% 30%, rgba(59, 130, 246, 0.12), transparent 40%),
-                    radial-gradient(circle at 80% 70%, rgba(124, 58, 237, 0.15), transparent 45%),
-                    linear-gradient(135deg, #f0f9ff, #eef2ff);
+                    radial-gradient(circle at 20% 30%, rgba(249, 115, 22, 0.12), transparent 40%),
+                    radial-gradient(circle at 80% 70%, rgba(234, 88, 12, 0.15), transparent 45%),
+                    linear-gradient(135deg, #fff7ed, #ffedd5);
                 position: relative;
                 overflow: hidden;
             }
@@ -28,7 +28,7 @@ session_start();
                 position: absolute;
                 width: 600px;
                 height: 600px;
-                background: radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, transparent 70%);
+                background: radial-gradient(circle, rgba(249, 115, 22, 0.08) 0%, transparent 70%);
                 top: -300px;
                 left: -300px;
                 z-index: 0;
@@ -39,7 +39,7 @@ session_start();
                 position: absolute;
                 width: 600px;
                 height: 600px;
-                background: radial-gradient(circle, rgba(124, 58, 237, 0.08) 0%, transparent 70%);
+                background: radial-gradient(circle, rgba(234, 88, 12, 0.08) 0%, transparent 70%);
                 bottom: -300px;
                 right: -300px;
                 z-index: 0;
@@ -73,7 +73,7 @@ session_start();
                 left: 0;
                 right: 0;
                 height: 6px;
-                background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+                background: linear-gradient(90deg, #f97316, #ea580c);
             }
 
             .login-selection-title {
@@ -85,7 +85,7 @@ session_start();
                 letter-spacing: -0.01em;
                 position: relative;
                 display: block;
-                background: linear-gradient(90deg, #2563eb, #7c3aed);
+                background: linear-gradient(90deg, #ea580c, #c2410c);
                 -webkit-background-clip: text;
                 -webkit-text-fill-color: transparent;
                 background-clip: text;
@@ -153,10 +153,10 @@ session_start();
             }
 
             .login-tab-btn.active {
-                background: linear-gradient(135deg, #2563eb, #7c3aed);
+                background: linear-gradient(135deg, #f97316, #ea580c);
                 color: #ffffff;
                 border-color: transparent;
-                box-shadow: 0 6px 20px rgba(59, 130, 246, 0.3);
+                box-shadow: 0 6px 20px rgba(249, 115, 22, 0.3);
                 transform: translateY(-2px);
                 position: relative;
                 z-index: 1;
@@ -248,15 +248,15 @@ session_start();
             }
             
             .password-toggle:hover {
-                color: #3b82f6;
+                color: #f97316;
             }
             
             .login-panel input[type="text"]:focus,
             .login-panel input[type="password"]:focus,
             .login-panel input[type="email"]:focus {
                 outline: none;
-                border-color: #93c5fd;
-                box-shadow: 0 0 0 3px rgba(147, 197, 253, 0.3);
+                border-color: #fdba74;
+                box-shadow: 0 0 0 3px rgba(253, 186, 116, 0.3);
                 background-color: #ffffff;
             }
                 border-radius: 12px;
@@ -276,27 +276,27 @@ session_start();
             .login-panel input[type="text"]:focus,
             .login-panel input[type="password"]:focus {
                 outline: none;
-                border-color: #93c5fd;
-                box-shadow: 0 0 0 3px rgba(147, 197, 253, 0.4);
+                border-color: #fdba74;
+                box-shadow: 0 0 0 3px rgba(253, 186, 116, 0.4);
                 background: #ffffff;
             }
             
             .login-panel input[type="text"]:focus + i,
             .login-panel input[type="password"]:focus + i {
-                color: #3b82f6;
+                color: #f97316;
             }
 
             .login-panel input[type="submit"] {
                 width: 100%;
                 border-radius: 30px;
-                background: linear-gradient(135deg, #1f7a8c, #166278);
+                background: linear-gradient(135deg, #ea580c, #c2410c);
                 color: #ffffff;
                 font-weight: 600;
                 font-size: 15px;
                 padding: 12px 16px 12px 50px;
                 border: none;
                 cursor: pointer;
-                box-shadow: 0 4px 15px rgba(31, 122, 140, 0.4);
+                box-shadow: 0 4px 15px rgba(234, 88, 12, 0.4);
                 transition: all 0.3s ease;
                 margin-top: 10px;
                 position: relative;
@@ -313,7 +313,7 @@ session_start();
                 transform: translateY(-50%);
                 width: 30px;
                 height: 30px;
-                background: #69d0d7;
+                background: #fb923c;
                 border-radius: 50%;
                 display: flex;
                 align-items: center;
@@ -329,8 +329,8 @@ session_start();
 
             .login-panel input[type="submit"]:hover:not(:disabled) {
                 transform: translateY(-2px);
-                box-shadow: 0 8px 20px rgba(31, 122, 140, 0.6);
-                background: linear-gradient(135deg, #1a6c7c, #0f4b5a);
+                box-shadow: 0 8px 20px rgba(234, 88, 12, 0.6);
+                background: linear-gradient(135deg, #c2410c, #9a3412);
             }
 
             .login-panel input[type="submit"]:disabled {

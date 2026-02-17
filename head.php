@@ -15,7 +15,7 @@
 <link rel="stylesheet" href="css/basic.css">
 <link rel="stylesheet" href="css/float-label.css">
 <link rel="stylesheet" href="css/editable-table.css">
-<link rel="stylesheet" href="css/spinner.css">
+<link rel="stylesheet" href="css/spinner.css">s
 <link href="css/jquery.flexdatalist.css" rel="stylesheet" type="text/css">
 <script type="text/javascript" src="https://cdn.datatables.net/1.10.12/js/jquery.dataTables.min.js"></script>
 <script src="js/form-fancy-control.js"></script>

@@ -246,7 +246,7 @@ if (isset($_POST['invoiceId']) && !empty($_POST['invoiceId'])) {
     $statement = $db->prepare($updateInvoice);
     $statement->bindParam(':no', $newInvoice);
     $statement->execute();
-
+yml
     $invDate = $_POST['invoiceDt'];
     $netPrice = $_POST['netPrice'];
     $state = $_POST["invoiceState"];

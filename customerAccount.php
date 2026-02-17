@@ -6734,6 +6734,14 @@
                             $(document).ajaxStop(function () {
                                 location.reload(true);
                             });
+
+
+
+
+
+
+
+        
                         },
                         error: function (data, status, err) {
                             alert(status);
