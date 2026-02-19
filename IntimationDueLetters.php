@@ -365,7 +365,22 @@ if($PageAction == "PreviewPDF"){
 	$pdf->Output($fileName, 'I');
 }
 else if($PageAction == "SendMail"){
-	require 'PHPMailer/PHPMailerAutoload.php';
+	$phpMailerAutoloadCandidates = array(
+		__DIR__ . '/PHPMailer/PHPMailerAutoload.php',
+		__DIR__ . '/phpmailer/PHPMailerAutoload.php',
+		__DIR__ . '/PHPMailerAutoload.php',
+	);
+	$phpMailerAutoloadLoaded = false;
+	foreach ($phpMailerAutoloadCandidates as $phpMailerAutoloadPath) {
+		if (file_exists($phpMailerAutoloadPath)) {
+			require_once $phpMailerAutoloadPath;
+			$phpMailerAutoloadLoaded = true;
+			break;
+		}
+	}
+	if (!$phpMailerAutoloadLoaded) {
+		throw new Exception('PHPMailer autoload not found');
+	}
 	$isAjaxRequest = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
 
 		$mailBody = '<html><body>' . $mailBodyPart . '</body></html>';

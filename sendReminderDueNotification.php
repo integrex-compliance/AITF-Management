@@ -2,6 +2,7 @@
 
 
 
+/**
  * @package com.tecnick.tcpdf
  * @abstract TCPDF - Example: Custom Header and Footer
  * @author Nicola Asuni
@@ -175,7 +176,22 @@ $body = '<html><body><p>Dear Sir / Mam,</p>'
         . '<p>AITF-MCL</p>'
         . '<body></html>';
 
-require 'PHPMailer/PHPMailerAutoload.php';
+$phpMailerAutoloadCandidates = array(
+    __DIR__ . '/PHPMailer/PHPMailerAutoload.php',
+    __DIR__ . '/phpmailer/PHPMailerAutoload.php',
+    __DIR__ . '/PHPMailerAutoload.php',
+);
+$phpMailerAutoloadLoaded = false;
+foreach ($phpMailerAutoloadCandidates as $phpMailerAutoloadPath) {
+    if (file_exists($phpMailerAutoloadPath)) {
+        require_once $phpMailerAutoloadPath;
+        $phpMailerAutoloadLoaded = true;
+        break;
+    }
+}
+if (!$phpMailerAutoloadLoaded) {
+    throw new Exception('PHPMailer autoload not found');
+}
 
 $email = new PHPMailer;
 $email->IsSMTP();
@@ -183,8 +199,8 @@ $email->Host='smtp.gmail.com';
 $email->Port=587;
 $email->SMTPAuth=true;
 $email->SMTPSecure='tls';
-$email->Username='aitfintimation@gmail.com';
-$email->Password='intimation@123';
+$email->Username='certification@aitf.co.in';
+$email->Password='AITF@@hasTags';
 $email->setFrom('aitfintimation@gmail.com');
 $email->addReplyTo('aitfintimation@gmail.com');
 $email->Subject = '2nd reminder for '.$servicedesc.' - '.$customer['customer_name'];

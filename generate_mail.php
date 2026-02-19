@@ -2,7 +2,22 @@
 
 $result="Yet to Process";
 if(isset($_POST['submit'])){
-require 'PHPMailer/PHPMailerAutoload.php';
+$phpMailerAutoloadCandidates = array(
+    __DIR__ . '/PHPMailer/PHPMailerAutoload.php',
+    __DIR__ . '/phpmailer/PHPMailerAutoload.php',
+    __DIR__ . '/PHPMailerAutoload.php',
+);
+$phpMailerAutoloadLoaded = false;
+foreach ($phpMailerAutoloadCandidates as $phpMailerAutoloadPath) {
+    if (file_exists($phpMailerAutoloadPath)) {
+        require_once $phpMailerAutoloadPath;
+        $phpMailerAutoloadLoaded = true;
+        break;
+    }
+}
+if (!$phpMailerAutoloadLoaded) {
+    throw new Exception('PHPMailer autoload not found');
+}
 $mail = new PHPMailer;
 $mail->Host='smtp.gmail.com';
 $mail->port=587;

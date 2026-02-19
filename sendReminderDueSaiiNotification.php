@@ -3,6 +3,7 @@
 
 
 
+/**
  * @package com.tecnick.tcpdf
  * @abstract TCPDF - Example: Custom Header and Footer
  * @author Nicola Asuni
@@ -179,7 +180,22 @@ $body = '<html><body><p>Dear Sir / Mam,</p>'
         . '<p>AITF-MCL</p>'
         . '<body></html>';
 
-require 'PHPMailer/PHPMailerAutoload.php';
+$phpMailerAutoloadCandidates = array(
+    __DIR__ . '/PHPMailer/PHPMailerAutoload.php',
+    __DIR__ . '/phpmailer/PHPMailerAutoload.php',
+    __DIR__ . '/PHPMailerAutoload.php',
+);
+$phpMailerAutoloadLoaded = false;
+foreach ($phpMailerAutoloadCandidates as $phpMailerAutoloadPath) {
+    if (file_exists($phpMailerAutoloadPath)) {
+        require_once $phpMailerAutoloadPath;
+        $phpMailerAutoloadLoaded = true;
+        break;
+    }
+}
+if (!$phpMailerAutoloadLoaded) {
+    throw new Exception('PHPMailer autoload not found');
+}
 
 $email = new PHPMailer;
 $email->IsSMTP();
