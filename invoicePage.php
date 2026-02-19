@@ -923,6 +923,15 @@
                     $('.invoiceFirmId').val(data[0]['firm_id']);
                     $('.invoiceId').val(data[0]['invoice_id']);
                     $('.finalserviceAmtTd').empty();
+                    var includeFinalQtyRate = false;
+                    for (var k in data[1]) {
+                        if ((data[1][k]['quantity'] !== null && data[1][k]['quantity'] !== undefined && data[1][k]['quantity'] !== '') ||
+                                (data[1][k]['rate'] !== null && data[1][k]['rate'] !== undefined && data[1][k]['rate'] !== '')) {
+                            includeFinalQtyRate = true;
+                            break;
+                        }
+                    }
+                    $('.includeFinalQtyRate').prop('checked', includeFinalQtyRate);
                     var option1 = "";
                     var svcs = '<?php echo $svclist ?>';
                     var services = svcs.split(',');
@@ -936,7 +945,31 @@
 
                     for (var key in data[1]) {
                         var option2 = '<option value="' + data[1][key]['service_desc'] + '"selected>' + data[1][key]['service_desc'] + '</option>';
-                        $('.finalserviceAmtTd').append('<div class="row finalRemoveServiceAmtRow">\n\
+                        if (includeFinalQtyRate) {
+                            var qtyVal = data[1][key]['quantity'] !== undefined && data[1][key]['quantity'] !== null ? data[1][key]['quantity'] : '';
+                            var rateVal = data[1][key]['rate'] !== undefined && data[1][key]['rate'] !== null ? data[1][key]['rate'] : '';
+                            $('.finalserviceAmtTd').append('<div class="row finalRemoveServiceAmtRow finalInvoiceServiceRow">\n\
+                                        <div class="col-sm-5 form-group float-label-control">\n\
+                                        <div class="input-group dropdown">\n\
+                                        <label for="">Service</label>\n\
+                                        <input type="text" class="form-control finalInvoiceService dropdown-toggle" name="finalInvoiceService[]" value="' + data[1][key]['service_desc'] + '" placeholder="Service">\n\
+                                        <ul class="dropdown-menu"><?php foreach ($aitfservices as $service) { ?><li><a href="#" data-value="<?php echo $service["firm_service"] ?>"><?php echo $service["firm_service"] ?></a></li><?php } ?></ul><span role="button" class="input-group-addon dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span class="caret"></span></span></div></div>\n\
+                                        <div class="col-sm-2 form-group float-label-control" style="padding-top:10px;">\n\
+                                        <label for="">Qty</label>\n\
+                                        <input type="number" step="0.01" name="finalInvoiceServiceQty[]" class="form-control form-group finalInvoiceServiceQty" placeholder="Qty" value="' + qtyVal + '"></div>\n\
+                                        <div class="col-sm-2 form-group float-label-control" style="padding-top:10px;">\n\
+                                        <label for="">Rate</label>\n\
+                                        <input type="number" step="0.01" name="finalInvoiceServiceRate[]" class="form-control form-group finalInvoiceServiceRate" placeholder="Rate" value="' + rateVal + '"></div>\n\
+                                        <div class = "col-sm-2 removeSvcAmtVal form-group float-label-control" style = "padding-top:10px;" > \n\
+                                        <label for = "" > Amount </label>\n\
+                                        <input type= "number" step="0.01" name= "finalInvoiceServiceAmt[]" class ="form-control form-group finalInvoiceServiceAmt" id = "finalInvoiceServiceAmt" placeholder = "Amount" value="' + data[1][key]['service_amount'] + '" readonly> </input>\n\
+                                        </div>\n\
+                                        <div class = "col-sm-1 finalRemoveServiceAmtCol form-group float-label-control" style = "padding-top:10px;" >\n\
+                                        <a  class="finalRemoveServiceAmt pull-right" id="finalRemoveServiceAmt" style="cursor: pointer;"><i style="margin-top: 9px;" class="glyphicon glyphicon-remove" title="Remove Service"></i></a>\n\
+                                        </div>\n\
+                                        </div>');
+                        } else {
+                            $('.finalserviceAmtTd').append('<div class="row finalRemoveServiceAmtRow finalInvoiceServiceRow">\n\
                                         <div class="col-sm-8 form-group float-label-control">\n\
                                         <div class="input-group dropdown">\n\
                                         <label for="">Service</label>\n\
@@ -944,12 +977,13 @@
                                         <ul class="dropdown-menu"><?php foreach ($aitfservices as $service) { ?><li><a href="#" data-value="<?php echo $service["firm_service"] ?>"><?php echo $service["firm_service"] ?></a></li><?php } ?></ul><span role="button" class="input-group-addon dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span class="caret"></span></span></div></div>\n\
                                         <div class = "col-sm-3 removeSvcAmtVal form-group float-label-control" style = "padding-top:10px;" > \n\
                                         <label for = "" > Amount </label>\n\
-                                        <input type= "number" name= "finalInvoiceServiceAmt[]" class ="form-control form-group finalInvoiceServiceAmt" id = "finalInvoiceServiceAmt" placeholder = "Amount" value="' + data[1][key]['service_amount'] + '"> </input>\n\
+                                        <input type= "number" step="0.01" name= "finalInvoiceServiceAmt[]" class ="form-control form-group finalInvoiceServiceAmt" id = "finalInvoiceServiceAmt" placeholder = "Amount" value="' + data[1][key]['service_amount'] + '"> </input>\n\
                                         </div>\n\
                                         <div class = "col-sm-1 finalRemoveServiceAmtCol form-group float-label-control" style = "padding-top:10px;" >\n\
                                         <a  class="finalRemoveServiceAmt pull-right" id="finalRemoveServiceAmt" style="cursor: pointer;"><i style="margin-top: 9px;" class="glyphicon glyphicon-remove" title="Remove Service"></i></a>\n\
                                         </div>\n\
                                         </div>');
+                        }
                     }
                     $('input[type="text"]').trigger('change');
                     $('input[type="number"]').trigger('change');
@@ -996,6 +1030,15 @@
                     $('.invoiceFirmId').val(data[0]['firm_id']);
                     $('.invoiceId').val(data[0]['invoice_id']);
                     $('.serviceAmtTd').empty();
+                    var includeQtyRate = false;
+                    for (var k in data[1]) {
+                        if ((data[1][k]['quantity'] !== null && data[1][k]['quantity'] !== undefined && data[1][k]['quantity'] !== '') ||
+                                (data[1][k]['rate'] !== null && data[1][k]['rate'] !== undefined && data[1][k]['rate'] !== '')) {
+                            includeQtyRate = true;
+                            break;
+                        }
+                    }
+                    $('.includeQtyRate').prop('checked', includeQtyRate);
                     var option1 = "";
                     var svcs = '<?php echo $svclist ?>';
                     var services = svcs.split(',');
@@ -1009,20 +1052,45 @@
 
                     for (var key in data[1]) {
                         var option2 = '<option value="' + data[1][key]['service_desc'] + '"selected>' + data[1][key]['service_desc'] + '</option>';
-                        $('.serviceAmtTd').append('<div class="row removeServiceAmtRow">\n\
-                                        <div class="col-sm-8 form-group float-label-control">\n\
+                        if (includeQtyRate) {
+                            var qtyVal = data[1][key]['quantity'] !== undefined && data[1][key]['quantity'] !== null ? data[1][key]['quantity'] : '';
+                            var rateVal = data[1][key]['rate'] !== undefined && data[1][key]['rate'] !== null ? data[1][key]['rate'] : '';
+                            $('.serviceAmtTd').append('<div class="row removeServiceAmtRow invoiceServiceRow" style="padding-top: 10px;">\n\
+                                        <div class="col-sm-5 form-group float-label-control invoiceServiceCol">\n\
                                         <div class="input-group dropdown">\n\
                                         <label for="">Service</label>\n\
                                         <input type="text" class="form-control invoiceService dropdown-toggle" name="invoiceService[]" value="' + data[1][key]['service_desc'] + '" placeholder="Service">\n\
                                         <ul class="dropdown-menu"><?php foreach ($aitfservices as $service) { ?><li><a href="#" data-value="<?php echo $service["firm_service"] ?>"><?php echo $service["firm_service"] ?></a></li><?php } ?></ul><span role="button" class="input-group-addon dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span class="caret"></span></span></div></div>\n\
-                                        <div class = "col-sm-3 removeSvcAmtVal form-group float-label-control" style = "padding-top:10px;" > \n\
+                                        <div class="col-sm-2 form-group float-label-control" style="padding-top:10px;">\n\
+                                        <label for="">Qty</label>\n\
+                                        <input type="number" step="0.01" name="invoiceServiceQty[]" class="form-control form-group invoiceServiceQty" placeholder="Qty" value="' + qtyVal + '"></div>\n\
+                                        <div class="col-sm-2 form-group float-label-control" style="padding-top:10px;">\n\
+                                        <label for="">Rate</label>\n\
+                                        <input type="number" step="0.01" name="invoiceServiceRate[]" class="form-control form-group invoiceServiceRate" placeholder="Rate" value="' + rateVal + '"></div>\n\
+                                        <div class = "col-sm-2 removeSvcAmtVal form-group float-label-control invoiceAmountCol" style = "padding-top:10px;" >\n\
                                         <label for = "" > Amount </label>\n\
-                                        <input type= "number" name= "invoiceServiceAmt[]" class ="form-control form-group invoiceServiceAmt" id = "invoiceService" placeholder = "Amount" value="' + data[1][key]['service_amount'] + '"> </input>\n\
+                                        <input type= "number" step="0.01" name= "invoiceServiceAmt[]" class ="form-control form-group invoiceServiceAmt" id = "invoiceService" placeholder = "Amount" value="' + data[1][key]['service_amount'] + '" readonly> </input>\n\
                                         </div>\n\
                                         <div class = "col-sm-1 removeServiceAmtCol form-group float-label-control" style = "padding-top:10px;" >\n\
                                         <a  class="removeServiceAmt pull-right" id="removeServiceAmt" style="cursor: pointer;"><i style="margin-top: 9px;" class="glyphicon glyphicon-remove" title="Remove Service"></i></a>\n\
                                         </div>\n\
                                         </div>');
+                        } else {
+                            $('.serviceAmtTd').append('<div class="row removeServiceAmtRow invoiceServiceRow" style="padding-top: 10px;">\n\
+                                        <div class="col-sm-8 form-group float-label-control invoiceServiceCol">\n\
+                                        <div class="input-group dropdown">\n\
+                                        <label for="">Service</label>\n\
+                                        <input type="text" class="form-control invoiceService dropdown-toggle" name="invoiceService[]" value="' + data[1][key]['service_desc'] + '" placeholder="Service">\n\
+                                        <ul class="dropdown-menu"><?php foreach ($aitfservices as $service) { ?><li><a href="#" data-value="<?php echo $service["firm_service"] ?>"><?php echo $service["firm_service"] ?></a></li><?php } ?></ul><span role="button" class="input-group-addon dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span class="caret"></span></span></div></div>\n\
+                                        <div class = "col-sm-3 removeSvcAmtVal form-group float-label-control invoiceAmountCol" style = "padding-top:10px;" > \n\
+                                        <label for = "" > Amount </label>\n\
+                                        <input type= "number" step="0.01" name= "invoiceServiceAmt[]" class ="form-control form-group invoiceServiceAmt" id = "invoiceService" placeholder = "Amount" value="' + data[1][key]['service_amount'] + '"> </input>\n\
+                                        </div>\n\
+                                        <div class = "col-sm-1 removeServiceAmtCol form-group float-label-control" style = "padding-top:10px;" >\n\
+                                        <a  class="removeServiceAmt pull-right" id="removeServiceAmt" style="cursor: pointer;"><i style="margin-top: 9px;" class="glyphicon glyphicon-remove" title="Remove Service"></i></a>\n\
+                                        </div>\n\
+                                        </div>');
+                        }
                     }
                     $('input[type="text"]').trigger('change');
                     $('input[type="number"]').trigger('change');

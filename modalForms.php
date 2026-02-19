@@ -11,12 +11,6 @@ $customerStatus = "SELECT * FROM customer_status";
 $statement = $db->prepare($customerStatus);
 $statement->execute();
 $status = $statement->fetchAll();
-
-
-
-
-
-
 $sqlinv = "SELECT max(invoice_date) as invdate FROM invoice_details";
 $statement = $db->prepare($sqlinv);
 $statement->execute();
@@ -545,9 +539,16 @@ $csgttax = $taxationDetails["rate"];
                             <a  class="addServiceAmtRow pull-right" id='addServiceAmtRow' style="cursor: pointer;"><i style="margin-top: 9px; color: white;" class="glyphicon glyphicon-plus-sign" title="Add new Service"></i></a>
                         </div>
                     </div>
+                    <div class="row" style="padding-top: 10px;">
+                        <div class="col-sm-12">
+                            <label style="font-weight: 600;">
+                                <input type="checkbox" class="includeQtyRate" name="includeQtyRate" value="1"> Include Quantity & Rate
+                            </label>
+                        </div>
+                    </div>
                     <div class='serviceAmtTd'>
-                        <div class="row invoiceService" style="padding-top: 10px;">
-                            <div class="col-sm-8 form-group float-label-control">
+                        <div class="row invoiceService invoiceServiceRow" style="padding-top: 10px;">
+                            <div class="col-sm-8 form-group float-label-control invoiceServiceCol">
                                 <div class="input-group dropdown">
                                     <label for="">Service</label>
                                     <input type="text" class="form-control invoiceService dropdown-toggle" name="invoiceService[]" value="" placeholder="Service">
@@ -559,7 +560,7 @@ $csgttax = $taxationDetails["rate"];
                                     <span role="button" class="input-group-addon dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span class="caret"></span></span>
                                 </div>
                             </div>
-                            <div class="col-sm-4 form-group float-label-control" style="padding-top: 10px;">
+                            <div class="col-sm-4 form-group float-label-control invoiceAmountCol" style="padding-top: 10px;">
                                 <label for="">Amount</label> 
                                 <input type="number" name="invoiceServiceAmt[]" class="form-control form-group invoiceServiceAmt" id="invoiceService" placeholder="Amount">
                             </div>
@@ -679,6 +680,13 @@ $csgttax = $taxationDetails["rate"];
                         <div class="col-xs-12  text-center btn  qms_complete_btn generalAnalyse">
                             <span><i class="fa  ">Add Services</i></span>
                             <a  class="addFinalServiceAmtRow pull-right" id='addFinalServiceAmtRow' style="cursor: pointer;"><i style="margin-top: 9px; color: white;" class="glyphicon glyphicon-plus-sign" title="Add new Service"></i></a>                            
+                        </div>
+                    </div>
+                    <div class="row" style="padding-top: 10px;">
+                        <div class="col-sm-12">
+                            <label style="font-weight: 600;">
+                                <input type="checkbox" class="includeFinalQtyRate" name="includeFinalQtyRate" value="1"> Include Quantity & Rate
+                            </label>
                         </div>
                     </div>
                     <div class='finalserviceAmtTd'>
@@ -1870,7 +1878,7 @@ $csgttax = $taxationDetails["rate"];
 
             $sumofsvc = 0;
             $('.invoiceServiceAmt').each(function () {
-                $sumofsvc = $sumofsvc + parseInt($(this).val());
+                $sumofsvc = $sumofsvc + (+($(this).val() || 0));
             });
             $(".netPrice").val($sumofsvc);
 
@@ -1948,7 +1956,7 @@ $csgttax = $taxationDetails["rate"];
             var sum = 0;
 //            var taxrate = <?php echo $csgttax ?>;
             $(".finalInvoiceServiceAmt").each(function () {
-                sum = sum + parseInt($(this).val());
+                sum = sum + (+($(this).val() || 0));
             });
 //            alert(<?php echo $csgttax ?>);
             $(".finalNetPrice").val(sum);
@@ -2020,7 +2028,7 @@ $csgttax = $taxationDetails["rate"];
             var sum = 0;
 //            var taxrate = <?php echo $csgttax ?>;
             $(".finalInvoiceServiceAmt").each(function () {
-                sum = sum + parseInt($(this).val());
+                sum = sum + (+($(this).val() || 0));
             });
 //            alert(<?php echo $csgttax ?>);
             $(".finalNetPrice").val(sum);
@@ -2088,7 +2096,7 @@ $csgttax = $taxationDetails["rate"];
 //            myFunction();
             $sumofsvc = 0;
             $('.invoiceServiceAmt').each(function () {
-                $sumofsvc = $sumofsvc + parseInt($(this).val());
+                $sumofsvc = $sumofsvc + (+($(this).val() || 0));
             });
             $(".netPrice").val($sumofsvc);
 
@@ -2157,7 +2165,7 @@ $csgttax = $taxationDetails["rate"];
         $(".calculateGST").click(function () {
             $sumofsvc = 0;
             $('.invoiceServiceAmt').each(function () {
-                $sumofsvc = $sumofsvc + parseInt($(this).val());
+                $sumofsvc = $sumofsvc + (+($(this).val() || 0));
             });
             $(".netPrice").val($sumofsvc);
 
@@ -2229,7 +2237,7 @@ $csgttax = $taxationDetails["rate"];
             var sum = 0;
 //            var taxrate = <?php echo $csgttax ?>;
             $(".finalInvoiceServiceAmt").each(function () {
-                sum = sum + parseInt($(this).val());
+                sum = sum + (+($(this).val() || 0));
             });
 //            alert(<?php echo $csgttax ?>);
             $(".finalNetPrice").val(sum);
@@ -2697,31 +2705,115 @@ $csgttax = $taxationDetails["rate"];
             }
         });
 
-        $(".addServiceAmtRow").on("click", function () {
-            var option1 = "";
-            var svcs = '<?php echo $svclist ?>';
-            var services = svcs.split(',');
-            var serviceLen = services.length;
-            var max = (Math.max(serviceLen));
-            for (var key = 0; key < max; key++) {
-                var svcname = key <= serviceLen && services[key] != null && services[key] != "" ? services[key] : "";
-                option1 += '<option value="' + svcname + '">' + svcname + '</option>';
+        function round2(val) {
+            var n = parseFloat(val);
+            if (isNaN(n)) {
+                return 0;
             }
+            return Math.round((n + Number.EPSILON) * 100) / 100;
+        }
 
-            $('.serviceAmtTd').append('<div class="row removeServiceAmtRow">\n\
-                                        <div class="col-sm-8 form-group float-label-control">\n\
+        function proformaIncludeQtyRateEnabled() {
+            return $('.includeQtyRate').is(':checked');
+        }
+
+        function buildProformaServiceRowHtml(isFirst, includeQtyRate, service, qty, rate, amount) {
+            var svc = service || '';
+            var q = qty || '';
+            var r = rate || '';
+            var a = amount || '';
+            if (includeQtyRate) {
+                if (a === '' && q !== '' && r !== '') {
+                    a = round2(round2(q) * round2(r));
+                }
+                if (q === '' && a !== '' && r === '') {
+                    q = 1;
+                    r = a;
+                }
+                var removeCol = isFirst ? '' : '<div class = "col-sm-1 removeServiceAmtCol form-group float-label-control" style = "padding-top:10px;" ><a  class="removeServiceAmt pull-right" id="removeServiceAmt" style="cursor: pointer;"><i style="margin-top: 9px;" class="glyphicon glyphicon-remove" title="Remove Service"></i></a></div>';
+                return '<div class="row removeServiceAmtRow invoiceServiceRow" style="padding-top: 10px;">\n\
+                                        <div class="col-sm-5 form-group float-label-control invoiceServiceCol">\n\
                                         <div class="input-group dropdown">\n\
                                         <label for="">Service</label>\n\
-                                        <input type="text" class="form-control invoiceService dropdown-toggle" name="invoiceService[]" value="" placeholder="Service">\n\
+                                        <input type="text" class="form-control invoiceService dropdown-toggle" name="invoiceService[]" value="' + svc + '" placeholder="Service">\n\
                                         <ul class="dropdown-menu"><?php foreach ($aitfservices as $service) { ?><li><a href="#" data-value="<?php echo $service["firm_service"] ?>"><?php echo $service["firm_service"] ?></a></li><?php } ?></ul><span role="button" class="input-group-addon dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span class="caret"></span></span></div></div>\n\
-                                        <div class = "col-sm-3 removeSvcAmtVal form-group float-label-control" style = "padding-top:10px;" > \n\
+                                        <div class="col-sm-2 form-group float-label-control" style="padding-top:10px;">\n\
+                                        <label for="">Qty</label>\n\
+                                        <input type="number" step="0.01" name="invoiceServiceQty[]" class="form-control form-group invoiceServiceQty" placeholder="Qty" value="' + q + '"></div>\n\
+                                        <div class="col-sm-2 form-group float-label-control" style="padding-top:10px;">\n\
+                                        <label for="">Rate</label>\n\
+                                        <input type="number" step="0.01" name="invoiceServiceRate[]" class="form-control form-group invoiceServiceRate" placeholder="Rate" value="' + r + '"></div>\n\
+                                        <div class="col-sm-2 removeSvcAmtVal form-group float-label-control invoiceAmountCol" style="padding-top:10px;">\n\
+                                        <label for="">Amount</label>\n\
+                                        <input type="number" step="0.01" name="invoiceServiceAmt[]" class="form-control form-group invoiceServiceAmt" id="invoiceService" placeholder="Amount" value="' + a + '" readonly></div>\n\
+                                        ' + removeCol + '\n\
+                                        </div>';
+            }
+            var removeCol = isFirst ? '' : '<div class = "col-sm-1 removeServiceAmtCol form-group float-label-control" style = "padding-top:10px;" ><a  class="removeServiceAmt pull-right" id="removeServiceAmt" style="cursor: pointer;"><i style="margin-top: 9px;" class="glyphicon glyphicon-remove" title="Remove Service"></i></a></div>';
+            return '<div class="row removeServiceAmtRow invoiceServiceRow" style="padding-top: 10px;">\n\
+                                        <div class="col-sm-8 form-group float-label-control invoiceServiceCol">\n\
+                                        <div class="input-group dropdown">\n\
+                                        <label for="">Service</label>\n\
+                                        <input type="text" class="form-control invoiceService dropdown-toggle" name="invoiceService[]" value="' + svc + '" placeholder="Service">\n\
+                                        <ul class="dropdown-menu"><?php foreach ($aitfservices as $service) { ?><li><a href="#" data-value="<?php echo $service["firm_service"] ?>"><?php echo $service["firm_service"] ?></a></li><?php } ?></ul><span role="button" class="input-group-addon dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span class="caret"></span></span></div></div>\n\
+                                        <div class = "col-sm-3 removeSvcAmtVal form-group float-label-control invoiceAmountCol" style = "padding-top:10px;" >\n\
                                         <label for = "" > Amount </label>\n\
-                                        <input type= "number" name= "invoiceServiceAmt[]" class ="form-control form-group invoiceServiceAmt" id = "invoiceService" placeholder = "Amount" > </input>\n\
+                                        <input type= "number" step="0.01" name= "invoiceServiceAmt[]" class ="form-control form-group invoiceServiceAmt" id = "invoiceService" placeholder = "Amount" value="' + a + '"> </input>\n\
                                         </div>\n\
-                                        <div class = "col-sm-1 removeServiceAmtCol form-group float-label-control" style = "padding-top:10px;" >\n\
-                                        <a  class="removeServiceAmt pull-right" id="removeServiceAmt" style="cursor: pointer;"><i style="margin-top: 9px;" class="glyphicon glyphicon-remove" title="Remove Service"></i></a>\n\
-                                        </div>\n\
-                                        </div>');
+                                        ' + removeCol + '\n\
+                                        </div>';
+        }
+
+        function rebuildProformaServiceRows() {
+            var includeQtyRate = proformaIncludeQtyRateEnabled();
+            var rows = [];
+            $('.serviceAmtTd .invoiceServiceRow').each(function () {
+                var $row = $(this);
+                var service = $row.find('input[name="invoiceService[]"]').val() || '';
+                var qty = $row.find('input[name="invoiceServiceQty[]"]').val() || '';
+                var rate = $row.find('input[name="invoiceServiceRate[]"]').val() || '';
+                var amt = $row.find('input[name="invoiceServiceAmt[]"]').val() || '';
+                rows.push({service: service, qty: qty, rate: rate, amt: amt});
+            });
+            if (rows.length === 0) {
+                rows.push({service: '', qty: '', rate: '', amt: ''});
+            }
+            $('.serviceAmtTd').empty();
+            for (var i = 0; i < rows.length; i++) {
+                $('.serviceAmtTd').append(buildProformaServiceRowHtml(i === 0, includeQtyRate, rows[i].service, rows[i].qty, rows[i].rate, rows[i].amt));
+            }
+            if (includeQtyRate) {
+                $('.serviceAmtTd .invoiceServiceRow').each(function () {
+                    var $r = $(this);
+                    var qty = $r.find('.invoiceServiceQty').val();
+                    var rate = $r.find('.invoiceServiceRate').val();
+                    var amt = round2(round2(qty) * round2(rate));
+                    if (!isNaN(amt)) {
+                        $r.find('.invoiceServiceAmt').val(amt).trigger('change');
+                    }
+                });
+            } else {
+                $('.serviceAmtTd .invoiceServiceAmt').trigger('change');
+            }
+        }
+
+        $(document).on('change', '.includeQtyRate', function () {
+            rebuildProformaServiceRows();
+        });
+
+        $(document).on('input', '.invoiceServiceQty, .invoiceServiceRate', function () {
+            if (!proformaIncludeQtyRateEnabled()) {
+                return;
+            }
+            var $row = $(this).closest('.invoiceServiceRow');
+            var qty = $row.find('.invoiceServiceQty').val();
+            var rate = $row.find('.invoiceServiceRate').val();
+            var amt = round2(round2(qty) * round2(rate));
+            $row.find('.invoiceServiceAmt').val(amt).trigger('change');
+        });
+
+        $(".addServiceAmtRow").on("click", function () {
+            $('.serviceAmtTd').append(buildProformaServiceRowHtml(false, proformaIncludeQtyRateEnabled(), '', '', '', ''));
             $('.serviceAmtTd').fadeIn("slow");
 //            $(".invoiceGenerate").removeAttr('disabled');
         });
@@ -2732,31 +2824,107 @@ $csgttax = $taxationDetails["rate"];
             $(this).parent("div.removeServiceAmtCol").parent('div.removeServiceAmtRow').remove();
         });
 
-        $(".addFinalServiceAmtRow").on("click", function () {
-            var option1 = "";
-            var svcs = '<?php echo $svclist ?>';
-            var services = svcs.split(',');
-            var serviceLen = services.length;
-            var max = (Math.max(serviceLen));
-            for (var key = 0; key < max; key++) {
-                var svcname = key <= serviceLen && services[key] != null && services[key] != "" ? services[key] : "";
-                option1 += '<option value="' + svcname + '">' + svcname + '</option>';
-            }
+        function finalIncludeQtyRateEnabled() {
+            return $('.includeFinalQtyRate').is(':checked');
+        }
 
-            $('.finalserviceAmtTd').append('<div class="row finalRemoveServiceAmtRow">\n\
-                                        <div class="col-sm-8 form-group float-label-control">\n\
+        function buildFinalServiceRowHtml(includeQtyRate, service, qty, rate, amount) {
+            var svc = service || '';
+            var q = qty || '';
+            var r = rate || '';
+            var a = amount || '';
+            if (includeQtyRate) {
+                if (a === '' && q !== '' && r !== '') {
+                    a = round2(round2(q) * round2(r));
+                }
+                if (q === '' && a !== '' && r === '') {
+                    q = 1;
+                    r = a;
+                }
+                return '<div class="row finalRemoveServiceAmtRow finalInvoiceServiceRow">\n\
+                                        <div class="col-sm-5 form-group float-label-control">\n\
                                         <div class="input-group dropdown">\n\
                                         <label for="">Service</label>\n\
-                                        <input type="text" class="form-control finalInvoiceService dropdown-toggle" name="finalInvoiceService[]" value="" placeholder="Service">\n\
+                                        <input type="text" class="form-control finalInvoiceService dropdown-toggle" name="finalInvoiceService[]" value="' + svc + '" placeholder="Service">\n\
                                         <ul class="dropdown-menu"><?php foreach ($aitfservices as $service) { ?><li><a href="#" data-value="<?php echo $service["firm_service"] ?>"><?php echo $service["firm_service"] ?></a></li><?php } ?></ul><span role="button" class="input-group-addon dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span class="caret"></span></span></div></div>\n\
-                                        <div class = "col-sm-3 removeSvcAmtVal form-group float-label-control" style = "padding-top:10px;" > \n\
+                                        <div class="col-sm-2 form-group float-label-control" style="padding-top:10px;">\n\
+                                        <label for="">Qty</label>\n\
+                                        <input type="number" step="0.01" name="finalInvoiceServiceQty[]" class="form-control form-group finalInvoiceServiceQty" placeholder="Qty" value="' + q + '"></div>\n\
+                                        <div class="col-sm-2 form-group float-label-control" style="padding-top:10px;">\n\
+                                        <label for="">Rate</label>\n\
+                                        <input type="number" step="0.01" name="finalInvoiceServiceRate[]" class="form-control form-group finalInvoiceServiceRate" placeholder="Rate" value="' + r + '"></div>\n\
+                                        <div class = "col-sm-2 removeSvcAmtVal form-group float-label-control" style = "padding-top:10px;" >\n\
                                         <label for = "" > Amount </label>\n\
-                                        <input type= "number" name= "finalInvoiceServiceAmt[]" class ="form-control form-group finalInvoiceServiceAmt" id = "finalInvoiceServiceAmt" placeholder = "Amount" value=""> </input>\n\
+                                        <input type= "number" step="0.01" name= "finalInvoiceServiceAmt[]" class ="form-control form-group finalInvoiceServiceAmt" id = "finalInvoiceServiceAmt" placeholder = "Amount" value="' + a + '" readonly> </input>\n\
                                         </div>\n\
                                         <div class = "col-sm-1 finalRemoveServiceAmtCol form-group float-label-control" style = "padding-top:10px;" >\n\
                                         <a  class="finalRemoveServiceAmt pull-right" id="finalRemoveServiceAmt" style="cursor: pointer;"><i style="margin-top: 9px;" class="glyphicon glyphicon-remove" title="Remove Service"></i></a>\n\
                                         </div>\n\
-                                        </div>');
+                                        </div>';
+            }
+            return '<div class="row finalRemoveServiceAmtRow finalInvoiceServiceRow">\n\
+                                        <div class="col-sm-8 form-group float-label-control">\n\
+                                        <div class="input-group dropdown">\n\
+                                        <label for="">Service</label>\n\
+                                        <input type="text" class="form-control finalInvoiceService dropdown-toggle" name="finalInvoiceService[]" value="' + svc + '" placeholder="Service">\n\
+                                        <ul class="dropdown-menu"><?php foreach ($aitfservices as $service) { ?><li><a href="#" data-value="<?php echo $service["firm_service"] ?>"><?php echo $service["firm_service"] ?></a></li><?php } ?></ul><span role="button" class="input-group-addon dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span class="caret"></span></span></div></div>\n\
+                                        <div class = "col-sm-3 removeSvcAmtVal form-group float-label-control" style = "padding-top:10px;" > \n\
+                                        <label for = "" > Amount </label>\n\
+                                        <input type= "number" step="0.01" name= "finalInvoiceServiceAmt[]" class ="form-control form-group finalInvoiceServiceAmt" id = "finalInvoiceServiceAmt" placeholder = "Amount" value="' + a + '"> </input>\n\
+                                        </div>\n\
+                                        <div class = "col-sm-1 finalRemoveServiceAmtCol form-group float-label-control" style = "padding-top:10px;" >\n\
+                                        <a  class="finalRemoveServiceAmt pull-right" id="finalRemoveServiceAmt" style="cursor: pointer;"><i style="margin-top: 9px;" class="glyphicon glyphicon-remove" title="Remove Service"></i></a>\n\
+                                        </div>\n\
+                                        </div>';
+        }
+
+        function rebuildFinalServiceRows() {
+            var includeQtyRate = finalIncludeQtyRateEnabled();
+            var rows = [];
+            $('.finalserviceAmtTd .finalInvoiceServiceRow').each(function () {
+                var $row = $(this);
+                var service = $row.find('input[name="finalInvoiceService[]"]').val() || '';
+                var qty = $row.find('input[name="finalInvoiceServiceQty[]"]').val() || '';
+                var rate = $row.find('input[name="finalInvoiceServiceRate[]"]').val() || '';
+                var amt = $row.find('input[name="finalInvoiceServiceAmt[]"]').val() || '';
+                rows.push({service: service, qty: qty, rate: rate, amt: amt});
+            });
+            $('.finalserviceAmtTd').empty();
+            for (var i = 0; i < rows.length; i++) {
+                $('.finalserviceAmtTd').append(buildFinalServiceRowHtml(includeQtyRate, rows[i].service, rows[i].qty, rows[i].rate, rows[i].amt));
+            }
+            if (includeQtyRate) {
+                $('.finalserviceAmtTd .finalInvoiceServiceRow').each(function () {
+                    var $r = $(this);
+                    var qty = $r.find('.finalInvoiceServiceQty').val();
+                    var rate = $r.find('.finalInvoiceServiceRate').val();
+                    var amt = round2(round2(qty) * round2(rate));
+                    if (!isNaN(amt)) {
+                        $r.find('.finalInvoiceServiceAmt').val(amt).trigger('change');
+                    }
+                });
+            } else {
+                $('.finalserviceAmtTd .finalInvoiceServiceAmt').trigger('change');
+            }
+        }
+
+        $(document).on('change', '.includeFinalQtyRate', function () {
+            rebuildFinalServiceRows();
+        });
+
+        $(document).on('input', '.finalInvoiceServiceQty, .finalInvoiceServiceRate', function () {
+            if (!finalIncludeQtyRateEnabled()) {
+                return;
+            }
+            var $row = $(this).closest('.finalInvoiceServiceRow');
+            var qty = $row.find('.finalInvoiceServiceQty').val();
+            var rate = $row.find('.finalInvoiceServiceRate').val();
+            var amt = round2(round2(qty) * round2(rate));
+            $row.find('.finalInvoiceServiceAmt').val(amt).trigger('change');
+        });
+
+        $(".addFinalServiceAmtRow").on("click", function () {
+            $('.finalserviceAmtTd').append(buildFinalServiceRowHtml(finalIncludeQtyRateEnabled(), '', '', '', ''));
             $('.finalserviceAmtTd').fadeIn("slow");
             $(".fianlInvoiceGenerate").attr("disabled", true);
         });

@@ -34,6 +34,8 @@ while (ob_get_level() > 0) {
 }
 ob_start();
 
+$__invoiceServicesQtyRateReady = invoiceServicesHasQtyRateColumns($db);
+
 $invoiceid = "";
 $total_amt = "";
 $innvoice = "";
@@ -74,21 +76,46 @@ if (!empty($firmSign)) {
 
 if (isset($_POST['invoiceId']) && !empty($_POST['invoiceId'])) {
     $invoiceid = $_POST['invoiceId'];
+    $netPriceVal = moneyRound($_POST['finalNetPrice']);
+    if (isset($_POST['finalInvoiceService'], $_POST['finalInvoiceServiceAmt']) && is_array($_POST['finalInvoiceService']) && is_array($_POST['finalInvoiceServiceAmt'])) {
+        $serviceSumVal = 0.0;
+        $c = min(count($_POST['finalInvoiceService']), count($_POST['finalInvoiceServiceAmt']));
+        $qtyArr = isset($_POST['finalInvoiceServiceQty']) && is_array($_POST['finalInvoiceServiceQty']) ? $_POST['finalInvoiceServiceQty'] : [];
+        $rateArr = isset($_POST['finalInvoiceServiceRate']) && is_array($_POST['finalInvoiceServiceRate']) ? $_POST['finalInvoiceServiceRate'] : [];
+        $useQtyRate = !empty($_POST['includeFinalQtyRate']) && count($qtyArr) > 0 && count($rateArr) > 0;
+        for ($i = 0; $i < $c; $i++) {
+            if ((string) $_POST['finalInvoiceService'][$i] !== '') {
+                if ($useQtyRate) {
+                    $serviceSumVal += round(moneyRound($qtyArr[$i] ?? 0) * moneyRound($rateArr[$i] ?? 0), 2);
+                } else {
+                    $serviceSumVal += moneyRound($_POST['finalInvoiceServiceAmt'][$i]);
+                }
+            }
+        }
+        if ($serviceSumVal > 0 && abs($netPriceVal - $serviceSumVal) > 0.009) {
+            $netPriceVal = round($serviceSumVal, 2);
+        }
+    }
     if ($_POST["finalTaxtype"] == "IGST") {
         $sgst = "NA";
         $cgst = "NA";
-        $igst = $_POST['finaligst'];
-        $total_amt = $_POST['finalNetPrice'] + $_POST['finaligst'];
-        $gsts = '<tr><td colspan="2" style="text-align:right">IGST@18%</td><td> ' . $igst . '/- </td></tr>';
+        $igstVal = round($netPriceVal * 0.18, 2);
+        $igst = moneyDb($igstVal);
+        $total_amt = round($netPriceVal + $igstVal, 2);
+        $gsts = '<tr><td colspan="2" style="text-align:right">IGST@18%</td><td> ' . moneyFormat2($igstVal) . '/- </td></tr>';
     } else if ($_POST["finalTaxtype"] == "CGST & SGST") {
         $igst = 'NA';
-        $sgst = $_POST['finalsgst'];
-        $cgst = $_POST['finalcgst'];
-        $total_amt = $_POST['finalNetPrice'] + $_POST['finalcgst'] + $_POST['finalsgst'];
-        $gsts = '<tr><td colspan="2" style="text-align:right">CGST@9%</td><td> ' . $cgst . '/- </td></tr>
-                <tr><td colspan="2" style="text-align:right">SGST@9%</td><td> ' . $sgst . '/- </td></tr>';
+        $cgstVal = round($netPriceVal * 0.09, 2);
+        $sgstVal = round($netPriceVal * 0.09, 2);
+        $cgst = moneyDb($cgstVal);
+        $sgst = moneyDb($sgstVal);
+        $total_amt = round($netPriceVal + $cgstVal + $sgstVal, 2);
+        $gsts = '<tr><td colspan="2" style="text-align:right">CGST@9%</td><td> ' . moneyFormat2($cgstVal) . '/- </td></tr>
+                <tr><td colspan="2" style="text-align:right">SGST@9%</td><td> ' . moneyFormat2($sgstVal) . '/- </td></tr>';
     }
 
+    $netPriceDb = moneyDb($netPriceVal);
+    $totalAmtDb = moneyDb($total_amt);
     $invoiceUpdate = "UPDATE `invoice_details` SET `customer_id`= :customer,`invoice_date`= :date,`state`= :state,`state_code`= :statecode,`net_price`= :netprice,"
             . "`igst`= :igst,`cgst`= :cgst,`sgst`= :sgst,`tax_type`= :taxtype,`final_amount`= :totalAmt WHERE `invoice_id` = :id";
     $statement = $db->prepare($invoiceUpdate);
@@ -97,12 +124,12 @@ if (isset($_POST['invoiceId']) && !empty($_POST['invoiceId'])) {
     $statement->bindParam(':date', date("Y-m-d", strtotime($_POST['invoiceDt'])));
     $statement->bindParam(':state', $_POST['invoiceState']);
     $statement->bindParam(':statecode', $_POST['invoiceStateCode']);
-    $statement->bindParam(':netprice', $_POST['finalNetPrice']);
+    $statement->bindParam(':netprice', $netPriceDb);
     $statement->bindParam(':igst', $igst);
     $statement->bindParam(':cgst', $cgst);
     $statement->bindParam(':sgst', $sgst);
     $statement->bindParam(':taxtype', $_POST["finalTaxtype"]);
-    $statement->bindParam(':totalAmt', $total_amt);
+    $statement->bindParam(':totalAmt', $totalAmtDb);
     $statement->execute();
 
     $invoiceInfo = "SELECT * FROM invoice_details WHERE invoice_id = :id";
@@ -121,14 +148,32 @@ if (isset($_POST['invoiceId']) && !empty($_POST['invoiceId'])) {
     if (isset($_POST['finalInvoiceService']) && isset($_POST['finalInvoiceServiceAmt'])) {
         $serviceArray = $_POST['finalInvoiceService'];
         $serviceAmtArray = $_POST['finalInvoiceServiceAmt'];
+        $serviceQtyArray = isset($_POST['finalInvoiceServiceQty']) && is_array($_POST['finalInvoiceServiceQty']) ? $_POST['finalInvoiceServiceQty'] : [];
+        $serviceRateArray = isset($_POST['finalInvoiceServiceRate']) && is_array($_POST['finalInvoiceServiceRate']) ? $_POST['finalInvoiceServiceRate'] : [];
+        $hasQtyRateCols = invoiceServicesHasQtyRateColumns($db);
         $count = 0;
         foreach ($serviceArray as $service) {
             if ($serviceArray[$count] != "") {
-                $invoiceServices = "INSERT INTO invoice_services (invoice_ids, service_desc, service_amount) VALUES (:id,:service,:amount)";
+                if ($hasQtyRateCols) {
+                    $invoiceServices = "INSERT INTO invoice_services (invoice_ids, service_desc, service_amount, quantity, rate) VALUES (:id,:service,:amount,:qty,:rate)";
+                } else {
+                    $invoiceServices = "INSERT INTO invoice_services (invoice_ids, service_desc, service_amount) VALUES (:id,:service,:amount)";
+                }
                 $statement = $db->prepare($invoiceServices);
                 $statement->bindParam(':id', $invoiceid);
                 $statement->bindParam(':service', $serviceArray[$count]);
-                $statement->bindParam(':amount', $serviceAmtArray[$count]);
+                $serviceAmtVal = $serviceAmtArray[$count];
+                if (!empty($_POST['includeFinalQtyRate']) && isset($serviceQtyArray[$count], $serviceRateArray[$count])) {
+                    $serviceAmtVal = round(moneyRound($serviceQtyArray[$count]) * moneyRound($serviceRateArray[$count]), 2);
+                }
+                $serviceAmtDb = moneyDb($serviceAmtVal);
+                $statement->bindParam(':amount', $serviceAmtDb);
+                if ($hasQtyRateCols) {
+                    $qtyDb = isset($serviceQtyArray[$count]) ? moneyDb($serviceQtyArray[$count]) : null;
+                    $rateDb = isset($serviceRateArray[$count]) ? moneyDb($serviceRateArray[$count]) : null;
+                    $statement->bindParam(':qty', $qtyDb);
+                    $statement->bindParam(':rate', $rateDb);
+                }
                 $statement->execute();
                 $count++;
             }
@@ -136,7 +181,7 @@ if (isset($_POST['invoiceId']) && !empty($_POST['invoiceId'])) {
     }
 
     $invDate = $_POST['invoiceDt'];
-    $netPrice = $_POST['finalNetPrice'];
+    $netPrice = $netPriceVal;
     $state = $_POST["invoiceState"];
     $stateCode = $_POST["invoiceStateCode"];
 
@@ -154,21 +199,37 @@ if (isset($_POST['invoiceId']) && !empty($_POST['invoiceId'])) {
 
     $invno = $innvoice['final_invoice_no'];
     $invDate = $innvoice['invoice_date'];
-    $netPrice = $innvoice['net_price'];
-    $sgst = $innvoice['sgst'];
-    $cgst = $innvoice["cgst"];
-    $igst = $innvoice['igst'];
-    $total_amt = $innvoice['final_amount'];
+    $netPrice = moneyRound($innvoice['net_price']);
+    $sgst = $innvoice['sgst'] === 'NA' ? 'NA' : moneyRound($innvoice['sgst']);
+    $cgst = $innvoice["cgst"] === 'NA' ? 'NA' : moneyRound($innvoice["cgst"]);
+    $igst = $innvoice['igst'] === 'NA' ? 'NA' : moneyRound($innvoice['igst']);
+    $total_amt = moneyRound($innvoice['final_amount']);
     $state = $innvoice['state'];
     $stateCode = $innvoice['state_code'];
     $finalprefix = $innvoice['final_prefix'];
+    if (is_array($invoiceSvc)) {
+        $serviceSumVal = 0.0;
+        foreach ($invoiceSvc as $svc) {
+            if (isset($svc['service_amount'])) {
+                $serviceSumVal += moneyRound($svc['service_amount']);
+            }
+        }
+        if ($serviceSumVal > 0 && abs($netPrice - $serviceSumVal) > 0.009) {
+            $netPrice = round($serviceSumVal, 2);
+        }
+    }
     
 
     if ($innvoice["tax_type"] == "CGST & SGST") {
-        $gsts = '<tr><td colspan="2" style="text-align:right">CGST@9%</td><td> ' . $cgst . '/- </td></tr>
-                <tr><td colspan="2" style="text-align:right">SGST@9%</td><td> ' . $sgst . '/- </td></tr>';
+        $cgstVal = round($netPrice * 0.09, 2);
+        $sgstVal = round($netPrice * 0.09, 2);
+        $total_amt = round($netPrice + $cgstVal + $sgstVal, 2);
+        $gsts = '<tr><td colspan="2" style="text-align:right">CGST@9%</td><td> ' . moneyFormat2($cgstVal) . '/- </td></tr>
+                <tr><td colspan="2" style="text-align:right">SGST@9%</td><td> ' . moneyFormat2($sgstVal) . '/- </td></tr>';
     } else if ($innvoice["tax_type"] == "IGST") {
-        $gsts = '<tr><td colspan="2" style="text-align:right">IGST@18%</td><td> ' . $igst . '/- </td></tr>';
+        $igstVal = round($netPrice * 0.18, 2);
+        $total_amt = round($netPrice + $igstVal, 2);
+        $gsts = '<tr><td colspan="2" style="text-align:right">IGST@18%</td><td> ' . moneyFormat2($igstVal) . '/- </td></tr>';
     }
 }
 
@@ -188,20 +249,47 @@ if (isset($_POST['invoiceid']) && !empty($_POST['invoiceid'])) {
 
     $invno = $innvoice['final_invoice_no'];
     $invDate = $innvoice['invoice_date'];
-    $netPrice = $innvoice['net_price'];
-    $sgst = $innvoice['sgst'];
-    $cgst = $innvoice["cgst"];
-    $igst = $innvoice['igst'];
-    $total_amt = $innvoice['final_amount'];
+    $netPrice = moneyRound($innvoice['net_price']);
+    $sgst = $innvoice['sgst'] === 'NA' ? 'NA' : moneyRound($innvoice['sgst']);
+    $cgst = $innvoice["cgst"] === 'NA' ? 'NA' : moneyRound($innvoice["cgst"]);
+    $igst = $innvoice['igst'] === 'NA' ? 'NA' : moneyRound($innvoice['igst']);
+    $total_amt = moneyRound($innvoice['final_amount']);
     $state = $innvoice['state'];
     $stateCode = $innvoice['state_code'];
     $finalprefix = $innvoice['final_prefix'];
 
     if ($innvoice["tax_type"] == "CGST & SGST") {
-        $gsts = '<tr><td colspan="2" style="text-align:right">CGST@9%</td><td> ' . $cgst . '/- </td></tr>
-                <tr><td colspan="2" style="text-align:right">SGST@9%</td><td> ' . $sgst . '/- </td></tr>';
+        if (is_array($invoiceSvc)) {
+            $serviceSumVal = 0.0;
+            foreach ($invoiceSvc as $svc) {
+                if (isset($svc['service_amount'])) {
+                    $serviceSumVal += moneyRound($svc['service_amount']);
+                }
+            }
+            if ($serviceSumVal > 0 && abs($netPrice - $serviceSumVal) > 0.009) {
+                $netPrice = round($serviceSumVal, 2);
+            }
+        }
+        $cgstVal = round($netPrice * 0.09, 2);
+        $sgstVal = round($netPrice * 0.09, 2);
+        $total_amt = round($netPrice + $cgstVal + $sgstVal, 2);
+        $gsts = '<tr><td colspan="2" style="text-align:right">CGST@9%</td><td> ' . moneyFormat2($cgstVal) . '/- </td></tr>
+                <tr><td colspan="2" style="text-align:right">SGST@9%</td><td> ' . moneyFormat2($sgstVal) . '/- </td></tr>';
     } else if ($innvoice["tax_type"] == "IGST") {
-        $gsts = '<tr><td colspan="2" style="text-align:right">IGST@18%</td><td> ' . $igst . '/- </td></tr>';
+        if (is_array($invoiceSvc)) {
+            $serviceSumVal = 0.0;
+            foreach ($invoiceSvc as $svc) {
+                if (isset($svc['service_amount'])) {
+                    $serviceSumVal += moneyRound($svc['service_amount']);
+                }
+            }
+            if ($serviceSumVal > 0 && abs($netPrice - $serviceSumVal) > 0.009) {
+                $netPrice = round($serviceSumVal, 2);
+            }
+        }
+        $igstVal = round($netPrice * 0.18, 2);
+        $total_amt = round($netPrice + $igstVal, 2);
+        $gsts = '<tr><td colspan="2" style="text-align:right">IGST@18%</td><td> ' . moneyFormat2($igstVal) . '/- </td></tr>';
     }
 }
 
@@ -315,25 +403,65 @@ $pdf->AddPage();
 // create some HTML content
 $subtable = '<table border="2" cellspacing="6" cellpadding="4"><tr><td>a</td><td>b</td></tr><tr><td>c</td><td>d</td></tr></table>';
 
+$includeQtyRate = !empty($_POST['includeFinalQtyRate']);
+if (!$includeQtyRate && is_array($invoiceSvc)) {
+    foreach ($invoiceSvc as $svc) {
+        if ((isset($svc['quantity']) && $svc['quantity'] !== null && $svc['quantity'] !== '') ||
+                (isset($svc['rate']) && $svc['rate'] !== null && $svc['rate'] !== '')) {
+            $includeQtyRate = true;
+            break;
+        }
+    }
+}
+
 $serviceRow = '';
-if (isset($_POST['invoiceService']) && isset($_POST['invoiceServiceAmt'])) {
-    $serviceArray = $_POST['invoiceService'];
-    $serviceAmtArray = $_POST['invoiceServiceAmt'];
+if (isset($_POST['finalInvoiceService']) && isset($_POST['finalInvoiceServiceAmt'])) {
+    $serviceArray = $_POST['finalInvoiceService'];
+    $serviceAmtArray = $_POST['finalInvoiceServiceAmt'];
+    $serviceQtyArray = isset($_POST['finalInvoiceServiceQty']) && is_array($_POST['finalInvoiceServiceQty']) ? $_POST['finalInvoiceServiceQty'] : [];
+    $serviceRateArray = isset($_POST['finalInvoiceServiceRate']) && is_array($_POST['finalInvoiceServiceRate']) ? $_POST['finalInvoiceServiceRate'] : [];
+    if (!$includeQtyRate && count($serviceQtyArray) > 0 && count($serviceRateArray) > 0) {
+        $includeQtyRate = true;
+    }
     $count = 0;
     foreach ($serviceArray as $service) {
-        $serviceRow = $serviceRow . '<tr><td>' . ($count + 1) . '</td><td>' . $serviceArray[$count] . '</td><td>' . $serviceAmtArray[$count] . '/-</td></tr>';
+        if ($includeQtyRate) {
+            $qtyVal = $serviceQtyArray[$count] ?? '';
+            $rateVal = $serviceRateArray[$count] ?? '';
+            $amtVal = $serviceAmtArray[$count] ?? '';
+            if ($qtyVal !== '' && $rateVal !== '') {
+                $amtVal = round(moneyRound($qtyVal) * moneyRound($rateVal), 2);
+            }
+            $serviceRow = $serviceRow . '<tr><td>' . ($count + 1) . '</td><td>' . $serviceArray[$count] . '</td><td>' . moneyFormat($qtyVal) . '</td><td>' . moneyFormat($rateVal) . '</td><td>' . moneyFormat2($amtVal) . '/-</td></tr>';
+        } else {
+            $serviceRow = $serviceRow . '<tr><td>' . ($count + 1) . '</td><td>' . $serviceArray[$count] . '</td><td>' . moneyFormat2($serviceAmtArray[$count]) . '/-</td></tr>';
+        }
         $count = $count + 1;
     }
 } else {
     $count = 0;
 //    print_r($invoiceSvc);
     foreach ($invoiceSvc as $svc) {
-        $serviceRow = $serviceRow . '<tr style="border-top: none"><td>' . ($count + 1) . '</td><td>' . $svc['service_desc'] . '</td><td>' . $svc['service_amount'] . '/-</td></tr>';
+        if ($includeQtyRate) {
+            $qtyVal = isset($svc['quantity']) ? $svc['quantity'] : '';
+            $rateVal = isset($svc['rate']) ? $svc['rate'] : '';
+            $serviceRow = $serviceRow . '<tr style="border-top: none"><td>' . ($count + 1) . '</td><td>' . $svc['service_desc'] . '</td><td>' . moneyFormat($qtyVal) . '</td><td>' . moneyFormat($rateVal) . '</td><td>' . moneyFormat2($svc['service_amount']) . '/-</td></tr>';
+        } else {
+            $serviceRow = $serviceRow . '<tr style="border-top: none"><td>' . ($count + 1) . '</td><td>' . $svc['service_desc'] . '</td><td>' . moneyFormat2($svc['service_amount']) . '/-</td></tr>';
+        }
         $count = $count + 1;
     }
 }
 
 //echo $serviceRow;
+
+$gstsForTable = $includeQtyRate ? str_replace('colspan="2"', 'colspan="4"', $gsts) : $gsts;
+$netColspan = $includeQtyRate ? 4 : 2;
+$finalColspan = $includeQtyRate ? 4 : 2;
+$wordsColspan = $includeQtyRate ? 5 : 3;
+$serviceHeader = $includeQtyRate ?
+        '<tr><th width="5%">Sr.</th><th width="45%">Description</th><th width="10%">Qty</th><th width="15%">Rate</th><th width="25%">Amount in Rs. </th></tr>' :
+        '<tr><th width="5%">Sr.</th><th width="60%">Description</th><th width="35%">Amount in Rs. </th></tr>';
 
 $html = '
 <table border="1" cellspacing="1" cellpadding="4">	
@@ -344,16 +472,16 @@ $html = '
     </td>
     <td ><br><b> INVOICE NO:' . $finalprefix . '-' . $invno . '</b><br><br><br><b>DATE:</b> ' . date("d.m.Y", strtotime($invDate)) . ' </td>
     </tr>
-    <tr><td colspan="3"><b>SAC code : </b> Other Technical And Scientific Services N.e.c – 998349</td></tr>
+    <tr><td colspan="3"><b>SAC code : </b> 998311</td></tr>
     </table>
     <table border="1" cellspacing="1" cellpadding="4">
-    <tr><th width="5%">Sr.</th><th width="60%">Description</th><th width="35%">Amount in Rs. </th></tr> 
+    ' . $serviceHeader . ' 
     ' . $serviceRow . '
-    <tr><td colspan="2" style="text-align:right">Taxable Basic Amount</td><td> ' . $netPrice . '/- </td></tr>
-    ' . $gsts . '
-    <tr><td colspan="2" style="text-align:right">TOTAL INVOICE VALUE WITH TAX</td><td><b>' . $total_amt . '/-</b></td></tr>
-    <tr><td colspan="3"><b>Total Amount in words: ' . convertToWord($total_amt) . '</b></td></tr>
-    <tr><td colspan="3"><b>
+    <tr><td colspan="' . $netColspan . '" style="text-align:right">Taxable Basic Amount</td><td> ' . moneyFormat($netPrice) . '/- </td></tr>
+    ' . $gstsForTable . '
+    <tr><td colspan="' . $finalColspan . '" style="text-align:right">TOTAL INVOICE VALUE WITH TAX</td><td><b>' . moneyFormat($total_amt) . '/-</b></td></tr>
+    <tr><td colspan="' . $wordsColspan . '"><b>Total Amount in words: ' . convertToWord($total_amt) . '</b></td></tr>
+    <tr><td colspan="' . $wordsColspan . '"><b>
     NOTE-</b>
     <ul style= "list-style-type:none; ">
     <li>* Please issue cheque in favor of AITF Management Certification Limited. Cash Payment is not acceptable</li>
@@ -393,6 +521,69 @@ $pdf->Output('Final Invoice.pdf', 'I');
 // END OF FILE
 //============================================================+
 
+function moneyRound($value) {
+    $v = is_string($value) ? str_replace(',', '', $value) : $value;
+    return round((float) $v, 2);
+}
+
+function moneyDb($value) {
+    if ($value === 'NA' || $value === '' || $value === null) {
+        return $value;
+    }
+    return number_format(moneyRound($value), 2, '.', '');
+}
+
+function moneyFormat($value) {
+    if ($value === 'NA' || $value === '' || $value === null) {
+        return (string) $value;
+    }
+    $v = moneyRound($value);
+    if (abs($v - round($v)) < 0.00001) {
+        return number_format($v, 0, '.', '');
+    }
+    return number_format($v, 2, '.', '');
+}
+
+function moneyFormat2($value) {
+    if ($value === 'NA' || $value === '' || $value === null) {
+        return (string) $value;
+    }
+    return number_format(moneyRound($value), 2, '.', '');
+}
+
+function invoiceServicesHasQtyRateColumns($db) {
+    static $has = null;
+    if ($has !== null) {
+        return $has;
+    }
+    try {
+        $stmtQty = $db->query("SHOW COLUMNS FROM invoice_services LIKE 'quantity'");
+        $hasQty = $stmtQty && $stmtQty->fetch();
+        $stmtRate = $db->query("SHOW COLUMNS FROM invoice_services LIKE 'rate'");
+        $hasRate = $stmtRate && $stmtRate->fetch();
+        if (!$hasQty) {
+            try {
+                $db->exec("ALTER TABLE invoice_services ADD COLUMN quantity DECIMAL(10,2) NULL");
+            } catch (Exception $e) {
+            }
+        }
+        if (!$hasRate) {
+            try {
+                $db->exec("ALTER TABLE invoice_services ADD COLUMN rate DECIMAL(10,2) NULL");
+            } catch (Exception $e) {
+            }
+        }
+        $stmtQty2 = $db->query("SHOW COLUMNS FROM invoice_services LIKE 'quantity'");
+        $hasQty2 = $stmtQty2 && $stmtQty2->fetch();
+        $stmtRate2 = $db->query("SHOW COLUMNS FROM invoice_services LIKE 'rate'");
+        $hasRate2 = $stmtRate2 && $stmtRate2->fetch();
+        $has = ($hasQty2 && $hasRate2) ? true : false;
+    } catch (Exception $e) {
+        $has = false;
+    }
+    return $has;
+}
+
 function convertcash($num, $currency) {
     if (strlen($num) > 3) {
         $lastthree = substr($num, strlen($num) - 3, strlen($num));
@@ -412,10 +603,15 @@ function convertcash($num, $currency) {
 }
 
 function convertToWord($number) {
-    $no = round($number);
-    $point = round($number - $no, 2) * 100;
+    $number = moneyRound($number);
+    $no = (int) floor($number);
+    $point = (int) round(($number - $no) * 100);
+    if ($point === 100) {
+        $no = $no + 1;
+        $point = 0;
+    }
     $hundred = null;
-    $digits_1 = strlen($no);
+    $digits_1 = strlen((string) $no);
     $i = 0;
     $str = array();
     $words = array('0' => '', '1' => 'One', '2' => 'Two',
@@ -429,10 +625,11 @@ function convertToWord($number) {
         '60' => 'Sixty', '70' => 'Seventy',
         '80' => 'Eighty', '90' => 'Ninety');
     $digits = array('', 'Hundred', 'Thousand', 'Lakh', 'Crore');
+    $n = $no;
     while ($i < $digits_1) {
         $divider = ($i == 2) ? 10 : 100;
-        $number = floor($no % $divider);
-        $no = floor($no / $divider);
+        $number = floor($n % $divider);
+        $n = floor($n / $divider);
         $i += ($divider == 10) ? 1 : 2;
         if ($number) {
             $plural = (($counter = count($str)) && $number > 9) ? 's' : null;
@@ -446,9 +643,14 @@ function convertToWord($number) {
             $str[] = null;
     }
     $str = array_reverse($str);
-    $result = implode('', $str);
-    $points = ($point) ?
-            "." . $words[$point / 10] . " " .
-            $words[$point = $point % 10] : '';
-    return $result . " " . $points . " Only";
+    $result = trim(implode('', $str));
+    if ($result === '') {
+        $result = 'Zero';
+    }
+    $pointsWords = '';
+    if ($point) {
+        $pointsWords = ($point < 21) ? $words[$point] : ($words[floor($point / 10) * 10] . " " . $words[$point % 10]);
+        $pointsWords = trim($pointsWords);
+    }
+    return $result . " Rupees" . ($pointsWords !== '' ? (" and " . $pointsWords . " Paise") : "") . " Only";
 }

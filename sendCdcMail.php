@@ -152,7 +152,7 @@ try {
         'secure'     => 'tls',
         'smtp_auth'  => true,
         'username'   => 'certification@aitf.co.in',
-        'password'   => 'foroffice@aitf1122',
+        'password'   => 'AITF@@hasTag',
         'from_email' => 'certification@aitf.co.in',
         'from_name'  => 'AITF Certification Team'
     ];

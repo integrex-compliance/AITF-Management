@@ -35,7 +35,7 @@ $mailConfig = [
     'port' => 587,
     'secure' => 'tls',
     'username' => 'certification@aitf.co.in',
-    'password' => 'foroffice@aitf1122',
+    'password' => 'AITF@@hasTag',
     'from_email' => 'certification@aitf.co.in',
     'from_name' => 'AITF Intimation'
 ];
