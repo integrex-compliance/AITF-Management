@@ -1450,59 +1450,59 @@ if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
     }
 } else if (isset($_GET['customer']) && !empty($_GET['customer']) && isset($_GET["idval"]) && !empty($_GET["idval"])) {
     try {
-        $count = "SELECT count(id) as id FROM allotment_count where client_id = :id";
-        $statement = $db->prepare($count);
+        $existing = "SELECT id, client_count FROM allotment_count WHERE client_id = :id LIMIT 1";
+        $statement = $db->prepare($existing);
         $statement->bindParam(":id", $_GET['customer']);
         $statement->execute();
-        $counter = $statement->fetch();
-        if ($counter['id'] > 0) {
-            // Return existing allotment number for this client
-            $existing = "SELECT client_count FROM allotment_count WHERE client_id = :id";
-            $statement = $db->prepare($existing);
+        $existingRow = $statement->fetch(PDO::FETCH_ASSOC);
+
+        if ($existingRow && isset($existingRow['client_count'])) {
+            $hasAgreement = "SELECT COUNT(*) as cnt FROM certification_aggrement WHERE customer_id = :id";
+            $statement = $db->prepare($hasAgreement);
             $statement->bindParam(":id", $_GET['customer']);
             $statement->execute();
-            $existingData = $statement->fetch();
-            outputJSON($existingData['client_count']);
-        } else {
-            $date = date("d-m-Y", strtotime($_GET["idval"]));
-            $orderdate = explode('-', $date);
-            $month = $orderdate[1];
-            $day = $orderdate[0];
-            $year = $orderdate[2];
-            $clientCount = "SELECT MAX(id) as max_id FROM `allotment_count` WHERE year = :year AND month = :month";
-//            $clientCount = "SELECT client_count FROM allotment_count WHERE year= :year and month = :month ORDER BY client_count DESC LIMIT 1";
-            $statement = $db->prepare($clientCount);
-            $statement->bindParam(":year", $year);
-            $statement->bindParam(":month", $month);
-            $statement->execute();
-            $count = $statement->fetch();
+            $agreementRow = $statement->fetch(PDO::FETCH_ASSOC);
 
-            $counter = 1; // Default for first entry
-            
-            if ($count["max_id"] !== null) {
-                $lastCount = "SELECT client_count FROM allotment_count WHERE id = :id";
-                $statement = $db->prepare($lastCount);
-                $statement->bindParam(":id", $count["max_id"]);
-                $statement->execute();
-                $lastCountVal = $statement->fetch();
-                
-                if ($lastCountVal && $lastCountVal["client_count"]) {
-                    $counter = $lastCountVal["client_count"] + 1;
-                }
+            if (!empty($agreementRow) && (int)$agreementRow['cnt'] > 0) {
+                outputJSON((int)$existingRow['client_count']);
+                exit;
             }
-            
-            // Insert the new allotment record
-            $insertAllotment = "INSERT INTO allotment_count (client_id, client_count, year, month, certification_date) VALUES (:client_id, :client_count, :year, :month, :cert_date)";
-            $statement = $db->prepare($insertAllotment);
-            $statement->bindParam(":client_id", $_GET['customer']);
-            $statement->bindParam(":client_count", $counter);
-            $statement->bindParam(":year", $year);
-            $statement->bindParam(":month", $month);
-            $statement->bindParam(":cert_date", $_GET["idval"]);
+
+            $cleanup = "DELETE FROM allotment_count WHERE client_id = :id";
+            $statement = $db->prepare($cleanup);
+            $statement->bindParam(":id", $_GET['customer']);
             $statement->execute();
-            
-            outputJSON($counter);
         }
+
+        $date = date("d-m-Y", strtotime($_GET["idval"]));
+        $orderdate = explode('-', $date);
+        $month = $orderdate[1];
+        $year = $orderdate[2];
+
+        $maxUsed = "SELECT MAX(ac.client_count) as max_count
+                    FROM allotment_count ac
+                    WHERE ac.year = :year AND ac.month = :month
+                      AND EXISTS (
+                        SELECT 1 FROM certification_aggrement ca
+                        WHERE ca.customer_id = ac.client_id
+                          AND YEAR(ca.aggrement_date) = :year2
+                          AND MONTH(ca.aggrement_date) = :month2
+                      )";
+        $statement = $db->prepare($maxUsed);
+        $statement->bindParam(":year", $year);
+        $statement->bindParam(":month", $month);
+        $statement->bindParam(":year2", $year);
+        $monthInt = (int)$month;
+        $statement->bindParam(":month2", $monthInt);
+        $statement->execute();
+        $maxRow = $statement->fetch(PDO::FETCH_ASSOC);
+
+        $counter = 1;
+        if (!empty($maxRow) && $maxRow['max_count'] !== null) {
+            $counter = ((int)$maxRow['max_count']) + 1;
+        }
+
+        outputJSON($counter);
 //        echo json_encode($counter);
     } catch (Exception $ex) {
         http_response_code(500);

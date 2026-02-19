@@ -33,7 +33,7 @@ $sgst = "";
 $igst = "";
 $gsts = "";
 $firmSign = "";
-$signaturePath = '';
+$signaturePath = ''; 
 
 $customerId = '';
 if (!empty($_POST['invoiceconsultingFirmName'])) {
@@ -82,8 +82,11 @@ if (isset($_POST['invoiceId']) && !empty($_POST['invoiceId'])) {
                 } else {
                     $serviceSumVal += moneyRound($_POST['invoiceServiceAmt'][$i]);
                 }
-            }
-        }
+            } 
+        } 
+
+
+        
         if ($serviceSumVal > 0 && abs($netPriceVal - $serviceSumVal) > 0.009) {
             $netPriceVal = round($serviceSumVal, 2);
         }
@@ -96,7 +99,7 @@ if (isset($_POST['invoiceId']) && !empty($_POST['invoiceId'])) {
         $total_amt = round($netPriceVal + $igstVal, 2);
         $gsts = '<tr><td colspan="2" style="text-align:right">IGST@18%</td><td> ' . moneyFormat2($igstVal) . '/- </td></tr>';
     } else if ($_POST["taxtype"] == "CGST & SGST") {
-        $igst = 'NA';
+        $igst = 'NA';  
         $cgstVal = round($netPriceVal * 0.09, 2);
         $sgstVal = round($netPriceVal * 0.09, 2);
         $cgst = moneyDb($cgstVal);
@@ -143,7 +146,7 @@ if (isset($_POST['invoiceId']) && !empty($_POST['invoiceId'])) {
         $serviceQtyArray = isset($_POST['invoiceServiceQty']) && is_array($_POST['invoiceServiceQty']) ? $_POST['invoiceServiceQty'] : [];
         $serviceRateArray = isset($_POST['invoiceServiceRate']) && is_array($_POST['invoiceServiceRate']) ? $_POST['invoiceServiceRate'] : [];
         $hasQtyRateCols = invoiceServicesHasQtyRateColumns($db);
-        $count = 0;
+        $count = 0;  if
         foreach ($serviceArray as $service) {
             if ($serviceArray[$count] != "") {
                 if ($hasQtyRateCols) {

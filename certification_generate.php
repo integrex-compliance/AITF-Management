@@ -60,6 +60,12 @@ if (isset($_POST["certificateid"]) && !empty($_POST["certificateid"])) {
             header("Location: customerAccount.php?customerid=" . (isset($_POST['csId']) ? $_POST['csId'] : ''));
             exit;
         }
+
+        $date = date("d-m-Y", strtotime($_POST["newRegistrationDate"]));
+        $orderdate = explode('-', $date);
+        $day = $orderdate[0];
+        $month = $orderdate[1];
+        $year = $orderdate[2];
         
         // Check if this service is an RC or CR service
         $serviceTypeCheck = "SELECT service_type FROM service WHERE service_id = :sid";
@@ -81,11 +87,48 @@ if (isset($_POST["certificateid"]) && !empty($_POST["certificateid"])) {
             $prevResult = $prevStmt->fetch();
             $hasPreviousServices = ($prevResult && $prevResult['service_count'] > 0);
         }
+
+        $client = "SELECT count(id) as id FROM allotment_count where client_id = :id";
+        $statement = $db->prepare($client);
+        $statement->bindParam(":id", $_POST["csId"]);
+        $statement->execute();
+        $row = $statement->fetch();
+
+        $shouldAllocateBaseAllotment = (!$isRCService && !($isCRService && $hasPreviousServices));
         
         // Always store the allotment as provided (including Rc-X suffix when generated for RC/CR)
         $allotmentToStore = $_POST["allotmentNo"];
-        
-        echo $_POST["service"]." -> ".$_POST["csId"]." -> ".$_POST["newRegistrationDate"]." -> ".$allotmentToStore;
+        $allocatedCount = null;
+
+        if (!$row["id"] && $shouldAllocateBaseAllotment) {
+            $maxUsed = "SELECT MAX(ac.client_count) as max_count
+                        FROM allotment_count ac
+                        WHERE ac.year = :year AND ac.month = :month
+                          AND EXISTS (
+                            SELECT 1 FROM certification_aggrement ca
+                            WHERE ca.customer_id = ac.client_id
+                              AND YEAR(ca.aggrement_date) = :year2
+                              AND MONTH(ca.aggrement_date) = :month2
+                          )";
+            $statement = $db->prepare($maxUsed);
+            $statement->bindParam(":year", $year);
+            $statement->bindParam(":month", $month);
+            $statement->bindParam(":year2", $year);
+            $monthInt = (int)$month;
+            $statement->bindParam(":month2", $monthInt);
+            $statement->execute();
+            $maxRow = $statement->fetch(PDO::FETCH_ASSOC);
+
+            $allocatedCount = 1;
+            if (!empty($maxRow) && $maxRow['max_count'] !== null) {
+                $allocatedCount = ((int)$maxRow['max_count']) + 1;
+            }
+
+            $monthName = date('F', mktime(0, 0, 0, (int)$month, 1));
+            $yy = substr($year, -2);
+            $allotmentToStore = 'AITF/' . $monthName . '-' . $yy . '/' . $allocatedCount;
+        }
+
         $sqlcertagrment = "INSERT INTO `certification_aggrement`(`service`, `customer_id`, `aggrement_date`, `aggrement_no`) VALUES (:svc, :customer, :date, :altno)";
         $statement = $db->prepare($sqlcertagrment);
         $statement->bindParam(":svc", $_POST["service"]);
@@ -93,37 +136,24 @@ if (isset($_POST["certificateid"]) && !empty($_POST["certificateid"])) {
         $statement->bindParam(":date", date("Y-m-d", strtotime($_POST["newRegistrationDate"])));
         $statement->bindParam(":altno", $allotmentToStore);
         $statement->execute();
-
-        $client = "SELECT count(id) as id FROM allotment_count where client_id = :id";
-        $statement = $db->prepare($client);
-        $statement->bindParam(":id", $_POST["csId"]);
-        $statement->execute();
-        $row = $statement->fetch();
         
         // Only update customer_info.unique_id for first-time services (not RC or CR after CA/SA)
-        if (!$row["id"] && !$isRCService && !($isCRService && $hasPreviousServices)) {
+        if (!$row["id"] && $shouldAllocateBaseAllotment) {
             $updateNextService = "UPDATE customer_info SET unique_id = :allotment_agreement WHERE id = :id";
             $statement = $db->prepare($updateNextService);
             $statement->bindParam(':allotment_agreement', $allotmentToStore);
             $statement->bindParam(':id', $_POST['csId']);
             $statement->execute();
 
-            $date = date("d-m-Y", strtotime($_POST["newRegistrationDate"]));
-            $orderdate = explode('-', $date);
-            $day = $orderdate[0];
-            $month = $orderdate[1];
-            $year = $orderdate[2];
-
             $insertCount = "INSERT INTO allotment_count (year, month, client_count, client_id, certification_date) VALUES (:year, :month, :count, :customer, :date)";
             $statement = $db->prepare($insertCount);
             $statement->bindParam(":year", $year);
             $statement->bindParam(":month", $month);
-            $statement->bindParam(":count", $_POST["newCount"]);
+            $statement->bindParam(":count", $allocatedCount);
             $statement->bindParam(":customer", $_POST['csId']);
             $statement->bindParam(":date", date("Y-m-d", strtotime($_POST["newRegistrationDate"])));
             $statement->execute();
         }
-        echo "3";
         header("Location: customerAccount.php?customerid=" . $_POST['csId']);
     } catch (Exception $ex) {
         
