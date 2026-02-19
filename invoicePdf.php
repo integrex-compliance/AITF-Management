@@ -146,9 +146,8 @@ if (isset($_POST['invoiceId']) && !empty($_POST['invoiceId'])) {
         $serviceQtyArray = isset($_POST['invoiceServiceQty']) && is_array($_POST['invoiceServiceQty']) ? $_POST['invoiceServiceQty'] : [];
         $serviceRateArray = isset($_POST['invoiceServiceRate']) && is_array($_POST['invoiceServiceRate']) ? $_POST['invoiceServiceRate'] : [];
         $hasQtyRateCols = invoiceServicesHasQtyRateColumns($db);
-        $count = 0;  if
-        foreach ($serviceArray as $service) {
-            if ($serviceArray[$count] != "") {
+        foreach ($serviceArray as $idx => $serviceDesc) {
+            if ((string) $serviceDesc !== "") {
                 if ($hasQtyRateCols) {
                     $invoiceServices = "INSERT INTO invoice_services (invoice_ids, service_desc, service_amount, quantity, rate) VALUES (:id,:service,:amount,:qty,:rate)";
                 } else {
@@ -156,21 +155,20 @@ if (isset($_POST['invoiceId']) && !empty($_POST['invoiceId'])) {
                 }
                 $statement = $db->prepare($invoiceServices);
                 $statement->bindParam(':id', $invoiceid);
-                $statement->bindParam(':service', $serviceArray[$count]);
-                $serviceAmtVal = $serviceAmtArray[$count];
-                if (!empty($_POST['includeQtyRate']) && isset($serviceQtyArray[$count], $serviceRateArray[$count])) {
-                    $serviceAmtVal = round(moneyRound($serviceQtyArray[$count]) * moneyRound($serviceRateArray[$count]), 2);
+                $statement->bindParam(':service', $serviceDesc);
+                $serviceAmtVal = $serviceAmtArray[$idx] ?? 0;
+                if (!empty($_POST['includeQtyRate']) && isset($serviceQtyArray[$idx], $serviceRateArray[$idx])) {
+                    $serviceAmtVal = round(moneyRound($serviceQtyArray[$idx]) * moneyRound($serviceRateArray[$idx]), 2);
                 }
                 $serviceAmtDb = moneyDb($serviceAmtVal);
                 $statement->bindParam(':amount', $serviceAmtDb);
                 if ($hasQtyRateCols) {
-                    $qtyDb = isset($serviceQtyArray[$count]) ? moneyDb($serviceQtyArray[$count]) : null;
-                    $rateDb = isset($serviceRateArray[$count]) ? moneyDb($serviceRateArray[$count]) : null;
+                    $qtyDb = isset($serviceQtyArray[$idx]) ? moneyDb($serviceQtyArray[$idx]) : null;
+                    $rateDb = isset($serviceRateArray[$idx]) ? moneyDb($serviceRateArray[$idx]) : null;
                     $statement->bindParam(':qty', $qtyDb);
                     $statement->bindParam(':rate', $rateDb);
                 }
                 $statement->execute();
-                $count++;
             }
         }
     }

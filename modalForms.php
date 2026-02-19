@@ -11,10 +11,6 @@ $customerStatus = "SELECT * FROM customer_status";
 $statement = $db->prepare($customerStatus);
 $statement->execute();
 $status = $statement->fetchAll();
-$sqlinv = "SELECT max(invoice_date) as invdate FROM invoice_details";
-$statement = $db->prepare($sqlinv);
-$statement->execute();
-$lastinvdate = $statement->fetch();
 
 $sql = "SELECT * FROM `firm_services`";
 $statement = $db->prepare($sql);
@@ -611,7 +607,6 @@ $csgttax = $taxationDetails["rate"];
                         </div>
                     </div>
                 </div>
-                <input type="hidden" class="previnvdate" name="previnvdate" id="previnvdate" value="<?php echo date("d.m.Y", strtotime($lastinvdate["invdate"])) ?>">
                 <div class="modal-footer">
                     <button type="button" class="btn btn-xs btn-default calculateGST">Reset GST</button>
                     <button type="button" class="btn btn-xs btn-info invoiceGenerate" disabled>Generate</button>
@@ -752,7 +747,6 @@ $csgttax = $taxationDetails["rate"];
                         </div>
                     </div>
                 </div>
-                <input type="hidden" class="previnvdate" name="previnvdate" id="previnvdate" value="<?php echo date("d.m.Y", strtotime($lastinvdate["invdate"])) ?>">
                 <div class="modal-footer">
                     <button type="button" class="btn btn-xs btn-default calculateFinalGST">Reset GST</button>
                     <button type="button" class="btn btn-xs btn-info fianlInvoiceGenerate" disabled="">Generate</button>
@@ -1482,12 +1476,6 @@ $csgttax = $taxationDetails["rate"];
         $isError = false;
         if ($('.invoiceDt').val() == "") {
             $('#invoiceDtErrorMsg').text("Invoice date can not be empty");
-            $('#invoiceDtError').show();
-            $('#invoiceDt').addClass('inputHighlight');
-            $isError = true;
-        } else if ($('.invoiceDt').val() != "" && $(".invoiceId").val() == "" && (moment($('.invoiceDt').val(), "DD/MM/YYYY") < moment($('.previnvdate').val(), "DD/MM/YYYY"))) {
-//            alert("in");
-            $('#invoiceDtErrorMsg').text("Date should be greator than or equal prevoius invoice");
             $('#invoiceDtError').show();
             $('#invoiceDt').addClass('inputHighlight');
             $isError = true;
