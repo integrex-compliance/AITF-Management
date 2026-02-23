@@ -18,7 +18,18 @@ foreach ($phpMailerAutoloadCandidates as $phpMailerAutoloadPath) {
 if (!$phpMailerAutoloadLoaded) {
     throw new Exception('PHPMailer autoload not found');
 }
-$mailConfig = require __DIR__ . '/config/mail_config.php';
+$mailConfigPath = __DIR__ . '/config/mail_config.php';
+$mailConfig = file_exists($mailConfigPath) ? require $mailConfigPath : [];
+$mailConfig = array_merge(
+    [
+        'host' => 'smtpout.secureserver.net',
+        'port' => 587,
+        'secure' => 'tls',
+        'username' => '',
+        'password' => ''
+    ],
+    is_array($mailConfig) ? $mailConfig : []
+);
 $mail = new PHPMailer;
 $mail->isSMTP();
 $mail->Host = $mailConfig['host'];

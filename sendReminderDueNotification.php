@@ -193,7 +193,18 @@ if (!$phpMailerAutoloadLoaded) {
     throw new Exception('PHPMailer autoload not found');
 }
 
-$mailConfig = require __DIR__ . '/config/mail_config.php';
+$mailConfigPath = __DIR__ . '/config/mail_config.php';
+$mailConfig = file_exists($mailConfigPath) ? require $mailConfigPath : [];
+$mailConfig = array_merge(
+    [
+        'host' => 'smtpout.secureserver.net',
+        'port' => 587,
+        'secure' => 'tls',
+        'username' => 'certification@aitf.co.in',
+        'password' => 'AITF999@@HasTag#'
+    ],
+    is_array($mailConfig) ? $mailConfig : []
+);
 
 $email = new PHPMailer;
 $email->IsSMTP();
