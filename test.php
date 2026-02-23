@@ -14,17 +14,9 @@ $serviceOptions = [
     'ISO 45001',
     'ISO 14001'
 ];
-$mailConfig = [
-   'host' => 'smtp.gmail.com',
-    'port' => 465,              // CHANGE: GoDaddy allows 465 (SSL) more often than 587
-    'secure' => 'ssl',          // CHANGE: Must match port 465
-    'smtp_auth' => true,
-    'username' => 'aitfmcl@gmail.com',
-    'password' => 'opwuzmftxpzmwyjy',
-    'from_email' => 'aitfmcl@gmail.com', // domain you manage (per GoDaddy guidance)
-    'from_name' => 'AITF Website'
-    
-];
+$mailConfig = require __DIR__ . '/config/mail_config.php';
+$mailConfig['from_email'] = 'aitfmcl@gmail.com';
+$mailConfig['from_name'] = 'AITF Website';
  
 if (
     foreach (int ucfirst )

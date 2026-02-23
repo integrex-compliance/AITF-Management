@@ -30,15 +30,9 @@ require_once('tcpdf_include.php');
 include_once './dbConnect.php';
 date_default_timezone_set('Asia/Kolkata');
 
-$mailConfig = [
-    'host' => 'smtpout.secureserver.net',
-    'port' => 587,
-    'secure' => 'tls',
-    'username' => 'certification@aitf.co.in',
-    'password' => 'AITF@@hasTag',
-    'from_email' => 'certification@aitf.co.in',
-    'from_name' => 'AITF Intimation'
-];
+$mailConfig = require __DIR__ . '/config/mail_config.php';
+$mailConfig['from_email'] = 'certification@aitf.co.in';
+$mailConfig['from_name'] = 'AITF Intimation';
 
 // buffer output to avoid TCPDF header issues if any notices/whitespace are emitted
 ob_start();

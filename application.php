@@ -5,16 +5,9 @@ $success_message = '';
 $error_message = '';
 $applications = [];
 
-$mailConfig = [
-    'host' => 'smtpout.secureserver.net',
-    'port' => 587,
-    'secure' => 'tls',
-    'smtp_auth' => true,
-    'username' => 'certification@aitf.co.in',
-    'password' => 'AITF@@hasTag',
-    'from_email' => 'certification@aitf.co.in',
-    'from_name' => 'AITF Website'
-];
+$mailConfig = require __DIR__ . '/config/mail_config.php';
+$mailConfig['from_email'] = 'certification@aitf.co.in';
+$mailConfig['from_name'] = 'AITF Website';
 
 if (isset($db)) {
     try {
@@ -323,6 +316,13 @@ if (isset($db)) {
                         $attempts = [
                             ['host' => 'localhost', 'port' => 25, 'secure' => '', 'autotls' => false, 'auth' => false],
                             ['host' => 'relay-hosting.secureserver.net', 'port' => 25, 'secure' => '', 'autotls' => false, 'auth' => false],
+                            [
+                                'host' => $mailConfig['host'],
+                                'port' => $mailConfig['port'],
+                                'secure' => $mailConfig['secure'],
+                                'autotls' => $mailConfig['secure'] === 'tls',
+                                'auth' => ($mailConfig['username'] ?? '') !== '' && ($mailConfig['password'] ?? '') !== ''
+                            ],
                         ];
 
                         $applySmtpConfig = function(PHPMailer $mailer, array $cfg) use ($mailConfig, $smtpOptions) {
@@ -350,7 +350,7 @@ if (isset($db)) {
                         $adminMail->Sender = $mailConfig['from_email'] ?: 'no-reply@localhost';
                         $adminMail->addCustomHeader('Return-Path', $mailConfig['from_email'] ?: 'no-reply@localhost');
                         $adminMail->addAddress('certification@aitf.co.in', 'AITF Certification');
-                        $adminMail->addCC('gauravoli777@gmail.com', 'AITF Team');
+                        $adminMail->addCC('aitfmcl@gmail.com', 'AITF Team');
                         $adminMail->addCC('aitfmcl@gmail.com', 'AITF Notifications');
                         $adminMail->Subject = 'New Audit Application Submitted - ' . $org_name;
 

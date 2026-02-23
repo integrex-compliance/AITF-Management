@@ -146,16 +146,10 @@ try {
     $adminEmail = 'certification@aitf.co.in'; // admin/office mailbox
 
     // SMTP config: use certification@aitf.co.in (same as application form)
-    $mailConfig = [
-        'host'       => 'smtpout.secureserver.net',
-        'port'       => 587,
-        'secure'     => 'tls',
-        'smtp_auth'  => true,
-        'username'   => 'certification@aitf.co.in',
-        'password'   => 'AITF@@hasTag',
-        'from_email' => 'certification@aitf.co.in',
-        'from_name'  => 'AITF Certification Team'
-    ];
+    $mailConfig = require __DIR__ . '/config/mail_config.php';
+    $mailConfig['smtp_auth'] = ($mailConfig['username'] ?? '') !== '' && ($mailConfig['password'] ?? '') !== '';
+    $mailConfig['from_email'] = 'certification@aitf.co.in';
+    $mailConfig['from_name'] = 'AITF Certification Team';
 
     $configureSmtp = function (PHPMailer $mailer, array $cfg) {
         $mailer->isSMTP();

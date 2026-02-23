@@ -19,16 +19,18 @@ if (!$phpMailerAutoloadLoaded) {
     throw new Exception('PHPMailer autoload not found');
 }
 
+$mailConfig = require __DIR__ . '/config/mail_config.php';
+
 $mail = new PHPMailer();
 $msg='Name';
 $mail->IsSMTP();
-$mail->SMTPDebug = 1;
-$mail->Port       = 465;
-//$mail->SMTPSecure = 'ssl';
-$mail->Host     = 'smtp.mail.yahoo.com';
-$mail->SMTPAuth = true; 
-$mail->Username = 'harishajabe@yahoo.co.in';
-$mail->Password = 'jpknlodwmjslvdaf'; 
+$mail->SMTPDebug = 0;
+$mail->Port = $mailConfig['port'];
+$mail->SMTPSecure = $mailConfig['secure'];
+$mail->Host = $mailConfig['host'];
+$mail->SMTPAuth = ($mailConfig['username'] ?? '') !== '' && ($mailConfig['password'] ?? '') !== '';
+$mail->Username = $mailConfig['username'];
+$mail->Password = $mailConfig['password'];
 $mail->SetFrom('harishajabe@yahoo.co.in', 'harish');
 
 $mail->Subject    = "PHPMailer Test Subject via POP before SMTP, basic";

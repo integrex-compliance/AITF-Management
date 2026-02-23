@@ -1,6 +1,7 @@
 <?php
 
 require 'PHPMailerAutoload.php';
+$mailConfig = require __DIR__ . '/config/mail_config.php';
 $mail = new PHPMailer(true);
 
 class AITFServiceEmailSender {
@@ -11,13 +12,14 @@ class AITFServiceEmailSender {
 
         //Send mail using gmail
         if (true) {
+            global $mailConfig;
             $mail->IsSMTP(); // telling the class to use SMTP
-            $mail->SMTPAuth = true; // enable SMTP authentication
-            $mail->SMTPSecure = "ssl"; // sets the prefix to the servier
-            $mail->Host = "smtp.gmail.com"; // sets GMAIL as the SMTP server
-            $mail->Port = 465; // set the SMTP port for the GMAIL server
-            $mail->Username = "recruitgunadhya@gmail.com"; // GMAIL username
-            $mail->Password = "latur1102"; // GMAIL password
+            $mail->SMTPAuth = ($mailConfig['username'] ?? '') !== '' && ($mailConfig['password'] ?? '') !== ''; // enable SMTP authentication
+            $mail->SMTPSecure = $mailConfig['secure']; // sets the prefix to the servier
+            $mail->Host = $mailConfig['host']; // sets GMAIL as the SMTP server
+            $mail->Port = $mailConfig['port']; // set the SMTP port for the GMAIL server
+            $mail->Username = $mailConfig['username']; // GMAIL username
+            $mail->Password = $mailConfig['password']; // GMAIL password
         }
 
 
@@ -45,13 +47,14 @@ class AITFServiceEmailSender {
 
         //Send mail using gmail
         if (true) {
+            global $mailConfig;
             $mail->IsSMTP(); // telling the class to use SMTP
-            $mail->SMTPAuth = true; // enable SMTP authentication
-            $mail->SMTPSecure = "ssl"; // sets the prefix to the servier
-            $mail->Host = "smtp.gmail.com"; // sets GMAIL as the SMTP server
-            $mail->Port = 465; // set the SMTP port for the GMAIL server
-            $mail->Username = "recruitgunadhya@gmail.com"; // GMAIL username
-            $mail->Password = "latur1102"; // GMAIL password
+            $mail->SMTPAuth = ($mailConfig['username'] ?? '') !== '' && ($mailConfig['password'] ?? '') !== ''; // enable SMTP authentication
+            $mail->SMTPSecure = $mailConfig['secure']; // sets the prefix to the servier
+            $mail->Host = $mailConfig['host']; // sets GMAIL as the SMTP server
+            $mail->Port = $mailConfig['port']; // set the SMTP port for the GMAIL server
+            $mail->Username = $mailConfig['username']; // GMAIL username
+            $mail->Password = $mailConfig['password']; // GMAIL password
         }
                
 
@@ -79,14 +82,15 @@ class AITFServiceEmailSender {
         $mail = new PHPMailer(true);
         //Send mail using gmail
         if (true) {
+            global $mailConfig;
             $mail->IsSMTP(); // telling the class to use SMTP
             //$mail->FromName = 'UPuzzledMe';
-            $mail->SMTPAuth = true; // enable SMTP authentication
-            $mail->SMTPSecure = "ssl"; // sets the prefix to the servier
-            $mail->Host = "smtp.gmail.com"; // sets GMAIL as the SMTP server
-            $mail->Port = 465; // set the SMTP port for the GMAIL server
-            $mail->Username = "recruitgunadhya@gmail.com"; // GMAIL username
-            $mail->Password = "latur1102"; // GMAIL password
+            $mail->SMTPAuth = ($mailConfig['username'] ?? '') !== '' && ($mailConfig['password'] ?? '') !== ''; // enable SMTP authentication
+            $mail->SMTPSecure = $mailConfig['secure']; // sets the prefix to the servier
+            $mail->Host = $mailConfig['host']; // sets GMAIL as the SMTP server
+            $mail->Port = $mailConfig['port']; // set the SMTP port for the GMAIL server
+            $mail->Username = $mailConfig['username']; // GMAIL username
+            $mail->Password = $mailConfig['password']; // GMAIL password
         }
 
         if ($ismultiple) {

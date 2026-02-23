@@ -197,14 +197,16 @@ if (!$phpMailerAutoloadLoaded) {
     throw new Exception('PHPMailer autoload not found');
 }
 
+$mailConfig = require __DIR__ . '/config/mail_config.php';
+
 $email = new PHPMailer;
 $email->IsSMTP();
-$email->Host='smtp.gmail.com';
-$email->Port=587;
-$email->SMTPAuth=true;
-$email->SMTPSecure='tls';
-$email->Username='aitfintimation@gmail.com';
-$email->Password='intimation@123';
+$email->Host = $mailConfig['host'];
+$email->Port = $mailConfig['port'];
+$email->SMTPAuth = ($mailConfig['username'] ?? '') !== '' && ($mailConfig['password'] ?? '') !== '';
+$email->SMTPSecure = $mailConfig['secure'];
+$email->Username = $mailConfig['username'];
+$email->Password = $mailConfig['password'];
 $email->setFrom('aitfintimation@gmail.com');
 $email->addReplyTo('aitfintimation@gmail.com');
 $email->Subject = 'Withdrawal Reminder For '.$servicedesc.' - '.$customer['customer_name'];

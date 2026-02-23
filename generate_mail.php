@@ -18,14 +18,15 @@ foreach ($phpMailerAutoloadCandidates as $phpMailerAutoloadPath) {
 if (!$phpMailerAutoloadLoaded) {
     throw new Exception('PHPMailer autoload not found');
 }
+$mailConfig = require __DIR__ . '/config/mail_config.php';
 $mail = new PHPMailer;
-$mail->Host='smtp.gmail.com';
-$mail->port=587;
-$mail->SMTPAuth=true;
-$mail->SMTPSecure='tls';
-$mail->Username='aitfmcl@gmail.com';
-$mail->Password='amqxvynmfsnvvihi';
-$mail->Password='aitf@work11';
+$mail->isSMTP();
+$mail->Host = $mailConfig['host'];
+$mail->Port = $mailConfig['port'];
+$mail->SMTPAuth = ($mailConfig['username'] ?? '') !== '' && ($mailConfig['password'] ?? '') !== '';
+$mail->SMTPSecure = $mailConfig['secure'];
+$mail->Username = $mailConfig['username'];
+$mail->Password = $mailConfig['password'];
 
 $mail->setFrom('aitfmcl@gmail.com');
 

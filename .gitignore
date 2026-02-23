@@ -1,4 +1,4 @@
-﻿# Directories to ignore
+# Directories to ignore
 uploads/
 tinymce/
 PHPMailer/
@@ -13,3 +13,4 @@ PHPMailer/
 debug.php
 dubug.php
 *.crdownload
+/config/mail_config.php

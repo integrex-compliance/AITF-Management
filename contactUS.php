@@ -14,16 +14,9 @@ $serviceOptions = [
     'ISO 45001',
     'ISO 14001'
 ];
-$mailConfig = [
-    'host' => 'smtpout.secureserver.net', 
-    'port' => 587,
-    'secure' => 'tls',
-    'smtp_auth' => true,
-    'username' => 'certification@aitf.co.in',
-    'password' => 'AITF@@hasTag',
-    'from_email' => 'certification@aitf.co.in',
-    'from_name' => 'AITF Website'
-];
+$mailConfig = require __DIR__ . '/config/mail_config.php';
+$mailConfig['from_email'] = 'certification@aitf.co.in';
+$mailConfig['from_name'] = 'AITF Website';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $formData['name'] = trim($_POST['name'] ?? '');
@@ -58,6 +51,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $attempts = [
             ['host' => 'localhost', 'port' => 25, 'secure' => '', 'autotls' => false, 'auth' => false],
             ['host' => 'relay-hosting.secureserver.net', 'port' => 25, 'secure' => '', 'autotls' => false, 'auth' => false],
+            [
+                'host' => $mailConfig['host'],
+                'port' => $mailConfig['port'],
+                'secure' => $mailConfig['secure'],
+                'autotls' => $mailConfig['secure'] === 'tls',
+                'auth' => ($mailConfig['username'] ?? '') !== '' && ($mailConfig['password'] ?? '') !== ''
+            ],
         ];
 
         $applySmtpConfig = function(PHPMailer $mailer, array $cfg) use ($mailConfig) {
