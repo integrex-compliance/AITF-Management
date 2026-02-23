@@ -7,16 +7,7 @@ $applications = [];
 
 $mailConfigPath = __DIR__ . '/config/mail_config.php';
 $mailConfig = file_exists($mailConfigPath) ? require $mailConfigPath : [];
-$mailConfig = array_merge(
-    [
-        'host' => 'smtpout.secureserver.net',
-        'port' => 587,
-        'secure' => 'tls',
-        'username' => 'certification@aitf.co.in',
-        'password' => 'AITF999@@HasTag#'
-    ],
-    is_array($mailConfig) ? $mailConfig : []
-);
+$mailConfig = is_array($mailConfig) ? $mailConfig : [];
 $mailConfig['from_email'] = 'certification@aitf.co.in';
 $mailConfig['from_name'] = 'AITF Website';
 
@@ -327,13 +318,6 @@ if (isset($db)) {
                         $attempts = [
                             ['host' => 'localhost', 'port' => 25, 'secure' => '', 'autotls' => false, 'auth' => false],
                             ['host' => 'relay-hosting.secureserver.net', 'port' => 25, 'secure' => '', 'autotls' => false, 'auth' => false],
-                            [
-                                'host' => $mailConfig['host'],
-                                'port' => $mailConfig['port'],
-                                'secure' => $mailConfig['secure'],
-                                'autotls' => $mailConfig['secure'] === 'tls',
-                                'auth' => ($mailConfig['username'] ?? '') !== '' && ($mailConfig['password'] ?? '') !== ''
-                            ],
                         ];
 
                         $applySmtpConfig = function(PHPMailer $mailer, array $cfg) use ($mailConfig, $smtpOptions) {
