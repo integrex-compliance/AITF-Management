@@ -30,13 +30,23 @@ if (isset($_POST['schedule-service-id']) && !empty($_POST['schedule-service-id']
         }
 
         if (isset($_POST['addScheduleStage'])) {
+            $refNo = null;
+            $stmtRef = $db->prepare("SELECT unique_id FROM customer_info WHERE id = :id");
+            $stmtRef->bindParam(':id', $customer);
+            $stmtRef->execute();
+            $refRow = $stmtRef->fetch();
+            if ($refRow && !empty($refRow['unique_id'])) {
+                $refNo = $refRow['unique_id'];
+            } else {
+                $refNo = $_POST['scheduleRefNo'];
+            }
             $scheduleid = "INSERT INTO audit_schedule_id (serviceca_id, customer_ca_id, client_name, ref_no, schedule_address, schedule_contact_person, schedule_scope, schedule_app_standard, schedule_aifcode,schedule_nacfcode,schedule_naceclass,schedule_audit_type, schedule_mandays,schedule_audit_date, schedule_auditors, break, break_from, break_to) "
                     . "VALUES (:service,:customer,:client,:refno,:address,:contactperson,:scope,:appstandard,:iafcode,:nacecode,:naceclass,:audittype,:mandays,:auditDate,:auditor,:lunch,:timeFrom,:timeTo)";
             $statement = $db->prepare($scheduleid);
             $statement->bindParam(':service', $service);
             $statement->bindParam(':customer', $customer);
             $statement->bindParam(':client', $_POST['scheduleClientName']);
-            $statement->bindParam(':refno', $_POST['scheduleRefNo']);
+            $statement->bindParam(':refno', $refNo);
             $statement->bindParam(':address', $_POST['scheduleAddress']);
             $statement->bindParam(':contactperson', $_POST['scheduleContactPerson']);
             $statement->bindParam(':scope', $_POST['scheduleScope']);
@@ -119,7 +129,17 @@ if (isset($_POST['schedule-service-id']) && !empty($_POST['schedule-service-id']
                     . "stage_i_date = :rev_date, stage_i_isue = :isue, stage_i_isuedate = :isueDate, break = :lunch, break_from = :timeFrom, break_to = :timeTo WHERE audit_schedule_id = :id ";
             $statement = $db->prepare($scheduleIdupdate);
             $statement->bindParam(':client', $_POST['scheduleClientNameEdit']);
-            $statement->bindParam(':refno', $_POST['scheduleRefNoEdit']);
+            $refNo = null;
+            $stmtRef = $db->prepare("SELECT unique_id FROM customer_info WHERE id = :id");
+            $stmtRef->bindParam(':id', $customerid);
+            $stmtRef->execute();
+            $refRow = $stmtRef->fetch();
+            if ($refRow && !empty($refRow['unique_id'])) {
+                $refNo = $refRow['unique_id'];
+            } else {
+                $refNo = $_POST['scheduleRefNoEdit'];
+            }
+            $statement->bindParam(':refno', $refNo);
             $statement->bindParam(':address', $_POST['scheduleAddressEdit']);
             $statement->bindParam(':contactperson', $_POST['scheduleContactPersonEdit']);
             $statement->bindParam(':scope', $_POST['scheduleScopeEdit']);

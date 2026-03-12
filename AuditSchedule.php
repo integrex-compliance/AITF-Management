@@ -44,6 +44,21 @@ $statement->bindParam(':customer', $_POST['customerid']);
 $statement->execute();
 $stageIInfo = $statement->fetch();
 
+$agreementNo = $stageIInfo['ref_no'];
+$stmtCustomer = $db->prepare("SELECT unique_id FROM customer_info WHERE id = :id");
+$stmtCustomer->bindParam(':id', $_POST['customerid']);
+$stmtCustomer->execute();
+$customerRow = $stmtCustomer->fetch();
+if ($customerRow && !empty($customerRow['unique_id'])) {
+    $agreementNo = $customerRow['unique_id'];
+}
+if (!empty($agreementNo) && (!isset($stageIInfo['ref_no']) || trim((string)$stageIInfo['ref_no']) !== trim((string)$agreementNo))) {
+    $stmtUpdate = $db->prepare("UPDATE audit_schedule_id SET ref_no = :ref WHERE audit_schedule_id = :id");
+    $stmtUpdate->bindParam(':ref', $agreementNo);
+    $stmtUpdate->bindParam(':id', $_POST['auditscheduleid']);
+    $stmtUpdate->execute();
+}
+
 $formNo = $stageIInfo['stage_i_form'];
 $rev_date = $stageIInfo['stage_i_date'];
 $rev = $stageIInfo['stage_i_rev'];
@@ -218,7 +233,7 @@ $html = '<table border="1"  cellpadding="3" cellspacing="0">
         <font size="10">Client Name: <font color="black">' . $stageIInfo['client_name'] . '</font></font>
     </td>
     <td colspan="4" >
-        <font size="10">Agreement No:<font color="black">' . $stageIInfo['ref_no'] . '</font></font>
+        <font size="10">Agreement No:<font color="black">' . $agreementNo . '</font></font>
     </td>
 </tr>
 <tr>

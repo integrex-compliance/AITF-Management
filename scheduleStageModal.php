@@ -754,40 +754,18 @@ Planning, Review Inputs, review Outputs, Minutes of the Meeting, Top Management 
         });
 
         $('.createStageSchedule').click(function () {
-            $('.schedule-customer-id').val($(this).attr('data-customer'));
-            $('.schedule-service-id').val($(this).attr('data-service'));
-//    var serviceType = $(this).attr('data-serviceType');
-            
-            // First, generate the allotment number automatically
-            $.ajax({
-                url: "checkCustomer.php",
-                type: "GET",
-                dataType: "json",
-                data: {
-                    generateAllotment: "true"
-                },
-                success: function (allotmentData) {
-                    if (allotmentData.success) {
-                        // Set the generated allotment number
-                        $('.scheduleRefNo').val(allotmentData.allotmentNumber);
-                        $('.scheduleRefNo').trigger('change'); // Trigger change event to update UI
-                        console.log('Generated Allotment Number:', allotmentData.allotmentNumber);
-                    } else {
-                        console.error('Failed to generate allotment number:', allotmentData.error);
-                    }
-                },
-                error: function (xhr, status, error) {
-                    console.error('Error generating allotment number:', error);
-                }
-            });
+            var customerId = $(this).attr('data-customer');
+            var serviceId = $(this).attr('data-service');
+            $('.schedule-customer-id').val(customerId);
+            $('.schedule-service-id').val(serviceId);
             
             $.ajax({
                 url: "getClientInfo.php",
                 type: "GET",
                 dataType: "json",
                 data: {
-                    customer_id: $(this).attr('data-customer'),
-                    service_id: $(this).attr('data-service'),
+                    customer_id: customerId,
+                    service_id: serviceId,
                 },
                 success: function (data)
                 {
@@ -822,8 +800,10 @@ Planning, Review Inputs, review Outputs, Minutes of the Meeting, Top Management 
 //                    $('.scheduleAuditType').val(data[7]["nace_codes"]);
                     $('.scheduleClientName').val(data[0]['customer_name']);
                     $('.scheduleAddress').val(data[0]['address']);
-                    // Note: scheduleRefNo is already set by the allotment generation above
-                    // $('.scheduleRefNo').val(data[0]['unique_id']); // Commented out to keep generated allotment
+                    if (data[0] && data[0]['unique_id'] != null && data[0]['unique_id'] !== "") {
+                        $('.scheduleRefNo').val(data[0]['unique_id']);
+                        $('.scheduleRefNo').trigger('change');
+                    }
                     $('.scheduleContactPerson').val(data[0]['contact_person']);
 //                    alert(data[1]['audit_standard']);
 //                    alert(data[3]['certification']);
@@ -900,8 +880,10 @@ for (var key in data[6]) {
         });
 
         $('.editStageSchedule').click(function () {
-            $('.schedule-service-id-edit').val($(this).attr('data-service'));
-            $('.schedule-customer-id-edit').val($(this).attr('data-customer'));
+            var customerId = $(this).attr('data-customer');
+            var serviceId = $(this).attr('data-service');
+            $('.schedule-service-id-edit').val(serviceId);
+            $('.schedule-customer-id-edit').val(customerId);
             $('.schedule-audit-id-edit').val($(this).attr('data-row-id'));
             $.ajax({
                 url: "contractDetails.php",
@@ -909,7 +891,7 @@ for (var key in data[6]) {
                 dataType: "json",
                 data: {
                     scheduleId: $(this).attr('data-row-id'),
-                    serviceID: $(this).attr('data-service'),
+                    serviceID: serviceId,
                 },
                 success: function (data)
                 {
@@ -925,6 +907,21 @@ for (var key in data[6]) {
                     $('.scheduleNaceclassEdit').val(data[0]['schedule_naceclass']);
                     $('.scheduleAuditTypeEdit').val(data[0]['schedule_audit_type']);
                     $('.scheduleMandaysEdit').val(data[0]['schedule_mandays']);
+                    $.ajax({
+                        url: "getClientInfo.php",
+                        type: "GET",
+                        dataType: "json",
+                        data: {
+                            customer_id: customerId,
+                            service_id: serviceId,
+                        },
+                        success: function (clientData) {
+                            if (clientData && clientData[0] && clientData[0]['unique_id'] != null && clientData[0]['unique_id'] !== "") {
+                                $('.scheduleRefNoEdit').val(clientData[0]['unique_id']);
+                                $('.scheduleRefNoEdit').trigger('change');
+                            }
+                        }
+                    });
                     if (data[0]['schedule_audit_date'] == "" || data[0]['schedule_audit_date'] == null)
                         $schedule_audit_date = "";
                     else

@@ -111,6 +111,23 @@ if(isset($_GET['customerId']) && !empty($_GET['customerId']) && isset($_GET['con
         $statement->execute();
         $scheduleDetails = $statement->fetch();
         
+        if ($scheduleDetails && !empty($scheduleDetails['customer_ca_id'])) {
+            $customerStmt = $db->prepare("SELECT unique_id FROM customer_info WHERE id = :id");
+            $customerStmt->bindParam(':id', $scheduleDetails['customer_ca_id']);
+            $customerStmt->execute();
+            $customerRow = $customerStmt->fetch();
+            if ($customerRow && !empty($customerRow['unique_id'])) {
+                $correctRef = $customerRow['unique_id'];
+                if (empty($scheduleDetails['ref_no']) || trim((string)$scheduleDetails['ref_no']) !== trim((string)$correctRef)) {
+                    $updateStmt = $db->prepare("UPDATE audit_schedule_id SET ref_no = :ref WHERE audit_schedule_id = :id");
+                    $updateStmt->bindParam(':ref', $correctRef);
+                    $updateStmt->bindParam(':id', $_GET['scheduleId']);
+                    $updateStmt->execute();
+                    $scheduleDetails['ref_no'] = $correctRef;
+                }
+            }
+        }
+        
         $schedule = "SELECT * FROM audit_schedule WHERE audit_scheduleid = :schedule and schedule_service_id = :service";
         $statement = $db->prepare($schedule);
         $statement->bindParam(':schedule', $_GET['scheduleId']);

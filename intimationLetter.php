@@ -7,37 +7,38 @@
     include 'header.php';
     include 'dbConnect.php';
 
-    $notice = "SELECT ci.id, customer_name, unique_id, svc.service_id, service_type, svcdt.due_date, svcdt.sent_date, action, action_id FROM customer_info ci left join service svc on ci.id = svc.customer_id left join ca_service_dates svcdt on svc.service_id = svcdt.service_id where svc.service_id = (select max(tmp.service_id) from service tmp where tmp.customer_id = ci.id) and (action = 'Suspension Reminder') and due_date <= now() and status != 'sent' and svcdt.is_deleted = 'N'";
+    $excludeWithdrawn = " AND (ci.audit_status IS NULL OR ci.audit_status <> 'Withdrawn')";
+    $notice = "SELECT ci.id, customer_name, unique_id, svc.service_id, service_type, svcdt.due_date, svcdt.sent_date, action, action_id FROM customer_info ci left join service svc on ci.id = svc.customer_id left join ca_service_dates svcdt on svc.service_id = svcdt.service_id where svc.service_id = (select max(tmp.service_id) from service tmp where tmp.customer_id = ci.id) and (action = 'Suspension Reminder') and due_date <= now() and status != 'sent' and svcdt.is_deleted = 'N'".$excludeWithdrawn;
     $statement = $db->prepare($notice);
     $statement->execute();
     $noticeDue = $statement->fetchAll();
 
-    $reminder = "SELECT ci.id, customer_name, unique_id, svc.service_id, service_type, svcdt.due_date, svcdt.sent_date, action, action_id FROM customer_info ci left join service svc on ci.id = svc.customer_id left join ca_service_dates svcdt on svc.service_id = svcdt.service_id where svc.service_id = (select max(tmp.service_id) from service tmp where tmp.customer_id = ci.id) and (action = 'Suspend Letter') and due_date <= now() and status != 'sent' and svcdt.is_deleted = 'N'";
+    $reminder = "SELECT ci.id, customer_name, unique_id, svc.service_id, service_type, svcdt.due_date, svcdt.sent_date, action, action_id FROM customer_info ci left join service svc on ci.id = svc.customer_id left join ca_service_dates svcdt on svc.service_id = svcdt.service_id where svc.service_id = (select max(tmp.service_id) from service tmp where tmp.customer_id = ci.id) and (action = 'Suspend Letter') and due_date <= now() and status != 'sent' and svcdt.is_deleted = 'N'".$excludeWithdrawn;
     $statement = $db->prepare($reminder);
     $statement->execute();
     $reminderDue = $statement->fetchAll();
 
-	$suspension = "SELECT ci.id, customer_name, unique_id, svc.service_id, service_type, svcdt.due_date, svcdt.sent_date, action, action_id FROM customer_info ci left join service svc on ci.id = svc.customer_id left join ca_service_dates svcdt on svc.service_id = svcdt.service_id where svc.service_id = (select max(tmp.service_id) from service tmp where tmp.customer_id = ci.id) and (action = 'Withdrawal Reminder' or action = 'Withdrawal Reminder') and due_date <= now() and status != 'sent' and svcdt.is_deleted = 'N'";
+	$suspension = "SELECT ci.id, customer_name, unique_id, svc.service_id, service_type, svcdt.due_date, svcdt.sent_date, action, action_id FROM customer_info ci left join service svc on ci.id = svc.customer_id left join ca_service_dates svcdt on svc.service_id = svcdt.service_id where svc.service_id = (select max(tmp.service_id) from service tmp where tmp.customer_id = ci.id) and (action = 'Withdrawal Reminder' or action = 'Withdrawal Reminder') and due_date <= now() and status != 'sent' and svcdt.is_deleted = 'N'".$excludeWithdrawn;
     $statement = $db->prepare($suspension);
     $statement->execute();
     $suspensionDue = $statement->fetchAll();
     
-    $withdrawn = "SELECT ci.id, customer_name, unique_id, svc.service_id, service_type, svcdt.due_date, svcdt.sent_date, action, action_id FROM customer_info ci left join service svc on ci.id = svc.customer_id left join ca_service_dates svcdt on svc.service_id = svcdt.service_id where svc.service_id = (select max(tmp.service_id) from service tmp where tmp.customer_id = ci.id) and (action = 'Withdrawal Letter' or action = 'Withdraw Letter') and due_date <= now() and status != 'sent' and svcdt.is_deleted = 'N'";
+    $withdrawn = "SELECT ci.id, customer_name, unique_id, svc.service_id, service_type, svcdt.due_date, svcdt.sent_date, action, action_id FROM customer_info ci left join service svc on ci.id = svc.customer_id left join ca_service_dates svcdt on svc.service_id = svcdt.service_id where svc.service_id = (select max(tmp.service_id) from service tmp where tmp.customer_id = ci.id) and (action = 'Withdrawal Letter' or action = 'Withdraw Letter') and due_date <= now() and status != 'sent' and svcdt.is_deleted = 'N'".$excludeWithdrawn;
     $statement = $db->prepare($withdrawn);
     $statement->execute();
     $withdrawnDue = $statement->fetchAll();
 
-	$expireReminder1 = "SELECT ci.id, customer_name, unique_id, svc.service_id, service_type, svcdt.due_date, svcdt.sent_date, action, action_id FROM customer_info ci left join service svc on ci.id = svc.customer_id left join ca_service_dates svcdt on svc.service_id = svcdt.service_id where svc.service_id = (select max(tmp.service_id) from service tmp where tmp.customer_id = ci.id) and (action = '1st Reminder') and due_date <= now() and status != 'sent' and svcdt.is_deleted = 'N'";
+	$expireReminder1 = "SELECT ci.id, customer_name, unique_id, svc.service_id, service_type, svcdt.due_date, svcdt.sent_date, action, action_id FROM customer_info ci left join service svc on ci.id = svc.customer_id left join ca_service_dates svcdt on svc.service_id = svcdt.service_id where svc.service_id = (select max(tmp.service_id) from service tmp where tmp.customer_id = ci.id) and (action = '1st Reminder') and due_date <= now() and status != 'sent' and svcdt.is_deleted = 'N'".$excludeWithdrawn;
     $statement = $db->prepare($expireReminder1);
     $statement->execute();
     $expireReminderDue1 = $statement->fetchAll();
 	
-	$expireReminder2 = "SELECT ci.id, customer_name, unique_id, svc.service_id, service_type, svcdt.due_date, svcdt.sent_date, action, action_id FROM customer_info ci left join service svc on ci.id = svc.customer_id left join ca_service_dates svcdt on svc.service_id = svcdt.service_id where svc.service_id = (select max(tmp.service_id) from service tmp where tmp.customer_id = ci.id) and (action = '2nd Reminder') and due_date <= now() and status != 'sent' and svcdt.is_deleted = 'N'";
+	$expireReminder2 = "SELECT ci.id, customer_name, unique_id, svc.service_id, service_type, svcdt.due_date, svcdt.sent_date, action, action_id FROM customer_info ci left join service svc on ci.id = svc.customer_id left join ca_service_dates svcdt on svc.service_id = svcdt.service_id where svc.service_id = (select max(tmp.service_id) from service tmp where tmp.customer_id = ci.id) and (action = '2nd Reminder') and due_date <= now() and status != 'sent' and svcdt.is_deleted = 'N'".$excludeWithdrawn;
     $statement = $db->prepare($expireReminder2);
     $statement->execute();
     $expireReminderDue2 = $statement->fetchAll();
 	
-    $expired = "SELECT ci.id, customer_name, unique_id, svc.service_id, service_type, svcdt.due_date, svcdt.sent_date, action, action_id FROM customer_info ci left join service svc on ci.id = svc.customer_id left join ca_service_dates svcdt on svc.service_id = svcdt.service_id where svc.service_id = (select max(tmp.service_id) from service tmp where tmp.customer_id = ci.id) and action = 'Expire Letter' and due_date <= now() and status != 'sent' and svcdt.is_deleted = 'N'";
+    $expired = "SELECT ci.id, customer_name, unique_id, svc.service_id, service_type, svcdt.due_date, svcdt.sent_date, action, action_id FROM customer_info ci left join service svc on ci.id = svc.customer_id left join ca_service_dates svcdt on svc.service_id = svcdt.service_id where svc.service_id = (select max(tmp.service_id) from service tmp where tmp.customer_id = ci.id) and action = 'Expire Letter' and due_date <= now() and status != 'sent' and svcdt.is_deleted = 'N'".$excludeWithdrawn;
     $statement = $db->prepare($expired);
     $statement->execute();
     $expireDue = $statement->fetchAll();
