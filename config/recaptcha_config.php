@@ -11,7 +11,7 @@ return [
     'enabled' => true,
 
     // Supported values: v2_checkbox, v3
-    'version' => 'v3',
+    'version' => 'v2_checkbox',
 
     // Used only with v3.
     'action' => 'submit',
