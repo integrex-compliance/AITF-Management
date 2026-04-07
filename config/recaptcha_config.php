@@ -2,10 +2,10 @@
 
 return [
     // Paste your Google reCAPTCHA site key here.
-    'site_key' => '6LcIHKksAAAAAAtYeQDQaBpCAyHjg4PIa7XKFMer',
+    'site_key' => '6LfwOKssAAAAAIG6iKITHC9NcHJEunaUMTm6-dAU',
 
     // Paste your Google reCAPTCHA secret key here.
-    'secret_key' => '6LcIHKksAAAAAFU1KUQ2X601xzZ-BJNbQAwVjYdA',
+    'secret_key' => '6LfwOKssAAAAAG9AKAY8V3jxxGy_b6F6INUPwWYi',
 
     // Change to false only if you want to temporarily disable captcha.
     'enabled' => true,
