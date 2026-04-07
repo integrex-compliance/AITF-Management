@@ -1,0 +1,267 @@
+[2026-03-13 16:27:15] INSERT REQUEST RECEIVED -> Client ID: #99
+[2026-03-13 16:35:42] INSERT REQUEST RECEIVED -> Client ID: #92
+FULL PAYLOAD:
+[
+    {
+        "internal_client_id": "92",
+        "customer_name": "Gurukrupa Engineering(withdrawn)",
+        "address": "Plot No. 21\/85, Bhalekar Chowk, Near D. Max fabrication, Jyotiba nagar, Talawade, Pune - 411 062, Maharashtra, India ",
+        "certification_status": "Withdrawn",
+        "certificate_tracking_id": "65",
+        "certificate_number": "99611741470",
+        "issue_date": "2017-03-15",
+        "expiry_date": "2020-03-14",
+        "standard_name": "ISO 9001:2008",
+        "customer_guid": "GUID-000092",
+        "country": "India",
+        "schema_name": "QMS",
+        "certification_type": "Accredited"
+    }
+]
+
+---------------------------------------------
+[2026-03-13 16:43:29] INSERT REQUEST RECEIVED -> Client ID: #94
+FULL PAYLOAD:
+[
+    {
+        "internal_client_id": "94",
+        "customer_name": "Bharat Engineering Works (withdrawal)",
+        "address": "(Office) : Sr. No.132\/5 Kalbhore Estate, Kalbhor Nagar Chinchwad, Pune-411 019, Maharashtra, India.\r\n(Factory): Sr. No. 141\/1 Jadhavwasti, Tathawade Pune - 411033, Maharashtra, India.\r\n",
+        "certification_status": "Withdrawn",
+        "certificate_tracking_id": "67",
+        "certificate_number": "6811216011463",
+        "issue_date": "2017-01-27",
+        "expiry_date": "2020-01-26",
+        "standard_name": "ISO 9001:2015",
+        "customer_guid": "GUID-000094",
+        "country": "India",
+        "schema_name": "QMS",
+        "certification_type": "Accredited"
+    }
+]
+
+---------------------------------------------
+[2026-03-13 17:34:02] INSERT REQUEST RECEIVED -> Client ID: #99
+FULL PAYLOAD:
+[
+    {
+        "internal_client_id": "99",
+        "customer_name": "BCM Precision Engineering (Withdraw)",
+        "address": "Gat No. 812, Pawarwasti, Kudalwadi, Chikhali, Tal. Haveli, Dist. Pune - 412 114, Maharashtra, India.",
+        "certification_status": "Withdrawn",
+        "certificate_tracking_id": "98",
+        "certificate_number": "3371216021417 ",
+        "issue_date": "2016-02-02",
+        "expiry_date": "2019-02-01",
+        "standard_name": "ISO 9001:2015",
+        "customer_guid": "GUID-000099",
+        "country": "India",
+        "schema_name": "QMS",
+        "certification_type": "Accredited"
+    }
+]
+
+---------------------------------------------
+[2026-03-13 17:44:19] INSERT REQUEST RECEIVED -> Client ID: #95
+FULL PAYLOAD:
+[
+    {
+        "internal_client_id": "95",
+        "customer_name": "Kiran Enterprises",
+        "address": "Plot No. 18, Gat No. 87, Jyotibanagar, Talawade, Pune - 411 062, Maharashtra, India.",
+        "certification_status": "Expire",
+        "certificate_tracking_id": "94",
+        "certificate_number": "4971215011414",
+        "issue_date": "2015-10-13",
+        "expiry_date": "2018-10-12",
+        "standard_name": "ISO 9001:2008",
+        "customer_guid": "GUID-000095",
+        "country": "India",
+        "schema_name": "QMS",
+        "certification_type": "Accredited"
+    }
+]
+
+---------------------------------------------
+[2026-03-13 18:53:00] INSERT REQUEST RECEIVED -> Client ID: #99
+FULL PAYLOAD:
+[
+    {
+        "internal_client_id": "99",
+        "customer_name": "BCM Precision Engineering (Withdraw)",
+        "address": "Gat No. 812, Pawarwasti, Bihar, Chikhali, Tal. Haveli",
+        "certification_status": "Withdrawn",
+        "certificate_tracking_id": "98",
+        "certificate_number": "3371216021417 ",
+        "issue_date": "2016-02-02",
+        "expiry_date": "2019-02-01",
+        "standard_name": "ISO 9001:2015",
+        "customer_guid": "GUID-000099",
+        "country": "India",
+        "schema_name": "QMS",
+        "certification_type": "Accredited"
+    }
+]
+
+---------------------------------------------
+[2026-03-13 18:53:06] INSERT REQUEST RECEIVED -> Client ID: #98
+FULL PAYLOAD:
+[
+    {
+        "internal_client_id": "98",
+        "customer_name": "Soniya Industries (withdrawn)",
+        "address": "Gat NO.165, Sahyog Nagar, Nandadeep Industrial Complex, Talawade Road, Pune 411 062, Maharashtra, India. ",
+        "certification_status": "Withdrawn",
+        "certificate_tracking_id": "97",
+        "certificate_number": "2331216011420",
+        "issue_date": "2016-03-15",
+        "expiry_date": "2018-09-14",
+        "standard_name": "ISO 9001:2015",
+        "customer_guid": "GUID-000098",
+        "country": "India",
+        "schema_name": "QMS",
+        "certification_type": "Accredited"
+    }
+]
+
+---------------------------------------------
+[2026-03-13 18:53:18] INSERT REQUEST RECEIVED -> Client ID: #97
+FULL PAYLOAD:
+[
+    {
+        "internal_client_id": "97",
+        "customer_name": "Pallavi Enterprises(Withdrawn)",
+        "address": "Gat No. 243, Kharabwadi, Chakan-Talegaon Road, Tal. Khed, \r\nDist. Pune - 410 501, Maharashtra, India.",
+        "certification_status": "Withdrawn",
+        "certificate_tracking_id": "96",
+        "certificate_number": "3051215021416",
+        "issue_date": "2016-01-19",
+        "expiry_date": "2019-01-18",
+        "standard_name": "ISO 9001:2008",
+        "customer_guid": "GUID-000097",
+        "country": "India",
+        "schema_name": "QMS",
+        "certification_type": "Accredited"
+    }
+]
+
+---------------------------------------------
+[2026-03-13 19:16:38] INSERT REQUEST RECEIVED -> Client ID: #545
+FULL PAYLOAD:
+[
+    {
+        "internal_client_id": "545",
+        "customer_name": "E. M. ASSOCIATES",
+        "address": "S.No. 81\/3 Dangat Industrial Estate, NDA Road, Near Agarwal godown, Shivane, Pune-411023   Maharashtra India. ",
+        "certification_status": "Withdrawn",
+        "certificate_tracking_id": "1140",
+        "certificate_number": "203923414433",
+        "issue_date": "2023-11-19",
+        "expiry_date": "2026-11-18",
+        "standard_name": "ISO 9001:2015",
+        "customer_guid": "GUID-000545",
+        "country": "India",
+        "schema_name": "QMS",
+        "certification_type": "Accredited"
+    }
+]
+
+---------------------------------------------
+[2026-03-14 13:52:00] INSERT REQUEST RECEIVED -> Client ID: #99
+FULL PAYLOAD:
+[
+    "{\"internal_client_id\":\"99\",\"customer_name\":\"BCM Precision Engineering (Withdraw)\",\"address\":\"Gat No. 812, Pawarwasti, Bihar, Chikhali, Tal. Haveli\",\"certification_status\":\"Withdrawn\",\"certificate_tracking_id\":\"98\",\"certificate_number\":\"3371216021417 \",\"issue_date\":\"2016-02-02\",\"expiry_date\":\"2019-02-01\",\"standard_name\":\"ISO 9001:2015\",\"customer_guid\":\"\",\"country\":\"India\",\"schema_name\":\"QMS\",\"certification_type\":\"Accredited\"}"
+]
+
+---------------------------------------------
+[2026-03-14 13:52:56] INSERT REQUEST RECEIVED -> Client ID: #98
+FULL PAYLOAD:
+[
+    "{\"internal_client_id\":\"98\",\"customer_name\":\"Soniya Industries (withdrawn)\",\"address\":\"Gat NO.165, Sahyog Nagar, Nandadeep Industrial Complex, Talawade Road, Pune 411 062, Maharashtra, India. \",\"certification_status\":\"Withdrawn\",\"certificate_tracking_id\":\"97\",\"certificate_number\":\"2331216011420\",\"issue_date\":\"2016-03-15\",\"expiry_date\":\"2018-09-14\",\"standard_name\":\"ISO 9001:2015\",\"customer_guid\":\"\",\"country\":\"India\",\"schema_name\":\"QMS\",\"certification_type\":\"Accredited\"}"
+]
+
+---------------------------------------------
+[2026-03-14 13:53:08] INSERT REQUEST RECEIVED -> Client ID: #99
+FULL PAYLOAD:
+[
+    "{\"internal_client_id\":\"99\",\"customer_name\":\"BCM Precision Engineering (Withdraw)\",\"address\":\"Gat No. 812, Pawarwasti, Bihar, Chikhali, Tal. Haveli\",\"certification_status\":\"Withdrawn\",\"certificate_tracking_id\":\"98\",\"certificate_number\":\"3371216021417 \",\"issue_date\":\"2016-02-02\",\"expiry_date\":\"2019-02-01\",\"standard_name\":\"ISO 9001:2015\",\"customer_guid\":\"\",\"country\":\"India\",\"schema_name\":\"QMS\",\"certification_type\":\"Accredited\"}"
+]
+
+---------------------------------------------
+[2026-03-14 13:53:21] INSERT REQUEST RECEIVED -> Client ID: #99
+FULL PAYLOAD:
+[
+    "{\"internal_client_id\":\"99\",\"customer_name\":\"BCM Precision Engineering (Withdraw)\",\"address\":\"Gat No. 812, Pawarwasti, Bihar, Chikhali, Tal. Haveli\",\"certification_status\":\"Withdrawn\",\"certificate_tracking_id\":\"98\",\"certificate_number\":\"3371216021417 \",\"issue_date\":\"2016-02-02\",\"expiry_date\":\"2019-02-01\",\"standard_name\":\"ISO 9001:2015\",\"customer_guid\":\"\",\"country\":\"India\",\"schema_name\":\"QMS\",\"certification_type\":\"Accredited\"}"
+]
+
+---------------------------------------------
+[2026-03-14 13:53:51] INSERT REQUEST RECEIVED -> Client ID: #99
+FULL PAYLOAD:
+[
+    "{\"internal_client_id\":\"99\",\"customer_name\":\"BCM Precision Engineering (Withdraw)\",\"address\":\"Gat No. 812, Pawarwasti, Bihar, Chikhali, Tal. Haveli\",\"certification_status\":\"Withdrawn\",\"certificate_tracking_id\":\"98\",\"certificate_number\":\"3371216021417 \",\"issue_date\":\"2016-02-02\",\"expiry_date\":\"2019-02-01\",\"standard_name\":\"ISO 9001:2015\",\"customer_guid\":\"\",\"country\":\"India\",\"schema_name\":\"QMS\",\"certification_type\":\"Accredited\"}"
+]
+
+---------------------------------------------
+[2026-03-14 13:56:03] INSERT REQUEST RECEIVED -> Client ID: #96
+FULL PAYLOAD:
+[
+    {
+        "internal_client_id": "96",
+        "customer_name": "S. K. Industries",
+        "address": "Gat No. 357\/95, Plot No: 06, Waghjai Nagar, Kharabwadi, Chakan, Tal-Khed, Dist. Pune-410501, Maharashtra, India.",
+        "certification_status": "Valid",
+        "certificate_tracking_id": "95",
+        "certificate_number": "2441215011415",
+        "issue_date": "2016-01-14",
+        "expiry_date": "2019-01-13",
+        "standard_name": "ISO 9001:2008",
+        "customer_guid": "GUID-000096",
+        "country": "India",
+        "schema_name": "QMS",
+        "certification_type": "Accredited"
+    }
+]
+
+---------------------------------------------
+[2026-03-14 13:56:22] INSERT REQUEST RECEIVED -> Client ID: #95
+FULL PAYLOAD:
+[
+    {
+        "internal_client_id": "95",
+        "customer_name": "Kiran Enterprises",
+        "address": "Plot No. 18, Gat No. 87, Andhra Pradesh, Talawade, Pune - 411 062",
+        "certification_status": "Expire",
+        "certificate_tracking_id": "94",
+        "certificate_number": "4971215011414",
+        "issue_date": "2015-10-13",
+        "expiry_date": "2018-10-12",
+        "standard_name": "ISO 9001:2008",
+        "customer_guid": "GUID-000095",
+        "country": "India",
+        "schema_name": "QMS",
+        "certification_type": "Accredited"
+    }
+]
+
+---------------------------------------------
+[2026-03-14 14:26:13] INSERT REQUEST RECEIVED -> Client ID: #93
+FULL PAYLOAD:
+[
+    {
+        "internal_client_id": "93",
+        "customer_name": "Yash Plastic & Engineering Works",
+        "address": "Akurdi Industrial Estate, Plot No.3B+3 part\/15, D-1 Block, MIDC Road, \r\nAkurdi, Chinchwad, Pune-411 019, Maharashtra, India",
+        "certification_status": "Valid",
+        "certificate_tracking_id": "66",
+        "certificate_number": "28511751476",
+        "issue_date": "2017-04-10",
+        "expiry_date": "2020-04-09",
+        "standard_name": "ISO 9001:2015",
+        "customer_guid": "GUID-000093",
+        "country": "India",
+        "schema_name": "QMS",
+        "certification_type": "Accredited"
+    }
+]
+
+---------------------------------------------

@@ -174,6 +174,12 @@ include 'header.php';
                     <div class="col-sm-12 main_content">
                         <div class="app-rec-wrapper">
                         <div class="app-rec-card table-responsive">
+                            <?php if (isset($_GET['deleted']) && $_GET['deleted'] == '1') { ?>
+                                <div class="alert alert-success" style="margin-bottom: 10px;">
+                                    <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+                                    Application deleted successfully.
+                                </div>
+                            <?php } ?>
                             <div class="app-rec-header">
                                 <div class="app-rec-title">
                                     <div class="app-rec-title-icon"><i class="fa fa-list-ul"></i></div>
@@ -193,6 +199,7 @@ include 'header.php';
                                         <th><small>Sr.</small></th>
                                         <th><small>Submitted On</small></th>
                                         <th><small>Organization</small></th>
+                                        <th style="width: 90px; text-align: center;"><small>Action</small></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -218,13 +225,22 @@ include 'header.php';
                                                     <?php if ($isUnread) { ?><span class="app-rec-unread-pill"><i class="fa fa-bell"></i>Unread</span><?php } ?>
                                                 </small>
                                             </td>
+                                            <td style="text-align: center;">
+                                                <form action="applicationReceivedView.php" method="post" onsubmit="return confirm('Are you sure you want to delete this application?');" style="display: inline;">
+                                                    <input type="hidden" name="action" value="delete_app">
+                                                    <input type="hidden" name="id" value="<?php echo (int)$row['id']; ?>">
+                                                    <button type="submit" class="btn btn-xs btn-danger" title="Delete">
+                                                        <i class="fa fa-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </td>
                                         </tr>
                                         <?php
                                     }
                                 } else {
                                     ?>
                                     <tr>
-                                        <td colspan="3"><small>No applications received yet.</small></td>
+                                        <td colspan="4"><small>No applications received yet.</small></td>
                                     </tr>
                                     <?php
                                 }

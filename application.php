@@ -1,5 +1,22 @@
 <?php
 require_once './dbConnect.php';
+$recaptchaHelperPath = __DIR__ . '/include/recaptcha_helper.php';
+if (file_exists($recaptchaHelperPath)) {
+    require_once $recaptchaHelperPath;
+}
+
+$recaptchaConfig = function_exists('aitf_get_recaptcha_config') ? aitf_get_recaptcha_config() : [
+    'site_key' => '6LcIHKksAAAAAAtYeQDQaBpCAyHjg4PIa7XKFMer',
+    'secret_key' => '6LcIHKksAAAAAFU1KUQ2X601xzZ-BJNbQAwVjYdA',
+    'version' => 'v3',
+    'action' => 'submit',
+    'minimum_score' => 0.5,
+    'theme' => 'light',
+    'enabled' => false
+];
+$recaptchaReady = function_exists('aitf_is_recaptcha_ready') ? aitf_is_recaptcha_ready() : false;
+$recaptchaBypass = function_exists('aitf_should_bypass_recaptcha') ? aitf_should_bypass_recaptcha() : false;
+$recaptchaFrontendEnabled = $recaptchaReady && !$recaptchaBypass;
 
 $success_message = '';
 $error_message = '';
@@ -105,11 +122,16 @@ if (isset($db)) {
         $contact_person = getOnlineAuditPostValue('contact_person');
         $phone = getOnlineAuditPostValue('phone');
         $email = getOnlineAuditPostValue('email');
+        $recaptchaToken = trim($_POST['g-recaptcha-response'] ?? '');
 
         if ($org_name === '' || $contact_person === '' || $phone === '' || $email === '') {
             $error_message = 'Please fill in all required fields marked with *.';
         } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $error_message = 'Please enter a valid email address.';
+        } elseif (function_exists('aitf_verify_recaptcha') && !aitf_verify_recaptcha($recaptchaToken, $error_message)) {
+            if ($error_message === '') {
+                $error_message = 'Captcha verification failed. Please try again.';
+            }
         } else {
             $site_address = getOnlineAuditPostValue('site_address');
             $office_address = getOnlineAuditPostValue('office_address');
@@ -458,6 +480,13 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
 <html lang="en">
 <head>
     <?php include './headSource.php'; ?>
+    <?php if ($recaptchaFrontendEnabled): ?>
+        <?php if (($recaptchaConfig['version'] ?? 'v2_checkbox') === 'v3'): ?>
+            <script src="https://www.google.com/recaptcha/api.js?render=<?php echo urlencode($recaptchaConfig['site_key']); ?>"></script>
+        <?php else: ?>
+            <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+        <?php endif; ?>
+    <?php endif; ?>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -684,6 +713,55 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
             display: none;
         }
 
+        .captcha-wrap {
+            width: 100%;
+            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: center;
+            padding: 14px 16px;
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+        }
+
+        .captcha-wrap .g-recaptcha {
+            max-width: 100%;
+            display: flex;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .captcha-wrap .g-recaptcha > div {
+            max-width: 100% !important;
+            margin: 0 auto;
+        }
+
+        .captcha-help {
+            font-size: 0.88rem;
+            color: #6b7280;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        .captcha-status {
+            display: none;
+            margin-top: 10px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: rgba(245, 158, 11, 0.12);
+            border: 1px solid rgba(245, 158, 11, 0.24);
+            color: #b45309;
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .captcha-status.show {
+            display: block;
+        }
+
         /* Submit overlay */
         .submit-overlay {
             position: fixed;
@@ -901,6 +979,11 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
             
             .section[style*="background: linear-gradient"] {
                 padding: 120px 0 40px !important;
+            }
+
+            .captcha-wrap .g-recaptcha {
+                transform: scale(0.92);
+                transform-origin: center top;
             }
         }
     </style>
@@ -1444,6 +1527,19 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                                     </div>
                                 </div>
                                 <div class="col-md-12" id="submit-area">
+                                    <div class="captcha-wrap">
+                                        <?php if ($recaptchaBypass): ?>
+                                            <div class="captcha-help">Localhost mode detected, captcha is bypassed on this local machine.</div>
+                                        <?php elseif ($recaptchaReady && (($recaptchaConfig['version'] ?? 'v2_checkbox') === 'v2_checkbox')): ?>
+                                            <div class="g-recaptcha" data-sitekey="<?php echo htmlspecialchars($recaptchaConfig['site_key'], ENT_QUOTES, 'UTF-8'); ?>" data-theme="<?php echo htmlspecialchars($recaptchaConfig['theme'], ENT_QUOTES, 'UTF-8'); ?>" data-callback="applicationCaptchaSolved" data-expired-callback="applicationCaptchaExpired"></div>
+                                        <?php elseif ($recaptchaReady): ?>
+                                            <input type="hidden" name="g-recaptcha-response" id="application-recaptcha-token">
+                                            <div class="captcha-help">Spam protection is active. Your form will be verified automatically before submit.</div>
+                                        <?php else: ?>
+                                            <div class="captcha-help">Captcha widget will appear after Google reCAPTCHA keys are added in `config/recaptcha_config.php`.</div>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div id="application-captcha-status" class="captcha-status">Please complete the captcha to enable the submit button.</div>
                                     <div id="required-warning" class="required-warning">Important fields are missing.</div>
                                     <button type="submit" class="submit-btn">Submit Application</button>
                                 </div>
@@ -1577,6 +1673,10 @@ If you are completing the application offline, please download our Audit Applica
 
     <script>
         (function () {
+            var recaptchaVersion = <?php echo json_encode($recaptchaConfig['version'] ?? 'v2_checkbox'); ?>;
+            var recaptchaSiteKey = <?php echo json_encode($recaptchaConfig['site_key'] ?? ''); ?>;
+            var recaptchaAction = <?php echo json_encode($recaptchaConfig['action'] ?? 'submit'); ?>;
+            var recaptchaEnabled = <?php echo json_encode($recaptchaFrontendEnabled); ?>;
             var form = document.getElementById('online-application-form-main');
             if (!form) return;
 
@@ -1587,6 +1687,10 @@ If you are completing the application offline, please download our Audit Applica
             var submitArea = document.getElementById('submit-area');
             var standardRows = document.getElementById('standard-rows');
             var addStandardRowBtn = document.getElementById('add-standard-row');
+            var captchaStatus = document.getElementById('application-captcha-status');
+            var captchaBox = form.querySelector('.g-recaptcha');
+            var requiresVisibleCaptcha = Boolean(recaptchaEnabled && recaptchaVersion !== 'v3' && captchaBox);
+            var recaptchaSubmitting = false;
 
             function buildEmployeeStructureText() {
                 var table = document.getElementById('employee-structure-table');
@@ -1877,6 +1981,13 @@ If you are completing the application offline, please download our Audit Applica
                 });
             }
 
+            function isApplicationCaptchaComplete() {
+                if (!requiresVisibleCaptcha) {
+                    return true;
+                }
+                return typeof grecaptcha !== 'undefined' && grecaptcha.getResponse().trim() !== '';
+            }
+
             function validateRequiredFields() {
                 var missing = false;
                 for (var i = 0; i < requiredFields.length; i++) {
@@ -1903,11 +2014,16 @@ If you are completing the application offline, please download our Audit Applica
                     }
                 }
                 if (submitBtn) {
-                    submitBtn.disabled = missing;
+                    var captchaMissing = !isApplicationCaptchaComplete();
+                    submitBtn.disabled = missing || captchaMissing;
                     submitBtn.dataset.missing = missing ? '1' : '0';
+                    submitBtn.dataset.captchaMissing = captchaMissing ? '1' : '0';
                 }
                 if (requiredWarning) {
                     requiredWarning.style.display = 'none';
+                }
+                if (captchaStatus) {
+                    captchaStatus.classList.toggle('show', requiresVisibleCaptcha && !isApplicationCaptchaComplete());
                 }
             }
 
@@ -1929,9 +2045,21 @@ If you are completing the application offline, please download our Audit Applica
                 }
             }
 
+            window.applicationCaptchaSolved = function () {
+                validateRequiredFields();
+            };
+
+            window.applicationCaptchaExpired = function () {
+                validateRequiredFields();
+            };
+
             if (submitBtn) {
                 submitBtn.addEventListener('mouseenter', function () { toggleWarning(true); });
                 submitBtn.addEventListener('mouseleave', function () { toggleWarning(false); });
+            }
+
+            if (requiresVisibleCaptcha) {
+                window.setInterval(validateRequiredFields, 700);
             }
 
             form.addEventListener('submit', function (e) {
@@ -1944,7 +2072,11 @@ If you are completing the application offline, please download our Audit Applica
                 validateRequiredFields();
                 if (submitBtn && submitBtn.disabled) {
                     e.preventDefault();
-                    alert('Please fill all required fields before submitting.');
+                    if (submitBtn.dataset.missing === '1') {
+                        alert('Please fill all required fields before submitting.');
+                    } else if (submitBtn.dataset.captchaMissing === '1') {
+                        alert('Please complete the captcha before submitting.');
+                    }
                     return false;
                 }
 
@@ -1956,6 +2088,36 @@ If you are completing the application offline, please download our Audit Applica
                 var otherField = document.getElementById('other_certificates_field');
                 if (otherField) {
                     otherField.value = buildOtherCertificatesText();
+                }
+
+                if (recaptchaEnabled && recaptchaVersion === 'v3') {
+                    var tokenField = document.getElementById('application-recaptcha-token');
+                    if (!recaptchaSubmitting) {
+                        e.preventDefault();
+                        if (typeof grecaptcha === 'undefined' || !recaptchaSiteKey) {
+                            alert('Captcha is not ready yet. Please wait a moment and try again.');
+                            return false;
+                        }
+                        grecaptcha.ready(function () {
+                            grecaptcha.execute(recaptchaSiteKey, { action: recaptchaAction }).then(function (token) {
+                                if (tokenField) {
+                                    tokenField.value = token;
+                                }
+                                recaptchaSubmitting = true;
+                                form.requestSubmit();
+                            }).catch(function () {
+                                alert('Captcha verification failed. Please try again.');
+                            });
+                        });
+                        return false;
+                    }
+                    recaptchaSubmitting = false;
+                }
+
+                if (recaptchaEnabled && recaptchaVersion !== 'v3' && captchaBox && typeof grecaptcha !== 'undefined' && grecaptcha.getResponse().trim() === '') {
+                    validateRequiredFields();
+                    e.preventDefault();
+                    return false;
                 }
 
                 var overlay = document.getElementById('submitOverlay');
@@ -1971,11 +2133,11 @@ If you are completing the application offline, please download our Audit Applica
                 var overlay = document.getElementById('submitOverlay');
                 if (overlay) overlay.classList.remove('show');
                 if (submitBtn) {
-                    submitBtn.disabled = false;
                     if (submitBtn.dataset.originalText) {
                         submitBtn.textContent = submitBtn.dataset.originalText;
                     }
                 }
+                validateRequiredFields();
             });
         })();
     </script>

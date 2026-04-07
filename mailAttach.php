@@ -8,9 +8,10 @@
  * @since 2008-03-04
  */
 // Include the main TCPDF library (search for installation path).
-require_once 'testemail.php';
 require_once('tcpdf_include.php');
 include_once './dbConnect.php';
+require_once __DIR__ . '/include/invoice_mail_helper.php';
+aitfLoadPHPMailer();
 date_default_timezone_set('Asia/Kolkata');
 
 $invoiceid = "";
@@ -294,31 +295,55 @@ $otp = rand(100000, 999999);
 
 $pdf->Output(__DIR__ . '/notification/' . $otp . 'invoice.pdf', 'F');
 
-$body = '<html><body><p>Dear Sir / Mam,</p>'
-        . '<p>'.$_POST["msgforClientFinalInvoice"].'</p>'
-        . '<p>Thanks,</p>'
-        . '<p>AITF-MCL</p>'
-        . '<body></html>';
+$body = aitfBuildFinalInvoiceMailBody($customerInfo, $innvoice, $invoiceSvc, isset($_POST["msgforClientFinalInvoice"]) ? $_POST["msgforClientFinalInvoice"] : '');
+$mailConfig = aitfGetInvoiceMailConfig();
+$attachmentPath = __DIR__ . '/notification/' . $otp . 'invoice.pdf';
+$attachmentName = 'Final-Invoice-' . $finalprefix . '-' . $invno . '.pdf';
 
 $email = new PHPMailer();
-$email->From = 'aitfmcl@gmail.com';
-$email->FromName = 'AITF-MCL';
-$email->Subject = 'Final invoice';
+$email->isHTML(true);
+$email->Subject = 'Final Invoice - ' . $customerInfo['customer_name'];
 $email->Body = $body;
-$email->IsHTML(true);
-$email->AddAddress($customerInfo['email_id']);
-$email->addCC('aitf.intimation@gmail.com');
+$email->AltBody = strip_tags(str_replace(array('<br>', '<br/>', '<br />', '</p>', '</li>'), array("\n", "\n", "\n", "\n", "\n"), $body));
+aitfAddEmailRecipients($email, $customerInfo['email_id']);
+if (!empty($mailConfig['office_copy'])) {
+    $email->addBCC($mailConfig['office_copy']);
+}
+$email->AddAttachment($attachmentPath, $attachmentName);
 
-$file_to_attach = __DIR__ . '/notification/' . $otp . 'invoice.pdf';
+list($mailSent, $mailError) = aitfSendInvoiceMailer($email);
 
-$email->AddAttachment($file_to_attach, 'NameOfFile.pdf');
+if ($mailSent) {
+    $invoicesent = "UPDATE invoice_details SET final_inv_sent_count= final_inv_sent_count + 1 WHERE invoice_id = :id";
+    $statement = $db->prepare($invoicesent);
+    $statement->bindParam(':id', $_POST['invoiceid']);
+    $statement->execute();
 
-$email->Send();
-$invoice = "1";
+    if (!empty($mailConfig['office_copy'])) {
+        $confirmation = new PHPMailer();
+        $confirmation->isHTML(true);
+        $confirmation->Subject = 'Invoice Sent Confirmation - Final Invoice - ' . $customerInfo['customer_name'];
+        $confirmation->Body = '<html><body>'
+            . '<p>Following email and document have been sent to the client.</p>'
+            . '<p><strong>Invoice Type:</strong> Final Invoice<br>'
+            . '<strong>Client:</strong> ' . aitfInvoiceEscape($customerInfo['customer_name']) . '<br>'
+            . '<strong>Recipients:</strong> ' . aitfInvoiceEscape($customerInfo['email_id']) . '<br>'
+            . '<strong>Subject:</strong> ' . aitfInvoiceEscape($email->Subject) . '<br>'
+            . '<strong>Attachment:</strong> ' . aitfInvoiceEscape($attachmentName) . '</p>'
+            . '<hr>'
+            . '<p><strong>Message sent to client:</strong></p>'
+            . $body
+            . '</body></html>';
+        $confirmation->AltBody = 'Following email and document have been sent to the client.' . "\n"
+            . 'Invoice Type: Final Invoice' . "\n"
+            . 'Client: ' . $customerInfo['customer_name'] . "\n"
+            . 'Recipients: ' . $customerInfo['email_id'] . "\n"
+            . 'Subject: ' . $email->Subject . "\n"
+            . 'Attachment: ' . $attachmentName;
+        $confirmation->addAddress($mailConfig['office_copy']);
+        $confirmation->AddAttachment($attachmentPath, $attachmentName);
+        aitfSendInvoiceMailer($confirmation);
+    }
+}
 
-$invoicesent = "UPDATE invoice_details SET final_inv_sent_count= final_inv_sent_count + 1 WHERE invoice_id = :id";
-$statement = $db->prepare($invoicesent);
-$statement->bindParam(':id', $_POST['invoiceid']);
-$statement->execute();
-
-header("Location: invoicePage.php?mailsend=" . $invoice);
+header("Location: " . aitfBuildInvoiceRedirectUrl($mailSent, $mailError));

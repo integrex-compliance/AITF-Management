@@ -7,7 +7,6 @@ PHPMailer/
 .project
 .buildpath
 .ftpquota
-.env
 
 # Additional common ignores
 *.log
@@ -15,5 +14,3 @@ debug.php
 dubug.php
 *.crdownload
 /config/mail_config.php
-/config/mail_config.example.php
-/config/.htaccess

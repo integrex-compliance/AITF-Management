@@ -1,4 +1,21 @@
 <?php
+$recaptchaHelperPath = __DIR__ . '/include/recaptcha_helper.php';
+if (file_exists($recaptchaHelperPath)) {
+    require_once $recaptchaHelperPath;
+}
+$recaptchaConfig = function_exists('aitf_get_recaptcha_config') ? aitf_get_recaptcha_config() : [
+    'site_key' => '6LcIHKksAAAAAAtYeQDQaBpCAyHjg4PIa7XKFMer',
+    'secret_key' => '6LcIHKksAAAAAFU1KUQ2X601xzZ-BJNbQAwVjYdA',
+    'version' => 'v3',
+    'action' => 'submit',
+    'minimum_score' => 0.5,
+    'theme' => 'light',
+    'enabled' => false
+];
+$recaptchaReady = function_exists('aitf_is_recaptcha_ready') ? aitf_is_recaptcha_ready() : false;
+$recaptchaBypass = function_exists('aitf_should_bypass_recaptcha') ? aitf_should_bypass_recaptcha() : false;
+$recaptchaFrontendEnabled = $recaptchaReady && !$recaptchaBypass;
+
 $successMsg = '';
 $errorMsg = '';
 $formData = [
@@ -39,6 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $formData['services'] = isset($_POST['services']) && is_array($_POST['services'])
         ? array_values(array_intersect($serviceOptions, $_POST['services']))
         : [];
+    $recaptchaToken = trim($_POST['g-recaptcha-response'] ?? '');
 
     if (
         $formData['name'] === '' ||
@@ -53,6 +71,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errorMsg = 'Please enter a valid email address.';
     } elseif (!preg_match('/^[0-9]{10,15}$/', preg_replace('/\D/', '', $formData['mobile']))) {
         $errorMsg = 'Please enter a valid mobile number (10-15 digits).';
+    } elseif (function_exists('aitf_verify_recaptcha') && !aitf_verify_recaptcha($recaptchaToken, $errorMsg)) {
+        if ($errorMsg === '') {
+            $errorMsg = 'Captcha verification failed. Please try again.';
+        }
     } else {
         require __DIR__ . '/PHPMailer/PHPMailerAutoload.php';
 
@@ -179,6 +201,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <html lang="en">
 <head>
     <?php include './headSource.php'; ?>
+    <?php if ($recaptchaFrontendEnabled): ?>
+        <?php if (($recaptchaConfig['version'] ?? 'v2_checkbox') === 'v3'): ?>
+            <script src="https://www.google.com/recaptcha/api.js?render=<?php echo urlencode($recaptchaConfig['site_key']); ?>"></script>
+        <?php else: ?>
+            <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+        <?php endif; ?>
+    <?php endif; ?>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <title>Contact Us - AITF Management Certification</title>
@@ -733,10 +762,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             box-shadow: 0 12px 30px rgba(29, 155, 240, 0.35);
         }
 
-        .submit-btn:hover {
+        .submit-btn:hover:not(:disabled) {
             transform: translateY(-2px);
             box-shadow: 0 16px 36px rgba(29, 155, 240, 0.45);
             filter: brightness(1.05);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            filter: grayscale(0.12);
+            box-shadow: 0 8px 18px rgba(29, 155, 240, 0.18);
         }
 
         .form-note {
@@ -744,6 +780,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             font-size: 0.95rem;
             margin-top: 10px;
             text-align: center;
+        }
+
+        .captcha-wrap {
+            width: 100%;
+            margin-top: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: center;
+            padding: 14px 16px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 14px;
+        }
+
+        .captcha-wrap .g-recaptcha {
+            max-width: 100%;
+            display: flex;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .captcha-wrap .g-recaptcha > div {
+            max-width: 100% !important;
+            margin: 0 auto;
+        }
+
+        .captcha-help {
+            font-size: 0.88rem;
+            color: #8899a6;
+            line-height: 1.5;
+            text-align: center;
+        }
+
+        .captcha-status {
+            display: none;
+            margin-top: 10px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: rgba(255, 193, 7, 0.12);
+            border: 1px solid rgba(255, 193, 7, 0.28);
+            color: #ffd166;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .captcha-status.show {
+            display: block;
         }
 
         /* Submit overlay */
@@ -901,6 +986,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             .services-list {
                 grid-template-columns: 1fr;
             }
+
+            .captcha-wrap {
+                align-items: center;
+            }
+
+            .captcha-wrap .g-recaptcha {
+                transform: scale(0.92);
+                transform-origin: center top;
+            }
         }
     </style>
 </head>
@@ -1017,7 +1111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     <h2>Contact Form</h2>
                 </div>
-                <form method="post">
+                <form method="post" id="contact-form">
                     <div class="form-grid">
                         <div>
                             <label class="form-label" for="name">Name*</label>
@@ -1054,7 +1148,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </div>
                     </div>
                     <div style="margin-top: 18px;">
+                        <div class="captcha-wrap">
+                            <?php if ($recaptchaBypass): ?>
+                                <div class="captcha-help">Localhost mode detected, captcha is bypassed on this local machine.</div>
+                            <?php elseif ($recaptchaReady && (($recaptchaConfig['version'] ?? 'v2_checkbox') === 'v2_checkbox')): ?>
+                                <div class="g-recaptcha" data-sitekey="<?php echo htmlspecialchars($recaptchaConfig['site_key'], ENT_QUOTES, 'UTF-8'); ?>" data-theme="<?php echo htmlspecialchars($recaptchaConfig['theme'], ENT_QUOTES, 'UTF-8'); ?>" data-callback="contactCaptchaSolved" data-expired-callback="contactCaptchaExpired"></div>
+                            <?php elseif ($recaptchaReady): ?>
+                                <input type="hidden" name="g-recaptcha-response" id="contact-recaptcha-token">
+                                <div class="captcha-help">Spam protection is active. Your form will be verified automatically before submit.</div>
+                            <?php else: ?>
+                                <div class="captcha-help">Captcha widget will appear after Google reCAPTCHA keys are added in `config/recaptcha_config.php`.</div>
+                            <?php endif; ?>
+                        </div>
                         <button type="submit" class="submit-btn">Send Message</button>
+                        <div class="captcha-status" id="contact-captcha-status">Please complete the captcha to enable the submit button.</div>
                         <div class="form-note">You will see a confirmation once your enquiry is sent. We typically respond within 24 hours.</div>
                     </div>
                 </form>
@@ -1104,6 +1211,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php include './footerSource.php'; ?>
 
     <script>
+        const recaptchaVersion = <?php echo json_encode($recaptchaConfig['version'] ?? 'v2_checkbox'); ?>;
+        const recaptchaSiteKey = <?php echo json_encode($recaptchaConfig['site_key'] ?? ''); ?>;
+        const recaptchaAction = <?php echo json_encode($recaptchaConfig['action'] ?? 'submit'); ?>;
+        const recaptchaEnabled = <?php echo json_encode($recaptchaFrontendEnabled); ?>;
+
         // Floating contact toggle
         const floatingBtn = document.getElementById('floatingBtn');
         const floatingContact = document.getElementById('floatingContact');
@@ -1120,12 +1232,82 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         });
 
         // Show loader on submit
-        const contactForm = document.querySelector('form');
+        const contactForm = document.getElementById('contact-form');
         const submitOverlay = document.getElementById('submitOverlay');
         const submitBtn = document.querySelector('.submit-btn');
+        const captchaStatus = document.getElementById('contact-captcha-status');
+        const captchaBox = contactForm ? contactForm.querySelector('.g-recaptcha') : null;
+        const requiresVisibleCaptcha = Boolean(recaptchaEnabled && recaptchaVersion !== 'v3' && captchaBox);
+        let recaptchaSubmitting = false;
+
+        function updateContactCaptchaState() {
+            if (!submitBtn) {
+                return;
+            }
+
+            if (!requiresVisibleCaptcha) {
+                submitBtn.disabled = false;
+                if (captchaStatus) {
+                    captchaStatus.classList.remove('show');
+                }
+                return;
+            }
+
+            const captchaDone = typeof grecaptcha !== 'undefined' && grecaptcha.getResponse().trim() !== '';
+            submitBtn.disabled = !captchaDone;
+            if (captchaStatus) {
+                captchaStatus.classList.toggle('show', !captchaDone);
+            }
+        }
+
+        window.contactCaptchaSolved = function () {
+            updateContactCaptchaState();
+        };
+
+        window.contactCaptchaExpired = function () {
+            updateContactCaptchaState();
+        };
 
         if (contactForm && submitOverlay && submitBtn) {
-            contactForm.addEventListener('submit', () => {
+            updateContactCaptchaState();
+            if (requiresVisibleCaptcha) {
+                window.setInterval(updateContactCaptchaState, 700);
+            }
+
+            contactForm.addEventListener('submit', (event) => {
+                if (recaptchaEnabled && recaptchaVersion === 'v3') {
+                    const tokenField = document.getElementById('contact-recaptcha-token');
+                    if (!recaptchaSubmitting) {
+                        event.preventDefault();
+                        if (typeof grecaptcha === 'undefined' || !recaptchaSiteKey) {
+                            alert('Captcha is not ready yet. Please wait a moment and try again.');
+                            return;
+                        }
+                        grecaptcha.ready(() => {
+                            grecaptcha.execute(recaptchaSiteKey, { action: recaptchaAction }).then((token) => {
+                                if (tokenField) {
+                                    tokenField.value = token;
+                                }
+                                recaptchaSubmitting = true;
+                                contactForm.requestSubmit();
+                            }).catch(() => {
+                                alert('Captcha verification failed. Please try again.');
+                            });
+                        });
+                        return;
+                    }
+                    recaptchaSubmitting = false;
+                } else if (recaptchaEnabled) {
+                    if (captchaBox && typeof grecaptcha !== 'undefined' && grecaptcha.getResponse().trim() === '') {
+                        event.preventDefault();
+                        updateContactCaptchaState();
+                        submitOverlay.classList.remove('show');
+                        if (submitBtn.dataset.originalText) {
+                            submitBtn.textContent = submitBtn.dataset.originalText;
+                        }
+                        return;
+                    }
+                }
                 submitOverlay.classList.add('show');
                 submitBtn.dataset.originalText = submitBtn.textContent;
                 submitBtn.textContent = 'Sending...';
@@ -1134,10 +1316,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             window.addEventListener('pageshow', () => {
                 submitOverlay.classList.remove('show');
-                submitBtn.disabled = false;
                 if (submitBtn.dataset.originalText) {
                     submitBtn.textContent = submitBtn.dataset.originalText;
                 }
+                updateContactCaptchaState();
             });
         }
     </script>

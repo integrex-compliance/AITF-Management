@@ -12,31 +12,36 @@ date_default_timezone_set('Asia/Kolkata');
 
 if (isset($_POST['invoice']) && !empty($_POST['invoice'])) {
     try {
-        $cmonth_invoice = "SELECT count(invoice_id) as id FROM `invoice_details` WHERE (invoice_date BETWEEN '" . date('Y-m-01') . "' AND '" . date('Y-m-t') . "') AND invoice_type = 'final'";
-        $statement = $db->prepare($cmonth_invoice);
+        $invoiceInfoQuery = "SELECT invoice_id, invoice_date FROM invoice_details WHERE invoice_id = :id";
+        $statement = $db->prepare($invoiceInfoQuery);
+        $statement->bindParam(':id', $_POST['invoice']);
         $statement->execute();
-        $monthinvc = $statement->fetch();
-//echo $cmonth_invoice.' -> '.date('Y-m-01').' -> '.' -> '.date('Y-m-t').' -> '.$monthinvc["id"]; die;
-        if ($monthinvc["id"] == '0') {
-            $proformaPrefix = strtoupper(date("Y/M"));
-            $proformaPrefix = 'CD/'.$proformaPrefix;
-            $proformainv = '1';
-            $updateInvoice = "UPDATE consulting_firm SET final_prefix = :prefix,final_invoice_no = :no WHERE firm_id = '1' ";
-            $statement = $db->prepare($updateInvoice);
-            $statement->bindParam(':prefix', $proformaPrefix);
-            $statement->bindParam(':no', $proformainv);
-            $statement->execute();
+        $invoiceInfo = $statement->fetch(PDO::FETCH_ASSOC);
+
+        if (!$invoiceInfo || empty($invoiceInfo['invoice_date'])) {
+            throw new Exception('Invoice date not found for final invoice generation.');
         }
 
-        $finalinvno = "SELECT * FROM consulting_firm";
-        $statement = $db->prepare($finalinvno);
-        $statement->execute();
-        $finvno = $statement->fetch();
+        $finalInvoiceDate = date('Y-m-d', strtotime($invoiceInfo['invoice_date']));
+        $finalprefix = 'CD/' . strtoupper(date('Y/M', strtotime($finalInvoiceDate)));
 
-        $finalNo = $finvno["final_invoice_no"];
+        $monthlyInvoiceNoQuery = "SELECT COALESCE(MAX(CAST(final_invoice_no AS UNSIGNED)), 0) AS max_invoice_no
+                FROM invoice_details
+                WHERE invoice_type = 'final'
+                AND final_prefix = :finalprefix
+                AND YEAR(invoice_date) = :invoice_year
+                AND MONTH(invoice_date) = :invoice_month";
+        $statement = $db->prepare($monthlyInvoiceNoQuery);
+        $invoiceYear = date('Y', strtotime($finalInvoiceDate));
+        $invoiceMonth = date('m', strtotime($finalInvoiceDate));
+        $statement->bindParam(':finalprefix', $finalprefix);
+        $statement->bindParam(':invoice_year', $invoiceYear);
+        $statement->bindParam(':invoice_month', $invoiceMonth);
+        $statement->execute();
+        $monthlyInvoiceInfo = $statement->fetch(PDO::FETCH_ASSOC);
+
+        $finalNo = (int) $monthlyInvoiceInfo['max_invoice_no'] + 1;
         $invoiceType = 'final';
-        $finalprefix = $finvno["final_prefix"];
-        $finalInvoiceDate = date("Y-m-d");
         
         $updateToFinal = "UPDATE invoice_details SET invoice_type = :type,final_prefix = :finalprefix, final_invoice_no=:final_invoice_no, invoice_date = :final_invoice_date WHERE invoice_id = :id ";
         $statement = $db->prepare($updateToFinal);
@@ -47,11 +52,12 @@ if (isset($_POST['invoice']) && !empty($_POST['invoice'])) {
         $statement->bindParam(':final_invoice_date', $finalInvoiceDate);
         $statement->execute();
 
-        $finalNo = $finalNo + 1;
+        $nextFinalNo = $finalNo + 1;
 
-        $updatefinvoiceno = "UPDATE consulting_firm SET final_invoice_no = :no";
+        $updatefinvoiceno = "UPDATE consulting_firm SET final_prefix = :prefix, final_invoice_no = :no WHERE firm_id = '1'";
         $statement = $db->prepare($updatefinvoiceno);
-        $statement->bindParam(":no", $finalNo);
+        $statement->bindParam(':prefix', $finalprefix);
+        $statement->bindParam(":no", $nextFinalNo);
         $statement->execute();
 
         header("Location: invoicePage.php");

@@ -20,12 +20,14 @@ $iafList = $statement->fetchAll();
         -webkit-appearance: none;
         margin: 0;
     }
+
     .auditorNumber {
         -moz-appearance: textfield;
     }
 </style>
 
-<div class="modal fade iafnacemodel" id="" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+<div class="modal fade iafnacemodel" id="" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+    aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -39,12 +41,14 @@ $iafList = $statement->fetchAll();
                     <div class="row">
                         <div class="row">
                             <div class="col-sm-4 form-group float-label-control">
-                                <label>IAF Code</label> 
-                                <input type="text" class="newIafInput" id="newIafInput" name="newIafInput" placeholder="Division">
+                                <label>IAF Code</label>
+                                <input type="text" class="newIafInput" id="newIafInput" name="newIafInput"
+                                    placeholder="Division">
                             </div>
                             <div class="col-sm-7 form-group float-label-control">
-                                <label>IAF Description</label> 
-                                <input type="text" class="newIafDesc" id="newIafDesc" name="newIafDesc" placeholder="Division Description">
+                                <label>IAF Description</label>
+                                <input type="text" class="newIafDesc" id="newIafDesc" name="newIafDesc"
+                                    placeholder="Division Description">
                             </div>
                             <div class="col-sm-1 form-group float-label-control">
                                 <a class="newNaceAdd" style="" title="Add Multiple Nace"><i class="fa fa-plus"></i></a>
@@ -53,15 +57,18 @@ $iafList = $statement->fetchAll();
                         <div class="newnaceaddrow">
                             <div class="row ">
                                 <div class="col-sm-4 form-group float-label-control">
-                                    <label>Nace Code</label> 
-                                    <input type="text" class="newNaceCode" id="newNaceCode" name="newNaceCode" placeholder="Group">
+                                    <label>Nace Code</label>
+                                    <input type="text" class="newNaceCode" id="newNaceCode" name="newNaceCode"
+                                        placeholder="Group">
                                 </div>
                                 <div class="col-sm-7 form-group float-label-control">
-                                    <label>Technical Area</label> 
-                                    <input type="text" class="newNaceDesc" id="newNaceDesc" name="newNaceDesc" placeholder="Group Description">
+                                    <label>Technical Area</label>
+                                    <input type="text" class="newNaceDesc" id="newNaceDesc" name="newNaceDesc"
+                                        placeholder="Group Description">
                                 </div>
                                 <div class="col-sm-1 form-group float-label-control">
-                                    <a class="removeNaceCode" style="" title="Remove Nace"><i class="fa fa-close"></i></a>
+                                    <a class="removeNaceCode" style="" title="Remove Nace"><i
+                                            class="fa fa-close"></i></a>
                                 </div>
                             </div>
                         </div>
@@ -77,7 +84,8 @@ $iafList = $statement->fetchAll();
         </div>
     </div>
 </div>
-<div class="modal fade iafnaceClassmodel" id="" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+<div class="modal fade iafnaceClassmodel" id="" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+    aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -90,31 +98,37 @@ $iafList = $statement->fetchAll();
                 <div class="modal-body">
                     <div class="row">
                         <div class="row">
-                            
-                        <div class="col-sm-4 form-group float-label-control">
-                                <label>Division</label> 
-                                <input type="text" class="newIafInput1" id="newIafInput1" name="newIafInput1" placeholder="Division">
+
+                            <div class="col-sm-4 form-group float-label-control">
+                                <label>Division</label>
+                                <input type="text" class="newIafInput1" id="newIafInput1" name="newIafInput1"
+                                    placeholder="Division">
                             </div>
                             <div class="col-sm-7 form-group float-label-control">
-                                <label>Group</label> 
-                                <input type="text" class="newIafDesc1" id="newIafDesc1" name="newIafDesc1" placeholder="Group">
+                                <label>Group</label>
+                                <input type="text" class="newIafDesc1" id="newIafDesc1" name="newIafDesc1"
+                                    placeholder="Group">
                             </div>
                             <div class="col-sm-1 form-group float-label-control">
-                                <a class="newNaceClassAdd" style="" title="Add Multiple Nace"><i class="fa fa-plus"></i></a>
+                                <a class="newNaceClassAdd" style="" title="Add Multiple Nace"><i
+                                        class="fa fa-plus"></i></a>
                             </div>
                         </div>
                         <div class="newnaceaddrowClass">
                             <div class="row ">
                                 <div class="col-sm-4 form-group float-label-control">
-                                    <label>Nace Class Code</label> 
-                                    <input type="text" class="newNaceCode1" id="newNaceCode1" name="newNaceClass1" placeholder="Nace Class Code">
+                                    <label>Nace Class Code</label>
+                                    <input type="text" class="newNaceCode1" id="newNaceCode1" name="newNaceClass1"
+                                        placeholder="Nace Class Code">
                                 </div>
                                 <div class="col-sm-7 form-group float-label-control">
-                                    <label>Technical Area</label> 
-                                    <input type="text" class="newNaceDesc1" id="newNaceDesc1" name="newNaceClassDesc1" placeholder="Technical Area">
+                                    <label>Technical Area</label>
+                                    <input type="text" class="newNaceDesc1" id="newNaceDesc1" name="newNaceClassDesc1"
+                                        placeholder="Technical Area">
                                 </div>
                                 <div class="col-sm-1 form-group float-label-control">
-                                    <a class="removeNaceCode" style="" title="Remove Nace"><i class="fa fa-close"></i></a>
+                                    <a class="removeNaceCode" style="" title="Remove Nace"><i
+                                            class="fa fa-close"></i></a>
                                 </div>
                             </div>
                         </div>
@@ -145,26 +159,30 @@ $iafList = $statement->fetchAll();
                     <div class="row">
                         <div class="row">
                             <div class="col-sm-12 form-group float-label-control">
-                                <label>Auditor Name</label> 
-                                <input type="text" class="auditorName" id="auditorName" name="auditorName" placeholder="Auditor Name" required>
+                                <label>Auditor Name</label>
+                                <input type="text" class="auditorName" id="auditorName" name="auditorName"
+                                    placeholder="Auditor Name" required>
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-sm-12 form-group float-label-control">
-                                <label>Auditor Number</label> 
-                                <input type="number" class="auditorNumber" id="auditorNumber" name="auditorNumber" placeholder="Auditor Number">
+                                <label>Auditor Number</label>
+                                <input type="number" class="auditorNumber" id="auditorNumber" name="auditorNumber"
+                                    placeholder="Auditor Number">
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-sm-12 form-group float-label-control">
                                 <label>Auditor Email</label>
-                                <input type="email" class="auditorEmail" id="auditorEmail" name="auditorEmail" placeholder="Auditor Email">
+                                <input type="email" class="auditorEmail" id="auditorEmail" name="auditorEmail"
+                                    placeholder="Auditor Email">
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-sm-12 form-group float-label-control">
                                 <label>Auditor Abbreviation</label>
-                                <input type="text" class="auditorabbr" id="auditorabbr" name="auditorabbr" placeholder="Auditor Abbreviation">
+                                <input type="text" class="auditorabbr" id="auditorabbr" name="auditorabbr"
+                                    placeholder="Auditor Abbreviation">
                             </div>
                         </div>
                     </div>
@@ -182,53 +200,62 @@ $iafList = $statement->fetchAll();
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">x</span><span class="sr-only">Close</span></button>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">x</span><span
+                        class="sr-only">Close</span></button>
                 <h4 class="modal-title" id="myModalLabel">Reset Password</h4>
             </div>
             <form action="changePassword.php" method="post" enctype="multipart/form-data">
-                <div class="modal-body"> 
+                <div class="modal-body">
                     <div class="row">
-                        <div class="col-sm-12 form-group float-label-control" >
+                        <div class="col-sm-12 form-group float-label-control">
                             <strong>Name : </strong><span class="userNameToReset"></span><br>
                             <strong>User Email : </strong><span class="userEmailToReset"></span>
-                        </div>                            
-                    </div>
-                    <div class="row">
-                        <div class="col-sm-8 form-group float-label-control" >
-                            <label for="">Reset Password</label>
-                            <input type="password" name="resetNewPassword" class="form-control form-group resetNewPassword" id="resetNewPassword" placeholder="Reset Password">
-                        </div>    
-                        <div class="col-sm-2 form-group float-label-control" >
-                            <a class="passwordShow" title="Show password"><i class="fa fa-eye"></i></a><a class="passwordHide" title="Hide password" style="display: none"><i class="fa fa-eye-slash"></i></a>
                         </div>
                     </div>
                     <div class="row">
-                        <div class="col-sm-12 form-group float-label-control" >
+                        <div class="col-sm-8 form-group float-label-control">
+                            <label for="">Reset Password</label>
+                            <input type="password" name="resetNewPassword"
+                                class="form-control form-group resetNewPassword" id="resetNewPassword"
+                                placeholder="Reset Password">
+                        </div>
+                        <div class="col-sm-2 form-group float-label-control">
+                            <a class="passwordShow" title="Show password"><i class="fa fa-eye"></i></a><a
+                                class="passwordHide" title="Hide password" style="display: none"><i
+                                    class="fa fa-eye-slash"></i></a>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-12 form-group float-label-control">
                             <div id="resetNewPasswordError" style="display: none">
-                                <small><span id="resetNewPasswordErrorMsg" style="color: #c9513c; font-style: italic; " ></span></small>
+                                <small><span id="resetNewPasswordErrorMsg"
+                                        style="color: #c9513c; font-style: italic; "></span></small>
                             </div>
                         </div>
                     </div>
                     <div class="row">
-                        <div class="col-sm-8 form-group float-label-control" >
+                        <div class="col-sm-8 form-group float-label-control">
                             <label for="">Confirm Password</label>
-                            <input type="password" name="confirmResetNewPassword" class="form-control form-group confirmResetNewPassword" id="confirmResetNewPassword" placeholder="Confirm Password">
-                        </div>    
+                            <input type="password" name="confirmResetNewPassword"
+                                class="form-control form-group confirmResetNewPassword" id="confirmResetNewPassword"
+                                placeholder="Confirm Password">
+                        </div>
                         <!--                            <div class="col-sm-2 form-group float-label-control" >
                                                         <a class="passwordShow" title="Show password"><i class="fa fa-eye"></i></a><a class="passwordHide" title="Hide password" style="display: none"><i class="fa fa-eye-slash"></i></a>
                                                     </div>-->
                     </div>
                     <div class="row">
-                        <div class="col-sm-12 form-group float-label-control" >
+                        <div class="col-sm-12 form-group float-label-control">
                             <div id="confirmResetNewPasswordError" style="display: none">
-                                <small><span id="confirmResetNewPasswordErrorMsg" style="color: #c9513c; font-style: italic; " ></span></small>
+                                <small><span id="confirmResetNewPasswordErrorMsg"
+                                        style="color: #c9513c; font-style: italic; "></span></small>
                             </div>
                         </div>
                     </div>
                     <input type="hidden" class="userID" id="userID" name="userID" value="">
-<!--                        <input type="hidden" class="editAbbreviationHidden" id="editAbbreviationHidden" name="editAbbreviationHidden" value="">
+                    <!--                        <input type="hidden" class="editAbbreviationHidden" id="editAbbreviationHidden" name="editAbbreviationHidden" value="">
                     <input type="hidden" class="editAbbreviationIDHidden" id="editAbbreviationIDHidden" name="editAbbreviationIDHidden" value="">-->
-                </div> 
+                </div>
                 <div class="modal-footer">
                     <button type="submit" class="btn btn-xs btn-info resetUserPassword">Reset</button>
                 </div>
@@ -238,10 +265,10 @@ $iafList = $statement->fetchAll();
 </div>
 
 <script type="text/javascript">
-    function  validatePassword(pass) {
-//        alert(pass);
+    function validatePassword(pass) {
+        //        alert(pass);
         return pass.match(/^(?=.*?[a-zA-Z])(?=.*?[0-9])(?=.*?[@#%$])[a-zA-Z0-9@#%$]{8,16}$/);
-//        return pass.match(/^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])([a-zA-Z0-9]{8,})$/);
+        //        return pass.match(/^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])([a-zA-Z0-9]{8,})$/);
     }
 
     var err = true;
@@ -268,7 +295,7 @@ $iafList = $statement->fetchAll();
             $('#confirmResetNewPasswordError').show();
             $('#confirmResetNewPassword').addClass('inputHighlight');
             $isError = true;
-//            alert("hi");
+            //            alert("hi");
         } else if ($('#resetNewPassword').val() != $('#confirmResetNewPassword').val()) {
             $('#confirmResetNewPasswordErrorMsg').text("Password not match");
             $('#confirmResetNewPasswordError').show();
@@ -291,13 +318,13 @@ $iafList = $statement->fetchAll();
         });
 
         $('.passwordShow').click(function () {
-//            $('.newPassword').type = 'text';
+            //            $('.newPassword').type = 'text';
             $('.passwordHide').show();
             document.getElementById('resetNewPassword').type = 'text';
             document.getElementById('userPassword').type = 'text';
             document.getElementById('confirmResetNewPassword').type = 'text';
             $('.passwordShow').hide();
-//            document.getElementById('newPassword').type = 'text';
+            //            document.getElementById('newPassword').type = 'text';
         });
 
         $('.passwordHide').click(function () {
@@ -320,8 +347,8 @@ $iafList = $statement->fetchAll();
                 nacedesc.push($(this).val());
             });
             $('.nace_desc_array').val(nacedesc.join("~"));
-//            alert($('.nace_code_array').val());
-//            alert($('.nace_desc_array').val());
+            //            alert($('.nace_code_array').val());
+            //            alert($('.nace_desc_array').val());
         });
         $(".addAifNaceCode1").click(function () {
             var nacecode = [];
@@ -335,8 +362,8 @@ $iafList = $statement->fetchAll();
                 nacedesc.push($(this).val());
             });
             $('.nace_desc_array').val(nacedesc.join("~"));
-//            alert($('.nace_code_array').val());
-//            alert($('.nace_desc_array').val());
+            //            alert($('.nace_code_array').val());
+            //            alert($('.nace_desc_array').val());
         });
         $(".newNaceAdd").click(function () {
             $(".newnaceaddrow").append('<div class="row parentrow">\n\
@@ -367,22 +394,21 @@ $iafList = $statement->fetchAll();
                             </div></div>');
         });
         $('body').on("click", ".removeNaceCode", function () {
-//        alert("Atleast one action item required");
+            //        alert("Atleast one action item required");
             $(this).parent("div.contentrow").parent('div.parentrow').remove();
         });
     });
 </script>
 <script>
 
-function groupFind(selectedValue)
- {
-    $.ajax({
-        url: 'ajax.php',
-        type: 'POST',
-        data: {selectedValue},
-        success:function(html){
-            $('#group_id').html(html);
-        }
-    });
-}
+    function groupFind(selectedValue) {
+        $.ajax({
+            url: 'ajax.php',
+            type: 'POST',
+            data: { selectedValue },
+            success: function (html) {
+                $('#group_id').html(html);
+            }
+        });
+    }
 </script>

@@ -1,10 +1,35 @@
 <?php
 session_start();
+
+$recaptchaHelperPath = __DIR__ . '/include/recaptcha_helper.php';
+if (file_exists($recaptchaHelperPath)) {
+    require_once $recaptchaHelperPath;
+}
+
+$recaptchaConfig = function_exists('aitf_get_recaptcha_config') ? aitf_get_recaptcha_config() : [
+    'site_key' => '6LcIHKksAAAAAAtYeQDQaBpCAyHjg4PIa7XKFMer',
+    'secret_key' => '6LcIHKksAAAAAFU1KUQ2X601xzZ-BJNbQAwVjYdA',
+    'version' => 'v2_checkbox',
+    'action' => 'submit',
+    'minimum_score' => 0.5,
+    'theme' => 'light',
+    'enabled' => false
+];
+$recaptchaReady = function_exists('aitf_is_recaptcha_ready') ? aitf_is_recaptcha_ready() : false;
+$recaptchaBypass = function_exists('aitf_should_bypass_recaptcha') ? aitf_should_bypass_recaptcha() : false;
+$recaptchaFrontendEnabled = $recaptchaReady && !$recaptchaBypass;
 ?>
 <!DOCTYPE html>
 <html lang="en">
     <head>
         <?php include './headSource.php'; ?>
+        <?php if ($recaptchaFrontendEnabled): ?>
+            <?php if (($recaptchaConfig['version'] ?? 'v2_checkbox') === 'v3'): ?>
+                <script src="https://www.google.com/recaptcha/api.js?render=<?php echo urlencode($recaptchaConfig['site_key']); ?>"></script>
+            <?php else: ?>
+                <script src="https://www.google.com/recaptcha/api.js?onload=loginRecaptchaOnload&render=explicit" async defer></script>
+            <?php endif; ?>
+        <?php endif; ?>
         <title>AITF - Login</title>
         <!-- Font Awesome for icons -->
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -74,6 +99,64 @@ session_start();
                 right: 0;
                 height: 6px;
                 background: linear-gradient(90deg, #f97316, #ea580c);
+            }
+
+            .login-captcha-wrap {
+                margin: 18px 0 10px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 10px;
+                padding: 12px 14px;
+                border: 1px solid #e2e8f0;
+                border-radius: 14px;
+                background: #f8fafc;
+                min-height: 92px;
+            }
+
+            .login-captcha-note {
+                margin-top: 0;
+                font-size: 0.85rem;
+                color: #6b7280;
+                text-align: center;
+            }
+
+            #admin-login-recaptcha,
+            #client-login-recaptcha {
+                width: 100%;
+                display: flex;
+                justify-content: center;
+            }
+
+            #admin-login-recaptcha > div,
+            #client-login-recaptcha > div {
+                margin: 0 auto;
+            }
+
+            .login-submit-btn {
+                width: 100%;
+                border-radius: 999px;
+                background: linear-gradient(135deg, #f97316, #ea580c);
+                border: none;
+                color: #fff;
+                padding: 12px 18px;
+                font-weight: 600;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                cursor: pointer;
+                box-shadow: 0 10px 25px rgba(234, 88, 12, 0.35);
+                transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+            }
+
+            .login-submit-btn:hover:not(:disabled) {
+                transform: translateY(-1px);
+                box-shadow: 0 14px 30px rgba(234, 88, 12, 0.45);
+            }
+
+            .login-submit-btn:disabled {
+                opacity: 0.55;
+                cursor: not-allowed;
+                box-shadow: 0 6px 16px rgba(148, 163, 184, 0.3);
             }
 
             .login-selection-title {
@@ -403,6 +486,12 @@ session_start();
                     width: 100%;
                     text-align: center;
                 }
+
+                #admin-login-recaptcha,
+                #client-login-recaptcha {
+                    transform: scale(0.92);
+                    transform-origin: center top;
+                }
             }
 
             .login-loading-overlay {
@@ -487,7 +576,7 @@ session_start();
 
                 <div class="login-panels">
                     <div id="user-login-panel" class="login-panel active">
-                        <form action="login.php" method="post">
+                        <form action="login.php" method="post" id="admin-login-form">
                             <label class="message-view" style="display: none;">Invalid Username or Password</label>
                             <div class="input-group">
                                 <i class="fas fa-envelope"></i>
@@ -500,12 +589,24 @@ session_start();
                                     <i class="far fa-eye"></i>
                                 </button>
                             </div>
-                            <input type="submit" value="Sign In">
+                            <div class="login-captcha-wrap">
+                                <?php if ($recaptchaBypass): ?>
+                                    <div class="login-captcha-note">Captcha is temporarily disabled on this environment.</div>
+                                <?php elseif ($recaptchaReady && (($recaptchaConfig['version'] ?? 'v2_checkbox') === 'v2_checkbox')): ?>
+                                    <div id="admin-login-recaptcha"></div>
+                                <?php elseif ($recaptchaReady): ?>
+                                    <input type="hidden" name="g-recaptcha-response" id="admin-login-recaptcha-token">
+                                    <div class="login-captcha-note">Login protection is active. Your request will be verified automatically.</div>
+                                <?php else: ?>
+                                    <div class="login-captcha-note">Captcha will be enabled after reCAPTCHA keys are configured.</div>
+                                <?php endif; ?>
+                            </div>
+                            <input type="submit" value="Sign In" class="login-submit-btn" id="admin-login-submit">
                         </form>
                     </div>
 
                     <div id="client-login-panel" class="login-panel">
-                        <form action="login.php" method="post">
+                        <form action="login.php" method="post" id="client-login-form">
                             <label class="message-view" style="display: none;">Invalid Username or Password</label>
                             <div class="input-group">
                                 <i class="fas fa-user"></i>
@@ -518,7 +619,19 @@ session_start();
                                     <i class="far fa-eye"></i>
                                 </button>
                             </div>
-                            <input type="submit" name="login" class="login loginmodal-submit" value="Sign In">
+                            <div class="login-captcha-wrap">
+                                <?php if ($recaptchaBypass): ?>
+                                    <div class="login-captcha-note">Captcha is temporarily disabled on this environment.</div>
+                                <?php elseif ($recaptchaReady && (($recaptchaConfig['version'] ?? 'v2_checkbox') === 'v2_checkbox')): ?>
+                                    <div id="client-login-recaptcha"></div>
+                                <?php elseif ($recaptchaReady): ?>
+                                    <input type="hidden" name="g-recaptcha-response" id="client-login-recaptcha-token">
+                                    <div class="login-captcha-note">Login protection is active. Your request will be verified automatically.</div>
+                                <?php else: ?>
+                                    <div class="login-captcha-note">Captcha will be enabled after reCAPTCHA keys are configured.</div>
+                                <?php endif; ?>
+                            </div>
+                            <input type="submit" name="login" class="login loginmodal-submit login-submit-btn" value="Sign In" id="client-login-submit">
                         </form>
                     </div>
                 </div>
@@ -532,6 +645,69 @@ session_start();
         <?php include './footerSource.php'; ?>
 
         <script>
+            const recaptchaVersion = <?php echo json_encode($recaptchaConfig['version'] ?? 'v2_checkbox'); ?>;
+            const recaptchaSiteKey = <?php echo json_encode($recaptchaConfig['site_key'] ?? ''); ?>;
+            const recaptchaEnabled = <?php echo json_encode($recaptchaFrontendEnabled); ?>;
+            const recaptchaAction = <?php echo json_encode($recaptchaConfig['action'] ?? 'submit'); ?>;
+
+            let adminLoginWidgetId = null;
+            let clientLoginWidgetId = null;
+
+            function loginUpdateButtonsState() {
+                const adminBtn = document.getElementById('admin-login-submit');
+                const clientBtn = document.getElementById('client-login-submit');
+
+                const requiresCheckbox = !!(recaptchaEnabled && recaptchaVersion !== 'v3');
+
+                if (!requiresCheckbox) {
+                    if (adminBtn) adminBtn.disabled = false;
+                    if (clientBtn) clientBtn.disabled = false;
+                    return;
+                }
+
+                if (typeof grecaptcha === 'undefined') {
+                    if (adminBtn) adminBtn.disabled = true;
+                    if (clientBtn) clientBtn.disabled = true;
+                    return;
+                }
+
+                const adminDone = adminLoginWidgetId !== null && grecaptcha.getResponse(adminLoginWidgetId).trim() !== '';
+                const clientDone = clientLoginWidgetId !== null && grecaptcha.getResponse(clientLoginWidgetId).trim() !== '';
+
+                if (adminBtn) adminBtn.disabled = !adminDone;
+                if (clientBtn) clientBtn.disabled = !clientDone;
+            }
+
+            function loginRecaptchaOnload() {
+                if (!recaptchaEnabled || recaptchaVersion === 'v3' || typeof grecaptcha === 'undefined') {
+                    return;
+                }
+
+                const adminContainer = document.getElementById('admin-login-recaptcha');
+                const clientContainer = document.getElementById('client-login-recaptcha');
+
+                if (adminContainer && adminLoginWidgetId === null) {
+                    adminLoginWidgetId = grecaptcha.render(adminContainer, {
+                        sitekey: recaptchaSiteKey,
+                        callback: function () { loginUpdateButtonsState(); },
+                        'expired-callback': function () { loginUpdateButtonsState(); }
+                    });
+                }
+
+                if (clientContainer && clientLoginWidgetId === null) {
+                    clientLoginWidgetId = grecaptcha.render(clientContainer, {
+                        sitekey: recaptchaSiteKey,
+                        callback: function () { loginUpdateButtonsState(); },
+                        'expired-callback': function () { loginUpdateButtonsState(); }
+                    });
+                }
+
+                loginUpdateButtonsState();
+                window.setInterval(loginUpdateButtonsState, 800);
+            }
+
+            window.loginRecaptchaOnload = loginRecaptchaOnload;
+
             document.addEventListener('DOMContentLoaded', function () {
                 // Password toggle functionality
                 const togglePassword = document.querySelector('#togglePassword');
@@ -581,16 +757,61 @@ session_start();
                     }
                 }
 
+                function hideLoginLoader() {
+                    if (overlay) {
+                        overlay.style.display = 'none';
+                    }
+                }
+
                 var forms = document.querySelectorAll('.login-panel form');
                 forms.forEach(function (form) {
-                    form.addEventListener('submit', function () {
+                    form.addEventListener('submit', function (e) {
                         var submitBtn = form.querySelector('input[type="submit"]');
+                        if (recaptchaEnabled && recaptchaVersion === 'v3') {
+                            var tokenField = form.querySelector('input[name="g-recaptcha-response"]');
+                            if (tokenField) {
+                                e.preventDefault();
+                                if (submitBtn) {
+                                    submitBtn.disabled = true;
+                                }
+                                showLoginLoader();
+                                if (!recaptchaSiteKey || typeof grecaptcha === 'undefined') {
+                                    hideLoginLoader();
+                                    if (submitBtn) {
+                                        submitBtn.disabled = false;
+                                    }
+                                    alert('Captcha is not ready yet. Please wait a moment and try again.');
+                                    return;
+                                }
+                                grecaptcha.ready(function () {
+                                    grecaptcha.execute(recaptchaSiteKey, { action: recaptchaAction }).then(function (token) {
+                                        tokenField.value = token;
+                                        form.submit();
+                                    }).catch(function () {
+                                        hideLoginLoader();
+                                        if (submitBtn) {
+                                            submitBtn.disabled = false;
+                                        }
+                                        alert('Captcha verification failed. Please try again.');
+                                    });
+                                });
+                                return;
+                            }
+                        }
+
+                        if (submitBtn && submitBtn.disabled) {
+                            e.preventDefault();
+                            return;
+                        }
+
                         if (submitBtn) {
                             submitBtn.disabled = true;
                         }
                         showLoginLoader();
                     });
                 });
+
+                loginUpdateButtonsState();
             });
         </script>
     </body>

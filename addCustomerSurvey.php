@@ -69,7 +69,7 @@ if (isset($_POST['survay-id']) && !empty($_POST['survay-id'])) {
 
         $auditQuality = $_POST['auditingQuality'];
         $auditPercent = floor(($auditQuality / 50) * 100);
-//        echo $auditPercent;
+        //        echo $auditPercent;
 
         if ($auditPercent >= "90") {
             $resultString = "Excellent";
@@ -82,10 +82,10 @@ if (isset($_POST['survay-id']) && !empty($_POST['survay-id'])) {
         } else if ($auditPercent <= "60") {
             $resultString = "Dissatisfied";
         }
-//         echo $resultString;
+        //         echo $resultString;
         $satisfyRating = $_POST['satisfactionRating'];
         $satisfyPercent = floor(($satisfyRating / 35) * 100);
-//        echo $satisfyPercent;
+        //        echo $satisfyPercent;
 
         if ($satisfyPercent >= "90") {
             $resultSatisfy = "Excellent";
@@ -113,15 +113,7 @@ if (isset($_POST['survay-id']) && !empty($_POST['survay-id'])) {
             $aggregateString = "Dissatisfied";
         }
 
-//                echo $aggregateResult;
-//        echo $resultSatisfy;
-//        $survayidedit = 'UPDATE customer_survey_id SET auditer_org = :auditororg, survey_date = :survaydate,'
-//                . 'audit_conducted_date = :auditdate, initial_cert = :initialcert,'
-//                . 'auditing_quality = :quality, auditing_percent = :percent'
-//                . 'auditing_result = :result, audit_ranking_good = :ranking, audit_ranking_bad = :notranking,'
-//                . 'individual_ranking = :auditorranking, mgmt_satisfaction = :satisfactionrating,'
-//                . 'mgmt_percent = :satisfactionpercent, mgmt_result = :satisfactionresult, mgmt_ranking_good = :satisfactionranking,'
-//                . 'mgmt_ranking_bad = :notsatisfactionranking WHERE survey_id = :id';
+
         $survayidedit = "UPDATE customer_survey_id SET auditer_org = :auditororg, survey_date = :survaydate, audit_conducted_date = :auditdate, initial_cert = :initialcert, auditing_quality = :quality, auditing_percent = :percent, auditing_result = :result, audit_ranking_good = :ranking, audit_ranking_bad = :notranking, individual_ranking = :auditorranking, mgmt_satisfaction = :satisfactionrating, mgmt_percent = :satisfactionpercent, mgmt_result = :satisfactionresult, mgmt_ranking_good = :satisfactionranking, mgmt_ranking_bad = :notsatisfactionranking, aggregate = :aggregate, aggregate_result = :aggregateString,review_date = :review_date WHERE survey_id = :id";
 
         $statement = $db->prepare($survayidedit);
@@ -150,7 +142,7 @@ if (isset($_POST['survay-id']) && !empty($_POST['survay-id'])) {
         $statement = $db->prepare($deleteSurvay);
         $statement->bindParam(':survayid', $survatid);
         $statement->execute();
-//        print_r($leadAuditor);
+
         for ($i = 0; $i < count($leadAuditor); ++$i) {
             if ($leadAuditor[$i] != "") {
                 $marks = "";
@@ -215,7 +207,7 @@ if (isset($_POST['survay-id']) && !empty($_POST['survay-id'])) {
 
                 $auditQuality = $_POST['auditingQuality'];
                 $auditPercent = floor(($auditQuality / 50) * 100);
-//                echo $auditPercent;
+
 
                 if ($auditPercent >= "90") {
                     $resultString = "Excellent";
@@ -231,7 +223,7 @@ if (isset($_POST['survay-id']) && !empty($_POST['survay-id'])) {
 
                 $satisfyRating = $_POST['satisfactionRating'];
                 $satisfyPercent = floor(($satisfyRating / 35) * 100);
-//                echo $satisfyPercent;
+
 
                 if ($satisfyPercent >= "90") {
                     $resultSatisfy = "Excellent";
@@ -270,17 +262,15 @@ if (isset($_POST['survay-id']) && !empty($_POST['survay-id'])) {
                 $statement->bindParam(':id', $_POST['cs-service-id']);
                 $statement->execute();
                 $serviceInfo = $statement->fetch();
-//                echo $_POST['cs-service-id'];
-                //$survayDate = date("Y-m-d", strtotime($_POST['surveyDate']));
-                //$auditDate = date("Y-m-d", strtotime($_POST['survayAuditDates']));
+
 
                 $customerSurveyid = 'INSERT INTO customer_survey_id(ca_serviceid, customer_ca, auditer_org, survey_date, '
-                        . 'audit_conducted_date, initial_cert, auditing_quality, auditing_percent, auditing_result, audit_ranking_good, '
-                        . 'audit_ranking_bad, individual_ranking, mgmt_satisfaction, mgmt_percent, mgmt_result, '
-                        . 'mgmt_ranking_good, mgmt_ranking_bad, aggregate, aggregate_result,review_date) '
-                        . 'VALUES (:service, :customer, :auditororg, :survaydate, :auditdate, :initialcert, '
-                        . ':quality, :percent, :result, :ranking, :notranking, :auditorranking, :satisfactionrating, :satisfactionpercent,'
-                        . ' :satisfactionresult, :satisfactionranking, :notsatisfactionranking, :aggregate, :aggregateString,:review_date)';
+                    . 'audit_conducted_date, initial_cert, auditing_quality, auditing_percent, auditing_result, audit_ranking_good, '
+                    . 'audit_ranking_bad, individual_ranking, mgmt_satisfaction, mgmt_percent, mgmt_result, '
+                    . 'mgmt_ranking_good, mgmt_ranking_bad, aggregate, aggregate_result,review_date) '
+                    . 'VALUES (:service, :customer, :auditororg, :survaydate, :auditdate, :initialcert, '
+                    . ':quality, :percent, :result, :ranking, :notranking, :auditorranking, :satisfactionrating, :satisfactionpercent,'
+                    . ' :satisfactionresult, :satisfactionranking, :notsatisfactionranking, :aggregate, :aggregateString,:review_date)';
                 $statement = $db->prepare($customerSurveyid);
                 $statement->bindParam(':service', $service);
                 $statement->bindParam(':customer', $customer);
@@ -309,7 +299,7 @@ if (isset($_POST['survay-id']) && !empty($_POST['survay-id'])) {
                 $statement->execute();
                 $row = $statement->fetch();
                 $survaysql = $row['id'];
-//print_r($leadAuditor);
+
                 for ($i = 0; $i < count($leadAuditor); ++$i) {
                     if ($leadAuditor[$i] != "") {
                         $marks = "";
@@ -340,7 +330,7 @@ if (isset($_POST['survay-id']) && !empty($_POST['survay-id'])) {
                     $statement = $db->prepare($updateService);
                     $statement->bindParam(':id', $_POST['cs-service-id']);
                     $statement->execute();
-//                    echo $serviceInfo['service_type'];
+
                 }
                 header("Location:customerAccount.php?customerid=" . $customer);
             }

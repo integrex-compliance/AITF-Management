@@ -16,11 +16,87 @@ header('Content-Type: application/json; charset=utf-8');
 ob_start();
 
 // Helper function to output clean JSON
-function outputJSON($data) {
+function outputJSON($data, $statusCode = 200) {
     ob_clean();
+    http_response_code($statusCode);
     echo json_encode($data);
     exit;
 }
+
+function getRequestHeadersSafe() {
+    if (function_exists('getallheaders')) {
+        $headers = getallheaders();
+        if (is_array($headers)) {
+            return $headers;
+        }
+    }
+
+    $headers = array();
+    foreach ($_SERVER as $key => $value) {
+        if (strpos($key, 'HTTP_') === 0) {
+            $headerName = str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($key, 5)))));
+            $headers[$headerName] = $value;
+        }
+    }
+
+    return $headers;
+}
+
+function getHeaderValue($headerName) {
+    $headers = getRequestHeadersSafe();
+    $requestedHeader = strtolower($headerName);
+
+    foreach ($headers as $key => $value) {
+        if (strtolower($key) === $requestedHeader) {
+            return trim($value);
+        }
+    }
+
+    if ($requestedHeader === 'x-http-authorization' && isset($_SERVER['HTTP_X_HTTP_AUTHORIZATION'])) {
+        return trim($_SERVER['HTTP_X_HTTP_AUTHORIZATION']);
+    }
+
+    return '';
+}
+
+function getExpectedApiKey() {
+    $serverName = isset($_SERVER['SERVER_NAME']) ? strtolower($_SERVER['SERVER_NAME']) : '';
+    $isLocalhost = in_array($serverName, array('localhost', '127.0.0.1', '::1'), true);
+
+    $apiKeys = array(
+        'localhost' => 'local-dev-api-key-12345',
+        'live' => 'live-production-api-key-67890'
+    );
+
+    return $isLocalhost ? $apiKeys['localhost'] : $apiKeys['live'];
+}
+
+function isLoggedInSessionRequest() {
+    return (
+        isset($_SESSION['id']) && !empty($_SESSION['id']) &&
+        isset($_SESSION['username']) && $_SESSION['username'] !== ''
+    );
+}
+
+function isAuthorizedRequest() {
+    if (isLoggedInSessionRequest()) {
+        return true;
+    }
+
+    $receivedApiKey = getHeaderValue('x-http-authorization');
+    $expectedApiKey = getExpectedApiKey();
+
+    if ($receivedApiKey === '' || $expectedApiKey === '') {
+        return false;
+    }
+
+    return hash_equals($expectedApiKey, $receivedApiKey);
+}
+
+if (!isAuthorizedRequest()) {
+    outputJSON(array('error' => 'Unauthorized'), 401);
+}
+
 if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
     try {
         // Get customer details

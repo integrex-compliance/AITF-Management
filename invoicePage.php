@@ -86,6 +86,83 @@
             opacity: 1.0;
             behavior: url("/css/pie/PIE.htc"); /* HANDLES IE */
         }
+
+        .invoice-section-title {
+            display: inline-block;
+            margin: 0 0 15px;
+            padding: 8px 16px;
+            font-size: 22px;
+            font-weight: 700;
+            color: #0d4d8b;
+            background: #eaf3ff;
+            border-left: 4px solid #0d4d8b;
+            border-radius: 4px;
+        }
+
+        .invoice-section-divider {
+            margin: 25px 0 0;
+            padding-top: 25px;
+            border-top: 2px solid #d6e4f0;
+        }
+
+        .invoice-filter-panel {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: flex-end;
+            margin: 10px 0 20px;
+            padding: 15px;
+            background: #f8fbff;
+            border: 1px solid #d6e4f0;
+            border-radius: 6px;
+        }
+
+        .invoice-filter-item {
+            flex: 1 1 220px;
+        }
+
+        .invoice-filter-item label {
+            display: block;
+            margin-bottom: 6px;
+            color: #0d4d8b;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        .invoice-filter-item input {
+            width: 100%;
+            height: 38px;
+            padding: 8px 12px;
+            border: 1px solid #bfd2e6;
+            border-radius: 4px;
+            box-shadow: none;
+        }
+
+        .invoice-filter-item input:focus {
+            border-color: #0d4d8b;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(13, 77, 139, 0.08);
+        }
+
+        #table_proforma_invoice_filter,
+        #table_final_invoice_filter {
+            display: none;
+        }
+
+        .invoice-mail-confirm {
+            margin-bottom: 12px;
+            padding: 10px 12px;
+            background: #f8fbff;
+            border: 1px solid #d6e4f0;
+            border-radius: 6px;
+            color: #0d4d8b;
+        }
+
+        .invoice-mail-confirm strong {
+            color: #083a69;
+        }
     </style>
 
     <div id="page-content-wrapper">
@@ -160,17 +237,14 @@
                 <div class="modal-content">
                     <div class="modal-header">
                         <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">x</span><span class="sr-only">Close</span></button>
-                        <h4 class="modal-title" id="myModalLabel">Message</h4>
+                        <h4 class="modal-title" id="myModalLabel">Send Proforma Invoice</h4>
                     </div>
                     <form class="customeraddform" id="customeraddform" action="invoicemailsend.php" method="post">
                         <div class="modal-body">
-                            <div class="row" style="">
-                                <div class="col-sm-12 form-group float-label-control">
-                                    <!--                            <div class="row">
-                                                                    <div class="col-sm-12 form-group float-label-control">-->
-                                    <label for="">Message</label>
-                                    <textarea name="msgforClient" rows="5" class="form-control form-group" id="msgforClient" placeholder="Message">Your invoice has been sent, please find an attachment.</textarea>
-                                </div>
+                            <div class="invoice-mail-confirm">
+                                Do you want to send this invoice to the client via email?
+                                <br>
+                                <strong>Note:</strong> A copy of the email and document will also be shared at <strong>certification@aitf.co.in</strong>.
                             </div>
                         </div>
                         <input type="hidden" class="invoiceFirmId" name="invoiceFirmId" value="">
@@ -178,7 +252,7 @@
                         <input type="hidden" class="invoiceid" name="invoiceid" value="">
                         <div class="modal-footer">
                             <button type="button" class="btn btn-xs btn-danger cancelInvSent">Cancel</button>
-                            <button type="submit" class="btn btn-xs btn-info">Send</button>
+                            <button type="submit" class="btn btn-xs btn-success">OK</button>
                         </div>
                     </form>
                 </div>
@@ -190,17 +264,14 @@
                 <div class="modal-content">
                     <div class="modal-header">
                         <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">x</span><span class="sr-only">Close</span></button>
-                        <h4 class="modal-title" id="myModalLabel">Message</h4>
+                        <h4 class="modal-title" id="myModalLabel">Send Final Invoice</h4>
                     </div>
                     <form class="customeraddform" id="customeraddform" action="mailAttach.php" method="post">
                         <div class="modal-body">
-                            <div class="row" style="">
-                                <div class="col-sm-12 form-group float-label-control">
-                                    <!--                            <div class="row">
-                                                                    <div class="col-sm-12 form-group float-label-control">-->
-                                    <label for="">Message</label>
-                                    <textarea name="msgforClientFinalInvoice" rows="5" class="form-control form-group" id="msgforClientFinalInvoice" placeholder="Message">Your invoice has been sent, please find an attachment.</textarea>
-                                </div>
+                            <div class="invoice-mail-confirm">
+                                Do you want to send this invoice to the client via email?
+                                <br>
+                                <strong>Note:</strong> A copy of the email and document will also be shared at <strong>certification@aitf.co.in</strong>.
                             </div>
                         </div>
                         <input type="hidden" class="finalInvoiceFirmId" name="invoiceFirmId" value="">
@@ -208,7 +279,7 @@
                         <input type="hidden" class="finalInvoiceid" name="invoiceid" value="">
                         <div class="modal-footer">
                             <button type="button" class="btn btn-xs btn-danger cancelFinalInvSent">Cancel</button>
-                            <button type="submit" class="btn btn-xs btn-info">Send</button>
+                            <button type="submit" class="btn btn-xs btn-success">OK</button>
                         </div>
                     </form>
                 </div>
@@ -222,17 +293,32 @@
                     <?php if (isset($_GET["mailsend"]) && $_GET["mailsend"] == "1") { ?>
                         <div class="alert alert-success">
                             <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
-                            Invoice mail send successfully
+                            Mail has been sent successfully. A copy of the email and document has also been shared at certification@aitf.co.in.
+                        </div>
+                    <?php } elseif (isset($_GET["mailsend"]) && $_GET["mailsend"] == "0") { ?>
+                        <div class="alert alert-danger">
+                            <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+                            <?php echo !empty($_GET["mailerror"]) ? htmlspecialchars(urldecode($_GET["mailerror"]), ENT_QUOTES, 'UTF-8') : 'Invoice mail send failed'; ?>
                         </div>
                     <?php } ?>
                     <div class="container" style="margin-top: 20px;">
                         <div class="row">
                             <div class="col-sm-12">
-                                <h5>Proforma Invoice</h5>
+                                <h5 class="invoice-section-title">Proforma Invoice</h5>
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-sm-12 contact-form">
+                                <div class="row">
+                                    <div class="col-sm-12 main_content" style="">
+                                        <div class="invoice-filter-panel">
+                                            <div class="invoice-filter-item">
+                                                <label for="proformaClientSearch">Client Name</label>
+                                                <input type="text" id="proformaClientSearch" placeholder="Search by client name">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                                 <div class="row clearfix">
                                     <div class="col-md-12 table-responsive">
                                         <table class="table table-bordered table-striped table-hover table-sortable" id="table_proforma_invoice">
@@ -325,26 +411,31 @@
             </div>
         </div>
 
-        <div class="page-content inset">
+        <div class="page-content inset invoice-section-divider">
             <div class="row">
                 <div class="col-md-12">
                     <div class="container" style="margin-top: 20px;">
                         <div class="row">
                             <div class="col-sm-12">
-                                <h5>Final Invoice</h5>
+                                <h5 class="invoice-section-title">Final Invoice</h5>
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-sm-12 contact-form">
                                 <div class="row">
                                     <div class="col-sm-12 main_content" style="">
-                                        <div class="row" style="padding-top:10px;">
-                                            <div class="col-sm-1"><a class="btn btn-info filterBtn"><i class="fa fa-filter "></i></a></div>                            
-                                            <div class="col-sm-4 float-label-control custom-float-label-control">
+                                        <div class="invoice-filter-panel">
+                                            <div class="invoice-filter-item">
+                                                <label for="filterFromDate">From Date</label>
                                                 <input type="text" class="filterFromDate" id="filterFromDate" name="filterFromDate" placeholder="From Date" value="">
                                             </div>
-                                            <div class="col-sm-4 form-group float-label-control custom-float-label-control">
+                                            <div class="invoice-filter-item">
+                                                <label for="filterToDate">To Date</label>
                                                 <input type="text" class="filterToDate" id="filterToDate" name="filterToDate" placeholder="To Date" value="">
+                                            </div>
+                                            <div class="invoice-filter-item">
+                                                <label for="finalClientSearch">Client Name</label>
+                                                <input type="text" id="finalClientSearch" placeholder="Search by client name">
                                             </div>
                                         </div>
                                     </div>
@@ -538,13 +629,26 @@
 </style>
 
 <script type="text/javascript">
-    var table = $('#table_proforma_invoice').DataTable({
+    function debounce(callback, delay) {
+        var debounceTimer;
+        return function () {
+            var context = this;
+            var args = arguments;
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(function () {
+                callback.apply(context, args);
+            }, delay);
+        };
+    }
+
+    var proformaTable = $('#table_proforma_invoice').DataTable({
         "sScrollX": "100%",
         "scrollY": '70vh',
         "scrollCollapse": true,
         "paging": false,
         "ordering": false,
         "lengthChange": false,
+        "autoWidth": false,
 //            "pageLength": 10,
         "paging": false,
         "columnDefs": [
@@ -580,13 +684,14 @@
                 //        "paging":         false
     });
 
-    var table = $('#table_final_invoice').DataTable({
+    var finalTable = $('#table_final_invoice').DataTable({
         "sScrollX": "100%",
         "scrollY": '70vh',
         "scrollCollapse": true,
         "paging": false,
         "ordering": false,
         "lengthChange": false,
+        "autoWidth": false,
 //            "pageLength": 10,
         "paging": false,
         "columnDefs": [
@@ -626,12 +731,11 @@
         var toDate = $(".filterToDate").val();
         if (fromDate != "" && toDate != "") {
             if (!compareMinDates(fromDate, toDate)) {
-                alert("To Date can't be after From Date");
+                alert("To Date, From Date se chhoti nahi ho sakti");
                 $(".filterToDate").val("");
             }
         }
-        //            alert("t");
-        table.draw();
+        finalTable.draw();
     });
 
     function ShowProgressAnimation() {
@@ -690,6 +794,9 @@
 
     $.fn.DataTable.ext.search.push(
             function (settings, data, dataIndex) {
+                if (settings.nTable.id !== 'table_final_invoice') {
+                    return true;
+                }
 //                var serviceType = $(".service-type").val();
                 var fromDate = $(".filterFromDate").val();
                 var toDate = $(".filterToDate").val();
@@ -731,6 +838,17 @@
     );
 
     $(document).ready(function () {
+
+        var debouncedProformaSearch = debounce(function () {
+            proformaTable.column(1).search($('#proformaClientSearch').val()).draw();
+        }, 200);
+
+        var debouncedFinalSearch = debounce(function () {
+            finalTable.column(1).search($('#finalClientSearch').val()).draw();
+        }, 200);
+
+        $('#proformaClientSearch').on('input', debouncedProformaSearch);
+        $('#finalClientSearch').on('input', debouncedFinalSearch);
 
         $('#filterFromDate').datepicker({
             minDate: '-100Y',

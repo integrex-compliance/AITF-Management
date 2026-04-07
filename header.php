@@ -169,6 +169,12 @@ if (!Utitlity::checkIfLoggedIn()) {
         header("Location: login");
         exit;
     }
+} else if (isset($pageIdentifier) && $pageIdentifier == "IAF Dashboard") {
+    $iafClass = "active";
+    if (Utitlity::checkExternalUser()) {
+        header("Location: login");
+        exit;
+    }
 }
 
 function simpleDateConversion($inputStr) {
@@ -204,6 +210,7 @@ function getFlatDate($inputStr) {
         <li class="sidebar-brand"><a class="" id="menu-toggle" href="#">AITF<span id="main_icon" class="glyphicon glyphicon-align-justify"></span></a></li>
     </ul>
     <ul class="sidebar-nav" id="sidebar">
+            <li><a href="iaf_dashboard.php" class="animate <?php echo isset($iafClass) ? $iafClass : ''; ?>">IAF DASHBOARD<i class="sub_icon fa fa-dashboard fa-2x" style="vertical-align:middle"></i></a></li>
         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff()) { ?>
             <?php $unreadBadge = isset($GLOBALS['unread_app_count']) ? (int)$GLOBALS['unread_app_count'] : 0; ?>
             <li>
@@ -235,18 +242,18 @@ function getFlatDate($inputStr) {
             <li><a href="listOfTds.php" class="animate <?php echo $addtds ?>">TDS DEDUCTED<i class="sub_icon fa fa-list  fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
-            <li><a href="intimationLetter.php" class="animate <?php echo $adddueClass ?>">INTEMATION DUE<i class="sub_icon fa fa-envelope-o fa-2x" style="vertical-align:middle"></i></a></li>
-            <li><a href="sentintimation.php" class="animate <?php echo $addsentClass ?>">INTEMATION SENT<i class="sub_icon fa fa-envelope fa-2x" style="vertical-align:middle"></i></a></li>
+            <li><a href="intimationLetter.php" class="animate <?php echo $adddueClass ?>">INTIMATION DUE<i class="sub_icon fa fa-envelope-o fa-2x" style="vertical-align:middle"></i></a></li>
+            <li><a href="sentintimation.php" class="animate <?php echo $addsentClass ?>">INTIMATION SENT<i class="sub_icon fa fa-envelope fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
             <!--<li><a href="clientList.php" class="animate">CLIENT LIST<i class="sub_icon fa fa-list  fa-2x" style="vertical-align:middle"></i></a></li>-->
-            <li><a href="invoicePage.php" class="animate <?php echo $addInvoiceClass ?>">INVOICE<i class="sub_icon fa fa-inr fa-2x" style="vertical-align:middle"></i></a></li>
+            <li><a href="invoicePage.php" class="animate <?php echo $addInvoiceClass ?>">INVOICES<i class="sub_icon fa fa-inr fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
-            <li><a href="quotationPage.php" class="animate <?php echo $addquotClass ?>">QUOTATION<i class="sub_icon fa fa-quote-left fa-2x" style="vertical-align:middle"></i></a></li>
+            <li><a href="quotationPage.php" class="animate <?php echo $addquotClass ?>">QUOTATIONS<i class="sub_icon fa fa-quote-left fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff()) { ?>
-            <li><a href="agreementPage.php" class="animate <?php echo $addagreementClass ?>">AGREEMENT<i class="sub_icon fa fa-quote-left fa-2x" style="vertical-align:middle"></i></a></li>
+            <li><a href="agreementPage.php" class="animate <?php echo $addagreementClass ?>">AGREEMENTS<i class="sub_icon fa fa-quote-left fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff()) { ?>
             <li><a href="auditPage.php" class="animate <?php echo $addAuditClass ?>">AUDIT LIST<i class="sub_icon fa fa-list-alt fa-2x" style="vertical-align:middle"></i></a></li>
@@ -289,6 +296,7 @@ function getFlatDate($inputStr) {
         <div class="collapse navbar-collapse " id="bs-example-navbar-collapse-1">
             <ul class="nav navbar-nav navbar-right">
                 <!--Adding hidden menu items here -->
+                <li class="visible-xs"><a href="iaf_dashboard.php" class="animate <?php //echo isset($iafClass) ? $iafClass : ''; ?>">IAF DASHBOARD</a></li>
                 <li class="visible-xs"><a href="homePage.php" class="animate <?php //echo $addClass              ?>">CLIENTS</a></li>
                 <li class="visible-xs"><a href="marketingPage.php" class="animate <?php //echo $addMarketingClass              ?>">MARKETING</a></li>
                 <li class="visible-xs"><a href="paymentPage.php" class="animate <?php //echo $addMarketingClass              ?>">PAYMENT</a></li>

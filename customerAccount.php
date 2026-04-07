@@ -829,13 +829,16 @@
             </div>
 
             <div class="row" style="">
-                <div class="col-xs-4  text-center btn  qms_complete_btn invoiceBtn" data-id="<?php echo $_GET['customerid'] ?>" data-address="<?php echo $clientInfo['address'] ?>">
+                <div class="col-xs-3  text-center btn  qms_complete_btn invoiceBtn" data-id="<?php echo $_GET['customerid'] ?>" data-address="<?php echo $clientInfo['address'] ?>">
                     <span><i class="fa fa-inr ">Proforma Invoice</i></span>
                 </div>
-                <div class="col-xs-4  text-center btn qms_complete_btn quotationBtn">
+                <div class="col-xs-3  text-center btn qms_complete_btn finalInvoiceBtn" data-id="<?php echo $_GET['customerid'] ?>" data-address="<?php echo $clientInfo['address'] ?>">
+                    <span><i class="fa fa-file-text-o ">Final Invoice</i></span>
+                </div>
+                <div class="col-xs-3  text-center btn qms_complete_btn quotationBtn">
                     <span><i class="fa fa-quote-left ">Quotation</i></span>
                 </div>
-                <div class="col-xs-4  text-center btn qms_complete_btn "  style="height: 28px">
+                <div class="col-xs-3  text-center btn qms_complete_btn "  style="height: 28px">
                     <select name="service-type"  class="form-control service-type" id="service-type"  style="height: 20px; background-color: #f5821f; padding-top: 0px; font-size: 10px; color: white">
                         <option value="" style="color: white; font-size: 10px">Create New Service</option>
                         <?php foreach ($servicess as $service) { ?>
@@ -6904,6 +6907,27 @@
                 $('.sp-service-type').show();
             }
 
+            function resetFinalInvoiceModal(customerId, customerAddress) {
+                var $finalModal = $('#finalinvoiceModal');
+                var finalForm = $finalModal.find('form').get(0);
+
+                if (finalForm) {
+                    finalForm.reset();
+                }
+
+                $finalModal.find('.invoiceId').val('');
+                $finalModal.find('.invoiceconsultingFirmName').val(customerId);
+                $finalModal.find('input[name="invoiceAddress"]').val(customerAddress);
+                $finalModal.find('input[name="invoiceDt"]').val(moment().format('DD.MM.YYYY'));
+                $finalModal.find('input[name="invoiceState"]').val('Maharashtra');
+                $finalModal.find('input[name="invoiceStateCode"]').val('27');
+                $finalModal.find('input[name="finalTaxtype"][value="CGST & SGST"]').prop('checked', true);
+                $finalModal.find('.finalserviceAmtTd').empty();
+                $finalModal.find('.addFinalServiceAmtRow').trigger('click');
+                $finalModal.find('.finalNetPrice, .finaligst, .finalcgst, .finalsgst').val('');
+                $finalModal.find('.fianlInvoiceGenerate').attr('disabled', true);
+            }
+
             $('.invoiceBtn').click(function () {
                 var companyName = $(this).attr("data-id");
                 var companyAddress = $(this).attr("data-address");
@@ -6913,6 +6937,14 @@
                 $('#consultingFirmName').trigger('change');
                 $('#invoiceAddress').trigger('change');
                 $('#invoiceModal').modal('show');
+            });
+
+            $('.finalInvoiceBtn').click(function () {
+                var companyName = $(this).attr("data-id");
+                var companyAddress = $(this).attr("data-address");
+
+                resetFinalInvoiceModal(companyName, companyAddress);
+                $('#finalinvoiceModal').modal('show');
             });
 
             $('.quotationBtn').click(function () {

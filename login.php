@@ -5,8 +5,20 @@ include_once 'dbConnect.php';
 date_default_timezone_set('Asia/Kolkata');
 include 'utility.php';
 
+$recaptchaHelperPath = __DIR__ . '/include/recaptcha_helper.php';
+if (file_exists($recaptchaHelperPath)) {
+    require_once $recaptchaHelperPath;
+}
+
 
 if (isset($_POST['useremail']) && !empty($_POST['useremail']) && isset($_POST['password']) && !empty($_POST['password'])) {
+    $recaptchaToken = trim($_POST['g-recaptcha-response'] ?? '');
+    $captchaError = '';
+    if (function_exists('aitf_verify_recaptcha') && !aitf_verify_recaptcha($recaptchaToken, $captchaError)) {
+        $_SESSION['login_error'] = true;
+        header("Location: loginSelection.php");
+        exit;
+    }
     try {
         // Single query fetch instead of count + fetch
         $userLogin = "SELECT user_id, user_name, abbreviation, email_id, password, role FROM user WHERE email_id = :useremail LIMIT 1";
@@ -50,6 +62,13 @@ if (isset($_POST['useremail']) && !empty($_POST['useremail']) && isset($_POST['p
         header("Location: index.php");
     }
 } else if (isset($_POST["clientemail"]) && !empty($_POST["clientemail"]) && isset($_POST["clientcid"]) && !empty($_POST["clientcid"])) {
+    $recaptchaToken = trim($_POST['g-recaptcha-response'] ?? '');
+    $captchaError = '';
+    if (function_exists('aitf_verify_recaptcha') && !aitf_verify_recaptcha($recaptchaToken, $captchaError)) {
+        $_SESSION['login_error'] = true;
+        header("Location: loginSelection.php");
+        exit;
+    }
     try {
         $input = preg_replace("/[^a-zA-Z]+/", "", $_POST["clientemail"]);
         $input = strtoupper($input);
