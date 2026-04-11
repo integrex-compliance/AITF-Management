@@ -1,5 +1,7 @@
 <?php
 require_once './dbConnect.php';
+$indiaTz = new DateTimeZone('Asia/Kolkata');
+date_default_timezone_set('Asia/Kolkata');
 $recaptchaHelperPath = __DIR__ . '/include/recaptcha_helper.php';
 if (file_exists($recaptchaHelperPath)) {
     require_once $recaptchaHelperPath;
@@ -99,7 +101,8 @@ if (isset($db)) {
             "ALTER TABLE online_audit_applications ADD COLUMN sign_date VARCHAR(50) NULL",
             "ALTER TABLE online_audit_applications ADD COLUMN sign_image_path VARCHAR(255) NULL",
             "ALTER TABLE online_audit_applications ADD COLUMN declaration_confirmed TINYINT(1) DEFAULT 0",
-            "ALTER TABLE online_audit_applications ADD COLUMN read_flag TINYINT(1) DEFAULT 0"
+            "ALTER TABLE online_audit_applications ADD COLUMN read_flag TINYINT(1) DEFAULT 0",
+            "ALTER TABLE online_audit_applications MODIFY created_at DATETIME NULL"
         ];
         foreach ($alterColumns as $sql) {
             try {
@@ -238,6 +241,7 @@ if (isset($db)) {
             }
 
             try {
+                $created_at = (new DateTimeImmutable('now', $indiaTz))->format('Y-m-d H:i:s');
                 $insertSql = "INSERT INTO online_audit_applications (
                     org_name, site_address, office_address, contact_person, contact_designation,
                     phone, email, website, gstin, legal_status,
@@ -250,7 +254,7 @@ if (isset($db)) {
                     org_type, major_customers, main_products, raw_materials, operations,
                     external_processes, design_responsibility, other_certificates,
                     system_implementation_date, proposed_audit_month,
-                    sign_name, sign_designation, sign_date, sign_image_path, declaration_confirmed
+                    sign_name, sign_designation, sign_date, sign_image_path, declaration_confirmed, created_at
                 ) VALUES (
                     :org_name, :site_address, :office_address, :contact_person, :contact_designation,
                     :phone, :email, :website, :gstin, :legal_status,
@@ -263,7 +267,7 @@ if (isset($db)) {
                     :org_type, :major_customers, :main_products, :raw_materials, :operations,
                     :external_processes, :design_responsibility, :other_certificates,
                     :system_implementation_date, :proposed_audit_month,
-                    :sign_name, :sign_designation, :sign_date, :sign_image_path, :declaration_confirmed
+                    :sign_name, :sign_designation, :sign_date, :sign_image_path, :declaration_confirmed, :created_at
                 )";
 
                     $stmt = $db->prepare($insertSql);
@@ -312,6 +316,7 @@ if (isset($db)) {
                 $stmt->bindParam(':sign_date', $sign_date);
                 $stmt->bindParam(':sign_image_path', $sign_image_path);
                     $stmt->bindParam(':declaration_confirmed', $declaration_confirmed, PDO::PARAM_INT);
+                    $stmt->bindParam(':created_at', $created_at);
                     $stmt->execute();
 
                     $insertedId = (int)$db->lastInsertId();

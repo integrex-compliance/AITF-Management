@@ -265,3 +265,24 @@ FULL PAYLOAD:
 ]
 
 ---------------------------------------------
+[2026-04-11 12:32:17] INSERT REQUEST RECEIVED -> Client ID: #89
+FULL PAYLOAD:
+[
+    {
+        "internal_client_id": "89",
+        "customer_name": "Square Manufacturing Works  again name cahnged",
+        "address": "SR No.15\/1, Gaurav Ind. Complex,Shop No. A4 & A5, MIDC, India",
+        "certification_status": "Withdrawn",
+        "certificate_tracking_id": "62",
+        "certificate_number": "60721761472",
+        "issue_date": "2017-03-18",
+        "expiry_date": "2020-03-17",
+        "standard_name": "ISO 9001:2008",
+        "customer_guid": "GUID-000089",
+        "country": "India",
+        "schema_name": "QMS",
+        "certification_type": "Accredited"
+    }
+]
+
+---------------------------------------------

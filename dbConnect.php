@@ -21,6 +21,7 @@ try{
 	$password = 'aitfmcl';
 	$db = new PDO($hostname, $username, $password);
 	$db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+	$db->exec("SET time_zone = '+05:30'");
 }
 catch(Exception $e)
 {

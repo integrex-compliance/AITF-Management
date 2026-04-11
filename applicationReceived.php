@@ -210,8 +210,12 @@ include 'header.php';
                                         $sr++;
                                         $displayDate = '';
                                         if (!empty($row['created_at'])) {
-                                            $timestamp = strtotime($row['created_at']);
-                                            $displayDate = $timestamp ? date('d M Y, h:i A', $timestamp) : $row['created_at'];
+                                            try {
+                                                $dt = new DateTimeImmutable($row['created_at'], new DateTimeZone('Asia/Kolkata'));
+                                                $displayDate = $dt->format('d M Y, h:i A');
+                                            } catch (Exception $e) {
+                                                $displayDate = $row['created_at'];
+                                            }
                                         }
                                         ?>
                                         <?php $isUnread = isset($row['read_flag']) && (int)$row['read_flag'] === 0; ?>

@@ -77,8 +77,12 @@ $e = function ($key) use ($application) {
 
 $createdAtDisplay = '';
 if (!empty($application['created_at'])) {
-    $ts = strtotime($application['created_at']);
-    $createdAtDisplay = $ts ? date('d M Y, h:i A', $ts) : $application['created_at'];
+    try {
+        $dt = new DateTimeImmutable($application['created_at'], new DateTimeZone('Asia/Kolkata'));
+        $createdAtDisplay = $dt->format('d M Y, h:i A');
+    } catch (Exception $e) {
+        $createdAtDisplay = $application['created_at'];
+    }
 }
 
 $styleBlock = '<style>
