@@ -582,3 +582,49 @@ $(document).ready(function () {
 //        return ((a < b) ? 1 : ((a > b) ? -1 : 0));
 //    }
 //});
+
+(function () {
+    function getStoredTheme() {
+        try {
+            return localStorage.getItem('aitf_theme');
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function storeTheme(theme) {
+        try {
+            localStorage.setItem('aitf_theme', theme);
+        } catch (e) {}
+    }
+
+    function isDarkThemeActive() {
+        return document.documentElement.classList.contains('theme-dark');
+    }
+
+    function applyTheme(theme) {
+        var isDark = theme === 'dark';
+        document.documentElement.classList.toggle('theme-dark', isDark);
+
+        var btn = document.getElementById('themeToggle');
+        if (btn) {
+            btn.setAttribute('aria-pressed', isDark ? 'true' : 'false');
+            btn.setAttribute('title', isDark ? 'Light Mode' : 'Dark Mode');
+            var icon = btn.querySelector('i');
+            if (icon) {
+                icon.className = isDark ? 'fa fa-sun-o' : 'fa fa-moon-o';
+            }
+        }
+    }
+
+    $(function () {
+        applyTheme(getStoredTheme() || (isDarkThemeActive() ? 'dark' : 'light'));
+    });
+
+    $(document).on('click', '#themeToggle', function (e) {
+        e.preventDefault();
+        var next = isDarkThemeActive() ? 'light' : 'dark';
+        storeTheme(next);
+        applyTheme(next);
+    });
+})();

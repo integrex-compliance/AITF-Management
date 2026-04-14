@@ -78,7 +78,7 @@ if (isset($_POST['useremail']) && !empty($_POST['useremail']) && isset($_POST['p
         $statement->bindParam(':clientpassword', $_POST['clientcid']);
         $statement->execute();
         $customerinfo = $statement->fetch();
-//        echo $customerinfo['customer_name'];
+        //        echo $customerinfo['customer_name'];
         if ($customerinfo) {
             $input1 = preg_replace("/[^a-zA-Z]+/", "", $customerinfo['customer_name']);
             $input1 = strtoupper($input1);

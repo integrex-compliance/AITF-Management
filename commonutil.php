@@ -10,7 +10,8 @@ date_default_timezone_set('Asia/Kolkata');
 
 // Common date helpers (duplicated from header.php for standalone scripts)
 if (!function_exists('simpleDateConversion')) {
-    function simpleDateConversion($inputStr) {
+    function simpleDateConversion($inputStr)
+    {
         if ($inputStr === '') {
             return '';
         }
@@ -23,7 +24,8 @@ if (!function_exists('simpleDateConversion')) {
 }
 
 if (!function_exists('getFlatDate')) {
-    function getFlatDate($inputStr) {
+    function getFlatDate($inputStr)
+    {
         if ($inputStr === '') {
             return '';
         }
@@ -35,14 +37,16 @@ if (!function_exists('getFlatDate')) {
     }
 }
 
-class Utitlity {
-    static function compress($source, $destination, $quality) {
+class Utitlity
+{
+    static function compress($source, $destination, $quality)
+    {
         $info = getimagesize($source);
-        if ($info ['mime'] == 'image/jpeg')
+        if ($info['mime'] == 'image/jpeg')
             $image = imagecreatefromjpeg($source);
-        elseif ($info ['mime'] == 'image/gif')
+        elseif ($info['mime'] == 'image/gif')
             $image = imagecreatefromgif($source);
-        elseif ($info ['mime'] == 'image/png')
+        elseif ($info['mime'] == 'image/png')
             $image = imagecreatefrompng($source);
         imagejpeg($image, $destination, $quality);
         return $destination;

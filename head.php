@@ -24,3 +24,12 @@
 <script type="text/javascript" src="./tinymce/tinymce.min.js"></script>
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+(function () {
+    try {
+        if (localStorage.getItem('aitf_theme') === 'dark') {
+            document.documentElement.classList.add('theme-dark');
+        }
+    } catch (e) {}
+})();
+</script>

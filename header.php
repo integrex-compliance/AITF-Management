@@ -333,6 +333,11 @@ function getFlatDate($inputStr) {
                     </style>
                 </li>
                 <?php } ?>
+                <li class="theme-toggle-item">
+                    <button type="button" id="themeToggle" class="theme-toggle-btn" aria-label="Toggle dark mode" aria-pressed="false">
+                        <i class="fa fa-moon-o" aria-hidden="true"></i>
+                    </button>
+                </li>
                 <?php if (isset($_SESSION['username'])) { ?>
                     <li><a class=" dropdown-toggle  animate " data-toggle="dropdown" href="#"><?php echo $_SESSION['username']; ?>&nbsp;</a>
                         <ul class=" dropdown-menu " role="menu">
