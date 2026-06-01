@@ -9,6 +9,8 @@ if (!function_exists('aitfLoadPHPMailer')) {
             return;
         }
 
+        
+
         $candidates = array(
             __DIR__ . '/../PHPMailer/PHPMailerAutoload.php',
             __DIR__ . '/../phpmailer/PHPMailerAutoload.php',
@@ -22,6 +24,7 @@ if (!function_exists('aitfLoadPHPMailer')) {
                 return;
             }
         }
+          
 
         throw new Exception('PHPMailer autoload not found');
     }

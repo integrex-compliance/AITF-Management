@@ -161,7 +161,7 @@ $csgttax = $taxationDetails["rate"];
                 <div class="modal-body">
                     <div class="row">
                         <div class="col-sm-12 form-group float-label-control">
-                            <label>Client Name</label>
+                            <label for="customerName">Client Name</label>
                             <input type="text" class="customerName" id="customerName" name="customerName" placeholder="Client Name">
                         </div>
                     </div>
@@ -172,27 +172,27 @@ $csgttax = $taxationDetails["rate"];
                     </div>
                     <div class="row">
                         <div class="col-sm-6 form-group float-label-control">
-                            <label>Comment</label>
+                            <label for="addnotes">Comment</label>
                             <textarea name="addnotes" rows="3" class="form-control form-group addnotes" id="addnotes" placeholder="Enter Comment"></textarea>
                         </div>
                         <div class="col-sm-6 form-group float-label-control">
-                            <label for="">Country</label>
+                            <label for="country">Country</label>
                             <input type="text" name="country" class="form-control country" id="country" placeholder="Country" value="India">
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-sm-12 form-group float-label-control">
-                            <label for="">Street Address</label>
+                            <label for="streetAddress">Street Address</label>
                             <textarea name="streetAddress" rows="2" class="form-control form-group streetAddress" id="streetAddress" placeholder="Enter Street Address"></textarea>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-sm-6 form-group float-label-control">
-                            <label for="">City</label>
+                            <label for="city">City</label>
                             <input type="text" name="city" class="form-control city" id="city" placeholder="City">
                         </div>
                         <div class="col-sm-6 form-group float-label-control">
-                            <label for="">State</label>
+                            <label for="state">State</label>
                             <select name="state" class="form-control state" id="state">
                                 <option value="">Select State</option>
                                 <option value="Andhra Pradesh">Andhra Pradesh</option>
@@ -236,25 +236,25 @@ $csgttax = $taxationDetails["rate"];
                     </div>
                     <div class="row">
                         <div class="col-sm-6 form-group float-label-control">
-                            <label for="">Post Code</label>
+                            <label for="postCode">Post Code</label>
                             <input type="text" name="postCode" class="form-control postCode" id="postCode" placeholder="Post Code">
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-sm-6 form-group float-label-control">
-                            <label>GSTIN Number</label>                            
+                            <label for="gstin_no">GSTIN Number</label>                            
                             <input type="text" class="gstin_no" id="gstin_no" name="gstin_no" placeholder="GSTIN Number" onkeypress="return AvoidSpace(event)">                                                               
                     <!--<input type="text" class="auditStatus" id="auditStatus" name="auditStatus" placeholder="Audit Status">-->
                         </div>
                         <div class="col-sm-6 form-group float-label-control">
-                            <label>Scope</label>
+                            <label for="scope">Scope</label>
                             <input type="text" class="scope" id="scope" name="scope" placeholder="Scope">
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-sm-4 form-group float-label-control">
                             <div class="row form-group float-label-control">
-                                <label>Contact Person</label>
+                                <label for="customerCntctPerson">Contact Person</label>
                                 <input type="text" class="customerCntctPerson" id="customerCntctPerson" name="customerCntctPerson" placeholder="Contact Person">
                             </div>
                             <div class="row form-group float-label-control">
@@ -265,7 +265,7 @@ $csgttax = $taxationDetails["rate"];
                         </div>
                         <div class="col-sm-4 form-group float-label-control">
                             <div class="row form-group float-label-control">
-                                <label>Email Id</label>
+                                <label for="customerEmail">Email Id</label>
                                 <input type="email" class="customerEmail" id="customerEmail" name="customerEmail" placeholder="Client Email">
                             </div>
                             <div class="row form-group float-label-control">
@@ -275,7 +275,7 @@ $csgttax = $taxationDetails["rate"];
                             </div>
                         </div>
                         <div class="col-sm-3 form-group float-label-control">
-                            <div class="row form-group float-label-control"><label>Contact No.</label>
+                            <div class="row form-group float-label-control"><label for="contactNo">Contact No.</label>
                                 <input type="text" class="contactNo" id="contactNo" name="contactNo" placeholder="Contact No.">
                             </div>
                             <div class="row form-group float-label-control">

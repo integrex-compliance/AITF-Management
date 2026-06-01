@@ -13,7 +13,7 @@ $legalStatus = "SELECT * FROM legal_ststus";
 $statement = $db->prepare($legalStatus);
 $statement->execute();
 $legalStatusList = $statement->fetchAll();
-
+ 
 //  Standards 
 $standards = "SELECT * FROM standards";
 $statement = $db->prepare($standards);
@@ -456,7 +456,7 @@ $accreditationList = $statement->fetchAll();
                     </div>
 
                 <!-- OHSMS Closed -->
-
+ 
 
                 <!-- Others -->
                 <div class="row" style="">
@@ -634,7 +634,7 @@ $accreditationList = $statement->fetchAll();
                                     <option value="yes">Yes</option>
                                     <option value="no">No</option>
                                 </select>
-                            </div>
+                            </div> 
                         </div>
                         <div class="row" style="">
                             <div class="col-xs-1">
@@ -652,6 +652,8 @@ $accreditationList = $statement->fetchAll();
                                 </select>
                             </div>
                         </div>
+
+                    
                         <div class="row" style="">
                             <div class="col-xs-1">
                                 <span >8.</span>

@@ -4,7 +4,7 @@
     include 'header.php';
     include 'dbConnect.php';
 
-//    Service CR
+    //    Service CR
     $crAuditApplication = "SELECT cr.cr_id, service, customer_id, application_form, ci.customer_name FROM service_type_cr cr LEFT JOIN customer_info ci on cr.customer_id = ci.id WHERE application_form like '%scanning%' and is_deleted = 'NO' and ci.audit_status <> 'Application canceled' ORDER BY ci.customer_name";
     $statement = $db->prepare($crAuditApplication);
     $statement->execute();
@@ -15,7 +15,7 @@
     $statement->execute();
     $crCertificationAgreementPending = $statement->fetchAll();
 
-//    Service CA
+    //    Service CA
     $caSignedNotification1 = "SELECT sca.ca_id, service, customer_id, signed_notification, ci.customer_name FROM service_type_ca sca LEFT JOIN customer_info ci on sca.customer_id = ci.id WHERE signed_notification like '%scanning%' and is_deleted = 'NO' ORDER BY ci.customer_name";
     $statement = $db->prepare($caSignedNotification1);
     $statement->execute();
@@ -61,8 +61,8 @@
     $statement->execute();
     $caCustomerFeedbackPending = $statement->fetchAll();
 
-//    Service SA-I
-
+    //    Service SA-I
+    
     $saiInformationUpdatoin = "SELECT sai.sai_id, service, customer_id, info_update_form, ci.customer_name FROM service_type_sai sai LEFT JOIN customer_info ci on sai.customer_id = ci.id WHERE info_update_form like '%scanning%' and is_deleted = 'NO' ORDER BY ci.customer_name";
     $statement = $db->prepare($saiInformationUpdatoin);
     $statement->execute();
@@ -103,8 +103,8 @@
     $statement->execute();
     $saiCustomerReviewPending = $statement->fetchAll();
 
-//    service type SA-II
-
+    //    service type SA-II
+    
     $saiiInformationUpdatoin = "SELECT saii.saii_id, service, customer_id, update_info_saii, ci.customer_name FROM service_type_saii saii LEFT JOIN customer_info ci on saii.customer_id = ci.id WHERE update_info_saii like '%scanning%' and is_deleted = 'NO' ORDER BY ci.customer_name";
     $statement = $db->prepare($saiiInformationUpdatoin);
     $statement->execute();
@@ -145,8 +145,8 @@
     $statement->execute();
     $saiiFeedbackPending = $statement->fetchAll();
 
-//    RC service
-
+    //    RC service
+    
     $rcNotification = "SELECT rc.rc_id, service, rc_customer, rc_signed_noti, ci.customer_name FROM service_type_rc rc LEFT JOIN customer_info ci on rc.rc_customer = ci.id WHERE rc_signed_noti like '%scanning%' and is_deleted = 'NO' ORDER BY ci.customer_name";
     $statement = $db->prepare($rcNotification);
     $statement->execute();
@@ -185,12 +185,12 @@
 
     <div id="page-content-wrapper">
         <div class="page-content inset">
-            <div class="container" >
+            <div class="container">
                 <br>
                 <br>
                 <div class="row">
                     <div class="col-md-12">
-                        <div class="panel panel-primary" >
+                        <div class="panel panel-primary">
                             <h4 style="color: #053c6d; text-align: center">Uploading Status</h4>
                         </div>
                     </div>
@@ -199,11 +199,12 @@
                 <!--CA-Service-->
                 <div class="row">
                     <div class="col-md-12">
-                        <div class="panel panel-primary" style="min-height: 40px" >
+                        <div class="panel panel-primary" style="min-height: 40px">
                             <div class="panel-heading text-center CR-Head" style="background: #053c6d; height: 50px;">
                                 <h4 style="color: white">Contract Review</h4>
                             </div>
-                            <div class="panel-rightbody homePagePanel CR-body" id="actionItemDisplayPanel" style="display: none">
+                            <div class="panel-rightbody homePagePanel CR-body" id="actionItemDisplayPanel"
+                                style="display: none">
                                 <div class="row event-row" id="dummyActionItemRow">
                                     <div class="col-xs-12 col-sm-12">
                                         <div class="row" style="">
@@ -214,7 +215,7 @@
                                                 <span><i class="fa">Certification Agreement</i></span>
                                             </div>
                                         </div>
-                                        <div class="row">                            
+                                        <div class="row">
                                             <div class="col-sm-6">
                                                 <?php
                                                 if ($crAuditApplicationPending) {
@@ -229,7 +230,7 @@
                                                     ?>
                                                     <div class="serviceContentCompleted">
                                                         <span>Uploading Completed</span>
-                                                    </div> 
+                                                    </div>
                                                 <?php } ?>
                                             </div>
                                             <div class="col-sm-6">
@@ -246,7 +247,7 @@
                                                     ?>
                                                     <div class="serviceContentCompleted">
                                                         <span>Uploading Completed</span>
-                                                    </div> 
+                                                    </div>
                                                 <?php } ?>
                                             </div>
                                         </div>
@@ -260,11 +261,12 @@
                 <!--CA-Service-->
                 <div class="row">
                     <div class="col-md-12">
-                        <div class="panel panel-primary" style="min-height: 40px" >
+                        <div class="panel panel-primary" style="min-height: 40px">
                             <div class="panel-heading text-center CA-Head" style="background: #053c6d; height: 50px;">
                                 <h4 style="color: white">SERVICE TYPE - CA</h4>
                             </div>
-                            <div class="panel-rightbody homePagePanel CA-body" id="actionItemDisplayPanel" style="display: none">
+                            <div class="panel-rightbody homePagePanel CA-body" id="actionItemDisplayPanel"
+                                style="display: none">
                                 <div class="row event-row" id="dummyActionItemRow">
                                     <div class="col-xs-12 col-sm-12">
                                         <div class="row" style="">
@@ -274,11 +276,12 @@
                                             <div class="col-xs-4  text-center btn qms_complete_btn">
                                                 <span><i class="fa">Stage-1 Schedule</i></span>
                                             </div>
-                                            <div class="col-xs-4  text-center btn qms_complete_btn "  style="height: 28px">
+                                            <div class="col-xs-4  text-center btn qms_complete_btn "
+                                                style="height: 28px">
                                                 <span><i class="fa">Stage-1 Audit Report</i></span>
                                             </div>
                                         </div>
-                                        <div class="row">                            
+                                        <div class="row">
                                             <div class="col-sm-4">
                                                 <?php
                                                 if ($caSignedNotification1Pending) {
@@ -293,7 +296,7 @@
                                                     ?>
                                                     <div class="serviceContentCompleted">
                                                         <span>Uploading Completed</span>
-                                                    </div> 
+                                                    </div>
                                                 <?php } ?>
                                             </div>
                                             <div class="col-sm-4">
@@ -310,7 +313,7 @@
                                                     ?>
                                                     <div class="serviceContentCompleted">
                                                         <span>Uploading Completed</span>
-                                                    </div> 
+                                                    </div>
                                                 <?php } ?>
                                             </div>
                                             <div class="col-sm-4">
@@ -327,22 +330,25 @@
                                                     ?>
                                                     <div class="serviceContentCompleted">
                                                         <span>Uploading Completed</span>
-                                                    </div> 
+                                                    </div>
                                                 <?php } ?>
                                             </div>
                                         </div>
                                         <div class="row" style="">
-                                            <div class="col-xs-4  text-center btn qms_complete_btn "  style="height: 28px">
+                                            <div class="col-xs-4  text-center btn qms_complete_btn "
+                                                style="height: 28px">
                                                 <span><i class="fa">Stage-2 Notification</i></span>
                                             </div>
-                                            <div class="col-xs-4  text-center btn qms_complete_btn "  style="height: 28px">
+                                            <div class="col-xs-4  text-center btn qms_complete_btn "
+                                                style="height: 28px">
                                                 <span><i class="fa">Stage-2 Audit Report</i></span>
                                             </div>
-                                            <div class="col-xs-4  text-center btn qms_complete_btn "  style="height: 28px">
+                                            <div class="col-xs-4  text-center btn qms_complete_btn "
+                                                style="height: 28px">
                                                 <span><i class="fa">Stage-2 Auditor Notes</i></span>
                                             </div>
                                         </div>
-                                        <div class="row">                            
+                                        <div class="row">
                                             <div class="col-sm-4">
                                                 <?php
                                                 if ($caStage2SgnedCopyPending) {
@@ -357,7 +363,7 @@
                                                     ?>
                                                     <div class="serviceContentCompleted">
                                                         <span>Uploading Completed</span>
-                                                    </div> 
+                                                    </div>
                                                 <?php } ?>
                                             </div>
                                             <div class="col-sm-4">
@@ -374,7 +380,7 @@
                                                     ?>
                                                     <div class="serviceContentCompleted">
                                                         <span>Uploading Completed</span>
-                                                    </div> 
+                                                    </div>
                                                 <?php } ?>
                                             </div>
                                             <div class="col-sm-4">
@@ -391,22 +397,25 @@
                                                     ?>
                                                     <div class="serviceContentCompleted">
                                                         <span>Uploading Completed</span>
-                                                    </div> 
+                                                    </div>
                                                 <?php } ?>
                                             </div>
                                         </div>
                                         <div class="row" style="">
-                                            <div class="col-xs-4  text-center btn qms_complete_btn "  style="height: 28px">
+                                            <div class="col-xs-4  text-center btn qms_complete_btn "
+                                                style="height: 28px">
                                                 <span><i class="fa">NC and Evidances</i></span>
                                             </div>
-                                            <div class="col-xs-4  text-center btn qms_complete_btn "  style="height: 28px">
+                                            <div class="col-xs-4  text-center btn qms_complete_btn "
+                                                style="height: 28px">
                                                 <span><i class="fa">Certificate</i></span>
                                             </div>
-                                            <div class="col-xs-4  text-center btn qms_complete_btn "  style="height: 28px">
+                                            <div class="col-xs-4  text-center btn qms_complete_btn "
+                                                style="height: 28px">
                                                 <span><i class="fa">Client Feedback</i></span>
                                             </div>
                                         </div>
-                                        <div class="row">                            
+                                        <div class="row">
                                             <div class="col-sm-4">
                                                 <?php
                                                 if ($caAuditNCPending) {
@@ -421,7 +430,7 @@
                                                     ?>
                                                     <div class="serviceContentCompleted">
                                                         <span>Uploading Completed</span>
-                                                    </div> 
+                                                    </div>
                                                 <?php } ?>
                                             </div>
                                             <div class="col-sm-4">
@@ -438,7 +447,7 @@
                                                     ?>
                                                     <div class="serviceContentCompleted">
                                                         <span>Uploading Completed</span>
-                                                    </div> 
+                                                    </div>
                                                 <?php } ?>
                                             </div>
                                             <div class="col-sm-4">
@@ -455,7 +464,7 @@
                                                     ?>
                                                     <div class="serviceContentCompleted">
                                                         <span>Uploading Completed</span>
-                                                    </div> 
+                                                    </div>
                                                 <?php } ?>
                                             </div>
                                         </div>
@@ -469,15 +478,17 @@
                 <!--SA-I Service-->
                 <div class="row">
                     <div class="col-md-12">
-                        <div class="panel panel-primary" style="min-height: 40px" >
+                        <div class="panel panel-primary" style="min-height: 40px">
                             <div class="panel-heading text-center SAi-Head" style="background: #053c6d; height: 50px;">
                                 <h4 style="color: white">SERVICE TYPE - SA-I</h4>
                             </div>
-                            <div class="panel-rightbody homePagePanel SAi-body" id="actionItemDisplayPanel" style="display: none">
+                            <div class="panel-rightbody homePagePanel SAi-body" id="actionItemDisplayPanel"
+                                style="display: none">
                                 <div class="row event-row" id="dummyActionItemRow">
                                     <div class="col-xs-12 col-sm-12">
                                         <div class="row" style="">
-                                            <div class="col-xs-4  text-center btn qms_complete_btn "  style="height: 28px">
+                                            <div class="col-xs-4  text-center btn qms_complete_btn "
+                                                style="height: 28px">
                                                 <span><i class="fa">Information Updation</i></span>
                                             </div>
                                             <div class="col-xs-4 text-center btn qms_complete_btn">
@@ -487,7 +498,7 @@
                                                 <span><i class="fa">Schedule Signed Copy</i></span>
                                             </div>
                                         </div>
-                                        <div class="row">                            
+                                        <div class="row">
                                             <div class="col-sm-4">
                                                 <?php
                                                 if ($saiInformationUpdatoinPending) {
@@ -499,7 +510,7 @@
                                                         <?php
                                                     }
                                                 } else {
-                                                    ?> 
+                                                    ?>
                                                     <div class="serviceContentCompleted">
                                                         <span>Uploading Completed</span>
                                                     </div>
@@ -516,7 +527,7 @@
                                                         <?php
                                                     }
                                                 } else {
-                                                    ?> 
+                                                    ?>
                                                     <div class="serviceContentCompleted">
                                                         <span>Uploading Completed</span>
                                                     </div>
@@ -533,7 +544,7 @@
                                                         <?php
                                                     }
                                                 } else {
-                                                    ?> 
+                                                    ?>
                                                     <div class="serviceContentCompleted">
                                                         <span>Uploading Completed</span>
                                                     </div>
@@ -541,18 +552,21 @@
                                             </div>
                                         </div>
                                         <div class="row" style="">
-                                            <div class="col-xs-4  text-center btn qms_complete_btn "  style="height: 28px">
+                                            <div class="col-xs-4  text-center btn qms_complete_btn "
+                                                style="height: 28px">
                                                 <span><i class="fa">Audit Report</i></span>
                                             </div>
-                                            <div class="col-xs-4  text-center btn qms_complete_btn "  style="height: 28px">
+                                            <div class="col-xs-4  text-center btn qms_complete_btn "
+                                                style="height: 28px">
                                                 <span><i class="fa">Auditor Notes</i></span>
                                             </div>
-                                            <div class="col-xs-4  text-center btn qms_complete_btn "  style="height: 28px">
+                                            <div class="col-xs-4  text-center btn qms_complete_btn "
+                                                style="height: 28px">
                                                 <span><i class="fa">NC and Evidences</i></span>
                                             </div>
 
                                         </div>
-                                        <div class="row">                            
+                                        <div class="row">
                                             <div class="col-sm-4">
                                                 <?php
                                                 if ($saiAuditReportPending) {
@@ -564,7 +578,7 @@
                                                         <?php
                                                     }
                                                 } else {
-                                                    ?> 
+                                                    ?>
                                                     <div class="serviceContentCompleted">
                                                         <span>Uploading Completed</span>
                                                     </div>
@@ -581,7 +595,7 @@
                                                         <?php
                                                     }
                                                 } else {
-                                                    ?> 
+                                                    ?>
                                                     <div class="serviceContentCompleted">
                                                         <span>Uploading Completed</span>
                                                     </div>
@@ -598,7 +612,7 @@
                                                         <?php
                                                     }
                                                 } else {
-                                                    ?> 
+                                                    ?>
                                                     <div class="serviceContentCompleted">
                                                         <span>Uploading Completed</span>
                                                     </div>
@@ -606,14 +620,16 @@
                                             </div>
                                         </div>
                                         <div class="row" style="">
-                                            <div class="col-xs-4  text-center btn qms_complete_btn "  style="height: 28px">
+                                            <div class="col-xs-4  text-center btn qms_complete_btn "
+                                                style="height: 28px">
                                                 <span><i class="fa">Certificate</i></span>
                                             </div>
-                                            <div class="col-xs-4  text-center btn qms_complete_btn "  style="height: 28px">
+                                            <div class="col-xs-4  text-center btn qms_complete_btn "
+                                                style="height: 28px">
                                                 <span><i class="fa">Client Feedback</i></span>
                                             </div>
                                         </div>
-                                        <div class="row">                                                                        
+                                        <div class="row">
                                             <div class="col-sm-4">
                                                 <?php
                                                 if ($saiCertificatePending) {
@@ -625,7 +641,7 @@
                                                         <?php
                                                     }
                                                 } else {
-                                                    ?> 
+                                                    ?>
                                                     <div class="serviceContentCompleted">
                                                         <span>Uploading Completed</span>
                                                     </div>
@@ -642,7 +658,7 @@
                                                         <?php
                                                     }
                                                 } else {
-                                                    ?> 
+                                                    ?>
                                                     <div class="serviceContentCompleted">
                                                         <span>Uploading Completed</span>
                                                     </div>
@@ -659,15 +675,17 @@
                 <!--SA-II Service-->
                 <div class="row">
                     <div class="col-md-12">
-                        <div class="panel panel-primary" style="min-height: 40px" >
+                        <div class="panel panel-primary" style="min-height: 40px">
                             <div class="panel-heading text-center SAii-Head" style="background: #053c6d; height: 50px;">
                                 <h4 style="color: white">SERVICE TYPE - SA-II</h4>
                             </div>
-                            <div class="panel-rightbody homePagePanel SAii-body" id="actionItemDisplayPanel" style="display: none">
+                            <div class="panel-rightbody homePagePanel SAii-body" id="actionItemDisplayPanel"
+                                style="display: none">
                                 <div class="row event-row" id="dummyActionItemRow">
                                     <div class="col-xs-12 col-sm-12">
                                         <div class="row" style="">
-                                            <div class="col-xs-4  text-center btn qms_complete_btn "  style="height: 28px">
+                                            <div class="col-xs-4  text-center btn qms_complete_btn "
+                                                style="height: 28px">
                                                 <span><i class="fa">Information Updation</i></span>
                                             </div>
                                             <div class="col-xs-4 text-center btn qms_complete_btn">
@@ -677,7 +695,7 @@
                                                 <span><i class="fa">Schedule Signed Copy</i></span>
                                             </div>
                                         </div>
-                                        <div class="row">                            
+                                        <div class="row">
                                             <div class="col-sm-4">
                                                 <?php
                                                 if ($saiiInformationUpdatoinPending) {
@@ -689,7 +707,7 @@
                                                         <?php
                                                     }
                                                 } else {
-                                                    ?> 
+                                                    ?>
                                                     <div class="serviceContentCompleted">
                                                         <span>Uploading Completed</span>
                                                     </div>
@@ -706,7 +724,7 @@
                                                         <?php
                                                     }
                                                 } else {
-                                                    ?> 
+                                                    ?>
                                                     <div class="serviceContentCompleted">
                                                         <span>Uploading Completed</span>
                                                     </div>
@@ -723,7 +741,7 @@
                                                         <?php
                                                     }
                                                 } else {
-                                                    ?> 
+                                                    ?>
                                                     <div class="serviceContentCompleted">
                                                         <span>Uploading Completed</span>
                                                     </div>
@@ -731,18 +749,21 @@
                                             </div>
                                         </div>
                                         <div class="row" style="">
-                                            <div class="col-xs-4  text-center btn qms_complete_btn "  style="height: 28px">
+                                            <div class="col-xs-4  text-center btn qms_complete_btn "
+                                                style="height: 28px">
                                                 <span><i class="fa">Audit Report</i></span>
                                             </div>
-                                            <div class="col-xs-4  text-center btn qms_complete_btn "  style="height: 28px">
+                                            <div class="col-xs-4  text-center btn qms_complete_btn "
+                                                style="height: 28px">
                                                 <span><i class="fa">Auditor Notes</i></span>
                                             </div>
-                                            <div class="col-xs-4  text-center btn qms_complete_btn "  style="height: 28px">
+                                            <div class="col-xs-4  text-center btn qms_complete_btn "
+                                                style="height: 28px">
                                                 <span><i class="fa">NC and Evidences</i></span>
                                             </div>
 
                                         </div>
-                                        <div class="row">                            
+                                        <div class="row">
                                             <div class="col-sm-4">
                                                 <?php
                                                 if ($saiiAuditReportPending) {
@@ -754,7 +775,7 @@
                                                         <?php
                                                     }
                                                 } else {
-                                                    ?> 
+                                                    ?>
                                                     <div class="serviceContentCompleted">
                                                         <span>Uploading Completed</span>
                                                     </div>
@@ -788,7 +809,7 @@
                                                         <?php
                                                     }
                                                 } else {
-                                                    ?> 
+                                                    ?>
                                                     <div class="serviceContentCompleted">
                                                         <span>Uploading Completed</span>
                                                     </div>
@@ -796,14 +817,16 @@
                                             </div>
                                         </div>
                                         <div class="row" style="">
-                                            <div class="col-xs-4  text-center btn qms_complete_btn "  style="height: 28px">
+                                            <div class="col-xs-4  text-center btn qms_complete_btn "
+                                                style="height: 28px">
                                                 <span><i class="fa">Certificate</i></span>
                                             </div>
-                                            <div class="col-xs-4  text-center btn qms_complete_btn "  style="height: 28px">
+                                            <div class="col-xs-4  text-center btn qms_complete_btn "
+                                                style="height: 28px">
                                                 <span><i class="fa">Client Feedback</i></span>
                                             </div>
                                         </div>
-                                        <div class="row">                                                                        
+                                        <div class="row">
                                             <div class="col-sm-4">
                                                 <?php
                                                 if ($saiiCertificatePending) {
@@ -815,7 +838,7 @@
                                                         <?php
                                                     }
                                                 } else {
-                                                    ?> 
+                                                    ?>
                                                     <div class="serviceContentCompleted">
                                                         <span>Uploading Completed</span>
                                                     </div>
@@ -832,7 +855,7 @@
                                                         <?php
                                                     }
                                                 } else {
-                                                    ?> 
+                                                    ?>
                                                     <div class="serviceContentCompleted">
                                                         <span>Uploading Completed</span>
                                                     </div>
@@ -849,15 +872,17 @@
                 <!--SA-RC Service-->
                 <div class="row">
                     <div class="col-md-12">
-                        <div class="panel panel-primary" style="min-height: 40px" >
+                        <div class="panel panel-primary" style="min-height: 40px">
                             <div class="panel-heading text-center RC-Head" style="background: #053c6d; height: 50px;">
                                 <h4 style="color: white">SERVICE TYPE - RC</h4>
                             </div>
-                            <div class="panel-rightbody homePagePanel RC-body" id="actionItemDisplayPanel" style="display: none">
+                            <div class="panel-rightbody homePagePanel RC-body" id="actionItemDisplayPanel"
+                                style="display: none">
                                 <div class="row event-row" id="dummyActionItemRow">
                                     <div class="col-xs-12 col-sm-12">
                                         <div class="row" style="">
-                                            <div class="col-xs-4  text-center btn qms_complete_btn "  style="height: 28px">
+                                            <div class="col-xs-4  text-center btn qms_complete_btn "
+                                                style="height: 28px">
                                                 <span><i class="fa">Signed Notification</i></span>
                                             </div>
                                             <div class="col-xs-4 text-center btn qms_complete_btn">
@@ -867,7 +892,7 @@
                                                 <span><i class="fa">Audit Report</i></span>
                                             </div>
                                         </div>
-                                        <div class="row">                            
+                                        <div class="row">
                                             <div class="col-sm-4">
                                                 <?php
                                                 if ($rcNotificationPending) {
@@ -879,7 +904,7 @@
                                                         <?php
                                                     }
                                                 } else {
-                                                    ?> 
+                                                    ?>
                                                     <div class="serviceContentCompleted">
                                                         <span>Uploading Completed</span>
                                                     </div>
@@ -896,7 +921,7 @@
                                                         <?php
                                                     }
                                                 } else {
-                                                    ?> 
+                                                    ?>
                                                     <div class="serviceContentCompleted">
                                                         <span>Uploading Completed</span>
                                                     </div>
@@ -913,7 +938,7 @@
                                                         <?php
                                                     }
                                                 } else {
-                                                    ?> 
+                                                    ?>
                                                     <div class="serviceContentCompleted">
                                                         <span>Uploading Completed</span>
                                                     </div>
@@ -921,18 +946,21 @@
                                             </div>
                                         </div>
                                         <div class="row" style="">
-                                            <div class="col-xs-4  text-center btn qms_complete_btn "  style="height: 28px">
+                                            <div class="col-xs-4  text-center btn qms_complete_btn "
+                                                style="height: 28px">
                                                 <span><i class="fa">Auditor Notes</i></span>
                                             </div>
-                                            <div class="col-xs-4  text-center btn qms_complete_btn "  style="height: 28px">
+                                            <div class="col-xs-4  text-center btn qms_complete_btn "
+                                                style="height: 28px">
                                                 <span><i class="fa">NC and Evidences</i></span>
                                             </div>
-                                            <div class="col-xs-4  text-center btn qms_complete_btn "  style="height: 28px">
+                                            <div class="col-xs-4  text-center btn qms_complete_btn "
+                                                style="height: 28px">
                                                 <span><i class="fa">Certificate</i></span>
                                             </div>
 
                                         </div>
-                                        <div class="row">                            
+                                        <div class="row">
                                             <div class="col-sm-4">
                                                 <?php
                                                 if ($rcAuditorNotesPending) {
@@ -944,7 +972,7 @@
                                                         <?php
                                                     }
                                                 } else {
-                                                    ?> 
+                                                    ?>
                                                     <div class="serviceContentCompleted">
                                                         <span>Uploading Completed</span>
                                                     </div>
@@ -961,7 +989,7 @@
                                                         <?php
                                                     }
                                                 } else {
-                                                    ?> 
+                                                    ?>
                                                     <div class="serviceContentCompleted">
                                                         <span>Uploading Completed</span>
                                                     </div>
@@ -978,7 +1006,7 @@
                                                         <?php
                                                     }
                                                 } else {
-                                                    ?> 
+                                                    ?>
                                                     <div class="serviceContentCompleted">
                                                         <span>Uploading Completed</span>
                                                     </div>
@@ -986,11 +1014,12 @@
                                             </div>
                                         </div>
                                         <div class="row" style="">
-                                            <div class="col-xs-4  text-center btn qms_complete_btn "  style="height: 28px">
+                                            <div class="col-xs-4  text-center btn qms_complete_btn "
+                                                style="height: 28px">
                                                 <span><i class="fa">Client Feedback</i></span>
                                             </div>
                                         </div>
-                                        <div class="row">                                                                        
+                                        <div class="row">
                                             <div class="col-sm-4">
                                                 <?php
                                                 if ($rcCustomerReviewPending) {
@@ -1002,7 +1031,7 @@
                                                         <?php
                                                     }
                                                 } else {
-                                                    ?> 
+                                                    ?>
                                                     <div class="serviceContentCompleted">
                                                         <span>Uploading Completed</span>
                                                     </div>

@@ -49,6 +49,12 @@ if (!Utitlity::checkIfLoggedIn()) {
         header("Location: login");
         exit;
     }
+} else if (isset($pageIdentifier) && $pageIdentifier == "Admin Dashboard") {
+    $addAdminDashboardClass = "active";
+    if (!Utitlity::checkForUserMainAdmin()) {
+        header("Location: login");
+        exit;
+    }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Add User") {
     $addUserClass = "active";
     if (!(Utitlity::checkForUserAdmin() || Utitlity::checkForMainAdmin())) {
@@ -210,6 +216,9 @@ function getFlatDate($inputStr) {
         <li class="sidebar-brand"><a class="" id="menu-toggle" href="#">AITF<span id="main_icon" class="glyphicon glyphicon-align-justify"></span></a></li>
     </ul>
     <ul class="sidebar-nav" id="sidebar">
+        <?php if (Utitlity::checkForUserMainAdmin()) { ?>
+            <li><a href="adminDashboard.php" class="animate <?php echo isset($addAdminDashboardClass) ? $addAdminDashboardClass : ''; ?>">ADMIN DASHBOARD<i class="sub_icon fa fa-line-chart fa-2x" style="vertical-align:middle"></i></a></li>
+        <?php } ?>
             <li><a href="iaf_dashboard.php" class="animate <?php echo isset($iafClass) ? $iafClass : ''; ?>">IAF DASHBOARD<i class="sub_icon fa fa-dashboard fa-2x" style="vertical-align:middle"></i></a></li>
         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff()) { ?>
             <?php $unreadBadge = isset($GLOBALS['unread_app_count']) ? (int)$GLOBALS['unread_app_count'] : 0; ?>
@@ -296,6 +305,9 @@ function getFlatDate($inputStr) {
         <div class="collapse navbar-collapse " id="bs-example-navbar-collapse-1">
             <ul class="nav navbar-nav navbar-right">
                 <!--Adding hidden menu items here -->
+                <?php if (Utitlity::checkForUserMainAdmin()) { ?>
+                    <li class="visible-xs"><a href="adminDashboard.php" class="animate <?php echo isset($addAdminDashboardClass) ? $addAdminDashboardClass : ''; ?>">ADMIN DASHBOARD</a></li>
+                <?php } ?>
                 <li class="visible-xs"><a href="iaf_dashboard.php" class="animate <?php //echo isset($iafClass) ? $iafClass : ''; ?>">IAF DASHBOARD</a></li>
                 <li class="visible-xs"><a href="homePage.php" class="animate <?php //echo $addClass              ?>">CLIENTS</a></li>
                 <li class="visible-xs"><a href="marketingPage.php" class="animate <?php //echo $addMarketingClass              ?>">MARKETING</a></li>

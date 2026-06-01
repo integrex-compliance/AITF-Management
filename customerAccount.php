@@ -7458,12 +7458,14 @@
             // Reset customer modal when it's hidden to ensure clean state
             $('#customerAdd').on('hidden.bs.modal', function () {
                 console.log('Customer modal closed - resetting form');
-                $('#customerAdd form')[0].reset();
-                $('.addMultipleContact').empty();
-                $('.editCustomerId').val('');
-                $('.customerPersonHidden, .customerContactHidden, .customerContactEmlHidden').val('');
-                $('#companyNameError, #contactEmailError, #contactNoError, #contactPersonError').hide();
-                $('.inputHighlight').removeClass('inputHighlight');
+                var $modal = $('#customerAdd');
+                $modal.find('form')[0].reset();
+                $modal.find('.addMultipleContact').empty();
+                $modal.find('.editCustomerId').val('');
+                $modal.find('.customerPersonHidden, .customerContactHidden, .customerContactEmlHidden').val('');
+                $modal.find('#companyNameError, #contactEmailError, #contactNoError, #contactPersonError').hide();
+                $modal.find('.inputHighlight').removeClass('inputHighlight');
+                refreshCustomerModalFloatLabels();
             });
             
             // Add form submission handler to debug and track the save process
@@ -7483,6 +7485,146 @@
                 // Allow form to submit naturally
                 return true;
             });
+
+            function refreshCustomerModalFloatLabels() {
+                var $modal = $('#customerAdd');
+                $modal.find('input, textarea').each(function () {
+                    $(this).trigger('input').trigger('change');
+                });
+            }
+
+            function parseCustomerAddress(address) {
+                var result = {
+                    streetAddress: '',
+                    city: '',
+                    state: '',
+                    postCode: '',
+                    country: 'India'
+                };
+
+                if (!address || typeof address !== 'string') {
+                    return result;
+                }
+
+                var parts = address
+                    .split(',')
+                    .map(function (p) { return (p || '').trim(); })
+                    .filter(Boolean);
+
+                if (parts.length === 0) {
+                    return result;
+                }
+
+                // Keep state matching in sync with the actual dropdown options
+                var stateOptions = $('#state option')
+                    .map(function () { return (this.value || '').trim(); })
+                    .get()
+                    .filter(Boolean);
+
+                var stateMap = {};
+                stateOptions.forEach(function (s) {
+                    stateMap[s.toLowerCase()] = s;
+                });
+
+                function extractCountry(part) {
+                    var raw = (part || '').trim();
+                    if (!raw) return null;
+                    if (raw.toLowerCase() === 'india') return { country: 'India', remainder: '' };
+                    var m = raw.match(/^(.*?)(?:[\s,.\-–—]*)india$/i);
+                    if (m) {
+                        var remainder = (m[1] || '').trim().replace(/[\s,.\-–—]+$/g, '').trim();
+                        return { country: 'India', remainder: remainder };
+                    }
+                    return null;
+                }
+
+                function extractPostCode(part) {
+                    var raw = (part || '').trim();
+                    if (!raw) return null;
+                    var m = raw.match(/(\d{4,10})\s*$/);
+                    if (!m) return null;
+                    var remainder = raw.slice(0, m.index).trim().replace(/[\s,.\-–—]+$/g, '').trim();
+                    return { code: m[1], remainder: remainder };
+                }
+
+                function cleanStateKey(part) {
+                    return (part || '')
+                        .replace(/[^a-zA-Z\s]/g, ' ')
+                        .replace(/\s+/g, ' ')
+                        .trim()
+                        .toLowerCase();
+                }
+
+                // Country: handle common case where "India" is included anywhere in the address
+                for (var i = parts.length - 1; i >= 0; i--) {
+                    var countryMatch = extractCountry(parts[i]);
+                    if (countryMatch) {
+                        result.country = countryMatch.country;
+                        if (countryMatch.remainder) {
+                            parts[i] = countryMatch.remainder;
+                        } else {
+                            parts.splice(i, 1);
+                        }
+                        break;
+                    }
+                }
+
+                // Post Code: pick the last numeric-looking token
+                for (var j = parts.length - 1; j >= 0; j--) {
+                    var postCodeMatch = extractPostCode(parts[j]);
+                    if (postCodeMatch) {
+                        result.postCode = postCodeMatch.code;
+                        if (postCodeMatch.remainder) {
+                            parts[j] = postCodeMatch.remainder;
+                        } else {
+                            parts.splice(j, 1);
+                        }
+                        break;
+                    }
+                }
+
+                // State: match against dropdown values (case-insensitive)
+                for (var k = parts.length - 1; k >= 0; k--) {
+                    var key = (parts[k] || '').trim().toLowerCase();
+                    var cleanedKey = cleanStateKey(parts[k]);
+                    if (stateMap[key]) {
+                        result.state = stateMap[key];
+                        parts.splice(k, 1);
+                        break;
+                    }
+                    if (stateMap[cleanedKey]) {
+                        result.state = stateMap[cleanedKey];
+                        parts.splice(k, 1);
+                        break;
+                    }
+                }
+
+                // City: last remaining token
+                if (parts.length > 0) {
+                    result.city = parts.pop();
+                }
+
+                // Street: everything else (supports commas in street)
+                if (parts.length > 0) {
+                    result.streetAddress = parts.join(', ');
+                }
+
+                // Fallback when address is already in the expected 5-part format but heuristics didn't catch it
+                if (!result.city && !result.state && !result.postCode && parts.length === 0) {
+                    var rawParts = address.split(',').map(function (p) { return (p || '').trim(); }).filter(Boolean);
+                    if (rawParts.length >= 5) {
+                        result.country = rawParts[rawParts.length - 1] || result.country;
+                        result.postCode = rawParts[rawParts.length - 2] || '';
+                        result.state = rawParts[rawParts.length - 3] || '';
+                        result.city = rawParts[rawParts.length - 4] || '';
+                        result.streetAddress = rawParts.slice(0, rawParts.length - 4).join(', ') || '';
+                    } else if (rawParts.length === 1) {
+                        result.streetAddress = rawParts[0];
+                    }
+                }
+
+                return result;
+            }
             
             $('.editCustomerDetails').click(function () {
                 var customerId = $(this).attr('data-id');
@@ -7497,38 +7639,30 @@
                     },
                     success: function (customer) {
                         if (customer && !customer.error) {
+                            var $modal = $('#customerAdd');
                             // CRITICAL: Clear the modal form completely first
-                            $('#customerAdd form')[0].reset();
+                            $modal.find('form')[0].reset();
                             
                             // Clear any dynamically added contact rows
-                            $('.addMultipleContact').empty();
+                            $modal.find('.addMultipleContact').empty();
                             
                             // Clear all error messages
-                            $('#companyNameError, #contactEmailError, #contactNoError, #contactPersonError').hide();
-                            $('.inputHighlight').removeClass('inputHighlight');
+                            $modal.find('#companyNameError, #contactEmailError, #contactNoError, #contactPersonError').hide();
+                            $modal.find('.inputHighlight').removeClass('inputHighlight');
                             
                             // Populate the modal fields
-                            $('.customerName').val(customer.customer_name || '');
-                            $('.gstin_no').val(customer.gstin_no || '');
-                            $('.scope').val(customer.scope || '');
-                            $('.addnotes').val(customer.comment || '');
+                            $modal.find('.customerName').val(customer.customer_name || '');
+                            $modal.find('.gstin_no').val(customer.gstin_no || '');
+                            $modal.find('.scope').val(customer.scope || '');
+                            $modal.find('.addnotes').val(customer.comment || '');
                             
-                            // Parse address if it's in the concatenated format
-                            var address = customer.address || '';
-                            var addressParts = address.split(', ');
-                            if (addressParts.length >= 5) {
-                                $('.streetAddress').val(addressParts[0] || '');
-                                $('.city').val(addressParts[1] || '');
-                                $('.state').val(addressParts[2] || '');
-                                $('.postCode').val(addressParts[3] || '');
-                                $('.country').val(addressParts[4] || '');
-                            } else {
-                                $('.streetAddress').val(address);
-                                $('.city').val('');
-                                $('.state').val('');
-                                $('.postCode').val('');
-                                $('.country').val('India');
-                            }
+                            // Parse address robustly (supports missing parts and commas inside street address)
+                            var parsedAddress = parseCustomerAddress(customer.address || '');
+                            $modal.find('.streetAddress').val(parsedAddress.streetAddress || '');
+                            $modal.find('.city').val(parsedAddress.city || '');
+                            $modal.find('.state').val(parsedAddress.state || '');
+                            $modal.find('.postCode').val(parsedAddress.postCode || '');
+                            $modal.find('.country').val(parsedAddress.country || 'India');
                             
                             // Parse contact persons, emails, and phone numbers
                             var contactPersons = (customer.contact_person || '').split(',');
@@ -7536,22 +7670,23 @@
                             var contacts = (customer.contact || '').split(',');
                             
                             // Set first contact in the main fields
-                            $('#customerCntctPerson').val(contactPersons[0] ? contactPersons[0].trim() : '');
-                            $('#customerEmail').val(emails[0] ? emails[0].trim() : '');
-                            $('#contactNo').val(contacts[0] ? contacts[0].trim() : '');
+                            $modal.find('#customerCntctPerson').val(contactPersons[0] ? contactPersons[0].trim() : '');
+                            $modal.find('#customerEmail').val(emails[0] ? emails[0].trim() : '');
+                            $modal.find('#contactNo').val(contacts[0] ? contacts[0].trim() : '');
                             
                             // Set hidden fields for all contacts (will be used on save)
-                            $('.customerPersonHidden').val(customer.contact_person || '');
-                            $('.customerContactEmlHidden').val(customer.email_id || '');
-                            $('.customerContactHidden').val(customer.contact || '');
+                            $modal.find('.customerPersonHidden').val(customer.contact_person || '');
+                            $modal.find('.customerContactEmlHidden').val(customer.email_id || '');
+                            $modal.find('.customerContactHidden').val(customer.contact || '');
                             
                             // CRITICAL: Set customer ID for update mode
-                            $('.editCustomerId').val(customerId);
+                            $modal.find('.editCustomerId').val(customerId);
                             
                             console.log('Edit mode - Customer ID set to:', customerId);
+                            refreshCustomerModalFloatLabels();
                             
                             // Show the modal
-                            $('#customerAdd').modal('show');
+                            $modal.modal('show');
                         } else {
                             alert('Error: Customer not found');
                         }

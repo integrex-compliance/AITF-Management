@@ -14,7 +14,29 @@ include 'headersource.php';
     <!-- this styles only adds some repairs on idevices  -->
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
     <!-- Google fonts - witch you want to use - (rest you can just remove) -->
-
+    
+    <style>
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.2);
+                opacity: 0.8;
+            }
+        }
+        
+        .online-form-highlight:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 32px rgba(22, 163, 74, 0.4) !important;
+        }
+        
+        .online-form-highlight a:hover {
+            background: #f0fdf4 !important;
+            transform: scale(1.05);
+        }
+    </style>
 </head>
 
 <body>
@@ -30,7 +52,14 @@ include 'headersource.php';
                     <!--</div>-->
                 </div>
                 <div class="col-sm-6">
-                    <ul><li><a href="application.php?msg=".urlencode("")>Application form</a></li></ul>
+                    <ul>
+                        <li><a href="application.php?msg=".urlencode("")>Application form</a></li>
+                        <li style="margin-left: 15px;">
+                            <a href="info_updation_form.php" style="background: #16a34a; color: white; padding: 5px 12px; border-radius: 6px; font-weight: 600; display: inline-block;">
+                                <i class="fa fa-star" style="color: #fbbf24;"></i> Fill Info Update Form (Online)
+                            </a>
+                        </li>
+                    </ul>
                     <div class="" style="text-align: right; color: gray;">
                         <a href="#">Downloads</a>
                     </div>
@@ -51,7 +80,29 @@ include 'headersource.php';
 
             <ul><li><a href="NC_closure.php?msg=".urlencode("")>NC report & closure</a></li></ul>
             <ul><li><a href="use_of_logo.php?msg=".urlencode("")>Use Of Logo Guideline</a></li></ul>
-            <ul><li><a href="info_update.php?msg=".urlencode("")>Information updation form</a></li></ul>
+            <ul><li><a href="info_update.php?msg=".urlencode("")>Information updation form (PDF)</a></li></ul>
+            
+            <!-- Highlighted Online Form Section -->
+            <div class="online-form-highlight" style="background: linear-gradient(135deg, #16a34a, #15803d); padding: 20px; border-radius: 12px; margin: 20px 0; box-shadow: 0 8px 24px rgba(22, 163, 74, 0.3); border: 2px solid #16a34a; transition: all 0.3s ease;">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <div style="background: #ffffff; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                        <i class="fa fa-edit" style="font-size: 24px; color: #16a34a;"></i>
+                    </div>
+                    <div style="flex: 1;">
+                        <h3 style="color: #ffffff; margin: 0 0 8px 0; font-size: 20px; font-weight: 600;">
+                            <i class="fa fa-star" style="color: #fbbf24; animation: pulse 2s infinite;"></i>
+                            Fill Information Updation Form (ONLINE)
+                        </h3>
+                        <p style="color: #f0fdf4; margin: 0 0 12px 0; font-size: 14px; line-height: 1.5;">
+                            Now you can fill and submit your information updation form online! No need to download PDF. Quick, easy, and instant submission.
+                        </p>
+                        <a href="info_updation_form.php" style="display: inline-block; background: #ffffff; color: #16a34a; padding: 10px 25px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: all 0.3s ease;">
+                            <i class="fa fa-arrow-right"></i> Fill Form Online Now
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
             <ul><li><a href="circular_auditing_doc.php?msg=".urlencode("")>Circular regarding auditing documents</a></li></ul>
             <ul><li><a href="guidline_g_1_11.php?msg=".urlencode("")>Granting, Refusing, Maintaining, Renewing, suspending, Restoring, Withdrawing, Expanding and Reducing of scope of certification</a></li></ul>
             <!--<ul><li><a href="auditor_guidline.php?msg=".urlencode("")>Guidline to auditors</a></li></ul>-->

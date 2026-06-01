@@ -367,3 +367,6 @@ document.getElementById('scroll-to-top').addEventListener('click', function(e) {
     window.scrollTo({top: 0, behavior: 'smooth'});
 });
 </script>
+
+</body>
+</html>

@@ -16,6 +16,8 @@
                 <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">x</span><span class="sr-only">Close</span></button>
                 Review of feedback
             </div>  
+
+            
             <form action="addCustomerSurvey.php" method="post">
                 <div class="modal-body">
                     <div class="row" style="">
@@ -64,6 +66,9 @@
                             <span><i class="fa  ">1. Rating of Auditing Quality</i></span>
                         </div>
                     </div>
+
+
+
                     <div class="">
                         <div class="row " style="padding-top: 10px">
                             <div class="col-sm-8 form-group float-label-control">

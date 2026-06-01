@@ -21,6 +21,7 @@ $recaptchaFrontendEnabled = $recaptchaReady && !$recaptchaBypass;
 ?>
 <!DOCTYPE html>
 <html lang="en">
+aasdasasf
 
 <head>
     <?php include './headSource.php'; ?>

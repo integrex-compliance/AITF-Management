@@ -23,7 +23,7 @@ include 'headersource.php';
         <a href="transition_g.php?msg=".urlencode("")>Transition guideline of ISO 9001:2015</a>&ensp; &ensp;  &ensp;  &ensp;  &ensp;
         <a href="NC_closure.php?msg=".urlencode("")>NC report & closure</a>&ensp; &ensp;  &ensp;  &ensp;  &ensp;
         <a href="use_of_logo.php?msg=".urlencode("")>Use Of Logo Guideline</a>&ensp; &ensp;  &ensp;  &ensp;  &ensp;
-        <a href="info_update.php?msg=".urlencode("")>Information updation form</a>&ensp; &ensp;  &ensp;  &ensp;  &ensp;
+        <a href="info_updation_form.php">Information updation form</a>&ensp; &ensp;  &ensp;  &ensp;  &ensp;
         <a href="circular_auditing_doc.php?msg=".urlencode("")>Circular regarding auditing documents</a></li> &ensp; &ensp;  &ensp;  &ensp;  &ensp;
     <a href="guidline_g_1_11.php?msg=".urlencode("")>Certification Process</a>&ensp; &ensp;  &ensp;  &ensp;  &ensp;
     <a href="auditor_guidline.php?msg=".urlencode("")>Guidline to auditors</a>

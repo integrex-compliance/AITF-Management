@@ -46,7 +46,7 @@ class MYPDF extends TCPDF {
         // Title
         $this->Cell(0, 15, 'AITF MANAGEMENT CERTIFICATION LIMITED', 0, false, 'C', 0, '', 0, false, 'M', 'M');
 
-       
+
 
         $this->writeHTMLCell($w = '', $h = '', $x = '', $y = '', $this->header, $border = 0, $ln = 0, $fill = 0, $reseth = true, $align = 'L', $autopadding = true);
         $this->SetLineStyle(array('width' => 0.40, 'color' => array(0, 0, 0)));
@@ -69,6 +69,7 @@ class MYPDF extends TCPDF {
     }
 
 }
+
 
 // create new PDF document
 $pdf = new MYPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);

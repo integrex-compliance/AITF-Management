@@ -89,8 +89,7 @@
                 <div class="col-md-3 layout_padding_2">
                     <div class="full" >
                         <p style="color: #095a83; font-weight: bold;">Learning Objective:</p>
-                    </div>
-                </div>
+        
                 <div class="col-md-9">
                     <div class="full">
                         <p><span class="fa fa-arrow-circle-right"> &nbsp;</span>Explain the purpose of an Information Security management system, of an Information Security management system standards, of management system audit, of third party certification.</p>
@@ -126,7 +125,7 @@
                 <div class="col-md-3 layout_padding_2">
                     <div class="full" >
                         <p style="color: #095a83; font-weight: bold;">Course Content:</p>
-                    </div>
+                    </div>m
                 </div>
                 <div class="col-md-9">
                     <div class="full">

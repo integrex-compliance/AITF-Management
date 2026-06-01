@@ -48,7 +48,7 @@ if (isset($_POST['useremail']) && !empty($_POST['useremail']) && isset($_POST['p
                 header("Location: marketingPage.php");
             }
             if (Utitlity::checkForMainAdmin()) {
-                header("Location: homePage.php");
+                header("Location: adminDashboard.php");
             }
         } else {
             // Invalid credentials: mark login error in session and redirect to clean login URL

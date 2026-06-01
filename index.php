@@ -8,6 +8,8 @@ session_start();
         <?php include './headSource.php'; ?>
         <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
         <link rel="stylesheet" href="/perfect-learn/css/methodology-styles.css">
+        <link rel="stylesheet" href="popup-advertisement.css">
+        <script src="popup-advertisement.js"></script>
         <style>
             /* Box Navigation */
             /* Modern Navigation Container */
@@ -537,7 +539,7 @@ session_start();
                 $('#login-error-banner').fadeOut(200);
             });
 
-            // AITF Typing Animation
+            
             function animateAITF() {
                 const aitfElement = $('#aitf-text');
                 

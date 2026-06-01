@@ -6,6 +6,15 @@
     include 'dbConnect.php';
     date_default_timezone_set('Asia/Kolkata');
 
+
+
+
+    // session handelling 
+    
+
+
+    
+
     $ststus = "YES";
 //    $customerList = "SELECT * FROM customer_info where is_deleted <> 'YES' ORDER BY unique_id";
     $customerList = "SELECT ci.* , ac.certification_date FROM customer_info ci left join allotment_count ac on ci.id = ac.client_id where is_deleted <> 'YES' ORDER BY ac.certification_date DESC";

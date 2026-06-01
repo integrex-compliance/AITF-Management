@@ -665,6 +665,26 @@
         padding-left: 30px !important;
         box-shadow: 0 2px 6px rgba(59, 130, 246, 0.2) !important;
     }
+    
+    /* Online Form Link Special Styling */
+    .dropdown-links-list a[href="info_updation_form.php"] {
+        animation: pulse-glow 2s infinite;
+    }
+    
+    .dropdown-links-list a[href="info_updation_form.php"]:hover {
+        background: linear-gradient(135deg, #15803d, #166534) !important;
+        transform: scale(1.05);
+        box-shadow: 0 6px 20px rgba(22, 163, 74, 0.5) !important;
+    }
+    
+    @keyframes pulse-glow {
+        0%, 100% {
+            box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+        }
+        50% {
+            box-shadow: 0 6px 20px rgba(22, 163, 74, 0.6);
+        }
+    }
 
     /* Animation for list items appearing */
     @keyframes slideInLeft {
@@ -1248,7 +1268,10 @@
                                                 class="link-line"></span>NC Report & Closure</a>
                                         <a href="infoUpdationForm.php"
                                             style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
-                                                class="link-line"></span>Information Update Form</a>
+                                                class="link-line"></span>Information Update Form (PDF)</a>
+                                        <a href="info_updation_form.php"
+                                            style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
+                                                class="link-line"></span>Information Update Form (Fill Online)</a>
                                         <a href="circuler.php"
                                             style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
                                                 class="link-line"></span>Circulars</a>
@@ -1415,7 +1438,8 @@
                             </div>
                         </li>
                         <li><a class="mobile-nav-item" href="ncClosure.php">NC Report &amp; Closure</a></li>
-                        <li><a class="mobile-nav-item" href="infoUpdationForm.php">Information Update Form</a></li>
+                        <li><a class="mobile-nav-item" href="infoUpdationForm.php">Information Update Form (PDF)</a></li>
+                        <li><a class="mobile-nav-item" href="info_updation_form.php">Information Update Form (Fill Online)</a></li>
                         <li><a class="mobile-nav-item" href="circuler.php">Circulars</a></li>
                     </ul>
                 </section>
