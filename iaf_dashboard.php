@@ -436,6 +436,7 @@ $(document).ready(function() {
         }
     });
 });
+ func
 
 function handleAction(actionType, clientData, btnElement) {
     const btn = $(btnElement);

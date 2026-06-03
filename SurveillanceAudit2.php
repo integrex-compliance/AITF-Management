@@ -14,9 +14,9 @@ session_start();
  * @since 2008-03-04
  */
 // Include the main TCPDF library (search for installation path).
-require_once('tcpdf_include.php');
+require_once(__DIR__ . '/tcpdf_include.php');
 // code by Pallavi to display pdf
-include_once './dbConnect.php';
+include_once __DIR__ . '/dbConnect.php';
 date_default_timezone_set('Asia/Kolkata');
 
 $audit1 = "SELECT * FROM `stage_oneaudit_id` where ca_service_id = :service and ca_customer_id = :customer";
@@ -87,7 +87,7 @@ $dateval_info = $schedule1_info["schedule_audit_date"];
 //}
 
 // Extend the TCPDF class to create custom Header and Footer
-class MYPDF extends TCPDF {
+class MYPDF_AuditScheduleStage2 extends TCPDF {
 
     protected $processId = 0;
     protected $header = '';
@@ -144,7 +144,7 @@ class MYPDF extends TCPDF {
 }
 
 // create new PDF document
-$pdf = new MYPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
+$pdf = new MYPDF_AuditScheduleStage2(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
 
 // set document information
 $pdf->SetCreator(PDF_CREATOR);
@@ -332,7 +332,12 @@ if (ob_get_length()) {
 } else {
     @ob_end_clean();
 }
-$pdf->Output('AuditSchedule_2.pdf', 'I');
+$outputMode = (isset($_POST['output_mode']) && $_POST['output_mode'] === 'S') ? 'S' : 'I';
+$pdfOutput = $pdf->Output('AuditSchedule_2.pdf', $outputMode);
+
+if ($outputMode === 'S') {
+    return $pdfOutput;
+}
 
 //============================================================+
 // END OF FILE

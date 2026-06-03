@@ -1,6 +1,7 @@
 <?php
 
-require 'PHPMailerAutoload.php';
+require 'PHPMailer/PHPMailerAutoload.php';
+
 $mailConfigPath = __DIR__ . '/config/mail_config.php';
 $mailConfig = file_exists($mailConfigPath) ? require $mailConfigPath : [];
 $mailConfig = array_merge(
@@ -70,8 +71,8 @@ class AITFServiceEmailSender {
                
 
         $mail->AddAddress($toEmails, $toName);
-        $mail->From = 'test@gmail.com';
-        $mail->FromName = 'AITF Service';
+        $mail->From = $mailConfig['username']; // Use configured email
+        $mail->FromName = 'AITF Certification Services';
         $mail->Subject = $subject; //"Please join Puzzleme; this is really challanging";
         $mail->Body = $body; //
         $file_to_attach = $attachment;
@@ -84,6 +85,46 @@ class AITFServiceEmailSender {
 // 			echo "Success!";
         } catch (Exception $e) {
 // 			echo "Fail - " . $mail->ErrorInfo;
+            throw new Exception($mail->ErrorInfo);
+        }
+    }
+
+    function sendMultipleAttachmentsEmail($toEmails, $toName, $body, $subject, $attachments) {
+        $mail = new PHPMailer(true);
+
+        //Send mail using gmail
+        if (true) {
+            global $mailConfig;
+            $mail->IsSMTP(); // telling the class to use SMTP
+            $mail->SMTPAuth = ($mailConfig['username'] ?? '') !== '' && ($mailConfig['password'] ?? '') !== ''; // enable SMTP authentication
+            $mail->SMTPSecure = $mailConfig['secure']; // sets the prefix to the servier
+            $mail->Host = $mailConfig['host']; // sets GMAIL as the SMTP server
+            $mail->Port = $mailConfig['port']; // set the SMTP port for the GMAIL server
+            $mail->Username = $mailConfig['username']; // GMAIL username
+            $mail->Password = $mailConfig['password']; // GMAIL password
+        }
+               
+
+        $mail->AddAddress($toEmails, $toName);
+        $mail->From = $mailConfig['username']; // Use configured email
+        $mail->FromName = 'AITF Certification Services';
+        $mail->Subject = $subject;
+        $mail->Body = $body;
+        
+        // Add multiple attachments
+        if (is_array($attachments)) {
+            foreach ($attachments as $file_to_attach) {
+                if (file_exists($file_to_attach)) {
+                    $mail->AddAttachment($file_to_attach, '');
+                }
+            }
+        }
+
+        $mail->IsHTML(true);
+
+        try {
+            $mail->Send();
+        } catch (Exception $e) {
             throw new Exception($mail->ErrorInfo);
         }
     }

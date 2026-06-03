@@ -68,6 +68,7 @@
     if (!in_array($invoiceStatus, $allowedInvoiceStatuses)) {
         $invoiceStatus = 'all';
     }
+    
 
     $letterAction = isset($_GET['letter_action']) ? $_GET['letter_action'] : 'all';
     $letterStatus = isset($_GET['letter_status']) ? $_GET['letter_status'] : 'all';

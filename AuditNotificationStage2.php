@@ -31,9 +31,9 @@ session_start();
  * @since 2008-03-04
  */
 // Include the main TCPDF library (search for installation path).
-require_once('tcpdf_include.php');
+require_once(__DIR__ . '/tcpdf_include.php');
 // code by Pallavi to display pdf
-include_once './dbConnect.php';
+include_once __DIR__ . '/dbConnect.php';
 date_default_timezone_set('Asia/Kolkata');
 $auditid = "SELECT * FROM stage_twoaudit_id WHERE audit_stageii_id = :audit";
 $statement = $db->prepare($auditid);
@@ -393,7 +393,12 @@ if (ob_get_length()) {
 } else {
     @ob_end_clean();
 }
-$pdf->Output('AuditNotificationandAssignment.pdf', 'I');
+$outputMode = (isset($_POST['output_mode']) && $_POST['output_mode'] === 'S') ? 'S' : 'I';
+$pdfOutput = $pdf->Output('AuditNotificationandAssignment.pdf', $outputMode);
+
+if ($outputMode === 'S') {
+    return $pdfOutput;
+}
 
 //============================================================+
 // END OF FILE

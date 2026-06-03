@@ -253,6 +253,7 @@ function getFlatDate($inputStr) {
         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
             <li><a href="intimationLetter.php" class="animate <?php echo $adddueClass ?>">INTIMATION DUE<i class="sub_icon fa fa-envelope-o fa-2x" style="vertical-align:middle"></i></a></li>
             <li><a href="sentintimation.php" class="animate <?php echo $addsentClass ?>">INTIMATION SENT<i class="sub_icon fa fa-envelope fa-2x" style="vertical-align:middle"></i></a></li>
+            <li><a href="inbox.php" class="animate <?php echo isset($addInboxClass) ? $addInboxClass : ''; ?>">INBOX<i class="sub_icon fa fa-inbox fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
             <!--<li><a href="clientList.php" class="animate">CLIENT LIST<i class="sub_icon fa fa-list  fa-2x" style="vertical-align:middle"></i></a></li>-->
@@ -316,6 +317,7 @@ function getFlatDate($inputStr) {
                 <li class="visible-xs"><a href="masterCreator.php" class="animate <?php //echo $addFinanceClass              ?>">MASTER CREATOR</a></li>
                 <li class="visible-xs"><a href="listOfTds.php" class="animate <?php //echo $addMarketingSetupClass              ?>">TDS DEDUCTED</a></li>
                 <li class="visible-xs"><a href="intimationLetter.php" class="animate <?php //echo $addMasterClass              ?> ">INTEMATION LETTERS</a></li>
+                <li class="visible-xs"><a href="inbox.php" class="animate">INBOX</a></li>
                 <li class="visible-xs"><a href="clientList.php" class="animate <?php //echo $addUserClass              ?>">CLIENT LIST</a></li>
                 <li class="visible-xs"><a href="invoicePage.php" class="animate <?php //echo $addUserClass              ?>">INVOICE</a></li>
                 <li class="visible-xs"><a href="quotationPage.php" class="animate <?php //echo $addUserClass              ?>">QUOTATION</a></li>

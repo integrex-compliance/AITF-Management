@@ -1349,13 +1349,29 @@
                                             <?php } ?>
                                         </select>
                                     </div>
-                                    <div class="col-xs-2 form-group float-label-control" style=""><label>Stage 1 Date</label> 
+                                    <div class="col-xs-2 form-group float-label-control" style="position: relative; padding-right: 26px;">
+                                        <div style="display: flex; align-items: center; gap: 5px; margin-bottom: 5px;">
+                                            <span style="margin: 0; color: black;">Stage 1 Date</span>
+                                            <?php if (!empty($caservice['audit_stage_id'])) { ?>
+                                                <a class="sendStageNotificationMail" data-stage="stage1" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" data-audit="<?php echo $caservice['audit_stage_id'] ?>" title="Send Stage I audit notification by email" style="padding: 1px 5px;">
+                                                    <i class="fa fa-envelope fa-lg " style="padding: 3px"></i>
+                                                </a>
+                                            <?php } ?>
+                                        </div>
                                         <input class="serviceAuditDate" placeholder="Stage 1 Date" data-id="<?php echo $caservice['service'] ?>" data-service="caService" data-column="audit_date" name="serviceAuditDate" style="color: black" value="<?php if (isset($caservice["caaudit"])) echo $caservice["caaudit"]; ?>" />
                                     </div>
                                     <div class="col-xs-2 form-group float-label-control" style=""><label>Team Leader</label> 
                                         <input class="caLeadAuditoe" placeholder="Team Leader" data-id="<?php echo $caservice['service'] ?>" data-service="caService" data-column="audit_date" name="caLeadAuditoe" style="color: black" value="<?php if (isset($caservice["stage1_auditor"])) echo $caservice["stage1_auditor"]; ?>" />
                                     </div>
-                                    <div class="col-xs-2 form-group float-label-control" style=""><label>Stage 2 Date</label> 
+                                    <div class="col-xs-2 form-group float-label-control" style="position: relative; padding-right: 26px;">
+                                        <div style="display: flex; align-items: center; gap: 5px; margin-bottom: 5px;">
+                                            <span style="margin: 0; color: black;">Stage 2 Date</span>
+                                            <?php if (!empty($caservice['audit_stageii_id'])) { ?>
+                                                <a class="sendStageNotificationMail" data-stage="stage2" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" data-audit="<?php echo $caservice['audit_stageii_id'] ?>" title="Send Stage II audit notification by email" style="padding: 1px 5px;">
+                                                    <i class="fa fa-envelope fa-lg " style="padding: 3px"></i>
+                                                </a>
+                                            <?php } ?>
+                                        </div>
                                         <input class="stage2date" placeholder="Stage 2 Date" data-id="<?php echo $caservice['service'] ?>" data-service="caService" data-column="audit_date" name="stage2date" style="color: black" value="<?php if (isset($caservice["stage2_audit"])) echo $caservice["stage2_audit"]; ?>" />
                                     </div>
                                     <div class="col-xs-2 form-group float-label-control" style=""><label>Team Leader, Auditors(s)</label> 
@@ -8575,6 +8591,163 @@
                     clearTimeout(sendingTimer);
                     $('#' + overlayId).hide();
                 });
+            });
+
+            
+            // Styled Alert and Confirm Dialog Functions
+            function showStyledAlert(title, message, type) {
+                var iconClass = type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle';
+                var iconColor = type === 'success' ? '#4CAF50' : type === 'error' ? '#f44336' : '#2196F3';
+                
+                var dialogHtml = '<div class="styled-alert-overlay" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 10000; display: flex; align-items: center; justify-content: center;">' +
+                    '<div class="styled-alert-box" style="background: white; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); max-width: 450px; width: 90%; padding: 0; animation: slideIn 0.3s ease;">' +
+                    '<div style="padding: 24px; text-align: center;">' +
+                    '<i class="fa ' + iconClass + ' fa-3x" style="color: ' + iconColor + '; margin-bottom: 16px;"></i>' +
+                    '<h3 style="margin: 0 0 12px 0; font-size: 22px; color: #333;">' + title + '</h3>' +
+                    '<p style="margin: 0; font-size: 15px; color: #666; line-height: 1.6;">' + message + '</p>' +
+                    '</div>' +
+                    '<div style="border-top: 1px solid #eee; padding: 16px 24px; text-align: right;">' +
+                    '<button class="styled-alert-ok" style="background: ' + iconColor + '; color: white; border: none; padding: 10px 32px; border-radius: 6px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s;">OK</button>' +
+                    '</div>' +
+                    '</div>' +
+                    '</div>';
+                
+                var $dialog = $(dialogHtml).appendTo('body');
+                
+                $dialog.find('.styled-alert-ok, .styled-alert-overlay').click(function() {
+                    $dialog.fadeOut(200, function() {
+                        $dialog.remove();
+                    });
+                });
+            }
+            
+            function showStyledConfirm(title, message, onConfirm) {
+                var dialogHtml = '<div class="styled-confirm-overlay" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 10000; display: flex; align-items: center; justify-content: center;">' +
+                    '<div class="styled-confirm-box" style="background: white; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); max-width: 500px; width: 90%; padding: 0; animation: slideIn 0.3s ease;">' +
+                    '<div style="padding: 24px; text-align: center;">' +
+                    '<i class="fa fa-envelope fa-3x" style="color: #2196F3; margin-bottom: 16px;"></i>' +
+                    '<h3 style="margin: 0 0 12px 0; font-size: 22px; color: #333;">' + title + '</h3>' +
+                    '<p style="margin: 0; font-size: 15px; color: #666; line-height: 1.6;">' + message + '</p>' +
+                    '</div>' +
+                    '<div style="border-top: 1px solid #eee; padding: 16px 24px; text-align: right; display: flex; gap: 12px; justify-content: flex-end;">' +
+                    '<button class="styled-confirm-cancel" style="background: #e0e0e0; color: #666; border: none; padding: 10px 24px; border-radius: 6px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s;">Cancel</button>' +
+                    '<button class="styled-confirm-ok" style="background: #2196F3; color: white; border: none; padding: 10px 24px; border-radius: 6px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s;">Send Email</button>' +
+                    '</div>' +
+                    '</div>' +
+                    '</div>';
+                
+                var $dialog = $(dialogHtml).appendTo('body');
+                
+                $dialog.find('.styled-confirm-cancel').click(function() {
+                    $dialog.fadeOut(200, function() {
+                        $dialog.remove();
+                    });
+                });
+                
+                $dialog.find('.styled-confirm-overlay').click(function(e) {
+                    if ($(e.target).hasClass('styled-confirm-overlay')) {
+                        $dialog.fadeOut(200, function() {
+                            $dialog.remove();
+                        });
+                    }
+                });
+                
+                $dialog.find('.styled-confirm-ok').click(function() {
+                    $dialog.fadeOut(200, function() {
+                        $dialog.remove();
+                    });
+                    if (typeof onConfirm === 'function') {
+                        onConfirm();
+                    }
+                });
+                
+                // Add hover effects
+                $dialog.find('button').hover(
+                    function() {
+                        $(this).css('transform', 'translateY(-2px)');
+                        if ($(this).hasClass('styled-confirm-ok')) {
+                            $(this).css('background', '#1976D2');
+                        }
+                    },
+                    function() {
+                        $(this).css('transform', 'translateY(0)');
+                        if ($(this).hasClass('styled-confirm-ok')) {
+                            $(this).css('background', '#2196F3');
+                        }
+                    }
+                );
+            }
+            
+            $(document).on('click', '.sendStageNotificationMail', function (e) {
+                e.preventDefault();
+                console.log('Mail button clicked');
+                
+                var $btn = $(this);
+                var payload = {
+                    customer: $btn.data('customer'),
+                    service: $btn.data('service'),
+                    audit: $btn.data('audit'),
+                    stage: $btn.data('stage')
+                };
+                
+                console.log('Payload:', payload);
+                
+                var stageLabel = payload.stage === 'stage2' ? 'Stage II' : 'Stage I';
+
+                if (!payload.audit) {
+                    console.log('No audit ID found');
+                    showStyledAlert('Error', stageLabel + ' notification reference is missing. Please save the notification first.', 'error');
+                    return false;
+                }
+
+                console.log('Showing confirmation dialog');
+                showStyledConfirm(
+                    'Send Email Confirmation',
+                    'Are you sure you want to send the ' + stageLabel + ' audit notification and plan documents to the client via email?',
+                    function() {
+                        console.log('Confirmation OK clicked, sending AJAX request');
+                        
+                        if (typeof ShowProgressAnimation === 'function') {
+                            ShowProgressAnimation();
+                        }
+
+                        $btn.prop('disabled', true).addClass('disabled');
+
+                        $.ajax({
+                            url: 'sendStageNotificationMail.php',
+                            type: 'POST',
+                            data: payload,
+                            dataType: 'json'
+                        }).done(function (res) {
+                            console.log('AJAX success:', res);
+                            if (res && res.success) {
+                                showStyledAlert('Success', res.message || (stageLabel + ' audit documents sent successfully.'), 'success');
+                            } else {
+                                showStyledAlert('Error', (res && res.message) ? res.message : 'Unable to send email right now.', 'error');
+                            }
+                        }).fail(function (xhr, status, error) {
+                            console.log('AJAX failed:', status, error, xhr.responseText);
+                            var message = 'Unable to send email right now. Please try again.';
+                            if (xhr && xhr.responseJSON && xhr.responseJSON.message) {
+                                message = xhr.responseJSON.message;
+                            } else if (xhr && typeof xhr.responseText === 'string' && xhr.responseText.trim() !== '') {
+                                try {
+                                    var parsed = JSON.parse(xhr.responseText);
+                                    if (parsed && parsed.message) {
+                                        message = parsed.message;
+                                    }
+                                } catch (e) {
+                                }
+                            }
+                            showStyledAlert('Error', message, 'error');
+                        }).always(function () {
+                            $btn.prop('disabled', false).removeClass('disabled');
+                            if (typeof HideProgressAnimation === 'function') {
+                                HideProgressAnimation();
+                            }
+                        });
+                    }
+                );
             });
 
             $('.downloadCustomersatisfaction').click(function () {

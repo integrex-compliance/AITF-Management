@@ -48,6 +48,7 @@ $statement = $db->prepare($customer);
 $statement->bindParam(':id', $_POST['invoiceCustomerId']);
 $statement->execute();
 $customerInfo = $statement->fetch();
+ 
 
 $consultingFirm = "SELECT * FROM consulting_firm ";
 $statement = $db->prepare($consultingFirm);
@@ -312,6 +313,7 @@ $mailConfig = aitfGetInvoiceMailConfig();
 $attachmentPath = __DIR__ . '/notification/' . $otp . 'proforma_invoice.pdf';
 $attachmentName = 'Proforma-Invoice-' . $proformaprefix . '-' . $invno . '.pdf';
 
+
 $email = new PHPMailer();
 $email->isHTML(true);
 $email->Subject = 'Proforma Invoice - ' . $customerInfo['customer_name'];
@@ -324,6 +326,8 @@ if (!empty($mailConfig['office_copy'])) {
 $email->AddAttachment($attachmentPath, $attachmentName);
 
 list($mailSent, $mailError) = aitfSendInvoiceMailer($email);
+
+
 
 if ($mailSent) {
     $invoicesent = "UPDATE invoice_details SET pro_inv_sent_count= pro_inv_sent_count + 1 WHERE invoice_id = :id";
