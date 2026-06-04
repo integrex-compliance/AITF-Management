@@ -1350,28 +1350,24 @@
                                         </select>
                                     </div>
                                     <div class="col-xs-2 form-group float-label-control" style="position: relative; padding-right: 26px;">
-                                        <div style="display: flex; align-items: center; gap: 5px; margin-bottom: 5px;">
-                                            <span style="margin: 0; color: black;">Stage 1 Date</span>
-                                            <?php if (!empty($caservice['audit_stage_id'])) { ?>
-                                                <a class="sendStageNotificationMail" data-stage="stage1" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" data-audit="<?php echo $caservice['audit_stage_id'] ?>" title="Send Stage I audit notification by email" style="padding: 1px 5px;">
-                                                    <i class="fa fa-envelope fa-lg " style="padding: 3px"></i>
-                                                </a>
-                                            <?php } ?>
-                                        </div>
+                                        <label>Stage 1 Date</label>
+                                        <?php if (!empty($caservice['audit_stage_id'])) { ?>
+                                            <a class="sendStageNotificationMail" data-stage="stage1" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" data-audit="<?php echo $caservice['audit_stage_id'] ?>" title="Send Stage I audit notification by email" style="position: absolute; top: -1.2em; left: 92px; z-index: 10; pointer-events: auto; padding: 1px 5px;">
+                                                <i class="fa fa-envelope fa-lg" style="padding: 3px"></i>
+                                            </a>
+                                        <?php } ?>
                                         <input class="serviceAuditDate" placeholder="Stage 1 Date" data-id="<?php echo $caservice['service'] ?>" data-service="caService" data-column="audit_date" name="serviceAuditDate" style="color: black" value="<?php if (isset($caservice["caaudit"])) echo $caservice["caaudit"]; ?>" />
                                     </div>
                                     <div class="col-xs-2 form-group float-label-control" style=""><label>Team Leader</label> 
                                         <input class="caLeadAuditoe" placeholder="Team Leader" data-id="<?php echo $caservice['service'] ?>" data-service="caService" data-column="audit_date" name="caLeadAuditoe" style="color: black" value="<?php if (isset($caservice["stage1_auditor"])) echo $caservice["stage1_auditor"]; ?>" />
                                     </div>
                                     <div class="col-xs-2 form-group float-label-control" style="position: relative; padding-right: 26px;">
-                                        <div style="display: flex; align-items: center; gap: 5px; margin-bottom: 5px;">
-                                            <span style="margin: 0; color: black;">Stage 2 Date</span>
-                                            <?php if (!empty($caservice['audit_stageii_id'])) { ?>
-                                                <a class="sendStageNotificationMail" data-stage="stage2" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" data-audit="<?php echo $caservice['audit_stageii_id'] ?>" title="Send Stage II audit notification by email" style="padding: 1px 5px;">
-                                                    <i class="fa fa-envelope fa-lg " style="padding: 3px"></i>
-                                                </a>
-                                            <?php } ?>
-                                        </div>
+                                        <label>Stage 2 Date</label>
+                                        <?php if (!empty($caservice['audit_stageii_id'])) { ?>
+                                            <a class="sendStageNotificationMail" data-stage="stage2" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caservice['ca_id'] ?>" data-audit="<?php echo $caservice['audit_stageii_id'] ?>" title="Send Stage II audit notification by email" style="position: absolute; top: -1.2em; left: 92px; z-index: 10; pointer-events: auto; padding: 1px 5px;">
+                                                <i class="fa fa-envelope fa-lg" style="padding: 3px"></i>
+                                            </a>
+                                        <?php } ?>
                                         <input class="stage2date" placeholder="Stage 2 Date" data-id="<?php echo $caservice['service'] ?>" data-service="caService" data-column="audit_date" name="stage2date" style="color: black" value="<?php if (isset($caservice["stage2_audit"])) echo $caservice["stage2_audit"]; ?>" />
                                     </div>
                                     <div class="col-xs-2 form-group float-label-control" style=""><label>Team Leader, Auditors(s)</label> 
