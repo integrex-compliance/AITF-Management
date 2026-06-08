@@ -26,6 +26,15 @@ include 'schedule2servelance.php';
 include 'utility.php';
 ?>
 <head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZH2QWSFTB0"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-ZH2QWSFTB0');
+</script>
     <title>AITF</title>
 </head>
 <style>

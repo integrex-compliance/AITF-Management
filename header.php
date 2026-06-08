@@ -25,7 +25,17 @@ include 'schedule1servelance.php';
 include 'schedule2servelance.php';
 include 'utility.php';
 ?>
+
 <head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZH2QWSFTB0"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-ZH2QWSFTB0');
+</script>
     <title>AITF</title>
 </head>
 <style>
@@ -183,8 +193,9 @@ if (!Utitlity::checkIfLoggedIn()) {
     }
 }
 
-function simpleDateConversion($inputStr) {
-    if ($inputStr === "") { 
+function simpleDateConversion($inputStr)
+{
+    if ($inputStr === "") {
         return "";
     }
     $strSplit = explode("-", $inputStr);
@@ -194,12 +205,14 @@ function simpleDateConversion($inputStr) {
         return $inputStr;
 }
 
-function startsWith($haystack, $needle) {
+function startsWith($haystack, $needle)
+{
     // search backwards starting from haystack length characters from the end   
     return $needle === "" || strrpos($haystack, $needle, -strlen($haystack)) !== false;
 }
 
-function getFlatDate($inputStr) {
+function getFlatDate($inputStr)
+{
     if ($inputStr === "") {
         return "";
     }
@@ -213,79 +226,105 @@ function getFlatDate($inputStr) {
 
 <div id="sidebar-wrapper" class="hidden-xs">
     <ul id="sidebar_menu" class="sidebar-nav">
-        <li class="sidebar-brand"><a class="" id="menu-toggle" href="#">AITF<span id="main_icon" class="glyphicon glyphicon-align-justify"></span></a></li>
+        <li class="sidebar-brand"><a class="" id="menu-toggle" href="#">AITF<span id="main_icon"
+                    class="glyphicon glyphicon-align-justify"></span></a></li>
     </ul>
     <ul class="sidebar-nav" id="sidebar">
         <?php if (Utitlity::checkForUserMainAdmin()) { ?>
-            <li><a href="adminDashboard.php" class="animate <?php echo isset($addAdminDashboardClass) ? $addAdminDashboardClass : ''; ?>">ADMIN DASHBOARD<i class="sub_icon fa fa-line-chart fa-2x" style="vertical-align:middle"></i></a></li>
+            <li><a href="adminDashboard.php"
+                    class="animate <?php echo isset($addAdminDashboardClass) ? $addAdminDashboardClass : ''; ?>">ADMIN
+                    DASHBOARD<i class="sub_icon fa fa-line-chart fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
-            <li><a href="iaf_dashboard.php" class="animate <?php echo isset($iafClass) ? $iafClass : ''; ?>">IAF DASHBOARD<i class="sub_icon fa fa-dashboard fa-2x" style="vertical-align:middle"></i></a></li>
+        <li><a href="iaf_dashboard.php" class="animate <?php echo isset($iafClass) ? $iafClass : ''; ?>">IAF DASHBOARD<i
+                    class="sub_icon fa fa-dashboard fa-2x" style="vertical-align:middle"></i></a></li>
         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff()) { ?>
-            <?php $unreadBadge = isset($GLOBALS['unread_app_count']) ? (int)$GLOBALS['unread_app_count'] : 0; ?>
+            <?php $unreadBadge = isset($GLOBALS['unread_app_count']) ? (int) $GLOBALS['unread_app_count'] : 0; ?>
             <li>
                 <a href="applicationReceived.php" class="animate app-rec-nav <?php echo $addAppReceivedClass ?>">
                     APPLICATION RECEIVED
                     <?php if ($unreadBadge > 0) { ?>
-                        <span style="margin-left:8px; padding:2px 7px; border-radius:999px; background:#ef4444; color:#fff; font-size:11px; font-weight:700;"><?php echo $unreadBadge; ?></span>
+                        <span
+                            style="margin-left:8px; padding:2px 7px; border-radius:999px; background:#ef4444; color:#fff; font-size:11px; font-weight:700;"><?php echo $unreadBadge; ?></span>
                     <?php } ?>
                 </a>
             </li>
         <?php } ?>
         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
-            <li><a href="homePage.php" class="animate <?php echo $addClass ?>">CLIENTS<i class="sub_icon fa fa-building fa-2x" style="vertical-align:middle"></i></a></li>       
+            <li><a href="homePage.php" class="animate <?php echo $addClass ?>">CLIENTS<i
+                        class="sub_icon fa fa-building fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForUserMarketing() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
-            <li><a href="marketingPage.php" class="animate <?php echo $addMarketingClass ?>">MARKETING<i class="sub_icon fa fa-briefcase fa-2x" style="vertical-align:middle"></i></a></li>        
+            <li><a href="marketingPage.php" class="animate <?php echo $addMarketingClass ?>">MARKETING<i
+                        class="sub_icon fa fa-briefcase fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForUserFinance() || Utitlity::checkForUserAdmin()) { ?>
-            <li><a href="paymentPage.php" class="animate <?php echo $addFinanceClass ?>">PAYMENT<i class="sub_icon fa fa-money fa-2x" style="vertical-align:middle"></i></a></li>       
+            <li><a href="paymentPage.php" class="animate <?php echo $addFinanceClass ?>">PAYMENT<i
+                        class="sub_icon fa fa-money fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff() || Utitlity::checkForUserConsultant()) { ?>
-            <li><a href="auditPlanning.php" class="animate <?php echo $addWorkingClass ?>">AUDIT PLANNING<i class="sub_icon fa fa-money fa-2x" style="vertical-align:middle"></i></a></li>        
-            <!--<li><a href="idealPage.php" class="animate ">IDEAL<i class="sub_icon fa fa-briefcase fa-2x" style="vertical-align:middle"></i></a></li>-->            
+            <li><a href="auditPlanning.php" class="animate <?php echo $addWorkingClass ?>">AUDIT PLANNING<i
+                        class="sub_icon fa fa-money fa-2x" style="vertical-align:middle"></i></a></li>
+            <!--<li><a href="idealPage.php" class="animate ">IDEAL<i class="sub_icon fa fa-briefcase fa-2x" style="vertical-align:middle"></i></a></li>-->
         <?php } ?>
         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin()) { ?>
-            <li><a href="masterCreator.php" class="animate <?php echo $addMasterClass ?>">MASTER CREATOR<i class="sub_icon fa fa-wrench  fa-2x" style="vertical-align:middle"></i></a></li>
-        <?php } ?>
-        <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>            
-            <li><a href="listOfTds.php" class="animate <?php echo $addtds ?>">TDS DEDUCTED<i class="sub_icon fa fa-list  fa-2x" style="vertical-align:middle"></i></a></li>
+            <li><a href="masterCreator.php" class="animate <?php echo $addMasterClass ?>">MASTER CREATOR<i
+                        class="sub_icon fa fa-wrench  fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
-            <li><a href="intimationLetter.php" class="animate <?php echo $adddueClass ?>">INTIMATION DUE<i class="sub_icon fa fa-envelope-o fa-2x" style="vertical-align:middle"></i></a></li>
-            <li><a href="sentintimation.php" class="animate <?php echo $addsentClass ?>">INTIMATION SENT<i class="sub_icon fa fa-envelope fa-2x" style="vertical-align:middle"></i></a></li>
-            <li><a href="inbox.php" target="_blank" class="animate <?php echo isset($addInboxClass) ? $addInboxClass : ''; ?>">INBOX<i class="sub_icon fa fa-inbox fa-2x" style="vertical-align:middle"></i></a></li>
+            <li><a href="listOfTds.php" class="animate <?php echo $addtds ?>">TDS DEDUCTED<i
+                        class="sub_icon fa fa-list  fa-2x" style="vertical-align:middle"></i></a></li>
+        <?php } ?>
+        <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+            <li><a href="intimationLetter.php" class="animate <?php echo $adddueClass ?>">INTIMATION DUE<i
+                        class="sub_icon fa fa-envelope-o fa-2x" style="vertical-align:middle"></i></a></li>
+            <li><a href="sentintimation.php" class="animate <?php echo $addsentClass ?>">INTIMATION SENT<i
+                        class="sub_icon fa fa-envelope fa-2x" style="vertical-align:middle"></i></a></li>
+            <li><a href="inbox.php" target="_blank"
+                    class="animate <?php echo isset($addInboxClass) ? $addInboxClass : ''; ?>">INBOX<i
+                        class="sub_icon fa fa-inbox fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
             <!--<li><a href="clientList.php" class="animate">CLIENT LIST<i class="sub_icon fa fa-list  fa-2x" style="vertical-align:middle"></i></a></li>-->
-            <li><a href="invoicePage.php" class="animate <?php echo $addInvoiceClass ?>">INVOICES<i class="sub_icon fa fa-inr fa-2x" style="vertical-align:middle"></i></a></li>
+            <li><a href="invoicePage.php" class="animate <?php echo $addInvoiceClass ?>">INVOICES<i
+                        class="sub_icon fa fa-inr fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
-            <li><a href="quotationPage.php" class="animate <?php echo $addquotClass ?>">QUOTATIONS<i class="sub_icon fa fa-quote-left fa-2x" style="vertical-align:middle"></i></a></li>
+            <li><a href="quotationPage.php" class="animate <?php echo $addquotClass ?>">QUOTATIONS<i
+                        class="sub_icon fa fa-quote-left fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff()) { ?>
-            <li><a href="agreementPage.php" class="animate <?php echo $addagreementClass ?>">AGREEMENTS<i class="sub_icon fa fa-quote-left fa-2x" style="vertical-align:middle"></i></a></li>
+            <li><a href="agreementPage.php" class="animate <?php echo $addagreementClass ?>">AGREEMENTS<i
+                        class="sub_icon fa fa-quote-left fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff()) { ?>
-            <li><a href="auditPage.php" class="animate <?php echo $addAuditClass ?>">AUDIT LIST<i class="sub_icon fa fa-list-alt fa-2x" style="vertical-align:middle"></i></a></li>
+            <li><a href="auditPage.php" class="animate <?php echo $addAuditClass ?>">AUDIT LIST<i
+                        class="sub_icon fa fa-list-alt fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
         <?php if (Utitlity::checkForUserMainAdmin()) { ?>
-            <li><a href="addUsers.php" class="animate <?php echo $addUserClass ?>">ADD USER<i class="sub_icon fa fa-user-plus fa-2x" style="vertical-align:middle"></i></a></li>
+            <li><a href="addUsers.php" class="animate <?php echo $addUserClass ?>">ADD USER<i
+                        class="sub_icon fa fa-user-plus fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin()) { ?>
-            <li><a href="clientRecycle.php" class="animate <?php echo $addRecycleClass ?>">RECYCLE BIN<i class="sub_icon fa fa-trash-o fa-2x" style="vertical-align:middle"></i></a></li>
+            <li><a href="clientRecycle.php" class="animate <?php echo $addRecycleClass ?>">RECYCLE BIN<i
+                        class="sub_icon fa fa-trash-o fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
         <?php if (!(Utitlity::checkClient() || Utitlity::checkExternalUser())) { ?>
-            <li><a href="auditanalysis.php" class="animate <?php echo $addcertissueClass ?>">CERT. ISSUED LIST<i class="sub_icon fa fa-newspaper-o fa-2x" style="vertical-align:middle"></i></a></li>
-            <li><a href="qualityanalysis.php" class="animate <?php echo $addauditperClass ?>">AUDIT PERFORMANCE<i class="sub_icon fa fa-recycle fa-2x" style="vertical-align:middle"></i></a></li>
-            <li><a href="clientanalysis.php" class="animate <?php echo $clientanalysis ?>">CLIENT ANALYSIS<i class="sub_icon fa fa-eye fa-2x" style="vertical-align:middle"></i></a></li>
+            <li><a href="auditanalysis.php" class="animate <?php echo $addcertissueClass ?>">CERT. ISSUED LIST<i
+                        class="sub_icon fa fa-newspaper-o fa-2x" style="vertical-align:middle"></i></a></li>
+            <li><a href="qualityanalysis.php" class="animate <?php echo $addauditperClass ?>">AUDIT PERFORMANCE<i
+                        class="sub_icon fa fa-recycle fa-2x" style="vertical-align:middle"></i></a></li>
+            <li><a href="clientanalysis.php" class="animate <?php echo $clientanalysis ?>">CLIENT ANALYSIS<i
+                        class="sub_icon fa fa-eye fa-2x" style="vertical-align:middle"></i></a></li>
             <!--<li><a href="cdcobjective.php" class="animate <?php echo $cdcobj ?>">CDC OBJECTIVE<i class="sub_icon fa fa-eye fa-2x" style="vertical-align:middle"></i></a></li>-->
-            <li><a href="apprevobjective.php" class="animate <?php echo $apprevobj ?>">APP REV OBJECTIVE<i class="sub_icon fa fa-eye fa-2x" style="vertical-align:middle"></i></a></li>
+            <li><a href="apprevobjective.php" class="animate <?php echo $apprevobj ?>">APP REV OBJECTIVE<i
+                        class="sub_icon fa fa-eye fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
-            <li><a href="uploadingStatus.php" class="animate <?php echo $docobj ?>">DOC.UPLOAD STATUS<i class="sub_icon fa fa-eye fa-2x" style="vertical-align:middle"></i></a></li>
+        <li><a href="uploadingStatus.php" class="animate <?php echo $docobj ?>">DOC.UPLOAD STATUS<i
+                    class="sub_icon fa fa-eye fa-2x" style="vertical-align:middle"></i></a></li>
     </ul>
 </div>
 <!--do not display the customer add to customer-->
-<?php if (!(Utitlity::checkClient() || Utitlity::checkExternalUser())) { ?> 
+<?php if (!(Utitlity::checkClient() || Utitlity::checkExternalUser())) { ?>
     <div class="float-button-wrapper" style="text-align:center">
         <a class="addAccountCss" style="text-align:center"><span class=" pull-right glyphicon glyphicon-plus "></span></a>
     </div>
@@ -295,7 +334,8 @@ function getFlatDate($inputStr) {
     <div class="container">
         <!-- Brand and toggle get grouped for better mobile display -->
         <div class="navbar-header ">
-            <button type="button" class="navbar-toggle " data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+            <button type="button" class="navbar-toggle " data-toggle="collapse"
+                data-target="#bs-example-navbar-collapse-1">
                 <span class="sr-only ">Toggle navigation</span>
                 <span class="icon-bar "></span>
                 <span class="icon-bar "></span>
@@ -307,59 +347,81 @@ function getFlatDate($inputStr) {
             <ul class="nav navbar-nav navbar-right">
                 <!--Adding hidden menu items here -->
                 <?php if (Utitlity::checkForUserMainAdmin()) { ?>
-                    <li class="visible-xs"><a href="adminDashboard.php" class="animate <?php echo isset($addAdminDashboardClass) ? $addAdminDashboardClass : ''; ?>">ADMIN DASHBOARD</a></li>
+                    <li class="visible-xs"><a href="adminDashboard.php"
+                            class="animate <?php echo isset($addAdminDashboardClass) ? $addAdminDashboardClass : ''; ?>">ADMIN
+                            DASHBOARD</a></li>
                 <?php } ?>
-                <li class="visible-xs"><a href="iaf_dashboard.php" class="animate <?php //echo isset($iafClass) ? $iafClass : ''; ?>">IAF DASHBOARD</a></li>
-                <li class="visible-xs"><a href="homePage.php" class="animate <?php //echo $addClass              ?>">CLIENTS</a></li>
-                <li class="visible-xs"><a href="marketingPage.php" class="animate <?php //echo $addMarketingClass              ?>">MARKETING</a></li>
-                <li class="visible-xs"><a href="paymentPage.php" class="animate <?php //echo $addMarketingClass              ?>">PAYMENT</a></li>
-                <li class="visible-xs"><a href="auditPlanning.php" class="animate <?php //echo $addWorkingClass              ?>">AUDIT PLANNING</a></li>                
-                <li class="visible-xs"><a href="masterCreator.php" class="animate <?php //echo $addFinanceClass              ?>">MASTER CREATOR</a></li>
-                <li class="visible-xs"><a href="listOfTds.php" class="animate <?php //echo $addMarketingSetupClass              ?>">TDS DEDUCTED</a></li>
-                <li class="visible-xs"><a href="intimationLetter.php" class="animate <?php //echo $addMasterClass              ?> ">INTEMATION LETTERS</a></li>
+                <li class="visible-xs"><a href="iaf_dashboard.php"
+                        class="animate <?php //echo isset($iafClass) ? $iafClass : ''; ?>">IAF DASHBOARD</a></li>
+                <li class="visible-xs"><a href="homePage.php"
+                        class="animate <?php //echo $addClass              ?>">CLIENTS</a></li>
+                <li class="visible-xs"><a href="marketingPage.php"
+                        class="animate <?php //echo $addMarketingClass              ?>">MARKETING</a></li>
+                <li class="visible-xs"><a href="paymentPage.php"
+                        class="animate <?php //echo $addMarketingClass              ?>">PAYMENT</a></li>
+                <li class="visible-xs"><a href="auditPlanning.php"
+                        class="animate <?php //echo $addWorkingClass              ?>">AUDIT PLANNING</a></li>
+                <li class="visible-xs"><a href="masterCreator.php"
+                        class="animate <?php //echo $addFinanceClass              ?>">MASTER CREATOR</a></li>
+                <li class="visible-xs"><a href="listOfTds.php"
+                        class="animate <?php //echo $addMarketingSetupClass              ?>">TDS DEDUCTED</a></li>
+                <li class="visible-xs"><a href="intimationLetter.php"
+                        class="animate <?php //echo $addMasterClass              ?> ">INTEMATION LETTERS</a></li>
                 <li class="visible-xs"><a href="inbox.php" target="_blank" class="animate">INBOX</a></li>
-                <li class="visible-xs"><a href="clientList.php" class="animate <?php //echo $addUserClass              ?>">CLIENT LIST</a></li>
-                <li class="visible-xs"><a href="invoicePage.php" class="animate <?php //echo $addUserClass              ?>">INVOICE</a></li>
-                <li class="visible-xs"><a href="quotationPage.php" class="animate <?php //echo $addUserClass              ?>">QUOTATION</a></li>
-                <li class="visible-xs"><a href="addUsers.php" class="animate <?php //echo $addUserClass              ?>">ADD USER</a></li>
-                <li class="visible-xs"><a href="clientRecycle.php" class="animate <?php //echo $addUserClass              ?>">RECYCLE BIN</a></li>
+                <li class="visible-xs"><a href="clientList.php"
+                        class="animate <?php //echo $addUserClass              ?>">CLIENT LIST</a></li>
+                <li class="visible-xs"><a href="invoicePage.php"
+                        class="animate <?php //echo $addUserClass              ?>">INVOICE</a></li>
+                <li class="visible-xs"><a href="quotationPage.php"
+                        class="animate <?php //echo $addUserClass              ?>">QUOTATION</a></li>
+                <li class="visible-xs"><a href="addUsers.php"
+                        class="animate <?php //echo $addUserClass              ?>">ADD USER</a></li>
+                <li class="visible-xs"><a href="clientRecycle.php"
+                        class="animate <?php //echo $addUserClass              ?>">RECYCLE BIN</a></li>
                 <!--<li><a href="clientRecycle.php" class="animate">RECYCLE CLIENT<i class="sub_icon fa fa-refresh fa-2x" style="vertical-align:middle"></i></a></li>-->
                 <!-- Adding ends here -->
-                <?php if (!(Utitlity::checkClient() || Utitlity::checkExternalUser())) { ?> 
-                <li>
-                    <input class="dropdown-toggle animate searchcustomer" data-toggle="dropdown" placeholder="Search Client" style="margin-top: 10px; padding-left: 30px; z-index: 2; border: 2px solid #dadada; border-radius: 7px;" />
-                    <ul class="dropdown-menu clientlistappend" role="menu" style="max-height: 300px; overflow-y: auto;">
-                        <!--<li class="client-list" data-id="" style="text-align: left">aabbcc</li>-->
-                    </ul>
-                    <style>
-                        .client-list:hover,
-                        .client-list.active-item {
-                            background-color: #4CAF50 !important;
-                            color: white !important;
-                        }
-                        .client-list {
-                            transition: background-color 0.2s;
-                        }
-                        .clientlistappend {
-                            max-height: 300px;
-                            overflow-y: auto;
-                        }
-                    </style>
-                </li>
+                <?php if (!(Utitlity::checkClient() || Utitlity::checkExternalUser())) { ?>
+                    <li>
+                        <input class="dropdown-toggle animate searchcustomer" data-toggle="dropdown"
+                            placeholder="Search Client"
+                            style="margin-top: 10px; padding-left: 30px; z-index: 2; border: 2px solid #dadada; border-radius: 7px;" />
+                        <ul class="dropdown-menu clientlistappend" role="menu" style="max-height: 300px; overflow-y: auto;">
+                            <!--<li class="client-list" data-id="" style="text-align: left">aabbcc</li>-->
+                        </ul>
+                        <style>
+                            .client-list:hover,
+                            .client-list.active-item {
+                                background-color: #4CAF50 !important;
+                                color: white !important;
+                            }
+
+                            .client-list {
+                                transition: background-color 0.2s;
+                            }
+
+                            .clientlistappend {
+                                max-height: 300px;
+                                overflow-y: auto;
+                            }
+                        </style>
+                    </li>
                 <?php } ?>
                 <li class="theme-toggle-item">
-                    <button type="button" id="themeToggle" class="theme-toggle-btn" aria-label="Toggle dark mode" aria-pressed="false">
+                    <button type="button" id="themeToggle" class="theme-toggle-btn" aria-label="Toggle dark mode"
+                        aria-pressed="false">
                         <i class="fa fa-moon-o" aria-hidden="true"></i>
                     </button>
                 </li>
                 <?php if (isset($_SESSION['username'])) { ?>
-                    <li><a class=" dropdown-toggle  animate " data-toggle="dropdown" href="#"><?php echo $_SESSION['username']; ?>&nbsp;</a>
+                    <li><a class=" dropdown-toggle  animate " data-toggle="dropdown"
+                            href="#"><?php echo $_SESSION['username']; ?>&nbsp;</a>
                         <ul class=" dropdown-menu " role="menu">
-                            <li><a class="passwordChange" href="#" data-id="<?php echo $_SESSION['id']; ?>">Change Password</a></li>
+                            <li><a class="passwordChange" href="#" data-id="<?php echo $_SESSION['id']; ?>">Change
+                                    Password</a></li>
                         </ul>
                     </li>
                     <li><a href="#" class="animate" data-toggle="modal" data-target="#logoutConfirmModal">Logout</a></li>
-                        <?php } ?>
+                <?php } ?>
             </ul>
         </div>
     </div>
@@ -368,10 +430,10 @@ function getFlatDate($inputStr) {
 <script type="text/javascript">
     $(document).ready(function () {
         var selectedIndex = -1;
-        
+
         $(".searchcustomer").keydown(function (e) {
             var items = $(".clientlistappend .client-list");
-            
+
             // Arrow Down - Navigate down
             if (e.keyCode === 40) {
                 e.preventDefault();
@@ -401,7 +463,7 @@ function getFlatDate($inputStr) {
                 selectedIndex = -1;
             }
         });
-        
+
         function updateSelection(items) {
             items.removeClass('active-item');
             if (selectedIndex >= 0 && selectedIndex < items.length) {
@@ -413,7 +475,7 @@ function getFlatDate($inputStr) {
                 var itemHeight = item.outerHeight();
                 var dropdownHeight = dropdown.height();
                 var scrollTop = dropdown.scrollTop();
-                
+
                 if (itemTop + itemHeight > dropdownHeight) {
                     dropdown.scrollTop(scrollTop + itemTop + itemHeight - dropdownHeight);
                 } else if (itemTop < 0) {
@@ -421,15 +483,15 @@ function getFlatDate($inputStr) {
                 }
             }
         }
-        
+
         $(".searchcustomer").keyup(function (e) {
             // Skip if arrow keys or enter
             if (e.keyCode === 38 || e.keyCode === 40 || e.keyCode === 13 || e.keyCode === 27) {
                 return;
             }
-            
+
             selectedIndex = -1; // Reset selection on new search
-            
+
             $.ajax({
                 url: 'autoSearch.php',
                 type: 'GET',
@@ -439,11 +501,11 @@ function getFlatDate($inputStr) {
                 },
                 success: function (data) {
                     $(".clientlistappend").empty();
-//                    console.log(data);
+                    //                    console.log(data);
                     for (var key in data) {
                         $(".clientlistappend").append('<li class="client-list" style="text-align: left; padding: 8px 12px; cursor: pointer;" data-id="' + data[key]['id'] + '">' + data[key]['customer_name'] + '</li>');
                     }
-                    
+
                     // Show dropdown if there are results
                     if (data.length > 0) {
                         $(".clientlistappend").show();
@@ -454,19 +516,19 @@ function getFlatDate($inputStr) {
 
         $('body').on("click", ".client-list", function () {
             var customerID = $(this).attr('data-id');
-//            alert(customerID);
+            //            alert(customerID);
             // open popup
-//            localStorage['visited'] = customerID;
+            //            localStorage['visited'] = customerID;
             var url = 'customerAccount.php'
             var form = $('<form action="' + url + '" method="get">' +
-                    '<input type="hidden" name="customerid" value="' + customerID + '" />' +
-                    '</form>');
+                '<input type="hidden" name="customerid" value="' + customerID + '" />' +
+                '</form>');
             $('body').append(form);
             form.submit();
-//        alert("Atleast one action item required");
-//            $(this).parent("div.deleteNewAuditParentEdit").parent('div.newAuditRowParentEdit').remove();
+            //        alert("Atleast one action item required");
+            //            $(this).parent("div.deleteNewAuditParentEdit").parent('div.newAuditRowParentEdit').remove();
         });
-//        alert(window.parent.document.body.style.zoom = 0.9);
+        //        alert(window.parent.document.body.style.zoom = 0.9);
         $('.addAccountCss').click(function () {
             $("#customerAdd").modal("show");
         });
@@ -509,25 +571,37 @@ function getFlatDate($inputStr) {
         backdrop-filter: blur(8px) brightness(0.6);
         -webkit-backdrop-filter: blur(8px) brightness(0.6);
     }
-    
+
     /* Remove default Bootstrap backdrop */
     .modal-backdrop.fade {
         opacity: 0;
     }
-    
+
     .modal-backdrop.fade.show {
         opacity: 1 !important;
     }
 
     /* Modal Animation */
     @keyframes modalSlideIn {
-        from { transform: translateY(30px) scale(0.98); opacity: 0; }
-        to { transform: translateY(0) scale(1); opacity: 1; }
+        from {
+            transform: translateY(30px) scale(0.98);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+        }
     }
 
     @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
     }
 
     #logoutConfirmModal .modal-dialog {
@@ -537,7 +611,7 @@ function getFlatDate($inputStr) {
         transform-origin: center center;
         font-family: 'Segoe UI', 'Roboto', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
     }
-    
+
     #logoutConfirmModal .modal-content {
         border-radius: 16px;
         border: none;
@@ -710,7 +784,7 @@ function getFlatDate($inputStr) {
         opacity: 1;
         background: rgba(255, 255, 255, 0.15);
     }
-    
+
     /* Modal Content Styling */
     #logoutConfirmModal .modal-body:before {
         content: '⚠️';

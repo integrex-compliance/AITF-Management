@@ -305,7 +305,7 @@ $inbox_emails = [
     ],
     [
         'id' => 'inbox_19',
-        'sender' => 'AITF System',
+        'sender' => 'AITF Certification',
         'subject' => 'Client letter sent successfully. - Aaron Enterprises',
         'date' => 'May 30',
         'snippet' => 'Customer: Aaron Enterprises, Subject: Reminder for Withdrawal...',
@@ -313,7 +313,7 @@ $inbox_emails = [
     ],
     [
         'id' => 'inbox_20',
-        'sender' => 'AITF System',
+        'sender' => 'AITF Certification',
         'subject' => 'New Audit Application Received - Nilkanth Industries',
         'date' => 'May 30',
         'snippet' => 'New Audit Application Received from Nilkanth Industries...',
@@ -329,7 +329,8 @@ $inbox_json = json_encode($inbox_emails);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GoDaddy Webmail</title>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%233b82f6'%3E%3Cpath d='M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z'/%3E%3C/svg%3E">
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%233b82f6'%3E%3Cpath d='M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z'/%3E%3C/svg%3E">
     <!-- Use FontAwesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
