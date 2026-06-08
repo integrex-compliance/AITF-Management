@@ -286,3 +286,24 @@ FULL PAYLOAD:
 ]
 
 ---------------------------------------------
+[2026-06-08 11:25:50] INSERT REQUEST RECEIVED -> Client ID: #83
+FULL PAYLOAD:
+[
+    {
+        "internal_client_id": "83",
+        "customer_name": "SPA Engineering (WIthdrawn)",
+        "address": "Gat No. 452\/1, Sahyog colony no. 3, Opp. Janjira Hotel, Pune- Nashik Highway, Tapkir Nagar, Moshi, Pune -412 105, Maharashtra, India.",
+        "certification_status": "Withdrawn",
+        "certificate_tracking_id": "53",
+        "certificate_number": "68731751480",
+        "issue_date": "2017-05-02",
+        "expiry_date": "2020-05-01",
+        "standard_name": "ISO 9001:2015",
+        "customer_guid": "GUID-000083",
+        "country": "India",
+        "schema_name": "QMS",
+        "certification_type": "Accredited"
+    }
+]
+
+---------------------------------------------

@@ -1,5 +1,6 @@
-<!-- <?php
-
+<?php
+// godaddy_mail.php
+// GoDaddy Workspace Webmail Simulation
 
 include 'dbConnect.php';
 
@@ -112,7 +113,7 @@ usort($sent_entries, function ($a, $b) {
     if ($aTs === $bTs) {
         return strcasecmp($a['customer_name'], $b['customer_name']);
     }
-    return $bTs <=> $aTs;
+    return $bTs <=> $aTs; // Descending
 });
 
 $sent_json = json_encode($sent_entries);
@@ -330,7 +331,7 @@ $inbox_json = json_encode($inbox_emails);
     <title>GoDaddy Webmail</title>
     <link rel="icon" type="image/svg+xml"
         href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%233b82f6'%3E%3Cpath d='M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z'/%3E%3C/svg%3E">
-
+    <!-- Use FontAwesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -345,13 +346,13 @@ $inbox_json = json_encode($inbox_emails);
             overflow: hidden;
         }
 
-        .app-container {
+        /* .app-container {
             display: flex;
             height: 100vh;
             width: 100vw;
-        }
+        } */
 
-
+        /* Sidebar Styles */
         .sidebar {
             width: 260px;
             background-color: #1b2031;
@@ -600,7 +601,7 @@ $inbox_json = json_encode($inbox_emails);
             text-overflow: ellipsis;
         }
 
-
+        /* Right Pane (Preview) */
         .preview-pane {
             flex-grow: 1;
             display: flex;
@@ -704,7 +705,7 @@ $inbox_json = json_encode($inbox_emails);
             overflow-y: auto;
             flex-grow: 1;
             display: none;
-
+            /* hidden until selection */
         }
 
         .empty-preview {
@@ -860,7 +861,7 @@ $inbox_json = json_encode($inbox_emails);
 <body>
 
     <div class="app-container">
-
+        <!-- Sidebar -->
         <div class="sidebar">
             <div class="brand-header" onclick="window.location.href='homePage.php'">
                 <i class="fa fa-envelope-square"></i>
@@ -901,7 +902,7 @@ $inbox_json = json_encode($inbox_emails);
                 <div class="progress-text">37% done</div>
             </div>
 
-
+            <!-- Bottom action buttons as seen in screenshot -->
             <div
                 style="display: flex; padding: 10px; border-top: 1px solid rgba(255,255,255,0.05); gap: 10px; font-size: 12px; justify-content: center;">
                 <div style="cursor: pointer;"><i class="fa fa-bug"></i> Bug</div>
@@ -909,7 +910,7 @@ $inbox_json = json_encode($inbox_emails);
             </div>
         </div>
 
-
+        <!-- Middle Pane (Mail List) -->
         <div class="mail-list-pane">
             <div class="list-header">
                 <button class="new-email-btn">
@@ -929,11 +930,11 @@ $inbox_json = json_encode($inbox_emails);
             </div>
 
             <div class="mail-items" id="mail-list-container">
-
+                <!-- Mail items will be injected here via JS -->
             </div>
         </div>
 
-
+        <!-- Right Pane (Preview) -->
         <div class="preview-pane">
             <div class="top-navbar">
                 <div class="search-bar">
@@ -964,9 +965,9 @@ $inbox_json = json_encode($inbox_emails);
                 <div class="toolbar-btn"><i class="fa fa-ellipsis-h"></i></div>
             </div>
 
-
+            <!-- Empty State -->
             <div class="empty-preview" id="empty-preview">
-
+                <!-- Generic placeholder graphic using SVG -->
                 <svg width="240" height="180" viewBox="0 0 240 180" fill="none" xmlns="http://www.w3.org/2000/svg"
                     style="margin-bottom: 20px;">
                     <rect x="30" y="40" width="180" height="110" rx="6" fill="#e2e8f0" />
@@ -982,7 +983,7 @@ $inbox_json = json_encode($inbox_emails);
                 Select a mail to see preview
             </div>
 
-
+            <!-- Content State -->
             <div class="preview-content" id="preview-content">
                 <div class="email-header">
                     <div class="ai-summary"><i class="fa fa-align-left"></i> AI Summary</div>
@@ -1005,11 +1006,11 @@ $inbox_json = json_encode($inbox_emails);
                 </div>
 
                 <div class="email-body" id="preview-body">
-
+                    <!-- Body injected here -->
                 </div>
 
                 <div class="attachments-container" id="preview-attachments" style="display: none;">
-
+                    <!-- Attachments injected here -->
                 </div>
             </div>
         </div>
@@ -1027,7 +1028,7 @@ $inbox_json = json_encode($inbox_emails);
         const emptyPreview = document.getElementById('empty-preview');
         const previewContent = document.getElementById('preview-content');
 
-
+        // Elements for preview rendering
         const preSubject = document.getElementById('preview-subject');
         const preAvatar = document.getElementById('preview-avatar');
         const preSender = document.getElementById('preview-sender');
@@ -1045,7 +1046,7 @@ $inbox_json = json_encode($inbox_emails);
             }
 
             currentMails.forEach(mail => {
-
+                // Sent tab mapping: we mocked properties differently for sent tab
                 const isSent = currentFolder === 'sent';
                 const senderName = isSent ? `me, ${mail.customer_name}` : mail.sender;
                 const subjectText = mail.subject;
@@ -1096,11 +1097,11 @@ $inbox_json = json_encode($inbox_emails);
         }
 
         function selectMail(mail, element) {
-
+            // Update selection visual
             document.querySelectorAll('.mail-item').forEach(el => el.classList.remove('selected'));
             element.classList.add('selected');
 
-
+            // Switch views
             emptyPreview.style.display = 'none';
             previewContent.style.display = 'block';
 
@@ -1108,8 +1109,8 @@ $inbox_json = json_encode($inbox_emails);
 
             if (isSent) {
                 preSubject.textContent = mail.subject;
-                preAvatar.textContent = "M";
-                preAvatar.style.backgroundColor = "#10b981";
+                preAvatar.textContent = "M"; // "Me"
+                preAvatar.style.backgroundColor = "#10b981"; // Green for sent
                 preSender.textContent = "me";
                 preEmail.textContent = `To: ${mail.customer_name} <${mail.email_id || 'client@example.com'}>`;
                 preDate.textContent = mail.date;
@@ -1132,7 +1133,7 @@ $inbox_json = json_encode($inbox_emails);
                     <small>Email: certification@aitf.co.in | Web: www.aitf.co.in</small>
                 `;
 
-
+                // Show attachments
                 if (mail.attachments && mail.attachments.length > 0) {
                     preAttachments.style.display = 'flex';
                     preAttachments.innerHTML = '';
@@ -1172,14 +1173,14 @@ $inbox_json = json_encode($inbox_emails);
             }
         }
 
-
+        // Setup folder navigation
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', function () {
-
+                // Update active state
                 document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
                 this.classList.add('active');
 
-
+                // Change folder
                 const folder = this.getAttribute('data-folder');
                 currentFolder = folder;
                 folderTitle.textContent = folder.charAt(0).toUpperCase() + folder.slice(1);
@@ -1189,10 +1190,10 @@ $inbox_json = json_encode($inbox_emails);
                 } else if (folder === 'sent') {
                     currentMails = sentData;
                 } else {
-                    currentMails = [];
+                    currentMails = []; // Empty for Starred, Spam, etc.
                 }
 
-
+                // Reset preview
                 emptyPreview.style.display = 'flex';
                 previewContent.style.display = 'none';
 
@@ -1200,9 +1201,9 @@ $inbox_json = json_encode($inbox_emails);
             });
         });
 
-
+        // Initial render
         renderList();
     </script>
 </body>
 
-</html> -->
+</html>

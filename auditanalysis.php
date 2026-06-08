@@ -69,19 +69,19 @@
         }
     }
 
-    // Office certificate numbers for fallback
-    $officeCertMap = [];
+    // Office certificate data for fallback (multiple ISO support)
+    $officeDataMap = [];
     if (!empty($cdcMap)) {
         $crrIds = array_column($cdcMap, 'crr_id');
         $crrIds = array_filter($crrIds, function($v){ return $v !== null && $v !== ''; });
         if (!empty($crrIds)) {
             $placeholders = implode(',', array_fill(0, count($crrIds), '?'));
-            $sqlOffice = "SELECT crr_id, certificate_no FROM cdc_report_review_office_use WHERE crr_id IN ($placeholders) AND certificate_no IS NOT NULL AND certificate_no != '' ORDER BY iso_index ASC";
+            $sqlOffice = "SELECT crr_id, certificate_no, rev_no, rev_date FROM cdc_report_review_office_use WHERE crr_id IN ($placeholders) ORDER BY iso_index ASC";
             $stmt = $db->prepare($sqlOffice);
             $stmt->execute($crrIds);
             foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-                if (!isset($officeCertMap[$row['crr_id']])) {
-                    $officeCertMap[$row['crr_id']] = $row['certificate_no'];
+                if (!isset($officeDataMap[$row['crr_id']])) {
+                    $officeDataMap[$row['crr_id']] = $row;
                 }
             }
         }
@@ -170,18 +170,29 @@
                                     }
 
                                     $ca_cdc = $cdcMap[$subtypeId];
+                                    $certificateNo = $ca_cdc['certificateNo'];
+                                    $revNo = $ca_cdc['revCdc'];
                                     $rawIssueDate = $ca_cdc['revDatecdc'];
+
+                                    // Fallback to office_use table for modern multi-ISO support
+                                    if (isset($officeDataMap[$ca_cdc['crr_id']])) {
+                                        $office = $officeDataMap[$ca_cdc['crr_id']];
+                                        if (empty($certificateNo)) {
+                                            $certificateNo = $office['certificate_no'];
+                                        }
+                                        if (empty($revNo)) {
+                                            $revNo = $office['rev_no'];
+                                        }
+                                        if (empty($rawIssueDate) || $rawIssueDate == "0000-00-00") {
+                                            $rawIssueDate = $office['rev_date'];
+                                        }
+                                    }
+
                                     if ($rawIssueDate == "" || $rawIssueDate == "0000-00-00") {
                                         $rawIssueDate = $ca_cdc['Date'];
                                     }
                                     $issueDateConverted = simpleDateConversion($rawIssueDate);
                                     $issueDateVisible = ($rawIssueDate == "" || $rawIssueDate == "0000-00-00") ? "" : $issueDateConverted;
-                                    $certificateNo = $ca_cdc['certificateNo'];
-                                    if ($certificateNo == "" || $certificateNo === null) {
-                                        if (isset($officeCertMap[$ca_cdc['crr_id']])) {
-                                            $certificateNo = $officeCertMap[$ca_cdc['crr_id']];
-                                        }
-                                    }
                                     ?>
                                     <tr class="customerAccount <?php echo ($customer['audit_status'] === 'Application canceled') ? 'canceled-row' : ''; ?>" data-id="<?php echo $customer['id'] ?>" >
         <!--                                                <td  data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
@@ -191,7 +202,7 @@
                                             <small><a ><?php echo $certificateNo ?></a></small>
                                         </td>
                                         <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                            <small><a ><?php echo $ca_cdc['revCdc'] ?></a></small>
+                                            <small><a ><?php echo $revNo ?></a></small>
                                         </td>
                                         <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
                                             <small><a ><?php echo $customer["service_type"] ?></a></small>

@@ -3941,11 +3941,23 @@ removeUnwantedOptions('.granted-by', optionsToRemove);
             }, 200);
         });
         
-        // Collect ISO decisions before form submission
+        // Collect ISO decisions and sync legacy fields before form submission
         $('form[action="addCdcModal.php"]').on('submit', function(e) {
             var isoDecisions = collectIsoDecisions();
             $('#iso_decisions').val(JSON.stringify(isoDecisions));
             console.log('ISO decisions collected:', isoDecisions);
+
+            // Sync first ISO section data to legacy hidden fields for backward compatibility
+            var $firstSection = $('#cdcOfficeContainer .CdcOffice').first();
+            if ($firstSection.length > 0) {
+                $('.legacy-rev-date').val($firstSection.find('.revDatecdc').val());
+                $('.legacy-rev-no').val($firstSection.find('.revCdc').val());
+                $('.legacy-certificate-no').val($firstSection.find('.certificateNo').val());
+                $('.legacy-audit-type').val($firstSection.find('.nextaudittype').val());
+                $('.legacy-expire-date').val($firstSection.find('.expiredate').val());
+                $('.legacy-periodical-audit').val($firstSection.find('.periodicalaudit').val());
+                $('.legacy-comments').val($firstSection.find('.periodicalAuditcoment').val());
+            }
         });
 
     });
