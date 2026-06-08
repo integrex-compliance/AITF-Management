@@ -14,3 +14,4 @@ debug.php
 dubug.php
 *.crdownload
 /config/mail_config.php
+dbConnect.php
