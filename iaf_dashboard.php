@@ -380,7 +380,8 @@
                                             </div>
                                         </td>
                                         <td style="font-size: 12px; color: #64748b;">
-                                            <?php echo htmlspecialchars($c['customer_guid']); ?></td>
+                                            <?php echo htmlspecialchars($c['customer_guid']); ?>
+                                        </td>
                                         <td><strong>#<?php echo htmlspecialchars($c['internal_client_id']); ?></strong></td>
                                         <td class="company-name">
                                             <a href="customerAccount.php?customerid=<?php echo htmlspecialchars($c['internal_client_id']); ?>"
@@ -404,6 +405,7 @@
                                                 <span style="color: #94a3b8;">Pending</span>
                                             <?php endif; ?>
                                         </td>
+
                                         <td>
                                             <?php
                                             $statusStr = strtolower($c['certification_status']);

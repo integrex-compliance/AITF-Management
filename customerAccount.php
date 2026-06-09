@@ -650,7 +650,7 @@
                         <div class="col-sm-6">
                             <div class="row" style="padding: 5px; padding-left: 20px">
                                 <div class="col-sm-10 ">
-                                    <textarea name="add-notes" style="color: black; background-color: #e3eaf3; border: none" rows="10" cols="50" class="form-group notebox saveChanges" data-column="comment" id="add-notes" placeholder="Add Notes" readonly><?php
+                                    <textarea name="add-notes" style="color: black; background-color: #e3eaf3; border: none" rows="10" cols="50" class="form-group notebox saveChanges" data-column="comment" id="add-notes" placeholder="Add Notes"><?php
                                         if (isset($clientInfo['comment'])) {
                                             $comment = trim($clientInfo['comment']);
                                             // Remove unwanted text like 'yhnj' and other gibberish
@@ -659,8 +659,8 @@
                                             echo $comment;
                                         }
                                         ?></textarea>
-                                    <div style="display: flex; justify-content: flex-end; margin-top: 6px;">
-                                        <button type="button" class="btn btn-xs btn-info" id="editSaveCommentBtn">Edit</button>
+                                    <div style="display: flex; justify-content: flex-end; margin-top: 4px; min-height: 18px;">
+                                        <small id="notes-status" style="font-size: 11px; color: #888;"></small>
                                     </div>
                                 </div>
                             </div>
@@ -6052,111 +6052,54 @@
 
         $(document).ready(function () {
             
-            // Initialize comment edit/save functionality
-            console.log('=== INITIALIZING COMMENT EDIT/SAVE ===');
+            // Auto-save note on input (debounced)
             var $commentField = $('#add-notes');
-            var $commentBtn = $('#editSaveCommentBtn');
-            console.log('Comment field found:', $commentField.length > 0 ? 'YES' : 'NO');
+            var $notesStatus = $('#notes-status');
             
-            if ($commentField.length > 0 && $commentBtn.length > 0) {
-                console.log('Comment field ID:', $commentField.attr('id'));
-                console.log('Comment field classes:', $commentField.attr('class'));
-                console.log('Comment field data-column:', $commentField.attr('data-column'));
-                console.log('✓ Comment edit/save is ready');
-                
+            if ($commentField.length > 0) {
+                var saveTimer = null;
                 var isSaving = false;
-                var isEditing = false;
-                
-                $commentField.prop('readonly', true);
-                $commentBtn.text('Edit');
-                
-                function saveComment() {
-                    if (isSaving) {
-                        console.log('Already saving, skipping...');
-                        return;
-                    }
-                    
-                    console.log('>>> Saving comment <<<');
+
+                function autoSaveComment() {
+                    if (isSaving) return;
                     var commentValue = $commentField.val();
                     var customerId = '<?php echo $_GET['customerid']; ?>';
-                    
-                    console.log('Comment Value Length:', commentValue.length);
-                    console.log('Customer ID:', customerId);
-                    
-                    if (customerId) {
-                        isSaving = true;
-                        var originalBg = $commentField.css('background-color');
-                        $commentField.css('background-color', '#fffacd');
-                        $commentBtn.prop('disabled', true);
-                        
-                        $.ajax({
-                            url: 'updateCustomer.php',
-                            type: 'GET',
-                            cache: false,
-                            data: {
-                                id: customerId,
-                                columnName: 'comment',
-                                columnValue: commentValue
-                            },
-                            success: function(response) {
-                                console.log('RAW Response:', response);
-                                console.log('Response Length:', response.length);
-                                
-                                var trimmedResponse = response.trim().toLowerCase();
-                                console.log('Trimmed Response:', trimmedResponse);
-                                
-                                if (trimmedResponse.indexOf('success') !== -1) {
-                                    console.log(' Comment saved successfully to database');
-                                    $commentField.css('background-color', '#d4edda');
-                                    setTimeout(function() {
-                                        $commentField.css('background-color', originalBg);
-                                    }, 1500);
-                                    
-                                    isEditing = false;
-                                    $commentField.prop('readonly', true);
-                                    $commentBtn.text('Edit');
-                                } else {
-                                    console.error('✗ Comment save failed. Response:', response);
-                                    $commentField.css('background-color', '#f8d7da');
-                                    alert('Failed to save comment. Server response: ' + response);
-                                    setTimeout(function() {
-                                        $commentField.css('background-color', originalBg);
-                                    }, 2000);
-                                }
-                                isSaving = false;
-                                $commentBtn.prop('disabled', false);
-                            },
-                            error: function(xhr, status, error) {
-                                console.error('✗ AJAX Error:', status, error);
-                                console.error('XHR Status:', xhr.status);
-                                console.error('Response Text:', xhr.responseText);
-                                $commentField.css('background-color', '#f8d7da');
-                                alert('Error saving comment: ' + error);
-                                setTimeout(function() {
-                                    $commentField.css('background-color', originalBg);
-                                }, 2000);
-                                isSaving = false;
-                                $commentBtn.prop('disabled', false);
+                    if (!customerId) return;
+
+                    isSaving = true;
+                    $notesStatus.text('Saving...').css('color', '#888');
+
+                    $.ajax({
+                        url: 'updateCustomer.php',
+                        type: 'GET',
+                        cache: false,
+                        data: {
+                            id: customerId,
+                            columnName: 'comment',
+                            columnValue: commentValue
+                        },
+                        success: function(response) {
+                            var trimmedResponse = response.trim().toLowerCase();
+                            if (trimmedResponse.indexOf('success') !== -1) {
+                                $notesStatus.text('Saved ✓').css('color', '#28a745');
+                                setTimeout(function() { $notesStatus.text(''); }, 2500);
+                            } else {
+                                $notesStatus.text('Error saving').css('color', '#dc3545');
                             }
-                        });
-                    }
+                            isSaving = false;
+                        },
+                        error: function() {
+                            $notesStatus.text('Error saving').css('color', '#dc3545');
+                            isSaving = false;
+                        }
+                    });
                 }
-                
-                $commentBtn.on('click', function() {
-                    if (isSaving) return;
-                    
-                    if (!isEditing) {
-                        isEditing = true;
-                        $commentField.prop('readonly', false);
-                        $commentBtn.text('Save');
-                        $commentField.focus();
-                        return;
-                    }
-                    
-                    saveComment();
+
+                $commentField.on('input', function() {
+                    $notesStatus.text('').css('color', '#888');
+                    clearTimeout(saveTimer);
+                    saveTimer = setTimeout(autoSaveComment, 1200);
                 });
-            } else {
-                console.warn('✗ Comment field not found!');
             }
 
             $('.editFinalInvoice').click(function () {

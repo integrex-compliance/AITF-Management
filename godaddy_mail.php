@@ -13,8 +13,8 @@ $sql = "SELECT
             cas.signed_copy AS stage1_plan_doc,
             cas.signed_notification_II AS stage2_doc,
             s.service_id AS main_service_id,
-            cas.audit_date AS stage1_date,
-            cas.stage2_audit AS stage2_date,
+            (SELECT audit_dates FROM stage_oneaudit_id so WHERE so.ca_service_id = cas.ca_id ORDER BY so.audit_stage_id DESC LIMIT 1) AS stage1_date,
+            (SELECT audit_dates FROM stage_twoaudit_id st WHERE st.service_id = cas.ca_id ORDER BY st.audit_stageii_id DESC LIMIT 1) AS stage2_date,
             soi.audit_stage_id AS stage1_noti_id,
             asi.audit_schedule_id AS stage1_plan_id,
             stai.audit_stageii_id AS stage2_noti_id,
@@ -52,14 +52,21 @@ function formatGoDaddyDate($d)
 foreach ($rows as $r) {
     $customerName = isset($r['customer_name']) ? $r['customer_name'] : '';
     $emailId = isset($r['email_id']) ? $r['email_id'] : '';
-    $stage1Sent = !empty($r['stage1_sent_date']) ? $r['stage1_sent_date'] : $r['stage1_date'];
-    $stage2Sent = !empty($r['stage2_sent_date']) ? $r['stage2_sent_date'] : $r['stage2_date'];
+    
+    $stage1_audit_dates = isset($r['stage1_date']) ? trim($r['stage1_date'], ', ') : '';
+    $stage1_first_date = !empty($stage1_audit_dates) ? explode(',', $stage1_audit_dates)[0] : '';
+    $stage1Sent = !empty($r['stage1_sent_date']) ? $r['stage1_sent_date'] : $stage1_first_date;
+
+    $stage2_audit_dates = isset($r['stage2_date']) ? trim($r['stage2_date'], ', ') : '';
+    $stage2_first_date = !empty($stage2_audit_dates) ? explode(',', $stage2_audit_dates)[0] : '';
+    $stage2Sent = !empty($r['stage2_sent_date']) ? $r['stage2_sent_date'] : $stage2_first_date;
 
     if ($stage1Sent) {
         $attachments = array();
         if ($r['stage1_noti_id']) {
             $attachments[] = array('name' => 'Release - Notification for Stage - I audit.pdf', 'url' => 'AuditNotificationandAssignment.php', 'type' => 'post', 'params' => array('auditid' => $r['stage1_noti_id'], 'serviceid' => $r['ca_id'], 'customerid' => $r['customer_id']));
         }
+
         if ($r['stage1_plan_id']) {
             $attachments[] = array('name' => 'Release - Stage - I Audit Plan.pdf', 'url' => 'AuditSchedule.php', 'type' => 'post', 'params' => array('auditscheduleid' => $r['stage1_plan_id'], 'serviceid' => $r['ca_id'], 'customerid' => $r['customer_id']));
         }
@@ -71,6 +78,7 @@ foreach ($rows as $r) {
             'subject' => "Notification of Assessment - Stage I - " . $customerName,
             'date_raw' => $stage1Sent,
             'date' => formatGoDaddyDate($stage1Sent),
+            'audit_date' => $stage1_audit_dates,
             'stage' => 'Stage I',
             'attachments' => $attachments
         );
@@ -92,6 +100,7 @@ foreach ($rows as $r) {
             'subject' => "Notification of Assessment - Stage II - " . $customerName,
             'date_raw' => $stage2Sent,
             'date' => formatGoDaddyDate($stage2Sent),
+            'audit_date' => $stage2_audit_dates,
             'stage' => 'Stage II',
             'attachments' => $attachments
         );
@@ -1321,22 +1330,31 @@ $inbox_json = json_encode($inbox_emails);
                 preEmail.textContent = `To: ${mail.customer_name} <${mail.email_id || 'client@example.com'}>`;
                 preDate.textContent = mail.date;
 
+                let formattedAuditDate = mail.date;
+                if (mail.audit_date) {
+                    const dates = mail.audit_date.split(',').map(d => d.trim()).filter(d => d !== '');
+                    if (dates.length > 0) {
+                        formattedAuditDate = dates.map(d => {
+                            const dateObj = new Date(d);
+                            return isNaN(dateObj.getTime()) ? d : dateObj.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
+                        }).join(', ');
+                    }
+                }
+
                 preBody.innerHTML = `
-                    Dear Sir/Madam,<br><br>
-                    Greetings from <strong>AITF Management Certification Limited</strong>.<br><br>
-                    With reference to your application for ISO Certification, we are pleased to inform you that your <strong>${mail.stage}</strong> evaluation has been scheduled. Attached to this email, please find the formal Notification and the detailed Audit Plan for your review.<br><br>
-                    <strong>Attached Documents:</strong><br>
-                    1. Release - Notification for ${mail.stage} audit<br>
-                    2. Release - ${mail.stage} Audit Plan<br>
-                    3. Scanned Copy of Signed Notification (if available)<br>
-                    4. Scanned Copy of Audit Plan (if available)<br><br>
-                    Please ensure that all relevant personnel and documentation are available during the audit dates. Our lead auditor will coordinate with you for any further requirements.<br><br>
-                    If you have any queries or require any clarification regarding the audit schedule or process, please feel free to reach out to us.<br><br>
-                    We look forward to a successful assessment.<br><br>
-                    Best Regards,<br><br>
-                    <strong>Certification Department</strong><br>
-                    AITF Management Certification Limited<br>
-                    <small>Email: certification@aitf.co.in | Web: www.aitf.co.in</small>
+                    Dear Sir / Ma'am,<br><br>
+                    Greetings from <strong>AITF Management Certification Ltd..!!!</strong><br><br>
+                    This is to inform you that the <strong>ISO Certification</strong> audit is scheduled on <strong>${formattedAuditDate}</strong>.<br><br>
+                    Details of the audit date and the auditor are mentioned in the attached notification, Please find the attached notification and audit Schedule for the same.<br><br>
+                    Kindly give the acknowledgement for the audit date within <strong>1 day</strong> or else we will consider it accepted.<br><br>
+                    The hard copy of the same notification with a declaration of impartiality and confidentiality will be handed over to you on the day of the audit and your acknowledgement.<br><br>
+                    <hr style="border:none; border-top:1px solid #eaedf3; margin: 16px 0;">
+                    Thanks &amp; Regards,<br>
+                    <strong>STO - AITF (Technical Operational Staff - AITF)</strong><br>
+                    <strong>AITF Management Certification Limited</strong><br>
+                    Contact No. 9422011836 / 9422011837<br>
+                    Website: <a href="http://aitf.co.in" target="_blank" style="color:#2b70f0;">http://aitf.co.in</a><br>
+                    <span style="color:#64748b; font-size:12px;">QCI-NABCB Accredited Certification Body</span>
                 `;
 
                 // Show attachments
