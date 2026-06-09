@@ -307,3 +307,24 @@ FULL PAYLOAD:
 ]
 
 ---------------------------------------------
+[2026-06-09 07:19:17] INSERT REQUEST RECEIVED -> Client ID: #88
+FULL PAYLOAD:
+[
+    {
+        "internal_client_id": "88",
+        "customer_name": "Maya Industries",
+        "address": "Sr. No. 17\/1A, Ganesh Nagar, Dhawade Wasti, Bhosari, Pune - 411 039",
+        "certification_status": "Application canceled",
+        "certificate_tracking_id": "",
+        "certificate_number": "",
+        "issue_date": "",
+        "expiry_date": "",
+        "standard_name": "",
+        "customer_guid": "GUID-000088",
+        "country": "India",
+        "schema_name": "Other",
+        "certification_type": "Accredited"
+    }
+]
+
+---------------------------------------------

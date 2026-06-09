@@ -320,6 +320,23 @@ $inbox_emails = [
         'body' => '<h3>New Audit Application Received</h3><table border="1" cellpadding="5" style="border-collapse: collapse; width: 100%;"><tr><td><strong>Organization name</strong></td><td>Nilkanth Industries</td></tr><tr><td><strong>Contact person</strong></td><td>Mr.sharad kale</td></tr></table>'
     ]
 ];
+$om_heat_id = 0;
+try {
+    $stmt_om = $db->prepare("SELECT id FROM online_audit_applications WHERE org_name LIKE '%OM HEAT TREAT%' ORDER BY id DESC LIMIT 1");
+    $stmt_om->execute();
+    $om_row = $stmt_om->fetch(PDO::FETCH_ASSOC);
+    if ($om_row) {
+        $om_heat_id = (int) $om_row['id'];
+    } else {
+        $stmt_latest = $db->query("SELECT id FROM online_audit_applications ORDER BY id DESC LIMIT 1");
+        $latest_row = $stmt_latest->fetch(PDO::FETCH_ASSOC);
+        if ($latest_row) {
+            $om_heat_id = (int) $latest_row['id'];
+        }
+    }
+} catch (Exception $e) {
+    $om_heat_id = 0;
+}
 $inbox_json = json_encode($inbox_emails);
 ?>
 <!DOCTYPE html>
@@ -346,13 +363,14 @@ $inbox_json = json_encode($inbox_emails);
             overflow: hidden;
         }
 
-        /* .app-container {
+        .app-container {
             display: flex;
             height: 100vh;
             width: 100vw;
-        } */
+        }
 
-        /* Sidebar Styles */
+
+
         .sidebar {
             width: 260px;
             background-color: #1b2031;
@@ -606,7 +624,8 @@ $inbox_json = json_encode($inbox_emails);
             flex-grow: 1;
             display: flex;
             flex-direction: column;
-            background-color: white;
+            background-color: #f4f6f8;
+            /* Titan grey-blue background */
             overflow: hidden;
         }
 
@@ -617,34 +636,56 @@ $inbox_json = json_encode($inbox_emails);
             align-items: center;
             padding: 0 24px;
             justify-content: space-between;
+            background-color: #ffffff;
+            /* Explicit white background */
+            box-sizing: border-box;
         }
 
         .search-bar {
             position: relative;
-            width: 400px;
+            width: 500px;
+            display: flex;
+            align-items: center;
         }
 
         .search-bar input {
             width: 100%;
-            padding: 10px 15px 10px 35px;
-            background-color: #f8fafc;
-            border: 1px solid #e2e8f0;
+            height: 38px;
+            padding: 0 35px 0 35px;
+            background-color: #f1f3f5;
+            border: 1px solid #d1d5db;
             border-radius: 6px;
-            font-size: 14px;
+            font-size: 13px;
+            color: #1e293b;
             outline: none;
             transition: all 0.2s;
+            box-sizing: border-box;
         }
 
         .search-bar input:focus {
             border-color: #3b82f6;
             background-color: white;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
         }
 
-        .search-bar i {
+        .search-bar .fa-search {
             position: absolute;
             left: 12px;
-            top: 12px;
-            color: #94a3b8;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #64748b;
+            font-size: 13px;
+            pointer-events: none;
+        }
+
+        .search-bar .fa-angle-down {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #64748b;
+            font-size: 14px;
+            cursor: pointer;
         }
 
         .nav-actions {
@@ -664,17 +705,25 @@ $inbox_json = json_encode($inbox_emails);
         }
 
         .upgrade-btn {
-            background-color: #f59e0b;
-            color: white;
+            background-color: #f0a841;
+            /* GoDaddy warm gold */
+            color: #000000;
             border: none;
-            padding: 6px 12px;
-            border-radius: 4px;
+            padding: 8px 16px;
+            border-radius: 6px;
             font-weight: 600;
-            font-size: 12px;
+            font-size: 13px;
             cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
+            height: 38px;
+            box-sizing: border-box;
+            transition: background-color 0.2s;
+        }
+
+        .upgrade-btn:hover {
+            background-color: #ebb354;
         }
 
         .preview-toolbar {
@@ -687,6 +736,9 @@ $inbox_json = json_encode($inbox_emails);
             color: #64748b;
             font-size: 13px;
             font-weight: 500;
+            background-color: #ffffff;
+            /* Explicit white background */
+            box-sizing: border-box;
         }
 
         .toolbar-btn {
@@ -701,11 +753,11 @@ $inbox_json = json_encode($inbox_emails);
         }
 
         .preview-content {
-            padding: 30px 40px;
+            padding: 24px;
             overflow-y: auto;
             flex-grow: 1;
             display: none;
-            /* hidden until selection */
+            box-sizing: border-box;
         }
 
         .empty-preview {
@@ -724,21 +776,29 @@ $inbox_json = json_encode($inbox_emails);
             opacity: 0.8;
         }
 
-        .email-header {
-            margin-bottom: 30px;
+        /* Email Card Layout */
+        .email-card {
+            background-color: #ffffff;
+            border: 1px solid #eaedf3;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            padding: 28px;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
         }
 
         .email-subject {
-            font-size: 24px;
+            font-size: 20px;
             font-weight: 600;
-            color: #111;
-            margin-bottom: 20px;
+            color: #111111;
         }
 
         .email-meta {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
+            margin-bottom: 24px;
         }
 
         .sender-info {
@@ -755,18 +815,23 @@ $inbox_json = json_encode($inbox_emails);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 600;
         }
 
         .sender-details .name {
             font-weight: 600;
-            font-size: 15px;
+            font-size: 14px;
             color: #111;
         }
 
-        .sender-details .email {
+        .sender-details .email-address {
             font-size: 13px;
+            color: #64748b;
+        }
+
+        .sender-details .email {
+            font-size: 12px;
             color: #64748b;
             margin-top: 2px;
         }
@@ -780,7 +845,7 @@ $inbox_json = json_encode($inbox_emails);
         }
 
         .email-body {
-            font-size: 15px;
+            font-size: 14px;
             line-height: 1.6;
             color: #334155;
             padding-left: 52px;
@@ -788,8 +853,6 @@ $inbox_json = json_encode($inbox_emails);
 
         /* Attachment Styles */
         .attachments-container {
-            margin-top: 40px;
-            padding-left: 52px;
             display: flex;
             flex-wrap: wrap;
             gap: 15px;
@@ -806,22 +869,25 @@ $inbox_json = json_encode($inbox_emails);
             background-color: #f8fafc;
             cursor: pointer;
             transition: border-color 0.2s;
+            box-sizing: border-box;
         }
 
         .attachment-card:hover {
             border-color: #cbd5e1;
+            background-color: #f1f5f9;
         }
 
         .attachment-icon {
-            width: 40px;
-            height: 40px;
+            width: 36px;
+            height: 36px;
             background-color: #ef4444;
             color: white;
             border-radius: 6px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 20px;
+            font-size: 18px;
+            flex-shrink: 0;
         }
 
         .attachment-info {
@@ -830,7 +896,7 @@ $inbox_json = json_encode($inbox_emails);
 
         .attachment-name {
             font-weight: 500;
-            font-size: 13px;
+            font-size: 12px;
             color: #1e293b;
             white-space: nowrap;
             overflow: hidden;
@@ -840,13 +906,12 @@ $inbox_json = json_encode($inbox_emails);
         .attachment-size {
             font-size: 11px;
             color: #64748b;
-            margin-top: 4px;
+            margin-top: 2px;
         }
 
         .ai-summary {
-            float: right;
-            border: 1px solid #e2e8f0;
-            padding: 4px 10px;
+            border: 1px solid #dcdfe6;
+            padding: 6px 12px;
             border-radius: 4px;
             font-size: 12px;
             font-weight: 600;
@@ -854,6 +919,85 @@ $inbox_json = json_encode($inbox_emails);
             display: flex;
             align-items: center;
             gap: 6px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .ai-summary:hover {
+            border-color: #3b82f6;
+            background-color: #f0f7ff;
+        }
+
+        /* Action Footer Box */
+        .email-footer-actions {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #eaedf3;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .footer-action-btn {
+            background-color: transparent;
+            border: 1px solid #cbd5e1;
+            border-radius: 20px;
+            color: #475569;
+            font-size: 13px;
+            font-weight: 500;
+            padding: 8px 18px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            outline: none;
+        }
+
+        .footer-action-btn:hover {
+            background-color: #f1f5f9;
+            border-color: #94a3b8;
+            color: #0f172a;
+        }
+
+        .ai-reply-btn {
+            background-color: transparent;
+            border: 1px solid #e9d5ff;
+            border-radius: 20px;
+            color: #7c3aed;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 8px 18px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            outline: none;
+        }
+
+        .ai-reply-btn:hover {
+            background-color: #f3e8ff;
+            border-color: #d8b4fe;
+        }
+
+        .ai-spark {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background-color: #7c3aed;
+            color: white;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+        }
+
+        /* Sidebar Split Button Custom Styles */
+        .new-email-main-btn,
+        .new-email-dropdown-btn {
+            transition: background-color 0.2s;
         }
     </style>
 </head>
@@ -869,14 +1013,19 @@ $inbox_json = json_encode($inbox_emails);
             </div>
 
             <div class="account-selector">
-                <div class="avatar">C</div>
+                <div class="avatar" style="background-color: #8b5cf6;">C</div>
                 <div class="account-email">certification@aitf.co.in</div>
+                <span style="font-size: 13px; color: #3b82f6; font-weight: 600; margin-right: 8px;">28</span>
                 <i class="fa fa-angle-down"></i>
             </div>
 
             <ul class="nav-menu">
-                <li class="nav-item active" data-folder="inbox">
-                    <i class="fa fa-inbox"></i> Inbox
+                <li class="nav-item active" data-folder="inbox"
+                    style="display: flex; align-items: center; justify-content: space-between;">
+                    <span style="display: flex; align-items: center; gap: 15px;">
+                        <i class="fa fa-inbox"></i> Inbox
+                    </span>
+                    <span style="font-size: 12px; color: #3b82f6; font-weight: 600; margin-right: 5px;">28</span>
                 </li>
                 <li class="nav-item" data-folder="starred">
                     <i class="fa fa-star"></i> Starred
@@ -912,11 +1061,19 @@ $inbox_json = json_encode($inbox_emails);
 
         <!-- Middle Pane (Mail List) -->
         <div class="mail-list-pane">
-            <div class="list-header">
-                <button class="new-email-btn">
-                    <i class="fa fa-pencil-square-o"></i> New email <i class="fa fa-angle-down"
-                        style="margin-left: 5px;"></i>
-                </button>
+            <div class="list-header"
+                style="height: 60px; padding: 0 20px; display: flex; align-items: center; border-bottom: 1px solid #eaedf3; background-color: white; box-sizing: border-box;">
+                <div class="new-email-split-btn"
+                    style="display: flex; height: 38px; border-radius: 6px; overflow: hidden; background-color: #2b70f0;">
+                    <button class="new-email-main-btn"
+                        style="background-color: #2b70f0; color: white; border: none; padding: 0 16px; font-weight: 600; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px; border-right: 1px solid rgba(255,255,255,0.15); height: 100%;">
+                        <i class="fa fa-pencil-square-o"></i> New email
+                    </button>
+                    <button class="new-email-dropdown-btn"
+                        style="background-color: #2b70f0; color: white; border: none; padding: 0 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; height: 100%;">
+                        <i class="fa fa-angle-down"></i>
+                    </button>
+                </div>
             </div>
 
             <div class="list-controls">
@@ -940,19 +1097,27 @@ $inbox_json = json_encode($inbox_emails);
                 <div class="search-bar">
                     <i class="fa fa-search"></i>
                     <input type="text" placeholder="Search in certification@aitf.co.in">
+                    <i class="fa fa-angle-down"></i>
                 </div>
                 <div class="nav-actions">
-                    <div style="position:relative;">
-                        <i class="fa fa-bell-o"></i>
-                        <span
-                            style="position:absolute; top:-4px; right:-6px; background:#ef4444; color:white; font-size:9px; font-weight:bold; padding:2px 4px; border-radius:10px;">3</span>
+                    <i class="fa fa-eye" title="View options"></i>
+                    <i class="fa fa-th" title="App launcher"></i>
+                    <i class="fa fa-cog" title="Settings"></i>
+                    <i class="fa fa-question-circle-o" title="Help"></i>
+                    <button class="upgrade-btn">
+                        <i class="fa fa-arrow-circle-up" style="color: #000000; font-size: 14px;"></i> Upgrade
+                    </button>
+                    <div style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                        <div style="text-align: right; line-height: 1.1; font-family: sans-serif;">
+                            <div style="font-size: 8px; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px;">
+                                POWERED BY</div>
+                            <div style="font-size: 13px; color: #64748b; font-weight: 700; letter-spacing: 1px;">TITAN
+                            </div>
+                        </div>
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M4 4h16v3H4zm6 3h4v13h-4z" fill="#64748b" />
+                        </svg>
                     </div>
-                    <i class="fa fa-th"></i>
-                    <i class="fa fa-cog"></i>
-                    <i class="fa fa-question-circle-o"></i>
-                    <button class="upgrade-btn"><i class="fa fa-arrow-circle-up"></i> Upgrade</button>
-                    <span style="font-size:11px; color:#94a3b8; font-weight:600;">POWERED BY <br><span
-                            style="color:#64748b; font-size:13px;">TITAN</span></span>
                 </div>
             </div>
 
@@ -967,7 +1132,6 @@ $inbox_json = json_encode($inbox_emails);
 
             <!-- Empty State -->
             <div class="empty-preview" id="empty-preview">
-                <!-- Generic placeholder graphic using SVG -->
                 <svg width="240" height="180" viewBox="0 0 240 180" fill="none" xmlns="http://www.w3.org/2000/svg"
                     style="margin-bottom: 20px;">
                     <rect x="30" y="40" width="180" height="110" rx="6" fill="#e2e8f0" />
@@ -985,32 +1149,72 @@ $inbox_json = json_encode($inbox_emails);
 
             <!-- Content State -->
             <div class="preview-content" id="preview-content">
-                <div class="email-header">
-                    <div class="ai-summary"><i class="fa fa-align-left"></i> AI Summary</div>
+                <!-- Subject Header (Outside Card) -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                     <div class="email-subject" id="preview-subject">Subject</div>
+                    <div class="ai-summary" id="preview-ai-summary"><i class="fa fa-magic"></i> AI Summary</div>
+                </div>
+
+                <!-- Email Content Card -->
+                <div class="email-card">
+                    <!-- Metadata Header -->
                     <div class="email-meta">
                         <div class="sender-info">
                             <div class="sender-avatar" id="preview-avatar">S</div>
                             <div class="sender-details">
-                                <div class="name" id="preview-sender">Sender</div>
-                                <div class="email" id="preview-email">To: certification@aitf.co.in
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <span class="name" id="preview-sender">Sender</span>
+                                    <span class="email-address"
+                                        id="preview-email-address">&lt;certification@aitf.co.in&gt;</span>
                                 </div>
+                                <div class="email" id="preview-email">To: me</div>
                             </div>
                         </div>
                         <div class="email-date-actions">
                             <span id="preview-date">Date</span>
-                            <i class="fa fa-reply"></i>
-                            <i class="fa fa-ellipsis-h"></i>
+                            <span
+                                style="display: flex; align-items: center; gap: 4px; color: #94a3b8; font-size: 12px; margin-right: 5px;">
+                                <i class="fa fa-paperclip"></i> <span id="attachment-count-indicator">1</span> <i
+                                    class="fa fa-angle-down"></i>
+                            </span>
+                            <i class="fa fa-reply" style="cursor:pointer;" title="Reply"></i>
+                            <i class="fa fa-ellipsis-h" style="cursor:pointer;" title="More options"></i>
                         </div>
                     </div>
-                </div>
 
-                <div class="email-body" id="preview-body">
-                    <!-- Body injected here -->
-                </div>
+                    <!-- Email Body -->
+                    <div class="email-body" id="preview-body">
+                        <!-- Body injected here -->
+                    </div>
 
-                <div class="attachments-container" id="preview-attachments" style="display: none;">
-                    <!-- Attachments injected here -->
+                    <!-- Attachments Section (inside the card) -->
+                    <div id="attachments-section" style="margin-top: 30px; display: none; padding-left: 52px;">
+                        <div style="height: 1px; border-top: 1px dashed #e2e8f0; margin-bottom: 15px;"></div>
+                        <div
+                            style="font-size: 12px; color: #10b981; font-weight: 500; display: flex; align-items: center; gap: 6px; margin-bottom: 12px;">
+                            <i class="fa fa-check-circle"></i> Attachment scanned, safe to open
+                        </div>
+                        <div class="attachments-container" id="preview-attachments">
+                            <!-- Attachments injected here -->
+                        </div>
+                    </div>
+
+                    <!-- Action Footer Box -->
+                    <div class="email-footer-actions"
+                        style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eaedf3; display: flex; justify-content: space-between; align-items: center; padding-left: 52px;">
+                        <div style="display: flex; gap: 12px;">
+                            <button class="footer-action-btn" onclick="alert('Reply action clicked')"><i
+                                    class="fa fa-reply"></i> Reply</button>
+                            <button class="footer-action-btn" onclick="alert('Reply all action clicked')"><i
+                                    class="fa fa-reply-all"></i> Reply all</button>
+                            <button class="footer-action-btn" onclick="alert('Forward action clicked')"><i
+                                    class="fa fa-share"></i> Forward</button>
+                        </div>
+                        <div>
+                            <button class="ai-reply-btn"><span class="ai-spark"><i class="fa fa-bolt"></i></span> Reply
+                                with AI</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1032,10 +1236,13 @@ $inbox_json = json_encode($inbox_emails);
         const preSubject = document.getElementById('preview-subject');
         const preAvatar = document.getElementById('preview-avatar');
         const preSender = document.getElementById('preview-sender');
+        const preEmailAddress = document.getElementById('preview-email-address');
         const preEmail = document.getElementById('preview-email');
         const preDate = document.getElementById('preview-date');
         const preBody = document.getElementById('preview-body');
         const preAttachments = document.getElementById('preview-attachments');
+        const attachmentsSection = document.getElementById('attachments-section');
+        const attachmentCountIndicator = document.getElementById('attachment-count-indicator');
 
         function renderList() {
             mailListContainer.innerHTML = '';
@@ -1048,11 +1255,11 @@ $inbox_json = json_encode($inbox_emails);
             currentMails.forEach(mail => {
                 // Sent tab mapping: we mocked properties differently for sent tab
                 const isSent = currentFolder === 'sent';
-                const senderName = isSent ? `me, ${mail.customer_name}` : mail.sender;
+                const senderName = isSent ? `me, ${mail.customer_name}` : (mail.sender === 'AITF Certification' ? 'me' : mail.sender);
                 const subjectText = mail.subject;
                 const snippetText = isSent ? `Dear Sir, Please find attached documents for...` : mail.snippet;
                 const dateText = mail.date;
-                const hasAttachment = isSent;
+                const hasAttachment = isSent || mail.id === 'inbox_1' || mail.id === 'inbox_2';
 
                 const mailDiv = document.createElement('div');
                 mailDiv.className = 'mail-item';
@@ -1112,6 +1319,7 @@ $inbox_json = json_encode($inbox_emails);
                 preAvatar.textContent = "M"; // "Me"
                 preAvatar.style.backgroundColor = "#10b981"; // Green for sent
                 preSender.textContent = "me";
+                preEmailAddress.textContent = "<certification@aitf.co.in>";
                 preEmail.textContent = `To: ${mail.customer_name} <${mail.email_id || 'client@example.com'}>`;
                 preDate.textContent = mail.date;
 
@@ -1135,8 +1343,11 @@ $inbox_json = json_encode($inbox_emails);
 
                 // Show attachments
                 if (mail.attachments && mail.attachments.length > 0) {
+                    attachmentsSection.style.display = 'block';
                     preAttachments.style.display = 'flex';
                     preAttachments.innerHTML = '';
+                    attachmentCountIndicator.textContent = mail.attachments.length;
+
                     mail.attachments.forEach((att, index) => {
                         const card = document.createElement('div');
                         card.className = 'attachment-card';
@@ -1159,17 +1370,54 @@ $inbox_json = json_encode($inbox_emails);
                         preAttachments.appendChild(card);
                     });
                 } else {
-                    preAttachments.style.display = 'none';
+                    attachmentsSection.style.display = 'none';
+                    attachmentCountIndicator.textContent = '0';
                 }
             } else {
                 preSubject.textContent = mail.subject;
-                preAvatar.textContent = mail.sender.charAt(0).toUpperCase();
-                preAvatar.style.backgroundColor = "#3b82f6";
-                preSender.textContent = mail.sender;
-                preEmail.textContent = `To: me, certification@aitf.co.in`;
+                preAvatar.textContent = mail.sender === 'AITF Certification' ? 'M' : mail.sender.charAt(0).toUpperCase();
+                preAvatar.style.backgroundColor = mail.sender === 'AITF Certification' ? '#8b5cf6' : '#3b82f6';
+                preSender.textContent = mail.sender === 'AITF Certification' ? 'me' : mail.sender;
+                preEmailAddress.textContent = mail.sender === 'AITF Certification' ? '<certification@aitf.co.in>' : `<${mail.sender.toLowerCase().replace(/\s+/g, '')}@aitf.co.in>`;
+                preEmail.textContent = `To: me`;
                 preDate.textContent = mail.date;
                 preBody.innerHTML = mail.body;
-                preAttachments.style.display = 'none';
+
+                // Add mock attachments for inbox if applicable
+                if (mail.id === 'inbox_1') {
+                    attachmentsSection.style.display = 'block';
+                    preAttachments.style.display = 'flex';
+                    attachmentCountIndicator.textContent = '1';
+                    preAttachments.innerHTML = `
+                        <div class="attachment-card" onclick="alert('Opening Withdrawal Reminder.pdf...')">
+                            <div class="attachment-icon">
+                                <i class="fa fa-file-pdf-o"></i>
+                            </div>
+                            <div class="attachment-info">
+                                <div class="attachment-name">Withdrawal Reminder.pdf</div>
+                                <div class="attachment-size">15 KB</div>
+                            </div>
+                        </div>
+                    `;
+                } else if (mail.id === 'inbox_2') {
+                    attachmentsSection.style.display = 'block';
+                    preAttachments.style.display = 'flex';
+                    attachmentCountIndicator.textContent = '1';
+                    preAttachments.innerHTML = `
+                        <div class="attachment-card" onclick="alert('Opening Audit Application Form.pdf...')">
+                            <div class="attachment-icon">
+                                <i class="fa fa-file-pdf-o"></i>
+                            </div>
+                            <div class="attachment-info">
+                                <div class="attachment-name">Audit Application Form.pdf</div>
+                                <div class="attachment-size">32 KB</div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    attachmentsSection.style.display = 'none';
+                    attachmentCountIndicator.textContent = '0';
+                }
             }
         }
 
