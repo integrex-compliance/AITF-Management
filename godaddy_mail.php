@@ -1310,6 +1310,36 @@ $inbox_json = json_encode($inbox_emails);
             document.body.removeChild(form);
         }
 
+        function parseAndFormatDate(dateStr) {
+            if (!dateStr) return '';
+            let d = dateStr.trim();
+            let day, month, year;
+            let match = d.match(/^(\d{1,2})[\.\/-](\d{1,2})[\.\/-](\d{4})$/);
+            if (match) {
+                day = parseInt(match[1], 10);
+                month = parseInt(match[2], 10) - 1;
+                year = parseInt(match[3], 10);
+            } else {
+                match = d.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+                if (match) {
+                    year = parseInt(match[1], 10);
+                    month = parseInt(match[2], 10) - 1;
+                    day = parseInt(match[3], 10);
+                }
+            }
+            if (day && month !== undefined && year) {
+                const dateObj = new Date(year, month, day);
+                if (!isNaN(dateObj.getTime())) {
+                    return dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+                }
+            }
+            const fallbackDate = new Date(d);
+            if (!isNaN(fallbackDate.getTime())) {
+                return fallbackDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+            }
+            return d;
+        }
+
         function selectMail(mail, element) {
             // Update selection visual
             document.querySelectorAll('.mail-item').forEach(el => el.classList.remove('selected'));
@@ -1334,10 +1364,7 @@ $inbox_json = json_encode($inbox_emails);
                 if (mail.audit_date) {
                     const dates = mail.audit_date.split(',').map(d => d.trim()).filter(d => d !== '');
                     if (dates.length > 0) {
-                        formattedAuditDate = dates.map(d => {
-                            const dateObj = new Date(d);
-                            return isNaN(dateObj.getTime()) ? d : dateObj.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
-                        }).join(', ');
+                        formattedAuditDate = dates.map(d => parseAndFormatDate(d)).join(', ');
                     }
                 }
 
