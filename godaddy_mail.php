@@ -1103,7 +1103,7 @@ $inbox_json = json_encode($inbox_emails);
             <div class="top-navbar">
                 <div class="search-bar">
                     <i class="fa fa-search"></i>
-                    <input type="text" placeholder="Search in certification@aitf.co.in">
+                    <input type="text" id="search-input" placeholder="Search in certification@aitf.co.in">
                     <i class="fa fa-angle-down"></i>
                 </div>
                 <div class="nav-actions">
@@ -1250,16 +1250,33 @@ $inbox_json = json_encode($inbox_emails);
         const preAttachments = document.getElementById('preview-attachments');
         const attachmentsSection = document.getElementById('attachments-section');
         const attachmentCountIndicator = document.getElementById('attachment-count-indicator');
+        const searchInput = document.getElementById('search-input');
 
-        function renderList() {
+        function renderList(filterTerm = '') {
             mailListContainer.innerHTML = '';
 
-            if (currentMails.length === 0) {
+            let filteredMails = currentMails;
+            if (filterTerm) {
+                const term = filterTerm.toLowerCase();
+                filteredMails = currentMails.filter(mail => {
+                    const customerName = (mail.customer_name || '').toLowerCase();
+                    const subject = (mail.subject || '').toLowerCase();
+                    const emailId = (mail.email_id || '').toLowerCase();
+                    const sender = (mail.sender || '').toLowerCase();
+                    
+                    return customerName.includes(term) || 
+                           subject.includes(term) || 
+                           emailId.includes(term) ||
+                           sender.includes(term);
+                });
+            }
+
+            if (filteredMails.length === 0) {
                 mailListContainer.innerHTML = '<div style="padding: 30px; text-align: center; color: #94a3b8; font-size: 14px;">No emails found.</div>';
                 return;
             }
 
-            currentMails.forEach(mail => {
+            filteredMails.forEach(mail => {
                 // Sent tab mapping: we mocked properties differently for sent tab
                 const isSent = currentFolder === 'sent';
                 const senderName = isSent ? `me, ${mail.customer_name}` : (mail.sender === 'AITF Certification' ? 'me' : mail.sender);
@@ -1484,12 +1501,18 @@ $inbox_json = json_encode($inbox_emails);
                     currentMails = []; // Empty for Starred, Spam, etc.
                 }
 
-                // Reset preview
+                // Reset search and preview
+                searchInput.value = '';
                 emptyPreview.style.display = 'flex';
                 previewContent.style.display = 'none';
 
                 renderList();
             });
+        });
+
+        // Search Input Event
+        searchInput.addEventListener('input', (e) => {
+            renderList(e.target.value);
         });
 
         // Initial render
