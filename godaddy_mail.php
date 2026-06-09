@@ -63,12 +63,6 @@ foreach ($rows as $r) {
         if ($r['stage1_plan_id']) {
             $attachments[] = array('name' => 'Release - Stage - I Audit Plan.pdf', 'url' => 'AuditSchedule.php', 'type' => 'post', 'params' => array('auditscheduleid' => $r['stage1_plan_id'], 'serviceid' => $r['ca_id'], 'customerid' => $r['customer_id']));
         }
-        if ($r['stage1_doc']) {
-            $attachments[] = array('name' => 'Signed Notification Stage I.pdf', 'url' => $r['stage1_doc'], 'type' => 'static');
-        }
-        if ($r['stage1_plan_doc']) {
-            $attachments[] = array('name' => 'Audit Plan Scanned Copy.pdf', 'url' => $r['stage1_plan_doc'], 'type' => 'static');
-        }
 
         $sent_entries[] = array(
             'id' => 'sent_1_' . $r['customer_id'] . '_' . $r['ca_id'],
@@ -89,9 +83,6 @@ foreach ($rows as $r) {
         }
         if ($r['stage2_plan_id']) {
             $attachments[] = array('name' => 'Release - Stage - II Audit Plan.pdf', 'url' => 'SurveillanceAudit2.php', 'type' => 'post', 'params' => array('auditnotiid' => $r['stage2_plan_id'], 'serviceid' => $r['ca_id'], 'customerid' => $r['customer_id']));
-        }
-        if ($r['stage2_doc']) {
-            $attachments[] = array('name' => 'Signed Notification Stage II.pdf', 'url' => $r['stage2_doc'], 'type' => 'static');
         }
 
         $sent_entries[] = array(
@@ -400,17 +391,26 @@ $inbox_json = json_encode($inbox_emails);
         }
 
         .account-selector {
-            padding: 15px 20px;
+            padding: 10px 16px;
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             cursor: pointer;
             transition: background 0.2s;
         }
 
+
+
+
         .account-selector:hover {
-            background-color: rgba(255, 255, 255, 0.05);
+            background-color: rgba(255, 255, 255, 0.06);
+        }
+
+        .account-selector .chevron-left {
+            color: #aebcd2;
+            font-size: 13px;
+            flex-shrink: 0;
         }
 
         .avatar {
@@ -427,13 +427,12 @@ $inbox_json = json_encode($inbox_emails);
         }
 
         .account-email {
-            font-size: 14px;
+            font-size: 12.5px;
             color: white;
             font-weight: 500;
             flex-grow: 1;
             white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            overflow: visible;
         }
 
         .nav-menu {
@@ -1013,10 +1012,9 @@ $inbox_json = json_encode($inbox_emails);
             </div>
 
             <div class="account-selector">
-                <div class="avatar" style="background-color: #8b5cf6;">C</div>
+                <i class="fa fa-angle-down chevron-left"></i>
+                <div class="avatar" style="background-color: #8b5cf6; width:28px; height:28px; font-size:13px;">C</div>
                 <div class="account-email">certification@aitf.co.in</div>
-                <span style="font-size: 13px; color: #3b82f6; font-weight: 600; margin-right: 8px;">28</span>
-                <i class="fa fa-angle-down"></i>
             </div>
 
             <ul class="nav-menu">
