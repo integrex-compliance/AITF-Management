@@ -52,7 +52,7 @@ function formatGoDaddyDate($d)
 foreach ($rows as $r) {
     $customerName = isset($r['customer_name']) ? $r['customer_name'] : '';
     $emailId = isset($r['email_id']) ? $r['email_id'] : '';
-    
+
     $stage1_audit_dates = isset($r['stage1_date']) ? trim($r['stage1_date'], ', ') : '';
     $stage1_first_date = !empty($stage1_audit_dates) ? explode(',', $stage1_audit_dates)[0] : '';
     $stage1Sent = !empty($r['stage1_sent_date']) ? $r['stage1_sent_date'] : $stage1_first_date;
@@ -1263,11 +1263,11 @@ $inbox_json = json_encode($inbox_emails);
                     const subject = (mail.subject || '').toLowerCase();
                     const emailId = (mail.email_id || '').toLowerCase();
                     const sender = (mail.sender || '').toLowerCase();
-                    
-                    return customerName.includes(term) || 
-                           subject.includes(term) || 
-                           emailId.includes(term) ||
-                           sender.includes(term);
+
+                    return customerName.includes(term) ||
+                        subject.includes(term) ||
+                        emailId.includes(term) ||
+                        sender.includes(term);
                 });
             }
 

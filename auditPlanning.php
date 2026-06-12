@@ -14,6 +14,11 @@
     $statement = $db->prepare($auditPlanninginfo);
     $statement->execute();
     $auditPlanningInfo = $statement->fetchAll();
+
+    $auditorSql = "SELECT auditors_id, auditor_name FROM auditors ORDER BY auditor_name ASC";
+    $auditorStmt = $db->prepare($auditorSql);
+    $auditorStmt->execute();
+    $auditorList = $auditorStmt->fetchAll(PDO::FETCH_ASSOC);
     /*
      * To change this license header, choose License Headers in Project Properties.
      * To change this template file, choose Tools | Templates
@@ -24,14 +29,171 @@
         .custom-float-label-control {
             margin-bottom: 0em;
         }
+
+        /* Consistent styling with other pages */
+        .invoice-section-title {
+            display: inline-block;
+            margin: 0 0 15px;
+            padding: 8px 16px;
+            font-size: 22px;
+            font-weight: 700;
+            color: #0d4d8b;
+            background: #eaf3ff;
+            border-left: 4px solid #0d4d8b;
+            border-radius: 4px;
+        }
+
+        .invoice-filter-panel {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            margin: 10px 0 20px;
+            padding: 12px 15px;
+            background: #f8fbff;
+            border: 1px solid #d6e4f0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        .invoice-filter-item {
+            flex: 1;
+            min-width: 150px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* Search Box Specific Styling */
+        .search-item {
+            flex: 1.5;
+            min-width: 250px;
+        }
+
+        .search-item i {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #0d4d8b;
+            z-index: 1;
+            font-size: 14px;
+        }
+
+        .search-item input {
+            padding-left: 35px !important;
+        }
+
+        .invoice-filter-item input, .invoice-filter-item select {
+            width: 100%;
+            height: 40px;
+            padding: 8px 12px;
+            border: 1px solid #bfd2e6;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 13px;
+            background-color: #fff;
+            color: #333;
+            transition: all 0.2s;
+        }
+
+        .invoice-filter-item input:focus, .invoice-filter-item select:focus {
+            border-color: #0d4d8b;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(13, 77, 139, 0.1);
+        }
+
+        .btn-report-export {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            height: 40px;
+            margin: 0;
+            padding: 0 20px;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.2px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            text-transform: none;
+            border: 1px solid transparent;
+            white-space: nowrap;
+        }
+
+        .btn-solid-primary {
+            background-color: #0d4d8b;
+            color: #ffffff;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(13, 77, 139, 0.1);
+        }
+        .btn-solid-primary:hover {
+            background-color: #0b3d6e;
+            box-shadow: 0 4px 12px rgba(13, 77, 139, 0.15);
+            transform: translateY(-1px);
+        }
+        .btn-solid-primary:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(13, 77, 139, 0.1);
+        }
+
+        #tab_customer_list_filter {
+            display: none;
+        }
     </style>
 
     <div id="page-content-wrapper">
 
         <div class="page-content inset">
             <div class="container" >
-                <br>
-                <br>
+                <div class="row">
+                    <div class="col-sm-12">
+                        <h5 class="invoice-section-title">Audit Planning Dashboard</h5>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-sm-12 main_content" style="">
+                        <div class="invoice-filter-panel">
+                            <div class="invoice-filter-item search-item">
+                                <i class="fa fa-search"></i>
+                                <input type="text" id="auditClientSearch" placeholder="Search by Client Name...">
+                            </div>
+                            <div class="invoice-filter-item">
+                                <select id="auditorFilter" class="form-control" style="color: #333; background-color: #fff;">
+                                    <option value="">Select Auditor</option>
+                                    <?php foreach ($auditorList as $auditor) { ?>
+                                        <option value="<?php echo htmlspecialchars($auditor['auditor_name']); ?>">
+                                            <?php echo htmlspecialchars($auditor['auditor_name']); ?>
+                                        </option>
+                                    <?php } ?>
+                                </select>
+                            </div>
+                            <div class="invoice-filter-item">
+                                <select id="serviceTypeFilter" class="form-control" style="color: #333; background-color: #fff;">
+                                    <option value="">Select Service Type</option>
+                                    <option value="CA">CA</option>
+                                    <option value="SA-I">SA-I</option>
+                                    <option value="SA-II">SA-II</option>
+                                    <option value="RC">RC</option>
+                                    <option value="SP">SP</option>
+                                </select>
+                            </div>
+                            <div class="invoice-filter-item">
+                                <input type="text" class="filterFromDate" id="filterFromDate" placeholder="Date From">
+                            </div>
+                            <div class="invoice-filter-item">
+                                <input type="text" class="filterToDate" id="filterToDate" placeholder="Date To">
+                            </div>
+                            <div class="invoice-filter-item" style="flex: 0 0 160px;">
+                                <button type="button" class="btn-report-export btn-solid-primary downloadAuditReport" style="width: 100%;">
+                                    <i class="fa fa-cloud-download" style="font-size: 15px;"></i> Download
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div class="row clearfix" >
                     <div class="col-sm-12 main_content table-responsive">
                         <table class="table table-hover table-sortable table-striped" id="tab_customer_list" width="100%">
@@ -195,7 +357,102 @@
 </div>
 
 <script type="text/javascript">
+    function debounce(callback, delay) {
+        var debounceTimer;
+        return function () {
+            var context = this;
+            var args = arguments;
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(function () {
+                callback.apply(context, args);
+            }, delay);
+        };
+    }
+
+    function compareMinDates(filterDate, rowDate) {
+        if (!rowDate) return false;
+        var filterDateSplit = filterDate.split(".");
+        var rowDateSplit = rowDate.split(".");
+        if (filterDateSplit[2] < rowDateSplit[2]) return true;
+        if (filterDateSplit[2] == rowDateSplit[2]) {
+            if (filterDateSplit[1] < rowDateSplit[1]) return true;
+            if (filterDateSplit[1] == rowDateSplit[1]) {
+                if (filterDateSplit[0] <= rowDateSplit[0]) return true;
+            }
+        }
+        return false;
+    }
+
+    function compareMaxDates(filterDate, rowDate) {
+        if (!rowDate) return false;
+        var filterDateSplit = filterDate.split(".");
+        var rowDateSplit = rowDate.split(".");
+        if (filterDateSplit[2] > rowDateSplit[2]) return true;
+        if (filterDateSplit[2] == rowDateSplit[2]) {
+            if (filterDateSplit[1] > rowDateSplit[1]) return true;
+            if (filterDateSplit[1] == rowDateSplit[1]) {
+                if (filterDateSplit[0] >= rowDateSplit[0]) return true;
+            }
+        }
+        return false;
+    }
+
+    $.fn.DataTable.ext.search.push(
+            function (settings, data, dataIndex) {
+                var fromDate = $('#filterFromDate').val();
+                var toDate = $('#filterToDate').val();
+                var auditor = $('#auditorFilter').val().toLowerCase();
+                var svcType = $('#serviceTypeFilter').val().toLowerCase();
+                
+                var rowDate = data[3] || ""; // Column 3 is Audit date
+                var rowSvc = data[2].toLowerCase() || ""; // Column 2 is Service type
+                var rowAuditor = data[4].toLowerCase() || ""; // Column 4 is Auditor
+
+                var isfromDate = fromDate == "" || compareMinDates(fromDate, rowDate);
+                var isToDate = toDate == "" || compareMaxDates(toDate, rowDate);
+                var isAuditor = auditor == "" || rowAuditor.indexOf(auditor) !== -1;
+                var isSvc = svcType == "" || rowSvc.indexOf(svcType) !== -1;
+
+                return isfromDate && isToDate && isAuditor && isSvc;
+            }
+    );
+
     $(document).ready(function () {
+
+        var debouncedSearch = debounce(function () {
+            table.column(1).search($('#auditClientSearch').val()).draw();
+        }, 200);
+
+        $('#auditClientSearch').on('input', debouncedSearch);
+
+        $('#auditorFilter, #serviceTypeFilter, #filterFromDate, #filterToDate').on('input change keyup', function () {
+            table.draw();
+        });
+
+        $('#filterFromDate, #filterToDate').datepicker({
+            dateFormat: 'dd.mm.yy',
+            changeMonth: true,
+            changeYear: true
+        });
+
+        $('.downloadAuditReport').click(function () {
+            var fromDate = $('#filterFromDate').val();
+            var toDate = $('#filterToDate').val();
+            var auditor = $('#auditorFilter').val();
+            var serviceType = $('#serviceTypeFilter').val();
+            var clientName = $('#auditClientSearch').val();
+            var url = 'exportAuditPlanningReport.php';
+            var form = $('<form action="' + url + '" method="post" target="_blank">' +
+                    '<input type="hidden" name="fromDate" value="' + fromDate + '" />' +
+                    '<input type="hidden" name="toDate" value="' + toDate + '" />' +
+                    '<input type="hidden" name="auditor" value="' + auditor + '" />' +
+                    '<input type="hidden" name="serviceType" value="' + serviceType + '" />' +
+                    '<input type="hidden" name="clientName" value="' + clientName + '" />' +
+                    '</form>');
+            $('body').append(form);
+            form.submit();
+            form.remove();
+        });
 
         $('.downloadAuditNotificationii').click(function () {
             var notificationid = $(this).attr('data-audit');

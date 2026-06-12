@@ -328,3 +328,66 @@ FULL PAYLOAD:
 ]
 
 ---------------------------------------------
+[2026-06-10 07:06:16] INSERT REQUEST RECEIVED -> Client ID: #87
+FULL PAYLOAD:
+[
+    {
+        "internal_client_id": "87",
+        "customer_name": "Bhairavnath Industries",
+        "address": "Gat No.442, Opp. Z. P. school, Chakan Talegoan Road, Kharabwadi, Chakan, Tal-Khed, Dist-Pune-410 501, Maharashra, India",
+        "certification_status": "Withdrawn",
+        "certificate_tracking_id": "61",
+        "certificate_number": "27421741473",
+        "issue_date": "2017-03-20",
+        "expiry_date": "2020-03-19",
+        "standard_name": "ISO 9001:2008",
+        "customer_guid": "GUID-000087",
+        "country": "India",
+        "schema_name": "QMS",
+        "certification_type": "Accredited"
+    }
+]
+
+---------------------------------------------
+[2026-06-10 07:06:32] INSERT REQUEST RECEIVED -> Client ID: #86
+FULL PAYLOAD:
+[
+    {
+        "internal_client_id": "86",
+        "customer_name": "DDM Engineering Pvt Ltd(withdrawn)",
+        "address": "Gat No.365\/2, kharabwadi, Ambethan road, MIDC, Chakan, Tal-Khed, Dist-Pune 410 501, Maharashtra, India.",
+        "certification_status": "Withdrawn",
+        "certificate_tracking_id": "60",
+        "certificate_number": "20521731471",
+        "issue_date": "2017-03-15",
+        "expiry_date": "2020-03-14",
+        "standard_name": "ISO 9001:2015",
+        "customer_guid": "GUID-000086",
+        "country": "India",
+        "schema_name": "QMS",
+        "certification_type": "Accredited"
+    }
+]
+
+---------------------------------------------
+[2026-06-10 07:07:18] INSERT REQUEST RECEIVED -> Client ID: #82
+FULL PAYLOAD:
+[
+    {
+        "internal_client_id": "82",
+        "customer_name": "Deepak Enterprises",
+        "address": "Gat No.78, Jyotibanagar, Talawade, Taluka-Haveli, Dist. Pune-411 062, Maharashtra, India.",
+        "certification_status": "Active",
+        "certificate_tracking_id": "54",
+        "certificate_number": "63931741405",
+        "issue_date": "2014-04-24",
+        "expiry_date": "2017-04-23",
+        "standard_name": "ISO 9001:2015",
+        "customer_guid": "GUID-000082",
+        "country": "India",
+        "schema_name": "QMS",
+        "certification_type": "Accredited"
+    }
+]
+
+---------------------------------------------

@@ -109,7 +109,7 @@
             display: flex;
             flex-wrap: wrap;
             gap: 15px;
-            align-items: flex-end;
+            align-items: flex-end; /* Aligns bottoms of inputs and buttons */
             margin: 10px 0 20px;
             padding: 15px;
             background: #f8fbff;
@@ -118,17 +118,22 @@
         }
 
         .invoice-filter-item {
-            flex: 1 1 220px;
+            flex: 1;
+            min-width: 200px;
+            display: flex;
+            flex-direction: column;
         }
 
         .invoice-filter-item label {
             display: block;
             margin-bottom: 6px;
             color: #0d4d8b;
-            font-size: 12px;
-            font-weight: 600;
+            font-size: 11px;
+            font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.4px;
+            letter-spacing: 0.5px;
+            height: 14px; /* Force consistent height for labels */
+            line-height: 14px;
         }
 
         .invoice-filter-item input {
@@ -136,14 +141,85 @@
             height: 38px;
             padding: 8px 12px;
             border: 1px solid #bfd2e6;
-            border-radius: 4px;
-            box-shadow: none;
+            border-radius: 6px;
+            box-sizing: border-box; /* Crucial for alignment */
+            font-size: 13px;
+            color: #333;
+            background-color: #fff;
         }
 
         .invoice-filter-item input:focus {
             border-color: #0d4d8b;
             outline: none;
-            box-shadow: 0 0 0 2px rgba(13, 77, 139, 0.08);
+            box-shadow: 0 0 0 3px rgba(13, 77, 139, 0.1);
+        }
+
+        /* Premium Enterprise Buttons */
+        .btn-report-export {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            height: 38px; /* Matches input height exactly */
+            margin: 0;
+            padding: 0 20px;
+            box-sizing: border-box; /* Crucial for alignment */
+            font-family: 'Inter', -apple-system, sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.2px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            text-transform: none;
+            border: 1px solid transparent;
+            white-space: nowrap;
+        }
+
+        /* 1. Solid Primary - Stripe/Linear Style */
+        .btn-solid-primary {
+            background-color: #0d4d8b;
+            color: #ffffff;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(13, 77, 139, 0.1);
+        }
+        .btn-solid-primary:hover {
+            background-color: #0b3d6e;
+            box-shadow: 0 4px 12px rgba(13, 77, 139, 0.15);
+            transform: translateY(-1px);
+        }
+        .btn-solid-primary:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(13, 77, 139, 0.1);
+        }
+
+        /* 2. Outlined Premium - Notion Style */
+        .btn-outlined-premium {
+            background-color: #ffffff;
+            color: #0d4d8b;
+            border: 1px solid #bfd2e6;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+        .btn-outlined-premium:hover {
+            border-color: #0d4d8b;
+            background-color: #f8fbff;
+            color: #0d4d8b;
+        }
+        .btn-outlined-premium:active {
+            background-color: #edf3ff;
+        }
+
+        /* 3. Soft Filled - Slack/Atlassian Style */
+        .btn-soft-filled {
+            background-color: #eaf3ff;
+            color: #0d4d8b;
+            box-shadow: none;
+        }
+        .btn-soft-filled:hover {
+            background-color: #d6e8ff;
+            color: #093967;
+        }
+        .btn-soft-filled:active {
+            background-color: #c2ddff;
         }
 
         #table_proforma_invoice_filter,
@@ -316,6 +392,13 @@
                                                 <label for="proformaClientSearch">Client Name</label>
                                                 <input type="text" id="proformaClientSearch" placeholder="Search by client name">
                                             </div>
+                                            <div class="invoice-filter-item">
+                                                <label>Action</label>
+                                                <!-- Premium Button Options: btn-solid-primary, btn-outlined-premium, btn-soft-filled -->
+                                                <button type="button" class="btn-report-export btn-solid-primary downloadProformaReport" style="width: 100%;">
+                                                    <i class="fa fa-cloud-download" style="font-size: 15px;"></i> Download Report
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -436,6 +519,13 @@
                                             <div class="invoice-filter-item">
                                                 <label for="finalClientSearch">Client Name</label>
                                                 <input type="text" id="finalClientSearch" placeholder="Search by client name">
+                                            </div>
+                                            <div class="invoice-filter-item">
+                                                <label>Action</label>
+                                                <!-- Premium Button Options: btn-solid-primary, btn-outlined-premium, btn-soft-filled -->
+                                                <button type="button" class="btn-report-export btn-solid-primary downloadFinalReport" style="width: 100%;">
+                                                    <i class="fa fa-cloud-download" style="font-size: 15px;"></i> Download Report
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
@@ -850,6 +940,34 @@
         $('#proformaClientSearch').on('input', debouncedProformaSearch);
         $('#finalClientSearch').on('input', debouncedFinalSearch);
 
+        $('.downloadProformaReport').click(function () {
+            var clientName = $('#proformaClientSearch').val();
+            var url = 'exportInvoiceReport.php';
+            var form = $('<form action="' + url + '" method="post" target="_blank">' +
+                    '<input type="hidden" name="invoiceType" value="proforma" />' +
+                    '<input type="hidden" name="clientName" value="' + clientName + '" />' +
+                    '</form>');
+            $('body').append(form);
+            form.submit();
+            form.remove();
+        });
+
+        $('.downloadFinalReport').click(function () {
+            var fromDate = $('#filterFromDate').val();
+            var toDate = $('#filterToDate').val();
+            var clientName = $('#finalClientSearch').val();
+            var url = 'exportInvoiceReport.php';
+            var form = $('<form action="' + url + '" method="post" target="_blank">' +
+                    '<input type="hidden" name="invoiceType" value="final" />' +
+                    '<input type="hidden" name="fromDate" value="' + fromDate + '" />' +
+                    '<input type="hidden" name="toDate" value="' + toDate + '" />' +
+                    '<input type="hidden" name="clientName" value="' + clientName + '" />' +
+                    '</form>');
+            $('body').append(form);
+            form.submit();
+            form.remove();
+        });
+
         $('#filterFromDate').datepicker({
             minDate: '-100Y',
             maxDate: '+100Y',
@@ -1244,3 +1362,4 @@
 
     });
 </script>
+t>

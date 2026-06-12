@@ -25,28 +25,21 @@
             --transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
 
-        /* Modern Card with 3D Tilt Effect */
+        /* Modern Card - Simplified for better performance */
         .modern-card {
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            background: rgba(255, 255, 255, 0.95);
             border-radius: 20px;
             border: 1px solid rgba(255, 255, 255, 0.4);
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1), 0 5px 15px rgba(0, 0, 0, 0.07);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
             padding: 40px;
             margin-bottom: 40px;
-            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
             position: relative;
-            overflow: hidden;
-            transform-style: preserve-3d;
-            perspective: 1000px;
-            will-change: transform, box-shadow;
-            transform: translateZ(0) scale(1);
         }
         
         .modern-card:hover {
-            transform: translateY(-10px) scale(1.02) rotateX(2deg) rotateY(2deg);
-            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.15), 0 15px 30px rgba(0, 0, 0, 0.1);
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
         }
         
         .modern-card::before {
@@ -55,18 +48,15 @@
             top: 0;
             left: 0;
             width: 100%;
-            height: 5px;
+            height: 4px;
             background: linear-gradient(90deg, var(--gradient-1), var(--gradient-2), var(--gradient-3));
-            background-size: 400% 400%;
-            animation: gradientBG 8s ease infinite;
+            z-index: 1;
         }
 
         /* Hero Section with Particles */
         .hero-section {
             position: relative;
-            height: 100vh;
-            min-height: 700px;
-            overflow: hidden;
+            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -76,6 +66,7 @@
             background-size: 400% 400%;
             animation: gradientBG 15s ease infinite;
             z-index: 1;
+            padding: 100px 0;
         }
         
         #particles-js {
@@ -174,12 +165,11 @@
             position: relative;
             margin-bottom: 15px;
             color: var(--text-color);
-            background: rgba(255, 255, 255, 0.7);
+            background: rgba(255, 255, 255, 0.9);
             border-radius: 12px;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.3s ease;
             border-left: 4px solid transparent;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-            backdrop-filter: blur(5px);
             transform: translateZ(0);
         }
         
@@ -269,6 +259,12 @@
         }
         
         /* Animations */
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
         @keyframes fadeInUp {
             from {
                 opacity: 0;
@@ -308,12 +304,19 @@
         
         /* Smooth scroll behavior */
         html {
-            scroll-behavior: smooth;
+            scroll-behavior: smooth !important;
+            height: auto !important;
+        }
+        
+        body {
+            overflow-y: auto !important;
+            overflow-x: hidden;
+            height: auto !important;
         }
     </style>
 </head>
 
-    <body id="home" data-spy="scroll" data-target="#navbar-wd" data-offset="98">
+    <body id="home" data-offset="98">
     <?php include './headerSource.php'; ?>
     
     <!-- Hero Section with Particles -->
@@ -500,30 +503,10 @@
             },
             retina_detect: true
         });
-        
-        // Add 3D tilt effect to cards
-        const cards = document.querySelectorAll('.modern-card');
-        cards.forEach(card => {
-            card.addEventListener('mousemove', (e) => {
-                const rect = card.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                
-                const centerX = rect.width / 2;
-                const centerY = rect.height / 2;
-                
-                const angleX = (y - centerY) / 20;
-                const angleY = (centerX - x) / 20;
-                
-                card.style.transform = `perspective(1000px) rotateX(${angleX}deg) rotateY(${angleY}deg) translateY(-10px) scale(1.02)`;
-                card.style.boxShadow = `${-angleY}px ${angleX}px 30px rgba(0,0,0,0.2)`;
-            });
-            
-            card.addEventListener('mouseleave', () => {
-                card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) translateY(0) scale(1)';
-                card.style.boxShadow = '0 25px 60px rgba(0, 0, 0, 0.15), 0 15px 30px rgba(0, 0, 0, 0.1)';
-            });
-        });
+
+        // Force enable scrolling just in case
+        document.documentElement.style.overflowY = 'auto';
+        document.body.style.overflowY = 'auto';
     });
     </script>
 </body>
