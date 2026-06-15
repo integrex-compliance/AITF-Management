@@ -222,10 +222,10 @@
 
     <div id="page-content-wrapper">
         <div class="page-content inset">
-            <div class="container" >
+            <div class="container" 
                 <div class="row">
                     <div class="col-sm-12">
-                        <h5 class="invoice-section-title">Client Management Dashboard</h5>
+                        <h5 class="invoice-section-title">Client Management & Reports </h5>
                     </div>
                 </div>
                 <div class="row">

@@ -1,7 +1,7 @@
 <div id="wrapper" class="active">
 
     <?php
-    
+
     $pageIdentifier = "TDS list";
     include_once './header.php';
     include_once './dbConnect.php';
@@ -10,6 +10,8 @@
     $status = $_GET['status'] ?? 'all';
     $startDateStr = $_GET['startDate'] ?? '';
     $endDateStr = $_GET['endDate'] ?? '';
+    $clientSearch = $_GET['clientSearch'] ?? '';
+    $sortOrder = $_GET['sortOrder'] ?? '';
 
     $startDate = '';
     $endDate = '';
@@ -29,20 +31,25 @@
         }
     }
 
-    $allTds = "SELECT ci.id, customer_name,ci.unique_id,ps.customer_id,ps.service_type as tds, ps.amount_decided,ps.payment_received,ps.payment_date,ps.comment,ps.payment_id, svc.service_id, svc.service_type 
-               FROM customer_info ci 
-               left join payment_system ps ON ci.id=ps.customer_id 
-               left join service svc on ps.customer_id = svc.customer_id 
-               WHERE svc.service_id = (select max(tmp.service_id) from service tmp where tmp.customer_id = ci.id) 
+    $allTds = "SELECT ci.id, customer_name,ci.unique_id,ps.customer_id,ps.service_type as tds, ps.amount_decided,ps.payment_received,ps.payment_date,ps.comment,ps.payment_id, svc.service_id, svc.service_type
+               FROM customer_info ci
+               left join payment_system ps ON ci.id=ps.customer_id
+               left join service svc on ps.customer_id = svc.customer_id
+               WHERE svc.service_id = (select max(tmp.service_id) from service tmp where tmp.customer_id = ci.id)
                and ps.service_type LIKE '%tds%'";
 
+    $params = [];
     if ($status == 'received') {
         $allTds .= " AND ps.payment_received > 0";
     } elseif ($status == 'not_received') {
         $allTds .= " AND (ps.payment_received IS NULL OR ps.payment_received = 0 OR ps.payment_received = '' OR ps.payment_received = '0.00' OR ps.payment_received = '0')";
     }
 
-    $params = [];
+    if (!empty($clientSearch)) {
+        $allTds .= " AND ci.customer_name LIKE :clientSearch";
+        $params[':clientSearch'] = '%' . $clientSearch . '%';
+    }
+
     if (!empty($startDate)) {
         $allTds .= " AND ps.payment_date >= :startDate";
         $params[':startDate'] = $startDate;
@@ -50,6 +57,14 @@
     if (!empty($endDate)) {
         $allTds .= " AND ps.payment_date <= :endDate";
         $params[':endDate'] = $endDate;
+    }
+
+    if ($sortOrder == 'high') {
+        $allTds .= " ORDER BY CAST(ps.amount_decided AS DECIMAL(10,2)) DESC";
+    } elseif ($sortOrder == 'low') {
+        $allTds .= " ORDER BY CAST(ps.amount_decided AS DECIMAL(10,2)) ASC";
+    } else {
+        $allTds .= " ORDER BY ci.id DESC";
     }
 
     $statement = $db->prepare($allTds);
@@ -175,6 +190,10 @@
                                             </select>
                                         </div>
                                         <div class="invoice-filter-item">
+                                            <label for="clientSearch">Client Name</label>
+                                            <input type="text" name="clientSearch" id="clientSearch" value="<?php echo $clientSearch; ?>" placeholder="Search Client..." onkeyup="if(event.keyCode == 13) $('#filterForm').submit()">
+                                        </div>
+                                        <div class="invoice-filter-item">
                                             <label for="startDate">From Date</label>
                                             <input type="text" name="startDate" id="startDate" class="datepicker-tds" value="<?php echo $startDateStr; ?>" autocomplete="off" placeholder="DD.MM.YYYY">
                                         </div>
@@ -183,8 +202,16 @@
                                             <input type="text" name="endDate" id="endDate" class="datepicker-tds" value="<?php echo $endDateStr; ?>" autocomplete="off" placeholder="DD.MM.YYYY">
                                         </div>
                                         <div class="invoice-filter-item">
+                                            <label for="sortOrder">Sort By Amount</label>
+                                            <select name="sortOrder" id="sortOrder" onchange="$('#filterForm').submit()">
+                                                <option value="" <?php echo $sortOrder == '' ? 'selected' : ''; ?>>Default</option>
+                                                <option value="high" <?php echo $sortOrder == 'high' ? 'selected' : ''; ?>>High to Low</option>
+                                                <option value="low" <?php echo $sortOrder == 'low' ? 'selected' : ''; ?>>Low to High</option>
+                                            </select>
+                                        </div>
+                                        <div class="invoice-filter-item">
                                             <label>Action</label>
-                                            <button type="button" class="btn-premium btn-solid-primary downloadTdsReport" style="width: 100%; height: 38px; background: #0d4d8b; color: #fff; border: none; border-radius: 6px; font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px;">
+                                            <button type="button" onclick="exportReport()" class="btn-premium btn-solid-primary downloadTdsReport" style="width: 100%; height: 38px; background: #0d4d8b; color: #fff; border: none; border-radius: 6px; font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px;">
                                                 <i class="fa fa-cloud-download" style="font-size: 15px;"></i> Download Report
                                             </button>
                                         </div>
@@ -247,9 +274,9 @@
                                                 } ?></small>
                                                         </td>
                                                         <td data-name="sel" style="border-top: 1px solid #ffffff;  border-right: 1px solid #ffffff;">
-                                                            <div class="table-edit-control">  
+                                                            <div class="table-edit-control">
                                                                 <textarea rows="3" class="saveChanges" data-row="<?php echo $tds['payment_id'] ?>" data-column="comment" name="payComments" value="" placeholder="" ><?php if (isset($tds['comment'])) echo $tds['comment'] ?></textarea>
-                                                            </div>  
+                                                            </div>
                                                         </td>
                                                     </tr>
 <?php } ?>
@@ -272,8 +299,34 @@
         var status = $('#status').val();
         var startDate = $('#startDate').val();
         var endDate = $('#endDate').val();
-        var url = 'exportTdsReport.php?status=' + status + '&startDate=' + startDate + '&endDate=' + endDate + '&action=export';
-        window.open(url, '_blank');
+        var clientSearch = $('#clientSearch').val();
+        var sortOrder = $('#sortOrder').val();
+
+        var form = document.createElement("form");
+        form.method = "POST";
+        form.action = "exportTdsReport.php";
+        form.target = "_blank";
+
+        var params = {
+            status: status,
+            startDate: startDate,
+            endDate: endDate,
+            clientSearch: clientSearch,
+            sortOrder: sortOrder,
+            action: "export"
+        };
+
+        for (var key in params) {
+            var input = document.createElement("input");
+            input.type = "hidden";
+            input.name = key;
+            input.value = params[key];
+            form.appendChild(input);
+        }
+
+        document.body.appendChild(form);
+        form.submit();
+        document.body.removeChild(form);
     }
 
     $(document).ready(function () {
@@ -295,75 +348,48 @@
         }, 100);
 
         var table = $('#table_finance_details').DataTable({
-//            "sScrollX": "100%",
-        "scrollY": '70vh',
-        "scrollCollapse": true,
-        "paging": false,
-        "ordering": false,
-        "lengthChange": false,
-//            "pageLength": 10,
-        "paging": false,
-        "columnDefs": [
-            {
-                "width": "10%",
-                "targets": 0
-            },
-            {
-                "width": "15%",
-                "targets": 1
-            },
-            {
-                "width": "15%",
-                "targets": 2
-            },
-            {
-                "width": "12%",
-                "targets": 3
-            },
-            {
-                "width": "10%",
-                "targets": 4
-            },
-        ]
-                //        "paging":         false
-    });
-
-    $("#menu-toggle").click(function (e) {
-        e.preventDefault();
-        $("#wrapper").toggleClass("active");
-        $(".container").toggleClass("active");
-        table.draw();
-    });
-
-    $('.saveChanges').change(function (e) {
-        saveData($(this));
-    });
-    function saveData($selector) {
-
-        var checkedValue = $selector.val();
-        //            alert(checkedValue);
-        $.ajax({
-            url: "deleteFinalInvoice.php",
-            type: "GET",
-            //                dataType: 'JSON',
-            data: {
-                id: $selector.attr('data-row'),
-                columnName: $selector.attr('data-column'),
-                columnValue: checkedValue,
-            }, error: function (xhr, status, error) {
-                //                    alert("There seems to be issue saving data!");
-            },
-            success: function (data) {
-//                    alert(data);
-            }
+            "scrollY": '70vh',
+            "scrollCollapse": true,
+            "paging": false,
+            "ordering": false,
+            "lengthChange": false,
+            "columnDefs": [
+                { "width": "10%", "targets": 0 },
+                { "width": "15%", "targets": 1 },
+                { "width": "15%", "targets": 2 },
+                { "width": "12%", "targets": 3 },
+                { "width": "10%", "targets": 4 },
+            ]
         });
 
-        $selector.removeClass("glowing-border");
-        //           $(this).removeClass("form-group ");
-        $selector.addClass("lookslike-label");
-    }
+        $("#menu-toggle").click(function (e) {
+            e.preventDefault();
+            $("#wrapper").toggleClass("active");
+            $(".container").toggleClass("active");
+            table.draw();
+        });
 
-    $(document).ready(function () {
+        $('.saveChanges').change(function (e) {
+            saveData($(this));
+        });
+
+        function saveData($selector) {
+            var checkedValue = $selector.val();
+            $.ajax({
+                url: "deleteFinalInvoice.php",
+                type: "GET",
+                data: {
+                    id: $selector.attr('data-row'),
+                    columnName: $selector.attr('data-column'),
+                    columnValue: checkedValue,
+                },
+                success: function (data) {
+                    // Success logic
+                }
+            });
+            $selector.removeClass("glowing-border");
+            $selector.addClass("lookslike-label");
+        }
 
         $('.customerAccount').click(function () {
             var customerID = $(this).attr('data-id');
@@ -375,10 +401,7 @@
             form.submit();
         });
 
-      
-
         $('.newCustomer').click(function () {
-            //            alert('hi');
             $(".addNewCustomer").show();
             $('.newCustomer').hide();
         });
@@ -388,17 +411,6 @@
             $(".addNewCustomer").hide();
         });
 
-        $('.customerAccount').click(function () {
-            var customerID = $(this).attr('data-id');
-            var url = 'customerAccount.php'
-            var form = $('<form action="' + url + '" method="get">' +
-                    '<input type="hidden" name="customerid" value="' + customerID + '" />' +
-                    '</form>');
-            $('body').append(form);
-            form.submit();
-        });
-
         table.columns.adjust().draw();
-
     });
 </script>

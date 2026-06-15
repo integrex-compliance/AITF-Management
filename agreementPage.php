@@ -11,7 +11,7 @@
     include 'header.php';
     include 'dbConnect.php';
 
-//    $quotationList = "SELECT qd.quotation_id, qd.customer_id, quotationno, quotation_date, free_covers, stage_i_audit, stage_ii_audit, total_cost, maintenance, ci.id, customer_name, ci.address, svc.service_id, service_type FROM quotation_detail qd left join customer_info ci on qd.customer_id = ci.id left join service svc on qd.customer_id = svc.customer_id where svc.service_id = (select max(tmp.service_id) from service tmp where tmp.customer_id = ci.id)";
+    //    $quotationList = "SELECT qd.quotation_id, qd.customer_id, quotationno, quotation_date, free_covers, stage_i_audit, stage_ii_audit, total_cost, maintenance, ci.id, customer_name, ci.address, svc.service_id, service_type FROM quotation_detail qd left join customer_info ci on qd.customer_id = ci.id left join service svc on qd.customer_id = svc.customer_id where svc.service_id = (select max(tmp.service_id) from service tmp where tmp.customer_id = ci.id)";
 //    $quotationList = "SELECT s.service_id, service_type, s.customer_id, ci.customer_name, qd.quotation_id, quotationno, quotation_date, total_cost, 'Quotation' as quotid FROM customer_info ci join service s on ci.id = s.customer_id join quotation_detail qd on ci.id = qd.customer_id where s.service_id = (select max(tmp.service_id) from service tmp where tmp.customer_id = ci.id) union SELECT s.service_id, service_type, s.customer_id, ci.customer_name, aa.audit_id as quotation_id, uni_svc_id as quotationno, application_date as quotation_date, '' as total_cost, 'Aggrement' as quotid  FROM customer_info ci join service s on ci.id = s.customer_id join audit_application aa on s.service_id = aa.uni_svc_id where s.service_id = (select max(tmp.service_id) from service tmp where tmp.customer_id = ci.id) order by customer_name";
 //    $quotationList = "SELECT s.service_id, service_type, s.customer_id, ci.customer_name, ci.unique_id, aa.audit_id as quotation_id, uni_svc_id as quotationno, application_date as quotation_date, '' as total_cost, 'Aggrement' as quotid  FROM customer_info ci join service s on ci.id = s.customer_id join audit_application aa on s.service_id = aa.uni_svc_id where s.service_id = (select max(tmp.service_id) from service tmp where tmp.customer_id = ci.id) and ci.is_deleted = 'NO' order by customer_name";
     $quotationList = "SELECT s.service_id, service_type, s.customer_id, ci.customer_name, ci.audit_status, aa.audit_id as quotation_id, aa.service_id as casvcid, uni_svc_id as quotationno, application_date as quotation_date,'Aggrement' as quotid,refundable_amount,audit_stage_i, audit_stage_iI, initial_assessment, ca.id, ca.aggrement_date, ca.aggrement_no FROM customer_info ci join service s on ci.id = s.customer_id join audit_application aa on s.service_id = aa.uni_svc_id left join certification_aggrement ca on aa.service_id = ca.service where ci.is_deleted = 'NO' order by aggrement_date DESC";
@@ -53,7 +53,7 @@
             background: #f8fbff;
             border: 1px solid #d6e4f0;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
         }
 
         .invoice-filter-item {
@@ -130,11 +130,13 @@
             color: #ffffff;
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(13, 77, 139, 0.1);
         }
+
         .btn-solid-primary:hover {
             background-color: #0b3d6e;
             box-shadow: 0 4px 12px rgba(13, 77, 139, 0.15);
             transform: translateY(-1px);
         }
+
         .btn-solid-primary:active {
             transform: translateY(0);
             box-shadow: 0 2px 4px rgba(13, 77, 139, 0.1);
@@ -153,24 +155,29 @@
                     <div class="container" style="margin-top: 20px;">
                         <div class="row">
                             <div class="col-sm-12">
-                                <h5 class="invoice-section-title">Certification Agreements</h5>
+                                <h5 class="invoice-section-title">Certification Agreements & Reports</h5>
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-sm-12 main_content" style="">
                                 <div class="invoice-filter-panel">
                                     <div class="invoice-filter-item">
-                                        <input type="text" class="filterFromDate" id="filterFromDate" name="filterFromDate" placeholder="Due From Date" value="">
+                                        <input type="text" class="filterFromDate" id="filterFromDate"
+                                            name="filterFromDate" placeholder="Due From Date" value="">
                                     </div>
                                     <div class="invoice-filter-item">
-                                        <input type="text" class="filterToDate" id="filterToDate" name="filterToDate" placeholder="Due To Date" value="">
+                                        <input type="text" class="filterToDate" id="filterToDate" name="filterToDate"
+                                            placeholder="Due To Date" value="">
                                     </div>
                                     <div class="invoice-filter-item search-item">
                                         <i class="fa fa-search"></i>
-                                        <input type="text" id="agreementClientSearch" placeholder="Search by Client Name...">
+                                        <input type="text" id="agreementClientSearch"
+                                            placeholder="Search by Client Name...">
                                     </div>
                                     <div class="invoice-filter-item" style="flex: 0 0 160px;">
-                                        <button type="button" class="btn-report-export btn-solid-primary downloadAgreementReport" style="width: 100%;">
+                                        <button type="button"
+                                            class="btn-report-export btn-solid-primary downloadAgreementReport"
+                                            style="width: 100%;">
                                             <i class="fa fa-cloud-download" style="font-size: 15px;"></i> Download
                                         </button>
                                     </div>
@@ -181,7 +188,8 @@
                             <div class="col-sm-12 contact-form">
                                 <div class="row clearfix">
                                     <div class="col-md-12 table-responsive">
-                                        <table class="table table-bordered table-striped table-hover table-sortable" id="table_quotation">
+                                        <table class="table table-bordered table-striped table-hover table-sortable"
+                                            id="table_quotation">
                                             <thead>
                                                 <tr>
                                                     <th class="">
@@ -193,10 +201,10 @@
                                                     <th class="">
                                                         <small><a>Agreement/Quotation No.</a></small>
                                                     </th>
-                                                    <th class="" >
+                                                    <th class="">
                                                         <small><a>Amount</a></small>
                                                     </th>
-                                                    <th class="" >
+                                                    <th class="">
                                                         <small><a>Date</a></small>
                                                     </th>
                                                     <th class="">
@@ -214,30 +222,61 @@
                                                     $count = $count + 1;
                                                     $total_cost = $quotation['refundable_amount'] + $quotation['audit_stage_i'] + $quotation['audit_stage_iI'];
                                                     ?>
-                                                    <tr id='addr0' >                                                        
-                                                        <td class="customerAccount" data-id="<?php echo $quotation['customer_id'] ?>" data-name="desc" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                                    <tr id='addr0'>
+                                                        <td class="customerAccount"
+                                                            data-id="<?php echo $quotation['customer_id'] ?>"
+                                                            data-name="desc"
+                                                            style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
                                                             <small><?php echo $quotation['customer_name'] ?></small>
                                                         </td>
-                                                        <td class="customerAccount" data-id="<?php echo $quotation['customer_id'] ?>" data-name="sel" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                                        <td class="customerAccount"
+                                                            data-id="<?php echo $quotation['customer_id'] ?>"
+                                                            data-name="sel"
+                                                            style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
                                                             <small><?php echo $quotation['service_type'] ?></small>
                                                         </td>
-                                                        <td class="customerAccount" data-id="<?php echo $quotation['customer_id'] ?>" data-name="sel" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                                        <td class="customerAccount"
+                                                            data-id="<?php echo $quotation['customer_id'] ?>"
+                                                            data-name="sel"
+                                                            style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
                                                             <small><?php echo $quotation['aggrement_no'] ?></small>
                                                         </td>
-                                                        <td class="customerAccount" data-id="<?php echo $quotation['customer_id'] ?>" data-name="sel" style="border-top: 1px solid #ffffff;  border-right: 1px solid #ffffff;">
+                                                        <td class="customerAccount"
+                                                            data-id="<?php echo $quotation['customer_id'] ?>"
+                                                            data-name="sel"
+                                                            style="border-top: 1px solid #ffffff;  border-right: 1px solid #ffffff;">
                                                             <small><?php echo $total_cost ?></small>
                                                         </td>
-                                                        <td class="customerAccount" data-id="<?php echo $quotation['customer_id'] ?>" data-name="sel" style="border-top: 1px solid #ffffff;  border-right: 1px solid #ffffff;">
+                                                        <td class="customerAccount"
+                                                            data-id="<?php echo $quotation['customer_id'] ?>"
+                                                            data-name="sel"
+                                                            style="border-top: 1px solid #ffffff;  border-right: 1px solid #ffffff;">
                                                             <small><span><?php echo simpleDateConversion($quotation['aggrement_date']); ?>~</span><?php echo simpleDateConversion($quotation['aggrement_date']); ?></small>
                                                         </td>
-                                                        <td class="customerAccount" data-id="<?php echo $quotation['customer_id'] ?>" data-name="sel" style="border-top: 1px solid #ffffff;  border-right: 1px solid #ffffff;">
+                                                        <td class="customerAccount"
+                                                            data-id="<?php echo $quotation['customer_id'] ?>"
+                                                            data-name="sel"
+                                                            style="border-top: 1px solid #ffffff;  border-right: 1px solid #ffffff;">
                                                             <small><?php echo $quotation['audit_status']; ?></small>
                                                             <!--<a class="finalInvoice" data-customer="<?php //  echo $quotation['customer_id']              ?>" data-id="<?php echo $proforma['audit_status'] ?>" title="Add to final invoice" style="padding: 1px 5px; "><i class="fa fa-plus-circle fa-lg " style="padding:3px"></i></a>-->
                                                         </td>
-                                                        <td data-name="sel" style="border-top: 1px solid #ffffff;  border-right: 1px solid #ffffff;">
-                                                            <a class="editAuditApp" data-page="agreement" data-audit="<?php echo $quotation['quotation_id'] ?>" data-firm="<?php echo $quotation['firm_id'] ?>" data-customer="<?php echo $quotation['customer_id'] ?>" data-id="<?php echo $quotation['quotation_id'] ?>" title="Edit Quotation" style="padding: 1px 5px; "><i class="fa fa-pencil-square" style="padding:3px"></i></a>
-                                                            <a class="viewQuotation" data-service="<?php echo $quotation['casvcid'] ?>" data-customer="<?php echo $quotation['customer_id'] ?>" data-certfication="<?php echo $quotation['id'] ?>" data-id="<?php echo $quotation['quotation_id'] ?>" title="Quotation PDF" style="padding: 1px 5px; "><i class="fa fa-file-pdf-o" style="padding:3px"></i></a>                                                            
-                                                            <!--<a class="downloadcertificate pull-right" data-customer="<?php echo $_GET['customerid'] ?>"  data-service="<?php echo $spservices['sp_id'] ?>" data-certfication="<?php echo $spservices['id'] ?>" title="Download audit application" style="padding: 1px 5px;"><i class="fa fa-download fa-lg " style="padding: 3px"></i></a>--> 
+                                                        <td data-name="sel"
+                                                            style="border-top: 1px solid #ffffff;  border-right: 1px solid #ffffff;">
+                                                            <a class="editAuditApp" data-page="agreement"
+                                                                data-audit="<?php echo $quotation['quotation_id'] ?>"
+                                                                data-firm="<?php echo $quotation['firm_id'] ?>"
+                                                                data-customer="<?php echo $quotation['customer_id'] ?>"
+                                                                data-id="<?php echo $quotation['quotation_id'] ?>"
+                                                                title="Edit Quotation" style="padding: 1px 5px; "><i
+                                                                    class="fa fa-pencil-square" style="padding:3px"></i></a>
+                                                            <a class="viewQuotation"
+                                                                data-service="<?php echo $quotation['casvcid'] ?>"
+                                                                data-customer="<?php echo $quotation['customer_id'] ?>"
+                                                                data-certfication="<?php echo $quotation['id'] ?>"
+                                                                data-id="<?php echo $quotation['quotation_id'] ?>"
+                                                                title="Quotation PDF" style="padding: 1px 5px; "><i
+                                                                    class="fa fa-file-pdf-o" style="padding:3px"></i></a>
+                                                            <!--<a class="downloadcertificate pull-right" data-customer="<?php echo $_GET['customerid'] ?>"  data-service="<?php echo $spservices['sp_id'] ?>" data-certfication="<?php echo $spservices['id'] ?>" title="Download audit application" style="padding: 1px 5px;"><i class="fa fa-download fa-lg " style="padding: 3px"></i></a>-->
                                                         </td>
                                                     </tr>
                                                 <?php } ?>
@@ -266,7 +305,7 @@
             }, delay);
         };
     }
-    
+
     function compareMinDates(filterDate, rowDate) {
         var filterDateSplit = filterDate.split(".");
         var rowDateSplit = rowDate.split(".");
@@ -311,45 +350,45 @@
     }
 
     $.fn.DataTable.ext.search.push(
-            function (settings, data, dataIndex) {
-//                var serviceType = $(".service-type").val();
-                var fromDate = $(".filterFromDate").val();
-                var toDate = $(".filterToDate").val();
-//                var isServiceType = false;
-                var isfromDate = false;
-                var isToDate = false;
-                //            alert(serviceType);
-                if (fromDate == "" && toDate == "") {
-                    return true;
-                }
-//                if (serviceType != "") {
-//                    var servieTypeStr = data[6] || ""; // use data for the age column
-////                    alert(servieTypeStr);
-//                    if (servieTypeStr.toUpperCase().trim() == serviceType.toUpperCase().trim()) {
-//                        //                alert("test");
-//                        isServiceType = true;
-//                    }
-//                } else {
-//                    isServiceType = true;
-//                }
-                var dateValue = data[4] || "";
-                var dateSplit = dateValue.split("~");
-                //            alert(dateSplit[1]);
-                //            alert(fromDate);
-                if (fromDate != "") {
-//                      alert(dateValue);
-                    isfromDate = compareMinDates(fromDate, dateSplit[1]);
-                } else {
-                    isfromDate = true;
-                }
-                if (toDate != "") {
-                    isToDate = compareMaxDates(toDate, dateSplit[1]);
-                } else {
-                    isToDate = true;
-                }
-                finalResult = (isfromDate && isToDate);
-                return finalResult;
+        function (settings, data, dataIndex) {
+            //                var serviceType = $(".service-type").val();
+            var fromDate = $(".filterFromDate").val();
+            var toDate = $(".filterToDate").val();
+            //                var isServiceType = false;
+            var isfromDate = false;
+            var isToDate = false;
+            //            alert(serviceType);
+            if (fromDate == "" && toDate == "") {
+                return true;
             }
+            //                if (serviceType != "") {
+            //                    var servieTypeStr = data[6] || ""; // use data for the age column
+            ////                    alert(servieTypeStr);
+            //                    if (servieTypeStr.toUpperCase().trim() == serviceType.toUpperCase().trim()) {
+            //                        //                alert("test");
+            //                        isServiceType = true;
+            //                    }
+            //                } else {
+            //                    isServiceType = true;
+            //                }
+            var dateValue = data[4] || "";
+            var dateSplit = dateValue.split("~");
+            //            alert(dateSplit[1]);
+            //            alert(fromDate);
+            if (fromDate != "") {
+                //                      alert(dateValue);
+                isfromDate = compareMinDates(fromDate, dateSplit[1]);
+            } else {
+                isfromDate = true;
+            }
+            if (toDate != "") {
+                isToDate = compareMaxDates(toDate, dateSplit[1]);
+            } else {
+                isToDate = true;
+            }
+            finalResult = (isfromDate && isToDate);
+            return finalResult;
+        }
     );
 
     var table = $('#table_quotation').DataTable({
@@ -359,7 +398,7 @@
         "paging": false,
         "ordering": false,
         "lengthChange": false,
-//            "pageLength": 10,
+        //            "pageLength": 10,
         "paging": false,
         "columnDefs": [
             {
@@ -383,11 +422,11 @@
                 "targets": 4
             },
         ]
-                //        "paging":         false
+        //        "paging":         false
     });
 
     $(document).ready(function () {
-        
+
         var debouncedAgreementSearch = debounce(function () {
             table.column(0).search($('#agreementClientSearch').val()).draw();
         }, 200);
@@ -400,15 +439,15 @@
             var clientName = $('#agreementClientSearch').val();
             var url = 'exportAgreementReport.php';
             var form = $('<form action="' + url + '" method="post" target="_blank">' +
-                    '<input type="hidden" name="fromDate" value="' + fromDate + '" />' +
-                    '<input type="hidden" name="toDate" value="' + toDate + '" />' +
-                    '<input type="hidden" name="clientName" value="' + clientName + '" />' +
-                    '</form>');
+                '<input type="hidden" name="fromDate" value="' + fromDate + '" />' +
+                '<input type="hidden" name="toDate" value="' + toDate + '" />' +
+                '<input type="hidden" name="clientName" value="' + clientName + '" />' +
+                '</form>');
             $('body').append(form);
             form.submit();
             form.remove();
         });
-        
+
         $('#filterFromDate').datepicker({
             minDate: '-100Y',
             maxDate: '+100Y',
@@ -434,19 +473,19 @@
         $("#filterToDate").keydown(function (e) {
             //            e.preventDefault();
         });
-        
+
         $('.filterFromDate, .filterToDate').change(function () {
-        var fromDate = $(".filterFromDate").val();
-        var toDate = $(".filterToDate").val();
-        if (fromDate != "" && toDate != "") {
-            if (!compareMinDates(fromDate, toDate)) {
-                alert("To Date can't be after From Date");
-                $(".filterToDate").val("");
+            var fromDate = $(".filterFromDate").val();
+            var toDate = $(".filterToDate").val();
+            if (fromDate != "" && toDate != "") {
+                if (!compareMinDates(fromDate, toDate)) {
+                    alert("To Date can't be after From Date");
+                    $(".filterToDate").val("");
+                }
             }
-        }
-        //            alert("t");
-        table.draw();
-    });
+            //            alert("t");
+            table.draw();
+        });
 
         $(".viewQuotation").click(function () {
             var customer = $(this).attr('data-customer');
@@ -454,53 +493,53 @@
             var service = $(this).attr("data-service");
             var url = 'Csa.php';
             var form = $('<form action="' + url + '" method="post" target="_blank" >' +
-                    '<input type="hidden" name="csId" value="' + customer + '" />' +
-                    '<input type="hidden" name="certification" value="' + certification + '" />' +
-                    '<input type="hidden" name="service" value="' + service + '" />' +
-                    '</form>');
+                '<input type="hidden" name="csId" value="' + customer + '" />' +
+                '<input type="hidden" name="certification" value="' + certification + '" />' +
+                '<input type="hidden" name="service" value="' + service + '" />' +
+                '</form>');
             $('body').append(form);
             form.submit();
         });
 
-//        $('.viewQuotation').click(function (e) {
-//         //            alert(ServiceId)
-//         var customerID = $(this).attr('data-customer');
-//         var quotation_id ;
-//        var url = '';
-//            var form = '';
-//            $.ajax({
-//                url: "checkCustomer.php",
-//                type: "GET",
-//                dataType: "json",
-//                data: {
-//                    
-//                    customerId: customerID,
-//                },
-//                success: function (data)
-//                {
-//                    if (data[0] == "no deta") {  
-//                         quotation_id = data[1];  alert(data[1]);                    
-//                    } 
-//                    else {
-//                          quotation_id = data[1];
-//                          console.log(quotation_id);
-//                        }
-//                },
-//                error: function (data, status, err)
-//                {
-//                    alert(data[0],data[1]);
-//                }
-//            });
-//             
-//             url = 'Csa.php';
-//                          form = $('<form action="' + url + '" method="post" target="_blank">' +
-//                    '<input type="hidden" name="csId" value="' + customerID + '" />' +
-//                    '<input type="hidden" name="ServiceId" value="' + quotation_id + '" />' +
-//                    '</form>');
-//            $('body').append(form);
-//            form.submit();
-//            
-//        });
+        //        $('.viewQuotation').click(function (e) {
+        //         //            alert(ServiceId)
+        //         var customerID = $(this).attr('data-customer');
+        //         var quotation_id ;
+        //        var url = '';
+        //            var form = '';
+        //            $.ajax({
+        //                url: "checkCustomer.php",
+        //                type: "GET",
+        //                dataType: "json",
+        //                data: {
+        //                    
+        //                    customerId: customerID,
+        //                },
+        //                success: function (data)
+        //                {
+        //                    if (data[0] == "no deta") {  
+        //                         quotation_id = data[1];  alert(data[1]);                    
+        //                    } 
+        //                    else {
+        //                          quotation_id = data[1];
+        //                          console.log(quotation_id);
+        //                        }
+        //                },
+        //                error: function (data, status, err)
+        //                {
+        //                    alert(data[0],data[1]);
+        //                }
+        //            });
+        //             
+        //             url = 'Csa.php';
+        //                          form = $('<form action="' + url + '" method="post" target="_blank">' +
+        //                    '<input type="hidden" name="csId" value="' + customerID + '" />' +
+        //                    '<input type="hidden" name="ServiceId" value="' + quotation_id + '" />' +
+        //                    '</form>');
+        //            $('body').append(form);
+        //            form.submit();
+        //            
+        //        });
 
         $('.certificationBtn').click(function () {
             var ServiceId = $(this).attr('data-service');
@@ -508,22 +547,22 @@
             // alert(csId);
             var url = 'Csa.php';
             var form = $('<form action="' + url + '" method="post" target="_blank" >' +
-                    '<input type="hidden" name="ServiceId" value="' + ServiceId + '" />' +
-                    '<input type="hidden" name="csId" value="' + csId + '" />' +
-                    '</form>');
+                '<input type="hidden" name="ServiceId" value="' + ServiceId + '" />' +
+                '<input type="hidden" name="csId" value="' + csId + '" />' +
+                '</form>');
             $('body').append(form);
             form.submit();
         });
 
         $('.customerAccount').click(function () {
             var customerID = $(this).attr('data-id');
-//            alert(customerID);
+            //            alert(customerID);
             // open popup
             localStorage['visited'] = customerID;
             var url = 'customerAccount.php'
             var form = $('<form action="' + url + '" method="get">' +
-                    '<input type="hidden" name="customerid" value="' + customerID + '" />' +
-                    '</form>');
+                '<input type="hidden" name="customerid" value="' + customerID + '" />' +
+                '</form>');
             $('body').append(form);
             form.submit();
         });
@@ -543,9 +582,8 @@
                 data: {
                     quotation: $(this).attr('data-id'),
                 },
-                success: function (data)
-                {
-//                    alert(data);
+                success: function (data) {
+                    //                    alert(data);
                     $('.conditionDescTd').empty();
                     $('.quotationId').val(data[0]['quotation_id']);
                     $('.quoteCustomerId').val(data[0]['customer_id']);
@@ -568,8 +606,7 @@
                     $('input[type="number"]').trigger('change');
                     $('#quotation').modal('show');
                 },
-                error: function (data, status, err)
-                {
+                error: function (data, status, err) {
                     alert(status);
                 }
             });

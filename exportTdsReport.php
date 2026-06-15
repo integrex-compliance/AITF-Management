@@ -1,18 +1,20 @@
 <?php
+ob_start();
 require_once('tcpdf_include.php');
 include_once './dbConnect.php';
 include_once './commonutil.php';
 
-// Ensure no stray output
-while (ob_get_level() > 0) {
+// Ensure no stray output before this point
+while (ob_get_level() > 1) {
     ob_end_clean();
 }
-ob_start();
 
-$status = $_GET['status'] ?? 'all';
-$startDateStr = $_GET['startDate'] ?? '';
-$endDateStr = $_GET['endDate'] ?? '';
-$action = $_GET['action'] ?? 'export';
+$status = $_REQUEST['status'] ?? 'all';
+$startDateStr = $_REQUEST['startDate'] ?? '';
+$endDateStr = $_REQUEST['endDate'] ?? '';
+$action = $_REQUEST['action'] ?? 'export';
+$clientSearch = $_REQUEST['clientSearch'] ?? '';
+$sortOrder = $_REQUEST['sortOrder'] ?? '';
 
 $startDate = '';
 $endDate = '';
@@ -104,25 +106,39 @@ $sql = "SELECT ci.id, customer_name, ci.unique_id, ps.service_type as tds, ps.am
         WHERE svc.service_id = (SELECT MAX(tmp.service_id) FROM service tmp WHERE tmp.customer_id = ci.id) 
         AND ps.service_type LIKE '%tds%'";
 
+$queryParams = [];
+
 if ($status == 'received') {
     $sql .= " AND ps.payment_received > 0 AND ps.payment_received IS NOT NULL AND ps.payment_received <> ''";
 } elseif ($status == 'not_received') {
     $sql .= " AND (ps.payment_received IS NULL OR ps.payment_received = 0 OR ps.payment_received = '' OR ps.payment_received = '0.00')";
 }
 
+if (!empty($clientSearch)) {
+    $sql .= " AND ci.customer_name LIKE :clientSearch";
+    $queryParams[':clientSearch'] = '%' . $clientSearch . '%';
+}
+
 if (!empty($startDate)) {
     $sql .= " AND ps.payment_date >= :startDate";
+    $queryParams[':startDate'] = $startDate;
 }
 if (!empty($endDate)) {
     $sql .= " AND ps.payment_date <= :endDate";
+    $queryParams[':endDate'] = $endDate;
+}
+
+if ($sortOrder == 'high') {
+    $sql .= " ORDER BY CAST(ps.amount_decided AS DECIMAL(10,2)) DESC";
+} elseif ($sortOrder == 'low') {
+    $sql .= " ORDER BY CAST(ps.amount_decided AS DECIMAL(10,2)) ASC";
+} else {
+    $sql .= " ORDER BY ci.id DESC";
 }
 
 $statement = $db->prepare($sql);
-if (!empty($startDate)) {
-    $statement->bindValue(':startDate', $startDate);
-}
-if (!empty($endDate)) {
-    $statement->bindValue(':endDate', $endDate);
+foreach ($queryParams as $key => $val) {
+    $statement->bindValue($key, $val);
 }
 $statement->execute();
 $tdsList = $statement->fetchAll(PDO::FETCH_ASSOC);
@@ -171,6 +187,7 @@ $pdf = new REPORTPDF('L', PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
 
 $pdf->reportTitle = ($status == 'not_received') ? 'TDS NOT RECEIVED REPORT' : (($status == 'received') ? 'TDS RECEIVED REPORT' : 'TDS ALL REPORT');
 $filters = "STATUS: " . strtoupper($status);
+if($clientSearch) $filters .= " | CLIENT: " . strtoupper($clientSearch);
 if($startDate) $filters .= " | FROM: " . date("d.m.Y", strtotime($startDate));
 if($endDate) $filters .= " | TO: " . date("d.m.Y", strtotime($endDate));
 $pdf->filters = $filters;

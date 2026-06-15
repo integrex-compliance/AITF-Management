@@ -385,8 +385,13 @@
         ORDER BY svcdt.due_date ASC", $intimationActions);
     $currentDueCount = count($pendingLettersDetail);
 
-    $paymentTotals = dashFetchOne($db, "SELECT COUNT(*) rows_count, COALESCE(SUM(CASE WHEN CAST(REPLACE(balance, ',', '') AS DECIMAL(12,2)) > 0 THEN CAST(REPLACE(balance, ',', '') AS DECIMAL(12,2)) ELSE 0 END),0) pending_amount, COALESCE(SUM(CAST(REPLACE(payment_received, ',', '') AS DECIMAL(12,2))),0) received_amount, COALESCE(SUM(CAST(REPLACE(amount_decided, ',', '') AS DECIMAL(12,2))),0) decided_amount FROM payment_system WHERE service_type <> 'TDS'");
-    $paymentServiceRows = dashFetchAll($db, "SELECT service_type label, COALESCE(SUM(CAST(REPLACE(balance, ',', '') AS DECIMAL(12,2))),0) amount, COUNT(*) total FROM payment_system WHERE service_type <> 'TDS' GROUP BY service_type ORDER BY amount DESC LIMIT 8");
+    // IMPORTANT: Dashboard totals should reflect the *current* state.
+    // We compute pending as SUM(max(balance,0)). This will automatically:
+    // - decrease when payment_received is added (balance reduces)
+    // - increase back if a received entry is deleted (old balance row comes back)
+    // As long as addPayment.php keeps balance = amount_decided - payment_received per row.
+    $paymentTotals = dashFetchOne($db, "SELECT COUNT(*) rows_count, COALESCE(SUM(CASE WHEN " . dashAmountExpr('balance') . " > 0 THEN " . dashAmountExpr('balance') . " ELSE 0 END),0) pending_amount, COALESCE(SUM(" . dashAmountExpr('payment_received') . "),0) received_amount, COALESCE(SUM(" . dashAmountExpr('amount_decided') . "),0) decided_amount FROM payment_system WHERE service_type <> 'TDS'");
+    $paymentServiceRows = dashFetchAll($db, "SELECT service_type label, COALESCE(SUM(CASE WHEN " . dashAmountExpr('balance') . " > 0 THEN " . dashAmountExpr('balance') . " ELSE 0 END),0) amount, COUNT(*) total FROM payment_system WHERE service_type <> 'TDS' GROUP BY service_type ORDER BY amount DESC LIMIT 8");
     $recentPayments = dashFetchAll($db, "SELECT
             ps.payment_sy_id as payment_group_id,
             COALESCE(ci1.id, ci2.id, ci3.id, ci4.id, ci5.id, ci6.id, ci7.id, ci8.id) as resolved_customer_id,
@@ -435,18 +440,21 @@
     $clientServiceRows = dashFetchAll($db, "SELECT service_type label, COUNT(*) total FROM service GROUP BY service_type ORDER BY total DESC LIMIT 8");
     $applicationTotals = dashFetchOne($db, "SELECT COUNT(*) online_total, SUM(CASE WHEN read_flag = 0 THEN 1 ELSE 0 END) unread_total FROM online_audit_applications");
     $auditApplicationTotals = dashFetchOne($db, "SELECT COUNT(*) audit_total, SUM(CASE WHEN review_date IS NOT NULL THEN 1 ELSE 0 END) reviewed_total FROM audit_application");
-    $recentClients = dashFetchAll($db, "SELECT ci.id, ci.customer_name, ci.unique_id, ci.audit_status, ci.next_service, ci.contact_person, ci.contact, ci.email_id, COUNT(svc.service_id) service_count, COALESCE(SUM(CAST(REPLACE(ps.balance, ',', '') AS DECIMAL(12,2))),0) pending_amount FROM customer_info ci LEFT JOIN service svc ON ci.id = svc.customer_id LEFT JOIN payment_system ps ON ci.id = ps.customer_id AND ps.service_type <> 'TDS' WHERE ci.is_deleted <> 'YES' GROUP BY ci.id ORDER BY ci.id DESC LIMIT 10");
+    $recentClients = dashFetchAll($db, "SELECT ci.id, ci.customer_name, ci.unique_id, ci.audit_status, ci.next_service, ci.contact_person, ci.contact, ci.email_id, COUNT(svc.service_id) service_count, COALESCE(SUM(CASE WHEN " . dashAmountExpr('ps.balance') . " > 0 THEN " . dashAmountExpr('ps.balance') . " ELSE 0 END),0) pending_amount FROM customer_info ci LEFT JOIN service svc ON ci.id = svc.customer_id LEFT JOIN payment_system ps ON ci.id = ps.customer_id AND ps.service_type <> 'TDS' WHERE ci.is_deleted <> 'YES' GROUP BY ci.id ORDER BY ci.id DESC LIMIT 10");
     $recentOnlineApplications = dashFetchAll($db, "SELECT id, org_name, contact_person, phone, email, standard_applied, created_at, read_flag FROM online_audit_applications ORDER BY created_at DESC LIMIT 8");
 
     // Pending Payments Detailed List
+    // Robust pending list: group by payment_sy_id (one client payment ledger)
+    // and compute pending from decided - received (NOT from stored balance), because
+    // older rows may have inconsistent balance formats.
     $pendingPaymentsDetail = dashFetchAll($db, "SELECT
             ps.payment_sy_id as payment_group_id,
-            COALESCE(ci1.id, ci2.id, ci3.id, ci4.id, ci5.id, ci6.id, ci7.id, ci8.id) as resolved_customer_id,
-            NULLIF(TRIM(ps.customer_id), '') as ps_customer_id,
-            NULLIF(TRIM(psi.customer_id), '') as psi_customer_id,
-            NULLIF(TRIM(psg.group_customer_id), '') as ps_group_customer_id,
-            COALESCE(NULLIF(TRIM(ps.customer_id), ''), NULLIF(TRIM(psi.customer_id), ''), NULLIF(TRIM(psg.group_customer_id), '')) as customer_id,
-            COALESCE(
+            MAX(COALESCE(ci1.id, ci2.id, ci3.id, ci4.id, ci5.id, ci6.id, ci7.id, ci8.id)) as resolved_customer_id,
+            MAX(NULLIF(TRIM(ps.customer_id), '')) as ps_customer_id,
+            MAX(NULLIF(TRIM(psi.customer_id), '')) as psi_customer_id,
+            MAX(NULLIF(TRIM(psg.group_customer_id), '')) as ps_group_customer_id,
+            MAX(COALESCE(NULLIF(TRIM(ps.customer_id), ''), NULLIF(TRIM(psi.customer_id), ''), NULLIF(TRIM(psg.group_customer_id), ''))) as customer_id,
+            MAX(COALESCE(
                 NULLIF(TRIM(ci1.customer_name), ''),
                 NULLIF(TRIM(ci2.customer_name), ''),
                 NULLIF(TRIM(ci3.customer_name), ''),
@@ -457,8 +465,9 @@
                 NULLIF(TRIM(ci8.customer_name), ''),
                 NULLIF(TRIM(oa1.org_name), ''),
                 NULLIF(TRIM(oa2.org_name), '')
-            ) as customer_name,
-            ps.service_type, ps.balance, ps.payment_date
+            )) as customer_name,
+            COUNT(*) as entry_count,
+            GREATEST(SUM(" . dashAmountExpr('ps.amount_decided') . ") - SUM(" . dashAmountExpr('ps.payment_received') . "), 0) as pending_amount
         FROM payment_system ps
         LEFT JOIN payment_system_id psi ON ps.payment_sy_id = psi.payment_sy_id
         LEFT JOIN (SELECT payment_sy_id, MAX(NULLIF(TRIM(customer_id), '')) as group_customer_id FROM payment_system GROUP BY payment_sy_id) psg ON ps.payment_sy_id = psg.payment_sy_id
@@ -473,8 +482,9 @@
         LEFT JOIN online_audit_applications oa1 ON TRIM(ps.customer_id) = CAST(oa1.id AS CHAR)
         LEFT JOIN online_audit_applications oa2 ON TRIM(psi.customer_id) = CAST(oa2.id AS CHAR)
         WHERE ps.service_type <> 'TDS'
-        AND CAST(REPLACE(ps.balance, ',', '') AS DECIMAL(12,2)) > 0
-        ORDER BY CAST(REPLACE(ps.balance, ',', '') AS DECIMAL(12,2)) DESC");
+        GROUP BY ps.payment_sy_id
+        HAVING pending_amount > 0
+        ORDER BY pending_amount DESC");
 
     $customerLookupRows = dashFetchAll($db, "SELECT id, unique_id, customer_name FROM customer_info");
     $serviceLookupRows = dashFetchAll($db, "SELECT svc.service_id, ci.id as customer_id, ci.customer_name FROM service svc LEFT JOIN customer_info ci ON svc.customer_id = ci.id");
@@ -547,79 +557,15 @@
         $pendingPaymentsDetail[$idx] = dashResolveClientFromRow($paymentRow, $customerIdNameMap, $customerUniqueNameMap, $customerNameMap, $serviceIdNameMap, $paymentAliasNameMap, $paymentAliasIdMap);
     }
 
-    // Convert payment rows into client-wise pending summary (one client, one row)
-    $pendingByClientMap = array();
-    foreach ($pendingPaymentsDetail as $payRow) {
-        $balanceValue = dashToAmount(isset($payRow['balance']) ? $payRow['balance'] : 0);
-        if ($balanceValue <= 0) {
-            continue;
-        }
-
-        $resolvedId = isset($payRow['resolved_customer_id']) ? (int) $payRow['resolved_customer_id'] : 0;
-        $resolvedName = isset($payRow['customer_name']) ? trim((string) $payRow['customer_name']) : '';
-
-        $rawKeyValue = '';
-        if (!empty($payRow['psi_customer_id'])) {
-            $rawKeyValue = (string) $payRow['psi_customer_id'];
-        } elseif (!empty($payRow['ps_customer_id'])) {
-            $rawKeyValue = (string) $payRow['ps_customer_id'];
-        } elseif (!empty($payRow['ps_group_customer_id'])) {
-            $rawKeyValue = (string) $payRow['ps_group_customer_id'];
-        } elseif (!empty($payRow['customer_id'])) {
-            $rawKeyValue = (string) $payRow['customer_id'];
-        }
-
-        $fallbackRef = isset($payRow['fallback_ref']) ? trim((string) $payRow['fallback_ref']) : '';
-        if ($fallbackRef === '') {
-            $fallbackRef = trim($rawKeyValue);
-        }
-
-        $paymentGroupId = isset($payRow['payment_group_id']) ? (int) $payRow['payment_group_id'] : 0;
-
-        if ($resolvedId > 0) {
-            $groupKey = 'ID:' . $resolvedId;
-        } elseif ($resolvedName !== '') {
-            $groupKey = 'NAME:' . dashNormalizeKey($resolvedName);
-        } elseif ($fallbackRef !== '') {
-            $groupKey = 'RAW:' . dashNormalizeKey($fallbackRef);
-        } elseif ($paymentGroupId > 0) {
-            $groupKey = 'PAY:' . $paymentGroupId;
-        } else {
-            $groupKey = 'ROW:' . $payRow['payment_group_id'] . ':' . $payRow['service_type'];
-        }
-
-        if (!isset($pendingByClientMap[$groupKey])) {
-            $pendingByClientMap[$groupKey] = array(
-                'resolved_customer_id' => $resolvedId,
-                'customer_name' => $resolvedName,
-                'fallback_ref' => $fallbackRef,
-                'payment_group_id' => $paymentGroupId,
-                'pending_amount' => 0.0,
-                'entry_count' => 0
-            );
-        }
-
-        $pendingByClientMap[$groupKey]['pending_amount'] += $balanceValue;
-        $pendingByClientMap[$groupKey]['entry_count']++;
-
-        if ($pendingByClientMap[$groupKey]['customer_name'] === '' && $resolvedName !== '') {
-            $pendingByClientMap[$groupKey]['customer_name'] = $resolvedName;
-        }
-
-        if ($pendingByClientMap[$groupKey]['fallback_ref'] === '' && $fallbackRef !== '') {
-            $pendingByClientMap[$groupKey]['fallback_ref'] = $fallbackRef;
-        }
-
-        if ((int) $pendingByClientMap[$groupKey]['payment_group_id'] <= 0 && $paymentGroupId > 0) {
-            $pendingByClientMap[$groupKey]['payment_group_id'] = $paymentGroupId;
-        }
-
-        if ((int) $pendingByClientMap[$groupKey]['resolved_customer_id'] <= 0 && $resolvedId > 0) {
-            $pendingByClientMap[$groupKey]['resolved_customer_id'] = $resolvedId;
-        }
+    // $pendingPaymentsDetail is already client-wise (GROUP BY payment_sy_id)
+    // Ensure numeric types + deterministic sorting.
+    foreach ($pendingPaymentsDetail as $idx => $row) {
+        $pendingPaymentsDetail[$idx]['pending_amount'] = isset($row['pending_amount']) ? (float) $row['pending_amount'] : 0.0;
+        $pendingPaymentsDetail[$idx]['entry_count'] = isset($row['entry_count']) ? (int) $row['entry_count'] : 0;
+        $pendingPaymentsDetail[$idx]['resolved_customer_id'] = isset($row['resolved_customer_id']) ? (int) $row['resolved_customer_id'] : 0;
+        $pendingPaymentsDetail[$idx]['payment_group_id'] = isset($row['payment_group_id']) ? (int) $row['payment_group_id'] : 0;
     }
 
-    $pendingPaymentsDetail = array_values($pendingByClientMap);
     usort($pendingPaymentsDetail, function ($a, $b) {
         $aAmt = isset($a['pending_amount']) ? (float) $a['pending_amount'] : 0.0;
         $bAmt = isset($b['pending_amount']) ? (float) $b['pending_amount'] : 0.0;
