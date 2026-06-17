@@ -27,15 +27,15 @@ include 'utility.php';
 ?>
 
 <head>
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-ZH2QWSFTB0"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-ZH2QWSFTB0"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
 
-  gtag('config', 'G-ZH2QWSFTB0');
-</script>
+        gtag('config', 'G-ZH2QWSFTB0');
+    </script>
     <title>AITF</title>
 </head>
 <style>
@@ -296,6 +296,9 @@ function getFlatDate($inputStr)
             <li><a href="agreementPage.php" class="animate <?php echo $addagreementClass ?>">AGREEMENTS<i
                         class="sub_icon fa fa-quote-left fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
+
+
+
         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff()) { ?>
             <li><a href="auditPage.php" class="animate <?php echo $addAuditClass ?>">AUDIT LIST<i
                         class="sub_icon fa fa-list-alt fa-2x" style="vertical-align:middle"></i></a></li>

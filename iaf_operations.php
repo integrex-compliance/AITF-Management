@@ -76,20 +76,20 @@ switch ($action) {
 
         $iafPayload = [
             "certified_entity" => [
-                "certified_entity_unique_id" => (string)$data['internal_client_id'],
+                "certified_entity_unique_id" => (string) $data['internal_client_id'],
                 "certified_entity_name" => $data['customer_name'],
                 "business_registered_country" => $data['country'],
                 "business_registered_full_address" => $data['address']
             ],
             "certification" => [
-                "certificate_identity_number" => (string)$data['certificate_tracking_id'],
-                "certificate_number" => (string)$data['certificate_number'],
+                "certificate_identity_number" => (string) $data['certificate_tracking_id'],
+                "certificate_number" => (string) $data['certificate_number'],
                 "certification_status" => $data['certification_status'],
                 "certificate_accreditation_status" => $data['certification_type'],
                 "certification_type" => "Management System",
                 "certification_issue_date" => $issueDate,
                 "certification_expiry_date" => $expiryDate,
-                "certified_entity_unique_id" => (string)$data['internal_client_id'],
+                "certified_entity_unique_id" => (string) $data['internal_client_id'],
                 "main_site_country" => $data['country'],
                 "main_site_full_address" => $data['address'],
                 "accreditation_body_name" => "YOUR_AB_NAME", // MUST UPDATE
