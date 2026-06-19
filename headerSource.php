@@ -6,15 +6,17 @@
 <script src="js/outer/popper.min.js"></script>
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" type="text/javascript"></script>
 <style type="text/css">
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&family=Montserrat:wght@700;800&family=Playfair+Display:wght@700;800;900&display=swap');
 
     :root {
-        --nav-bg: linear-gradient(135deg, #9facc9ff 0%, #4468a4ff 50%, #82a2efff 100%);
-        --nav-text: #f8fafc;
+        --nav-height: 85px;
+        --nav-bg: #ffffff;
+        --nav-text: #1e293b;
+        --nav-hover-text: #2563eb;
+        --nav-hover-bg: rgba(37, 99, 235, 0.06);
         --nav-accent: #3b82f6;
         --nav-accent-light: #60a5fa;
-        --nav-accent-glow: rgba(59, 130, 246, 0.4);
-        --nav-hover-bg: rgba(255, 255, 255, 0.08);
+        --nav-accent-glow: rgba(59, 130, 246, 0.15);
         --nav-glass: rgba(255, 255, 255, 0.05);
     }
 
@@ -27,13 +29,70 @@
         width: 100%;
         z-index: 1030;
         background: var(--nav-bg);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
         box-sizing: border-box;
         font-family: 'Inter', 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        height: 70px;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        height: var(--nav-height);
+        transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+
+    #home .top-header:not(.scrolled) {
+        --nav-bg: transparent;
+        --nav-text: #f1f5f9;
+        --nav-hover-text: #ffffff;
+        --nav-hover-bg: rgba(255, 255, 255, 0.12);
+        
+        background: transparent !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
+        box-shadow: none !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+
+    .top-header.scrolled {
+        background: #ffffff !important;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+    }
+
+    .top-header.scrolled .navbar a:not(.login-btn),
+    .top-header.scrolled .navbar .dropdown>a,
+    .top-header.scrolled .nav-primary .nav-link,
+    .top-header.scrolled .header-nav .nav-link,
+    .top-header.scrolled .header-nav .nav-link:not(.login-btn) {
+        color: #1e293b !important;
+    }
+
+    .top-header.scrolled .header-nav .nav-link:not(.login-btn):hover,
+    .top-header.scrolled .header-nav .dropdown:hover>.nav-link:not(.login-btn),
+    .top-header.scrolled .nav-primary .nav-link:hover {
+        color: #2563eb !important;
+        background: rgba(37, 99, 235, 0.08) !important;
+    }
+
+    .top-header.scrolled .mobile-toggle-bar {
+        background-color: #1e293b !important;
+    }
+
+    /* Toggler styling */
+    .navbar-toggler {
+        border: none !important;
+        padding: 10px !important;
+        outline: none !important;
+        background: transparent !important;
+    }
+    
+    .mobile-toggle-bar {
+        display: block;
+        width: 25px;
+        height: 3px;
+        background-color: var(--nav-text);
+        margin: 5px 0;
+        transition: all 0.3s ease;
+        border-radius: 2px;
     }
 
     /* Navbar full width styling */
@@ -46,9 +105,9 @@
         width: 100% !important;
         max-width: 100% !important;
         box-shadow: none !important;
-        height: 70px !important;
-        min-height: 70px !important;
-        max-height: 70px !important;
+        height: var(--nav-height) !important;
+        min-height: var(--nav-height) !important;
+        max-height: var(--nav-height) !important;
         overflow: visible !important;
         display: flex !important;
         align-items: center !important;
@@ -110,8 +169,8 @@
     /* AITF Logo Styling */
     .navbar-brand {
         padding: 0;
-        height: 70px;
-        max-height: 70px;
+        height: var(--nav-height);
+        max-height: var(--nav-height);
         display: flex;
         align-items: center;
         margin-right: 20px;
@@ -124,8 +183,8 @@
     }
 
     .navbar-brand img {
-        max-height: 55px;
-        height: 55px;
+        max-height: 100px;
+        height: 100px;
         width: auto;
         filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
     }
@@ -171,11 +230,11 @@
         transform: translateX(-50%);
     }
 
-    /* Ensure all navbar links are white */
+    /* Ensure all navbar links match the text variable */
     .navbar a:not(.login-btn),
     .navbar .dropdown>a,
     .nav-primary .nav-link {
-        color: #f1f5f9 !important;
+        color: var(--nav-text) !important;
         text-shadow: none;
     }
 
@@ -192,11 +251,11 @@
     .header-nav .nav-link:not(.login-btn):focus-visible,
     .header-nav .dropdown:hover>.nav-link:not(.login-btn) {
         background: var(--nav-hover-bg) !important;
-        color: #ffffff !important;
+        color: var(--nav-hover-text) !important;
         border: none !important;
         box-shadow: 0 0 20px var(--nav-accent-glow) !important;
         transform: translateY(-2px);
-        text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+        text-shadow: none;
         border-radius: 8px !important;
         overflow: hidden;
     }
@@ -206,21 +265,24 @@
         width: 60%;
     }
 
-    /* Force all navigation links to be white */
+    /* Force all navigation links to match the variable (except hover which uses hover text variable) */
     .header-nav .nav-link,
     .header-nav .nav-link:not(.login-btn),
-    .header-nav .nav-link:not(.login-btn):hover,
     .header-nav .nav-link:not(.login-btn):focus,
     .header-nav .nav-link:not(.login-btn):active,
     .header-nav .dropdown>a,
-    .header-nav .dropdown>a:hover,
     .header-nav .dropdown>a:focus,
     .header-nav .dropdown>a:active,
     .nav-primary .nav-link,
-    .nav-primary .nav-link:hover,
     .nav-primary .nav-link:focus,
     .nav-primary .nav-link:active {
-        color: #f1f5f9 !important;
+        color: var(--nav-text) !important;
+    }
+
+    .header-nav .nav-link:not(.login-btn):hover,
+    .header-nav .dropdown>a:hover,
+    .nav-primary .nav-link:hover {
+        color: var(--nav-hover-text) !important;
     }
 
     .header-nav .nav-link.login-btn {
@@ -343,7 +405,7 @@
     .dropdown-content.dropdown-modern-grid {
         display: none;
         position: fixed !important;
-        top: 72px !important;
+        top: var(--nav-height) !important;
         left: 50% !important;
         transform: translateX(-50%) !important;
         background: #ffffff !important;
@@ -1451,6 +1513,23 @@
 
 <script type="text/javascript">
     $(document).ready(function () {
+        // Vanilla JS Scroll behavior to change navbar background and toggle colors
+        function updateScroll() {
+            var header = document.querySelector('.top-header');
+            if (header) {
+                if (window.pageYOffset > 50 || document.documentElement.scrollTop > 50) {
+                    header.classList.add('scrolled');
+                } else {
+                    header.classList.remove('scrolled');
+                }
+            }
+        }
+        window.addEventListener('scroll', updateScroll);
+        // Run on DOMContentLoaded and load to prevent delays
+        document.addEventListener('DOMContentLoaded', updateScroll);
+        window.addEventListener('load', updateScroll);
+        updateScroll();
+
         // Enhanced dropdown menu functionality - No transitions, instant show/hide
         var activeDropdown = null;
 

@@ -105,6 +105,32 @@
             margin-top: 20px;
         }
         
+        .header-blue-section {
+            padding: 160px 0 80px;
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+            margin-bottom: -100px;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header-blue-section h1 {
+            color: #ffffff;
+            font-weight: 800;
+            font-size: 3rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+            text-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        .header-blue-section p {
+            color: rgba(255,255,255,0.9);
+            font-size: 1.2rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
         .pdf-container {
             background: #fff;
             border-radius: 15px;
@@ -114,6 +140,8 @@
             max-width: 900px;
             border: 1px solid rgba(0, 0, 0, 0.05);
             transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative;
+            z-index: 2;
         }
         
         .pdf-container:hover {
@@ -467,23 +495,16 @@
 <body id="home" data-spy="scroll" data-target="#navbar-wd" data-offset="98">
     <?php include './headerSource.php'; ?>
 
-    <!-- Page Header -->
-    <!-- Main Header Section -->
-    <div class="section" style="padding-top: 60px;">
+    <!-- Blue Header Section -->
+    <div class="header-blue-section">
         <div class="container">
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="heading_main text_align_center fade-in" style="animation-delay: 0.1s">
-                        <h1 class="mb-3"><span>NC CLOSURE</span> REPORT</h1>
-                        <p class="lead text-muted">Non-Conformance Closure Documentation and Resources</p>
-                    </div>
-                </div>
-            </div>
+            <h1>NC CLOSURE REPORT</h1>
+            <p>Non-Conformance Closure Documentation and Resources</p>
         </div>
     </div>
 
     <!-- Document Access Section -->
-    <div class="section" style="padding: 20px 0 40px;">
+    <div class="section">
         <div class="container">
             <div class="row">
                 <div class="col-lg-8 offset-lg-2">

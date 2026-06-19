@@ -3,594 +3,554 @@ session_start();
 ?>
 <!DOCTYPE html>
 <html lang="en">
-    <!-- Basic -->
-    <head>
-        <?php include './headSource.php'; ?>
-        <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
-        <link rel="stylesheet" href="/perfect-learn/css/methodology-styles.css">
-        <link rel="stylesheet" href="popup-advertisement.css">
-        <script src="popup-advertisement.js"></script>
-        <style>
-            /* Box Navigation */
-            /* Modern Navigation Container */
-            .box-nav-container {
-                display: flex;
-                justify-content: center;
-                flex-wrap: wrap;
-                gap: 25px;
-                margin: 0 auto;
-                max-width: 1300px;
-                padding: 0 30px;
-                transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-                perspective: 1000px;
-            }
-            
-            /* Box Navigation Styles */
-            .box-nav-container {
-                display: flex;
-                justify-content: center;
-                flex-wrap: wrap;
-                gap: 14px;
-                margin: 24px auto 10px;
-                padding: 0 16px;
-                width: 100%;
-                position: relative;
-                z-index: 5;
-                max-width: 1200px;
-                margin-left: auto;
-                margin-right: auto;
-                transform: none;
-            }
+<!-- Basic -->
 
-            /* Stylish Navigation Items */
-            .box-nav-item {
-                width: 220px;
-                background: linear-gradient(145deg, rgba(255,255,255,0.12), rgba(255,255,255,0.05));
-                backdrop-filter: blur(12px);
-                -webkit-backdrop-filter: blur(12px);
-                border-radius: 20px;
-                padding: 30px 20px;
-                border: 1px solid rgba(255, 255, 255, 0.15);
-                box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2), 0 5px 15px rgba(0,0,0,0.1);
-                transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
-                cursor: pointer;
-                position: relative;
-                overflow: hidden;
-                transform: translateY(0) rotateX(0) rotateY(0);
-                transform-style: preserve-3d;
-                will-change: transform, box-shadow;
-                text-align: center;
-                cursor: pointer;
-                transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-                box-shadow: 0 4px 15px rgba(26, 58, 106, 0.1);
-                border: 2px solid rgba(26, 58, 106, 0.1);
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                height: 100px;
-                position: relative;
-                z-index: 5;
-                overflow: hidden;
-            }
-            
-            .box-nav-item {
-                background: #ffffff;
-                color: #0f172a;
-                transform: translateY(0);
-                box-shadow: 0 10px 25px rgba(15, 23, 42, 0.06);
-                border: 1px solid rgba(148, 163, 184, 0.35);
-            }
-            
-            /* Active State */
-            .box-nav-item.active {
-                transform: translateY(-4px);
-                box-shadow: 0 18px 35px rgba(15, 23, 42, 0.18);
-                border-width: 2px;
-                animation: none;
-            }
-            
-            /* Icon Styling */
-            .box-nav-icon {
-                font-size: 46px;
-                margin-bottom: 20px;
-                color: #f97316;
-                transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
-                position: relative;
-                z-index: 2;
-                text-shadow: none;
-                background: none;
-                -webkit-background-clip: initial;
-                -webkit-text-fill-color: currentColor;
-                display: inline-block;
-                padding: 10px;
-            }
-            
-            .box-nav-item:hover .box-nav-icon {
-                transform: scale(1.1);
-                color: #2a5a9a;
-            }
-            
-            /* Title Styling */
-            .box-nav-title {
-                font-family: 'Poppins', sans-serif;
-                font-size: 16px;
-                font-weight: 600;
-                color: #0f172a;
-                line-height: 1.6;
-                margin: 10px 0 0;
-                position: relative;
-                z-index: 2;
-                text-shadow: none;
-                transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-                letter-spacing: 0.5px;
-                text-transform: uppercase;
-                background: none;
-                -webkit-background-clip: initial;
-                -webkit-text-fill-color: currentColor;
-                transition: color 0.3s ease;
-                position: relative;
-                z-index: 2;
-            }
-            
-            .box-nav-item .box-nav-icon,
-            .box-nav-item .box-nav-title {
-                color: inherit;
-            }
-            
-            /* Add a subtle shine effect on hover */
-            /* Shine Effect */
-            .box-nav-item::before {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: -100%;
-                width: 100%;
-                height: 100%;
-                background: linear-gradient(
-                    90deg,
+<head>
+    <?php include './headSource.php'; ?>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/perfect-learn/css/methodology-styles.css">
+    <link rel="stylesheet" href="popup-advertisement.css">
+    <script src="popup-advertisement.js"></script>
+    <style>
+        /* Box Navigation */
+        /* Modern Navigation Container */
+        .box-nav-container {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 25px;
+            margin: 0 auto;
+            max-width: 1300px;
+            padding: 0 30px;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            perspective: 1000px;
+        }
+
+        /* Box Navigation Styles */
+        .box-nav-container {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 14px;
+            margin: 24px auto 10px;
+            padding: 0 16px;
+            width: 100%;
+            position: relative;
+            z-index: 5;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+            transform: none;
+        }
+
+        /* Stylish Navigation Items */
+        .box-nav-item {
+            width: 220px;
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.05));
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 20px;
+            padding: 30px 20px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2), 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transform: translateY(0) rotateX(0) rotateY(0);
+            transform-style: preserve-3d;
+            will-change: transform, box-shadow;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            box-shadow: 0 4px 15px rgba(26, 58, 106, 0.1);
+            border: 2px solid rgba(26, 58, 106, 0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100px;
+            position: relative;
+            z-index: 5;
+            overflow: hidden;
+        }
+
+        .box-nav-item {
+            background: #ffffff;
+            color: #0f172a;
+            transform: translateY(0);
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.06);
+            border: 1px solid rgba(148, 163, 184, 0.35);
+        }
+
+        /* Active State */
+        .box-nav-item.active {
+            transform: translateY(-4px);
+            box-shadow: 0 18px 35px rgba(15, 23, 42, 0.18);
+            border-width: 2px;
+            animation: none;
+        }
+
+        /* Icon Styling */
+        .box-nav-icon {
+            font-size: 46px;
+            margin-bottom: 20px;
+            color: #f97316;
+            transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative;
+            z-index: 2;
+            text-shadow: none;
+            background: none;
+            -webkit-background-clip: initial;
+            -webkit-text-fill-color: currentColor;
+            display: inline-block;
+            padding: 10px;
+        }
+
+        .box-nav-item:hover .box-nav-icon {
+            transform: scale(1.1);
+            color: #2a5a9a;
+        }
+
+        /* Title Styling */
+        .box-nav-title {
+            font-family: 'Poppins', sans-serif;
+            font-size: 16px;
+            font-weight: 600;
+            color: #0f172a;
+            line-height: 1.6;
+            margin: 10px 0 0;
+            position: relative;
+            z-index: 2;
+            text-shadow: none;
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            background: none;
+            -webkit-background-clip: initial;
+            -webkit-text-fill-color: currentColor;
+            transition: color 0.3s ease;
+            position: relative;
+            z-index: 2;
+        }
+
+        .box-nav-item .box-nav-icon,
+        .box-nav-item .box-nav-title {
+            color: inherit;
+        }
+
+        /* Add a subtle shine effect on hover */
+        /* Shine Effect */
+        .box-nav-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg,
                     transparent,
                     rgba(255, 255, 255, 0.1),
                     rgba(255, 255, 255, 0.3),
                     rgba(255, 255, 255, 0.1),
-                    transparent
-                );
-                transition: 0.8s;
-                animation: shine 8s infinite;
-            }
-            
-            @keyframes shine {
-                0% { transform: translateX(-100%) skewX(-20deg); }
-                20% { transform: translateX(200%) skewX(-20deg); }
-                100% { transform: translateX(200%) skewX(-20deg); }
-            }
-            
-            .box-nav-item:hover::before {
-                left: 100%;
-            }
-            
-            /* Responsive adjustments */
-            /* Responsive Design */
-            @media (max-width: 1200px) {
-                .box-nav-item {
-                    width: 180px;
-                    padding: 25px 15px;
-                }
-                
-                .box-nav-icon {
-                    font-size: 38px;
-                }
-                
-                .box-nav-title {
-                    font-size: 15px;
-                }
-            }
-            
-            @media (max-width: 992px) {
-                .box-nav-container {
-                    gap: 15px;
-                }
-                
-                .box-nav-item {
-                    width: 160px;
-                    padding: 20px 12px;
-                    border-radius: 16px;
-                }
-                
-                .box-nav-icon {
-                    font-size: 36px;
-                    margin-bottom: 15px;
-                }
-                
-                .box-nav-title {
-                    font-size: 14px;
-                    line-height: 1.5;
-                }
-            }
-            
-            @media (max-width: 768px) {
-                .box-nav-container {
-                    gap: 15px;
-                    transform: none;
-                    margin-top: 24px;
-                }
-                
-                .box-nav-item {
-                    width: calc(50% - 10px);
-                    max-width: 180px;
-                    padding: 20px 15px;
-                }
-            }
-            
-            @media (max-width: 992px) {
-                .box-nav-container {
-                    margin: 22px 0 14px;
-                }
-                
-                .box-nav-item {
-                    width: calc(50% - 8px);
-                    padding: 18px 10px;
-                    border-radius: 14px;
-                }
-                
-                .box-nav-icon {
-                    font-size: 32px;
-                    margin-bottom: 12px;
-                }
-                
-                .box-nav-title {
-                    font-size: 13px;
-                    line-height: 1.4;
-                }
-            }
-            
-            @media (max-width: 768px) {
-                .management-slider-section {
-                    padding: 32px 0 44px;
-                }
-                
-                .slider-container {
-                    min-height: 280px;
-                    padding: 0 15px;
-                }
-                
-                .slide-content {
-                    padding: 22px 16px;
-                    min-height: 230px;
-                    width: 95%;
-                    border-radius: 20px;
-                }
-                
-                .slide h3 {
-                    font-size: 22px;
-                    margin-bottom: 15px;
-                    padding-bottom: 10px;
-                    letter-spacing: 0.5px;
-                }
-                
-                .slide-description {
-                    font-size: 14px;
-                    margin-bottom: 20px;
-                    padding: 15px 20px;
-                    line-height: 1.6;
-                    border-radius: 12px;
-                }
-                
-                .slide-icon {
-                    width: 70px;
-                    height: 70px;
-                    margin-top: 20px;
-                    font-size: 28px;
-                    margin-bottom: 15px;
-                    border-radius: 20px;
-                }
-                
-                .slider-btn {
-                    padding: 10px 20px;
-                    font-size: 12px;
-                    min-width: 140px;
-                    margin-top: 20px;
-                }
-                
-                .slider-arrow {
-                    width: 44px;
-                    height: 44px;
-                    font-size: 16px;
-                    top: 45%;
-                }
-                
-                .prev-arrow {
-                    left: 5px;
-                }
-                
-                .next-arrow {
-                    right: 5px;
-                }
-                
-                .slider-dots {
-                    bottom: 14px;
-                    padding: 10px 15px;
-                    gap: 8px;
-                }
-                
-                .slider-dot {
-                    width: 12px;
-                    height: 12px;
-                }
-                
-                .box-nav-container {
-                    gap: 8px;
-                    padding: 0 10px;
-                    transform: none;
-                    margin: 24px 0 15px;
-                }
-                
-                .box-nav-item {
-                    width: calc(50% - 6px);
-                    padding: 12px 8px;
-                    border-radius: 12px;
-                    height: 80px;
-                }
-                
-                .box-nav-icon {
-                    font-size: 24px;
-                    margin-bottom: 6px;
-                    padding: 3px;
-                }
-                
-                .box-nav-title {
-                    font-size: 11px;
-                    line-height: 1.2;
-                    letter-spacing: 0.2px;
-                }
-                
-                /* Enhanced touch interactions for mobile */
-                .slide-content {
-                    transform: translateZ(0) !important;
-                }
-                
-                .slide-content:hover {
-                    transform: translateY(-10px) scale(1.01) !important;
-                }
-                
-                .slide-content:active {
-                    transform: translateY(-5px) scale(0.99) !important;
-                    transition: transform 0.1s ease !important;
-                }
-            }
-            
-            @media (max-width: 480px) {
-                .management-slider-section {
-                    padding: 22px 0 34px;
-                }
-                
-                .slide-content {
-                    padding: 20px 12px;
-                    min-height: 210px;
-                }
-                
-                .slide h3 {
-                    font-size: 18px;
-                    margin-bottom: 12px;
-                }
-                
-                .slide-description {
-                    font-size: 13px;
-                    padding: 12px 15px;
-                    margin-bottom: 15px;
-                }
-                
-                .slide-icon {
-                    width: 60px;
-                    height: 60px;
-                    margin-top: 15px;
-                    font-size: 24px;
-                    margin-bottom: 12px;
-                }
-                
-                .slider-btn {
-                    padding: 8px 16px;
-                    font-size: 11px;
-                    min-width: 120px;
-                }
-                
-                .slider-arrow {
-                    width: 45px;
-                    height: 45px;
-                    font-size: 16px;
-                }
-                
-                .box-nav-item {
-                    width: calc(50% - 4px);
-                    padding: 10px 6px;
-                    height: 70px;
-                    border-radius: 10px;
-                }
-                
-                .box-nav-icon {
-                    font-size: 20px;
-                    margin-bottom: 4px;
-                }
-                
-                .box-nav-title {
-                    font-size: 10px;
-                    line-height: 1.1;
-                }
-            }
-            
-            .slider-dots {
-                position: absolute;
-                bottom: 50px;
-                left: 0;
-                right: 0;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                gap: 10px;
-                z-index: 10;
-                padding: 15px 20px;
-                background: rgba(255, 255, 255, 0.7);
-                backdrop-filter: blur(10px);
-                -webkit-backdrop-filter: blur(10px);
-                border-radius: 50px;
-                width: max-content;
-                margin: 0 auto;
-                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-                border: 1px solid rgba(255, 255, 255, 0.8);
-            }
-            
-            .slider-container.loaded .slider-dots {
-                opacity: 1;
-                transform: translateY(0);
+                    transparent);
+            transition: 0.8s;
+            animation: shine 8s infinite;
+        }
+
+        @keyframes shine {
+            0% {
+                transform: translateX(-100%) skewX(-20deg);
             }
 
-            .login-error-banner {
-                position: fixed;
-                top: 80px;
-                left: 50%;
-                transform: translateX(-50%) translateY(-10px);
-                padding: 12px 18px;
-                border-radius: 14px;
-                background: linear-gradient(135deg, #fee2e2, #fecaca);
-                border: 1px solid #fecaca;
-                box-shadow: 0 14px 35px rgba(127, 29, 29, 0.35);
-                display: none;
-                align-items: center;
-                gap: 12px;
-                z-index: 9999;
-                max-width: 420px;
-                width: calc(100% - 32px);
-                opacity: 0;
-                transition: opacity 0.2s ease, transform 0.2s ease;
+            20% {
+                transform: translateX(200%) skewX(-20deg);
             }
 
-            .login-error-banner.visible {
-                display: flex;
-                opacity: 1;
-                transform: translateX(-50%) translateY(0);
+            100% {
+                transform: translateX(200%) skewX(-20deg);
+            }
+        }
+
+        .box-nav-item:hover::before {
+            left: 100%;
+        }
+
+        /* Responsive adjustments */
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .box-nav-item {
+                width: 180px;
+                padding: 25px 15px;
             }
 
-            .login-error-icon {
-                width: 32px;
-                height: 32px;
-                border-radius: 999px;
-                background: #b91c1c;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                color: #fee2e2;
-                font-weight: 700;
-                font-size: 18px;
+            .box-nav-icon {
+                font-size: 38px;
             }
 
-            .login-error-text-main {
+            .box-nav-title {
+                font-size: 15px;
+            }
+        }
+
+        @media (max-width: 992px) {
+            .box-nav-container {
+                gap: 15px;
+            }
+
+            .box-nav-item {
+                width: 160px;
+                padding: 20px 12px;
+                border-radius: 16px;
+            }
+
+            .box-nav-icon {
+                font-size: 36px;
+                margin-bottom: 15px;
+            }
+
+            .box-nav-title {
                 font-size: 14px;
-                font-weight: 600;
-                color: #7f1d1d;
+                line-height: 1.5;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .box-nav-container {
+                gap: 15px;
+                transform: none;
+                margin-top: 24px;
             }
 
-            .login-error-text-sub {
+            .box-nav-item {
+                width: calc(50% - 10px);
+                max-width: 180px;
+                padding: 20px 15px;
+            }
+        }
+
+        @media (max-width: 992px) {
+            .box-nav-container {
+                margin: 22px 0 14px;
+            }
+
+            .box-nav-item {
+                width: calc(50% - 8px);
+                padding: 18px 10px;
+                border-radius: 14px;
+            }
+
+            .box-nav-icon {
+                font-size: 32px;
+                margin-bottom: 12px;
+            }
+
+            .box-nav-title {
+                font-size: 13px;
+                line-height: 1.4;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .management-slider-section {
+                padding: 32px 0 44px;
+            }
+
+            .slider-container {
+                min-height: 280px;
+                padding: 0 15px;
+            }
+
+            .slide-content {
+                padding: 22px 16px;
+                min-height: 230px;
+                width: 95%;
+                border-radius: 20px;
+            }
+
+            .slide h3 {
+                font-size: 22px;
+                margin-bottom: 15px;
+                padding-bottom: 10px;
+                letter-spacing: 0.5px;
+            }
+
+            .slide-description {
+                font-size: 14px;
+                margin-bottom: 20px;
+                padding: 15px 20px;
+                line-height: 1.6;
+                border-radius: 12px;
+            }
+
+            .slide-icon {
+                width: 70px;
+                height: 70px;
+                margin-top: 20px;
+                font-size: 28px;
+                margin-bottom: 15px;
+                border-radius: 20px;
+            }
+
+            .slider-btn {
+                padding: 10px 20px;
                 font-size: 12px;
-                color: #b91c1c;
-                margin-top: 2px;
+                min-width: 140px;
+                margin-top: 20px;
             }
 
-            .login-error-close {
-                margin-left: auto;
-                background: transparent;
-                border: none;
-                color: #7f1d1d;
+            .slider-arrow {
+                width: 44px;
+                height: 44px;
                 font-size: 16px;
-                cursor: pointer;
-                padding: 0 4px;
-                line-height: 1;
+                top: 45%;
             }
 
-            /* Typing Animation Styles for AITF */
-            .aitf-typing {
-                display: inline-block;
-                position: relative;
-                font-weight: bold;
+            .prev-arrow {
+                left: 5px;
             }
 
-            .red-char {
-                color: #dc2626;
+            .next-arrow {
+                right: 5px;
             }
 
-            .blue-char {
-                color: #032887ff;
+            .slider-dots {
+                bottom: 14px;
+                padding: 10px 15px;
+                gap: 8px;
             }
-        </style>
-    </head>
 
-    <body id="home" data-spy="scroll" data-target="#navbar-wd" data-offset="98">
+            .slider-dot {
+                width: 12px;
+                height: 12px;
+            }
+
+            .box-nav-container {
+                gap: 8px;
+                padding: 0 10px;
+                transform: none;
+                margin: 24px 0 15px;
+            }
+
+            .box-nav-item {
+                width: calc(50% - 6px);
+                padding: 12px 8px;
+                border-radius: 12px;
+                height: 80px;
+            }
+
+            .box-nav-icon {
+                font-size: 24px;
+                margin-bottom: 6px;
+                padding: 3px;
+            }
+
+            .box-nav-title {
+                font-size: 11px;
+                line-height: 1.2;
+                letter-spacing: 0.2px;
+            }
+
+            /* Enhanced touch interactions for mobile */
+            .slide-content {
+                transform: translateZ(0) !important;
+            }
+
+            .slide-content:hover {
+                transform: translateY(-10px) scale(1.01) !important;
+            }
+
+            .slide-content:active {
+                transform: translateY(-5px) scale(0.99) !important;
+                transition: transform 0.1s ease !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .management-slider-section {
+                padding: 22px 0 34px;
+            }
+
+            .slide-content {
+                padding: 20px 12px;
+                min-height: 210px;
+            }
+
+            .slide h3 {
+                font-size: 18px;
+                margin-bottom: 12px;
+            }
+
+            .slide-description {
+                font-size: 13px;
+                padding: 12px 15px;
+                margin-bottom: 15px;
+            }
+
+            .slide-icon {
+                width: 60px;
+                height: 60px;
+                margin-top: 15px;
+                font-size: 24px;
+                margin-bottom: 12px;
+            }
+
+            .slider-btn {
+                padding: 8px 16px;
+                font-size: 11px;
+                min-width: 120px;
+            }
+
+            .slider-arrow {
+                width: 45px;
+                height: 45px;
+                font-size: 16px;
+            }
+
+            .box-nav-item {
+                width: calc(50% - 4px);
+                padding: 10px 6px;
+                height: 70px;
+                border-radius: 10px;
+            }
+
+            .box-nav-icon {
+                font-size: 20px;
+                margin-bottom: 4px;
+            }
+
+            .box-nav-title {
+                font-size: 10px;
+                line-height: 1.1;
+            }
+        }
+
+        .slider-dots {
+            position: absolute;
+            bottom: 50px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            z-index: 10;
+            padding: 15px 20px;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 50px;
+            width: max-content;
+            margin: 0 auto;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+        }
+
+        .slider-container.loaded .slider-dots {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .login-error-banner {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-10px);
+            padding: 12px 18px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #fee2e2, #fecaca);
+            border: 1px solid #fecaca;
+            box-shadow: 0 14px 35px rgba(127, 29, 29, 0.35);
+            display: none;
+            align-items: center;
+            gap: 12px;
+            z-index: 9999;
+            max-width: 420px;
+            width: calc(100% - 32px);
+            opacity: 0;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+
+        .login-error-banner.visible {
+            display: flex;
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .login-error-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 999px;
+            background: #b91c1c;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fee2e2;
+            font-weight: 700;
+            font-size: 18px;
+        }
+
+        .login-error-text-main {
+            font-size: 14px;
+            font-weight: 600;
+            color: #7f1d1d;
+        }
+
+        .login-error-text-sub {
+            font-size: 12px;
+            color: #b91c1c;
+            margin-top: 2px;
+        }
+
+        .login-error-close {
+            margin-left: auto;
+            background: transparent;
+            border: none;
+            color: #7f1d1d;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 0 4px;
+            line-height: 1;
+        }
+
+        /* Typing Animation Styles for AITF */
+        .aitf-typing {
+            display: inline-block;
+            position: relative;
+            font-weight: bold;
+        }
+
+        .red-char {
+            color: #dc2626;
+        }
+
+        .blue-char {
+            color: #032887ff;
+        }
+    </style>
+</head>
+
+<body id="home" data-spy="scroll" data-target="#navbar-wd" data-offset="98">
+
     <head>
         <?php include './headerSource.php'; ?>
     </head>
     <script type="text/javascript">
-/// some script
-// jquery ready start
+        /// some script
+        // jquery ready start
         $(document).ready(function () {
-<?php if (isset($_SESSION['login_error']) && $_SESSION['login_error']) { unset($_SESSION['login_error']); ?>
-        $('#login-error-banner').addClass('visible');
-<?php } ?>
+            <?php if (isset($_SESSION['login_error']) && $_SESSION['login_error']) {
+                unset($_SESSION['login_error']); ?>
+                $('#login-error-banner').addClass('visible');
+            <?php } ?>
 
             $('.login-error-close').on('click', function () {
                 $('#login-error-banner').fadeOut(200);
             });
 
-            
-            function animateAITF() {
-                const aitfElement = $('#aitf-text');
-                
-                function typeAnimation() {
-                    aitfElement.html('');
-                    aitfElement.removeClass('deleting-animation').addClass('typing-animation');
-                    
-                    let text = 'AITF';
-                    let colors = {'A': 'red-char', 'I': 'blue-char', 'T': 'blue-char', 'F': 'red-char'};
-                    let index = 0;
-                    const typeInterval = setInterval(() => {
-                        if (index < text.length) {
-                            let char = text[index];
-                            let colorClass = colors[char];
-                            aitfElement.append(`<span class="${colorClass}">${char}</span>`);
-                            index++;
-                        } else {
-                            clearInterval(typeInterval);
-                            aitfElement.removeClass('typing-animation');
-                            
-                            // Wait a bit, then start deleting
-                            setTimeout(deleteAnimation, 1000);
-                        }
-                    }, 200);
-                }
-                
-                function deleteAnimation() {
-                    aitfElement.addClass('deleting-animation');
-                    
-                    let spans = aitfElement.find('span');
-                    let index = spans.length - 1;
-                    const deleteInterval = setInterval(() => {
-                        if (index >= 0) {
-                            $(spans[index]).remove();
-                            index--;
-                        } else {
-                            clearInterval(deleteInterval);
-                            aitfElement.removeClass('deleting-animation');
-                            
-                            // Start typing immediately without delay
-                            typeAnimation();
-                        }
-                    }, 150);
-                }
-                
-                // Start the typing animation
-                typeAnimation();
-            }
-            
+
             // Start the animation when page loads
-            setTimeout(animateAITF, 500);
+            // Removed old AITF animation
 
             // jQuery code
             //////////////////////// Prevent closing from click inside dropdown
@@ -610,2053 +570,1317 @@ session_start();
     </div>
 
     <style>
-        .hero-section {
+        /* Premium Hero Section Styles */
+        .modern-hero-section {
+            background: #050b1a;
             position: relative;
-            z-index: 1;
+            padding: 200px 0 100px; /* Increased top padding from 140px to 200px to push content down */
+            overflow: hidden;
+            color: #ffffff;
+            font-family: 'Montserrat', sans-serif;
+            min-height: 90vh;
+            /* Taller container to show more of the image vertically */
+            display: flex;
+            align-items: center;
         }
-        .wave-container {
+
+        .hero-bg-image {
             position: absolute;
-            top: 0;
-            left: 0;
+            top: 60px; /* Shift the entire background container down by 60px to clear the navbar completely */
+            left: -4%;
+            right: -4%;
+            bottom: -4%;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 1;
+            transform: scale(1.0);
+            animation: heroImageIntro 2.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .hero-bg-image img {
             width: 100%;
             height: 100%;
-            z-index: 0;
-            overflow: hidden;
+            object-fit: cover;
+            object-position: center 75%;
+            /* Significantly lowered focus to center 75% to bring the helmet down away from the navbar */
+            filter: grayscale(5%) brightness(0.95);
         }
-        .wave {
+
+        .hero-bg-overlay {
             position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 200%;
-            height: 100%;
-            background-repeat: repeat-x;
-            background-size: 50% 100%;
+            inset: 0;
+            background:
+                radial-gradient(circle at 50% 50%, transparent 0%, rgba(5, 11, 26, 0.4) 40%, #050b1a 85%),
+                linear-gradient(to right, #050b1a 5%, transparent 40%, transparent 60%, #050b1a 95%);
+            opacity: 0;
+            z-index: 1;
+            animation: heroOverlayIntro 1s cubic-bezier(0.16, 1, 0.3, 1) forwards 1.5s;
         }
-        .wave1 {
-            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="%231d4ed8" fill-opacity="0.2" d="M0,192L48,197.3C96,203,192,213,288,229.3C384,245,480,267,576,250.7C672,235,768,181,864,181.3C960,181,1056,235,1152,234.7C1248,235,1344,181,1392,154.7L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>');
-            animation: wave 15s linear infinite;
+
+        @keyframes heroImageIntro {
+            0% {
+                opacity: 1;
+                transform: scale(1.02);
+                /* Slight scale */
+            }
+
+            60% {
+                opacity: 1;
+                transform: scale(0.99);
+            }
+
+            100% {
+                opacity: 0.85;
+                /* Increased from 0.65 to show more of the image */
+                transform: scale(0.96);
+                /* Zooms out smoothly below 1.0 */
+            }
         }
-        .wave2 {
-            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="%231d4ed8" fill-opacity="0.3" d="M0,192L48,197.3C96,203,192,213,288,229.3C384,245,480,267,576,250.7C672,235,768,181,864,181.3C960,181,1056,235,1152,234.7C1248,235,1344,181,1392,154.7L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>');
-            animation: wave 12s linear infinite reverse;
+
+        @keyframes heroOverlayIntro {
+            0% {
+                opacity: 0;
+            }
+
+            100% {
+                opacity: 0.75;
+                /* Slightly reduced from 0.85 to improve image visibility */
+            }
         }
-        .wave3 {
-            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="%231d4ed8" fill-opacity="0.4" d="M0,192L48,197.3C96,203,192,213,288,229.3C384,245,480,267,576,250.7C672,235,768,181,864,181.3C960,181,1056,235,1152,234.7C1248,235,1344,181,1392,154.7L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>');
-            background-size: 50% 90%;
-            animation: wave 20s linear infinite;
-            animation-delay: -5s;
+
+        /* Subtle Grid Background */
+        .modern-hero-section::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(59, 130, 246, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(59, 130, 246, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            mask-image: radial-gradient(circle at center, black, transparent 90%);
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0;
+            animation: fadeIn 1s forwards 1.5s;
+            /* Delayed grid fade-in */
         }
-        @keyframes wave {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-50%); }
+
+        /* Soft Blue Glows */
+        .hero-glow-1 {
+            position: absolute;
+            top: 20%;
+            right: 10%;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(37, 99, 235, 0.1) 0%, transparent 70%);
+            pointer-events: none;
+            filter: blur(60px);
+            z-index: 0;
+            opacity: 0;
+            animation: fadeIn 2s forwards 1.8s;
+            /* Delayed glow fade-in */
         }
-    </style>
-    <div class="modern-hero-section" style="padding-top: 80px;">
-        <div class="container">
-            <div class="hero-content">
-                <div class="hero-text" style="margin-top: 20px;">
-                    <h1 style="margin-top: 0;">Welcome to <span class="aitf-typing typing-animation" id="aitf-text">AITF</span></h1>
-                    <h2>Your Trusted Certification Partner</h2>
-                    <div class="hero-highlights" style="flex-wrap: nowrap;">
-                        <span class="highlight-badge">
-                            <i class="fas fa-medal" style="color: #FFD700;"></i>
-                            <span>NABCB Accredited</span>
-                        </span>
-                        <span class="highlight-badge iso-cluster">
-                            <i class="fas fa-shield-alt"></i>
-                            <div class="iso-chip-row">
-                                <span class="iso-chip">ISO 9001</span>
-                                <span class="iso-chip">ISO 45001</span>
-                                <span class="iso-chip">ISO 14001</span>
-                            </div>
-                        </span>
-                    </div>
-                    <p class="hero-description">Empowering organizations through accredited, authentic, impartial, and ethical certification services for management standards such as QMS, EMS, and OHSMS.</p>
-                    <div class="hero-cta" style="width: 100%; justify-content: flex-end; margin-top: 20px;">
-                        <a href="text/audit_application_form.pdf" class="cta-button secondary " style="margin-left: auto;" download>
-                            <i class="fas fa-arrow-down"></i>
-                            <span> Download Application Form</span>
-                        </a>
-                        <a href="application.php#online-application-form" class="cta-button primary">
-                            <i class="fas fa-edit"></i>
-                            <span>Fill Application Form Online</span>
-                        </a>
-                    </div>
-                </div>
-                <div class="dashboard-certifications">
-                    <div class="certification-border">
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                    </div>
-                    <div class="dashboard-header">
-                        <h3>OUR CERTIFICATIONS</h3>
-                        <div class="dashboard-badge">
-                            <i class="fas fa-medal" style="color: #FFD700; margin-right: 5px;"></i>
-                            <span>Accredited</span>
-                        </div>
-                    </div>
-                    <div class="certification-dashboard">
-                        <a href="contactUS.php" style="text-decoration: none; color: inherit; display: block;">
-                        <div class="certification-card" style="--card-color: #c64bff">
-                            <div class="cert-icon">
-                                <i class="fas fa-check"></i>
-                            </div>
-                            <div class="cert-details">
-                                <span class="cert-code">ISO <span class="iso-number" data-text="9001" data-color="#ff6b6b">9001</span></span>
-                                <span class="cert-name">QMS</span>
-                            </div>
-                            <div class="cert-status">
-                                <span class="status-dot"></span>
-                                <span>Apply</span>
-                            </div>
-                        </div>
-                        </a>
-                        <a href="contactUS.php" style="text-decoration: none; color: inherit; display: block;">
-                        <div class="certification-card" style="--card-color: #4f83ff">
-                            <div class="cert-icon">
-                                <i class="fas fa-check"></i>
-                            </div>
-                            <div class="cert-details">
-                                <span class="cert-code">ISO <span class="iso-number" data-text="45001" data-color="#4ecdc4">45001</span></span>
-                                <span class="cert-name">OHSMS</span>
-                            </div>
-                            <div class="cert-status">
-                                <span class="status-dot"></span>
-                                <span>Apply</span>
-                            </div>
-                        </div>
-                        </a>
-                        <a href="contactUS.php" style="text-decoration: none; color: inherit; display: block;">
-                        <div class="certification-card" style="--card-color: #8a5cff">
-                            <div class="cert-icon">
-                                <i class="fas fa-check"></i>
-                            </div>
-                            <div class="cert-details">
-                                <span class="cert-code">ISO <span class="iso-number" data-text="14001" data-color="#ffe66d">14001</span></span>
-                                <span class="cert-name">EMS</span>
-                            </div>
-                            <div class="cert-status">
-                                <span class="status-dot"></span>
-                                <span>Apply</span>
-                            </div>
-                        </div>
-                        </a>
-                    </div>
-                   
-                    </div>
-                </div>
-                
-                <!-- Audit Application Flow Section -->
-                <div class="audit-flow-section">
-                    <div class="flow-header">
-                        <h3 class="flow-title">
-                            <i class="fas fa-stream"></i>
-                            Audit Application Process Flow
-                        </h3>
-                        <div class="flow-badge">
-                            <span class="pulse-dot"></span>
-                            <span>Live Process</span>
-                        </div>
-                    </div>
-                    
-                    <div class="audit-flow-container">
-                        <div class="flow-step" data-step="1">
-                            <div class="step-header" onclick="toggleStep(this)">
-                                <div class="step-number">1</div>
-                                <div class="step-content">
-                                    <h4>Audit Application</h4>
-                                    <p>Initial application submission</p>
-                                </div>
-                                <div class="step-toggle">
-                                    <i class="fas fa-chevron-down"></i>
-                                </div>
-                            </div>
-                            <div class="step-details">
-                                <div class="step-info">
-                                    <h5>Key Application Requirements</h5>
-                                    <ul>
-                                        <li>Download application form from www.aitf.co.in (Downloads section)</li>
-                                        <li>Available in PDF and MS Word formats</li>
-                                        <li>Fill client requirements and certification details</li>
-                                        <li>Provide activities carried out by client</li>
-                                        <li>Include number of employees and sites information</li>
-                                        <li>Add certification-specific information</li>
-                                        <li>Application must be stamped and signed</li>
-                                        <li>Submit by authorized person only</li>
-                                        <li>Send via mail, courier, or handover to AITF office</li>
-                                    </ul>
-                                </div>
-                                <div class="step-timeline">
-                                    <span class="timeline-badge">2-3 Days</span>
-                                </div>
-                            </div>
-                            <div class="step-connector"></div>
-                        </div>
-                        
-                        <div class="flow-step" data-step="2">
-                            <div class="step-header" onclick="toggleStep(this)">
-                                <div class="step-number">2</div>
-                                <div class="step-content">
-                                    <h4>Application Review</h4>
-                                    <p>Comprehensive evaluation process</p>
-                                </div>
-                                <div class="step-toggle">
-                                    <i class="fas fa-chevron-down"></i>
-                                </div>
-                            </div>
-                            <div class="step-details">
-                                <div class="step-info">
-                                    <h5>Application Review Process</h5>
-                                    <ul>
-                                        <li>Review of application information by AITF-MCL</li>
-                                        <li>Economic offer preparation for certification</li>
-                                        <li>Based on required man-days for auditing</li>
-                                        <li>Analysis of organization scope criticality</li>
-                                        <li>Evaluation of sites to be audited</li>
-                                        <li>Competency requirements analysis</li>
-                                        <li>Appointing competent auditor for assessment</li>
-                                        <li>Detailed cost estimation and timeline</li>
-                                    </ul>
-                                </div>
-                                <div class="step-timeline">
-                                    <span class="timeline-badge">5-7 Days</span>
-                                </div>
-                            </div>
-                            <div class="step-connector"></div>
-                        </div>
-                        
-                        <div class="flow-step" data-step="3">
-                            <div class="step-header" onclick="toggleStep(this)">
-                                <div class="step-number">3</div>
-                                <div class="step-content">
-                                    <h4>Certification Proposal</h4>
-                                    <p>Detailed certification plan</p>
-                                </div>
-                                <div class="step-toggle">
-                                    <i class="fas fa-chevron-down"></i>
-                                </div>
-                            </div>
-                            <div class="step-details">
-                                <div class="step-info">
-                                    <h5>Certification Proposal Details</h5>
-                                    <ul>
-                                        <li>Review of completed questionnaire information</li>
-                                        <li>AITF reviews available scopes with AITF-MCL</li>
-                                        <li>Preparation of detailed proposal/agreement</li>
-                                        <li>Letter for registration service agreement included</li>
-                                        <li>Sent along with application for registration</li>
-                                        <li>Specifies surveillance visit frequency</li>
-                                        <li>Terms and conditions for certification grant</li>
-                                        <li>Maintenance of certification requirements</li>
-                                        <li>Certification criteria clearly defined</li>
-                                    </ul>
-                                </div>
-                                <div class="step-timeline">
-                                    <span class="timeline-badge">3-5 Days</span>
-                                </div>
-                            </div>
-                            <div class="step-connector"></div>
-                        </div>
-                        
-                        <div class="flow-step" data-step="4">
-                            <div class="step-header" onclick="toggleStep(this)">
-                                <div class="step-number">4</div>
-                                <div class="step-content">
-                                    <h4>Certification Service Agreement</h4>
-                                    <p>Service terms and conditions</p>
-                                </div>
-                                <div class="step-toggle">
-                                    <i class="fas fa-chevron-down"></i>
-                                </div>
-                            </div>
-                            <div class="step-details">
-                                <div class="step-info">
-                                    <h5>Service Agreement Process</h5>
-                                    <ul>
-                                        <li>Client acceptance of proposal/agreement required</li>
-                                        <li>Submit signed agreement along with application fees</li>
-                                        <li>Receipt of agreement enables client registration</li>
-                                        <li>Unique identification number allotted to organization</li>
-                                        <li>Application for registration received and reviewed</li>
-                                        <li>Confirms exact client company name display</li>
-                                        <li>Verifies site address details</li>
-                                        <li>Defines scope description (products/services)</li>
-                                        <li>Certification audit contract made and sent</li>
-                                    </ul>
-                                </div>
-                                <div class="step-timeline">
-                                    <span class="timeline-badge">1-2 Days</span>
-                                </div>
-                            </div>
-                            <div class="step-connector"></div>
-                        </div>
-                        
-                        <div class="flow-step" data-step="5">
-                            <div class="step-header" onclick="toggleStep(this)">
-                                <div class="step-number">5</div>
-                                <div class="step-content">
-                                    <h4>Contract Review</h4>
-                                    <p>Legal and compliance review</p>
-                                </div>
-                                <div class="step-toggle">
-                                    <i class="fas fa-chevron-down"></i>
-                                </div>
-                            </div>
-                            <div class="step-details">
-                                <div class="step-info">
-                                    <h5>Contract Review Process</h5>
-                                    <ul>
-                                        <li>Review of signed service agreement received</li>
-                                        <li>Analysis of contract terms and conditions</li>
-                                        <li>Identify required changes if any</li>
-                                        <li>Revision of contract carried out if needed</li>
-                                        <li>Client acceptance of contract revisions</li>
-                                        <li>Proceed with assessment planning after acceptance</li>
-                                        <li>Final contract approval and documentation</li>
-                                    </ul>
-                                </div>
-                                <div class="step-timeline">
-                                    <span class="timeline-badge">2-3 Days</span>
-                                </div>
-                            </div>
-                            <div class="step-connector"></div>
-                        </div>
-                        
-                        <div class="flow-step" data-step="6">
-                            <div class="step-header" onclick="toggleStep(this)">
-                                <div class="step-number">6</div>
-                                <div class="step-content">
-                                    <h4>Assessment Planning</h4>
-                                    <p>Strategic assessment schedule</p>
-                                </div>
-                                <div class="step-toggle">
-                                    <i class="fas fa-chevron-down"></i>
-                                </div>
-                            </div>
-                            <div class="step-details">
-                                <div class="step-info">
-                                    <h5>Assessment Planning Process</h5>
-                                    <ul>
-                                        <li>Analysis of auditee organization details (Scope, Name, Address)</li>
-                                        <li>Clear understanding between client & AITF-MCL requirements</li>
-                                        <li>Audit language requirement assessment</li>
-                                        <li>Review of client management system if previously certified</li>
-                                        <li>Arrangement of AITF-MCL resources for certification service</li>
-                                        <li>Evaluation of assessment readiness of the applicant</li>
-                                        <li>Comprehensive assessment plan preparation</li>
-                                        <li>Resource allocation and scheduling</li>
-                                        <li>Final assessment documentation</li>
-                                    </ul>
-                                </div>
-                                <div class="step-timeline">
-                                    <span class="timeline-badge">5-7 Days</span>
-                                </div>
-                            </div>
-                            <div class="step-connector"></div>
-                        </div>
-                        
-                        <div class="flow-step" data-step="7">
-                            <div class="step-header" onclick="toggleStep(this)">
-                                <div class="step-number">7</div>
-                                <div class="step-content">
-                                    <h4>Audit Notification with Assignment of Auditor</h4>
-                                    <p>Auditor assignment and notification</p>
-                                </div>
-                                <div class="step-toggle">
-                                    <i class="fas fa-chevron-down"></i>
-                                </div>
-                            </div>
-                            <div class="step-details">
-                                <div class="step-info">
-                                    <h5>Audit Notification Process</h5>
-                                    <ul>
-                                        <li>AITF-MCL sends audit notification to client</li>
-                                        <li>Audit planning details included in notification</li>
-                                        <li>Assignment of qualified auditor</li>
-                                        <li>Client acceptance required for auditor assignment</li>
-                                        <li>Verification of no conflict of interest</li>
-                                        <li>Client confirmation for audit scheduling</li>
-                                        <li>Final audit date confirmation</li>
-                                        <li>Audit team communication established</li>
-                                    </ul>
-                                </div>
-                                <div class="step-timeline">
-                                    <span class="timeline-badge">2-3 Days</span>
-                                </div>
-                            </div>
-                            <div class="step-connector"></div>
-                        </div>
-                        
-                        <div class="flow-step" data-step="8">
-                            <div class="step-header" onclick="toggleStep(this)">
-                                <div class="step-number">8</div>
-                                <div class="step-content">
-                                    <h4>Stage I Audit</h4>
-                                    <p>Initial assessment phase</p>
-                                </div>
-                                <div class="step-toggle">
-                                    <i class="fas fa-chevron-down"></i>
-                                </div>
-                            </div>
-                            <div class="step-details">
-                                <div class="step-info">
-                                    <h5>Stage I Audit Process</h5>
-                                    <ul>
-                                        <li>Determine organization's readiness for Stage 2 audit</li>
-                                        <li>Review of client's documentation and quality system</li>
-                                        <li>Review Quality Manual / Policy documents</li>
-                                        <li>Examine Procedures / Guidelines / Work Instructions</li>
-                                        <li>Check all required documentation is available</li>
-                                        <li>Verify information consistency and controlled state</li>
-                                        <li>Confirm documentation distributed for implementation</li>
-                                        <li>Partial onsite evaluation of internal audits</li>
-                                        <li>Assess management review planning and performance</li>
-                                        <li>Evaluate management system implementation level</li>
-                                        <li>Submit findings & advice in written report</li>
-                                    </ul>
-                                </div>
-                                <div class="step-timeline">
-                                    <span class="timeline-badge">3-5 Days</span>
-                                </div>
-                            </div>
-                            <div class="step-connector"></div>
-                        </div>
-                        
-                        <div class="flow-step" data-step="9">
-                            <div class="step-header" onclick="toggleStep(this)">
-                                <div class="step-number">9</div>
-                                <div class="step-content">
-                                    <h4>Stage II Audit</h4>
-                                    <p>Final certification audit</p>
-                                </div>
-                                <div class="step-toggle">
-                                    <i class="fas fa-chevron-down"></i>
-                                </div>
-                            </div>
-                            <div class="step-details">
-                                <div class="step-info">
-                                    <h5>Stage II Audit Process</h5>
-                                    <ul>
-                                        <li>Conducted onsite to evaluate implementation effectiveness</li>
-                                        <li>Assessment of client's management system effectiveness</li>
-                                        <li>Audit findings categorized into Minor Non-Conformances</li>
-                                        <li>Audit findings categorized into Major Non-Conformances</li>
-                                        <li>Minor Non-Compliance: Isolated deficiency cases</li>
-                                        <li>Minor: Does not affect product conformity or customer satisfaction</li>
-                                        <li>Major Non-Compliance: Total lapse of applicable requirements</li>
-                                        <li>Major: Critical to management system operation</li>
-                                        <li>Assessment audit after Stage 1 inadequacies removed</li>
-                                        <li>Organization demonstrates compliance to international standard</li>
-                                        <li>Auditors plan and conduct the assessment audit</li>
-                                    </ul>
-                                </div>
-                                <div class="step-timeline">
-                                    <span class="timeline-badge">5-7 Days</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="flow-progress">
-                        <div class="progress-bar">
-                            <div class="progress-fill"></div>
-                        </div>
-                        <div class="progress-text">
-                            <span class="current-step">Step 1</span>
-                            <span class="total-steps">of 9</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- NABCB Accreditation Section -->
-                <div class="container mt-4 mb-5">
-                    <div class="row justify-content-center">
-                        <div class="col-lg-10">
-                            <div class="accreditation-section p-4 p-lg-5 text-white rounded-3 position-relative overflow-hidden" style="
-                                background: linear-gradient(135deg, #0f172a 0%, #1e293b 40%, #1e3a8a 100%);
-                                border: none;
-                                position: relative;
-                                box-shadow: 
-                                    0 25px 80px rgba(15, 23, 42, 0.6),
-                                    0 10px 40px rgba(30, 58, 138, 0.4),
-                                    inset 0 1px 0 rgba(255, 255, 255, 0.1);
-                                transform: translateY(0);
-                                transition: all 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
-                                border-radius: 24px;
-                            " onmouseover="this.style.transform='translateY(-12px) scale(1.02)'; this.style.boxShadow='0 35px 100px rgba(15, 23, 42, 0.8), 0 15px 50px rgba(30, 58, 138, 0.5)';" onmouseout="this.style.transform='translateY(0) scale(1)'; this.style.boxShadow='0 25px 80px rgba(15, 23, 42, 0.6), 0 10px 40px rgba(30, 58, 138, 0.4)';">
-                                
-                                <!-- Animated Top Border -->
-                                <div class="position-absolute top-0 start-0 w-100" style="height: 6px; background: linear-gradient(90deg, #f97316, #fb923c, #fbbf24, #f97316); background-size: 300% 100%; animation: gradientFlow 3s ease-in-out infinite; z-index: 10; box-shadow: 0 4px 20px rgba(249, 115, 22, 0.6);"></div>
-                                
-                                <!-- Enhanced Background Pattern -->
-                                <div class="position-absolute top-0 start-0 w-100 h-100 opacity-05" style="
-                                    background-image: 
-                                        radial-gradient(circle at 25% 25%, rgba(249, 115, 22, 0.1) 0%, transparent 50%),
-                                        radial-gradient(circle at 75% 75%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
-                                        repeating-linear-gradient(45deg, transparent, transparent 35px, rgba(255, 255, 255, 0.02) 35px, rgba(255, 255, 255, 0.02) 70px);
-                                    pointer-events: none;
-                                "></div>
-                                
-                                <!-- Floating Background Icons -->
-                                <div class="position-absolute top-0 end-0 p-4" style="animation: floatSlow 8s ease-in-out infinite;">
-                                    <i class="fas fa-award" style="font-size: 4rem; opacity: 0.08; color: #f97316; filter: blur(1px);"></i>
-                                </div>
-                                <div class="position-absolute top-0 start-0 p-4" style="animation: floatSlow 10s ease-in-out infinite 2s;">
-                                    <i class="fas fa-certificate" style="font-size: 3rem; opacity: 0.06; color: #3b82f6; filter: blur(1px);"></i>
-                                </div>
-                                <div class="position-absolute bottom-0 end-0 p-4" style="animation: floatSlow 9s ease-in-out infinite 1s;">
-                                    <i class="fas fa-shield-alt" style="font-size: 2.5rem; opacity: 0.05; color: #10b981; filter: blur(1px);"></i>
-                                </div>
-                                
-                                <!-- Enhanced Central Icon -->
-                                <div class="text-center mb-4" style="margin-top: 20px;">
-                                    <div class="d-inline-block p-5 rounded-circle position-relative" style="
-                                        background: linear-gradient(135deg, rgba(249, 115, 22, 0.15), rgba(249, 115, 22, 0.05));
-                                        backdrop-filter: blur(20px);
-                                        -webkit-backdrop-filter: blur(20px);
-                                        border: 2px solid rgba(249, 115, 22, 0.3);
-                                        box-shadow: 
-                                            0 20px 40px rgba(249, 115, 22, 0.2),
-                                            inset 0 1px 0 rgba(255, 255, 255, 0.2);
-                                        animation: iconGlow 4s ease-in-out infinite;
-                                        transform: translateY(10px);
-                                    ">
-                                        <div class="position-absolute top-0 start-0 w-100 h-100 rounded-circle" style="
-                                            background: radial-gradient(circle, rgba(249, 115, 22, 0.4) 0%, transparent 70%); 
-                                            animation: rippleExpand 4s linear infinite;
-                                        "></div>
-                                        <i class="fas fa-medal" style="font-size: 5rem; color: #fbbf24; position: relative; z-index: 2; text-shadow: 0 0 20px rgba(251, 191, 36, 0.5);"></i>
-                                    </div>
-                                </div>
-                                
-                                <!-- Enhanced Heading -->
-                                <div class="text-center mb-4">
-                                    <div class="d-inline-block">
-                                        <div class="badge mb-3 px-5 py-2 d-inline-flex align-items-center" style="
-                                            background: linear-gradient(135deg, rgba(249, 115, 22, 0.9), rgba(251, 146, 60, 0.9));
-                                            color: white;
-                                            font-size: 0.7rem;
-                                            text-transform: uppercase;
-                                            letter-spacing: 2px;
-                                            font-weight: 700;
-                                            border-radius: 50px;
-                                            box-shadow: 0 8px 25px rgba(249, 115, 22, 0.4);
-                                            border: none;
-                                            animation: badgePulse 3s ease-in-out infinite;
-                                            position: relative;
-                                            overflow: visible;
-                                            z-index: 1;
-                                            white-space: nowrap;
-                                            min-width: 180px;
-                                            justify-content: center;
-                                        ">
-                                            <i class="fas fa-star" style="color: #fbbf24; position: relative; z-index: 2; font-size: 0.9rem; margin-right: 6px;"></i>
-                                            <span style="position: relative; z-index: 2; font-size: 0.7rem; letter-spacing: 1.5px;">OFFICIAL RECOGNITION</span>
-                                            <i class="fas fa-star" style="color: #fbbf24; position: relative; z-index: 2; font-size: 0.9rem; margin-left: 6px;"></i>
-                                        </div>
-                                    </div>
-                                    <h2 class="h2 fw-bold mb-0 position-relative" style="
-                                        z-index: 2; 
-                                        text-shadow: 
-                                            0 4px 8px rgba(0,0,0,0.5),
-                                            0 0 30px rgba(249, 115, 22, 0.3);
-                                        font-size: 2.5rem;
-                                        font-weight: 800;
-                                        background: linear-gradient(135deg, #ffffff, #e0e7ff);
-                                        -webkit-background-clip: text;
-                                        -webkit-text-fill-color: transparent;
-                                        background-clip: text;
-                                    ">
-                                        <i class="fas fa-certificate me-3" style="
-                                            color: #fbbf24; 
-                                            font-size: 2rem;
-                                            filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.6));
-                                            animation: iconRotate 6s linear infinite;
-                                        "></i>
-                                        NABCB Accredited Certification Body
-                                    </h2>
-                                </div>
-                                
-                                <!-- Enhanced Description -->
-                                <div class="text-center mb-5">
-                                    <p class="lead mb-0 position-relative" style="
-                                        z-index: 2; 
-                                        font-size: 1.4rem; 
-                                        line-height: 1.8; 
-                                        text-shadow: 0 2px 4px rgba(0,0,0,0.4);
-                                        max-width: 900px; 
-                                        margin-left: auto; 
-                                        margin-right: auto;
-                                        color: #e0e7ff;
-                                        font-weight: 500;
-                                    ">
-                                        <span style="display: inline-block; padding: 8px 16px; margin: 4px; background: rgba(255, 255, 255, 0.05); border-radius: 8px;">AITF Management Certification Limited is an</span>
-                                        <br>
-                                        <strong style="
-                                            color: #fbbf24; 
-                                            font-weight: 800; 
-                                            text-shadow: 0 0 20px rgba(251, 191, 36, 0.6);
-                                            font-size: 1.6rem;
-                                            display: inline-block;
-                                            padding: 8px 20px;
-                                            margin: 8px 4px;
-                                            background: linear-gradient(135deg, rgba(249, 115, 22, 0.2), rgba(251, 146, 60, 0.1));
-                                            border-radius: 12px;
-                                            border: 1px solid rgba(249, 115, 22, 0.3);
-                                            animation: highlightGlow 4s ease-in-out infinite;
-                                        ">accredited certification body</strong>
-                                        <br>
-                                        <span style="display: inline-block; padding: 8px 16px; margin: 4px; background: rgba(255, 255, 255, 0.05); border-radius: 8px;">from NABCB (National Accreditation Board for Certification Bodies)</span>
-                                        <br>
-                                        <span style="display: inline-block; padding: 8px 16px; margin: 4px; background: rgba(255, 255, 255, 0.05); border-radius: 8px;">for QMS, EMS, and OHSMS Certifications.</span>
-                                    </p>
-                                </div>
-                                
-                                <!-- Enhanced Certification Badges -->
-                                <div class="text-center mt-5">
-                                    <div class="d-inline-flex gap-3 flex-wrap justify-content-center align-items-center">
-                                        <div class="certification-badge px-5 py-3 rounded-pill d-flex align-items-center gap-3" style="
-                                            background: linear-gradient(135deg, rgba(249, 115, 22, 0.3), rgba(249, 115, 22, 0.1));
-                                            backdrop-filter: blur(10px);
-                                            -webkit-backdrop-filter: blur(10px);
-                                            border: 2px solid rgba(249, 115, 22, 0.5);
-                                            color: white; 
-                                            font-weight: 700; 
-                                            font-size: 1.1rem;
-                                            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); 
-                                            box-shadow: 0 8px 25px rgba(249, 115, 22, 0.4);
-                                            position: relative;
-                                            overflow: hidden;
-                                        " onmouseover="this.style.transform='translateY(-5px) scale(1.1)'; this.style.boxShadow='0 15px 40px rgba(249, 115, 22, 0.6)'; this.style.borderColor='rgba(249, 115, 22, 0.8)';" onmouseout="this.style.transform='translateY(0) scale(1)'; this.style.boxShadow='0 8px 25px rgba(249, 115, 22, 0.4)'; this.style.borderColor='rgba(249, 115, 22, 0.5)';">
-                                            <div class="position-absolute top-0 start-0 w-100 h-100" style="background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%); animation: shimmer 3s ease-in-out infinite;"></div>
-                                            <i class="fas fa-check-circle" style="color: #fbbf24; font-size: 1.3rem; position: relative; z-index: 2;"></i>
-                                            <span style="position: relative; z-index: 2;">QMS</span>
-                                        </div>
-                                        <div class="certification-badge px-5 py-3 rounded-pill d-flex align-items-center gap-3" style="
-                                            background: linear-gradient(135deg, rgba(249, 115, 22, 0.3), rgba(249, 115, 22, 0.1));
-                                            backdrop-filter: blur(10px);
-                                            -webkit-backdrop-filter: blur(10px);
-                                            border: 2px solid rgba(249, 115, 22, 0.5);
-                                            color: white; 
-                                            font-weight: 700; 
-                                            font-size: 1.1rem;
-                                            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); 
-                                            box-shadow: 0 8px 25px rgba(249, 115, 22, 0.4);
-                                            position: relative;
-                                            overflow: hidden;
-                                        " onmouseover="this.style.transform='translateY(-5px) scale(1.1)'; this.style.boxShadow='0 15px 40px rgba(249, 115, 22, 0.6)'; this.style.borderColor='rgba(249, 115, 22, 0.8)';" onmouseout="this.style.transform='translateY(0) scale(1)'; this.style.boxShadow='0 8px 25px rgba(249, 115, 22, 0.4)'; this.style.borderColor='rgba(249, 115, 22, 0.5)';">
-                                            <div class="position-absolute top-0 start-0 w-100 h-100" style="background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%); animation: shimmer 3s ease-in-out infinite 0.5s;"></div>
-                                            <i class="fas fa-check-circle" style="color: #fbbf24; font-size: 1.3rem; position: relative; z-index: 2;"></i>
-                                            <span style="position: relative; z-index: 2;">EMS</span>
-                                        </div>
-                                        <div class="certification-badge px-5 py-3 rounded-pill d-flex align-items-center gap-3" style="
-                                            background: linear-gradient(135deg, rgba(249, 115, 22, 0.3), rgba(249, 115, 22, 0.1));
-                                            backdrop-filter: blur(10px);
-                                            -webkit-backdrop-filter: blur(10px);
-                                            border: 2px solid rgba(249, 115, 22, 0.5);
-                                            color: white; 
-                                            font-weight: 700; 
-                                            font-size: 1.1rem;
-                                            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); 
-                                            box-shadow: 0 8px 25px rgba(249, 115, 22, 0.4);
-                                            position: relative;
-                                            overflow: hidden;
-                                        " onmouseover="this.style.transform='translateY(-5px) scale(1.1)'; this.style.boxShadow='0 15px 40px rgba(249, 115, 22, 0.6)'; this.style.borderColor='rgba(249, 115, 22, 0.8)';" onmouseout="this.style.transform='translateY(0) scale(1)'; this.style.boxShadow='0 8px 25px rgba(249, 115, 22, 0.4)'; this.style.borderColor='rgba(249, 115, 22, 0.5)';">
-                                            <div class="position-absolute top-0 start-0 w-100 h-100" style="background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%); animation: shimmer 3s ease-in-out infinite 1s;"></div>
-                                            <i class="fas fa-check-circle" style="color: #fbbf24; font-size: 1.3rem; position: relative; z-index: 2;"></i>
-                                            <span style="position: relative; z-index: 2;">OHSMS</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <!-- Enhanced Bottom Gradient Border -->
-                                <div class="position-absolute bottom-0 start-0 w-100" style="
-                                    height: 8px; 
-                                    background: linear-gradient(90deg, #f97316, #fb923c, #fbbf24, #f59e0b, #f97316); 
-                                    background-size: 300% 100%; 
-                                    animation: gradientFlow 4s ease-in-out infinite; 
-                                    box-shadow: 0 4px 20px rgba(249, 115, 22, 0.6);
-                                    border-radius: 0 0 24px 24px;
-                                "></div>
-                                
-                                <!-- CSS Animations -->
-                                <style>
-                                    @keyframes floatSlow {
-                                        0%, 100% { transform: translateY(0px) rotate(0deg); }
-                                        50% { transform: translateY(-15px) rotate(3deg); }
-                                    }
-                                    @keyframes iconGlow {
-                                        0%, 100% { 
-                                            box-shadow: 0 20px 40px rgba(249, 115, 22, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-                                            transform: scale(1);
-                                        }
-                                        50% { 
-                                            box-shadow: 0 25px 50px rgba(249, 115, 22, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
-                                            transform: scale(1.05);
-                                        }
-                                    }
-                                    @keyframes rippleExpand {
-                                        0% { transform: scale(1); opacity: 0.4; }
-                                        100% { transform: scale(2); opacity: 0; }
-                                    }
-                                    @keyframes gradientFlow {
-                                        0%, 100% { background-position: 0% 50%; }
-                                        50% { background-position: 100% 50%; }
-                                    }
-                                    @keyframes badgePulse {
-                                        0%, 100% { transform: scale(1); box-shadow: 0 8px 25px rgba(249, 115, 22, 0.4); }
-                                        50% { transform: scale(1.05); box-shadow: 0 12px 35px rgba(249, 115, 22, 0.6); }
-                                    }
-                                    @keyframes iconRotate {
-                                        0% { transform: rotateY(0deg); }
-                                        100% { transform: rotateY(360deg); }
-                                    }
-                                    @keyframes highlightGlow {
-                                        0%, 100% { box-shadow: 0 0 20px rgba(251, 191, 36, 0.6); }
-                                        50% { box-shadow: 0 0 30px rgba(251, 191, 36, 0.8); }
-                                    }
-                                    @keyframes shimmer {
-                                        0% { transform: translateX(-100%); }
-                                        100% { transform: translateX(100%); }
-                                    }
-                                </style>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <style>
-                    /* Dashboard Style Certifications */
-                    .dashboard-certifications {
-                        background: rgba(15, 15, 20, 0.8);
-                        backdrop-filter: blur(12px);
-                        -webkit-backdrop-filter: blur(12px);
-                        position: relative;
-                        overflow: hidden;
-                        z-index: 1;
-                        border-radius: 15px;
-                        padding: 22px;
-                        margin: 0 auto 0;
-                        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
-                        max-width: 380px;
-                        margin-left: auto;
-                        margin-right: 0;
-                        border: 1px solid rgba(255, 215, 128, 0.45);
-                        transition: all 0.3s ease;
-                        transform: translateY(0%);
-                        margin-top: 5px;
-                        z-index: 5;
-                    }
 
-                    .certification-border {
-                        position: absolute;
-                        top: 0;
-                        left: 0;
-                        width: 100%;
-                        height: 100%;
-                        z-index: -1;
-                        overflow: hidden;
-                        border-radius: 15px;
-                        padding: 1.5px;
-                        background: linear-gradient(45deg, 
-                            #ff6b6b, #ff8e8e, #ffb3b3,
-                            #ffd166, #ffd700, #f4a261,
-                            #e9c46a, #2a9d8f, #4cc9f0,
-                            #4895ef, #4361ee, #3a0ca3);
-                        background-size: 400% 400%;
-                        animation: gradientBG 8s ease infinite;
-                    }
-                    
-                    .certification-border::before {
-                        content: '';
-                        position: absolute;
-                        top: 1.5px;
-                        left: 1.5px;
-                        right: 1.5px;
-                        bottom: 1.5px;
-                        background: rgba(15, 15, 20, 0.9);
-                        border-radius: 12px;
-                        z-index: -1;
-                    }
-                    
-                    .certification-border span {
-                        position: absolute;
-                        display: block;
-                        background: linear-gradient(90deg, 
-                            #ff6b6b, #ff8e8e, #ffd166, 
-                            #f4a261, #e9c46a, #2a9d8f, 
-                            #4cc9f0, #4895ef, #4361ee, #3a0ca3);
-                        background-size: 300% 100%;
-                        animation: borderAnimation 3s linear infinite;
-                        box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
-                        z-index: 1;
-                    }
-                    
-                    .certification-border span:nth-child(1) {
-                        top: 0;
-                        left: -100%;
-                        width: 100%;
-                        height: 3px;
-                        animation-delay: 0s;
-                        filter: drop-shadow(0 0 5px #ff6b6b);
-                    }
-                    
-                    .certification-border span:nth-child(2) {
-                        top: -100%;
-                        right: 0;
-                        width: 3px;
-                        height: 100%;
-                        animation-delay: 0.5s;
-                        filter: drop-shadow(0 0 5px #4cc9f0);
-                    }
-                    
-                    .certification-border span:nth-child(3) {
-                        bottom: 0;
-                        right: -100%;
-                        width: 100%;
-                        height: 3px;
-                        animation-delay: 1s;
-                        filter: drop-shadow(0 0 5px #a78bfa);
-                    }
-                    
-                    .certification-border span:nth-child(4) {
-                        bottom: -100%;
-                        left: 0;
-                        width: 3px;
-                        height: 100%;
-                        animation-delay: 1.5s;
-                        filter: drop-shadow(0 0 5px #3a0ca3);
-                    }
-                    
-                    @keyframes borderAnimation {
-                        0% {
-                            transform: translateX(0) translateY(0);
-                            background-position: 0% center;
-                            opacity: 0.9;
-                        }
-                        50% {
-                            opacity: 1;
-                            filter: brightness(1.2);
-                        }
-                        100% {
-                            transform: translateX(200%) translateY(200%);
-                            background-position: 200% center;
-                            opacity: 0.9;
-                        }
-                    }
-                    
-                    @keyframes gradientBG {
-                        0% {
-                            background-position: 0% 50%;
-                        }
-                        50% {
-                            background-position: 100% 50%;
-                        }
-                        100% {
-                            background-position: 0% 50%;
-                        }
-                    }
-                    
-                    /* Add corner elements */
-                    .dashboard-certifications::after {
-                        content: '';
-                        position: absolute;
-                        width: 15px;
-                        height: 15px;
-                        border: 2px solid #8a5cff;
-                        animation: cornerPulse 2s ease-in-out infinite;
-                    }
-                    
-                    .dashboard-certifications::after {
-                        top: 10px;
-                        left: 10px;
-                        border-right: none;
-                        border-bottom: none;
-                        border-top-left-radius: 5px;
-                    }
-                    
-                    @keyframes cornerPulse {
-                        0%, 100% {
-                            opacity: 0.7;
-                            transform: scale(1);
-                        }
-                        50% {
-                            opacity: 1;
-                            transform: scale(1.2);
-                        }
-                    }
-
-                    .dashboard-certifications::before {
-                        content: '';
-                        position: absolute;
-                        top: 10px;
-                        left: 12px;
-                        right: 12px;
-                        height: 3px;
-                        border: none;
-                        background: linear-gradient(90deg, #4f83ff, #8a5cff, #c64bff);
-                        border-radius: 999px;
-                    }
-
-                    .dashboard-header {
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
-                        margin-bottom: 20px;
-                        padding-bottom: 15px;
-                        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-                    }
-
-                    .dashboard-header h3 {
-                        margin: 0;
-                        color: #fff;
-                        font-size: 18px;
-                        font-weight: 600;
-                        letter-spacing: 1px;
-                    }
-
-                    .dashboard-badge {
-                        background: linear-gradient(135deg, #4f83ff, #8a5cff);
-                        padding: 6px 12px;
-                        border-radius: 20px;
-                        display: flex;
-                        align-items: center;
-                        gap: 6px;
-                        font-size: 12px;
-                        font-weight: 500;
-                        color: white;
-                        box-shadow: 0 4px 15px rgba(79, 131, 255, 0.3);
-                    }
-
-                    .dashboard-badge i {
-                        font-size: 14px;
-                    }
-
-                    .certification-dashboard {
-                        display: flex;
-                        flex-direction: column;
-                        gap: 12px;
-                        margin-bottom: 20px;
-                    }
-
-                    .certification-card {
-                        background: rgba(255, 255, 255, 0.9);
-                        border-radius: 10px;
-                        padding: 15px;
-                        display: flex;
-                        align-items: center;
-                        transition: all 0.3s ease;
-                        position: relative;
-                        overflow: hidden;
-                        border-left: 4px solid var(--card-color);
-                        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-                        z-index: 1;
-                    }
-                    
-                    .certification-card::before {
-                        content: '';
-                        position: absolute;
-                        top: 0;
-                        left: 0;
-                        width: 100%;
-                        height: 100%;
-                        background: transparent;
-                        z-index: -1;
-                    }
-                    
-                    .certification-card::after {
-                        content: '';
-                        position: absolute;
-                        top: 0;
-                        left: 0;
-                        width: 0;
-                        height: 100%;
-                        background: linear-gradient(90deg,
-                            rgba(34, 197, 94, 0.25) 0%,
-                            rgba(22, 163, 74, 0.75) 50%,
-                            rgba(22, 101, 52, 0.98) 100%);
-                        z-index: -1;
-                        transition: width 12s linear;
-                    }
-                    
-                    .certification-card::after {
-                        animation: fillAnimation 12s infinite linear;
-                    }
-                    
-                    .certification-card:nth-child(1)::after {
-                        animation-delay: 0s;
-                    }
-                    
-                    .certification-card:nth-child(2)::after {
-                        animation-delay: 0.2s;
-                    }
-                    
-                    .certification-card:nth-child(3)::after {
-                        animation-delay: 0.4s;
-                    }
-
-                    .certification-card:hover {
-                        transform: translateY(-3px);
-                        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-                    }
-                    
-                    .certification-card:hover::after {
-                        animation-play-state: paused;
-                    }
-
-                    .cert-icon {
-                        width: 40px;
-                        height: 40px;
-                        border-radius: 8px;
-                        background: rgba(79, 131, 255, 0.1);
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        margin-right: 15px;
-                        color: var(--card-color);
-                        font-size: 16px;
-                    }
-
-                    .cert-details {
-                        flex: 1;
-                    }
-
-                    .cert-code {
-                        display: block;
-                        font-weight: 900;
-                        color: #2d3748;
-                        font-size: 18px;
-                        margin-bottom: 2px;
-                    }
-                    
-                    .iso-number {
-                        font-weight: 900;
-                        position: relative;
-                    }
-                    
-                    .iso-number[data-color="#ff6b6b"] {
-                        color: #ff6b6b;
-                    }
-                    
-                    .iso-number[data-color="#4ecdc4"] {
-                        color: #4ecdc4;
-                    }
-                    
-                    .iso-number[data-color="#ffe66d"] {
-                        color: #ffe66d;
-                    }
-                    
-                    .iso-number.typing::after {
-                        content: '|';
-                        position: absolute;
-                        right: -8px;
-                        animation: blink 0.7s infinite;
-                    }
-                    
-                    @keyframes blink {
-                        0%, 50% { opacity: 1; }
-                        51%, 100% { opacity: 0; }
-                    }
-
-                    .cert-name {
-                        display: block;
-                        font-size: 12px;
-                        color: #718096;
-                        font-weight: 500;
-                    }
-
-                    .cert-status {
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        font-size: 11px;
-                        color: #10b981;
-                        font-weight: 700;
-                        background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 25%, #6d28d9 50%, #7c3aed 75%, #8b5cf6 100%);
-                        background-size: 200% 200%;
-                        border: 2px solid rgba(255, 255, 255, 0.3);
-                        border-radius: 25px;
-                        padding: 8px 16px;
-                        cursor: pointer;
-                        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-                        box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4), 0 0 20px rgba(139, 92, 246, 0.2);
-                        text-transform: uppercase;
-                        letter-spacing: 0.5px;
-                        position: relative;
-                        overflow: hidden;
-                    }
-
-                    .status-dot {
-                        display: inline-block;
-                        width: 10px;
-                        height: 10px;
-                        background: white;
-                        border-radius: 50%;
-                        margin-right: 8px;
-                        box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
-                        animation: statusPulse 2s infinite;
-                    }
-                    
-                    @keyframes statusPulse {
-                        0%, 100% {
-                            transform: scale(1);
-                            opacity: 1;
-                        }
-                        50% {
-                            transform: scale(1.2);
-                            opacity: 0.8;
-                        }
-                    }
-
-                    .dashboard-footer {
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
-                        padding-top: 15px;
-                        border-top: 1px solid rgba(255, 255, 255, 0.1);
-                    }
-
-                    .status-indicator {
-                        display: flex;
-                        align-items: center;
-                        gap: 8px;
-                        font-size: 12px;
-                        color: rgba(255, 255, 255, 0.7);
-                    }
-
-                    .pulse {
-                        display: block;
-                        width: 8px;
-                        height: 8px;
-                        border-radius: 50%;
-                        background: #48bb78;
-                        position: relative;
-                    }
-
-                    .pulse::after {
-                        content: '';
-                        position: absolute;
-                        width: 100%;
-                        height: 100%;
-                        top: 0;
-                        left: 0;
-                        background: #48bb78;
-                        border-radius: 50%;
-                        animation: pulse 2s infinite;
-                        opacity: 0.7;
-                    }
-
-                    .update-time {
-                        color: #fff;
-                        font-weight: 500;
-                    }
-
-                    .refresh-btn {
-                        background: rgba(255, 255, 255, 0.1);
-                        border: none;
-                        color: #fff;
-                        padding: 6px 12px;
-                        border-radius: 20px;
-                        font-size: 12px;
-                        display: flex;
-                        align-items: center;
-                        gap: 6px;
-                        cursor: pointer;
-                        transition: all 0.3s ease;
-                    }
-
-                    .refresh-btn:hover {
-                        background: rgba(255, 255, 255, 0.2);
-                    }
-
-                    .refresh-btn i {
-                        font-size: 12px;
-                    }
-
-                    @keyframes fillAnimation {
-                        0% { width: 0; }
-                        98% { width: 100%; }
-                        100% { width: 0; }
-                    }
-
-                    @keyframes highlightGlow {
-                        0%, 100% {
-                            box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.25), 0 0 14px rgba(56, 189, 248, 0.25);
-                            border-color: rgba(129, 140, 248, 0.7);
-                        }
-                        50% {
-                            box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.55), 0 0 26px rgba(56, 189, 248, 0.75);
-                            border-color: rgba(129, 140, 248, 1);
-                        }
-                    }
-                    
-                    @keyframes shine {
-                        0% { transform: translateX(-100%); }
-                        20% { transform: translateX(100%); }
-                        100% { transform: translateX(100%); }
-                    }
-                    
-                    @keyframes pulse {
-                        0% {
-                            transform: scale(1);
-                            opacity: 1;
-                        }
-                        70% {
-                            transform: scale(2);
-                            opacity: 0;
-                        }
-                        100% {
-                            transform: scale(1);
-                            opacity: 0;
-                        }
-                    }
-
-                    @media (max-width: 992px) {
-                       .dashboard-certifications {
-                           margin: 40px auto 0;
-                           transform: none;
-                           max-width: 100%;
-                       }
-                    }
-                    
-                    @media (max-width: 480px) {
-                       .dashboard-certifications {
-                           padding: 20px 15px;
-                           margin: 20px 10px;
-                           transform: none;
-                       }
-                        
-                        .certification-card {
-                            padding: 12px 15px;
-                        }
-                        
-                        .cert-icon {
-                            width: 36px;
-                            height: 36px;
-                            font-size: 14px;
-                        }
-                        
-                        .cert-code {
-                            font-size: 16px;
-                            font-weight: 900;
-                        }
-                        
-                        .cert-name {
-                            font-size: 11px;
-                        }
-                        
-                        .cert-status:hover {
-                            transform: translateY(-3px) scale(1.05);
-                            box-shadow: 0 8px 25px rgba(139, 92, 246, 0.6), 0 0 30px rgba(139, 92, 246, 0.4);
-                            background-position: 100% 100%;
-                            border-color: rgba(255, 255, 255, 0.5);
-                        }
-                        
-                        .cert-status::before {
-                            content: '';
-                            position: absolute;
-                            top: 0;
-                            left: -100%;
-                            width: 100%;
-                            height: 100%;
-                            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-                            transition: left 0.6s;
-                        }
-                        
-                        .cert-status:hover::before {
-                            left: 100%;
-                        }
-                    }
-                </style>
-                <script>
-                    // Update timestamp and add refresh functionality
-                    document.addEventListener('DOMContentLoaded', function() {
-                        const updateTime = document.querySelector('.update-time');
-                        const refreshBtn = document.querySelector('.refresh-btn');
-                        if (!updateTime) {
-                            console.warn('update-time element not found; skipping timestamp update.');
-                            return;
-                        }
-                        
-                        function updateTimestamp() {
-                            const now = new Date();
-                            updateTime.textContent = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                            
-                            // Add a visual feedback for refresh
-                            if (refreshBtn) {
-                                refreshBtn.innerHTML = '<i class="fas fa-check"></i> Updated';
-                                setTimeout(() => {
-                                    refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh';
-                                }, 2000);
-                            }
-                        }
-                        
-                        // Initial update
-                        updateTimestamp();
-                        
-                        // Test alert to check if JS runs
-                        console.log('JavaScript is running!');
-                        
-                        // Very simple typing effect - test version
-                        function animateNumber(element, text, color) {
-                            console.log('Starting animation for:', text);
-                            element.style.color = color;
-                            let currentText = '';
-                            let typing = true;
-                            
-                            function animate() {
-                                if (typing) {
-                                    if (currentText.length < text.length) {
-                                        currentText += text[currentText.length];
-                                        element.textContent = currentText;
-                                        setTimeout(animate, 200);
-                                    } else {
-                                        typing = false;
-                                        setTimeout(animate, 1500);
-                                    }
-                                } else {
-                                    if (currentText.length > 0) {
-                                        currentText = currentText.slice(0, -1);
-                                        element.textContent = currentText;
-                                        setTimeout(animate, 100);
-                                    } else {
-                                        typing = true;
-                                        setTimeout(animate, 500);
-                                    }
-                                }
-                            }
-                            
-                            animate();
-                        }
-                        
-                        // Start immediately - don't wait for load
-                        const iso9001 = document.querySelector('[data-text="9001"]');
-                        const iso45001 = document.querySelector('[data-text="45001"]');
-                        const iso14001 = document.querySelector('[data-text="14001"]');
-                        
-                        console.log('Elements found:', iso9001, iso45001, iso14001);
-                        
-                        if (iso9001) animateNumber(iso9001, '9001', '#ff6b6b');
-                        if (iso45001) animateNumber(iso45001, '45001', '#4ecdc4');
-                        if (iso14001) animateNumber(iso14001, '14001', '#ffe66d');
-                        
-                        // Update time every minute
-                        setInterval(() => {
-                            const now = new Date();
-                            updateTime.textContent = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                        }, 60000);
-                        
-                        // Add click event for refresh button
-                        if (refreshBtn) {
-                            refreshBtn.addEventListener('click', updateTimestamp);
-                        }
-                    });
-                </script>
-            </div>
-        </div>
-    </div>
-    
-    <style>
-        .modern-hero-section {
-            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
-            color: #fff;
-            padding: 0 0 60px;
-            margin-top: 0;
-            font-family: 'Montserrat', 'Poppins', sans-serif;
-            position: relative;
-            overflow: hidden;
-            position: relative;
-            overflow: hidden;
-            font-family: 'Montserrat', 'Poppins', sans-serif;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .hero-content {
-            max-width: 1200px;
-            margin: -10px auto 0;
+        .hero-container {
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 60px;
             position: relative;
-            z-index: 2;
-            padding: 0 20px;
-        }
-        
-        .hero-text {
-            flex: 1;
-            max-width: 600px;
-            padding: 20px 0;
-        }
-        
-        .hero-image {
-            flex: 1;
-            text-align: center;
-        }
-        
-        .certifications-container {
-            background: rgba(255, 255, 255, 0.08);
-            padding: 35px 30px;
-            border-radius: 15px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            max-width: 400px;
+            z-index: 10;
             width: 100%;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease;
         }
-        
-        .certifications-container:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
-            border-color: rgba(255, 255, 255, 0.2);
+
+        /* Left Side Content */
+        .hero-text-content {
+            flex: 1.2;
+            max-width: 650px;
         }
-        
-        .certifications-container h3 {
-            color: #fff;
-            font-size: 1.7rem;
-            margin-bottom: 25px;
-            text-align: center;
-            position: relative;
-            padding-bottom: 15px;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-            font-family: 'Montserrat', sans-serif;
-        }
-        
-        .certifications-container h3:after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 80px;
-            height: 3px;
-            background: linear-gradient(90deg, #4299e1, #48bb78);
-            border-radius: 3px;
-            transition: all 0.3s ease;
-        }
-        
-        .certifications-container:hover h3:after {
-            width: 100px;
-        }
-        
-        .certification-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-        
-        .certification-list li {
-            color: #f8fafc;
-            font-size: 1.15rem;
-            padding: 14px 16px;
-            margin: 5px 0;
-            border-radius: 8px;
-            border: 1px solid transparent;
-            background: rgba(255, 255, 255, 0.03);
-            display: flex;
+
+        .hero-label {
+            display: inline-flex;
             align-items: center;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            gap: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #60a5fa;
+            margin-bottom: 24px;
+            padding: 6px 14px;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 50px;
+            animation: fadeInDown 0.8s cubic-bezier(0.16, 1, 0.3, 1) 1.5s both;
+            /* Delayed intro */
+        }
+
+        .hero-label::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: #3b82f6;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #3b82f6;
+        }
+
+        .hero-main-title {
+            font-size: 64px;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 24px;
+            color: #ffffff;
+            letter-spacing: -1px;
+            animation: fadeInLeft 0.8s cubic-bezier(0.16, 1, 0.3, 1) 1.65s both;
+            /* Delayed intro */
+        }
+
+        .hero-main-title span {
+            display: block;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-sub-title {
+            font-size: 19px;
+            line-height: 1.7;
+            color: #94a3b8;
+            margin-bottom: 48px;
+            max-width: 540px;
+            animation: fadeInLeft 0.8s cubic-bezier(0.16, 1, 0.3, 1) 1.8s both;
+            /* Delayed intro */
+        }
+
+        .hero-btns {
+            display: flex;
+            gap: 20px;
+            animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 1.95s both;
+            /* Delayed intro */
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+            }
+        }
+
+        .hero-btn {
+            padding: 16px 32px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 15px;
+            text-decoration: none !important;
+            transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
             position: relative;
             overflow: hidden;
         }
-        
-        .certification-list li:hover {
+
+        .hero-btn-primary {
+            background: #2563eb;
+            color: #ffffff;
+            box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.4);
+        }
+
+        .hero-btn-primary:hover {
+            background: #1d4ed8;
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px -5px rgba(37, 99, 235, 0.5);
+        }
+
+        .hero-btn-secondary {
+            background: rgba(255, 255, 255, 0.03);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .hero-btn-secondary:hover {
             background: rgba(255, 255, 255, 0.08);
-            transform: translateX(5px);
-            border-color: rgba(66, 153, 225, 0.3);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-3px);
         }
-        
-        .certification-list li:before {
-            content: '✓';
-            color: #48bb78;
-            font-weight: bold;
-            margin-right: 15px;
-            font-size: 1.3rem;
-            text-shadow: 0 0 10px rgba(72, 187, 120, 0.5);
-            transition: all 0.3s ease;
-        }
-        
-        .certification-list li:hover:before {
-            transform: scale(1.2);
-        }
-        
-        .certification-list li:last-child {
-            border-bottom: none;
-        }
-        
-        h1 {
-            font-size: 3rem;
-            font-weight: 700;
-            margin-bottom: 15px;
-            color: #fff;
-        }
-        
-        h2 {
-            font-size: 1.8rem;
-            font-weight: 400;
-            margin-bottom: 30px;
-            color: #a0aec0;
-        }
-        
-        .hero-highlights {
+
+        /* Right Side - Ecosystem Visual */
+        .hero-visual-content {
+            flex: 1;
             display: flex;
-            gap: 1.5rem;
-            margin: 0 0 2.5rem 0;
-            flex-wrap: wrap;
-            align-items: stretch;
-        }
-        
-        .highlight-badge {
-            display: inline-flex;
+            justify-content: center;
             align-items: center;
-            gap: 1rem;
-            padding: 0.85rem 2.8rem;
-            min-width: 260px;
-            min-height: 72px;
-            border-radius: 999px;
-            font-size: 1rem;
-            font-weight: 600;
-            color: #f8fafc;
             position: relative;
-            isolation: isolate;
-            overflow: visible;
-            letter-spacing: 0.02em;
-            transition: transform 0.35s ease, box-shadow 0.35s ease;
+            min-height: 600px;
+            opacity: 0;
+            transform: scale(0.96) translateY(10px);
+            animation: visualIntro 1s cubic-bezier(0.16, 1, 0.3, 1) forwards 1.6s;
         }
-        
-        .highlight-badge::before {
+
+        @keyframes visualIntro {
+            0% {
+                opacity: 0;
+                transform: scale(0.96) translateY(10px);
+            }
+
+            100% {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .hero-visual-content::before {
             content: '';
+            position: absolute;
+            width: 700px;
+            height: 700px;
+            background: radial-gradient(circle, rgba(37, 200, 235, 0.08) 0%, rgba(30, 58, 138, 0.03) 50%, transparent 80%);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .ecosystem-container {
+            position: relative;
+            width: 500px;
+            height: 500px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Turbine Pillar */
+        .turbine-pillar {
+            position: absolute;
+            bottom: -50px;
+            left: 50%;
+            width: 40px;
+            height: 300px;
+            background: linear-gradient(to top, transparent, rgba(59, 130, 246, 0.15), rgba(96, 165, 250, 0.3));
+            transform: translateX(-50%);
+            clip-path: polygon(30% 0%, 70% 0%, 100% 100%, 0% 100%);
+            z-index: 3;
+            pointer-events: none;
+        }
+
+        .turbine-pillar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 2px;
+            height: 100%;
+            background: linear-gradient(to top, transparent, rgba(255, 255, 255, 0.2));
+            transform: translateX(-50%);
+        }
+
+        /* Background Web structure */
+        .web-structure {
             position: absolute;
             inset: 0;
-            border-radius: inherit;
-            background: linear-gradient(120deg, rgba(94, 234, 212, 0.9), rgba(56, 189, 248, 0.9), rgba(192, 132, 252, 0.9));
-            background-size: 200% 200%;
-            animation: borderSweep 6s linear infinite;
-            filter: drop-shadow(0 0 12px rgba(59, 130, 246, 0.45));
-            z-index: -2;
+            z-index: 2;
+            opacity: 0.4;
         }
-        
-        .highlight-badge::after {
-            content: '';
+
+        .web-line {
             position: absolute;
-            inset: 4px;
-            border-radius: inherit;
-            background: radial-gradient(circle at 15% 20%, rgba(94, 234, 212, 0.2), transparent 45%),
-                        rgba(6, 11, 25, 0.92);
-            box-shadow: inset 0 18px 35px rgba(2, 6, 23, 0.8), 0 15px 35px rgba(8, 8, 20, 0.35);
-            z-index: -1;
+            top: 50%;
+            left: 50%;
+            height: 1px;
+            background: linear-gradient(90deg, rgba(96, 165, 250, 0.3), transparent);
+            transform-origin: left center;
         }
-        
-        .highlight-badge:hover {
-            transform: translateY(-4px) scale(1.02);
-            box-shadow: 0 12px 35px rgba(56, 189, 248, 0.35);
+
+        /* Center AITF Node */
+        .center-node-wrapper {
+            position: relative;
+            z-index: 35;
         }
-        
-        .highlight-badge i {
-            font-size: 24px;
-            color: #FFD700 !important;
-        }
-        
-        .highlight-badge i.fa-medal {
-            font-size: 32px;
-        }
-        
-        .highlight-badge.iso-cluster {
-            align-items: center;
-            gap: 0.5rem;
-            padding-right: 0.5rem;
-            max-width: fit-content;
-            padding-left: 0.8rem;
-        }
-        
-        .iso-chip-row {
-            display: flex;
-            gap: 0.3rem;
-            flex-wrap: nowrap;
-        }
-        
-        .iso-chip {
-            width: 55px;
-            height: 55px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+
+        .center-node {
+            width: 150px;
+            height: 150px;
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+            border: 2px solid rgba(255, 255, 255, 0.4);
             border-radius: 50%;
-            font-size: 11px;
-            font-weight: 600;
-            color: white;
-            text-align: center;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4),
-                       inset 0 1px 0 rgba(255, 255, 255, 0.2);
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .iso-chip::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transition: 0.6s;
-        }
-        
-        .iso-chip:hover {
-            transform: translateY(-2px) scale(1.05);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6),
-                       inset 0 1px 0 rgba(255, 255, 255, 0.3);
-            border-color: rgba(255, 255, 255, 0.5);
-        }
-        
-        .iso-chip:hover::before {
-            left: 100%;
-        @keyframes borderSweep {
-            0% {
-                background-position: 0% 50%;
-            }
-            50% {
-                background-position: 100% 50%;
-            }
-            100% {
-                background-position: 0% 50%;
-            }
-        }
-        
-        .hero-description {
-            font-size: 1.1rem;
-            line-height: 1.8;
-            margin: 0 0 2.5rem 0;
-            color: #e2e8f0;
-            max-width: 90%;
-            opacity: 0.9;
-        }
-        
-        .button-group {
-            margin-top: 35px;
-            text-align: center;
             display: flex;
-            gap: 1.2rem;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-        
-        .hero-cta {
-            display: flex;
-            gap: 1.2rem;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-        
-        .cta-button {
-            display: inline-flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 0.6rem;
-            padding: 1rem 2.2rem;
-            border-radius: 8px;
-            font-weight: 600;
-            text-decoration: none;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            font-size: 1.05rem;
-            border: none;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            font-weight: 800;
+            color: #ffffff;
+            box-shadow: 0 0 60px rgba(37, 99, 235, 0.6), inset 0 0 30px rgba(255, 255, 255, 0.15);
             position: relative;
-            overflow: hidden;
-            z-index: 1;
+            animation: centerFloat 6s infinite ease-in-out;
+            text-align: center;
+            line-height: 1.1;
         }
-        
-        .cta-button.primary {
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-            color: white;
+
+        .center-node span:first-child {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            opacity: 0.8;
+            margin-bottom: 5px;
         }
-        
-        .cta-button.secondary {
-            background: rgba(255, 255, 255, 0.08);
-            color: #e2e8f0;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(5px);
+
+        .center-node span:last-child {
+            font-size: 24px;
+            font-weight: 900;
+            letter-spacing: -0.5px;
         }
-        
-        .cta-button::before {
+
+        .center-node::after {
             content: '';
             position: absolute;
-            top: 0;
-            left: 0;
+            inset: -15px;
+            border-radius: 50%;
+            border: 1px solid rgba(37, 200, 235, 0.5);
+            animation: centerPulse 4s infinite;
+        }
+
+        /* Orbiting Standards (Turbine Blades) */
+        .orbit-ring {
+            position: absolute;
+            inset: 0;
+            border: 1px solid rgba(37, 200, 235, 0.12);
+            border-radius: 50%;
+            z-index: 5;
+        }
+
+        .iso-standard {
+            position: absolute;
+            width: 110px;
+            height: 110px;
+            background: rgba(15, 23, 42, 0.98);
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 800;
+            color: #ffffff;
+            backdrop-filter: blur(15px);
+            z-index: 30;
+            animation: orbitRotation 60s linear infinite;
+            transition: transform 0.3s ease;
+        }
+
+        .iso-standard img {
             width: 100%;
             height: 100%;
-            background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%);
-            z-index: -1;
-            opacity: 0;
-            transition: opacity 0.3s ease;
+            object-fit: cover;
+            border-radius: 50%;
+            animation: iconFloat 3s infinite ease-in-out;
         }
-        
-        .cta-button:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+
+        .iso-standard span {
+            font-size: 9px;
+            font-weight: 700;
+            margin-top: 3px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            text-align: center;
+            line-height: 1.2;
+            padding: 0 5px;
+            display: none; /* Hide labels to focus on the image circles */
         }
-        
-        .cta-button:hover::before {
-            opacity: 1;
+
+        /* QMS - Blue Quality theme */
+        .iso-9001 {
+            animation-delay: 0s;
+            border: none;
+            box-shadow: 0 0 30px rgba(59, 130, 246, 0.6);
+            background: transparent;
         }
-        
-        .cta-button:active {
-            transform: translateY(0);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+
+        /* EMS - Green Earth theme */
+        .iso-14001 {
+            animation-delay: -20s;
+            border: none;
+            box-shadow: 0 0 30px rgba(16, 185, 129, 0.6);
+            background: transparent;
         }
-        
-        @media (max-width: 992px) {
-            .modern-hero-section {
-                padding: 40px 0 60px;
+
+        /* OHSMS - Orange Safety theme */
+        .iso-45001 {
+            animation-delay: -40s;
+            border: none;
+            box-shadow: 0 0 30px rgba(245, 158, 11, 0.6);
+            background: transparent;
+        }
+
+        @keyframes iconFloat {
+
+            0%,
+            100% {
+                transform: translateY(0);
             }
-            
-            .hero-content {
+
+            50% {
+                transform: translateY(-5px);
+            }
+        }
+
+        /* Connection Lines - Enhanced Turbine Blades */
+        .connection-line {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 200px;
+            height: 3px;
+            background: linear-gradient(90deg, #60a5fa 0%, rgba(59, 130, 246, 0.5) 60%, transparent 100%);
+            transform-origin: left center;
+            opacity: 0.7;
+            z-index: 10;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+            animation: connectionOrbit 60s linear infinite;
+        }
+
+        .line-1 {
+            animation-delay: 0s;
+        }
+
+        .line-2 {
+            animation-delay: -20s;
+        }
+
+        .line-3 {
+            animation-delay: -40s;
+        }
+
+        /* Data Flow Particles */
+        .connection-line::after {
+            content: '';
+            position: absolute;
+            top: -3px;
+            left: 0;
+            width: 8px;
+            height: 8px;
+            background: #ffffff;
+            border-radius: 50%;
+            box-shadow: 0 0 12px #60a5fa, 0 0 25px #ffffff;
+            animation: dataFlow 4s linear infinite;
+            filter: blur(0.5px);
+        }
+
+        /* Pulse at Intersection with Center */
+        .connection-line::before {
+            content: '';
+            position: absolute;
+            left: -8px;
+            top: -8px;
+            width: 20px;
+            height: 20px;
+            background: rgba(96, 165, 250, 0.7);
+            border-radius: 50%;
+            opacity: 0;
+            animation: intersectionPulse 4s ease-out infinite;
+        }
+
+        .line-2::after,
+        .line-2::before {
+            animation-delay: -1.3s;
+        }
+
+        .line-3::after,
+        .line-3::before {
+            animation-delay: -2.6s;
+        }
+
+        /* Keyframes */
+        @keyframes orbitRotation {
+            from {
+                transform: rotate(0deg) translateX(200px) rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg) translateX(200px) rotate(-360deg);
+            }
+        }
+
+        @keyframes connectionOrbit {
+            from {
+                transform: rotate(0deg) translateY(-50%);
+            }
+
+            to {
+                transform: rotate(360deg) translateY(-50%);
+            }
+        }
+
+        @keyframes dataFlow {
+            0% {
+                left: 100%;
+                opacity: 0;
+            }
+
+            10% {
+                opacity: 1;
+            }
+
+            90% {
+                opacity: 1;
+            }
+
+            100% {
+                left: 0%;
+                opacity: 0;
+            }
+        }
+
+        @keyframes intersectionPulse {
+            0% {
+                transform: scale(1);
+                opacity: 0;
+            }
+
+            90% {
+                transform: scale(1);
+                opacity: 0;
+            }
+
+            95% {
+                transform: scale(1.3);
+                opacity: 0.9;
+            }
+
+            100% {
+                transform: scale(3);
+                opacity: 0;
+            }
+        }
+
+        @keyframes centerFloat {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-15px);
+            }
+        }
+
+        @keyframes centerPulse {
+            0% {
+                transform: scale(1);
+                opacity: 0.8;
+            }
+
+            100% {
+                transform: scale(1.5);
+                opacity: 0;
+            }
+        }
+
+        @keyframes fadeInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-40px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .hero-main-title {
+                font-size: 52px;
+            }
+
+            .ecosystem-container {
+                transform: scale(0.85);
+            }
+        }
+
+        @media (max-width: 991px) {
+            .modern-hero-section {
+                padding: 100px 0 60px;
+            }
+
+            .hero-container {
                 flex-direction: column;
                 text-align: center;
-                gap: 40px;
+                gap: 20px;
             }
-            
-            .hero-text {
+
+            .hero-text-content {
                 max-width: 100%;
-                text-align: center;
-                padding: 0;
+                order: 2;
             }
-            
-            .hero-text h1 {
-                font-size: 3.8rem;
-                margin: 0 0 1rem 0;
-                font-weight: 800;
-                line-height: 1.2;
-                background: linear-gradient(to right, #ffffff, #e0e7ff);
-                -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
-                letter-spacing: -0.5px;
+
+            .hero-visual-content {
+                min-height: 450px;
+                order: 1;
             }
-            
-            .hero-text h2 {
-                font-size: 1.2rem;
-                margin: 0 auto 2.5rem;
-                max-width: 100%;
-            }
-            
-            .hero-highlights {
-                justify-content: center;
-                margin-bottom: 2.5rem;
-            }
-            
-            .hero-cta {
+
+            .hero-btns {
                 justify-content: center;
             }
-            
-            .cta-button {
-                padding: 0.9rem 1.8rem;
+
+            .hero-sub-title {
+                margin-left: auto;
+                margin-right: auto;
+            }
+
+            .ecosystem-container {
+                transform: scale(0.75);
             }
         }
-        
-        @media (max-width: 768px) {
-            .modern-hero-section {
-                padding: 20px 0 50px;
+
+        @media (max-width: 576px) {
+            .hero-main-title {
+                font-size: 38px;
             }
-            
-            .hero-text h1 {
-                font-size: 2.4rem;
-                line-height: 1.3;
+
+            .hero-sub-title {
+                font-size: 16px;
             }
-            
-            .hero-text h2 {
-                font-size: 1.1rem;
-                line-height: 1.6;
-                margin-bottom: 2rem;
+
+            .hero-btns {
+                flex-direction: column;
             }
-            
-            .highlight-badge {
-                padding: 0.5rem 1.2rem;
-                font-size: 0.9rem;
-            }
-            
-            .highlight-badge i {
-                background: none !important;
-                box-shadow: none !important;
-                color: #FFD700 !important;
-            }
-            
-            .hero-cta {
-                gap: 1rem;
-            }
-            
-            .cta-button {
+
+            .hero-btn {
                 width: 100%;
                 justify-content: center;
-                padding: 0.9rem 1.5rem;
             }
-            
-            .hero-description {
-                font-size: 1rem;
-                max-width: 100%;
+
+            .ecosystem-container {
+                transform: scale(0.6);
+            }
+        }
+
+        /* AITF Journey Section Styles */
+        /* AITF Journey Section Styles - Horizontal Scroll Redesign */
+        .aitf-journey-section {
+            background: #ffffff;
+            background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
+            background-size: 40px 40px;
+            padding: 100px 0;
+            position: relative;
+            overflow: hidden;
+            color: #0a192f;
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .journey-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 40px;
+            width: 100%;
+        }
+
+        .journey-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        /* Horizontal Timeline Styles */
+        .horizontal-timeline-wrapper {
+            position: relative;
+            padding: 150px 0;
+            margin: 40px 0;
+            overflow: visible;
+        }
+
+        /* The Horizontal Spine */
+        .timeline-spine {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: #e2e8f0;
+            transform: translateY(-50%);
+            z-index: 1;
+        }
+
+        .timeline-spine-progress {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 0%;
+            height: 4px;
+            background: #b8860b;
+            transform: translateY(-50%);
+            z-index: 2;
+            box-shadow: 0 0 15px rgba(184, 134, 11, 0.4);
+        }
+
+        /* Milestone Content Container */
+        .milestones-track {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            z-index: 3;
+            width: 100%;
+            min-width: 1200px;
+            /* Ensure enough space for horizontal layout */
+        }
+
+        .milestone-item {
+            position: relative;
+            width: 250px;
+            flex-shrink: 0;
+        }
+
+        /* Alternating Top/Bottom Layout */
+        .milestone-item.top {
+            padding-bottom: 220px;
+        }
+
+        .milestone-item.bottom {
+            padding-top: 220px;
+        }
+
+        .milestone-dot-wrapper {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+        }
+
+        .milestone-dot {
+            width: 24px;
+            height: 24px;
+            background: #ffffff;
+            border: 4px solid #e2e8f0;
+            border-radius: 50%;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 0 0 0 rgba(184, 134, 11, 0);
+        }
+
+        .milestone-item.active .milestone-dot {
+            border-color: #b8860b;
+            background: #b8860b;
+            transform: scale(1.3);
+            box-shadow: 0 0 20px rgba(184, 134, 11, 0.6);
+        }
+
+        /* Connecting Vertical Line */
+        .milestone-connector {
+            position: absolute;
+            left: 50%;
+            width: 2px;
+            background: #e2e8f0;
+            transform: translateX(-50%);
+            transition: all 0.6s ease;
+        }
+
+        .milestone-item.top .milestone-connector {
+            bottom: 50%;
+            height: 0;
+            /* Animated */
+            margin-bottom: 12px;
+        }
+
+        .milestone-item.bottom .milestone-connector {
+            top: 50%;
+            height: 0;
+            /* Animated */
+            margin-top: 12px;
+        }
+
+        .milestone-item.active .milestone-connector {
+            background: #b8860b;
+            height: 60px;
+        }
+
+        /* Milestone Card */
+        .milestone-card {
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 20px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
+            text-align: center;
+            opacity: 0;
+            transform: translateY(30px) scale(0.9);
+            transition: all 0.8s cubic-bezier(0.165, 0.84, 0.44, 1);
+            width: 280px;
+        }
+
+        .milestone-item.active .milestone-card {
+            opacity: 1;
+            transform: translateY(0) scale(1.05);
+            border-color: #b8860b;
+            box-shadow: 0 30px 60px rgba(184, 134, 11, 0.15);
+        }
+
+        .milestone-year {
+            font-family: 'Playfair Display', serif;
+            font-size: 26px;
+            font-weight: 900;
+            color: #b8860b;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .milestone-card h4 {
+            font-size: 17px;
+            font-weight: 800;
+            color: #0a192f;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .milestone-card p {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #64748b;
+            margin: 0;
+        }
+
+        /* Mobile Styles - Keep Vertical on Small Screens */
+        @media (max-width: 991px) {
+            .milestones-track {
+                flex-direction: column;
+                min-width: 100%;
+                gap: 50px;
+            }
+
+            .timeline-spine,
+            .timeline-spine-progress {
+                left: 30px;
+                width: 4px;
+                height: 100%;
+                transform: none;
+                top: 0;
+            }
+
+            .milestone-item {
+                width: 100%;
+                padding: 0 0 0 80px !important;
+                text-align: left;
+            }
+
+            .milestone-dot-wrapper {
+                left: 30px;
+                transform: translate(-50%, -50%);
+            }
+
+            .milestone-connector {
+                display: none;
+            }
+
+            .milestone-card {
+                text-align: left;
+                opacity: 1;
+                transform: none;
             }
         }
     </style>
-    <!-- end section -->
-    <!-- section -->
-    <section class="methodology-section" style="position: relative; padding: 120px 0; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); overflow: hidden;">
-        <!-- Decorative Elements -->
-        <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            background: 
-                radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.1) 0%, transparent 20%),
-                radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.1) 0%, transparent 20%),
-                radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.05) 0%, transparent 40%);
-            z-index: 0;">
+
+    <div class="modern-hero-section">
+        <div class="hero-bg-image">
+            <img src="aitfImages/hero image aitf.png" alt="AITF Hero Background">
         </div>
-        
-        <div class="container" style="position: relative; z-index: 1;">
-            <div class="section-header text-center" style="max-width: 1000px; margin: 0 auto 60px;">
-                <span style="display: inline-block; 
-                    background: linear-gradient(90deg, #8b5cf6, #10b981);
-                    -webkit-background-clip: text;
-                    -webkit-text-fill-color: transparent;
-                    font-weight: 700;
-                    letter-spacing: 3px;
-                    margin-bottom: 20px;
-                    text-transform: uppercase;
-                    font-size: 0.95rem;
-                    position: relative;
-                    padding: 8px 24px;
-                    border-radius: 50px;
-                    background-color: rgba(139, 92, 246, 0.1);
-                    backdrop-filter: blur(5px);
-                    border: 1px solid rgba(139, 92, 246, 0.2);">
-                    Why Choose AITF
-                </span>
-                
-                <h2 class="section-title" style="font-size: 3rem; 
-                    font-weight: 800; 
-                    margin: 20px auto 30px; 
-                    color: #f8fafc; 
-                    line-height: 1.2;
-                    position: relative;
-                    display: inline-block;
-                    letter-spacing: -0.5px;
-                    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);">
-                    Our Commitment to <span style="position: relative; white-space: nowrap;
-                        background: linear-gradient(90deg, #8b5cf6, #10b981);
-                        -webkit-background-clip: text;
-                        -webkit-text-fill-color: transparent;
-                        font-weight: 900;">
-                        Excellence
-                    </span>
-                </h2>
-                
-                <div style="position: relative; max-width: 1000px; margin: 40px auto 0;">
-                    <div style="background: rgba(30, 41, 59, 0.7); 
-                        border-radius: 20px; 
-                        padding: 60px; 
-                        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 
-                                    inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
-                        border: 1px solid rgba(255, 255, 255, 0.05);
-                        position: relative;
-                        overflow: hidden;
-                        backdrop-filter: blur(10px);">
-                        
-                        <!-- Decorative Corner Elements -->
-                        <div style="position: absolute; 
-                            top: 0; 
-                            right: 0; 
-                            width: 120px; 
-                            height: 120px; 
-                            background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, transparent 70%);
-                            border-radius: 0 20px 0 0;">
-                        </div>
-                        
-                        <div style="position: absolute;
-                            bottom: 0;
-                            left: 0;
-                            width: 120px;
-                            height: 120px;
-                            background: linear-gradient(315deg, rgba(16, 185, 129, 0.2) 0%, transparent 70%);
-                            border-radius: 0 20px 0 0;
-                            transform: rotate(180deg);
-                            opacity: 0.8;">
-                        </div>
-                        
-                        <p class="section-description" style="color: #e2e8f0; 
-                            font-size: 1.2rem; 
-                            line-height: 1.9; 
-                            margin: 0 auto;
-                            font-weight: 400;
-                            letter-spacing: 0.3px;
-                            text-align: center;
-                            max-width: 800px;
-                            position: relative;
-                            z-index: 1;
-                            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);">
-                            At <strong style="color: #8b5cf6; font-weight: 600; text-shadow: 0 0 10px rgba(139, 92, 246, 0.3);">AITF Management Certification Ltd.</strong>, we are dedicated to delivering comprehensive assessment services through our team of highly qualified auditors. Our primary objective is to enhance our clients' business performance by conducting value-added audits of their processes and management systems.
-                        </p>
-                        
-                        <!-- Decorative Bottom Border -->
-                        <div style="position: absolute;
-                            bottom: 0;
-                            left: 50%;
-                            transform: translateX(-50%);
-                            width: 150px;
-                            height: 4px;
-                            background: linear-gradient(90deg, #8b5cf6, #10b981);
-                            border-radius: 2px;
-                            margin: 30px 0;
-                            box-shadow: 0 0 15px rgba(139, 92, 246, 0.5);">
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="methodology-container" style="justify-content: center;">
-                <div class="methodology-card" style="max-width: 800px; margin: 0 auto;">
-                    <div class="card-icon">
-                        <i class="fa fa-search"></i>
-                    </div>
-                    <div class="card-content">
-                        <h3>Our Core Principles</h3>
-                        <p>We maintain the highest standards of <strong>competence, independence, and impartiality</strong> in our assessment processes. Our team of certified auditors is committed to helping organizations achieve and demonstrate compliance with international standards, driving continuous improvement and operational excellence across all business functions.</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="cta-container" style="margin-top: 40px;">
-                <div class="cta-box" style="position: relative;
-                    background: linear-gradient(135deg, #05010c48 0%, #9f5afd 100%);
-                    border-radius: 20px;
-                    padding: 60px 40px;
-                    text-align: center;
-                    color: white;
-                    overflow: hidden;
-                    box-shadow: 0 20px 40px rgba(124, 58, 237, 0.4);
-                    border: 1px solid rgba(255, 255, 255, 0.15);">
-                    
-                    <!-- Decorative elements -->
-                    <div style="position: absolute;
-                        top: -50px;
-                        right: -50px;
-                        width: 200px;
-                        height: 200px;
-                        background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
-                        border-radius: 50%;">
-                    </div>
-                    <div style="position: absolute;
-                        bottom: -30px;
-                        left: -30px;
-                        width: 150px;
-                        height: 150px;
-                        background: radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, transparent 70%);
-                        border-radius: 50%;">
-                    </div>
-                    
-                    <h3 style="font-size: 2.2rem;
-                        font-weight: 800;
-                        margin: 0 0 15px 0;
-                        position: relative;
-                        z-index: 2;
-                        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
-                        Ready to Get Certified?
-                    </h3>
-                    
-                    <p style="font-size: 1.15rem;
-                        margin: 0 auto 30px;
-                        max-width: 600px;
-                        line-height: 1.7;
-                        position: relative;
-                        z-index: 2;
-                        color: rgba(255, 255, 255, 0.9);">
-                        Take the first step towards excellence with AITF Management Certification Limited.
+        <div class="hero-bg-overlay"></div>
+        <div class="hero-glow-1"></div>
+        <div class="container">
+            <div class="hero-container">
+                <div class="hero-text-content">
+                    <div class="hero-label">NABCB Accredited Certification Body</div>
+                    <h1 class="hero-main-title">
+                        Your Trusted <span>Certification Partner</span>
+                    </h1>
+                    <p class="hero-sub-title">
+                        Empowering organizations through accredited, authentic, impartial and ethical certification
+                        services for management system standards.
                     </p>
-                    
-                    <a href="contactUs.php" 
-                       class="cta-button" 
-                       style="display: inline-block;
-                           background: white;
-                           color: #7c3aed;
-                           font-weight: 600;
-                           padding: 14px 36px;
-                           border-radius: 50px;
-                           text-decoration: none;
-                           font-size: 1.1rem;
-                           transition: all 0.3s ease;
-                           box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-                           position: relative;
-                           z-index: 2;
-                           border: none;
-                           cursor: pointer;
-                           text-transform: uppercase;
-                           letter-spacing: 1px;
-                           &:hover {
-                               transform: translateY(-3px);
-                               box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
-                               background: #f8fafc;
-                           }">
-                        Get Started
-                    </a>
-                    
-                    <!-- Decorative dots -->
-                    <div style="position: absolute;
-                        top: 20px;
-                        right: 30px;
-                        display: flex;
-                        gap: 8px;
-                        z-index: 1;">
-                        <span style="display: inline-block;
-                            width: 8px;
-                            height: 8px;
-                            background: rgba(255, 255, 255, 0.3);
-                            border-radius: 50%;"></span>
-                        <span style="display: inline-block;
-                            width: 8px;
-                            height: 8px;
-                            background: rgba(255, 255, 255, 0.3);
-                            border-radius: 50%;"></span>
-                        <span style="display: inline-block;
-                            width: 8px;
-                            height: 8px;
-                            background: rgba(255, 255, 255, 0.3);
-                            border-radius: 50%;"></span>
+                    <div class="hero-btns">
+                        <a href="text/audit_application_form.pdf" class="hero-btn hero-btn-secondary" download>
+                            <i class="fas fa-file-download"></i> Download Form
+                        </a>
+                        <a href="application.php#online-application-form" class="hero-btn hero-btn-primary">
+                            <i class="fas fa-edit"></i> Apply Online
+                        </a>
+                    </div>
+                </div>
+
+                <div class="hero-visual-content">
+                    <div class="ecosystem-container">
+                        <!-- Background Web Structure -->
+                        <div class="web-structure">
+                            <div class="web-line" style="transform: rotate(30deg); width: 250px;"></div>
+                            <div class="web-line" style="transform: rotate(90deg); width: 250px;"></div>
+                            <div class="web-line" style="transform: rotate(150deg); width: 250px;"></div>
+                            <div class="web-line" style="transform: rotate(210deg); width: 250px;"></div>
+                            <div class="web-line" style="transform: rotate(270deg); width: 250px;"></div>
+                            <div class="web-line" style="transform: rotate(330deg); width: 250px;"></div>
+                        </div>
+
+                        <!-- Turbine Structure -->
+                        <div class="turbine-pillar"></div>
+                        <div class="orbit-ring"></div>
+
+                        <!-- Center Hub -->
+                        <div class="center-node-wrapper">
+                            <div class="center-node">
+                                <span>Discover</span>
+                                <span>Our Services</span>
+                            </div>
+                        </div>
+
+                        <!-- ISO Standards Nodes -->
+                        <div class="iso-standard iso-9001">
+                            <img src="aitfImages/qmscircle.png" alt="QMS Icon">
+                        </div>
+                        <div class="iso-standard iso-14001">
+                            <img src="aitfImages/emscircle.png" alt="EMS Icon">
+                        </div>
+                        <div class="iso-standard iso-45001">
+                            <img src="aitfImages/ohsms circle.png" alt="OHSMS Icon">
+                        </div>
+
+                        <!-- Active Connection Lines -->
+                        <div class="connection-line line-1"></div>
+                        <div class="connection-line line-2"></div>
+                        <div class="connection-line line-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AITF Journey Section - Horizontal Storytelling -->
+    <section class="aitf-journey-section" id="journey-scroll-section">
+        <div class="journey-container">
+            <div class="journey-header">
+                <span class="journey-tag"
+                    style="font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 14px; text-transform: uppercase; letter-spacing: 3px; color: #b8860b; display: block; margin-bottom: 15px;">Our
+                    Legacy</span>
+                <h2 class="journey-title"
+                    style="font-family: 'Playfair Display', serif; font-size: 48px; font-weight: 800; color: #0a192f; margin-bottom: 30px; line-height: 1.2;">
+                    A Journey of <span style="color: #b8860b;">Integrity & Excellence</span></h2>
+            </div>
+
+            <div class="legacy-highlight"
+                style="display: flex; flex-direction: column; align-items: center; margin-bottom: 40px;">
+                <div class="legacy-number-wrapper"
+                    style="position: relative; display: flex; align-items: center; justify-content: center;">
+                    <div class="legacy-number" id="legacy-counter"
+                        style="font-size: 120px; font-weight: 900; line-height: 1; color: #0a192f; transition: color 0.4s ease;">
+                        0</div>
+                    <span class="legacy-plus" id="legacy-plus"
+                        style="font-size: 80px; font-weight: 900; color: #b8860b; opacity: 0; margin-left: 5px;">+</span>
+                </div>
+                <div class="legacy-text"
+                    style="font-size: 18px; font-weight: 600; text-transform: uppercase; letter-spacing: 5px; color: #64748b;">
+                    Years of Excellence</div>
+            </div>
+
+            <div class="horizontal-timeline-wrapper">
+                <div class="timeline-spine"></div>
+                <div class="timeline-spine-progress"></div>
+
+                <div class="milestones-track">
+                    <!-- Milestone 1: Top -->
+                    <div class="milestone-item top" data-step="1">
+                        <div class="milestone-dot-wrapper">
+                            <div class="milestone-dot"></div>
+                        </div>
+                        <div class="milestone-connector"></div>
+                        <div class="milestone-card" style="border-top: 5px solid #3b82f6;">
+                            <span class="milestone-year" style="color: #3b82f6;">2001</span>
+                            <h4>Foundation</h4>
+                            <p>Establishment of AITF as a specialized assessment body, focusing on institutional
+                                integrity.</p>
+                        </div>
+                    </div>
+
+                    <!-- Milestone 2: Bottom -->
+                    <div class="milestone-item bottom" data-step="2">
+                        <div class="milestone-dot-wrapper">
+                            <div class="milestone-dot"></div>
+                        </div>
+                        <div class="milestone-connector"></div>
+                        <div class="milestone-card" style="border-bottom: 5px solid #10b981;">
+                            <span class="milestone-year" style="color: #10b981;">2005</span>
+                            <h4>ISO 9001 Operations</h4>
+                            <p>Commencement of Quality Management Certification Assessment services across industrial
+                                sectors.</p>
+                        </div>
+                    </div>
+
+                    <!-- Milestone 3: Top -->
+                    <div class="milestone-item top" data-step="3">
+                        <div class="milestone-dot-wrapper">
+                            <div class="milestone-dot"></div>
+                        </div>
+                        <div class="milestone-connector"></div>
+                        <div class="milestone-card" style="border-top: 5px solid #f59e0b;">
+                            <span class="milestone-year" style="color: #f59e0b;">2010</span>
+                            <h4>Accredited ISO 14001</h4>
+                            <p>Expansion into Environmental Management systems with Accredited status.</p>
+                        </div>
+                    </div>
+
+                    <!-- Milestone 4: Bottom -->
+                    <div class="milestone-item bottom" data-step="4">
+                        <div class="milestone-dot-wrapper">
+                            <div class="milestone-dot"></div>
+                        </div>
+                        <div class="milestone-connector"></div>
+                        <div class="milestone-card" style="border-bottom: 5px solid #ef4444;">
+                            <span class="milestone-year" style="color: #ef4444;">2015</span>
+                            <h4>Accredited ISO 45001</h4>
+                            <p>Integration of Occupational Health & Safety Management systems under accredited
+                                frameworks.</p>
+                        </div>
+                    </div>
+
+                    <!-- Milestone 5: Top -->
+                    <div class="milestone-item top" data-step="5">
+                        <div class="milestone-dot-wrapper">
+                            <div class="milestone-dot"></div>
+                        </div>
+                        <div class="milestone-connector"></div>
+                        <div class="milestone-card" style="border-top: 5px solid #8b5cf6;">
+                            <span class="milestone-year" style="color: #8b5cf6;">Present</span>
+                            <h4>NABCB Compliance</h4>
+                            <p>Maintaining rigorous standards through continual compliance and technical excellence.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="growth-indicators"
+                style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 60px;">
+                <!-- Growth Chart 1 -->
+                <div class="growth-card"
+                    style="background: #0a192f; padding: 40px; border-radius: 20px; color: #ffffff; position: relative; overflow: hidden;">
+                    <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 25px; color: #ffffff;">Scale of Global
+                        Client Partnerships</h3>
+                    <div class="bar-chart-container" style="display: flex; flex-direction: column; gap: 15px;">
+                        <div class="bar-row" style="display: flex; align-items: center; gap: 15px;">
+                            <span class="bar-label"
+                                style="font-size: 13px; color: #94a3b8; width: 100px;">Establishment</span>
+                            <div class="bar-track"
+                                style="flex: 1; height: 10px; background: rgba(255, 255, 255, 0.05); border-radius: 5px; overflow: hidden;">
+                                <div class="bar-fill" style="width: 5%; height: 100%; background: #b8860b;"></div>
+                            </div>
+                        </div>
+                        <div class="bar-row" style="display: flex; align-items: center; gap: 15px;">
+                            <span class="bar-label" style="font-size: 13px; color: #94a3b8; width: 100px;">Today</span>
+                            <div class="bar-track"
+                                style="flex: 1; height: 10px; background: rgba(255, 255, 255, 0.05); border-radius: 5px; overflow: hidden;">
+                                <div class="bar-fill" data-width="100%"
+                                    style="width: 0%; height: 100%; background: #b8860b;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Growth Chart 2 -->
+                <div class="growth-card"
+                    style="background: #0a192f; padding: 40px; border-radius: 20px; color: #ffffff; position: relative; overflow: hidden;">
+                    <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 25px; color: #ffffff;">Annual
+                        Assessment Velocity</h3>
+                    <div class="histogram-container"
+                        style="display: flex; align-items: flex-end; justify-content: space-between; height: 100px; padding-top: 20px;">
+                        <div class="histogram-bar" data-height="40%"
+                            style="width: 15%; background: linear-gradient(to top, #b8860b, #daa520); border-radius: 4px 4px 0 0; height: 0; position: relative;">
+                            <span class="histogram-year"
+                                style="position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #94a3b8;">2021</span>
+                        </div>
+                        <div class="histogram-bar" data-height="55%"
+                            style="width: 15%; background: linear-gradient(to top, #b8860b, #daa520); border-radius: 4px 4px 0 0; height: 0; position: relative;">
+                            <span class="histogram-year"
+                                style="position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #94a3b8;">2022</span>
+                        </div>
+                        <div class="histogram-bar" data-height="70%"
+                            style="width: 15%; background: linear-gradient(to top, #b8860b, #daa520); border-radius: 4px 4px 0 0; height: 0; position: relative;">
+                            <span class="histogram-year"
+                                style="position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #94a3b8;">2023</span>
+                        </div>
+                        <div class="histogram-bar" data-height="85%"
+                            style="width: 15%; background: linear-gradient(to top, #b8860b, #daa520); border-radius: 4px 4px 0 0; height: 0; position: relative;">
+                            <span class="histogram-year"
+                                style="position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #94a3b8;">2024</span>
+                        </div>
+                        <div class="histogram-bar" data-height="100%"
+                            style="width: 15%; background: linear-gradient(to top, #b8860b, #daa520); border-radius: 4px 4px 0 0; height: 0; position: relative;">
+                            <span class="histogram-year"
+                                style="position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #94a3b8;">2025</span>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </section>
-    <style>
-    /* Moved CSS from body to style tag */
-    @media (max-width: 767px) {
-        .methodology-card {
-            min-width: 280px;
-            padding: 25px;
-            margin-bottom: 20px;
-        }
-    }
-    </style>
-                                </style>
+
+    <!-- Why Choose AITF Section -->
+    <section class="why-choose-aitf" style="padding: 100px 0; background: #f8fafc; overflow: hidden; position: relative;">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6 mb-5 mb-lg-0" style="position: relative; z-index: 2;">
+                    <div class="why-tag" style="display: inline-block; padding: 6px 15px; background: rgba(184, 134, 11, 0.1); color: #b8860b; border-radius: 50px; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px;">Why Choose AITF</div>
+                    <h2 class="why-title" style="font-family: 'Playfair Display', serif; font-size: 42px; font-weight: 800; color: #0a192f; margin-bottom: 25px; line-height: 1.2;">Our Commitment to <span style="color: #b8860b;">Excellence</span></h2>
+                    <p class="why-text" style="font-size: 18px; line-height: 1.8; color: #475569; margin-bottom: 35px; text-align: justify;">
+                        At <strong>AITF Management Certification Ltd.</strong>, we are dedicated to delivering comprehensive assessment services through our team of highly qualified auditors. Our primary objective is to enhance our clients' business performance by conducting value-added audits of their processes and management systems.
+                    </p>
+                    
+                    <div class="feature-list" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div class="feature-item" style="display: flex; align-items: center; gap: 15px; padding: 15px; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: transform 0.3s ease;">
+                            <div class="feature-icon" style="width: 45px; height: 45px; background: #b8860b; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px;">
+                                <i class="fa fa-user-tie"></i>
+                            </div>
+                            <span style="font-weight: 600; color: #0a192f;">Qualified Auditors</span>
+                        </div>
+                        <div class="feature-item" style="display: flex; align-items: center; gap: 15px; padding: 15px; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: transform 0.3s ease;">
+                            <div class="feature-icon" style="width: 45px; height: 45px; background: #b8860b; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px;">
+                                <i class="fa fa-chart-line"></i>
+                            </div>
+                            <span style="font-weight: 600; color: #0a192f;">Business Growth</span>
+                        </div>
+                        <div class="feature-item" style="display: flex; align-items: center; gap: 15px; padding: 15px; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: transform 0.3s ease;">
+                            <div class="feature-icon" style="width: 45px; height: 45px; background: #b8860b; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px;">
+                                <i class="fa fa-search-plus"></i>
+                            </div>
+                            <span style="font-weight: 600; color: #0a192f;">Value-Added Audits</span>
+                        </div>
+                        <div class="feature-item" style="display: flex; align-items: center; gap: 15px; padding: 15px; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: transform 0.3s ease;">
+                            <div class="feature-icon" style="width: 45px; height: 45px; background: #b8860b; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px;">
+                                <i class="fa fa-check-double"></i>
+                            </div>
+                            <span style="font-weight: 600; color: #0a192f;">Process Integrity</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6" style="position: relative;">
+                    <div class="image-stack" style="position: relative; padding: 30px;">
+                        <!-- Background Decorative Element -->
+                        <div class="decorative-blob" style="position: absolute; top: -10%; right: -10%; width: 100%; height: 100%; background: radial-gradient(circle, rgba(184, 134, 11, 0.08) 0%, transparent 70%); z-index: 1; border-radius: 50%;"></div>
+                        
+                        <!-- Main Image Container with Premium Frame -->
+                        <div class="main-img-container" style="position: relative; z-index: 2; border-radius: 40px; padding: 15px; background: white; box-shadow: 0 40px 100px rgba(10, 25, 47, 0.15); transition: all 0.5s cubic-bezier(0.165, 0.84, 0.44, 1);">
+                            <div class="img-inner-wrapper" style="border-radius: 28px; overflow: hidden; position: relative;">
+                                <img src="aitfImages/qmsaudit.png" alt="AITF QMS Audit" style="width: 100%; height: auto; display: block; transition: transform 0.8s cubic-bezier(0.165, 0.84, 0.44, 1);">
+                                <div class="img-overlay" style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(10, 25, 47, 0.4) 0%, transparent 40%); opacity: 0; transition: opacity 0.5s ease;"></div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-    <!-- end section -->
+        
+        <style>
+            .feature-item:hover {
+                transform: translateY(-8px);
+                background: #b8860b !important;
+                box-shadow: 0 15px 30px rgba(184, 134, 11, 0.2) !important;
+            }
+            .feature-item:hover span {
+                color: white !important;
+            }
+            .feature-item:hover .feature-icon {
+                background: white !important;
+                color: #b8860b !important;
+            }
+            .main-img-container:hover {
+                transform: translateY(-10px) scale(1.02);
+            }
+            .main-img-container:hover .img-inner-wrapper img {
+                transform: scale(1.1);
+            }
+            .main-img-container:hover .img-overlay {
+                opacity: 1;
+            }
+        </style>
+    </section>
+
+    <!-- Our Core Principles Section -->
+    <section class="core-principles" style="padding: 100px 0; background: #ffffff; overflow: hidden; position: relative;">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6 order-2 order-lg-1" style="position: relative;">
+                    <div class="image-stack-left" style="position: relative; padding: 30px;">
+                        <!-- Background Decorative Element -->
+                        <div class="decorative-blob-left" style="position: absolute; top: -10%; left: -10%; width: 100%; height: 100%; background: radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, transparent 70%); z-index: 1; border-radius: 50%;"></div>
+                        
+                        <!-- Main Image Container with Premium Frame -->
+                        <div class="principle-img-container" style="position: relative; z-index: 2; border-radius: 40px; padding: 15px; background: white; box-shadow: 0 40px 100px rgba(16, 185, 129, 0.12); transition: all 0.5s cubic-bezier(0.165, 0.84, 0.44, 1);">
+                            <div class="img-inner-wrapper" style="border-radius: 28px; overflow: hidden; position: relative;">
+                                <img src="aitfImages/emsauditf.png" alt="AITF EMS Audit" style="width: 100%; height: auto; display: block; transition: transform 0.8s cubic-bezier(0.165, 0.84, 0.44, 1);">
+                                <div class="principle-overlay" style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(6, 78, 59, 0.3) 0%, transparent 40%); opacity: 0; transition: opacity 0.5s ease;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6 order-1 order-lg-2 mb-5 mb-lg-0" style="position: relative; z-index: 2; padding-left: 50px;">
+                    <div class="principle-tag" style="display: inline-block; padding: 6px 15px; background: rgba(16, 185, 129, 0.1); color: #10b981; border-radius: 50px; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px;">Core Values</div>
+                    <h2 class="principle-title" style="font-family: 'Playfair Display', serif; font-size: 42px; font-weight: 800; color: #0a192f; margin-bottom: 25px; line-height: 1.2;">Our Core <span style="color: #10b981;">Principles</span></h2>
+                    <p class="principle-text" style="font-size: 18px; line-height: 1.8; color: #475569; margin-bottom: 35px; text-align: justify;">
+                        We maintain the highest standards of <strong>competence, independence, and impartiality</strong> in our assessment processes. Our team of certified auditors is committed to helping organizations achieve and demonstrate compliance with international standards, driving continuous improvement and operational excellence across all business functions.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <style>
+            .p-feature-item:hover {
+                transform: translateX(10px);
+            }
+            .principle-img-container:hover {
+                transform: translateY(-10px) scale(1.02);
+                box-shadow: 0 50px 110px rgba(16, 185, 129, 0.18);
+            }
+            .principle-img-container:hover .img-inner-wrapper img {
+                transform: scale(1.1);
+            }
+            .principle-img-container:hover .principle-overlay {
+                opacity: 1;
+            }
+        </style>
+    </section>
+
     <!-- Premium Management Systems Slider Section -->
     <div class="section management-slider-section" style="position: relative; z-index: 10;">
         <div class="slider-container" style="position: relative;">
             <button class="slider-arrow prev-arrow" aria-label="Previous slide">
                 <span class="fa fa-angles-left"></span>
             </button>
-            
+
             <div class="slider-track">
                 <!-- Slide 1 - Quality Management System -->
                 <div class="slide active">
@@ -2665,7 +1889,8 @@ session_start();
                             <i class="fa fa-award"></i>
                         </div>
                         <h3>QUALITY MANAGEMENT SYSTEM</h3>
-                        <p class="slide-description">Ensures consistent product and service quality by meeting customer and regulatory requirements through ISO 9001 standards.</p>
+                        <p class="slide-description">Ensures consistent product and service quality by meeting customer
+                            and regulatory requirements through ISO 9001 standards.</p>
                         <a href="contactUs.php" class="slider-btn">APPLY NOW <i class="fa fa-arrow-right"></i></a>
                     </div>
                 </div>
@@ -2677,7 +1902,8 @@ session_start();
                             <i class="fa fa-leaf"></i>
                         </div>
                         <h3>ENVIRONMENTAL MANAGEMENT SYSTEM</h3>
-                        <p class="slide-description">Helps organizations minimize environmental impact, comply with laws, and improve sustainability under ISO 14001.</p>
+                        <p class="slide-description">Helps organizations minimize environmental impact, comply with
+                            laws, and improve sustainability under ISO 14001.</p>
                         <a href="contactUs.php" class="slider-btn">APPLY NOW <i class="fa fa-arrow-right"></i></a>
                     </div>
                 </div>
@@ -2689,7 +1915,8 @@ session_start();
                             <i class="fa fa-shield-halved"></i>
                         </div>
                         <h3>OCCUPATIONAL HEALTH &amp; SAFETY MANAGEMENT SYSTEM (OHSMS)</h3>
-                        <p class="slide-description">Builds a robust OH&S framework to reduce risks, protect employee well-being, and drive continual improvement under ISO 45001.</p>
+                        <p class="slide-description">Builds a robust OH&S framework to reduce risks, protect employee
+                            well-being, and drive continual improvement under ISO 45001.</p>
                         <a href="contactUs.php" class="slider-btn">APPLY NOW <i class="fa fa-arrow-right"></i></a>
                     </div>
                 </div>
@@ -2699,21 +1926,22 @@ session_start();
             <button class="slider-arrow next-arrow" aria-label="Next slide">
                 <span class="fa fa-angles-right"></span>
             </button>
-            
+
             <div class="slider-nav">
                 <span class="slider-dot" data-slide="0"></span>
                 <span class="slider-dot" data-slide="1"></span>
                 <span class="slider-dot" data-slide="2"></span>
             </div>
-            
+
             <!-- Box Navigation Controls Removed -->
         </div>
         <div class="slider-glow"></div>
     </div>
     <!-- end section -->
-    
+
     <!-- NABCB Accredited ISO Certification Section -->
-    <div class="section layout_padding nabcb-section" style="position: relative; padding: 60px 0 !important; background: linear-gradient(135deg, #0a192f 0%, #172a45 100%);">
+    <div class="section layout_padding nabcb-section"
+        style="position: relative; padding: 60px 0 !important; background: linear-gradient(135deg, #0a192f 0%, #172a45 100%);">
         <div class="nabcb-particles" id="nabcb-particles"></div>
         <div class="container" style="position: relative; z-index: 2;">
             <div class="row">
@@ -2729,7 +1957,7 @@ session_start();
                     </div>
                 </div>
             </div>
-            
+
             <div class="row">
                 <div class="col-md-10 col-md-offset-1">
                     <div class="info-card">
@@ -2746,11 +1974,13 @@ session_start();
                                 </div>
                             </div>
                             <div class="info-card-back">
-                                <p>The National Accreditation Board for Certification Bodies (NABCB) is a key entity in India's quality infrastructure, serving as a constituent board of the Quality Council of India (QCI).</p>
+                                <p>The National Accreditation Board for Certification Bodies (NABCB) is a key entity in
+                                    India's quality infrastructure, serving as a constituent board of the Quality
+                                    Council of India (QCI).</p>
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="info-card">
                         <div class="info-card-inner">
                             <div class="info-card-front">
@@ -2761,11 +1991,13 @@ session_start();
                                 <p>Globally Accepted Certifications</p>
                             </div>
                             <div class="info-card-back">
-                                <p>A certificate issued by an AITF that is accredited by NABCB and issued with the NABCB & IAF MLA mark is accepted in all economies, as the accreditation body is an IAF MLA signatory.</p>
+                                <p>A certificate issued by an AITF that is accredited by NABCB and issued with the NABCB
+                                    & IAF MLA mark is accepted in all economies, as the accreditation body is an IAF MLA
+                                    signatory.</p>
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="info-card">
                         <div class="info-card-inner">
                             <div class="info-card-front">
@@ -2776,13 +2008,15 @@ session_start();
                                 <p>Trusted Certification Process</p>
                             </div>
                             <div class="info-card-back">
-                                <p>NABCB assesses the competence and impartiality of CABs (AITF) based on international standards and its own criteria, ensuring that the certificates and reports issued are reliable and trustworthy.</p>
+                                <p>NABCB assesses the competence and impartiality of CABs (AITF) based on international
+                                    standards and its own criteria, ensuring that the certificates and reports issued
+                                    are reliable and trustworthy.</p>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            
+
             <div class="row">
                 <div class="col-md-12 text-center">
                     <div class="certificate-showcase">
@@ -2790,9 +2024,11 @@ session_start();
                         <div class="certificate-showcase-grid">
                             <div class="certificate-item">
                                 <div class="certificate-img-container">
-                                    <img src="images/certificate_1.png" alt="ISO 9001:2015 Certification" class="certificate-thumb">
+                                    <img src="images/certificate_1.png" alt="ISO 9001:2015 Certification"
+                                        class="certificate-thumb">
                                     <div class="certificate-hover">
-                                        <a href="images/certificate_1.png" class="view-cert-btn" data-lightbox="cert-gallery" data-title="ISO 9001:2015 Certification">
+                                        <a href="images/certificate_1.png" class="view-cert-btn"
+                                            data-lightbox="cert-gallery" data-title="ISO 9001:2015 Certification">
                                             <i class="fa fa-search-plus"></i>
                                             <span>View</span>
                                         </a>
@@ -2801,12 +2037,14 @@ session_start();
                                 <h4>ISO 9001:2015</h4>
                                 <p>Quality Management System</p>
                             </div>
-                            
+
                             <div class="certificate-item">
                                 <div class="certificate-img-container">
-                                    <img src="images/certificate_2.png" alt="ISO 14001:2015 Certification" class="certificate-thumb">
+                                    <img src="images/certificate_2.png" alt="ISO 14001:2015 Certification"
+                                        class="certificate-thumb">
                                     <div class="certificate-hover">
-                                        <a href="images/certificate_2.png" class="view-cert-btn" data-lightbox="cert-gallery" data-title="ISO 14001:2015 Certification">
+                                        <a href="images/certificate_2.png" class="view-cert-btn"
+                                            data-lightbox="cert-gallery" data-title="ISO 14001:2015 Certification">
                                             <i class="fa fa-search-plus"></i>
                                             <span>View</span>
                                         </a>
@@ -2815,12 +2053,14 @@ session_start();
                                 <h4>ISO 14001:2015</h4>
                                 <p>Environmental Management System</p>
                             </div>
-                            
+
                             <div class="certificate-item">
                                 <div class="certificate-img-container">
-                                    <img src="images/certificate_3.png" alt="ISO 45001:2018 Certification" class="certificate-thumb">
+                                    <img src="images/certificate_3.png" alt="ISO 45001:2018 Certification"
+                                        class="certificate-thumb">
                                     <div class="certificate-hover">
-                                        <a href="images/certificate_3.png" class="view-cert-btn" data-lightbox="cert-gallery" data-title="ISO 45001:2018 Certification">
+                                        <a href="images/certificate_3.png" class="view-cert-btn"
+                                            data-lightbox="cert-gallery" data-title="ISO 45001:2018 Certification">
                                             <i class="fa fa-search-plus"></i>
                                             <span>View</span>
                                         </a>
@@ -2834,15 +2074,15 @@ session_start();
                 </div>
             </div>
         </div>
-        
+
         <div class="floating-shapes">
             <div class="shape shape-1"></div>
             <div class="shape shape-2"></div>
             <div class="shape shape-3"></div>
         </div>
     </div>
-    
-        
+
+
     <style>
         /* NABCB Section - Larger Certification Text */
         .certificate-item h4 {
@@ -2850,13 +2090,13 @@ session_start();
             font-weight: 700;
             margin: 15px 0 5px;
         }
-        
+
         .certificate-item p {
             font-size: 20px !important;
             font-weight: 500;
             color: #e0e0e0;
         }
-        
+
         /* AITF Intro Section Styling */
         .aitf-intro {
             font-family: 'Montserrat', 'Poppins', sans-serif;
@@ -2872,14 +2112,14 @@ session_start();
             padding: 25px 30px;
             font-weight: 500;
             color: #ffffff;
-            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5), 
-                         -1px -1px 3px rgba(0, 0, 0, 0.3);
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5),
+                -1px -1px 3px rgba(0, 0, 0, 0.3);
             position: relative;
             background: rgba(0, 0, 0, 0.4);
             border-radius: 12px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         }
-        
+
         .aitf-intro::before {
             content: '';
             position: absolute;
@@ -2887,21 +2127,21 @@ session_start();
             left: 0;
             right: 0;
             bottom: 0;
-            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
             border-radius: 12px;
             z-index: -1;
             opacity: 0.3;
         }
-        
+
         .aitf-intro strong {
             color: #ffffff;
             font-weight: 700;
-            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.7), 
-                       -1px -1px 3px rgba(0, 0, 0, 0.5);
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.7),
+                -1px -1px 3px rgba(0, 0, 0, 0.5);
             position: relative;
             padding: 0 3px;
         }
-        
+
         @media (max-width: 768px) {
             .aitf-intro {
                 font-size: 1.1rem;
@@ -2912,13 +2152,13 @@ session_start();
                 background: rgba(0, 0, 0, 0.5);
                 text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.7);
             }
-            
+
             .aitf-intro strong {
                 color: #ffffff;
                 text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.7);
             }
         }
-        
+
         /* NABCB Section Styling */
         .nabcb-section {
             position: relative;
@@ -2931,7 +2171,7 @@ session_start();
             width: 100%;
             box-sizing: border-box;
         }
-        
+
         .nabcb-section::before {
             content: '';
             position: absolute;
@@ -2943,13 +2183,13 @@ session_start();
             z-index: -1;
             opacity: 0.3;
         }
-        
+
         .section-header {
             margin-bottom: 60px;
             position: relative;
             z-index: 2;
         }
-        
+
         .section-tag {
             display: inline-block;
             background: rgba(0, 173, 239, 0.2);
@@ -2963,7 +2203,7 @@ session_start();
             text-transform: uppercase;
             border: 1px solid rgba(0, 173, 239, 0.3);
         }
-        
+
         .section-title {
             font-size: 42px;
             font-weight: 800;
@@ -2974,12 +2214,12 @@ session_start();
             text-shadow: 0 0 30px rgba(100, 240, 255, 0.3);
             position: relative;
         }
-        
+
         .section-title .highlight {
             color: #ffd700;
             -webkit-text-fill-color: #ffd700;
         }
-        
+
         .title-divider {
             display: flex;
             align-items: center;
@@ -2987,27 +2227,27 @@ session_start();
             margin: 25px auto 40px;
             max-width: 400px;
         }
-        
+
         .divider-line {
             height: 2px;
             background: linear-gradient(90deg, transparent, rgba(0, 173, 239, 0.5), transparent);
             flex: 1;
         }
-        
+
         .divider-icon {
             color: #00adef;
             margin: 0 15px;
             font-size: 20px;
             opacity: 0.7;
         }
-        
+
         /* Info Cards */
         .info-card {
             perspective: 1000px;
             margin-bottom: 30px;
             height: 220px;
         }
-        
+
         .info-card-inner {
             position: relative;
             width: 100%;
@@ -3018,12 +2258,13 @@ session_start();
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
             border-radius: 15px;
         }
-        
+
         .info-card:hover .info-card-inner {
             transform: rotateY(180deg);
         }
-        
-        .info-card-front, .info-card-back {
+
+        .info-card-front,
+        .info-card-back {
             position: absolute;
             width: 100%;
             height: 100%;
@@ -3036,13 +2277,13 @@ session_start();
             justify-content: center;
             align-items: center;
         }
-        
+
         .info-card-front {
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        
+
         .info-card-back {
             background: linear-gradient(135deg, #00adef 0%, #0077b6 100%);
             color: white;
@@ -3053,7 +2294,7 @@ session_start();
             font-size: 15px;
             line-height: 1.6;
         }
-        
+
         .icon-wrapper {
             width: 70px;
             height: 70px;
@@ -3065,25 +2306,25 @@ session_start();
             margin-bottom: 20px;
             border: 2px solid rgba(0, 173, 239, 0.3);
         }
-        
+
         .icon-wrapper i {
             font-size: 30px;
             color: #00adef;
         }
-        
+
         .info-card h3 {
             font-size: 20px;
             font-weight: 700;
             margin-bottom: 10px;
             color: #fff;
         }
-        
+
         .info-card p {
             color: #b3e0ff;
             font-size: 14px;
             margin: 0;
         }
-        
+
         .hover-indicator {
             margin-top: 15px;
             font-size: 12px;
@@ -3092,19 +2333,19 @@ session_start();
             flex-direction: column;
             align-items: center;
         }
-        
+
         .hover-indicator i {
             margin-top: 5px;
             animation: bounce 2s infinite;
         }
-        
+
         /* Certificate Showcase */
         .certificate-showcase {
             margin-top: 60px;
             position: relative;
             z-index: 2;
         }
-        
+
         .showcase-title {
             font-size: 28px;
             font-weight: 700;
@@ -3113,7 +2354,7 @@ session_start();
             position: relative;
             display: inline-block;
         }
-        
+
         .showcase-title::after {
             content: '';
             position: absolute;
@@ -3125,7 +2366,7 @@ session_start();
             background: linear-gradient(90deg, #00adef, #00f2fe);
             border-radius: 2px;
         }
-        
+
         .certificate-showcase-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -3134,7 +2375,7 @@ session_start();
             max-width: 1300px;
             padding: 30px 20px;
         }
-        
+
         .certificate-item {
             background: rgba(10, 25, 47, 0.7);
             border-radius: 12px;
@@ -3146,7 +2387,7 @@ session_start();
             position: relative;
             z-index: 1;
         }
-        
+
         .certificate-item::before {
             content: '';
             position: absolute;
@@ -3159,24 +2400,24 @@ session_start();
             opacity: 0;
             transition: opacity 0.4s ease;
         }
-        
+
         .certificate-item:hover::before {
             opacity: 1;
         }
-        
+
         .certificate-item:hover {
             transform: translateY(-8px) scale(1.02);
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
             border-color: rgba(100, 255, 218, 0.3);
         }
-        
+
         .certificate-img-container {
             position: relative;
             overflow: hidden;
             height: 280px;
             background: #000;
         }
-        
+
         .certificate-thumb {
             width: 100%;
             height: 100%;
@@ -3186,7 +2427,7 @@ session_start();
             padding: 15px;
             box-sizing: border-box;
         }
-        
+
         .certificate-hover {
             position: absolute;
             top: 0;
@@ -3201,15 +2442,15 @@ session_start();
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             backdrop-filter: blur(5px);
         }
-        
+
         .certificate-item:hover .certificate-hover {
             opacity: 1;
         }
-        
+
         .certificate-item:hover .certificate-thumb {
             transform: scale(1.05);
         }
-        
+
         .view-cert-btn {
             display: inline-flex;
             align-items: center;
@@ -3228,7 +2469,7 @@ session_start();
             overflow: hidden;
             z-index: 1;
         }
-        
+
         .view-cert-btn::before {
             content: '';
             position: absolute;
@@ -3240,27 +2481,27 @@ session_start();
             transition: width 0.3s ease;
             z-index: -1;
         }
-        
+
         .view-cert-btn:hover::before {
             width: 100%;
         }
-        
+
         .view-cert-btn i {
             margin-right: 10px;
             font-size: 16px;
             transition: transform 0.3s ease;
         }
-        
+
         .view-cert-btn:hover {
             transform: translateY(-3px);
             box-shadow: 0 5px 15px rgba(100, 255, 218, 0.3);
             color: #64ffda;
         }
-        
+
         .view-cert-btn:hover i {
             transform: scale(1.2);
         }
-        
+
         .certificate-item h4 {
             color: #64ffda;
             font-size: 20px;
@@ -3268,89 +2509,89 @@ session_start();
             margin: 25px 25px 8px;
             letter-spacing: 0.5px;
         }
-        
+
         .certificate-item p {
             color: #ccd6f6;
             font-size: 15px;
             margin: 0 25px 25px;
-                font-size: 28px;
-            }
-            
-            .section-tag {
-                font-size: 12px;
-                padding: 6px 15px;
-            }
-            
-            .certificate-badges {
-                flex-direction: column;
-                align-items: center;
-            }
-            
-            .badge {
-                width: 180px;
-            }
+            font-size: 28px;
+        }
+
+        .section-tag {
+            font-size: 12px;
+            padding: 6px 15px;
+        }
+
+        .certificate-badges {
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .badge {
+            width: 180px;
+        }
         }
     </style>
-    
+
     <script>
         // Initialize particles.js for the NABCB section
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             // Add any necessary JavaScript for animations or interactions
             const cards = document.querySelectorAll('.info-card');
-            
+
             cards.forEach(card => {
-                card.addEventListener('mouseenter', function() {
+                card.addEventListener('mouseenter', function () {
                     this.querySelector('.info-card-inner').style.transform = 'rotateY(180deg)';
                 });
-                
-                card.addEventListener('mouseleave', function() {
+
+                card.addEventListener('mouseleave', function () {
                     this.querySelector('.info-card-inner').style.transform = 'rotateY(0)';
                 });
             });
-            
+
             // Add parallax effect to floating shapes
             const shapes = document.querySelectorAll('.floating-shapes .shape');
-            
+
             document.addEventListener('mousemove', (e) => {
                 const x = e.clientX / window.innerWidth;
                 const y = e.clientY / window.innerHeight;
-                
+
                 shapes.forEach((shape, index) => {
                     const speed = (index + 1) * 0.5;
                     const xMove = (x - 0.5) * 20 * speed;
                     const yMove = (y - 0.5) * 20 * speed;
-                    
+
                     shape.style.transform = `translate(${xMove}px, ${yMove}px) ${window.getComputedStyle(shape).transform.split(' ').slice(2).join(' ')}`;
                 });
             });
-            
+
         });
     </script>
     <!-- End NABCB Section -->
-    
-    
-                            <!-- Research Section Placeholder -->
-                            <!-- Add your research section content here -->
-                </div>
-            </div>
+
+
+    <!-- Research Section Placeholder -->
+    <!-- Add your research section content here -->
+    </div>
+    </div>
 
     <?php include './footerSource.php'; ?>
     <script>
         // Management Systems Slider
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             // Mark slider as loading
             const sliderSection = document.querySelector('.management-slider-section');
             const sliderContainer = document.querySelector('.slider-container');
-            
+
             if (sliderSection && sliderContainer) {
                 // Show loading state
                 sliderSection.style.opacity = '1';
-                
+
                 // Initialize slider after a small delay to ensure styles are applied
                 setTimeout(() => {
                     sliderContainer.classList.add('loaded');
                     sliderSection.classList.add('loaded');
-                    
+
                     // Show navigation dots with a slight delay
                     const dots = document.querySelector('.slider-dots');
                     if (dots) {
@@ -3366,12 +2607,12 @@ session_start();
             const dots = document.querySelectorAll('.slider-dot');
             const prevBtn = document.querySelector('.prev-arrow');
             const nextBtn = document.querySelector('.next-arrow');
-            
+
             // Start at -1 so first updateActiveSlide(0) fully initializes state
             let currentSlide = -1;
             let slideInterval;
             const slideCount = slides.length;
-            
+
             // Initialize slider with performance optimizations and safety mechanisms
             function initSlider() {
                 // Clear all slide classes first
@@ -3379,18 +2620,18 @@ session_start();
                 allSlides.forEach(slide => {
                     slide.classList.remove('active', 'prev', 'next');
                 });
-                
+
                 // Reset current slide index
                 currentSlide = -1;
-                
+
                 // Set initial active states
                 updateActiveSlide(0);
-                
+
                 // Add aggressive safety mechanism to prevent stuck slider
                 setInterval(() => {
                     const slides = document.querySelectorAll('.slide');
                     const activeSlide = document.querySelector('.slide.active');
-                    
+
                     // If no active slide found, reset to first slide
                     if (!activeSlide && slides.length > 0) {
                         console.log('Safety reset: No active slide found, resetting to slide 0');
@@ -3399,7 +2640,7 @@ session_start();
                         // Restart auto-slide if it stopped
                         startAutoSlide();
                     }
-                    
+
                     // Force progression if stuck on last slide for too long
                     if (currentSlide === slides.length - 1) {
                         setTimeout(() => {
@@ -3410,10 +2651,10 @@ session_start();
                         }, 3500); // Slightly less than auto-slide interval
                     }
                 }, 3000); // Check every 3 seconds
-                
+
                 // Start auto-slide with slight delay for initial load
                 setTimeout(startAutoSlide, 800);
-                
+
                 // Add event listeners for arrows
                 prevBtn.addEventListener('click', (e) => {
                     e.preventDefault();
@@ -3421,14 +2662,14 @@ session_start();
                     prevSlide();
                     startAutoSlide();
                 });
-                
+
                 nextBtn.addEventListener('click', (e) => {
                     e.preventDefault();
                     pauseSlide();
                     nextSlide();
                     startAutoSlide();
                 });
-                
+
                 // Add click events to dots
                 dots.forEach((dot, index) => {
                     dot.addEventListener('click', (e) => {
@@ -3436,7 +2677,7 @@ session_start();
                         goToSlide(index);
                     });
                 });
-                
+
                 // Add click events to box navigation items
                 const boxNavItems = document.querySelectorAll('.box-nav-item');
                 boxNavItems.forEach((item, index) => {
@@ -3445,35 +2686,35 @@ session_start();
                         goToSlide(index);
                     });
                 });
-                
+
                 // Pause on hover, resume on leave (desktop)
                 const sliderContainer = document.querySelector('.slider-container');
                 sliderContainer.addEventListener('mouseenter', pauseSlide);
                 sliderContainer.addEventListener('mouseleave', startAutoSlide);
-                
+
                 // Enhanced touch events for mobile with better performance
                 let touchStartX = 0;
                 let touchEndX = 0;
                 let touchStartTime = 0;
-                
+
                 sliderTrack.addEventListener('touchstart', (e) => {
                     touchStartX = e.changedTouches[0].screenX;
                     touchStartTime = Date.now();
                     pauseSlide();
                 }, { passive: true });
-                
+
                 sliderTrack.addEventListener('touchend', (e) => {
                     touchEndX = e.changedTouches[0].screenX;
                     handleSwipe();
                     startAutoSlide();
                 }, { passive: true });
-                
+
                 function handleSwipe() {
                     const swipeThreshold = 50;
                     const timeThreshold = 300; // Maximum time for a swipe
                     const diff = touchStartX - touchEndX;
                     const timeDiff = Date.now() - touchStartTime;
-                    
+
                     // Only register as swipe if it's fast enough and far enough
                     if (Math.abs(diff) > swipeThreshold && timeDiff < timeThreshold) {
                         if (diff > 0) {
@@ -3484,45 +2725,45 @@ session_start();
                     }
                 }
             }
-            
+
             // Go to specific slide (user-triggered)
             function goToSlide(index) {
                 pauseSlide();
                 updateActiveSlide(index);
                 startAutoSlide();
             }
-            
+
             // Update active slide with improved transition handling and robust error handling
             function updateActiveSlide(newIndex) {
                 // Get all slides and navigation elements
                 const allSlides = document.querySelectorAll('.slide');
                 const allDots = document.querySelectorAll('.slider-dot');
                 const boxNavItems = document.querySelectorAll('.box-nav-item');
-                
+
                 // Validate slides exist
                 if (!allSlides || allSlides.length === 0) {
                     console.error('No slides found');
                     return;
                 }
-                
+
                 // Calculate the new index with boundary checks
                 const totalSlides = allSlides.length;
                 newIndex = newIndex % totalSlides;
                 if (newIndex < 0) newIndex = totalSlides - 1;
-                
+
                 // Always update for infinite scroll (remove the check that prevents same index)
                 console.log('Updating to slide:', newIndex, 'Total slides:', totalSlides);
-                
+
                 // Clear all classes first to prevent blur issues
                 allSlides.forEach(slide => {
                     slide.classList.remove('active', 'prev', 'next');
                 });
-                
+
                 // Force immediate update without requestAnimationFrame for reliability
                 // Update current slide index
                 const oldSlide = currentSlide;
                 currentSlide = newIndex;
-                
+
                 // Update slide classes for smooth 3D transitions
                 allSlides.forEach((slide, index) => {
                     if (index === currentSlide) {
@@ -3533,20 +2774,20 @@ session_start();
                         slide.classList.add('next');
                     }
                 });
-                
+
                 // Update dots with smooth transitions
                 allDots.forEach((dot, index) => {
                     dot.classList.toggle('active', index === newIndex);
                 });
-                
+
                 // Update box navigation
                 boxNavItems.forEach((item, index) => {
                     item.classList.toggle('active', index === newIndex);
                 });
-                
+
                 console.log('Slide transition complete:', currentSlide);
             }
-            
+
             // Next slide with robust boundary handling
             function nextSlide() {
                 const totalSlides = document.querySelectorAll('.slide').length;
@@ -3554,7 +2795,7 @@ session_start();
                 console.log('Next slide: from', currentSlide, 'to', nextIndex);
                 updateActiveSlide(nextIndex);
             }
-            
+
             // Previous slide with robust boundary handling
             function prevSlide() {
                 const totalSlides = document.querySelectorAll('.slide').length;
@@ -3562,31 +2803,31 @@ session_start();
                 console.log('Prev slide: from', currentSlide, 'to', prevIndex);
                 updateActiveSlide(prevIndex);
             }
-            
+
             // Auto slide with improved performance and robust cycling
             function startAutoSlide() {
                 clearInterval(slideInterval);
                 const totalSlides = document.querySelectorAll('.slide').length;
                 if (totalSlides <= 1) return;
-                
+
                 slideInterval = setInterval(() => {
                     const nextIndex = (currentSlide + 1) % totalSlides;
                     console.log('Auto slide: from', currentSlide, 'to', nextIndex);
-                    
+
                     // Force update even if same index (prevents stuck on last slide)
                     if (nextIndex === 0 && currentSlide === totalSlides - 1) {
                         currentSlide = -1; // Force reset
                     }
-                    
+
                     updateActiveSlide(nextIndex);
                 }, 4000); // Faster, snappier slide change
             }
-            
+
             // Pause auto slide
             function pauseSlide() {
                 clearInterval(slideInterval);
             }
-            
+
             // Initialize slider after ensuring everything is loaded
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', initSlider);
@@ -3595,15 +2836,15 @@ session_start();
                 setTimeout(initSlider, 300);
             }
         });
-        
+
         // Enhanced welcome text animation
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const welcomeText = document.getElementById('welcomeText');
             if (welcomeText) {
                 // Add animation class after a short delay
                 setTimeout(() => {
                     welcomeText.classList.add('animate-welcome');
-                    
+
                     // Add floating effect
                     setInterval(() => {
                         welcomeText.style.transform = 'translateY(-5px)';
@@ -3612,14 +2853,14 @@ session_start();
                         }, 1000);
                     }, 2000);
                 }, 100);
-                
+
                 // Enhanced hover effect
-                welcomeText.addEventListener('mouseover', function() {
+                welcomeText.addEventListener('mouseover', function () {
                     this.style.transform = 'scale(1.05) translateY(-5px)';
                     this.style.transition = 'all 0.3s ease';
                 });
-                
-                welcomeText.addEventListener('mouseout', function() {
+
+                welcomeText.addEventListener('mouseout', function () {
                     this.style.transform = 'scale(1) translateY(0)';
                 });
             }
@@ -3643,14 +2884,14 @@ session_start();
 
                     // how many times to update the value, and how much to increment the value on each update
                     var loops = Math.ceil(settings.speed / settings.refreshInterval),
-                            increment = (settings.to - settings.from) / loops;
+                        increment = (settings.to - settings.from) / loops;
 
                     // references & variables that will change with each update
                     var self = this,
-                            $self = $(this),
-                            loopCount = 0,
-                            value = settings.from,
-                            data = $self.data('countTo') || {};
+                        $self = $(this),
+                        loopCount = 0,
+                        value = settings.from,
+                        data = $self.data('countTo') || {};
 
                     $self.data('countTo', data);
 
@@ -3726,170 +2967,232 @@ session_start();
             }
         });
     </script>
-    
+
     <style>
         @keyframes wave {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-50%); }
+            0% {
+                transform: translateX(0);
+            }
+
+            100% {
+                transform: translateX(-50%);
+            }
         }
 
         /* Ultra Creative 3D Welcome Section */
         @keyframes float3d {
-            0%, 100% { transform: translateY(0) rotateX(0) rotateY(0); }
-            25% { transform: translateY(-10px) rotateX(5deg) rotateY(5deg); }
-            75% { transform: translateY(10px) rotateX(-5deg) rotateY(-5deg); }
+
+            0%,
+            100% {
+                transform: translateY(0) rotateX(0) rotateY(0);
+            }
+
+            25% {
+                transform: translateY(-10px) rotateX(5deg) rotateY(5deg);
+            }
+
+            75% {
+                transform: translateY(10px) rotateX(-5deg) rotateY(-5deg);
+            }
         }
-        
+
         @keyframes gradientBG {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
         }
-        
+
         @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
         }
-        
+
         @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.7;
+            }
         }
-        
+
         @keyframes aitfLogoBounceIn {
             0% {
                 transform: translateY(40px) scale(0.9);
                 opacity: 0;
                 filter: brightness(1.2);
             }
+
             60% {
                 transform: translateY(-8px) scale(1.06);
                 opacity: 1;
             }
+
             80% {
                 transform: translateY(3px) scale(0.99);
             }
+
             100% {
                 transform: translateY(0) scale(1);
                 opacity: 1;
             }
         }
-        
+
         @keyframes aitfWordSlideUp {
             from {
                 transform: translateY(14px);
                 opacity: 0;
             }
+
             to {
                 transform: translateY(0);
                 opacity: 1;
             }
         }
-        
+
         @keyframes aitfWordFadeScale {
             from {
                 transform: scale(0.96);
                 opacity: 0;
             }
+
             to {
                 transform: scale(1);
                 opacity: 1;
             }
         }
-        
+
         @keyframes aitfTypeIn {
             from {
                 max-width: 0ch;
             }
+
             to {
                 max-width: 9ch;
             }
         }
-        
+
         @keyframes aitfWordHighlight {
             0% {
                 opacity: 0;
                 text-shadow: none;
             }
+
             60% {
                 opacity: 1;
                 text-shadow: 0 0 10px rgba(129, 140, 248, 0.9), 0 0 24px rgba(56, 189, 248, 0.6);
             }
+
             100% {
                 opacity: 1;
                 text-shadow: 0 0 6px rgba(129, 140, 248, 0.6), 0 0 14px rgba(56, 189, 248, 0.4);
             }
         }
-        
+
         @keyframes aitfPillIn {
             from {
                 opacity: 0;
                 transform: translateY(8px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
             }
         }
-        
+
         @keyframes aitfMetaIn {
             from {
                 opacity: 0;
                 transform: translateY(10px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
             }
         }
-        
+
         @keyframes cardSheen {
-            0%, 35% {
+
+            0%,
+            35% {
                 transform: translate3d(-30%, 0, 0);
                 opacity: 0;
             }
-            40%, 55% {
+
+            40%,
+            55% {
                 transform: translate3d(10%, 0, 0);
                 opacity: 1;
             }
-            60%, 100% {
+
+            60%,
+            100% {
                 transform: translate3d(40%, 0, 0);
                 opacity: 0;
             }
         }
-        
+
         /* Subtle continuous motion */
         @keyframes aitfLogoBreath {
-            0%, 100% {
+
+            0%,
+            100% {
                 transform: translateY(0) scale(1);
                 text-shadow: 0 0 10px rgba(129, 140, 248, 0.7), 0 0 26px rgba(56, 189, 248, 0.5);
             }
+
             50% {
                 transform: translateY(-3px) scale(1.03);
                 text-shadow: 0 0 14px rgba(129, 140, 248, 0.9), 0 0 34px rgba(56, 189, 248, 0.7);
             }
         }
-        
+
         @keyframes aitfWordDrift {
-            0%, 100% {
+
+            0%,
+            100% {
                 transform: translateY(0);
             }
+
             50% {
                 transform: translateY(-2px);
             }
         }
-        
+
         @keyframes aitfMetaGlow {
-            0%, 100% {
+
+            0%,
+            100% {
                 text-shadow: 0 0 0 rgba(56, 189, 248, 0.0);
                 opacity: 0.9;
             }
+
             50% {
                 text-shadow: 0 0 10px rgba(56, 189, 248, 0.7);
                 opacity: 1;
             }
         }
-        
+
         .welcome-3d-container {
             perspective: 1000px;
             margin: 40px 0;
@@ -3899,7 +3202,7 @@ session_start();
             align-items: center;
             min-height: 200px;
         }
-        
+
         .aitf-hero-text {
             position: relative;
             z-index: 2;
@@ -3907,7 +3210,7 @@ session_start();
             color: #f9fafb;
             font-family: "Poppins", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         }
-        
+
         .aitf-pill {
             display: inline-flex;
             align-items: center;
@@ -3927,7 +3230,7 @@ session_start();
             transform: translateY(8px);
             animation: aitfPillIn 0.4s 0.1s ease-out forwards;
         }
-        
+
         .aitf-logo-abbr {
             font-size: clamp(2.8rem, 9vw, 5.2rem);
             font-weight: 800;
@@ -3939,38 +3242,45 @@ session_start();
             opacity: 0;
             transform: translateY(20px) scale(1.1);
             animation: aitfLogoBounceIn 0.9s 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards,
-                       aitfLogoBreath 7s 1.4s ease-in-out infinite;
+                aitfLogoBreath 7s 1.4s ease-in-out infinite;
             color: transparent;
         }
-        
+
         .aitf-logo-abbr::before {
             content: 'A';
             position: absolute;
-            left: -0.1em; /* Slight left adjustment */
+            left: -0.1em;
+            /* Slight left adjustment */
             top: 0;
-            color: #8B2F2F; /* Solid reddish-brown for A */
+            color: #8B2F2F;
+            /* Solid reddish-brown for A */
             -webkit-text-fill-color: #8B2F2F;
         }
-        
+
         .aitf-logo-abbr::after {
             content: 'IT';
             position: absolute;
-            left: 0.95em; /* Position after A */
+            left: 0.95em;
+            /* Position after A */
             top: 0;
-            color: #1A2A5A; /* Dark blue for IT */
+            color: #1A2A5A;
+            /* Dark blue for IT */
             -webkit-text-fill-color: #1A2A5A;
             letter-spacing: 0.05em;
         }
-        
+
         .aitf-logo-abbr span {
             position: absolute;
-            left: 2.2em; /* Moved F even closer to IT */
+            left: 2.2em;
+            /* Moved F even closer to IT */
             top: 0;
-            color: #8B2F2F; /* Reddish-brown for F */
+            color: #8B2F2F;
+            /* Reddish-brown for F */
             -webkit-text-fill-color: #8B2F2F;
-            margin-left: -0.1em; /* Fine-tune position */
+            margin-left: -0.1em;
+            /* Fine-tune position */
         }
-        
+
         .aitf-full-form-text {
             color: #e5e7eb;
             font-size: 1.1rem;
@@ -3981,7 +3291,7 @@ session_start();
             opacity: 0.9;
             text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         }
-        
+
         .aitf-full-form {
             margin-top: 1rem;
             display: flex;
@@ -3993,36 +3303,36 @@ session_start();
             color: #e5e7eb;
             letter-spacing: 0.08em;
         }
-        
+
         .aitf-word {
             display: inline-block;
             opacity: 0;
         }
-        
+
         .word-1 {
             animation: aitfWordSlideUp 0.55s 1.1s cubic-bezier(0.16, 0.84, 0.44, 1) forwards,
-                       aitfWordDrift 9s 3s ease-in-out infinite;
+                aitfWordDrift 9s 3s ease-in-out infinite;
         }
-        
+
         .word-2 {
             animation: aitfWordFadeScale 0.55s 1.55s cubic-bezier(0.16, 0.84, 0.44, 1) forwards,
-                       aitfWordDrift 9s 3.4s ease-in-out infinite;
+                aitfWordDrift 9s 3.4s ease-in-out infinite;
         }
-        
+
         .word-3 {
             opacity: 1;
             overflow: hidden;
             white-space: nowrap;
             max-width: 0ch;
             animation: aitfTypeIn 0.9s 2s steps(9, end) forwards,
-                       aitfWordDrift 9s 3.8s ease-in-out infinite;
+                aitfWordDrift 9s 3.8s ease-in-out infinite;
         }
-        
+
         .word-4 {
             animation: aitfWordHighlight 0.6s 2.9s cubic-bezier(0.16, 0.84, 0.44, 1) forwards,
-                       aitfWordDrift 9s 4.2s ease-in-out infinite;
+                aitfWordDrift 9s 4.2s ease-in-out infinite;
         }
-        
+
         .aitf-meta {
             margin-top: 1.1rem;
             display: inline-flex;
@@ -4037,9 +3347,9 @@ session_start();
             opacity: 0;
             transform: translateY(10px);
             animation: aitfMetaIn 0.55s 3.1s cubic-bezier(0.16, 0.84, 0.44, 1) forwards,
-                       aitfMetaGlow 8s 4s ease-in-out infinite;
+                aitfMetaGlow 8s 4s ease-in-out infinite;
         }
-        
+
         .meta-dot {
             width: 6px;
             height: 6px;
@@ -4047,18 +3357,18 @@ session_start();
             background: radial-gradient(circle, #38bdf8, transparent 70%);
             box-shadow: 0 0 12px rgba(56, 189, 248, 0.9);
         }
-        
+
         .meta-separator {
             width: 42px;
             height: 1px;
             background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.8), transparent);
             opacity: 0.8;
         }
-        
+
         .meta-label {
             white-space: nowrap;
         }
-        
+
         .aitf-underline {
             margin-top: 18px;
             width: 72%;
@@ -4067,12 +3377,12 @@ session_start();
             margin-right: auto;
             background: linear-gradient(90deg, transparent, rgba(37, 99, 235, 0.25), rgba(56, 189, 248, 0.9), rgba(37, 99, 235, 0.6), transparent);
         }
-        
+
         .aitf-underline::after {
             animation: slide 2.4s ease-out infinite;
             opacity: 0.95;
         }
-        
+
         .welcome-3d-underline {
             height: 3px;
             width: 100%;
@@ -4081,7 +3391,7 @@ session_start();
             position: relative;
             overflow: hidden;
         }
-        
+
         .welcome-3d-underline::after {
             content: '';
             position: absolute;
@@ -4092,7 +3402,7 @@ session_start();
             background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8), transparent);
             animation: slide 2s linear infinite;
         }
-        
+
         .welcome-3d-glow {
             position: absolute;
             top: 0;
@@ -4103,7 +3413,7 @@ session_start();
             z-index: 1;
             animation: pulse 4s ease-in-out infinite;
         }
-        
+
         .welcome-3d-particles {
             position: absolute;
             top: 0;
@@ -4114,7 +3424,7 @@ session_start();
             overflow: hidden;
             border-radius: 20px;
         }
-        
+
         .welcome-3d-particles::before {
             content: '';
             position: absolute;
@@ -4122,59 +3432,76 @@ session_start();
             left: -50%;
             right: -50%;
             bottom: -50%;
-            background: 
+            background:
                 radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.1) 0%, transparent 20%),
                 radial-gradient(circle at 80% 70%, rgba(79, 195, 247, 0.1) 0%, transparent 20%),
                 radial-gradient(circle at 40% 60%, rgba(255, 255, 255, 0.1) 0%, transparent 20%);
             animation: rotate 60s linear infinite;
             opacity: 0.5;
         }
-        
+
         @keyframes rotate {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
         }
-        
+
         @keyframes slide {
-            0% { left: -100%; }
-            100% { left: 100%; }
+            0% {
+                left: -100%;
+            }
+
+            100% {
+                left: 100%;
+            }
         }
+
         @keyframes colorChange {
-            0% { 
+            0% {
                 color: #ffffff;
                 text-shadow: 0 0 10px #ffffff, 0 0 20px #ffffff, 0 0 30px #00aaff, 0 0 40px #00aaff;
                 border-color: #00aaff;
             }
-            33% { 
+
+            33% {
                 color: #ffff00;
                 text-shadow: 0 0 10px #ffff00, 0 0 20px #ffff00, 0 0 30px #ffaa00, 0 0 40px #ffaa00;
                 border-color: #ffaa00;
             }
-            66% { 
+
+            66% {
                 color: #ff9900;
                 text-shadow: 0 0 10px #ff9900, 0 0 20px #ff9900, 0 0 30px #ff5500, 0 0 40px #ff5500;
                 border-color: #ff5500;
             }
-            100% { 
+
+            100% {
                 color: #ffffff;
                 text-shadow: 0 0 10px #ffffff, 0 0 20px #ffffff, 0 0 30px #00aaff, 0 0 40px #00aaff;
                 border-color: #00aaff;
             }
         }
-        
+
         @keyframes borderGlow {
-            0%, 100% { 
+
+            0%,
+            100% {
                 box-shadow: 0 0 10px 3px rgba(0, 170, 255, 0.8),
-                            0 0 20px 6px rgba(0, 140, 255, 0.5),
-                            0 0 30px 9px rgba(0, 110, 255, 0.3);
+                    0 0 20px 6px rgba(0, 140, 255, 0.5),
+                    0 0 30px 9px rgba(0, 110, 255, 0.3);
             }
-            50% { 
+
+            50% {
                 box-shadow: 0 0 15px 5px rgba(0, 200, 255, 0.9),
-                            0 0 25px 10px rgba(0, 170, 255, 0.6),
-                            0 0 35px 15px rgba(0, 140, 255, 0.3);
+                    0 0 25px 10px rgba(0, 170, 255, 0.6),
+                    0 0 35px 15px rgba(0, 140, 255, 0.3);
             }
         }
-        
+
         .animate-welcome {
             animation: colorChange 6s infinite ease-in-out !important;
             display: inline-block !important;
@@ -4184,9 +3511,9 @@ session_start();
             letter-spacing: 1px;
             border: 3px solid #00aaff;
             border-radius: 15px;
-            background: 
-                radial-gradient(circle at 10px 10px, rgba(255,255,255,0.1) 2px, transparent 0) 0 0 / 30px 30px,
-                radial-gradient(circle at 25px 25px, rgba(255,255,255,0.1) 2px, transparent 0) 15px 15px / 30px 30px,
+            background:
+                radial-gradient(circle at 10px 10px, rgba(255, 255, 255, 0.1) 2px, transparent 0) 0 0 / 30px 30px,
+                radial-gradient(circle at 25px 25px, rgba(255, 255, 255, 0.1) 2px, transparent 0) 15px 15px / 30px 30px,
                 rgba(0, 0, 0, 0.3) !important;
             backdrop-filter: blur(5px);
             transition: all 0.5s ease;
@@ -4195,46 +3522,219 @@ session_start();
             animation: borderGlow 4s infinite alternate !important;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
         }
-        
+
         .animate-welcome:hover {
             transform: scale(1.05) !important;
-            background: 
-                radial-gradient(circle at 10px 10px, rgba(255,255,255,0.15) 2px, transparent 0) 0 0 / 30px 30px,
-                radial-gradient(circle at 25px 25px, rgba(255,255,255,0.15) 2px, transparent 0) 15px 15px / 30px 30px,
+            background:
+                radial-gradient(circle at 10px 10px, rgba(255, 255, 255, 0.15) 2px, transparent 0) 0 0 / 30px 30px,
+                radial-gradient(circle at 25px 25px, rgba(255, 255, 255, 0.15) 2px, transparent 0) 15px 15px / 30px 30px,
                 rgba(0, 0, 0, 0.4) !important;
             box-shadow: 0 0 30px rgba(0, 200, 255, 0.8) !important;
         }
     </style>
-    
+
+    <!-- GSAP & ScrollTrigger for AITF Journey -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+
     <script>
+        // GSAP Initialization for AITF Journey - Horizontal Scroll
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof gsap !== 'undefined') {
+                gsap.registerPlugin(ScrollTrigger);
+
+                // --- Dynamic Legacy Counter ---
+                const counter = document.getElementById('legacy-counter');
+                const plus = document.getElementById('legacy-plus');
+
+                const updateCounter = (val) => {
+                    counter.innerText = Math.floor(val);
+                    // Color Logic
+                    if (val <= 10) {
+                        counter.style.color = '#3b82f6'; // Blue (Starting Phase)
+                    } else if (val <= 20) {
+                        counter.style.color = '#10b981'; // Green (Expansion Phase)
+                    } else {
+                        counter.style.color = '#b8860b'; // Gold (Excellence Phase)
+                    }
+                };
+
+                // Counter Animation with ScrollTrigger
+                ScrollTrigger.create({
+                    trigger: ".legacy-highlight",
+                    start: "top 80%",
+                    onEnter: () => {
+                        gsap.to({ val: 0 }, {
+                            val: 25,
+                            duration: 2.5,
+                            ease: "power2.out",
+                            onUpdate: function () { updateCounter(this.targets()[0].val); },
+                            onComplete: () => { gsap.to(plus, { opacity: 1, x: 10, duration: 0.5 }); }
+                        });
+                    },
+                    onLeaveBack: () => {
+                        // Reset when scrolling back up so it re-counts
+                        gsap.set(plus, { opacity: 0, x: 0 });
+                        updateCounter(0);
+                    }
+                });
+
+                // --- Horizontal Scroll Logic ---
+                if (window.innerWidth > 991) {
+                    const track = document.querySelector('.milestones-track');
+                    const wrapper = document.querySelector('.horizontal-timeline-wrapper');
+
+                    // Pin the section and scroll track horizontally
+                    gsap.to(track, {
+                        x: () => -(track.scrollWidth - wrapper.offsetWidth),
+                        ease: "none",
+                        scrollTrigger: {
+                            trigger: "#journey-scroll-section",
+                            start: "top top",
+                            end: () => "+=" + (track.scrollWidth - wrapper.offsetWidth),
+                            scrub: 1,
+                            pin: true,
+                            anticipatePin: 1,
+                            invalidateOnRefresh: true
+                        }
+                    });
+
+                    // Sync spine progress with horizontal scroll
+                    gsap.to('.timeline-spine-progress', {
+                        width: "100%",
+                        ease: "none",
+                        scrollTrigger: {
+                            trigger: "#journey-scroll-section",
+                            start: "top top",
+                            end: () => "+=" + (track.scrollWidth - wrapper.offsetWidth),
+                            scrub: 1
+                        }
+                    });
+
+                    // Activate items as they pass the center
+                    const milestoneItems = document.querySelectorAll('.milestone-item');
+                    milestoneItems.forEach((item) => {
+                        ScrollTrigger.create({
+                            trigger: item,
+                            containerAnimation: gsap.to(track, { x: () => -(track.scrollWidth - wrapper.offsetWidth), ease: "none" }), // Needs to reference the same animation
+                            start: "left center",
+                            end: "right center",
+                            onEnter: () => item.classList.add('active'),
+                            onLeaveBack: () => item.classList.remove('active'),
+                        });
+
+                        // Fallback simple activation if containerAnimation is tricky in this env
+                        gsap.to(item, {
+                            scrollTrigger: {
+                                trigger: item,
+                                start: "left center",
+                                containerAnimation: gsap.getProperty(track, "x"), // simplified
+                                onEnter: () => item.classList.add('active'),
+                            }
+                        });
+                    });
+
+                    // Direct activation based on track position (more reliable)
+                    ScrollTrigger.create({
+                        trigger: "#journey-scroll-section",
+                        start: "top top",
+                        end: () => "+=" + (track.scrollWidth - wrapper.offsetWidth),
+                        scrub: 1,
+                        onUpdate: (self) => {
+                            const progress = self.progress;
+                            const items = document.querySelectorAll('.milestone-item');
+                            const activeIndex = Math.floor(progress * items.length);
+                            items.forEach((item, i) => {
+                                if (i <= activeIndex) item.classList.add('active');
+                                else item.classList.remove('active');
+                            });
+                        }
+                    });
+
+                } else {
+                    // Vertical fallback for mobile
+                    const milestoneItems = document.querySelectorAll('.milestone-item');
+                    milestoneItems.forEach((item) => {
+                        gsap.to(item, {
+                            scrollTrigger: {
+                                trigger: item,
+                                start: "top 80%",
+                                onEnter: () => item.classList.add('active')
+                            }
+                        });
+                    });
+
+                    gsap.to('.timeline-spine-progress', {
+                        height: "100%",
+                        ease: "none",
+                        scrollTrigger: {
+                            trigger: ".horizontal-timeline-wrapper",
+                            start: "top 70%",
+                            end: "bottom 70%",
+                            scrub: 1
+                        }
+                    });
+                }
+
+                // Bar Charts Animation
+                const barFills = document.querySelectorAll('.bar-fill[data-width]');
+                barFills.forEach(fill => {
+                    gsap.to(fill, {
+                        width: fill.getAttribute('data-width'),
+                        duration: 1.5,
+                        ease: 'power2.out',
+                        scrollTrigger: {
+                            trigger: fill,
+                            start: 'top 90%'
+                        }
+                    });
+                });
+
+                // Histogram Bars Animation
+                const histogramBars = document.querySelectorAll('.histogram-bar');
+                histogramBars.forEach((bar, index) => {
+                    gsap.to(bar, {
+                        height: bar.getAttribute('data-height'),
+                        duration: 1,
+                        delay: index * 0.1,
+                        ease: 'power2.out',
+                        scrollTrigger: {
+                            trigger: '.histogram-container',
+                            start: 'top 85%'
+                        }
+                    });
+                });
+            }
+        });
+
         // Animate welcome text characters
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const chars = document.querySelectorAll('.welcome-3d-char');
             chars.forEach((char, index) => {
                 // Random delay for each character
                 const delay = Math.random() * 0.5;
                 char.style.animation = `float 3s ease-in-out ${delay}s infinite`;
-                
+
                 // Add mouse move effect
                 char.addEventListener('mousemove', (e) => {
                     const rect = char.getBoundingClientRect();
                     const x = e.clientX - rect.left;
                     const y = e.clientY - rect.top;
-                    
+
                     const centerX = rect.width / 2;
                     const centerY = rect.height / 2;
-                    
+
                     const angleX = (y - centerY) * 0.05;
                     const angleY = (centerX - x) * 0.05;
-                    
+
                     char.style.transform = `rotateX(${angleX}deg) rotateY(${angleY}deg) translateZ(20px)`;
                 });
-                
+
                 char.addEventListener('mouseleave', () => {
                     char.style.transform = 'rotateX(0) rotateY(0) translateZ(0)';
                 });
             });
-            
+
             // Create floating particles
             const particlesContainer = document.querySelector('.welcome-3d-particles');
             if (particlesContainer) {
@@ -4257,34 +3757,34 @@ session_start();
                 }
             }
         });
-        
+
         // Add smooth hover effect for all buttons with class btn-light
         document.querySelectorAll('.btn-light').forEach(button => {
-            button.addEventListener('mouseover', function() {
+            button.addEventListener('mouseover', function () {
                 this.style.transform = 'translateY(-3px)';
                 this.style.boxShadow = '0 7px 20px rgba(0, 0, 0, 0.2)';
             });
-            
-            button.addEventListener('mouseout', function() {
+
+            button.addEventListener('mouseout', function () {
                 this.style.transform = 'translateY(0)';
                 this.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.1)';
             });
         });
-        
+
         // Audit Flow Dropdown Toggle Function
         function toggleStep(element) {
             const step = element.closest('.flow-step');
             const stepNumber = parseInt(step.dataset.step);
             const allSteps = document.querySelectorAll('.flow-step');
-            
+
             // Check if this step is already active
             const isAlreadyActive = step.classList.contains('active');
-            
+
             // Close all steps first
             allSteps.forEach(otherStep => {
                 otherStep.classList.remove('active');
             });
-            
+
             // If the clicked step was not already active, activate it and all previous steps
             if (!isAlreadyActive) {
                 allSteps.forEach(otherStep => {
@@ -4294,36 +3794,36 @@ session_start();
                     }
                 });
             }
-            
+
             // Update progress bar based on highest step number
             updateProgress(isAlreadyActive ? 0 : stepNumber);
         }
-        
+
         // Update progress bar
         function updateProgress(highestStepNumber) {
             const totalSteps = document.querySelectorAll('.flow-step').length;
             const progressPercent = (highestStepNumber / totalSteps) * 100;
-            
+
             const progressFill = document.querySelector('.progress-fill');
             const currentStepText = document.querySelector('.current-step');
-            
+
             if (progressFill) {
                 progressFill.style.width = progressPercent + '%';
             }
-            
+
             if (currentStepText) {
                 currentStepText.textContent = `Step ${highestStepNumber}`;
             }
         }
-        
+
         // Initialize all steps as closed, only step 1 active
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const allSteps = document.querySelectorAll('.flow-step');
             // Remove active class from all steps first
             allSteps.forEach(step => {
                 step.classList.remove('active');
             });
-            
+
             // Then add active class only to step 1
             const firstStep = document.querySelector('.flow-step[data-step="1"]');
             if (firstStep) {
@@ -4333,4 +3833,5 @@ session_start();
         });
     </script>
 </body>
+
 </html>

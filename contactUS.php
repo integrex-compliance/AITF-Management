@@ -93,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ],
         ];
 
-        $applySmtpConfig = function(PHPMailer $mailer, array $cfg) use ($mailConfig) {
+        $applySmtpConfig = function (PHPMailer $mailer, array $cfg) use ($mailConfig) {
             $mailer->isSMTP();
             $mailer->SMTPDebug = 0; // keep logs clean on production
             $mailer->Debugoutput = 'error_log';
@@ -199,16 +199,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <?php include './headSource.php'; ?>
     <?php if ($recaptchaFrontendEnabled): ?>
         <?php if (($recaptchaConfig['version'] ?? 'v2_checkbox') === 'v3'): ?>
-            <script src="https://www.google.com/recaptcha/api.js?render=<?php echo urlencode($recaptchaConfig['site_key']); ?>"></script>
+            <script
+                src="https://www.google.com/recaptcha/api.js?render=<?php echo urlencode($recaptchaConfig['site_key']); ?>"></script>
         <?php else: ?>
             <script src="https://www.google.com/recaptcha/api.js" async defer></script>
         <?php endif; ?>
     <?php endif; ?>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <title>Contact Us - AITF Management Certification</title>
     <style>
@@ -271,8 +274,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         /* Quick Contact Strip */
         .quick-strip {
             background: #192734;
-            border-top: 1px solid rgba(255,255,255,0.1);
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             padding: 20px 0;
         }
 
@@ -347,16 +350,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             background: #192734;
             border-radius: 20px;
             padding: 40px;
-            border: 1px solid rgba(255,255,255,0.08);
+            border: 1px solid rgba(255, 255, 255, 0.08);
             transition: all 0.3s ease;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
             backdrop-filter: blur(4px);
         }
 
         .card:hover {
             border-color: rgba(29, 155, 240, 0.3);
             transform: translateY(-5px);
-            box-shadow: 0 16px 36px rgba(29,155,240,0.18);
+            box-shadow: 0 16px 36px rgba(29, 155, 240, 0.18);
         }
 
         .alert {
@@ -384,7 +387,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             gap: 15px;
             margin-bottom: 30px;
             padding-bottom: 20px;
-            border-bottom: 1px solid rgba(255,255,255,0.08);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         }
 
         .card-icon {
@@ -410,7 +413,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             display: flex;
             gap: 20px;
             padding: 20px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             transition: all 0.3s ease;
         }
 
@@ -464,7 +467,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .hours-section {
             margin-top: 30px;
             padding-top: 25px;
-            border-top: 1px solid rgba(255,255,255,0.08);
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
         }
 
         .hours-section h3 {
@@ -488,7 +491,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             display: flex;
             justify-content: space-between;
             padding: 12px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             font-size: 0.95rem;
         }
 
@@ -530,8 +533,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
         }
 
         .email-card h3 {
@@ -593,13 +603,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             gap: 15px;
             margin-top: 35px;
             padding-top: 30px;
-            border-top: 1px solid rgba(255,255,255,0.08);
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
         }
 
         .social-link {
             width: 50px;
             height: 50px;
-            background: rgba(255,255,255,0.05);
+            background: rgba(255, 255, 255, 0.05);
             border-radius: 12px;
             display: flex;
             align-items: center;
@@ -625,7 +635,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             background: #192734;
             border-radius: 20px;
             padding: 30px;
-            border: 1px solid rgba(255,255,255,0.08);
+            border: 1px solid rgba(255, 255, 255, 0.08);
         }
 
         .map-header {
@@ -694,13 +704,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .form-control {
             width: 100%;
             background: #111820;
-            border: 1px solid rgba(255,255,255,0.08);
+            border: 1px solid rgba(255, 255, 255, 0.08);
             color: #e7e9ea;
             padding: 14px 16px;
             border-radius: 12px;
             font-size: 1rem;
             transition: border-color 0.3s ease, box-shadow 0.3s ease;
-            box-shadow: inset 0 1px 3px rgba(0,0,0,0.35);
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
         }
 
         .form-control:focus {
@@ -727,8 +737,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             display: flex;
             align-items: center;
             gap: 10px;
-            background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 12px;
             padding: 10px 12px;
             color: #e7e9ea;
@@ -739,7 +749,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .service-chip:hover {
             border-color: #1d9bf0;
             transform: translateY(-2px);
-            box-shadow: 0 8px 18px rgba(29,155,240,0.15);
+            box-shadow: 0 8px 18px rgba(29, 155, 240, 0.15);
         }
 
         .service-chip input {
@@ -790,8 +800,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             gap: 10px;
             align-items: center;
             padding: 14px 16px;
-            background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 14px;
         }
 
@@ -802,7 +812,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             width: 100%;
         }
 
-        .captcha-wrap .g-recaptcha > div {
+        .captcha-wrap .g-recaptcha>div {
             max-width: 100% !important;
             margin: 0 auto;
         }
@@ -859,15 +869,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .loader-ring {
             width: 54px;
             height: 54px;
-            border: 4px solid rgba(255,255,255,0.16);
+            border: 4px solid rgba(255, 255, 255, 0.16);
             border-top-color: #1d9bf0;
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            box-shadow: 0 0 0 1px rgba(255,255,255,0.04);
+            box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04);
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         /* Floating Contact */
@@ -908,7 +920,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             font-size: 20px;
             color: white;
             text-decoration: none;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
             transition: all 0.3s ease;
         }
 
@@ -916,9 +928,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             transform: scale(1.1);
         }
 
-        .floating-option.whatsapp { background: #25D366; }
-        .floating-option.phone { background: #1d9bf0; }
-        .floating-option.email { background: #EA4335; }
+        .floating-option.whatsapp {
+            background: #25D366;
+        }
+
+        .floating-option.phone {
+            background: #1d9bf0;
+        }
+
+        .floating-option.email {
+            background: #EA4335;
+        }
 
         .floating-btn {
             width: 60px;
@@ -998,14 +1018,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     </style>
 </head>
-<body>
+
     <?php include './headerSource.php'; ?>
 
+    <!-- Blue Header section for navbar visibility -->
+    <div style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); padding-top: 140px;"></div>
+
     <!-- Hero Section -->
-    <section class="contact-hero">
+    <section class="contact-hero" style="margin-top: -60px;">
         <div class="hero-content">
             <h1>Lets Start Conversation</h1>
-            <p>We're here to help and answer any questions you might have. Reach out and we'll respond as soon as possible.</p>
+            <p>We're here to help and answer any questions you might have. Reach out and we'll respond as soon as
+                possible.</p>
         </div>
     </section>
 
@@ -1039,9 +1063,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <!-- Main Content -->
     <main class="main-container">
         <?php if ($successMsg): ?>
-            <div class="alert alert-success"><?php echo htmlspecialchars($successMsg, ENT_QUOTES, 'UTF-8'); ?></div>
+            <div class="alert alert-success">
+                <?php echo htmlspecialchars($successMsg, ENT_QUOTES, 'UTF-8'); ?>
+            </div>
         <?php elseif ($errorMsg): ?>
-            <div class="alert alert-error"><?php echo htmlspecialchars($errorMsg, ENT_QUOTES, 'UTF-8'); ?></div>
+            <div class="alert alert-error">
+                <?php echo htmlspecialchars($errorMsg, ENT_QUOTES, 'UTF-8'); ?>
+            </div>
         <?php endif; ?>
 
         <div class="contact-grid">
@@ -1060,7 +1088,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     <div class="contact-item-content">
                         <h4>Our Location</h4>
-                        <p>Devi Indrayani Wing B 26,<br>Gat No. 382+3+4/1, Near IT Park,<br>Talwade, Pune - 411 062<br>Maharashtra, India</p>
+                        <p>Devi Indrayani Wing B 26,<br>Gat No. 382+3+4/1, Near IT Park,<br>Talwade, Pune - 411
+                            062<br>Maharashtra, India</p>
                     </div>
                 </div>
 
@@ -1070,7 +1099,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     <div class="contact-item-content">
                         <h4>Phone Number</h4>
-                        <a href="tel:+919881691012" onclick="window.location.href='tel:+919881691012';">+91 9881691012</a>
+                        <a href="tel:+919881691012" onclick="window.location.href='tel:+919881691012';">+91
+                            9881691012</a>
                     </div>
                 </div>
 
@@ -1115,27 +1145,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="form-grid">
                         <div>
                             <label class="form-label" for="name">Name*</label>
-                            <input class="form-control" type="text" id="name" name="name" value="<?php echo htmlspecialchars($formData['name'], ENT_QUOTES, 'UTF-8'); ?>" required>
+                            <input class="form-control" type="text" id="name" name="name"
+                                value="<?php echo htmlspecialchars($formData['name'], ENT_QUOTES, 'UTF-8'); ?>"
+                                required>
                         </div>
                         <div>
                             <label class="form-label" for="email">Email*</label>
-                            <input class="form-control" type="email" id="email" name="email" value="<?php echo htmlspecialchars($formData['email'], ENT_QUOTES, 'UTF-8'); ?>" required>
+                            <input class="form-control" type="email" id="email" name="email"
+                                value="<?php echo htmlspecialchars($formData['email'], ENT_QUOTES, 'UTF-8'); ?>"
+                                required>
                         </div>
                         <div>
                             <label class="form-label" for="company">Company Name*</label>
-                            <input class="form-control" type="text" id="company" name="company" value="<?php echo htmlspecialchars($formData['company'], ENT_QUOTES, 'UTF-8'); ?>" required>
+                            <input class="form-control" type="text" id="company" name="company"
+                                value="<?php echo htmlspecialchars($formData['company'], ENT_QUOTES, 'UTF-8'); ?>"
+                                required>
                         </div>
                         <div>
                             <label class="form-label" for="mobile">Mobile Number*</label>
-                            <input class="form-control" type="text" id="mobile" name="mobile" value="<?php echo htmlspecialchars($formData['mobile'], ENT_QUOTES, 'UTF-8'); ?>" placeholder="+91 9881691012" required>
+                            <input class="form-control" type="text" id="mobile" name="mobile"
+                                value="<?php echo htmlspecialchars($formData['mobile'], ENT_QUOTES, 'UTF-8'); ?>"
+                                placeholder="+91 9881691012" required>
                         </div>
                         <div>
                             <label class="form-label"> Select Services Interested In*</label>
                             <div class="services-list">
                                 <?php foreach ($serviceOptions as $service): ?>
                                     <label class="service-chip">
-                                        <input type="checkbox" name="services[]" value="<?php echo htmlspecialchars($service, ENT_QUOTES, 'UTF-8'); ?>" <?php echo in_array($service, $formData['services']) ? 'checked' : ''; ?>>
-                                        <span><?php echo htmlspecialchars($service, ENT_QUOTES, 'UTF-8'); ?></span>
+                                        <input type="checkbox" name="services[]"
+                                            value="<?php echo htmlspecialchars($service, ENT_QUOTES, 'UTF-8'); ?>" <?php echo in_array($service, $formData['services']) ? 'checked' : ''; ?>>
+                                        <span>
+                                            <?php echo htmlspecialchars($service, ENT_QUOTES, 'UTF-8'); ?>
+                                        </span>
                                     </label>
                                 <?php endforeach; ?>
                             </div>
@@ -1143,26 +1184,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="form-grid full">
                             <div>
                                 <label class="form-label" for="about">Tell us about yourself / your requirement*</label>
-                                <textarea class="form-control" id="about" name="about" rows="5" required><?php echo htmlspecialchars($formData['about'], ENT_QUOTES, 'UTF-8'); ?></textarea>
+                                <textarea class="form-control" id="about" name="about" rows="5"
+                                    required><?php echo htmlspecialchars($formData['about'], ENT_QUOTES, 'UTF-8'); ?></textarea>
                             </div>
                         </div>
                     </div>
                     <div style="margin-top: 18px;">
                         <div class="captcha-wrap">
                             <?php if ($recaptchaBypass): ?>
-                                <div class="captcha-help">Localhost mode detected, captcha is bypassed on this local machine.</div>
+                                <div class="captcha-help">Localhost mode detected, captcha is bypassed on this local
+                                    machine.</div>
                             <?php elseif ($recaptchaReady && (($recaptchaConfig['version'] ?? 'v2_checkbox') === 'v2_checkbox')): ?>
-                                <div class="g-recaptcha" data-sitekey="<?php echo htmlspecialchars($recaptchaConfig['site_key'], ENT_QUOTES, 'UTF-8'); ?>" data-theme="<?php echo htmlspecialchars($recaptchaConfig['theme'], ENT_QUOTES, 'UTF-8'); ?>" data-callback="contactCaptchaSolved" data-expired-callback="contactCaptchaExpired"></div>
+                                <div class="g-recaptcha"
+                                    data-sitekey="<?php echo htmlspecialchars($recaptchaConfig['site_key'], ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-theme="<?php echo htmlspecialchars($recaptchaConfig['theme'], ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-callback="contactCaptchaSolved" data-expired-callback="contactCaptchaExpired">
+                                </div>
                             <?php elseif ($recaptchaReady): ?>
                                 <input type="hidden" name="g-recaptcha-response" id="contact-recaptcha-token">
-                                <div class="captcha-help">Spam protection is active. Your form will be verified automatically before submit.</div>
+                                <div class="captcha-help">Spam protection is active. Your form will be verified
+                                    automatically before submit.</div>
                             <?php else: ?>
-                                <div class="captcha-help">Captcha widget will appear after Google reCAPTCHA keys are added in `config/recaptcha_config.php`.</div>
+                                <div class="captcha-help">Captcha widget will appear after Google reCAPTCHA keys are added
+                                    in `config/recaptcha_config.php`.</div>
                             <?php endif; ?>
                         </div>
                         <button type="submit" class="submit-btn">Send Message</button>
-                        <div class="captcha-status" id="contact-captcha-status">Please complete the captcha to enable the submit button.</div>
-                        <div class="form-note">You will see a confirmation once your enquiry is sent. We typically respond within 24 hours.</div>
+                        <div class="captcha-status" id="contact-captcha-status">Please complete the captcha to enable
+                            the submit button.</div>
+                        <div class="form-note">You will see a confirmation once your enquiry is sent. We typically
+                            respond within 24 hours.</div>
                     </div>
                 </form>
             </div>
@@ -1179,7 +1230,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </a>
                 </div>
                 <div class="map-container">
-                    <iframe src="https://www.google.com/maps?q=Devi+Indrayani+Wing+B+26,+Gat+No.+382+3+4/1,+Near+IT+Park,+Talwade,+Pune+411062&output=embed" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                    <iframe
+                        src="https://www.google.com/maps?q=Devi+Indrayani+Wing+B+26,+Gat+No.+382+3+4/1,+Near+IT+Park,+Talwade,+Pune+411062&output=embed"
+                        allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
                 </div>
             </div>
         </div>
@@ -1191,10 +1244,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <a href="https://wa.me/919881691012" class="floating-option whatsapp" target="_blank" title="WhatsApp">
                 <i class="fab fa-whatsapp"></i>
             </a>
-            <a href="tel:+919881691012" class="floating-option phone" title="Call" onclick="window.location.href='tel:+919881691012';">
+            <a href="tel:+919881691012" class="floating-option phone" title="Call"
+                onclick="window.location.href='tel:+919881691012';">
                 <i class="fas fa-phone-alt"></i>
             </a>
-            <a href="https://mail.google.com/mail/?view=cm&fs=1&to=aitfindia@gmail.com" class="floating-option email" title="Email" target="_blank">
+            <a href="https://mail.google.com/mail/?view=cm&fs=1&to=aitfindia@gmail.com" class="floating-option email"
+                title="Email" target="_blank">
                 <i class="fas fa-envelope"></i>
             </a>
         </div>
@@ -1219,7 +1274,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Floating contact toggle
         const floatingBtn = document.getElementById('floatingBtn');
         const floatingContact = document.getElementById('floatingContact');
-        
+
         floatingBtn.addEventListener('click', () => {
             floatingContact.classList.toggle('active');
         });
@@ -1324,4 +1379,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     </script>
 </body>
+
 </html>

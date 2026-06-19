@@ -80,10 +80,37 @@
             left: 50%;
             transform: translateX(-50%);
         }
+        .header-blue-section {
+            padding: 160px 0 80px;
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+            margin-bottom: -100px;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header-blue-section h1 {
+            color: #ffffff;
+            font-weight: 800;
+            font-size: 3rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+            text-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        .header-blue-section p {
+            color: rgba(255,255,255,0.9);
+            font-size: 1.2rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
         .document-section {
-            padding: 120px 0 80px; /* Increased top padding to account for fixed navbar */
+            padding: 120px 0 80px;
             background-color: #f8f9fa;
-            margin-top: -40px; /* Compensate for any default margins */
+            position: relative;
+            z-index: 2;
         }
         
         /* Ensure content doesn't hide behind fixed navbar */
@@ -96,14 +123,17 @@
 <body id="home" data-spy="scroll" data-target="#navbar-wd" data-offset="98">
     <?php include './headerSource.php'; ?>
 
+    <!-- Blue Header Section -->
+    <div class="header-blue-section">
+        <div class="container">
+            <h1>Circular</h1>
+            <p>Communication regarding AITF Methodology for ISO 9001:2015 transition period formats.</p>
+        </div>
+    </div>
+
     <!-- Document Section -->
     <section class="document-section">
         <div class="container">
-            <div class="section-header">
-                <h2>Circular</h2>
-                <p>To communicate AITF Methodology of maintaining relevant formats of certification process, while transition period of ISO 9001:2008 to ISO 9001:2015</p>
-            </div>
-            
             <div class="row justify-content-center">
                 <div class="col-lg-8">
                     <div class="document-card text-center">

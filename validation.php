@@ -44,18 +44,27 @@ session_start();
             flex-direction: column;
         }
         
+        .validation-header-section {
+            padding: 160px 0 80px;
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+            margin-bottom: -120px;
+            position: relative;
+            z-index: 1;
+        }
+        
         .validation-container {
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(255, 255, 255, 0.98);
             backdrop-filter: blur(10px);
             border-radius: 16px;
             box-shadow: var(--shadow-lg);
             padding: 3rem;
-            margin: 2rem auto;
+            margin: 0 auto 3rem;
             max-width: 700px;
             width: 90%;
             position: relative;
             overflow: hidden;
             border: 1px solid rgba(255, 255, 255, 0.5);
+            z-index: 2;
         }
         
         .validation-container::before {
@@ -303,9 +312,15 @@ session_start();
     <head>
         <?php include './headerSource.php'; ?>
     </head>
-    <!-- Start Banner -->
+    
+    <div class="validation-header-section text-center">
+        <div class="container">
+            <h1 style="color: white; font-weight: 800; font-size: 3rem; text-transform: uppercase; letter-spacing: 2px;">Validation</h1>
+            <p style="color: rgba(255,255,255,0.9); font-size: 1.2rem;">Verify your AITF certification status</p>
+        </div>
+    </div>
 
-    <div class="container my-5">
+    <div class="container" style="position: relative; z-index: 10;">
         <div class="decoration decoration-1"></div>
         <div class="decoration decoration-2"></div>
         

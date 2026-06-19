@@ -23,6 +23,32 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
         }
+
+        .header-blue-section {
+            padding: 160px 0 80px;
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+            margin-bottom: -100px;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header-blue-section h1 {
+            color: #ffffff;
+            font-weight: 800;
+            font-size: 3rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+            text-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        .header-blue-section p {
+            color: rgba(255,255,255,0.9);
+            font-size: 1.2rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
         
         h1, h2, h3, h4, h5, h6 {
             font-weight: 700;
@@ -34,12 +60,13 @@
             background: #ffffff;
             border-radius: 12px;
             padding: 50px;
-            margin: 30px auto;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+            margin: 0 auto 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
             border: 1px solid #e2e8f0;
             max-width: 1200px;
             position: relative;
             overflow: hidden;
+            z-index: 2;
         }
         
         .document-section::before {
@@ -402,8 +429,16 @@
 <body id="home" data-spy="scroll" data-target="#navbar-wd" data-offset="98">
     <?php include './headerSource.php'; ?>
 
+    <!-- Blue Header Section -->
+    <div class="header-blue-section">
+        <div class="container">
+            <h1>Certification Guidelines</h1>
+            <p>Our comprehensive framework for granting, maintaining, and managing certifications.</p>
+        </div>
+    </div>
+
     <!-- Main Content -->
-    <div class="section margin-top_80">
+    <div class="section">
         <div class="container">
             <div class="document-section">
                 <!-- Document Header -->

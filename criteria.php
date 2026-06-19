@@ -22,9 +22,9 @@
             }
             
             .certification-section {
-                padding: 80px 0 40px;
-                margin-top: 60px;
-                background: linear-gradient(135deg, #f6f9ff 0%, #f0f4ff 100%);
+                padding: 140px 0 60px;
+                margin-top: 0;
+                background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
                 position: relative;
                 overflow: hidden;
             }
@@ -477,11 +477,11 @@
             <div class="row">
                 <div class="col-12">
                     <div class="certification-header text-center mb-5">
-                        <h1 class="fw-bold mb-4" style="color: #0d6efd; font-family: 'Montserrat', 'Poppins', sans-serif; font-size: 2.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; position: relative; display: inline-block; padding-bottom: 15px;">
+                        <h1 class="fw-bold mb-4" style="color: #ffffff; font-family: 'Montserrat', 'Poppins', sans-serif; font-size: 2.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; position: relative; display: inline-block; padding-bottom: 15px;">
                             <span style="position: relative; z-index: 1;">
                                 CERTIFICATION CRITERIA
                             </span>
-                            <span style="position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 120px; height: 4px; background: linear-gradient(90deg, #0d6efd, #0dcaf0); border-radius: 2px;"></span>
+                            <span style="position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 120px; height: 4px; background: #ffffff; border-radius: 2px;"></span>
                         </h1>
                     </div>
                 </div>

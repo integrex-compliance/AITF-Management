@@ -9,18 +9,22 @@
     <head>
         <?php include './headerSource.php'; ?>
     </head>
+    
+    <!-- Blue Header Section -->
+    <div class="header-blue-section">
+        <div class="container">
+            <h1>USE OF LOGO GUIDELINE</h1>
+            <p>Requirements for the use of AITF and NABCB logos and statements.</p>
+        </div>
+    </div>
+
     <!-- Start Banner -->
 
-    <div class="section margin-top_80">
+    <div class="section">
         <div class="container">
             <div class="row">
-                <div class="col-md-12 layout_padding_2">
+                <div class="col-md-12" style="position: relative; z-index: 10;">
                     <div class="full pt-0">
-                        <div class="text-center mb-4">
-                            <h1 style="font-size: 2.5rem; font-weight: 700; color: #2a5f9e; white-space: nowrap;">
-                                USE OF LOGO GUIDELINE
-                            </h1>
-                        </div>
                         <div class="d-flex flex-wrap gap-3 justify-content-center mt-3 mb-4">
                             <a href="text/Guideline_Client_to_Use_of_Logo.pdf" download class="btn btn-primary btn-lg">
                                 <i class="fa fa-download me-2"></i> Download Full Guidelines (PDF)
@@ -100,6 +104,32 @@
     </div>
 
     <style>
+        .header-blue-section {
+            padding: 160px 0 80px;
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+            margin-bottom: -100px;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header-blue-section h1 {
+            color: #ffffff;
+            font-weight: 800;
+            font-size: 3rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+            text-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        .header-blue-section p {
+            color: rgba(255,255,255,0.9);
+            font-size: 1.2rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
         .card {
             border: none;
             border-radius: 12px;

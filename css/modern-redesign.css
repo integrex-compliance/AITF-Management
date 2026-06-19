@@ -1,0 +1,292 @@
+/* Modern Redesign Styles for AITF */
+
+:root {
+    --primary-blue: #1e3a8a;
+    --accent-blue: #3b82f6;
+    --accent-green: #10b981;
+    --accent-gold: #fbbf24;
+    --dark-bg: #0f172a;
+    --glass-bg: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.1);
+}
+
+body {
+    background-color: var(--dark-bg);
+    color: #fff;
+    overflow-x: hidden;
+}
+
+/* Glassmorphism Utility */
+.glass-panel {
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
+}
+
+/* Hero Section */
+.modern-hero-redesign {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    padding-top: 80px;
+}
+
+.hero-node-container {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+}
+
+.hero-node {
+    position: absolute;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: var(--glass-bg);
+    border: 2px solid var(--accent-blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #fff;
+    box-shadow: 0 0 30px rgba(59, 130, 246, 0.3);
+    z-index: 2;
+}
+
+.hero-node.qms { top: 25%; left: 15%; border-color: #3b82f6; }
+.hero-node.ems { top: 65%; left: 25%; border-color: #10b981; }
+.hero-node.ohsms { top: 40%; left: 80%; border-color: #f59e0b; }
+
+.connection-lines {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+/* ISO Storytelling Section */
+.iso-story-section {
+    position: relative;
+}
+
+.iso-sticky-container {
+    height: 400vh; /* 4 screens */
+}
+
+.iso-screen {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 10%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    opacity: 0;
+    visibility: hidden;
+}
+
+.iso-screen.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.iso-visuals {
+    flex: 1;
+    height: 60vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.iso-text-content {
+    flex: 1;
+    max-width: 500px;
+}
+
+/* Milestones Section */
+.milestones-section {
+    padding: 100px 0;
+    position: relative;
+}
+
+.milestones-timeline {
+    position: relative;
+    max-width: 800px;
+    margin: 50px auto;
+}
+
+.timeline-spine {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: rgba(255,255,255,0.1);
+    transform: translateX(-50%);
+}
+
+.timeline-progress {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--accent-blue), var(--accent-green));
+    transform: translateX(-50%);
+    height: 0;
+}
+
+.milestone-item {
+    width: 50%;
+    padding: 20px 40px;
+    position: relative;
+    opacity: 0;
+    transform: translateY(30px);
+}
+
+.milestone-item.left { left: 0; text-align: right; }
+.milestone-item.right { left: 50%; text-align: left; }
+
+.milestone-dot {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    background: var(--accent-blue);
+    border-radius: 50%;
+    top: 30px;
+    box-shadow: 0 0 10px var(--accent-blue);
+}
+
+.milestone-item.left .milestone-dot { right: -8px; }
+.milestone-item.right .milestone-dot { left: -8px; }
+
+/* Audit Process Roadmap */
+.audit-roadmap-section {
+    padding: 100px 0;
+    background: #060b19;
+}
+
+.roadmap-container {
+    position: relative;
+    padding: 50px 0;
+}
+
+.roadmap-path {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: rgba(255,255,255,0.1);
+    transform: translateY(-50%);
+}
+
+.roadmap-progress {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    height: 4px;
+    background: var(--accent-blue);
+    transform: translateY(-50%);
+    width: 0;
+}
+
+.roadmap-step {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #0f172a;
+    border: 2px solid rgba(255,255,255,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.roadmap-step.active {
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 15px var(--accent-blue);
+}
+
+.roadmap-step.completed {
+    background: var(--accent-blue);
+    border-color: var(--accent-blue);
+}
+
+.step-label {
+    position: absolute;
+    top: 50px;
+    width: 150px;
+    text-align: center;
+    font-size: 0.8rem;
+    opacity: 0.6;
+}
+
+/* KPI Dashboard */
+.kpi-section {
+    padding: 80px 0;
+}
+
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 30px;
+}
+
+.kpi-card {
+    padding: 40px;
+    text-align: center;
+}
+
+.kpi-value {
+    font-size: 3rem;
+    font-weight: 800;
+    margin-bottom: 10px;
+    background: linear-gradient(90deg, #fff, var(--accent-blue));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* Trust Center */
+.trust-center {
+    padding: 120px 0;
+    background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+    text-align: center;
+}
+
+.trust-indicators {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    margin: 50px 0;
+    flex-wrap: wrap;
+}
+
+.trust-item {
+    opacity: 0.5;
+    transition: all 0.5s ease;
+}
+
+.trust-item.active {
+    opacity: 1;
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 10px var(--accent-blue));
+}

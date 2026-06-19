@@ -1000,20 +1000,19 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
     </head>
     
     <!-- Online Form Header -->
-    <div class="section" style="padding: 180px 0 60px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); position: relative;">
+    <div class="section" style="padding: 180px 0 60px; background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); position: relative; z-index: 1;">
         <div class="container">
             <div class="row justify-content-center">
                 <div class="col-lg-10">
                     <div style="text-align: center;">
                         <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem; margin-bottom: 20px; line-height: 1.6;">
-                            Please fill out the form below to submit your application for certification.
+                            Begin your journey to ISO Certification with our streamlined application process.
                         </p>
                         <h1 style="color: #fff; font-size: 3.5rem; font-weight: 800; margin-bottom: 25px; text-transform: uppercase; letter-spacing: 2px; position: relative; display: inline-block;">
                             APPLICATION FORM
-                            <span style="display: block; width: 80px; height: 4px; background: linear-gradient(90deg, #2196F3, #00BCD4); margin: 15px auto 0; border-radius: 2px;"></span>
+                            <span style="display: block; width: 80px; height: 4px; background: #ffffff; margin: 15px auto 0; border-radius: 2px;"></span>
                         </h1>
                         <p style="color: rgba(255,255,255,0.8); font-size: 1.2rem; max-width: 700px; margin: 25px auto 0; line-height: 1.8;">
-                            Begin your journey to ISO Certification with our streamlined application process.<br>
                             Fill the form below and take the first step towards excellence.
                         </p>
                     </div>
