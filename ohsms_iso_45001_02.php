@@ -368,6 +368,97 @@
             box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
         }
         
+        /* Section Labels & Headings */
+        .section-label {
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--secondary-color);
+            margin-bottom: 6px;
+        }
+        
+        .section-heading {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            padding-bottom: 14px;
+            border-bottom: 3px solid var(--accent-color);
+            display: flex;
+            align-items: center;
+        }
+        
+        .section-heading i {
+            color: var(--secondary-color);
+            font-size: 1.2rem;
+        }
+        
+        /* Outcome Items */
+        .outcome-item {
+            background: #f8fafc;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            transition: var(--transition);
+        }
+        
+        .outcome-item:hover {
+            border-color: var(--secondary-color);
+            box-shadow: 0 4px 12px rgba(43, 108, 176, 0.08);
+            transform: translateY(-2px);
+        }
+        
+        .outcome-item h5 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 4px;
+        }
+        
+        /* Module Items */
+        .module-item {
+            background: #f8fafc;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            transition: var(--transition);
+        }
+        
+        .module-item:hover {
+            border-color: var(--secondary-color);
+            box-shadow: 0 4px 12px rgba(43, 108, 176, 0.08);
+            transform: translateY(-2px);
+        }
+        
+        .module-item h5 {
+            font-size: 0.98rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        
+        .module-number {
+            width: 32px;
+            height: 32px;
+            min-width: 32px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: #ffffff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.85rem;
+            margin-right: 14px;
+        }
+        
+        /* Duration Badge */
+        .duration-badge {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: #ffffff;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+        
         /* Responsive Design */
         @media (max-width: 768px) {
             .hero-content h1 {
@@ -585,6 +676,7 @@
                         <p><strong>Course Name:</strong> ISO 45001:2018 Lead Auditor Training Course</p>
                         <p><strong>Duration:</strong> 5 Days</p>
                         <p><strong>Certification:</strong> Internationally Recognized Certificate</p>
+                        <p>The above duration training is customised as per organizational need. Please contact us in case of requirement.</p>
                     </div>
                 </div>
                 
@@ -626,79 +718,127 @@
                     </div>
                 </div>
             
-            <div class="row">
-                <div class="col-md-3 layout_padding_2">
-                    <div class="full" >
-                        <p style="color: #095a83; font-weight: bold;">WHO SHOULD ATTEND?</p>
+            <!-- WHO SHOULD ATTEND -->
+            <div class="glass-card fade-in mb-4" style="animation-delay: 0.7s;">
+                <div class="section-label"><i class="fas fa-user-friends me-2"></i>Participants</div>
+                <h3 class="section-heading"><i class="fas fa-user-friends me-2"></i>WHO SHOULD ATTEND?</h3>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="outcome-item d-flex align-items-start mb-3 p-3">
+                            <div class="icon-box d-flex align-items-center justify-content-center me-3"><i class="fas fa-user-check text-primary"></i></div>
+                            <div><h5>Aspiring OH&S Auditors</h5><p class="mb-0 text-muted" style="font-size:0.92rem;">Individuals who want to progress towards Certified OH&S Auditor status</p></div>
+                        </div>
+                        <div class="outcome-item d-flex align-items-start mb-3 p-3">
+                            <div class="icon-box d-flex align-items-center justify-content-center me-3"><i class="fas fa-search text-primary"></i></div>
+                            <div><h5>Audit Professionals</h5><p class="mb-0 text-muted" style="font-size:0.92rem;">Individuals interested in conducting first, second and third party audits</p></div>
+                        </div>
+                        <div class="outcome-item d-flex align-items-start mb-3 p-3">
+                            <div class="icon-box d-flex align-items-center justify-content-center me-3"><i class="fas fa-building text-primary"></i></div>
+                            <div><h5>Company Leaders</h5><p class="mb-0 text-muted" style="font-size:0.92rem;">Individuals leading their companies to ISO 45001 certification</p></div>
+                        </div>
+                        <div class="outcome-item d-flex align-items-start mb-3 p-3">
+                            <div class="icon-box d-flex align-items-center justify-content-center me-3"><i class="fas fa-hard-hat text-primary"></i></div>
+                            <div><h5>Health & Safety Managers</h5><p class="mb-0 text-muted" style="font-size:0.92rem;">Health and safety managers and occupational H&S managers</p></div>
+                        </div>
+                        <div class="outcome-item d-flex align-items-start mb-3 p-3">
+                            <div class="icon-box d-flex align-items-center justify-content-center me-3"><i class="fas fa-shield-alt text-primary"></i></div>
+                            <div><h5>Safety Professionals</h5><p class="mb-0 text-muted" style="font-size:0.92rem;">Industrial hygienists and safety professionals</p></div>
+                        </div>
                     </div>
-                </div>
-                <div class="col-md-9">
-                    <div class="full">
-                        <p><span class="fa fa-arrow-circle-right"> &nbsp;</span>Individuals who want to progress towards Certified OH&S Auditor status</p>
-                        <p><span class="fa fa-arrow-circle-right"> &nbsp;</span>Individuals interested in conducting first, second and third party audits</p>
-                        <p><span class="fa fa-arrow-circle-right"> &nbsp;</span>Individuals leading their companies to ISO 45001 certification</p>
-                        <p><span class="fa fa-arrow-circle-right"> &nbsp;</span>Health and safety managers</p>
-                        <p><span class="fa fa-arrow-circle-right"> &nbsp;</span>Industrial hygienists and safety professionals</p>
-                        <p><span class="fa fa-arrow-circle-right"> &nbsp;</span>Occupational health and safety managers</p>
-                        <p><span class="fa fa-arrow-circle-right"> &nbsp;</span>Internal audit coordinators</p>
-                        <p><span class="fa fa-arrow-circle-right"> &nbsp;</span>Corporate or division H&S auditors</p>
-                        <p><span class="fa fa-arrow-circle-right"> &nbsp;</span>Corporate loss control/risk managers</p>
-                        <p><span class="fa fa-arrow-circle-right"> &nbsp;</span>Certification body auditors</p>
+                    <div class="col-md-6">
+                        <div class="outcome-item d-flex align-items-start mb-3 p-3">
+                            <div class="icon-box d-flex align-items-center justify-content-center me-3"><i class="fas fa-clipboard-check text-primary"></i></div>
+                            <div><h5>Internal Audit Coordinators</h5><p class="mb-0 text-muted" style="font-size:0.92rem;">Internal audit coordinators and corporate H&S auditors</p></div>
+                        </div>
+                        <div class="outcome-item d-flex align-items-start mb-3 p-3">
+                            <div class="icon-box d-flex align-items-center justify-content-center me-3"><i class="fas fa-exclamation-triangle text-primary"></i></div>
+                            <div><h5>Risk Managers</h5><p class="mb-0 text-muted" style="font-size:0.92rem;">Corporate loss control/risk managers</p></div>
+                        </div>
+                        <div class="outcome-item d-flex align-items-start mb-3 p-3">
+                            <div class="icon-box d-flex align-items-center justify-content-center me-3"><i class="fas fa-stamp text-primary"></i></div>
+                            <div><h5>Certification Body Auditors</h5><p class="mb-0 text-muted" style="font-size:0.92rem;">Certification body auditors and third-party assessors</p></div>
+                        </div>
                     </div>
                 </div>
             </div>
-            <br>
-            <div class="row">
-                <div class="col-md-3 layout_padding_2">
-                    <div class="full" >
-                        <p style="color: #095a83; font-weight: bold;">Course content:</p>
+            <!-- COURSE CONTENT -->
+            <div class="glass-card fade-in mb-4" style="animation-delay: 0.8s;">
+                <div class="section-label"><i class="fas fa-book me-2"></i>Curriculum</div>
+                <h3 class="section-heading"><i class="fas fa-book me-2"></i>COURSE CONTENT</h3>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="module-item p-3 mb-3">
+                            <div class="d-flex align-items-center"><div class="module-number">1</div><h5 class="mb-0">ISO 45000 Standards Series</h5></div>
+                            <p class="text-muted mb-0 mt-2" style="font-size:0.9rem;">Overview of the ISO 45000 family of standards</p>
+                        </div>
+                        <div class="module-item p-3 mb-3">
+                            <div class="d-flex align-items-center"><div class="module-number">2</div><h5 class="mb-0">Auditing Process Approach</h5></div>
+                            <p class="text-muted mb-0 mt-2" style="font-size:0.9rem;">Including the PDCA Cycle methodology</p>
+                        </div>
+                        <div class="module-item p-3 mb-3">
+                            <div class="d-flex align-items-center"><div class="module-number">3</div><h5 class="mb-0">Auditing ISO 45001:2018</h5></div>
+                            <p class="text-muted mb-0 mt-2" style="font-size:0.9rem;">Standard requirements auditing</p>
+                        </div>
+                        <div class="module-item p-3 mb-3">
+                            <div class="d-flex align-items-center"><div class="module-number">4</div><h5 class="mb-0">OH&S Documentation</h5></div>
+                            <p class="text-muted mb-0 mt-2" style="font-size:0.9rem;">Auditing Health & Safety Management Systems Documentation</p>
+                        </div>
+                        <div class="module-item p-3 mb-3">
+                            <div class="d-flex align-items-center"><div class="module-number">5</div><h5 class="mb-0">Audit Planning</h5></div>
+                            <p class="text-muted mb-0 mt-2" style="font-size:0.9rem;">Audit Plan development and preparation</p>
+                        </div>
+                        <div class="module-item p-3 mb-3">
+                            <div class="d-flex align-items-center"><div class="module-number">6</div><h5 class="mb-0">Auditing ISO 19011</h5></div>
+                            <p class="text-muted mb-0 mt-2" style="font-size:0.9rem;">ISO 19011:2011 standard requirements</p>
+                        </div>
                     </div>
-                </div>
-                <div class="col-md-9">
-                    <div class="full">
-                        <p><span class="fa fa-arrow-circle-right"> &nbsp;</span>ISO 45000 standards series</p>
-                        <p><span class="fa fa-arrow-circle-right"> &nbsp;</span>Auditing Process Approach including the PDCA Cycle</p>
-                        <p><span class="fa fa-arrow-circle-right"> &nbsp;</span>Auditing ISO 45001:2018 Standard requirements</p>
-                        <p><span class="fa fa-arrow-circle-right"> &nbsp;</span>Auditing Occupational Health & Safety Management Systems Documentation</p>
-                        <p><span class="fa fa-arrow-circle-right"> &nbsp;</span>Audit Planning- Audit Plan</p>
-                        <p><span class="fa fa-arrow-circle-right"> &nbsp;</span>Auditing ISO 19011 standard requirements</p>
-                        <p><span class="fa fa-arrow-circle-right"> &nbsp;</span>Auditing Standard ISO 19011:2011 requirements</p>
-                        <p><span class="fa fa-arrow-circle-right"> &nbsp;</span>Auditing Roles and Responsibilities of Auditor</p>
-                        <p><span class="fa fa-arrow-circle-right"> &nbsp;</span>Checklists, Non Conformance Reports</p>
-                        <p><span class="fa fa-arrow-circle-right"> &nbsp;</span>Audit Reporting</p>
-                        <p><span class="fa fa-arrow-circle-right"> &nbsp;</span>Final Team Meeting / Follow-up</p>
-                        <p><span class="fa fa-arrow-circle-right"> &nbsp;</span>Verification / Audit Records</p>
-                        <p><span class="fa fa-arrow-circle-right"> &nbsp;</span>Accreditation / Certification and Auditor Registration</p>
-                        <p><span class="fa fa-arrow-circle-right"> &nbsp;</span>Exercises, case study etc</p>
-                        <p><span class="fa fa-arrow-circle-right"> &nbsp;</span>Course Examination</p>
-                        <p><span class="fa fa-arrow-circle-right"> &nbsp;</span>Accreditation/ Certification and Auditor Registration</p>
+                    <div class="col-md-6">
+                        <div class="module-item p-3 mb-3">
+                            <div class="d-flex align-items-center"><div class="module-number">7</div><h5 class="mb-0">Roles & Responsibilities</h5></div>
+                            <p class="text-muted mb-0 mt-2" style="font-size:0.9rem;">Auditor roles and responsibilities</p>
+                        </div>
+                        <div class="module-item p-3 mb-3">
+                            <div class="d-flex align-items-center"><div class="module-number">8</div><h5 class="mb-0">Checklists & NCR</h5></div>
+                            <p class="text-muted mb-0 mt-2" style="font-size:0.9rem;">Checklists, Non Conformance Reports</p>
+                        </div>
+                        <div class="module-item p-3 mb-3">
+                            <div class="d-flex align-items-center"><div class="module-number">9</div><h5 class="mb-0">Audit Reporting</h5></div>
+                            <p class="text-muted mb-0 mt-2" style="font-size:0.9rem;">Final Team Meeting / Follow-up procedures</p>
+                        </div>
+                        <div class="module-item p-3 mb-3">
+                            <div class="d-flex align-items-center"><div class="module-number">10</div><h5 class="mb-0">Verification & Records</h5></div>
+                            <p class="text-muted mb-0 mt-2" style="font-size:0.9rem;">Verification and Audit Records management</p>
+                        </div>
+                        <div class="module-item p-3 mb-3">
+                            <div class="d-flex align-items-center"><div class="module-number">11</div><h5 class="mb-0">Accreditation & Certification</h5></div>
+                            <p class="text-muted mb-0 mt-2" style="font-size:0.9rem;">Certification and Auditor Registration process</p>
+                        </div>
+                        <div class="module-item p-3 mb-3">
+                            <div class="d-flex align-items-center"><div class="module-number">12</div><h5 class="mb-0">Exercises & Examination</h5></div>
+                            <p class="text-muted mb-0 mt-2" style="font-size:0.9rem;">Exercises, case study, and Course Examination</p>
+                        </div>
                     </div>
                 </div>
             </div>
             
-            <div class="row">
-                <div class="col-md-3 layout_padding_2">
-                    <div class="full" >
-                        <p style="color: #095a83; font-weight: bold;">Course Structure:</p>
-                    </div>
-                </div>
-                <div class="col-md-9">
-                    <div class="full">
-                        <p>Course starts at 8:30 A.M. and ends at 6:30 P.M. The course includes a series of presentations, Examples, Exercises involving group activities, Brain Storming, Readings and Sharing of Practical Experiences followed by 45 minutes Lunch Break.</p>
-                    </div>
+            <!-- COURSE STRUCTURE -->
+            <div class="glass-card fade-in mb-4" style="animation-delay: 0.9s;">
+                <div class="section-label"><i class="fas fa-chalkboard-teacher me-2"></i>Schedule</div>
+                <h3 class="section-heading"><i class="fas fa-chalkboard-teacher me-2"></i>COURSE STRUCTURE</h3>
+                <div class="outcome-item p-3">
+                    <p class="mb-0" style="font-size: 0.98rem; color: #475569; line-height: 1.8;">Course starts at <strong>8:30 A.M.</strong> and ends at <strong>6:30 P.M.</strong> The course includes a series of presentations, Examples, Exercises involving group activities, Brain Storming, Readings and Sharing of Practical Experiences followed by <strong>45 minutes Lunch Break</strong>.</p>
                 </div>
             </div>
-            
-            <div class="row">
-                <div class="col-md-3 layout_padding_2">
-                    <div class="full" >
-                        <p style="color: #095a83; font-weight: bold;">Duration:</p>
+
+            <!-- DURATION -->
+            <div class="glass-card fade-in mb-4" style="animation-delay: 1s;">
+                <div class="section-label"><i class="fas fa-calendar-alt me-2"></i>Duration</div>
+                <h3 class="section-heading"><i class="fas fa-clock me-2"></i>DURATION</h3>
+                <div class="duration-section p-4" style="text-align: center;">
+                    <div class="duration-badge d-inline-block px-5 py-3 mb-3">
+                        <i class="fas fa-hourglass-half me-2"></i>5 Days (40 Hours)
                     </div>
-                </div>
-                <div class="col-md-9">
-                    <div class="full">
-                        <p>5 Days</p>
-                    </div>
+                    <p class="mb-0 mt-2" style="font-size: 0.92rem; color: #64748b; font-style: italic;">The above duration training is customised as per organizational need. Please contact us in case of requirement.</p>
                 </div>
             </div>
             
@@ -712,8 +852,8 @@
     <section class="section bg-light">
         <div class="container">
             <div class="section-title">
-                <h2>Course Content</h2>
-                <p class="lead">Comprehensive coverage of OH&S management systems</p>
+                <h2>What You'll Learn</h2>
+                <p class="lead">Comprehensive coverage of OH&S management systems and auditing processes</p>
             </div>
             
             <div class="row">

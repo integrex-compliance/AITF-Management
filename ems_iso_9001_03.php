@@ -78,6 +78,7 @@
                     <div class="full" >
                         <p style="color: #095a83; font-weight: bold;">Duration:</p>
                     </div>
+                    
                 </div>
                 <div class="col-md-9">
                     <div class="full">
@@ -85,6 +86,7 @@
                     </div>
                 </div>
             </div>
+            <p >The above duration training is customised as per organizational need. Please contact us in case of requirement.</p>
 
             <div class="row">
                 <div class="col-md-3 layout_padding_2">

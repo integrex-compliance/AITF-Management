@@ -81,7 +81,7 @@
                             <div class="guideline-section mt-4">
                                 <h4><i class="fa fa-info-circle text-info me-2"></i>Important Notes</h4>
                                 <div class="alert alert-warning">
-                                    <h5><i class="fa fa-exclamation-triangle me-2"></i>Immediate Discontinuation Required For:</h5>
+                                    <h5><i class="fa fa-exclamation-triangle me-2"></i>Immediate Discontinuation of Logo usages Required For:</h5>
                                     <ul class="mb-0">
                                         <li>Suspension or withdrawal of certification</li>
                                         <li>Unauthorized changes to management system</li>
@@ -90,7 +90,7 @@
                                 </div>
                                 
                                 <div class="alert alert-danger mt-3">
-                                    <h5><i class="fa fa-exclamation-circle me-2"></i>Misuse Consequences:</h5>
+                                    <h5><i class="fa fa-exclamation-circle me-2"></i> Consequences for Misuse:</h5>
                                     <p class="mb-0">Misuse may result in corrective actions, withdrawal of certification, publication of transgression, and legal action as per the guidelines document.</p>
                                 </div>
                             </div>

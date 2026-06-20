@@ -245,12 +245,16 @@
                 <div class="col-md-6 mb-4">
                     <div class="info-card animate-on-scroll">
                         <h3><i class="far fa-clock"></i> Course Duration</h3>
+
                         <div class="d-flex align-items-center mt-3">
                             <div class="text-center p-3 bg-light rounded mr-4">
                                 <h2 class="mb-0 text-primary">2</h2>
                                 <small>Days</small>
+                               
                             </div>
+
                             <div>
+                                 <p>The below duration training is customised as per organizational need. Please contact us in case of requirement.</p>
                                 <p class="mb-1"><i class="far fa-calendar-alt text-primary mr-2"></i> 9:00 AM - 6:00 PM Daily</p>
                                 <p class="mb-1"><i class="fas fa-users text-primary mr-2"></i> Max 20 Participants</p>
                             </div>

@@ -280,6 +280,7 @@
                         <div class="info-content">
                             <p><strong>Training:</strong> Awareness Course: BCMS ISO 22301</p>
                             <p><strong>Duration:</strong> 1 Day (9:00 AM to 6:00 PM)</p>
+                            <p style="font-size: 0.90rem; color: #6c757d; font-style: italic; margin-top: 8px;">The above duration training is customised as per organizational need. Please contact us in case of requirement.</p>
                             <p><strong>Maximum Participants:</strong> 20 Delegates</p>
                             <p><strong>Eligibility:</strong> No prior knowledge or experience required</p>
                         </div>

@@ -353,6 +353,7 @@
                     <div class="col-md-6">
                         <h5 style="color: var(--primary-color);">Course Details</h5>
                         <p><strong>Duration:</strong> 1 Day Intensive Training</p>
+                        <p>The above duration training is customised as per organizational need. Please contact us in case of requirement.</p> 
                         <p><strong>Format:</strong> Interactive workshop with practical exercises</p>
                         <p><strong>Materials:</strong> Comprehensive course manual and handouts</p>
                         <p><strong>Assessment:</strong> End-of-course examination</p>

@@ -199,6 +199,7 @@
                         <h3><i class="fas fa-info-circle"></i> Training Details</h3>
                         <p><strong>Course:</strong> Awareness Course: ISMS 27001</p>
                         <p><strong>Duration:</strong> 1 Day</p>
+                        <p style="font-size: 0.90rem; color: #6c757d; font-style: italic; margin-top: 8px;">The above duration training is customised as per organizational need. Please contact us in case of requirement.</p>
                         <p><strong>Class Timing:</strong> 9:00 AM to 6:00 PM</p>
                         <p><strong>Maximum Participants:</strong> 20 Delegates</p>
                     </div>

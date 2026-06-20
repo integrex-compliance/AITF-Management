@@ -421,6 +421,7 @@
                             <li>Weekend Batches Available</li>
                             <li>Customized Training Solutions</li>
                         </ul>
+                        <p style="font-size: 0.90rem; color: #6c757d; font-style: italic; margin-top: 12px; padding: 10px; background-color: #f8f9fa; border-radius: 5px;">The above duration training is customised as per organizational need. Please contact us in case of requirement.</p>
                     </div>
                 </div>
             </div>

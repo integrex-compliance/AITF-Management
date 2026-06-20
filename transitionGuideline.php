@@ -376,7 +376,7 @@
                                     </section>
 
                                     <!-- Quick Links -->
-                                    <div class="card mb-4">
+                                    <!-- <div class="card mb-4">
                                         <div class="card-header bg-light">
                                             <h4 class="h6 mb-0">Quick Links</h4>
                                         </div>
@@ -393,7 +393,7 @@
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            </div> -->
 
                             <!-- Principles Section -->
                             <section id="principles" class="card mb-4">

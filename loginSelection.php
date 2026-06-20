@@ -21,8 +21,6 @@ $recaptchaFrontendEnabled = $recaptchaReady && !$recaptchaBypass;
 ?>
 <!DOCTYPE html>
 <html lang="en">
-aasdasasf
-
 <head>
     <?php include './headSource.php'; ?>
     <?php if ($recaptchaFrontendEnabled): ?>
@@ -45,9 +43,9 @@ aasdasasf
             justify-content: center;
             padding: 80px 16px 60px;
             background:
-                radial-gradient(circle at 20% 30%, rgba(249, 115, 22, 0.12), transparent 40%),
-                radial-gradient(circle at 80% 70%, rgba(234, 88, 12, 0.15), transparent 45%),
-                linear-gradient(135deg, #fff7ed, #ffedd5);
+                radial-gradient(circle at 20% 30%, rgba(37, 99, 235, 0.15), transparent 40%),
+                radial-gradient(circle at 80% 70%, rgba(59, 130, 246, 0.12), transparent 45%),
+                linear-gradient(135deg, #0f172a, #1e293b);
             position: relative;
             overflow: hidden;
         }
@@ -57,7 +55,7 @@ aasdasasf
             position: absolute;
             width: 600px;
             height: 600px;
-            background: radial-gradient(circle, rgba(249, 115, 22, 0.08) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(37, 99, 235, 0.1) 0%, transparent 70%);
             top: -300px;
             left: -300px;
             z-index: 0;
@@ -68,7 +66,7 @@ aasdasasf
             position: absolute;
             width: 600px;
             height: 600px;
-            background: radial-gradient(circle, rgba(234, 88, 12, 0.08) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, transparent 70%);
             bottom: -300px;
             right: -300px;
             z-index: 0;
@@ -79,10 +77,10 @@ aasdasasf
             width: 100%;
             background: rgba(255, 255, 255, 0.98);
             border-radius: 20px;
-            box-shadow: 0 10px 35px rgba(15, 23, 42, 0.15);
+            box-shadow: 0 10px 35px rgba(0, 0, 0, 0.4);
             padding: 40px 32px;
             margin: 20px auto 30px;
-            border: 1px solid rgba(226, 232, 240, 0.7);
+            border: 1px solid rgba(51, 65, 85, 0.3);
             backdrop-filter: blur(12px);
             position: relative;
             z-index: 1;
@@ -92,7 +90,7 @@ aasdasasf
 
         .login-selection-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 18px 50px rgba(15, 23, 42, 0.2);
+            box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
         }
 
         .login-selection-card::before {
@@ -102,7 +100,7 @@ aasdasasf
             left: 0;
             right: 0;
             height: 6px;
-            background: linear-gradient(90deg, #f97316, #ea580c);
+            background: linear-gradient(90deg, #2563eb, #3b82f6);
         }
 
         .login-captcha-wrap {
@@ -114,7 +112,7 @@ aasdasasf
             padding: 12px 14px;
             border: 1px solid #e2e8f0;
             border-radius: 14px;
-            background: #f8fafc;
+            background: #f1f5f9;
             min-height: 92px;
         }
 
@@ -140,7 +138,7 @@ aasdasasf
         .login-submit-btn {
             width: 100%;
             border-radius: 999px;
-            background: linear-gradient(135deg, #f97316, #ea580c);
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
             border: none;
             color: #fff;
             padding: 12px 18px;
@@ -148,13 +146,13 @@ aasdasasf
             letter-spacing: 0.06em;
             text-transform: uppercase;
             cursor: pointer;
-            box-shadow: 0 10px 25px rgba(234, 88, 12, 0.35);
+            box-shadow: 0 10px 25px rgba(37, 99, 235, 0.35);
             transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
         }
 
         .login-submit-btn:hover:not(:disabled) {
             transform: translateY(-1px);
-            box-shadow: 0 14px 30px rgba(234, 88, 12, 0.45);
+            box-shadow: 0 14px 30px rgba(37, 99, 235, 0.45);
         }
 
         .login-submit-btn:disabled {
@@ -172,7 +170,7 @@ aasdasasf
             letter-spacing: -0.01em;
             position: relative;
             display: block;
-            background: linear-gradient(90deg, #ea580c, #c2410c);
+            background: linear-gradient(90deg, #2563eb, #3b82f6);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -207,7 +205,7 @@ aasdasasf
         .login-tab-btn {
             padding: 14px 26px;
             border-radius: 10px;
-            border: 1px solid #e2e8f0;
+            border: 2px solid #e2e8f0;
             outline: none;
             cursor: pointer;
             font-size: 15px;
@@ -240,10 +238,10 @@ aasdasasf
         }
 
         .login-tab-btn.active {
-            background: linear-gradient(135deg, #f97316, #ea580c);
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
             color: #ffffff;
             border-color: transparent;
-            box-shadow: 0 6px 20px rgba(249, 115, 22, 0.3);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.3);
             transform: translateY(-2px);
             position: relative;
             z-index: 1;
@@ -335,25 +333,16 @@ aasdasasf
         }
 
         .password-toggle:hover {
-            color: #f97316;
+            color: #2563eb;
         }
 
         .login-panel input[type="text"]:focus,
         .login-panel input[type="password"]:focus,
         .login-panel input[type="email"]:focus {
             outline: none;
-            border-color: #fdba74;
-            box-shadow: 0 0 0 3px rgba(253, 186, 116, 0.3);
+            border-color: #93c5fd;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
             background-color: #ffffff;
-        }
-
-        border-radius: 12px;
-        border: 1px solid #e2e8f0;
-        font-size: 15px;
-        background: #f8fafc;
-        color: #1e293b;
-        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: 0 2px 4px rgba(15, 23, 42, 0.03);
         }
 
         .login-panel input[type="text"]::placeholder,
@@ -364,27 +353,27 @@ aasdasasf
         .login-panel input[type="text"]:focus,
         .login-panel input[type="password"]:focus {
             outline: none;
-            border-color: #fdba74;
-            box-shadow: 0 0 0 3px rgba(253, 186, 116, 0.4);
+            border-color: #93c5fd;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
             background: #ffffff;
         }
 
         .login-panel input[type="text"]:focus+i,
         .login-panel input[type="password"]:focus+i {
-            color: #f97316;
+            color: #2563eb;
         }
 
         .login-panel input[type="submit"] {
             width: 100%;
             border-radius: 30px;
-            background: linear-gradient(135deg, #ea580c, #c2410c);
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
             color: #ffffff;
             font-weight: 600;
             font-size: 15px;
             padding: 12px 16px 12px 50px;
             border: none;
             cursor: pointer;
-            box-shadow: 0 4px 15px rgba(234, 88, 12, 0.4);
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
             transition: all 0.3s ease;
             margin-top: 10px;
             position: relative;
@@ -401,7 +390,7 @@ aasdasasf
             transform: translateY(-50%);
             width: 30px;
             height: 30px;
-            background: #fb923c;
+            background: #3b82f6;
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -417,8 +406,8 @@ aasdasasf
 
         .login-panel input[type="submit"]:hover:not(:disabled) {
             transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(234, 88, 12, 0.6);
-            background: linear-gradient(135deg, #c2410c, #9a3412);
+            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.6);
+            background: linear-gradient(135deg, #1d4ed8, #1e40af);
         }
 
         .login-panel input[type="submit"]:disabled {
@@ -429,7 +418,7 @@ aasdasasf
 
         .login-selection-note {
             font-size: 13px;
-            color: #64748b;
+            color: #94a3b8;
             text-align: center;
             margin-top: 24px;
             line-height: 1.5;
@@ -445,7 +434,7 @@ aasdasasf
             transform: translateX(-50%);
             width: 60px;
             height: 2px;
-            background: linear-gradient(90deg, #e2e8f0, #94a3b8, #e2e8f0);
+            background: linear-gradient(90deg, #334155, #475569, #334155);
             border-radius: 2px;
         }
 
@@ -561,9 +550,7 @@ aasdasasf
 
 <body id="home" data-spy="scroll" data-target="#navbar-wd" data-offset="98">
 
-    <head>
-        <?php include './headerSource.php'; ?>
-    </head>
+    <?php include './headerSource.php'; ?>
 
     <div id="login-loading-overlay" class="login-loading-overlay">
         <div class="login-loading-box">

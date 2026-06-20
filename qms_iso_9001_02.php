@@ -565,6 +565,7 @@
                     <div class="glass-card text-center py-4">
                         <h3 class="text-primary mb-0">Duration: <span class="badge bg-primary text-white px-3 py-2">5 Days</span></h3>
                         <p class="mt-3 mb-0">Comprehensive training with hands-on exercises and practical applications</p>
+                        <p class="mt-2 mb-0" style="font-size: 0.92rem; color: #6c757d; font-style: italic;">The above duration training is customised as per organizational need. Please contact us in case of requirement.</p>
                     </div>
                 </div>
             </div>

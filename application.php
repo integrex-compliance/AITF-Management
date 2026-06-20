@@ -963,32 +963,288 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                 padding: 20px 15px;
             }
             
-            /* Header responsive adjustments */
-            .section[style*="background: linear-gradient"] h1 {
-                font-size: 2.5rem !important;
+            .app-hero-header {
+                padding: 100px 0 28px !important;
             }
-            
-            .section[style*="background: linear-gradient"] p {
-                font-size: 1rem !important;
+
+            .app-hero-header h1 {
+                font-size: 1.8rem !important;
             }
-            
-            .section[style*="background: linear-gradient"] {
-                padding: 140px 0 40px !important;
+
+            .app-hero-header p {
+                font-size: 0.9rem !important;
             }
         }
         
         @media (max-width: 576px) {
-            .section[style*="background: linear-gradient"] h1 {
-                font-size: 2rem !important;
+            .app-hero-header {
+                padding: 95px 0 24px !important;
             }
-            
-            .section[style*="background: linear-gradient"] {
-                padding: 120px 0 40px !important;
+
+            .app-hero-header h1 {
+                font-size: 1.5rem !important;
             }
 
             .captcha-wrap .g-recaptcha {
                 transform: scale(0.92);
                 transform-origin: center top;
+            }
+        }
+
+        /* ===== Tab Navigation ===== */
+        .app-tab-bar {
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            gap: 12px !important;
+            padding: 20px 0 !important;
+            margin: 0 auto !important;
+            position: relative !important;
+            z-index: 10 !important;
+            list-style: none !important;
+            border-bottom: none !important;
+            max-width: 700px !important;
+        }
+
+        .app-tab-btn {
+            position: relative !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 10px !important;
+            padding: 14px 28px !important;
+            font-family: 'Poppins', sans-serif !important;
+            font-size: 0.88rem !important;
+            font-weight: 600 !important;
+            letter-spacing: 0.02em !important;
+            border: 2px solid #e2e8f0 !important;
+            border-radius: 12px !important;
+            cursor: pointer !important;
+            transition: all 0.25s ease !important;
+            background: #ffffff !important;
+            color: #64748b !important;
+            margin: 0 !important;
+            outline: none !important;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
+            text-transform: none !important;
+            line-height: 1.4 !important;
+            white-space: nowrap !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+            flex: 1 !important;
+            max-width: 320px !important;
+        }
+
+        .app-tab-btn .tab-badge {
+            display: inline-block !important;
+            padding: 2px 8px !important;
+            font-size: 0.58rem !important;
+            font-weight: 700 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.05em !important;
+            border-radius: 999px !important;
+            background: #e0e7ff !important;
+            color: #3b82f6 !important;
+            line-height: 1.4 !important;
+            vertical-align: middle !important;
+        }
+
+        .app-tab-btn.active {
+            background: linear-gradient(135deg, #eff6ff, #f0f4ff) !important;
+            color: #1e3a8a !important;
+            border: 2px solid #2563eb !important;
+            font-weight: 700 !important;
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.15), 0 0 0 1px rgba(37, 99, 235, 0.06) !important;
+        }
+
+        .app-tab-btn.active .tab-badge {
+            background: #2563eb !important;
+            color: #fff !important;
+        }
+
+        .app-tab-btn.active i {
+            color: #2563eb !important;
+        }
+
+        .app-tab-btn:not(.active):hover {
+            border-color: #93c5fd !important;
+            color: #1e40af !important;
+            background: #fafbff !important;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08) !important;
+        }
+
+        .app-tab-btn i {
+            font-size: 1.05rem !important;
+            color: inherit !important;
+        }
+
+        .app-tab-panel {
+            display: none !important;
+        }
+
+        .app-tab-panel.active {
+            display: block !important;
+        }
+
+        /* Download Tab Card */
+        .download-tab-card {
+            background: #ffffff !important;
+            border: 1px solid #e5e7eb !important;
+            border-radius: 16px !important;
+            padding: 40px 36px !important;
+            box-shadow: 0 10px 32px rgba(15, 23, 42, 0.08) !important;
+            max-width: 780px !important;
+            margin: 0 auto !important;
+        }
+
+        .download-tab-card .dl-icon {
+            width: 72px !important;
+            height: 72px !important;
+            border-radius: 16px !important;
+            background: linear-gradient(135deg, #eff6ff, #dbeafe) !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            margin: 0 auto 20px !important;
+        }
+
+        .download-tab-card .dl-icon i {
+            font-size: 2rem !important;
+            color: #2563eb !important;
+        }
+
+        .download-tab-card h3 {
+            font-size: 1.4rem !important;
+            font-weight: 700 !important;
+            color: #1e293b !important;
+            margin-bottom: 10px !important;
+        }
+
+        .download-tab-card .dl-desc {
+            color: #64748b !important;
+            font-size: 0.95rem !important;
+            line-height: 1.7 !important;
+            margin-bottom: 24px !important;
+        }
+
+        .download-tab-card .dl-steps {
+            text-align: left !important;
+            margin-bottom: 28px !important;
+            list-style: none !important;
+            padding: 0 !important;
+        }
+
+        .download-tab-card .dl-steps li {
+            display: flex !important;
+            align-items: flex-start !important;
+            gap: 12px !important;
+            padding: 10px 0 !important;
+            border-bottom: 1px solid #f1f5f9 !important;
+            color: #334155 !important;
+            font-size: 0.93rem !important;
+            line-height: 1.6 !important;
+        }
+
+        .download-tab-card .dl-steps li:last-child {
+            border-bottom: none !important;
+        }
+
+        .download-tab-card .dl-steps .step-num {
+            flex-shrink: 0 !important;
+            width: 26px !important;
+            height: 26px !important;
+            border-radius: 50% !important;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+            color: #fff !important;
+            font-size: 0.75rem !important;
+            font-weight: 700 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            margin-top: 2px !important;
+        }
+
+        .dl-btn {
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 10px !important;
+            padding: 13px 32px !important;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+            color: #fff !important;
+            font-family: 'Poppins', sans-serif !important;
+            font-size: 0.95rem !important;
+            font-weight: 600 !important;
+            border: none !important;
+            border-radius: 10px !important;
+            cursor: pointer !important;
+            text-decoration: none !important;
+            transition: all 0.25s ease !important;
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.25) !important;
+        }
+
+        .dl-btn:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 10px 28px rgba(37, 99, 235, 0.35) !important;
+            color: #fff !important;
+            text-decoration: none !important;
+        }
+
+        .dl-btn i {
+            font-size: 1.1rem !important;
+        }
+
+        .dl-email-note {
+            margin-top: 20px !important;
+            padding: 12px 18px !important;
+            background: #fffbeb !important;
+            border: 1px solid #fde68a !important;
+            border-radius: 10px !important;
+            color: #92400e !important;
+            font-size: 0.85rem !important;
+            line-height: 1.6 !important;
+        }
+
+        .dl-email-note i {
+            color: #d97706 !important;
+            margin-right: 6px !important;
+        }
+
+        @media (max-width: 768px) {
+            .app-tab-bar {
+                max-width: 100% !important;
+                padding: 12px 10px !important;
+                gap: 8px !important;
+            }
+
+            .app-tab-btn {
+                padding: 12px 16px !important;
+                font-size: 0.8rem !important;
+            }
+
+            .app-tab-btn .tab-badge {
+                display: none !important;
+            }
+
+            .download-tab-card {
+                padding: 28px 20px !important;
+            }
+
+            .download-tab-card h3 {
+                font-size: 1.2rem !important;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .app-tab-bar {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 8px !important;
+                padding: 10px 12px !important;
+            }
+
+            .app-tab-btn {
+                max-width: 100% !important;
+                justify-content: center !important;
             }
         }
     </style>
@@ -1000,19 +1256,16 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
     </head>
     
     <!-- Online Form Header -->
-    <div class="section" style="padding: 180px 0 60px; background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); position: relative; z-index: 1;">
+    <div class="section app-hero-header" style="padding: 110px 0 36px; background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); position: relative; z-index: 1;">
         <div class="container">
             <div class="row justify-content-center">
                 <div class="col-lg-10">
                     <div style="text-align: center;">
-                        <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem; margin-bottom: 20px; line-height: 1.6;">
-                            Begin your journey to ISO Certification with our streamlined application process.
-                        </p>
-                        <h1 style="color: #fff; font-size: 3.5rem; font-weight: 800; margin-bottom: 25px; text-transform: uppercase; letter-spacing: 2px; position: relative; display: inline-block;">
+                        <h1 style="color: #fff; font-size: 2.4rem; font-weight: 800; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1.5px; position: relative; display: inline-block; line-height: 1.2;">
                             APPLICATION FORM
-                            <span style="display: block; width: 80px; height: 4px; background: #ffffff; margin: 15px auto 0; border-radius: 2px;"></span>
+                            <span style="display: block; width: 60px; height: 3px; background: #ffffff; margin: 10px auto 0; border-radius: 2px;"></span>
                         </h1>
-                        <p style="color: rgba(255,255,255,0.8); font-size: 1.2rem; max-width: 700px; margin: 25px auto 0; line-height: 1.8;">
+                        <p style="color: rgba(255,255,255,0.85); font-size: 1rem; max-width: 600px; margin: 12px auto 0; line-height: 1.6;">
                             Fill the form below and take the first step towards excellence.
                         </p>
                     </div>
@@ -1020,7 +1273,77 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
             </div>
         </div>
     </div>
-    <div class="section" id="online-application-form" style="padding: 40px 0;">
+
+    <!-- Tab Navigation Bar -->
+    <div style="background: #f8fafc; padding: 0; position: relative; z-index: 10; border-bottom: 1px solid #e2e8f0;">
+        <div class="container" style="max-width: 1140px; margin: 0 auto; padding: 0 15px;">
+            <div class="app-tab-bar" id="appTabBar" style="display: flex; justify-content: center; align-items: center; max-width: 700px; margin: 0 auto; padding: 20px 0; gap: 12px; list-style: none; position: relative; z-index: 10;">
+                <button class="app-tab-btn active" data-tab="download-tab" type="button" style="display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 14px 28px; font-family: Poppins, sans-serif; font-size: 0.88rem; font-weight: 700; border: 2px solid #2563eb; border-radius: 12px; cursor: pointer; background: linear-gradient(135deg, #eff6ff, #f0f4ff); color: #1e3a8a; transition: all 0.25s ease; outline: none; white-space: nowrap; flex: 1; max-width: 320px; box-shadow: 0 4px 16px rgba(37,99,235,0.15), 0 0 0 1px rgba(37,99,235,0.06);">
+                    <i class="fa fa-download" style="color: #2563eb; font-size: 1.05rem;"></i>
+                    Download &amp; Submit
+                    <span class="tab-badge" style="display: inline-block; padding: 2px 8px; font-size: 0.58rem; font-weight: 700; text-transform: uppercase; border-radius: 999px; background: #2563eb; color: #fff; line-height: 1.4;">Recommended</span>
+                </button>
+                <button class="app-tab-btn" data-tab="online-tab" type="button" style="display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 14px 28px; font-family: Poppins, sans-serif; font-size: 0.88rem; font-weight: 600; border: 2px solid #e2e8f0; border-radius: 12px; cursor: pointer; background: #ffffff; color: #64748b; transition: all 0.25s ease; outline: none; white-space: nowrap; flex: 1; max-width: 320px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                    <i class="fa fa-pencil-square-o" style="font-size: 1.05rem;"></i>
+                    Fill Online
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 1: Download Application Form (Default) -->
+    <div class="app-tab-panel active" id="download-tab">
+        <div class="section" style="padding: 36px 0 50px; background: #f5f7fb;">
+            <div class="container">
+                <div class="row justify-content-center">
+                    <div class="col-lg-8">
+                        <div class="download-tab-card" style="text-align: center;">
+                            <div class="dl-icon">
+                                <i class="fa fa-file-pdf-o"></i>
+                            </div>
+                            <h3>Download Audit Application Form</h3>
+                            <p class="dl-desc">
+                                Please carefully fill out the application form below. Make sure all fields are completed accurately before submitting. Incomplete or incorrect forms may delay the certification process.
+                            </p>
+
+                            <ul class="dl-steps">
+                                <li>
+                                    <span class="step-num">1</span>
+                                    <span><strong>Download</strong> the application form PDF using the button below.</span>
+                                </li>
+                                <li>
+                                    <span class="step-num">2</span>
+                                    <span><strong>Fill out</strong> all required fields carefully. Ensure organization details, contact information, and scope are accurate.</span>
+                                </li>
+                                <li>
+                                    <span class="step-num">3</span>
+                                    <span><strong>Sign</strong> the declaration section with your authorized signature and date.</span>
+                                </li>
+                                <li>
+                                    <span class="step-num">4</span>
+                                    <span><strong>Submit</strong> the completed form via email to <a href="mailto:aitfindia@gmail.com" style="color:#2563eb; font-weight:600; text-decoration:none;">aitfindia@gmail.com</a> or upload through our portal.</span>
+                                </li>
+                            </ul>
+
+                            <a href="newjs/images/elementsss/Audit Application form- BLANK.pdf" download class="dl-btn">
+                                <i class="fa fa-download"></i>
+                                Download Application Form (PDF)
+                            </a>
+
+                            <div class="dl-email-note">
+                                <i class="fa fa-info-circle"></i>
+                                <strong>Note:</strong> After filling out the form, please email the scanned copy to <a href="mailto:aitfindia@gmail.com" style="color:#92400e; font-weight:600;">aitfindia@gmail.com</a> along with supporting documents. Our team will review and get back to you within 2-3 business days.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 2: Fill Online Form -->
+    <div class="app-tab-panel" id="online-tab">
+    <div class="section" id="online-application-form" style="padding: 25px 0 40px;">
         <div class="container">
             <div class="row justify-content-center">
                 <div class="col-lg-10">
@@ -1561,12 +1884,6 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
             overflow-x: hidden;
         }
         
-        /* Make sure all sections are full width */
-        .section {
-            width: 100%;
-            float: left;
-        }
-        
         /* Force footer to be full width and override any parent styles */
         .footer-box {
             width: 100vw !important;
@@ -1580,7 +1897,7 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
             margin-right: -50vw !important;
         }
         
-        /* Ensure full width sections */
+        /* Only apply full-width to bottom content sections, NOT hero or tab bar */
         .section {
             width: 100% !important;
             max-width: 100% !important;
@@ -1588,11 +1905,30 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
             padding: 0 !important;
         }
         
-        .section > .container {
-            max-width: 100% !important;
-            width: 100% !important;
-            padding: 0 15px !important;
-            margin: 0 auto !important;
+        /* Hero section must keep its padding */
+        .app-hero-header {
+            padding: 110px 0 36px !important;
+        }
+        
+        @media (max-width: 768px) {
+            .app-hero-header {
+                padding: 100px 0 28px !important;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .app-hero-header {
+                padding: 95px 0 24px !important;
+            }
+        }
+        
+        /* Tab panel sections need their own padding */
+        #download-tab > .section {
+            padding: 36px 0 50px !important;
+        }
+        
+        #online-tab > .section {
+            padding: 25px 0 40px !important;
         }
         
         /* Ensure footer container takes full width */
@@ -1665,6 +2001,7 @@ If you are completing the application offline, please download our Audit Applica
             </div>
         </div>
     </div>
+    </div><!-- /online-tab panel -->
 
     <!-- Full Width Footer Wrapper -->
     <div style="width: 100vw; margin-left: calc(50% - 50vw); overflow-x: hidden;">
@@ -2144,6 +2481,75 @@ If you are completing the application offline, please download our Audit Applica
                 validateRequiredFields();
             });
         })();
+    </script>
+
+    <!-- Tab Switching Logic -->
+    <script>
+    (function() {
+        var tabBtns = document.querySelectorAll('.app-tab-btn');
+        var tabPanels = document.querySelectorAll('.app-tab-panel');
+
+        function activateTab(btn) {
+            var targetTab = btn.getAttribute('data-tab');
+
+            // Deactivate all buttons - reset inline styles
+            tabBtns.forEach(function(b) {
+                b.classList.remove('active');
+                b.style.color = '#94a3b8';
+                b.style.borderBottom = '3px solid transparent';
+                b.style.fontWeight = '600';
+                var icon = b.querySelector('i');
+                if (icon) icon.style.color = '#94a3b8';
+            });
+
+            // Deactivate all panels
+            tabPanels.forEach(function(p) {
+                p.classList.remove('active');
+                p.style.display = 'none';
+            });
+
+            // Activate selected button with inline styles
+            btn.classList.add('active');
+            btn.style.color = '#1e3a8a';
+            btn.style.borderBottom = '3px solid #2563eb';
+            btn.style.fontWeight = '700';
+            var activeIcon = btn.querySelector('i');
+            if (activeIcon) activeIcon.style.color = '#2563eb';
+
+            // Activate selected panel
+            var targetPanel = document.getElementById(targetTab);
+            if (targetPanel) {
+                targetPanel.classList.add('active');
+                targetPanel.style.display = 'block';
+            }
+
+            // Smooth scroll based on which tab was selected
+            if (targetTab === 'online-tab') {
+                var tabBar = document.getElementById('appTabBar');
+                if (tabBar) {
+                    setTimeout(function() {
+                        tabBar.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 50);
+                }
+            } else if (targetTab === 'download-tab') {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        tabBtns.forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                activateTab(this);
+            });
+        });
+
+        // If URL has hash #online-application-form, auto-switch to online tab
+        if (window.location.hash === '#online-application-form') {
+            var onlineBtn = document.querySelector('[data-tab="online-tab"]');
+            if (onlineBtn) activateTab(onlineBtn);
+        }
+    })();
     </script>
 </body>
 </html>

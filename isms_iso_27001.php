@@ -170,6 +170,7 @@
                 <div class="col-md-9">
                     <div class="full">
                         <p>5 Days</p>
+                        <p style="font-size: 0.92rem; color: #6c757d; font-style: italic; margin-top: 10px;">The above duration training is customised as per organizational need. Please contact us in case of requirement.</p>
                     </div>
                 </div>
             </div>

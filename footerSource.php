@@ -284,7 +284,7 @@
                     <div class="footer_blog">
                         <h3>COMPANY</h3>
                         <ul class="footer-links">
-                            <li><a href="aboutus.php">About Us</a></li>
+                            <li><a href="career.php">Careers</a></li>
                             <li><a href="policy.php">Privacy Policy</a></li>
 
                             <li><a href="faq.php">FAQs</a></li>

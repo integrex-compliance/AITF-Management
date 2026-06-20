@@ -1019,13 +1019,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </style>
 </head>
 
+<body id="home" data-spy="scroll" data-offset="98">
     <?php include './headerSource.php'; ?>
 
-    <!-- Blue Header section for navbar visibility -->
-    <div style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); padding-top: 140px;"></div>
-
     <!-- Hero Section -->
-    <section class="contact-hero" style="margin-top: -60px;">
+    <section class="contact-hero" style="margin-top: 0; padding-top: 140px;">
         <div class="hero-content">
             <h1>Lets Start Conversation</h1>
             <p>We're here to help and answer any questions you might have. Reach out and we'll respond as soon as

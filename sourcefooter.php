@@ -20,7 +20,7 @@
                 <ul class="socials_home_links">
                     <li class="one"><a href="#"></a></li>
                     <li class="two"><a href="#"></a></li>
-                    <li class="three"><a href="#"></a></li> 
+                    <li class="three"><a href="#"></a></li>
                     <li class="four"><a href="#"></a></li>
                     <li class="five"><a href="#"></a></li>
                     <li class="six"><a href="#"></a></li>
@@ -45,30 +45,30 @@
                 <h6>newsletter signup</h6>
                 Provide your email to receive latest information
                 <div class="clearfix mar_top1"></div>
-                <form method="get" action="home.html">            
+                <form method="get" action="home.html">
                     <input class="enter_email_input" name="samplees" id="samplees" value="Please enter your email..." onFocus="if (this.value == 'Please enter your email...') {
                                                     this.value = '';
                                                 }" onBlur="if (this.value == '') {
                                                             this.value = 'Please enter your email...';
-                                                        }" type="text">			
+                                                        }" type="text">
                     <input name="" value="subscribe" class="input_submit" type="submit">
-                </form>          
-            </div><!-- end newsletter sign up -->             
-            <div class="clearfix mar_top2"></div>            
-            <div class="copyright">            
+                </form>
+            </div><!-- end newsletter sign up -->
+            <div class="clearfix mar_top2"></div>
+            <div class="copyright">
                 Copyright &copy 2014 AITF. All rights reserved<br />
                 Terms of Service | Privacy Policy<br/>
                 Website Developed by AITF Management certification
-            </div><!-- end copyrights -->                        
-        </div>    
-    </div>   
-    <div class="footer_shadow"></div>        
+            </div><!-- end copyrights -->
+        </div>
+    </div>
+    <div class="footer_shadow"></div>
 </div>
 <div class="site_wrapper">
     <div class="container">
         <div class="footer_link">
             <li><a href="index.html">Home</a></li>
-            <li><a href="about.html">About ISO</a></li>
+            <li><a href="career.php">Careers</a></li>
             <li><a href="contact.php">Contact Us</a></li>
             <li><a href="application.php?msg=".urlencode("")>Application form</a></li>
         </div>

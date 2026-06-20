@@ -259,6 +259,7 @@
                                 <small>Days</small>
                             </div>
                             <div>
+                                <p>The below duration training is customised as per organizational need. Please contact us in case of requirement.</p>
                                 <p class="mb-1"><i class="far fa-clock text-success mr-2"></i> Full-time intensive training</p>
                                 <p class="mb-1"><i class="fas fa-users text-success mr-2"></i> Interactive sessions</p>
                                 <p class="mb-1"><i class="fas fa-certificate text-success mr-2"></i> Certification included</p>

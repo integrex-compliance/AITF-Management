@@ -464,7 +464,7 @@
                 <!-- Document Content -->
                 <div class="document-content">
                     <h3 class="section-title">1. Introduction</h3>
-                    <p>This policy document describes the process of Granting, Refusing, Maintaining, Renewing, Suspending, Restoring, Withdrawing, Expanding and Reducing of scope of certification.</p>
+                    <p>This policy document describes the process of Granting, Refusing, Maintaining of certification, Expanding or Reducing the scope of certification, Renewing, Suspending, Restoring following suspension or Withdrawing, of certification.</p>
 
                     <h3 class="section-title">2. Granting</h3>
                     <p>Certification is granted to organizations that have demonstrated conformity to the criteria for certification.</p>
@@ -472,7 +472,7 @@
                     <h3 class="section-title">3. Refusing</h3>
                     <p>AITF conducts a review of every application received to determine capability to undertake the conformity assessment activity applied for. Where it is determined that the AITF can does not have either the competence or the resources to undertake the activity or analysis shows any risk associated, in such event AITF may declines and informs to applicant with justification accordingly.</p>
 
-                    <h3 class="section-title">4. Maintaining</h3>
+                    <h3 class="section-title">4. Maintaining of certification</h3>
                     <h4>4.1 General</h4>
                     <p>AITF certification is maintained through surveillance audits, recertification audits and special audits.</p>
                     
@@ -513,10 +513,10 @@
                         <p><strong>6.5</strong> Under suspension, the client's management system certification is temporarily invalid.</p>
                     </div>
 
-                    <h3 class="section-title">7. Restoring</h3>
+                    <h3 class="section-title">7. Restoring following suspention</h3>
                     <p>If the required measures for a suspended certification has been implemented and demonstrated effectively by the established deadline, the AITF shall lift the suspension of the certificate and the certification shall be considered restored.</p>
 
-                    <h3 class="section-title">8. Withdrawing</h3>
+                    <h3 class="section-title">8. Withdrawing of certification</h3>
                     <p>AITF is entitled to terminate or withdraw the certification after giving written notice of intent if:</p>
                     <ul>
                         <li>If periodical audits reveal nonconformities of serious nature.</li>

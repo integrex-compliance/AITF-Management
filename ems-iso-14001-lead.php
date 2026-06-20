@@ -306,6 +306,9 @@
                             <div class="info_item">
                                 <strong>Duration:</strong> 5 Days (40 hours)
                             </div>
+                            <div class="info_item" style="background-color: #f8f9fa; padding: 10px; border-radius: 5px; margin-top: 10px;">
+                                <p style="font-size: 0.90rem; color: #6c757d; font-style: italic; margin: 0;">The above duration training is customised as per organizational need. Please contact us in case of requirement.</p>
+                            </div>
                             <div class="info_item">
                                 <strong>Format:</strong> Classroom / Virtual
                             </div>

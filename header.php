@@ -119,6 +119,12 @@ if (!Utitlity::checkIfLoggedIn()) {
         header("Location: login");
         exit;
     }
+} else if (isset($pageIdentifier) && $pageIdentifier == "Bills") {
+    $addBillsClass = "active";
+    if (!(Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin())) {
+        header("Location: login");
+        exit;
+    }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Quot") {
     $addquotClass = "active";
     if (!(Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin())) {
@@ -188,6 +194,12 @@ if (!Utitlity::checkIfLoggedIn()) {
 } else if (isset($pageIdentifier) && $pageIdentifier == "IAF Dashboard") {
     $iafClass = "active";
     if (Utitlity::checkExternalUser()) {
+        header("Location: login");
+        exit;
+    }
+} else if (isset($pageIdentifier) && $pageIdentifier == "Job Applications") {
+    $addJobAppClass = "active";
+    if (!(Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff())) {
         header("Location: login");
         exit;
     }
@@ -287,6 +299,8 @@ function getFlatDate($inputStr)
             <!--<li><a href="clientList.php" class="animate">CLIENT LIST<i class="sub_icon fa fa-list  fa-2x" style="vertical-align:middle"></i></a></li>-->
             <li><a href="invoicePage.php" class="animate <?php echo $addInvoiceClass ?>">INVOICES<i
                         class="sub_icon fa fa-inr fa-2x" style="vertical-align:middle"></i></a></li>
+            <li><a href="billsPage.php" class="animate <?php echo isset($addBillsClass) ? $addBillsClass : ''; ?>">BILLS<i
+                        class="sub_icon fa fa-file-text-o fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
             <li><a href="quotationPage.php" class="animate <?php echo $addquotClass ?>">QUOTATIONS<i
@@ -375,6 +389,7 @@ function getFlatDate($inputStr)
                         class="animate <?php //echo $addUserClass              ?>">CLIENT LIST</a></li>
                 <li class="visible-xs"><a href="invoicePage.php"
                         class="animate <?php //echo $addUserClass              ?>">INVOICE</a></li>
+                <li class="visible-xs"><a href="billsPage.php" class="animate">BILLS</a></li>
                 <li class="visible-xs"><a href="quotationPage.php"
                         class="animate <?php //echo $addUserClass              ?>">QUOTATION</a></li>
                 <li class="visible-xs"><a href="addUsers.php"

@@ -532,9 +532,7 @@ session_start();
 
 <body id="home" data-spy="scroll" data-target="#navbar-wd" data-offset="98">
 
-    <head>
-        <?php include './headerSource.php'; ?>
-    </head>
+    <?php include './headerSource.php'; ?>
     <script type="text/javascript">
         /// some script
         // jquery ready start
@@ -574,66 +572,75 @@ session_start();
         .modern-hero-section {
             background: #050b1a;
             position: relative;
-            padding: 200px 0 100px; /* Increased top padding from 140px to 200px to push content down */
+            padding: 95px 0 60px;
             overflow: hidden;
             color: #ffffff;
             font-family: 'Montserrat', sans-serif;
-            min-height: 90vh;
-            /* Taller container to show more of the image vertically */
+            min-height: 82vh;
             display: flex;
             align-items: center;
         }
 
         .hero-bg-image {
             position: absolute;
-            top: 60px; /* Shift the entire background container down by 60px to clear the navbar completely */
+            top: 85px;
             left: -4%;
             right: -4%;
             bottom: -4%;
             z-index: 0;
             pointer-events: none;
-            opacity: 1;
-            transform: scale(1.0);
-            animation: heroImageIntro 2.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            opacity: 0;
+            transform: scale(1.05) translateY(10px);
+            animation: heroImageIntro 1s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards;
+            mask-image: none;
+            -webkit-mask-image: none;
         }
 
         .hero-bg-image img {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            object-position: center 75%;
-            /* Significantly lowered focus to center 75% to bring the helmet down away from the navbar */
-            filter: grayscale(5%) brightness(0.95);
+            object-position: center 85%;
+            filter: grayscale(3%) brightness(1.0) contrast(1.05);
+            animation: heroImgKenBurns 25s ease-in-out infinite alternate;
+        }
+
+        @keyframes heroImgKenBurns {
+            0% {
+                transform: scale(1) translate(0, 0);
+            }
+            100% {
+                transform: scale(1.04) translate(-0.5%, -0.5%);
+            }
         }
 
         .hero-bg-overlay {
             position: absolute;
             inset: 0;
             background:
-                radial-gradient(circle at 50% 50%, transparent 0%, rgba(5, 11, 26, 0.4) 40%, #050b1a 85%),
-                linear-gradient(to right, #050b1a 5%, transparent 40%, transparent 60%, #050b1a 95%);
+                radial-gradient(circle at 54% 48%, transparent 0%, rgba(5, 11, 26, 0.30) 42%, rgba(5, 11, 26, 0.75) 88%),
+                linear-gradient(90deg, rgba(5, 11, 26, 0.96) 0%, rgba(5, 11, 26, 0.80) 24%, rgba(5, 11, 26, 0.18) 48%, rgba(5, 11, 26, 0.30) 100%),
+                linear-gradient(180deg, rgba(5, 11, 26, 0.50) 0%, rgba(5, 11, 26, 0.05) 40%, rgba(5, 11, 26, 0.70) 100%);
             opacity: 0;
             z-index: 1;
-            animation: heroOverlayIntro 1s cubic-bezier(0.16, 1, 0.3, 1) forwards 1.5s;
+            animation: heroOverlayIntro 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards 0.5s;
         }
 
         @keyframes heroImageIntro {
             0% {
-                opacity: 1;
-                transform: scale(1.02);
-                /* Slight scale */
+                opacity: 0;
+                transform: scale(1.05) translateY(10px);
+                filter: blur(4px);
             }
-
-            60% {
-                opacity: 1;
-                transform: scale(0.99);
+            50% {
+                opacity: 0.6;
+                transform: scale(1.02) translateY(3px);
+                filter: blur(1px);
             }
-
             100% {
-                opacity: 0.85;
-                /* Increased from 0.65 to show more of the image */
-                transform: scale(0.96);
-                /* Zooms out smoothly below 1.0 */
+                opacity: 0.92;
+                transform: scale(1) translateY(0);
+                filter: blur(0px);
             }
         }
 
@@ -643,8 +650,7 @@ session_start();
             }
 
             100% {
-                opacity: 0.75;
-                /* Slightly reduced from 0.85 to improve image visibility */
+                opacity: 0.78;
             }
         }
 
@@ -661,8 +667,28 @@ session_start();
             pointer-events: none;
             z-index: 0;
             opacity: 0;
-            animation: fadeIn 1s forwards 1.5s;
+            animation: fadeIn 0.5s forwards 0.4s;
             /* Delayed grid fade-in */
+        }
+
+        /* Cinematic Dark Curtain - First Load */
+        .hero-intro-curtain {
+            position: absolute;
+            inset: 0;
+            background: #050b1a;
+            z-index: 50;
+            animation: curtainFadeOut 0.4s cubic-bezier(0.4, 0, 0.2, 1) 0.15s forwards;
+            pointer-events: none;
+        }
+
+        @keyframes curtainFadeOut {
+            0% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+                visibility: hidden;
+            }
         }
 
         /* Soft Blue Glows */
@@ -670,14 +696,14 @@ session_start();
             position: absolute;
             top: 20%;
             right: 10%;
-            width: 500px;
-            height: 500px;
+            width: 400px;
+            height: 400px;
             background: radial-gradient(circle, rgba(37, 99, 235, 0.1) 0%, transparent 70%);
             pointer-events: none;
             filter: blur(60px);
             z-index: 0;
             opacity: 0;
-            animation: fadeIn 2s forwards 1.8s;
+            animation: fadeIn 0.6s forwards 0.3s;
             /* Delayed glow fade-in */
         }
 
@@ -685,7 +711,7 @@ session_start();
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 60px;
+            gap: clamp(34px, 5vw, 72px);
             position: relative;
             z-index: 10;
             width: 100%;
@@ -693,26 +719,39 @@ session_start();
 
         /* Left Side Content */
         .hero-text-content {
-            flex: 1.2;
-            max-width: 650px;
+            flex: 1.12;
+            max-width: 660px;
+            padding: 14px 0 16px;
+            position: relative;
+        }
+
+        .hero-text-content::before {
+            content: '';
+            position: absolute;
+            inset: -16px -22px -18px -22px;
+            z-index: -1;
+            border-radius: 28px;
+            background: linear-gradient(90deg, rgba(5, 11, 26, 0.60), rgba(5, 11, 26, 0.14));
+            border: 1px solid rgba(148, 163, 184, 0.08);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
+            backdrop-filter: blur(1px);
         }
 
         .hero-label {
             display: inline-flex;
             align-items: center;
-            gap: 10px;
-            font-size: 13px;
+            gap: 8px;
+            font-size: 12px;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 2px;
+            letter-spacing: 1.8px;
             color: #60a5fa;
-            margin-bottom: 24px;
-            padding: 6px 14px;
+            margin-bottom: 18px;
+            padding: 5px 12px;
             background: rgba(59, 130, 246, 0.1);
             border: 1px solid rgba(59, 130, 246, 0.2);
             border-radius: 50px;
-            animation: fadeInDown 0.8s cubic-bezier(0.16, 1, 0.3, 1) 1.5s both;
-            /* Delayed intro */
+            animation: fadeInDown 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
         }
 
         .hero-label::before {
@@ -725,38 +764,45 @@ session_start();
         }
 
         .hero-main-title {
-            font-size: 64px;
-            font-weight: 800;
-            line-height: 1.1;
-            margin-bottom: 24px;
+            font-size: clamp(40px, 4.4vw, 64px);
+            font-weight: 900;
+            line-height: 1.05;
+            margin: 0 0 20px;
             color: #ffffff;
-            letter-spacing: -1px;
-            animation: fadeInLeft 0.8s cubic-bezier(0.16, 1, 0.3, 1) 1.65s both;
-            /* Delayed intro */
+            letter-spacing: -1.5px;
+            text-shadow: 0 14px 36px rgba(0, 0, 0, 0.42);
+            animation: fadeInLeft 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.4s both;
         }
 
         .hero-main-title span {
             display: block;
-            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            background: linear-gradient(135deg, #3b82f6 0%, #5b7cfa 46%, #8b5cf6 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 12px 22px rgba(59, 130, 246, 0.18));
         }
 
         .hero-sub-title {
-            font-size: 19px;
-            line-height: 1.7;
-            color: #94a3b8;
-            margin-bottom: 48px;
-            max-width: 540px;
-            animation: fadeInLeft 0.8s cubic-bezier(0.16, 1, 0.3, 1) 1.8s both;
-            /* Delayed intro */
+            position: relative;
+            font-family: 'Inter', sans-serif;
+            font-size: clamp(15px, 1.2vw, 18px);
+            line-height: 1.75;
+            color: #d7e3f3;
+            margin: 0 0 28px;
+            max-width: 600px;
+            padding: 14px 18px 14px 20px;
+            border-left: 3px solid #3b82f6;
+            border-radius: 0 16px 16px 0;
+            background: linear-gradient(90deg, rgba(15, 23, 42, 0.65), rgba(15, 23, 42, 0.14));
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 12px 32px rgba(0, 0, 0, 0.14);
+            text-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+            animation: fadeInLeft 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.5s both;
         }
 
         .hero-btns {
             display: flex;
-            gap: 20px;
-            animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 1.95s both;
-            /* Delayed intro */
+            gap: 16px;
+            animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.6s both;
         }
 
         @keyframes fadeIn {
@@ -766,15 +812,15 @@ session_start();
         }
 
         .hero-btn {
-            padding: 16px 32px;
+            padding: 13px 26px;
             border-radius: 8px;
             font-weight: 700;
-            font-size: 15px;
+            font-size: 14px;
             text-decoration: none !important;
             transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
             display: inline-flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
             position: relative;
             overflow: hidden;
         }
@@ -811,10 +857,10 @@ session_start();
             justify-content: center;
             align-items: center;
             position: relative;
-            min-height: 600px;
+            min-height: 480px;
             opacity: 0;
             transform: scale(0.96) translateY(10px);
-            animation: visualIntro 1s cubic-bezier(0.16, 1, 0.3, 1) forwards 1.6s;
+            animation: visualIntro 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards 0.4s;
         }
 
         @keyframes visualIntro {
@@ -841,8 +887,8 @@ session_start();
 
         .ecosystem-container {
             position: relative;
-            width: 500px;
-            height: 500px;
+            width: 440px;
+            height: 440px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -851,10 +897,10 @@ session_start();
         /* Turbine Pillar */
         .turbine-pillar {
             position: absolute;
-            bottom: -50px;
+            bottom: -40px;
             left: 50%;
-            width: 40px;
-            height: 300px;
+            width: 36px;
+            height: 260px;
             background: linear-gradient(to top, transparent, rgba(59, 130, 246, 0.15), rgba(96, 165, 250, 0.3));
             transform: translateX(-50%);
             clip-path: polygon(30% 0%, 70% 0%, 100% 100%, 0% 100%);
@@ -897,42 +943,33 @@ session_start();
         }
 
         .center-node {
-            width: 150px;
-            height: 150px;
-            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
-            border: 2px solid rgba(255, 255, 255, 0.4);
+            width: 130px;
+            height: 130px;
+            background: rgba(15, 23, 42, 0.18);
+            border: 2px solid rgba(147, 197, 253, 0.45);
             border-radius: 50%;
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
-            font-weight: 800;
             color: #ffffff;
-            box-shadow: 0 0 60px rgba(37, 99, 235, 0.6), inset 0 0 30px rgba(255, 255, 255, 0.15);
+            box-shadow: 0 0 60px rgba(37, 99, 235, 0.48), inset 0 0 28px rgba(255, 255, 255, 0.12);
             position: relative;
             animation: centerFloat 6s infinite ease-in-out;
-            text-align: center;
-            line-height: 1.1;
+            overflow: hidden;
         }
 
-        .center-node span:first-child {
-            font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            opacity: 0.8;
-            margin-bottom: 5px;
-        }
-
-        .center-node span:last-child {
-            font-size: 24px;
-            font-weight: 900;
-            letter-spacing: -0.5px;
+        .center-node img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 50%;
+            display: block;
         }
 
         .center-node::after {
             content: '';
             position: absolute;
-            inset: -15px;
+            inset: -12px;
             border-radius: 50%;
             border: 1px solid rgba(37, 200, 235, 0.5);
             animation: centerPulse 4s infinite;
@@ -949,9 +986,10 @@ session_start();
 
         .iso-standard {
             position: absolute;
-            width: 110px;
-            height: 110px;
-            background: rgba(15, 23, 42, 0.98);
+            width: 120px;
+            height: 120px;
+            padding: 0;
+            background: radial-gradient(circle, rgba(15, 23, 42, 0.72) 0%, rgba(15, 23, 42, 0.12) 66%, transparent 72%);
             border-radius: 50%;
             display: flex;
             flex-direction: column;
@@ -960,18 +998,19 @@ session_start();
             font-size: 13px;
             font-weight: 800;
             color: #ffffff;
-            backdrop-filter: blur(15px);
+            backdrop-filter: blur(10px);
             z-index: 30;
-            animation: orbitRotation 60s linear infinite;
-            transition: transform 0.3s ease;
+            animation: orbitRotation 82s linear infinite;
+            transition: filter 0.3s ease, opacity 0.3s ease;
+            filter: drop-shadow(0 18px 28px rgba(0, 0, 0, 0.34));
         }
 
         .iso-standard img {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain;
             border-radius: 50%;
-            animation: iconFloat 3s infinite ease-in-out;
+            animation: iconFloat 4.8s infinite ease-in-out;
         }
 
         .iso-standard span {
@@ -983,31 +1022,38 @@ session_start();
             text-align: center;
             line-height: 1.2;
             padding: 0 5px;
-            display: none; /* Hide labels to focus on the image circles */
-        }
-
-        /* QMS - Blue Quality theme */
-        .iso-9001 {
-            animation-delay: 0s;
-            border: none;
-            box-shadow: 0 0 30px rgba(59, 130, 246, 0.6);
-            background: transparent;
-        }
-
-        /* EMS - Green Earth theme */
-        .iso-14001 {
-            animation-delay: -20s;
-            border: none;
-            box-shadow: 0 0 30px rgba(16, 185, 129, 0.6);
-            background: transparent;
+            display: none;
+            /* Hide labels to focus on the image circles */
         }
 
         /* OHSMS - Orange Safety theme */
         .iso-45001 {
-            animation-delay: -40s;
             border: none;
-            box-shadow: 0 0 30px rgba(245, 158, 11, 0.6);
-            background: transparent;
+            box-shadow: 0 0 34px rgba(245, 158, 11, 0.52), 0 0 78px rgba(245, 158, 11, 0.18);
+            animation: orbitRotation 82s linear -54.66s infinite, isoGlowPulse 3.5s ease-in-out 2.8s infinite;
+        }
+
+        /* QMS - Blue Quality theme */
+        .iso-9001 {
+            border: none;
+            box-shadow: 0 0 34px rgba(59, 130, 246, 0.48), 0 0 70px rgba(59, 130, 246, 0.16);
+            animation: orbitRotation 82s linear 0s infinite, isoGlowPulse 3.5s ease-in-out 3.2s infinite;
+        }
+
+        /* EMS - Green Earth theme */
+        .iso-14001 {
+            border: none;
+            box-shadow: 0 0 34px rgba(16, 185, 129, 0.48), 0 0 70px rgba(16, 185, 129, 0.14);
+            animation: orbitRotation 82s linear -27.33s infinite, isoGlowPulse 3.5s ease-in-out 3.6s infinite;
+        }
+
+        @keyframes isoGlowPulse {
+            0%, 100% {
+                filter: drop-shadow(0 18px 28px rgba(0, 0, 0, 0.34)) brightness(1);
+            }
+            50% {
+                filter: drop-shadow(0 18px 28px rgba(0, 0, 0, 0.34)) brightness(1.15);
+            }
         }
 
         @keyframes iconFloat {
@@ -1027,14 +1073,14 @@ session_start();
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 200px;
+            width: 180px;
             height: 3px;
             background: linear-gradient(90deg, #60a5fa 0%, rgba(59, 130, 246, 0.5) 60%, transparent 100%);
             transform-origin: left center;
             opacity: 0.7;
             z-index: 10;
             box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
-            animation: connectionOrbit 60s linear infinite;
+            animation: connectionOrbit 82s linear infinite;
         }
 
         .line-1 {
@@ -1042,11 +1088,11 @@ session_start();
         }
 
         .line-2 {
-            animation-delay: -20s;
+            animation-delay: -27.33s;
         }
 
         .line-3 {
-            animation-delay: -40s;
+            animation-delay: -54.66s;
         }
 
         /* Data Flow Particles */
@@ -1091,11 +1137,11 @@ session_start();
         /* Keyframes */
         @keyframes orbitRotation {
             from {
-                transform: rotate(0deg) translateX(200px) rotate(0deg);
+                transform: rotate(0deg) translateX(180px) rotate(0deg);
             }
 
             to {
-                transform: rotate(360deg) translateX(200px) rotate(-360deg);
+                transform: rotate(360deg) translateX(180px) rotate(-360deg);
             }
         }
 
@@ -1214,17 +1260,17 @@ session_start();
         /* Responsive Design */
         @media (max-width: 1200px) {
             .hero-main-title {
-                font-size: 52px;
+                font-size: 46px;
             }
 
             .ecosystem-container {
-                transform: scale(0.85);
+                transform: scale(0.82);
             }
         }
 
         @media (max-width: 991px) {
             .modern-hero-section {
-                padding: 100px 0 60px;
+                padding: 90px 0 50px;
             }
 
             .hero-container {
@@ -1239,7 +1285,7 @@ session_start();
             }
 
             .hero-visual-content {
-                min-height: 450px;
+                min-height: 380px;
                 order: 1;
             }
 
@@ -1253,17 +1299,17 @@ session_start();
             }
 
             .ecosystem-container {
-                transform: scale(0.75);
+                transform: scale(0.70);
             }
         }
 
         @media (max-width: 576px) {
             .hero-main-title {
-                font-size: 38px;
+                font-size: 34px;
             }
 
             .hero-sub-title {
-                font-size: 16px;
+                font-size: 14px;
             }
 
             .hero-btns {
@@ -1276,7 +1322,7 @@ session_start();
             }
 
             .ecosystem-container {
-                transform: scale(0.6);
+                transform: scale(0.55);
             }
         }
 
@@ -1509,6 +1555,7 @@ session_start();
     </style>
 
     <div class="modern-hero-section">
+        <div class="hero-intro-curtain"></div>
         <div class="hero-bg-image">
             <img src="aitfImages/hero image aitf.png" alt="AITF Hero Background">
         </div>
@@ -1519,7 +1566,7 @@ session_start();
                 <div class="hero-text-content">
                     <div class="hero-label">NABCB Accredited Certification Body</div>
                     <h1 class="hero-main-title">
-                        Your Trusted <span>Certification Partner</span>
+                        Your Trusted Partner In<span>Business Excellence Journey</span>
                     </h1>
                     <p class="hero-sub-title">
                         Empowering organizations through accredited, authentic, impartial and ethical certification
@@ -1554,8 +1601,7 @@ session_start();
                         <!-- Center Hub -->
                         <div class="center-node-wrapper">
                             <div class="center-node">
-                                <span>Discover</span>
-                                <span>Our Services</span>
+                                <img src="aitfImages/services.png" alt="Our Services">
                             </div>
                         </div>
 
@@ -1619,7 +1665,7 @@ session_start();
                         </div>
                         <div class="milestone-connector"></div>
                         <div class="milestone-card" style="border-top: 5px solid #3b82f6;">
-                            <span class="milestone-year" style="color: #3b82f6;">2001</span>
+                            <span class="milestone-year" style="color: #3b82f6;">2011</span>
                             <h4>Foundation</h4>
                             <p>Establishment of AITF as a specialized assessment body, focusing on institutional
                                 integrity.</p>
@@ -1633,7 +1679,7 @@ session_start();
                         </div>
                         <div class="milestone-connector"></div>
                         <div class="milestone-card" style="border-bottom: 5px solid #10b981;">
-                            <span class="milestone-year" style="color: #10b981;">2005</span>
+                            <span class="milestone-year" style="color: #10b981;">2015</span>
                             <h4>ISO 9001 Operations</h4>
                             <p>Commencement of Quality Management Certification Assessment services across industrial
                                 sectors.</p>
@@ -1647,7 +1693,7 @@ session_start();
                         </div>
                         <div class="milestone-connector"></div>
                         <div class="milestone-card" style="border-top: 5px solid #f59e0b;">
-                            <span class="milestone-year" style="color: #f59e0b;">2010</span>
+                            <span class="milestone-year" style="color: #f59e0b;">2020</span>
                             <h4>Accredited ISO 14001</h4>
                             <p>Expansion into Environmental Management systems with Accredited status.</p>
                         </div>
@@ -1660,7 +1706,7 @@ session_start();
                         </div>
                         <div class="milestone-connector"></div>
                         <div class="milestone-card" style="border-bottom: 5px solid #ef4444;">
-                            <span class="milestone-year" style="color: #ef4444;">2015</span>
+                            <span class="milestone-year" style="color: #ef4444;">2025</span>
                             <h4>Accredited ISO 45001</h4>
                             <p>Integration of Occupational Health & Safety Management systems under accredited
                                 frameworks.</p>
@@ -1682,146 +1728,424 @@ session_start();
                 </div>
             </div>
 
-            <div class="growth-indicators"
-                style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 60px;">
-                <!-- Growth Chart 1 -->
-                <div class="growth-card"
-                    style="background: #0a192f; padding: 40px; border-radius: 20px; color: #ffffff; position: relative; overflow: hidden;">
-                    <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 25px; color: #ffffff;">Scale of Global
-                        Client Partnerships</h3>
-                    <div class="bar-chart-container" style="display: flex; flex-direction: column; gap: 15px;">
-                        <div class="bar-row" style="display: flex; align-items: center; gap: 15px;">
-                            <span class="bar-label"
-                                style="font-size: 13px; color: #94a3b8; width: 100px;">Establishment</span>
-                            <div class="bar-track"
-                                style="flex: 1; height: 10px; background: rgba(255, 255, 255, 0.05); border-radius: 5px; overflow: hidden;">
-                                <div class="bar-fill" style="width: 5%; height: 100%; background: #b8860b;"></div>
+            <div class="growth-indicators milestone-summary-grid">
+                <div class="growth-card milestone-summary-card">
+                    <div class="summary-card-glow"></div>
+                    <div class="summary-card-head">
+                        <span class="summary-icon"><i class="fa fa-handshake"></i></span>
+                        <div>
+                            <span class="summary-kicker">Partnership Journey</span>
+                            <h3>From first trust to long-term client relationships</h3>
+                        </div>
+                    </div>
+                    <div class="summary-progress-line">
+                        <span></span>
+                    </div>
+                    <div class="summary-steps">
+                        <div class="summary-step">
+                            <span class="step-dot"></span>
+                            <div>
+                                <h4>Foundation</h4>
+                                <p>Built on impartial assessment practices and disciplined certification processes.</p>
                             </div>
                         </div>
-                        <div class="bar-row" style="display: flex; align-items: center; gap: 15px;">
-                            <span class="bar-label" style="font-size: 13px; color: #94a3b8; width: 100px;">Today</span>
-                            <div class="bar-track"
-                                style="flex: 1; height: 10px; background: rgba(255, 255, 255, 0.05); border-radius: 5px; overflow: hidden;">
-                                <div class="bar-fill" data-width="100%"
-                                    style="width: 0%; height: 100%; background: #b8860b;"></div>
+                        <div class="summary-step">
+                            <span class="step-dot"></span>
+                            <div>
+                                <h4>Client Confidence</h4>
+                                <p>Strengthened relationships through transparent assessment and professional communication.</p>
+                            </div>
+                        </div>
+                        <div class="summary-step">
+                            <span class="step-dot"></span>
+                            <div>
+                                <h4>Continual Trust</h4>
+                                <p>Evaluating organizations with consistent, ethical and value-added certification services.</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Growth Chart 2 -->
-                <div class="growth-card"
-                    style="background: #0a192f; padding: 40px; border-radius: 20px; color: #ffffff; position: relative; overflow: hidden;">
-                    <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 25px; color: #ffffff;">Annual
-                        Assessment Velocity</h3>
-                    <div class="histogram-container"
-                        style="display: flex; align-items: flex-end; justify-content: space-between; height: 100px; padding-top: 20px;">
-                        <div class="histogram-bar" data-height="40%"
-                            style="width: 15%; background: linear-gradient(to top, #b8860b, #daa520); border-radius: 4px 4px 0 0; height: 0; position: relative;">
-                            <span class="histogram-year"
-                                style="position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #94a3b8;">2021</span>
+                <div class="growth-card milestone-summary-card accent-card">
+                    <div class="summary-card-glow"></div>
+                    <div class="summary-card-head">
+                        <span class="summary-icon"><i class="fa fa-chart-line"></i></span>
+                        <div>
+                            <span class="summary-kicker">Assessment Capability</span>
+                            <h3>A steady evolution in audit readiness and service scope</h3>
                         </div>
-                        <div class="histogram-bar" data-height="55%"
-                            style="width: 15%; background: linear-gradient(to top, #b8860b, #daa520); border-radius: 4px 4px 0 0; height: 0; position: relative;">
-                            <span class="histogram-year"
-                                style="position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #94a3b8;">2022</span>
+                    </div>
+                    <div class="capability-flow">
+                        <div class="capability-node">
+                            <span>QMS</span>
+                            <small>Quality discipline</small>
                         </div>
-                        <div class="histogram-bar" data-height="70%"
-                            style="width: 15%; background: linear-gradient(to top, #b8860b, #daa520); border-radius: 4px 4px 0 0; height: 0; position: relative;">
-                            <span class="histogram-year"
-                                style="position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #94a3b8;">2023</span>
+                        <div class="flow-arrow"><i class="fa fa-arrow-right"></i></div>
+                        <div class="capability-node">
+                            <span>EMS</span>
+                            <small>Environmental responsibility</small>
                         </div>
-                        <div class="histogram-bar" data-height="85%"
-                            style="width: 15%; background: linear-gradient(to top, #b8860b, #daa520); border-radius: 4px 4px 0 0; height: 0; position: relative;">
-                            <span class="histogram-year"
-                                style="position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #94a3b8;">2024</span>
+                        <div class="flow-arrow"><i class="fa fa-arrow-right"></i></div>
+                        <div class="capability-node">
+                            <span>OHSMS</span>
+                            <small>Workplace safety focus</small>
                         </div>
-                        <div class="histogram-bar" data-height="100%"
-                            style="width: 15%; background: linear-gradient(to top, #b8860b, #daa520); border-radius: 4px 4px 0 0; height: 0; position: relative;">
-                            <span class="histogram-year"
-                                style="position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #94a3b8;">2025</span>
-                        </div>
+                    </div>
+                    <div class="summary-note">
+                        <i class="fa fa-shield-alt"></i>
+                        <p>Each milestone reflects stronger technical capability, better audit discipline and a broader commitment to management system excellence.</p>
                     </div>
                 </div>
             </div>
+
+            <style>
+                .milestone-summary-grid {
+                    display: grid;
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                    gap: 30px;
+                    margin-top: 64px;
+                }
+
+                .milestone-summary-card {
+                    position: relative;
+                    overflow: hidden;
+                    min-height: 330px;
+                    padding: 38px;
+                    border-radius: 28px;
+                    color: #ffffff;
+                    background:
+                        linear-gradient(145deg, rgba(10, 25, 47, 0.98), rgba(15, 36, 68, 0.96)),
+                        radial-gradient(circle at 15% 0%, rgba(184, 134, 11, 0.18), transparent 38%);
+                    border: 1px solid rgba(255, 255, 255, 0.08);
+                    box-shadow: 0 28px 80px rgba(10, 25, 47, 0.18);
+                    transition: transform 0.35s ease, box-shadow 0.35s ease;
+                }
+
+                .milestone-summary-card:hover {
+                    transform: translateY(-8px);
+                    box-shadow: 0 38px 100px rgba(10, 25, 47, 0.26);
+                }
+
+                .summary-card-glow {
+                    position: absolute;
+                    width: 240px;
+                    height: 240px;
+                    right: -90px;
+                    top: -100px;
+                    border-radius: 50%;
+                    background: rgba(184, 134, 11, 0.24);
+                    filter: blur(18px);
+                    pointer-events: none;
+                }
+
+                .accent-card .summary-card-glow {
+                    background: rgba(59, 130, 246, 0.22);
+                }
+
+                .summary-card-head {
+                    position: relative;
+                    display: flex;
+                    align-items: flex-start;
+                    gap: 18px;
+                    margin-bottom: 26px;
+                    z-index: 2;
+                }
+
+                .summary-icon {
+                    width: 58px;
+                    height: 58px;
+                    flex: 0 0 auto;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 20px;
+                    background: linear-gradient(135deg, #b8860b, #daa520);
+                    color: #ffffff;
+                    font-size: 24px;
+                    box-shadow: 0 18px 34px rgba(184, 134, 11, 0.24);
+                }
+
+                .accent-card .summary-icon {
+                    background: linear-gradient(135deg, #2563eb, #38bdf8);
+                    box-shadow: 0 18px 34px rgba(37, 99, 235, 0.24);
+                }
+
+                .summary-kicker {
+                    display: block;
+                    margin-bottom: 7px;
+                    color: #f8d477;
+                    font-size: 12px;
+                    font-weight: 900;
+                    letter-spacing: 1.8px;
+                    text-transform: uppercase;
+                }
+
+                .accent-card .summary-kicker {
+                    color: #93c5fd;
+                }
+
+                .summary-card-head h3 {
+                    margin: 0;
+                    color: #ffffff;
+                    font-size: 24px;
+                    font-weight: 850;
+                    line-height: 1.25;
+                    letter-spacing: -0.3px;
+                }
+
+                .summary-progress-line {
+                    position: relative;
+                    height: 4px;
+                    margin: 0 0 24px 76px;
+                    border-radius: 999px;
+                    background: rgba(255, 255, 255, 0.08);
+                    overflow: hidden;
+                }
+
+                .summary-progress-line span {
+                    display: block;
+                    width: 82%;
+                    height: 100%;
+                    border-radius: inherit;
+                    background: linear-gradient(90deg, #b8860b, #f8d477, rgba(248, 212, 119, 0.35));
+                }
+
+                .summary-steps {
+                    position: relative;
+                    display: grid;
+                    gap: 18px;
+                    z-index: 2;
+                }
+
+                .summary-step {
+                    display: grid;
+                    grid-template-columns: 20px 1fr;
+                    gap: 14px;
+                    align-items: flex-start;
+                }
+
+                .step-dot {
+                    width: 14px;
+                    height: 14px;
+                    margin-top: 6px;
+                    border-radius: 50%;
+                    background: #f8d477;
+                    box-shadow: 0 0 0 6px rgba(184, 134, 11, 0.14), 0 0 22px rgba(248, 212, 119, 0.50);
+                }
+
+                .summary-step h4 {
+                    margin: 0 0 5px;
+                    color: #ffffff;
+                    font-size: 16px;
+                    font-weight: 850;
+                }
+
+                .summary-step p,
+                .summary-note p {
+                    margin: 0;
+                    color: #cbd5e1;
+                    font-size: 14.5px;
+                    line-height: 1.65;
+                }
+
+                .capability-flow {
+                    position: relative;
+                    display: grid;
+                    grid-template-columns: 1fr auto 1fr auto 1fr;
+                    gap: 12px;
+                    align-items: stretch;
+                    z-index: 2;
+                }
+
+                .capability-node {
+                    min-height: 118px;
+                    padding: 18px 14px;
+                    border-radius: 22px;
+                    background: rgba(255, 255, 255, 0.08);
+                    border: 1px solid rgba(255, 255, 255, 0.10);
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    text-align: center;
+                }
+
+                .capability-node span {
+                    display: block;
+                    margin-bottom: 8px;
+                    color: #ffffff;
+                    font-size: 22px;
+                    font-weight: 900;
+                    letter-spacing: -0.3px;
+                }
+
+                .capability-node small {
+                    color: #cbd5e1;
+                    font-size: 12.5px;
+                    line-height: 1.45;
+                    font-weight: 650;
+                }
+
+                .flow-arrow {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: #93c5fd;
+                    opacity: 0.85;
+                }
+
+                .summary-note {
+                    position: relative;
+                    z-index: 2;
+                    display: flex;
+                    gap: 14px;
+                    margin-top: 24px;
+                    padding: 18px;
+                    border-radius: 20px;
+                    background: rgba(37, 99, 235, 0.12);
+                    border: 1px solid rgba(147, 197, 253, 0.14);
+                }
+
+                .summary-note i {
+                    color: #93c5fd;
+                    margin-top: 4px;
+                    font-size: 18px;
+                }
+
+                @media (max-width: 991px) {
+                    .milestone-summary-grid {
+                        grid-template-columns: 1fr;
+                    }
+                }
+
+                @media (max-width: 575px) {
+                    .milestone-summary-card {
+                        padding: 28px 22px;
+                    }
+
+                    .summary-card-head {
+                        flex-direction: column;
+                    }
+
+                    .summary-progress-line {
+                        margin-left: 0;
+                    }
+
+                    .capability-flow {
+                        grid-template-columns: 1fr;
+                    }
+
+                    .flow-arrow {
+                        transform: rotate(90deg);
+                    }
+                }
+            </style>
         </div>
     </section>
 
     <!-- Why Choose AITF Section -->
-    <section class="why-choose-aitf" style="padding: 100px 0; background: #f8fafc; overflow: hidden; position: relative;">
+    <section class="why-choose-aitf"
+        style="padding: 100px 0; background: #f8fafc; overflow: hidden; position: relative;">
         <div class="container">
             <div class="row align-items-center">
                 <div class="col-lg-6 mb-5 mb-lg-0" style="position: relative; z-index: 2;">
-                    <div class="why-tag" style="display: inline-block; padding: 6px 15px; background: rgba(184, 134, 11, 0.1); color: #b8860b; border-radius: 50px; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px;">Why Choose AITF</div>
-                    <h2 class="why-title" style="font-family: 'Playfair Display', serif; font-size: 42px; font-weight: 800; color: #0a192f; margin-bottom: 25px; line-height: 1.2;">Our Commitment to <span style="color: #b8860b;">Excellence</span></h2>
-                    <p class="why-text" style="font-size: 18px; line-height: 1.8; color: #475569; margin-bottom: 35px; text-align: justify;">
-                        At <strong>AITF Management Certification Ltd.</strong>, we are dedicated to delivering comprehensive assessment services through our team of highly qualified auditors. Our primary objective is to enhance our clients' business performance by conducting value-added audits of their processes and management systems.
+                    <div class="why-tag"
+                        style="display: inline-block; padding: 6px 15px; background: rgba(184, 134, 11, 0.1); color: #b8860b; border-radius: 50px; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px;">
+                        Why Choose AITF</div>
+                    <h2 class="why-title"
+                        style="font-family: 'Playfair Display', serif; font-size: 42px; font-weight: 800; color: #0a192f; margin-bottom: 25px; line-height: 1.2;">
+                        Our Commitment to <span style="color: #b8860b;">Excellence</span></h2>
+                    <p class="why-text"
+                        style="font-size: 18px; line-height: 1.8; color: #475569; margin-bottom: 35px; text-align: justify;">
+                        At <strong>AITF Management Certification Ltd.</strong>, we are dedicated to delivering
+                        comprehensive assessment services through our team of highly qualified auditors. Our primary
+                        objective is to enhance our clients' business performance by conducting value-added audits of
+                        their processes and management systems.
                     </p>
-                    
+
                     <div class="feature-list" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                        <div class="feature-item" style="display: flex; align-items: center; gap: 15px; padding: 15px; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: transform 0.3s ease;">
-                            <div class="feature-icon" style="width: 45px; height: 45px; background: #b8860b; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px;">
+                        <div class="feature-item"
+                            style="display: flex; align-items: center; gap: 15px; padding: 15px; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: transform 0.3s ease;">
+                            <div class="feature-icon"
+                                style="width: 45px; height: 45px; background: #b8860b; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px;">
                                 <i class="fa fa-user-tie"></i>
                             </div>
                             <span style="font-weight: 600; color: #0a192f;">Qualified Auditors</span>
                         </div>
-                        <div class="feature-item" style="display: flex; align-items: center; gap: 15px; padding: 15px; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: transform 0.3s ease;">
-                            <div class="feature-icon" style="width: 45px; height: 45px; background: #b8860b; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px;">
+                        <div class="feature-item"
+                            style="display: flex; align-items: center; gap: 15px; padding: 15px; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: transform 0.3s ease;">
+                            <div class="feature-icon"
+                                style="width: 45px; height: 45px; background: #b8860b; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px;">
                                 <i class="fa fa-chart-line"></i>
                             </div>
                             <span style="font-weight: 600; color: #0a192f;">Business Growth</span>
                         </div>
-                        <div class="feature-item" style="display: flex; align-items: center; gap: 15px; padding: 15px; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: transform 0.3s ease;">
-                            <div class="feature-icon" style="width: 45px; height: 45px; background: #b8860b; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px;">
+                        <div class="feature-item"
+                            style="display: flex; align-items: center; gap: 15px; padding: 15px; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: transform 0.3s ease;">
+                            <div class="feature-icon"
+                                style="width: 45px; height: 45px; background: #b8860b; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px;">
                                 <i class="fa fa-search-plus"></i>
                             </div>
                             <span style="font-weight: 600; color: #0a192f;">Value-Added Audits</span>
                         </div>
-                        <div class="feature-item" style="display: flex; align-items: center; gap: 15px; padding: 15px; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: transform 0.3s ease;">
-                            <div class="feature-icon" style="width: 45px; height: 45px; background: #b8860b; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px;">
+                        <div class="feature-item"
+                            style="display: flex; align-items: center; gap: 15px; padding: 15px; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: transform 0.3s ease;">
+                            <div class="feature-icon"
+                                style="width: 45px; height: 45px; background: #b8860b; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px;">
                                 <i class="fa fa-check-double"></i>
                             </div>
                             <span style="font-weight: 600; color: #0a192f;">Process Integrity</span>
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="col-lg-6" style="position: relative;">
                     <div class="image-stack" style="position: relative; padding: 30px;">
                         <!-- Background Decorative Element -->
-                        <div class="decorative-blob" style="position: absolute; top: -10%; right: -10%; width: 100%; height: 100%; background: radial-gradient(circle, rgba(184, 134, 11, 0.08) 0%, transparent 70%); z-index: 1; border-radius: 50%;"></div>
-                        
+                        <div class="decorative-blob"
+                            style="position: absolute; top: -10%; right: -10%; width: 100%; height: 100%; background: radial-gradient(circle, rgba(184, 134, 11, 0.08) 0%, transparent 70%); z-index: 1; border-radius: 50%;">
+                        </div>
+
                         <!-- Main Image Container with Premium Frame -->
-                        <div class="main-img-container" style="position: relative; z-index: 2; border-radius: 40px; padding: 15px; background: white; box-shadow: 0 40px 100px rgba(10, 25, 47, 0.15); transition: all 0.5s cubic-bezier(0.165, 0.84, 0.44, 1);">
-                            <div class="img-inner-wrapper" style="border-radius: 28px; overflow: hidden; position: relative;">
-                                <img src="aitfImages/qmsaudit.png" alt="AITF QMS Audit" style="width: 100%; height: auto; display: block; transition: transform 0.8s cubic-bezier(0.165, 0.84, 0.44, 1);">
-                                <div class="img-overlay" style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(10, 25, 47, 0.4) 0%, transparent 40%); opacity: 0; transition: opacity 0.5s ease;"></div>
+                        <div class="main-img-container"
+                            style="position: relative; z-index: 2; border-radius: 40px; padding: 15px; background: white; box-shadow: 0 40px 100px rgba(10, 25, 47, 0.15); transition: all 0.5s cubic-bezier(0.165, 0.84, 0.44, 1);">
+                            <div class="img-inner-wrapper"
+                                style="border-radius: 28px; overflow: hidden; position: relative;">
+                                <img src="aitfImages/commitment.png" alt="AITF commitment to excellence"
+                                    style="width: 100%; height: auto; display: block; transition: transform 0.8s cubic-bezier(0.165, 0.84, 0.44, 1);">
+                                <div class="img-overlay"
+                                    style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(10, 25, 47, 0.4) 0%, transparent 40%); opacity: 0; transition: opacity 0.5s ease;">
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        
+
         <style>
             .feature-item:hover {
                 transform: translateY(-8px);
                 background: #b8860b !important;
                 box-shadow: 0 15px 30px rgba(184, 134, 11, 0.2) !important;
             }
+
             .feature-item:hover span {
                 color: white !important;
             }
+
             .feature-item:hover .feature-icon {
                 background: white !important;
                 color: #b8860b !important;
             }
+
             .main-img-container:hover {
                 transform: translateY(-10px) scale(1.02);
             }
+
             .main-img-container:hover .img-inner-wrapper img {
                 transform: scale(1.1);
             }
+
             .main-img-container:hover .img-overlay {
                 opacity: 1;
             }
@@ -1829,47 +2153,460 @@ session_start();
     </section>
 
     <!-- Our Core Principles Section -->
-    <section class="core-principles" style="padding: 100px 0; background: #ffffff; overflow: hidden; position: relative;">
+    <section class="core-principles"
+        style="padding: 100px 0; background: #ffffff; overflow: hidden; position: relative;">
         <div class="container">
             <div class="row align-items-center">
                 <div class="col-lg-6 order-2 order-lg-1" style="position: relative;">
                     <div class="image-stack-left" style="position: relative; padding: 30px;">
                         <!-- Background Decorative Element -->
-                        <div class="decorative-blob-left" style="position: absolute; top: -10%; left: -10%; width: 100%; height: 100%; background: radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, transparent 70%); z-index: 1; border-radius: 50%;"></div>
-                        
+                        <div class="decorative-blob-left"
+                            style="position: absolute; top: -10%; left: -10%; width: 100%; height: 100%; background: radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, transparent 70%); z-index: 1; border-radius: 50%;">
+                        </div>
+
                         <!-- Main Image Container with Premium Frame -->
-                        <div class="principle-img-container" style="position: relative; z-index: 2; border-radius: 40px; padding: 15px; background: white; box-shadow: 0 40px 100px rgba(16, 185, 129, 0.12); transition: all 0.5s cubic-bezier(0.165, 0.84, 0.44, 1);">
-                            <div class="img-inner-wrapper" style="border-radius: 28px; overflow: hidden; position: relative;">
-                                <img src="aitfImages/emsauditf.png" alt="AITF EMS Audit" style="width: 100%; height: auto; display: block; transition: transform 0.8s cubic-bezier(0.165, 0.84, 0.44, 1);">
-                                <div class="principle-overlay" style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(6, 78, 59, 0.3) 0%, transparent 40%); opacity: 0; transition: opacity 0.5s ease;"></div>
+                        <div class="principle-img-container"
+                            style="position: relative; z-index: 2; border-radius: 40px; padding: 15px; background: white; box-shadow: 0 40px 100px rgba(16, 185, 129, 0.12); transition: all 0.5s cubic-bezier(0.165, 0.84, 0.44, 1);">
+                            <div class="img-inner-wrapper"
+                                style="border-radius: 28px; overflow: hidden; position: relative;">
+                                <img src="aitfImages/coreprienciple.png" alt="AITF core principles"
+                                    style="width: 100%; height: auto; display: block; transition: transform 0.8s cubic-bezier(0.165, 0.84, 0.44, 1);">
+                                <div class="principle-overlay"
+                                    style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(6, 78, 59, 0.3) 0%, transparent 40%); opacity: 0; transition: opacity 0.5s ease;">
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-lg-6 order-1 order-lg-2 mb-5 mb-lg-0" style="position: relative; z-index: 2; padding-left: 50px;">
-                    <div class="principle-tag" style="display: inline-block; padding: 6px 15px; background: rgba(16, 185, 129, 0.1); color: #10b981; border-radius: 50px; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px;">Core Values</div>
-                    <h2 class="principle-title" style="font-family: 'Playfair Display', serif; font-size: 42px; font-weight: 800; color: #0a192f; margin-bottom: 25px; line-height: 1.2;">Our Core <span style="color: #10b981;">Principles</span></h2>
-                    <p class="principle-text" style="font-size: 18px; line-height: 1.8; color: #475569; margin-bottom: 35px; text-align: justify;">
-                        We maintain the highest standards of <strong>competence, independence, and impartiality</strong> in our assessment processes. Our team of certified auditors is committed to helping organizations achieve and demonstrate compliance with international standards, driving continuous improvement and operational excellence across all business functions.
+                <div class="col-lg-6 order-1 order-lg-2 mb-5 mb-lg-0"
+                    style="position: relative; z-index: 2; padding-left: 50px;">
+                    <div class="principle-tag"
+                        style="display: inline-block; padding: 6px 15px; background: rgba(16, 185, 129, 0.1); color: #10b981; border-radius: 50px; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px;">
+                        Core Values</div>
+                    <h2 class="principle-title"
+                        style="font-family: 'Playfair Display', serif; font-size: 42px; font-weight: 800; color: #0a192f; margin-bottom: 25px; line-height: 1.2;">
+                        Our Core <span style="color: #10b981;">Principles</span></h2>
+                    <p class="principle-text"
+                        style="font-size: 18px; line-height: 1.8; color: #475569; margin-bottom: 35px; text-align: justify;">
+                        We maintain the highest standards of <strong>competence, independence, and impartiality</strong>
+                        in our assessment processes. Our team of certified auditors is committed to helping
+                        organizations achieve and demonstrate compliance with international standards, driving
+                        continuous improvement and operational excellence across all business functions.
                     </p>
                 </div>
             </div>
         </div>
-        
+
         <style>
             .p-feature-item:hover {
                 transform: translateX(10px);
             }
+
             .principle-img-container:hover {
                 transform: translateY(-10px) scale(1.02);
                 box-shadow: 0 50px 110px rgba(16, 185, 129, 0.18);
             }
+
             .principle-img-container:hover .img-inner-wrapper img {
                 transform: scale(1.1);
             }
+
             .principle-img-container:hover .principle-overlay {
                 opacity: 1;
+            }
+        </style>
+    </section>
+
+    <!-- Current Certification Services Section -->
+    <section class="current-cert-services">
+        <div class="container">
+            <div class="cert-services-heading">
+                <span class="cert-services-kicker">Certification Services</span>
+                <h2>Currently Providing Certification Services</h2>
+                <p>
+                    AITF currently provides professional certification services for Quality Management,
+                    Environmental Management and Occupational Health &amp; Safety Management systems.
+                </p>
+            </div>
+
+            <div class="row cert-services-grid">
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="cert-service-card qms-card">
+                        <div class="cert-service-image">
+                            <img src="aitfImages/qmsaudit.png" alt="QMS certification audit">
+                        </div>
+                        <div class="cert-service-content">
+                            <span class="cert-standard-pill">ISO 9001</span>
+                            <h3>QMS Certification</h3>
+                            <h4>Quality Management System</h4>
+                            <p>
+                                Helps organizations improve process consistency, customer satisfaction,
+                                operational control and continual improvement through a structured quality framework.
+                            </p>
+                            <ul>
+                                <li><i class="fa fa-check"></i> Process and quality control</li>
+                                <li><i class="fa fa-check"></i> Customer-focused improvement</li>
+                                <li><i class="fa fa-check"></i> Stronger compliance confidence</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="cert-service-card ems-card">
+                        <div class="cert-service-image">
+                            <img src="aitfImages/emsauditf.png" alt="EMS certification audit">
+                        </div>
+                        <div class="cert-service-content">
+                            <span class="cert-standard-pill">ISO 14001</span>
+                            <h3>EMS Certification</h3>
+                            <h4>Environmental Management System</h4>
+                            <p>
+                                Supports organizations in managing environmental responsibilities, reducing impact,
+                                improving resource efficiency and demonstrating responsible operations.
+                            </p>
+                            <ul>
+                                <li><i class="fa fa-check"></i> Environmental impact control</li>
+                                <li><i class="fa fa-check"></i> Resource efficiency practices</li>
+                                <li><i class="fa fa-check"></i> Sustainable business approach</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="cert-service-card ohsms-card">
+                        <div class="cert-service-image">
+                            <img src="aitfImages/ohsmsaudit.png" alt="OHSMS certification audit">
+                        </div>
+                        <div class="cert-service-content">
+                            <span class="cert-standard-pill">ISO 45001</span>
+                            <h3>OHSMS Certification</h3>
+                            <h4>Occupational Health &amp; Safety Management System</h4>
+                            <p>
+                                Enables organizations to build safer workplaces, identify hazards, reduce risks
+                                and strengthen health and safety performance for their workforce.
+                            </p>
+                            <ul>
+                                <li><i class="fa fa-check"></i> Workplace risk reduction</li>
+                                <li><i class="fa fa-check"></i> Safer operational practices</li>
+                                <li><i class="fa fa-check"></i> Health and safety performance</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cert-services-cta">
+                <p>Need certification support for your organization?</p>
+                <a href="application.php#online-application-form">Apply for Certification <i class="fa fa-arrow-right"></i></a>
+            </div>
+        </div>
+
+        <style>
+            .current-cert-services {
+                position: relative;
+                overflow: hidden;
+                padding: 105px 0 95px;
+                background:
+                    radial-gradient(circle at 8% 12%, rgba(37, 99, 235, 0.10), transparent 28%),
+                    radial-gradient(circle at 92% 18%, rgba(16, 185, 129, 0.12), transparent 30%),
+                    linear-gradient(180deg, #f8fbff 0%, #eef6ff 100%);
+                font-family: 'Inter', sans-serif;
+            }
+
+            .current-cert-services::before {
+                content: '';
+                position: absolute;
+                inset: 0;
+                background-image:
+                    linear-gradient(rgba(37, 99, 235, 0.045) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(37, 99, 235, 0.045) 1px, transparent 1px);
+                background-size: 42px 42px;
+                mask-image: linear-gradient(180deg, rgba(0,0,0,0.75), transparent 92%);
+                pointer-events: none;
+            }
+
+            .current-cert-services .container {
+                position: relative;
+                z-index: 2;
+            }
+
+            .cert-services-heading {
+                max-width: 850px;
+                margin: 0 auto 52px;
+                text-align: center;
+            }
+
+            .cert-services-kicker {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                padding: 8px 16px;
+                margin-bottom: 16px;
+                border-radius: 999px;
+                background: rgba(37, 99, 235, 0.10);
+                color: #2563eb;
+                font-size: 13px;
+                font-weight: 800;
+                letter-spacing: 1.8px;
+                text-transform: uppercase;
+            }
+
+            .cert-services-heading h2 {
+                margin: 0 0 16px;
+                font-family: 'Playfair Display', serif;
+                font-size: clamp(34px, 4vw, 52px);
+                font-weight: 900;
+                color: #0a192f;
+                line-height: 1.12;
+            }
+
+            .cert-services-heading p {
+                margin: 0 auto;
+                max-width: 760px;
+                color: #475569;
+                font-size: 18px;
+                line-height: 1.8;
+            }
+
+            .cert-services-grid {
+                align-items: stretch;
+            }
+
+            .cert-service-card {
+                height: 100%;
+                overflow: hidden;
+                border-radius: 30px;
+                background: rgba(255, 255, 255, 0.96);
+                border: 1px solid rgba(148, 163, 184, 0.22);
+                box-shadow: 0 24px 70px rgba(15, 23, 42, 0.10);
+                transition: transform 0.35s ease, box-shadow 0.35s ease;
+                position: relative;
+            }
+
+            .cert-service-card::before {
+                content: '';
+                position: absolute;
+                inset: 0 0 auto;
+                height: 6px;
+                background: linear-gradient(90deg, #2563eb, #38bdf8);
+                z-index: 2;
+            }
+
+            .cert-service-card.ems-card::before {
+                background: linear-gradient(90deg, #059669, #34d399);
+            }
+
+            .cert-service-card.ohsms-card::before {
+                background: linear-gradient(90deg, #f59e0b, #ef4444);
+            }
+
+            .cert-service-card:hover {
+                transform: translateY(-10px);
+                box-shadow: 0 34px 92px rgba(15, 23, 42, 0.16);
+            }
+
+            .cert-service-image {
+                height: 245px;
+                overflow: hidden;
+                background: #0f172a;
+                position: relative;
+            }
+
+            .cert-service-image::after {
+                content: '';
+                position: absolute;
+                inset: 0;
+                background: linear-gradient(180deg, transparent 45%, rgba(15, 23, 42, 0.58) 100%);
+                pointer-events: none;
+            }
+
+            .cert-service-image img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                display: block;
+                transition: transform 0.65s ease;
+            }
+
+            .cert-service-card:hover .cert-service-image img {
+                transform: scale(1.08);
+            }
+
+            .cert-service-content {
+                padding: 30px 28px 32px;
+            }
+
+            .cert-standard-pill {
+                display: inline-flex;
+                margin-bottom: 16px;
+                padding: 7px 13px;
+                border-radius: 999px;
+                background: #eff6ff;
+                color: #1d4ed8;
+                font-weight: 900;
+                font-size: 12px;
+                letter-spacing: 0.8px;
+            }
+
+            .ems-card .cert-standard-pill {
+                background: #ecfdf5;
+                color: #047857;
+            }
+
+            .ohsms-card .cert-standard-pill {
+                background: #fff7ed;
+                color: #c2410c;
+            }
+
+            .cert-service-content h3 {
+                margin: 0 0 6px;
+                color: #0f172a;
+                font-size: 25px;
+                font-weight: 900;
+                letter-spacing: -0.4px;
+            }
+
+            .cert-service-content h4 {
+                margin: 0 0 16px;
+                color: #2563eb;
+                font-size: 14px;
+                font-weight: 800;
+                text-transform: uppercase;
+                letter-spacing: 0.7px;
+                line-height: 1.5;
+            }
+
+            .ems-card .cert-service-content h4 {
+                color: #059669;
+            }
+
+            .ohsms-card .cert-service-content h4 {
+                color: #d97706;
+            }
+
+            .cert-service-content p {
+                margin: 0 0 20px;
+                color: #526173;
+                font-size: 15.5px;
+                line-height: 1.75;
+            }
+
+            .cert-service-content ul {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+                display: grid;
+                gap: 10px;
+            }
+
+            .cert-service-content li {
+                display: flex;
+                align-items: flex-start;
+                gap: 10px;
+                color: #334155;
+                font-size: 14.5px;
+                font-weight: 650;
+                line-height: 1.45;
+            }
+
+            .cert-service-content li i {
+                width: 22px;
+                height: 22px;
+                flex: 0 0 auto;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 50%;
+                background: #dbeafe;
+                color: #2563eb;
+                font-size: 11px;
+                margin-top: -1px;
+            }
+
+            .ems-card .cert-service-content li i {
+                background: #d1fae5;
+                color: #059669;
+            }
+
+            .ohsms-card .cert-service-content li i {
+                background: #ffedd5;
+                color: #ea580c;
+            }
+
+            .cert-services-cta {
+                margin: 26px auto 0;
+                padding: 24px 28px;
+                max-width: 820px;
+                border-radius: 26px;
+                background: linear-gradient(135deg, #0f172a, #1e3a8a);
+                color: #ffffff;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 20px;
+                box-shadow: 0 24px 70px rgba(15, 23, 42, 0.20);
+            }
+
+            .cert-services-cta p {
+                margin: 0;
+                color: #e2e8f0;
+                font-size: 18px;
+                font-weight: 800;
+            }
+
+            .cert-services-cta a {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 10px;
+                padding: 13px 20px;
+                border-radius: 999px;
+                background: linear-gradient(135deg, #38bdf8, #2563eb);
+                color: #ffffff;
+                text-decoration: none;
+                font-weight: 900;
+                white-space: nowrap;
+                box-shadow: 0 15px 34px rgba(37, 99, 235, 0.26);
+                transition: transform 0.25s ease, box-shadow 0.25s ease;
+            }
+
+            .cert-services-cta a:hover {
+                color: #ffffff;
+                text-decoration: none;
+                transform: translateY(-2px);
+                box-shadow: 0 20px 42px rgba(37, 99, 235, 0.34);
+            }
+
+            @media (max-width: 991px) {
+                .current-cert-services {
+                    padding: 78px 0;
+                }
+
+                .cert-services-cta {
+                    flex-direction: column;
+                    text-align: center;
+                }
+            }
+
+            @media (max-width: 575px) {
+                .cert-services-heading p {
+                    font-size: 16px;
+                }
+
+                .cert-service-image {
+                    height: 220px;
+                }
+
+                .cert-service-content {
+                    padding: 26px 22px 28px;
+                }
+
+                .cert-services-cta a {
+                    width: 100%;
+                }
             }
         </style>
     </section>

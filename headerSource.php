@@ -36,7 +36,7 @@
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
         height: var(--nav-height);
-        transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+        transition: background 0.4s ease, box-shadow 0.4s ease, border-color 0.4s ease;
     }
 
     #home .top-header:not(.scrolled) {
@@ -44,18 +44,15 @@
         --nav-text: #f1f5f9;
         --nav-hover-text: #ffffff;
         --nav-hover-bg: rgba(255, 255, 255, 0.12);
-        
-        background: transparent !important;
+
         border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
-        box-shadow: none !important;
+        box-shadow: none;
         backdrop-filter: none !important;
         -webkit-backdrop-filter: none !important;
     }
 
     .top-header.scrolled {
-        background: #ffffff !important;
         border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
     }
 
     .top-header.scrolled .navbar a:not(.login-btn),
@@ -84,7 +81,7 @@
         outline: none !important;
         background: transparent !important;
     }
-    
+
     .mobile-toggle-bar {
         display: block;
         width: 25px;
@@ -727,18 +724,18 @@
         padding-left: 30px !important;
         box-shadow: 0 2px 6px rgba(59, 130, 246, 0.2) !important;
     }
-    
+
     /* Online Form Link Special Styling */
     .dropdown-links-list a[href="info_updation_form.php"] {
         animation: pulse-glow 2s infinite;
     }
-    
+
     .dropdown-links-list a[href="info_updation_form.php"]:hover {
         background: linear-gradient(135deg, #15803d, #166534) !important;
         transform: scale(1.05);
         box-shadow: 0 6px 20px rgba(22, 163, 74, 0.5) !important;
     }
-    
+
     @keyframes pulse-glow {
         0%, 100% {
             box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
@@ -1513,22 +1510,58 @@
 
 <script type="text/javascript">
     $(document).ready(function () {
-        // Vanilla JS Scroll behavior to change navbar background and toggle colors
-        function updateScroll() {
-            var header = document.querySelector('.top-header');
-            if (header) {
-                if (window.pageYOffset > 50 || document.documentElement.scrollTop > 50) {
-                    header.classList.add('scrolled');
+        // Smooth navbar background based on scroll position
+        var header = document.querySelector('.top-header');
+        var scrollThreshold = 80;
+        var ticking = false;
+
+        function updateNavBg() {
+            if (!header) return;
+            var scrollY = window.pageYOffset || document.documentElement.scrollTop;
+
+            // Toggle .scrolled class for text color changes
+            if (scrollY > 30) {
+                header.classList.add('scrolled');
+            } else {
+                header.classList.remove('scrolled');
+            }
+
+            // Dynamic background opacity based on scroll position
+            if (document.body.id === 'home') {
+                var opacity = Math.min(scrollY / scrollThreshold, 1);
+                var r = Math.round(255);
+                var g = Math.round(255);
+                var b = Math.round(255);
+                header.style.background = 'rgba(' + r + ',' + g + ',' + b + ',' + opacity + ')';
+
+                // Dynamic box-shadow
+                if (opacity > 0.1) {
+                    header.style.boxShadow = '0 4px 20px rgba(0, 0, 0, ' + (0.08 * opacity) + ')';
                 } else {
-                    header.classList.remove('scrolled');
+                    header.style.boxShadow = 'none';
+                }
+
+                // Dynamic border
+                if (opacity > 0.5) {
+                    header.style.borderBottom = '1px solid rgba(0, 0, 0, ' + (0.08 * opacity) + ')';
+                } else {
+                    header.style.borderBottom = '1px solid rgba(255, 255, 255, ' + (0.15 * (1 - opacity)) + ')';
                 }
             }
+
+            ticking = false;
         }
-        window.addEventListener('scroll', updateScroll);
-        // Run on DOMContentLoaded and load to prevent delays
-        document.addEventListener('DOMContentLoaded', updateScroll);
-        window.addEventListener('load', updateScroll);
-        updateScroll();
+
+        window.addEventListener('scroll', function() {
+            if (!ticking) {
+                window.requestAnimationFrame(updateNavBg);
+                ticking = true;
+            }
+        });
+        // Run immediately to prevent delays
+        updateNavBg();
+        document.addEventListener('DOMContentLoaded', updateNavBg);
+        window.addEventListener('load', updateNavBg);
 
         // Enhanced dropdown menu functionality - No transitions, instant show/hide
         var activeDropdown = null;

@@ -347,6 +347,7 @@
                         <h3>Course Details</h3>
                         <p><strong>Training:</strong> Internal Auditor Training Course: BCMS 22301</p>
                         <p><strong>Duration:</strong> 2 Days</p>
+                        <p style="font-size: 0.90rem; color: #6c757d; font-style: italic; margin-top: 8px;">The above duration training is customised as per organizational need. Please contact us in case of requirement.</p>
                         <p><strong>Timing:</strong> 9:00 AM to 6:00 PM</p>
                     </div>
                 </div>
