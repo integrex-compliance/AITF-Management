@@ -769,7 +769,7 @@
                     <i class="fas fa-chevron-down faq-icon"></i>
                 </div>
                 <div class="faq-answer">
-                    Use the Information Update Form available in our resources section. Information that needs to be modified should be duly filled in Update Form given on web site and submitted online. Post submission, AITF will carry out required changes in client profile.
+                    Use the Information Update Form available in our download section. Information that needs to be modified should be duly filled in Update Form given on web site and submitted online. Post submission, AITF will carry out required changes in client profile.
                 </div>
             </div>
 
@@ -789,49 +789,12 @@
                     <i class="fas fa-chevron-down faq-icon"></i>
                 </div>
                 <div class="faq-answer">
-                    Use the Information Update Form available in our resources section. Submit changes in company details, contact information, or scope modifications for record updates.
+                    Use the Information Update Form available in our download section. Submit changes in company details, contact information, or scope modifications for record updates.
                 </div>
             </div>
         </div>
 
-        <!-- Audit & Compliance FAQs -->
-        <div class="faq-section">
-            <h2 class="section-title">
-                <i class="fas fa-clipboard-check"></i>
-                Audit & Assessment
-            </h2>
-            
-            <div class="faq-item" data-category="audit">
-                <div class="faq-question">
-                    <span>How should I prepare for an audit?</span>
-                    <i class="fas fa-chevron-down faq-icon"></i>
-                </div>
-                <div class="faq-answer">
-                    Prepare by: reviewing all documentation, conducting internal audits, ensuring records are up-to-date, training staff on quality procedures, and arranging necessary facilities for the audit team and arrange ISO awareness session and Internal Auditor's training to Process Owners for better preparation.
-                </div>
-            </div>
-
-            <div class="faq-item" data-category="audit">
-                <div class="faq-question">
-                    <span>What is NC Report & Closure process?</span>
-                    <i class="fas fa-chevron-down faq-icon"></i>
-                </div>
-                <div class="faq-answer">
-                    Non-Conformity (NC) Report identifies deviations from standards. The closure process involves: root cause analysis, corrective action implementation, effectiveness verification, and documentation of the resolution.
-                </div>
-            </div>
-
-            <div class="faq-item" data-category="audit">
-                <div class="faq-question">
-                    <span>How often are surveillance audits conducted?</span>
-                    <i class="fas fa-chevron-down faq-icon"></i>
-                </div>
-                <div class="faq-answer">
-                    Surveillance audits are typically conducted annually after initial certification. They ensure continued compliance and effectiveness of the management system.
-                </div>
-            </div>
-        </div>
-
+        
         <!-- General FAQs -->
         <div class="faq-section">
             <h2 class="section-title">
