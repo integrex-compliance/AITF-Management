@@ -1,4 +1,4 @@
-<div id="wrapper" class="active">
+<!-- <div id="wrapper" class="active">
     <?php
     $pageIdentifier = "Bills";
     // include 'header.php';
@@ -1440,4 +1440,4 @@
         $('.bill-edit-row').hide();
         filterBills();
     });
-</script>
+</script> -->
