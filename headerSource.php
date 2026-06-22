@@ -9,6 +9,7 @@
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&family=Montserrat:wght@700;800&family=Playfair+Display:wght@700;800;900&display=swap');
 
     :root {
+        --announcement-height: 48px;
         --nav-height: 85px;
         --nav-bg: #ffffff;
         --nav-text: #1e293b;
@@ -20,10 +21,101 @@
         --nav-glass: rgba(255, 255, 255, 0.05);
     }
 
+    .aitf-public-announcement-banner {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 1040;
+        height: var(--announcement-height);
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        background: linear-gradient(90deg, #053c6d 0%, #0b5b94 48%, #f5821f 100%);
+        color: #ffffff;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+        box-shadow: 0 8px 24px rgba(5, 60, 109, 0.18);
+        font-family: 'Inter', 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    .aitf-public-announcement-banner::before,
+    .aitf-public-announcement-banner::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 30px;
+        z-index: 2;
+        pointer-events: none;
+    }
+
+    .aitf-public-announcement-banner::before {
+        left: 0;
+        background: linear-gradient(90deg, #053c6d 0%, rgba(5, 60, 109, 0) 100%);
+    }
+
+    .aitf-public-announcement-banner::after {
+        right: 0;
+        background: linear-gradient(270deg, #f5821f 0%, rgba(245, 130, 31, 0) 100%);
+    }
+
+    .aitf-public-announcement-track {
+        display: flex;
+        width: max-content;
+        animation: aitfPublicAnnouncementScroll 28s linear infinite;
+        will-change: transform;
+    }
+
+    .aitf-public-announcement-group {
+        display: flex;
+        align-items: center;
+        flex-shrink: 0;
+        padding: 0 26px 0 70px;
+    }
+
+    .aitf-public-announcement-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 24px;
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: 0.35px;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .aitf-public-announcement-item i {
+        color: #ffd59b;
+        font-size: 13px;
+    }
+
+    .aitf-public-announcement-divider {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.8);
+        box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.14);
+    }
+
+    .aitf-public-announcement-banner:hover .aitf-public-announcement-track {
+        animation-play-state: paused;
+    }
+
+    @keyframes aitfPublicAnnouncementScroll {
+        from {
+            transform: translateX(0);
+        }
+
+        to {
+            transform: translateX(-50%);
+        }
+    }
+
     /* Fixed Navbar */
     .top-header {
         position: fixed;
-        top: 0;
+        top: var(--announcement-height);
         left: 0;
         right: 0;
         width: 100%;
@@ -37,6 +129,10 @@
         -webkit-backdrop-filter: blur(10px);
         height: var(--nav-height);
         transition: background 0.4s ease, box-shadow 0.4s ease, border-color 0.4s ease;
+    }
+
+    .top-header + * {
+        margin-top: calc(var(--announcement-height) + var(--nav-height)) !important;
     }
 
     #home .top-header:not(.scrolled) {
@@ -924,6 +1020,23 @@
 <head>
 
 </head>
+<div class="aitf-public-announcement-banner" aria-label="AITF announcements">
+    <div class="aitf-public-announcement-track">
+        <?php for ($announcementSet = 0; $announcementSet < 2; $announcementSet++) { ?>
+            <div class="aitf-public-announcement-group" aria-hidden="<?php echo $announcementSet === 0 ? 'false' : 'true'; ?>">
+                <span class="aitf-public-announcement-item"><i class="fa fa-certificate" aria-hidden="true"></i>NABCB Accredited Certification Body</span>
+                <span class="aitf-public-announcement-divider" aria-hidden="true"></span>
+                <span class="aitf-public-announcement-item"><i class="fa fa-balance-scale" aria-hidden="true"></i>Independent & Impartial Assessment</span>
+                <span class="aitf-public-announcement-divider" aria-hidden="true"></span>
+                <span class="aitf-public-announcement-item"><i class="fa fa-shield" aria-hidden="true"></i>Trusted. Accredited. Independent.</span>
+                <span class="aitf-public-announcement-divider" aria-hidden="true"></span>
+                <span class="aitf-public-announcement-item"><i class="fa fa-handshake-o" aria-hidden="true"></i>Trusted Certification Partner</span>
+                <span class="aitf-public-announcement-divider" aria-hidden="true"></span>
+            </div>
+        <?php } ?>
+    </div>
+</div>
+
 <header class="top-header">
     <nav class="navbar header-nav navbar-expand-lg">
         <div class="container-fluid">
@@ -1207,7 +1320,7 @@
                         </div>
                     </div>
 
-                    <div><a class="nav-link" href="validation.php">Cert Validate</a></div>
+                    <div><a class="nav-link" href="validation.php">Certificate validation</a></div>
                     <div><a class="nav-link" href="application.php#online-application-form">Application Form</a></div>
                     <div class="dropdown">
                         <a class="nav-link" href="#">Download</a>
@@ -1295,10 +1408,10 @@
                                     <div class="dropdown-links-list" style="display:none;">
                                         <a href="useOfLogo.php"
                                             style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
-                                                class="link-line"></span>Logo Usage Guideline</a>
+                                                class="link-line"></span>Logo Usage Guidelines</a>
                                         <a href="transitionGuideline.php"
                                             style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
-                                                class="link-line"></span>Transition Guideline</a>
+                                                class="link-line"></span>Transition Guidelines</a>
                                     </div>
                                 </div>
 
@@ -1343,7 +1456,7 @@
 
                     <div><a class="nav-link" href="aboutus.php">About Us</a></div>
                     <div><a class="nav-link" href="contactUS.php">Contact Us</a></div>
-                    <div><a class="nav-link login-btn" href="loginSelection.php">Login</a></div>
+                    <div><a class="nav-link login-btn" href="loginSelection.php"> Login</a></div>
                 </div>
             </div>
     </nav>
@@ -1378,7 +1491,7 @@
                         </li>
                         <li>
                             <a class="mobile-nav-item" href="validation.php">
-                                <span>Cert Validate</span>
+                                <span>Certificate Validation</span>
                             </a>
                         </li>
                         <li>
@@ -1486,8 +1599,8 @@
                         </li>
                         <li><a class="mobile-nav-item" href="auditorGuideline.php">Auditor Guideline</a></li>
                         <li class="mobile-nav-section-label">Guidelines</li>
-                        <li><a class="mobile-nav-item" href="useOfLogo.php">Logo Usage Guideline</a></li>
-                        <li><a class="mobile-nav-item" href="transitionGuideline.php">Transition Guideline</a></li>
+                        <li><a class="mobile-nav-item" href="useOfLogo.php">Logo Usage Guidelines</a></li>
+                        <li><a class="mobile-nav-item" href="transitionGuideline.php">Transition Guidelines</a></li>
                         <li class="mobile-nav-section-label">
                             <div style="display: flex; flex-direction: column;">
                                 <span>Reports &amp; Updates</span>

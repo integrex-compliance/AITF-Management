@@ -554,7 +554,7 @@
                 <div class="col-lg-8 offset-lg-2 text-center">
                     <div class="about-nc p-4 rounded shadow-sm bg-light">
                         <h3 class="mb-3">About Non-Conformance Closure</h3>
-                        <p class="mb-4">The Non-Conformance Closure Report documents the resolution of identified non-conformities in our quality management system. This comprehensive report ensures all corrective actions have been effectively implemented and verified.</p>
+                        <p class="mb-4">The Non-Conformance Closure Report documents the resolution of identified non-conformities in quality management system. This comprehensive report ensures all corrective actions have been effectively implemented and verified.</p>
                         <div class="features-grid">
                             <div class="feature-item">
                                 <i class="fas fa-check-circle text-success"></i>

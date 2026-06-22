@@ -572,7 +572,7 @@ session_start();
         .modern-hero-section {
             background: #050b1a;
             position: relative;
-            padding: 95px 0 60px;
+            padding: 175px 0 60px;
             overflow: hidden;
             color: #ffffff;
             font-family: 'Montserrat', sans-serif;
@@ -583,7 +583,7 @@ session_start();
 
         .hero-bg-image {
             position: absolute;
-            top: 85px;
+            top: 130px;
             left: -4%;
             right: -4%;
             bottom: -4%;
@@ -2383,30 +2383,27 @@ session_start();
             }
 
             .cert-service-image {
-                height: 245px;
+                height: 265px;
                 overflow: hidden;
-                background: #0f172a;
+                background: #ffffff;
                 position: relative;
-            }
-
-            .cert-service-image::after {
-                content: '';
-                position: absolute;
-                inset: 0;
-                background: linear-gradient(180deg, transparent 45%, rgba(15, 23, 42, 0.58) 100%);
-                pointer-events: none;
             }
 
             .cert-service-image img {
                 width: 100%;
                 height: 100%;
                 object-fit: cover;
+                object-position: center;
                 display: block;
-                transition: transform 0.65s ease;
+                filter: none;
+                image-rendering: auto;
+                backface-visibility: hidden;
+                transform: translateZ(0);
+                transition: transform 0.45s ease;
             }
 
             .cert-service-card:hover .cert-service-image img {
-                transform: scale(1.08);
+                transform: translateZ(0) scale(1.025);
             }
 
             .cert-service-content {
@@ -2571,7 +2568,7 @@ session_start();
                 }
 
                 .cert-service-image {
-                    height: 220px;
+                    height: 235px;
                 }
 
                 .cert-service-content {

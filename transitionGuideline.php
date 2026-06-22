@@ -16,7 +16,7 @@
         .guideline-header {
             background: linear-gradient(135deg, #1a4b8c 0%, #0d2b4e 100%);
             color: white;
-            padding: 100px 0 70px;
+            padding: 180px 0 70px;
             margin-bottom: 40px;
             position: relative;
             overflow: hidden;
@@ -78,6 +78,15 @@
             margin-bottom: 25px;
             padding-bottom: 15px;
             border-bottom: 2px solid #f1f1f1;
+        }
+
+        .transition-doc-header {
+            background: #f8fafc;
+            border: 1px solid #e9ecef;
+            border-left: 5px solid #3498db;
+            border-radius: 10px;
+            padding: 28px 24px;
+            margin-bottom: 30px;
         }
         
         .document-actions {
@@ -169,7 +178,7 @@
         
         @media (max-width: 768px) {
             .guideline-header {
-                padding: 60px 0 40px;
+                padding: 145px 0 45px;
             }
             
             .guideline-header h1 {
@@ -238,13 +247,12 @@
                         
                         <div class="guideline-container">
                             <!-- Header Section -->
-                            <div class="guideline-header text-center mb-5">
+                            <div class="transition-doc-header text-center mb-5">
                                 <h2 class="main-title">ISO 9001:2015 Transition Guidelines</h2>
                                 <p class="subtitle">Your Complete Guide to Upgrading from ISO 9001:2008</p>
-                                    <a href="perfect-learn/text/transition_guideline.pdf" download class="btn btn-outline-primary btn-lg ml-3">
-                                        <i class="fa fa-download mr-2"></i> Download PDF
-                                    </a>
-                                </div>
+                                <a href="perfect-learn/text/transition_guideline.pdf" download class="btn btn-outline-primary btn-lg ml-3">
+                                    <i class="fa fa-download mr-2"></i> Download PDF
+                                </a>
                             </div>
 
                             <!-- Quick Navigation -->
@@ -432,7 +440,7 @@
                                         </div>
                                         <div class="principle-card">
                                             <div class="principle-icon">
-                                                <i fa fa-chart-line"></i>
+                                                <i class="fa fa-chart-line"></i>
                                             </div>
                                             <h5>Improvement</h5>
                                             <p>Maintaining performance and creating new opportunities</p>
@@ -767,12 +775,6 @@
             </div>
         </div>
     </section>
-                </div>
-            </div>
-        </div>
-    </section>
-        </div>
-    </div>
 
     
     <?php include './footerSource.php'; ?>

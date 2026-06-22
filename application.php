@@ -964,7 +964,7 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
             }
             
             .app-hero-header {
-                padding: 100px 0 28px !important;
+                padding: 145px 0 28px !important;
             }
 
             .app-hero-header h1 {
@@ -978,7 +978,7 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
         
         @media (max-width: 576px) {
             .app-hero-header {
-                padding: 95px 0 24px !important;
+                padding: 140px 0 24px !important;
             }
 
             .app-hero-header h1 {
@@ -1256,7 +1256,7 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
     </head>
     
     <!-- Online Form Header -->
-    <div class="section app-hero-header" style="padding: 110px 0 36px; background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); position: relative; z-index: 1;">
+    <div class="section app-hero-header" style="padding: 180px 0 36px; background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); position: relative; z-index: 1;">
         <div class="container">
             <div class="row justify-content-center">
                 <div class="col-lg-10">
@@ -1905,20 +1905,20 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
             padding: 0 !important;
         }
         
-        /* Hero section must keep its padding */
+        /* Hero section must keep its padding below the fixed banner and navbar */
         .app-hero-header {
-            padding: 110px 0 36px !important;
+            padding: 180px 0 36px !important;
         }
         
         @media (max-width: 768px) {
             .app-hero-header {
-                padding: 100px 0 28px !important;
+                padding: 145px 0 28px !important;
             }
         }
         
         @media (max-width: 576px) {
             .app-hero-header {
-                padding: 95px 0 24px !important;
+                padding: 140px 0 24px !important;
             }
         }
         
