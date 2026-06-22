@@ -590,7 +590,7 @@
             
             <div class="faq-item" data-category="certification">
                 <div class="faq-question">
-                    <span>What is the first step to get AITF certification?</span>
+                    <span>What is the first step to get certification from AITF?</span>
                     <i class="fas fa-chevron-down faq-icon"></i>
                 </div>
                 <div class="faq-answer">
@@ -672,7 +672,7 @@
                     <i class="fas fa-chevron-down faq-icon"></i>
                 </div>
                 <div class="faq-answer">
-                    ISO certification typically takes 3-6 months, including gap analysis, documentation, implementation, internal audits, management review, and final certification audit by AITF auditors.
+                    ISO certification typically takes 60-90 days, including gap analysis, documentation, implementation, internal audits, management review, and final certification audit by AITF auditors.
                 </div>
             </div>
 
@@ -700,7 +700,7 @@
                     <i class="fas fa-chevron-down faq-icon"></i>
                 </div>
                 <div class="faq-answer">
-                    Prepare by: reviewing all documentation, conducting internal audits, ensuring records are up-to-date, training staff on quality procedures, and arranging necessary facilities for the audit team.
+                    Prepare by: reviewing all documentation, conducting internal audits, ensuring records are up-to-date, training staff on quality procedures, and arranging necessary facilities for the audit team and arrange ISO awareness session and Internal Auditor's training to Process Owners for better preparation.
                 </div>
             </div>
 
@@ -739,6 +739,37 @@
                 </div>
                 <div class="faq-answer">
                     After successful certification, you can use the AITF logo on marketing materials, products, and website as per the Logo Usage Guidelines. Download the official logo package from our resources section.
+                </div>
+            </div>
+
+              
+            <div class="faq-item" data-category="general">
+                <div class="faq-question">
+                    <span>How can I use the AITF logo after certification?</span>
+                    <i class="fas fa-chevron-down faq-icon"></i>
+                </div>
+                <div class="faq-answer">
+                    After successful certification, you can use the AITF logo on marketing materials, products, and website as per the Logo Usage Guidelines. Download the official logo package from our resources section.
+                </div>
+            </div>
+
+            <div class="faq-item" data-category="general">
+                <div class="faq-question">
+                    <span>What is the validity period of certification?</span>
+                    <i class="fas fa-chevron-down faq-icon"></i>
+                </div>
+                <div class="faq-answer">
+                    AITF certifications are typically valid for 3 years, subject to annual surveillance audits and compliance. Renewal requires a recertification audit before expiry.
+                </div>
+            </div>
+
+            <div class="faq-item" data-category="general">
+                <div class="faq-question">
+                    <span>How do I update my company information?</span>
+                    <i class="fas fa-chevron-down faq-icon"></i>
+                </div>
+                <div class="faq-answer">
+                    Use the Information Update Form available in our resources section. Information that needs to be modified should be duly filled in Update Form given on web site and submitted online. Post submission, AITF will carry out required changes in client profile.
                 </div>
             </div>
 
@@ -776,7 +807,7 @@
                     <i class="fas fa-chevron-down faq-icon"></i>
                 </div>
                 <div class="faq-answer">
-                    Prepare by: reviewing all documentation, conducting internal audits, ensuring records are up-to-date, training staff on quality procedures, and arranging necessary facilities for the audit team.
+                    Prepare by: reviewing all documentation, conducting internal audits, ensuring records are up-to-date, training staff on quality procedures, and arranging necessary facilities for the audit team and arrange ISO awareness session and Internal Auditor's training to Process Owners for better preparation.
                 </div>
             </div>
 
@@ -807,36 +838,7 @@
                 <i class="fas fa-info-circle"></i>
                 General Information
             </h2>
-            
-            <div class="faq-item" data-category="general">
-                <div class="faq-question">
-                    <span>How can I use the AITF logo after certification?</span>
-                    <i class="fas fa-chevron-down faq-icon"></i>
-                </div>
-                <div class="faq-answer">
-                    After successful certification, you can use the AITF logo on marketing materials, products, and website as per the Logo Usage Guidelines. Download the official logo package from our resources section.
-                </div>
-            </div>
-
-            <div class="faq-item" data-category="general">
-                <div class="faq-question">
-                    <span>What is the validity period of certification?</span>
-                    <i class="fas fa-chevron-down faq-icon"></i>
-                </div>
-                <div class="faq-answer">
-                    AITF certifications are typically valid for 3 years, subject to annual surveillance audits and compliance. Renewal requires a recertification audit before expiry.
-                </div>
-            </div>
-
-            <div class="faq-item" data-category="general">
-                <div class="faq-question">
-                    <span>How do I update my company information?</span>
-                    <i class="fas fa-chevron-down faq-icon"></i>
-                </div>
-                <div class="faq-answer">
-                    Use the Information Update Form available in our resources section. Submit changes in company details, contact information, or scope modifications for record updates.
-                </div>
-            </div>
+          
         </div>
 
         <div class="back-to-home">

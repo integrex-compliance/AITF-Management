@@ -1,7 +1,7 @@
 <div id="wrapper" class="active">
     <?php
     $pageIdentifier = "Bills";
-    include 'header.php';
+    // include 'header.php';
     include 'dbConnect.php';
 
     $message = '';

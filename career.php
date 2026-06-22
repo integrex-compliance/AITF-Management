@@ -170,6 +170,58 @@ $successApplicant = isset($_GET['success']) && $_GET['success'] == '1' ? trim($_
             grid-template-columns: repeat(3, 1fr);
             gap: 22px;
         }
+        .career-clean-section {
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+        }
+        .career-clean-section.alt {
+            background: linear-gradient(180deg, #f2f7ff 0%, #ffffff 100%);
+        }
+        .career-clean-section:before {
+            content: "";
+            position: absolute;
+            width: 360px;
+            height: 360px;
+            border-radius: 50%;
+            background: rgba(37, 99, 235, .08);
+            top: -140px;
+            right: -120px;
+        }
+        .career-section-header {
+            max-width: 880px;
+            margin: 0 auto 42px;
+            text-align: center;
+        }
+        .career-section-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 14px;
+            border-radius: 999px;
+            background: #eaf2ff;
+            color: #1d4ed8;
+            font-size: 12px;
+            font-weight: 900;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+        }
+        .career-section-header h2 {
+            margin: 16px 0 14px;
+            color: #0f172a;
+            font-size: clamp(32px, 4.2vw, 50px);
+            line-height: 1.12;
+            letter-spacing: -1.4px;
+            font-weight: 900;
+        }
+        .career-section-header p {
+            margin: 0 auto;
+            max-width: 760px;
+            color: #475569;
+            font-size: 17px;
+            line-height: 1.8;
+            font-weight: 500;
+        }
         .feature-card {
             background: #fff;
             border: 1px solid #e2e8f0;
@@ -484,11 +536,12 @@ $successApplicant = isset($_GET['success']) && $_GET['success'] == '1' ? trim($_
     }
 
     .career-page .career-hero p {
-        color: #e5eefc !important;
-        font-size: clamp(17px, 1.4vw, 21px) !important;
-        line-height: 1.8 !important;
+        color: #f1f5f9 !important;
+        font-size: clamp(18px, 1.5vw, 22px) !important;
+        line-height: 1.85 !important;
         max-width: 760px !important;
-        text-shadow: 0 8px 26px rgba(0,0,0,.22);
+        text-shadow: 0 4px 16px rgba(0,0,0,.3);
+        font-weight: 500;
     }
 
     .career-page .career-btn {
@@ -552,8 +605,14 @@ $successApplicant = isset($_GET['success']) && $_GET['success'] == '1' ? trim($_
     .career-page .section-title p,
     .career-page .feature-card p,
     .career-page .director-message p {
-        color: var(--career-muted) !important;
-        line-height: 1.75 !important;
+        color: #475569 !important;
+        line-height: 1.8 !important;
+        font-size: 16px !important;
+        font-weight: 500;
+    }
+
+    .career-page .feature-card p {
+        font-size: 15.5px !important;
     }
 
     .career-page .feature-card,
@@ -599,7 +658,14 @@ $successApplicant = isset($_GET['success']) && $_GET['success'] == '1' ? trim($_
 
     .career-page .impact-card p,
     .career-page .impact-list div {
-        color: #e5eefc !important;
+        color: #f1f5f9 !important;
+        font-size: 17px !important;
+        font-weight: 500 !important;
+        line-height: 1.8 !important;
+    }
+
+    .career-page .impact-card h2 {
+        font-size: clamp(38px, 4.5vw, 56px) !important;
     }
 
     .career-page .impact-list div {
@@ -878,17 +944,17 @@ $successApplicant = isset($_GET['success']) && $_GET['success'] == '1' ? trim($_
         </div>
     </section>
 
-    <section class="section" id="why-work">
+    <section class="section career-clean-section" id="why-work">
         <div class="career-container">
-            <div class="section-title">
-                <span class="tag">Why Work With Us?</span>
-                <h2>A place to learn, lead and do work that matters.</h2>
-                <p>AITF gives professionals the platform to sharpen their technical skills, work with diverse industries and contribute to dependable certification outcomes.</p>
+            <div class="career-section-header">
+                <span class="career-section-kicker"><i class="fa-solid fa-circle-check"></i> Why Work With Us?</span>
+                <h2>A clear path to learn, grow and create meaningful impact.</h2>
+                <p>AITF gives professionals a practical platform to build technical expertise, work with diverse industries and contribute to reliable certification outcomes.</p>
             </div>
             <div class="why-grid">
-                <div class="feature-card"><div class="feature-icon"><i class="fa-solid fa-chart-line"></i></div><h3>Career Growth</h3><p>Develop your assessment, auditing and client-handling skills through real assignments and senior guidance.</p></div>
-                <div class="feature-card"><div class="feature-icon"><i class="fa-solid fa-handshake"></i></div><h3>Supportive Team</h3><p>Work with a collaborative team that values fairness, knowledge sharing and professional integrity.</p></div>
-                <div class="feature-card"><div class="feature-icon"><i class="fa-solid fa-shield-halved"></i></div><h3>Trusted Work</h3><p>Contribute to transparent, impartial and value-added assessments for organizations across sectors.</p></div>
+                <div class="feature-card"><div class="feature-icon"><i class="fa-solid fa-chart-line"></i></div><h3>Career Growth</h3><p>Develop assessment, auditing and client-handling skills through real assignments, senior guidance and continuous learning.</p></div>
+                <div class="feature-card"><div class="feature-icon"><i class="fa-solid fa-handshake"></i></div><h3>Supportive Team</h3><p>Work with a collaborative team that values fairness, knowledge sharing, disciplined execution and professional integrity.</p></div>
+                <div class="feature-card"><div class="feature-icon"><i class="fa-solid fa-shield-halved"></i></div><h3>Trusted Work</h3><p>Contribute to transparent, impartial and value-added assessments for organizations across different sectors.</p></div>
             </div>
         </div>
     </section>
@@ -908,21 +974,22 @@ $successApplicant = isset($_GET['success']) && $_GET['success'] == '1' ? trim($_
         </div>
     </section>
 
-    <section class="section">
+    <section class="section career-clean-section alt">
         <div class="career-container">
-            <div class="section-title">
-                <span class="tag">Why You'll Love Working Here</span>
+            <div class="career-section-header">
+                <span class="career-section-kicker"><i class="fa-solid fa-heart"></i> Why You'll Love Working Here</span>
                 <h2>Professional environment, practical learning and meaningful responsibility.</h2>
+                <p>You will work in a focused environment where learning is practical, responsibilities are clear and every contribution supports better client outcomes.</p>
             </div>
             <div class="love-grid">
-                <div class="feature-card"><div class="feature-icon"><i class="fa-solid fa-graduation-cap"></i></div><h3>Learning Culture</h3><p>Stay updated with standards, processes and industry best practices while applying them practically.</p></div>
-                <div class="feature-card"><div class="feature-icon"><i class="fa-solid fa-compass"></i></div><h3>Clear Purpose</h3><p>Work on assignments that support organizational excellence and continual improvement.</p></div>
-                <div class="feature-card"><div class="feature-icon"><i class="fa-solid fa-people-group"></i></div><h3>Respect & Ownership</h3><p>We encourage responsible decision-making, disciplined execution and respectful teamwork.</p></div>
+                <div class="feature-card"><div class="feature-icon"><i class="fa-solid fa-graduation-cap"></i></div><h3>Learning Culture</h3><p>Stay updated with standards, processes and industry best practices while applying them in day-to-day work.</p></div>
+                <div class="feature-card"><div class="feature-icon"><i class="fa-solid fa-compass"></i></div><h3>Clear Purpose</h3><p>Work on assignments that support organizational excellence, stronger systems and continual improvement.</p></div>
+                <div class="feature-card"><div class="feature-icon"><i class="fa-solid fa-people-group"></i></div><h3>Respect & Ownership</h3><p>Take responsibility with confidence in a respectful team culture that encourages disciplined decision-making.</p></div>
             </div>
         </div>
     </section>
 
-    <section class="section">
+    <section class="section" style="background: #ffffff;">
         <div class="career-container director-wrap">
             <div class="director-card">
                 <div class="director-avatar"><i class="fa-solid fa-user-tie"></i></div>
@@ -930,9 +997,9 @@ $successApplicant = isset($_GET['success']) && $_GET['success'] == '1' ? trim($_
                 <span>AITF Management Certification</span>
             </div>
             <div class="director-message">
-                <p>At AITF, we believe that great organizations are built by people who are curious, disciplined and committed to doing the right thing. If you have the passion to learn and the courage to take responsibility, this is a place where your work will matter.</p>
-                <p>We welcome professionals who want to grow with integrity, serve clients with excellence and contribute to a stronger culture of quality and compliance. Your knowledge can create real impact, and we are ready to support your journey.</p>
-                <p><strong>Come prepared to learn, contribute and lead. Together, we can build trust and raise standards.</strong></p>
+                <p style="color: #1e293b; font-size: 17px; line-height: 1.8; font-weight: 500;">At AITF, we believe that great organizations are built by people who are curious, disciplined and committed to doing the right thing. If you have the passion to learn and the courage to take responsibility, this is a place where your work will matter.</p>
+                <p style="color: #1e293b; font-size: 17px; line-height: 1.8; font-weight: 500;">We welcome professionals who want to grow with integrity, serve clients with excellence and contribute to a stronger culture of quality and compliance. Your knowledge can create real impact, and we are ready to support your journey.</p>
+                <p style="color: #0f172a; font-size: 17px; line-height: 1.8; font-weight: 500;"><strong style="color: #0f172a;">Come prepared to learn, contribute and lead. Together, we can build trust and raise standards.</strong></p>
             </div>
         </div>
     </section>
@@ -974,16 +1041,12 @@ $successApplicant = isset($_GET['success']) && $_GET['success'] == '1' ? trim($_
                         </div>
                     </div>
                     <div class="field">
-                        <label for="apply_for">Apply For</label>
-                        <select id="apply_for" name="apply_for" required>
-                            <option value="">Select role</option>
-                            <option value="Auditor">Auditor</option>
-                            <option value="Facilitator">Facilitator</option>
-                        </select>
+                        <label for="apply_for">Attach Your CV Here</label>
+                        <input type="file" id="cv_file" name="cv_file" accept=".pdf,.doc,.docx" required style="padding: 18px 15px;">
                     </div>
                     <div class="field">
-                        <label for="message">Short Message <span style="color:#94a3b8; text-transform:none; font-weight:700;">(optional)</span></label>
-                        <textarea id="message" name="message" placeholder="Tell us briefly about your expertise or experience"></textarea>
+                        <label for="message">Short Message <span style="color:#64748b; text-transform:none; font-weight:600; font-size: 12px;">(optional)</span></label>
+                        <textarea id="message" name="message" placeholder="Tell us briefly about your expertise or experience" style="font-size: 15px;"></textarea>
                     </div>
 
                     <?php if ($recaptchaFrontendEnabled): ?>
@@ -991,12 +1054,12 @@ $successApplicant = isset($_GET['success']) && $_GET['success'] == '1' ? trim($_
                             <?php if (($recaptchaConfig['version'] ?? 'v2_checkbox') === 'v3'): ?>
                                 <input type="hidden" name="g-recaptcha-response" id="g-recaptcha-response">
                             <?php else: ?>
-                                <div class="g-recaptcha" data-sitekey="<?php echo htmlspecialchars($recaptchaConfig['site_key'], ENT_QUOTES, 'UTF-8'); ?>" data-theme="<?php echo htmlspecialchars($recaptchaConfig['theme'] ?? 'light', ENT_QUOTES, 'UTF-8'); ?>"></div>
+                                <div class="g-recaptcha" data-sitekey="<?php echo htmlspecialchars($recaptchaConfig['site_key'], ENT_QUOTES, 'UTF-8'); ?>" data-theme="<?php echo htmlspecialchars($recaptchaConfig['theme'] ?? 'light', ENT_QUOTES, 'UTF-8'); ?>" data-callback="enableSubmitBtn"></div>
                             <?php endif; ?>
                         </div>
                     <?php endif; ?>
 
-                    <button class="submit-btn" type="submit"><i class="fa-solid fa-paper-plane"></i> Submit Application</button>
+                    <button class="submit-btn" id="submitBtn" type="submit" <?php if ($recaptchaFrontendEnabled && ($recaptchaConfig['version'] ?? 'v2_checkbox') !== 'v3'): ?>disabled<?php endif; ?> style="<?php if ($recaptchaFrontendEnabled && ($recaptchaConfig['version'] ?? 'v2_checkbox') !== 'v3'): ?>opacity: 0.5; cursor: not-allowed;<?php endif; ?>"><i class="fa-solid fa-paper-plane"></i> Submit Application</button>
                 </form>
             </div>
         </div>
@@ -1071,4 +1134,16 @@ $successApplicant = isset($_GET['success']) && $_GET['success'] == '1' ? trim($_
     });
 </script>
 <?php endif; ?>
+
+<script>
+    // Enable submit button after captcha verification
+    function enableSubmitBtn() {
+        var submitBtn = document.getElementById('submitBtn');
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = '1';
+            submitBtn.style.cursor = 'pointer';
+        }
+    }
+</script>
 </html>

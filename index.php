@@ -1419,7 +1419,7 @@ session_start();
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            z-index: 10;
+            z-index: 5;
         }
 
         .milestone-dot {
@@ -1480,6 +1480,8 @@ session_start();
             transform: translateY(30px) scale(0.9);
             transition: all 0.8s cubic-bezier(0.165, 0.84, 0.44, 1);
             width: 280px;
+            position: relative;
+            z-index: 10;
         }
 
         .milestone-item.active .milestone-card {
@@ -1658,8 +1660,8 @@ session_start();
                 <div class="timeline-spine-progress"></div>
 
                 <div class="milestones-track">
-                    <!-- Milestone 1: Top -->
-                    <div class="milestone-item top" data-step="1">
+                    <!-- Milestone 1: 2011 Foundation -->
+                    <div class="milestone-item top active" data-step="1">
                         <div class="milestone-dot-wrapper">
                             <div class="milestone-dot"></div>
                         </div>
@@ -1667,62 +1669,34 @@ session_start();
                         <div class="milestone-card" style="border-top: 5px solid #3b82f6;">
                             <span class="milestone-year" style="color: #3b82f6;">2011</span>
                             <h4>Foundation</h4>
-                            <p>Establishment of AITF as a specialized assessment body, focusing on institutional
-                                integrity.</p>
+                            <p>AITF started in 2011 as a specialized assessment body, focusing on institutional integrity.</p>
                         </div>
                     </div>
 
-                    <!-- Milestone 2: Bottom -->
-                    <div class="milestone-item bottom" data-step="2">
+                    <!-- Milestone 2: 2016 NABCB Accreditation -->
+                    <div class="milestone-item top" data-step="2">
                         <div class="milestone-dot-wrapper">
                             <div class="milestone-dot"></div>
                         </div>
                         <div class="milestone-connector"></div>
-                        <div class="milestone-card" style="border-bottom: 5px solid #10b981;">
-                            <span class="milestone-year" style="color: #10b981;">2015</span>
-                            <h4>ISO 9001 Operations</h4>
-                            <p>Commencement of Quality Management Certification Assessment services across industrial
-                                sectors.</p>
+                        <div class="milestone-card nabcb-highlight-card" style="border-top: 5px solid #b8860b; transform: translateY(-40px) scale(1.08); box-shadow: 0 25px 70px rgba(184, 134, 11, 0.3);">
+                            <img src="images/nabcb.png" alt="NABCB Logo" style="height: 60px; width: auto; margin-bottom: 15px;">
+                            <span class="milestone-year" style="color: #b8860b;">2016</span>
+                            <h4 style="background: linear-gradient(135deg, #b8860b, #ffd700); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 19px; font-weight: 900;">NABCB ACCREDITATION</h4>
+                            <p>Accredited by NABCB in 2016 for QMS, EMS and OHSMS certification services.</p>
                         </div>
                     </div>
 
-                    <!-- Milestone 3: Top -->
+                    <!-- Milestone 3: Present -->
                     <div class="milestone-item top" data-step="3">
                         <div class="milestone-dot-wrapper">
                             <div class="milestone-dot"></div>
                         </div>
                         <div class="milestone-connector"></div>
-                        <div class="milestone-card" style="border-top: 5px solid #f59e0b;">
-                            <span class="milestone-year" style="color: #f59e0b;">2020</span>
-                            <h4>Accredited ISO 14001</h4>
-                            <p>Expansion into Environmental Management systems with Accredited status.</p>
-                        </div>
-                    </div>
-
-                    <!-- Milestone 4: Bottom -->
-                    <div class="milestone-item bottom" data-step="4">
-                        <div class="milestone-dot-wrapper">
-                            <div class="milestone-dot"></div>
-                        </div>
-                        <div class="milestone-connector"></div>
-                        <div class="milestone-card" style="border-bottom: 5px solid #ef4444;">
-                            <span class="milestone-year" style="color: #ef4444;">2025</span>
-                            <h4>Accredited ISO 45001</h4>
-                            <p>Integration of Occupational Health & Safety Management systems under accredited
-                                frameworks.</p>
-                        </div>
-                    </div>
-
-                    <!-- Milestone 5: Top -->
-                    <div class="milestone-item top" data-step="5">
-                        <div class="milestone-dot-wrapper">
-                            <div class="milestone-dot"></div>
-                        </div>
-                        <div class="milestone-connector"></div>
-                        <div class="milestone-card" style="border-top: 5px solid #8b5cf6;">
-                            <span class="milestone-year" style="color: #8b5cf6;">Present</span>
-                            <h4>NABCB Compliance</h4>
-                            <p>Maintaining rigorous standards through continual compliance and technical excellence.</p>
+                        <div class="milestone-card" style="border-top: 5px solid #10b981;">
+                            <span class="milestone-year" style="color: #10b981;">Present</span>
+                            <h4>Evaluation & Assessment</h4>
+                            <p>Currently conducting evaluation and assessment services for management system certifications.</p>
                         </div>
                     </div>
                 </div>
@@ -1760,7 +1734,7 @@ session_start();
                             <span class="step-dot"></span>
                             <div>
                                 <h4>Continual Trust</h4>
-                                <p>Evaluating organizations with consistent, ethical and value-added certification services.</p>
+                                <p>Evaluating organizations with consistent, ethical and value-added accredited  certification services.</p>
                             </div>
                         </div>
                     </div>
@@ -4275,171 +4249,79 @@ session_start();
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
 
     <script>
-        // GSAP Initialization for AITF Journey - Horizontal Scroll
+        // GSAP Initialization for AITF Journey - Simplified and Fixed
         document.addEventListener('DOMContentLoaded', function () {
-            if (typeof gsap !== 'undefined') {
+            // Show first milestone immediately
+            const firstMilestone = document.querySelector('.milestone-item[data-step="1"]');
+            if (firstMilestone) {
+                firstMilestone.classList.add('active');
+            }
+
+            if (typeof gsap !== 'undefined' && typeof ScrollTrigger !== 'undefined') {
                 gsap.registerPlugin(ScrollTrigger);
 
                 // --- Dynamic Legacy Counter ---
                 const counter = document.getElementById('legacy-counter');
                 const plus = document.getElementById('legacy-plus');
 
-                const updateCounter = (val) => {
-                    counter.innerText = Math.floor(val);
-                    // Color Logic
-                    if (val <= 10) {
-                        counter.style.color = '#3b82f6'; // Blue (Starting Phase)
-                    } else if (val <= 20) {
-                        counter.style.color = '#10b981'; // Green (Expansion Phase)
-                    } else {
-                        counter.style.color = '#b8860b'; // Gold (Excellence Phase)
-                    }
-                };
-
-                // Counter Animation with ScrollTrigger
-                ScrollTrigger.create({
-                    trigger: ".legacy-highlight",
-                    start: "top 80%",
-                    onEnter: () => {
-                        gsap.to({ val: 0 }, {
-                            val: 25,
-                            duration: 2.5,
-                            ease: "power2.out",
-                            onUpdate: function () { updateCounter(this.targets()[0].val); },
-                            onComplete: () => { gsap.to(plus, { opacity: 1, x: 10, duration: 0.5 }); }
-                        });
-                    },
-                    onLeaveBack: () => {
-                        // Reset when scrolling back up so it re-counts
-                        gsap.set(plus, { opacity: 0, x: 0 });
-                        updateCounter(0);
-                    }
-                });
-
-                // --- Horizontal Scroll Logic ---
-                if (window.innerWidth > 991) {
-                    const track = document.querySelector('.milestones-track');
-                    const wrapper = document.querySelector('.horizontal-timeline-wrapper');
-
-                    // Pin the section and scroll track horizontally
-                    gsap.to(track, {
-                        x: () => -(track.scrollWidth - wrapper.offsetWidth),
-                        ease: "none",
-                        scrollTrigger: {
-                            trigger: "#journey-scroll-section",
-                            start: "top top",
-                            end: () => "+=" + (track.scrollWidth - wrapper.offsetWidth),
-                            scrub: 1,
-                            pin: true,
-                            anticipatePin: 1,
-                            invalidateOnRefresh: true
+                if (counter && plus) {
+                    const updateCounter = (val) => {
+                        counter.innerText = Math.floor(val);
+                        if (val <= 5) {
+                            counter.style.color = '#3b82f6';
+                        } else if (val <= 10) {
+                            counter.style.color = '#10b981';
+                        } else {
+                            counter.style.color = '#b8860b';
                         }
-                    });
+                    };
 
-                    // Sync spine progress with horizontal scroll
-                    gsap.to('.timeline-spine-progress', {
-                        width: "100%",
-                        ease: "none",
-                        scrollTrigger: {
-                            trigger: "#journey-scroll-section",
-                            start: "top top",
-                            end: () => "+=" + (track.scrollWidth - wrapper.offsetWidth),
-                            scrub: 1
-                        }
-                    });
-
-                    // Activate items as they pass the center
-                    const milestoneItems = document.querySelectorAll('.milestone-item');
-                    milestoneItems.forEach((item) => {
-                        ScrollTrigger.create({
-                            trigger: item,
-                            containerAnimation: gsap.to(track, { x: () => -(track.scrollWidth - wrapper.offsetWidth), ease: "none" }), // Needs to reference the same animation
-                            start: "left center",
-                            end: "right center",
-                            onEnter: () => item.classList.add('active'),
-                            onLeaveBack: () => item.classList.remove('active'),
-                        });
-
-                        // Fallback simple activation if containerAnimation is tricky in this env
-                        gsap.to(item, {
-                            scrollTrigger: {
-                                trigger: item,
-                                start: "left center",
-                                containerAnimation: gsap.getProperty(track, "x"), // simplified
-                                onEnter: () => item.classList.add('active'),
-                            }
-                        });
-                    });
-
-                    // Direct activation based on track position (more reliable)
                     ScrollTrigger.create({
-                        trigger: "#journey-scroll-section",
-                        start: "top top",
-                        end: () => "+=" + (track.scrollWidth - wrapper.offsetWidth),
-                        scrub: 1,
-                        onUpdate: (self) => {
-                            const progress = self.progress;
-                            const items = document.querySelectorAll('.milestone-item');
-                            const activeIndex = Math.floor(progress * items.length);
-                            items.forEach((item, i) => {
-                                if (i <= activeIndex) item.classList.add('active');
-                                else item.classList.remove('active');
+                        trigger: ".legacy-highlight",
+                        start: "top 80%",
+                        onEnter: () => {
+                            gsap.to({ val: 0 }, {
+                                val: 15,
+                                duration: 2,
+                                ease: "power2.out",
+                                onUpdate: function () { updateCounter(this.targets()[0].val); },
+                                onComplete: () => { gsap.to(plus, { opacity: 1, duration: 0.3 }); }
                             });
-                        }
-                    });
-
-                } else {
-                    // Vertical fallback for mobile
-                    const milestoneItems = document.querySelectorAll('.milestone-item');
-                    milestoneItems.forEach((item) => {
-                        gsap.to(item, {
-                            scrollTrigger: {
-                                trigger: item,
-                                start: "top 80%",
-                                onEnter: () => item.classList.add('active')
-                            }
-                        });
-                    });
-
-                    gsap.to('.timeline-spine-progress', {
-                        height: "100%",
-                        ease: "none",
-                        scrollTrigger: {
-                            trigger: ".horizontal-timeline-wrapper",
-                            start: "top 70%",
-                            end: "bottom 70%",
-                            scrub: 1
+                        },
+                        onLeaveBack: () => {
+                            gsap.set(plus, { opacity: 0 });
+                            updateCounter(0);
                         }
                     });
                 }
 
-                // Bar Charts Animation
-                const barFills = document.querySelectorAll('.bar-fill[data-width]');
-                barFills.forEach(fill => {
-                    gsap.to(fill, {
-                        width: fill.getAttribute('data-width'),
-                        duration: 1.5,
-                        ease: 'power2.out',
-                        scrollTrigger: {
-                            trigger: fill,
-                            start: 'top 90%'
+                // --- Simplified Milestone Animations ---
+                const milestoneItems = document.querySelectorAll('.milestone-item');
+                milestoneItems.forEach((item) => {
+                    ScrollTrigger.create({
+                        trigger: item,
+                        start: "top 75%",
+                        onEnter: () => item.classList.add('active'),
+                        onLeaveBack: () => {
+                            if (item.dataset.step !== "1") {
+                                item.classList.remove('active');
+                            }
                         }
                     });
                 });
 
-                // Histogram Bars Animation
-                const histogramBars = document.querySelectorAll('.histogram-bar');
-                histogramBars.forEach((bar, index) => {
-                    gsap.to(bar, {
-                        height: bar.getAttribute('data-height'),
-                        duration: 1,
-                        delay: index * 0.1,
-                        ease: 'power2.out',
-                        scrollTrigger: {
-                            trigger: '.histogram-container',
-                            start: 'top 85%'
+                // Spine progress
+                ScrollTrigger.create({
+                    trigger: ".horizontal-timeline-wrapper",
+                    start: "top 70%",
+                    end: "bottom 30%",
+                    onUpdate: (self) => {
+                        const progress = self.progress * 100;
+                        const spine = document.querySelector('.timeline-spine-progress');
+                        if (spine) {
+                            spine.style.width = progress + '%';
                         }
-                    });
+                    }
                 });
             }
         });
@@ -4448,22 +4330,17 @@ session_start();
         document.addEventListener('DOMContentLoaded', function () {
             const chars = document.querySelectorAll('.welcome-3d-char');
             chars.forEach((char, index) => {
-                // Random delay for each character
                 const delay = Math.random() * 0.5;
                 char.style.animation = `float 3s ease-in-out ${delay}s infinite`;
 
-                // Add mouse move effect
                 char.addEventListener('mousemove', (e) => {
                     const rect = char.getBoundingClientRect();
                     const x = e.clientX - rect.left;
                     const y = e.clientY - rect.top;
-
                     const centerX = rect.width / 2;
                     const centerY = rect.height / 2;
-
                     const angleX = (y - centerY) * 0.05;
                     const angleY = (centerX - x) * 0.05;
-
                     char.style.transform = `rotateX(${angleX}deg) rotateY(${angleY}deg) translateZ(20px)`;
                 });
 
@@ -4472,7 +4349,6 @@ session_start();
                 });
             });
 
-            // Create floating particles
             const particlesContainer = document.querySelector('.welcome-3d-particles');
             if (particlesContainer) {
                 for (let i = 0; i < 20; i++) {
@@ -4495,7 +4371,6 @@ session_start();
             }
         });
 
-        // Add smooth hover effect for all buttons with class btn-light
         document.querySelectorAll('.btn-light').forEach(button => {
             button.addEventListener('mouseover', function () {
                 this.style.transform = 'translateY(-3px)';
@@ -4508,21 +4383,16 @@ session_start();
             });
         });
 
-        // Audit Flow Dropdown Toggle Function
         function toggleStep(element) {
             const step = element.closest('.flow-step');
             const stepNumber = parseInt(step.dataset.step);
             const allSteps = document.querySelectorAll('.flow-step');
-
-            // Check if this step is already active
             const isAlreadyActive = step.classList.contains('active');
 
-            // Close all steps first
             allSteps.forEach(otherStep => {
                 otherStep.classList.remove('active');
             });
 
-            // If the clicked step was not already active, activate it and all previous steps
             if (!isAlreadyActive) {
                 allSteps.forEach(otherStep => {
                     const otherStepNumber = parseInt(otherStep.dataset.step);
@@ -4532,15 +4402,12 @@ session_start();
                 });
             }
 
-            // Update progress bar based on highest step number
             updateProgress(isAlreadyActive ? 0 : stepNumber);
         }
 
-        // Update progress bar
         function updateProgress(highestStepNumber) {
             const totalSteps = document.querySelectorAll('.flow-step').length;
             const progressPercent = (highestStepNumber / totalSteps) * 100;
-
             const progressFill = document.querySelector('.progress-fill');
             const currentStepText = document.querySelector('.current-step');
 
@@ -4553,15 +4420,12 @@ session_start();
             }
         }
 
-        // Initialize all steps as closed, only step 1 active
         document.addEventListener('DOMContentLoaded', function () {
             const allSteps = document.querySelectorAll('.flow-step');
-            // Remove active class from all steps first
             allSteps.forEach(step => {
                 step.classList.remove('active');
             });
 
-            // Then add active class only to step 1
             const firstStep = document.querySelector('.flow-step[data-step="1"]');
             if (firstStep) {
                 firstStep.classList.add('active');
