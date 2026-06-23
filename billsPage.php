@@ -1,7 +1,7 @@
-<!-- <div id="wrapper" class="active">
+<div id="wrapper" class="active">
     <?php
     $pageIdentifier = "Bills";
-    // include 'header.php';
+    include 'header.php';
     include 'dbConnect.php';
 
     $message = '';
@@ -59,290 +59,523 @@
     if (!$db) {
         $errorMessage = 'Database connection is not available.';
         $bills = array();
-        $summary = array('total_bills' => 0, 'total_amount' => 0, 'paid_amount' => 0, 'unpaid_amount' => 0);
+        $summary = array('total_bills' => 0, 'total_amount' => 0, 'paid_amount' => 0, 'remaining_amount' => 0, 'overdue_amount' => 0, 'overdue_count' => 0);
+        $vendorSummaries = array();
+        $vendorLookup = array();
     } else {
         try {
+            // Migrations: ensure bills table exists
             $db->exec("CREATE TABLE IF NOT EXISTS bills (
                 bill_id INT AUTO_INCREMENT PRIMARY KEY,
                 vendor_name VARCHAR(255) NOT NULL,
                 amount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
-                payment_status ENUM('Paid','Unpaid') NOT NULL DEFAULT 'Unpaid',
+                payment_status VARCHAR(50) NOT NULL DEFAULT 'Unpaid',
                 description TEXT NULL,
                 attached_file VARCHAR(500) NULL,
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8");
 
+            // Safe ALTER columns
+            $db->exec("ALTER TABLE bills MODIFY COLUMN payment_status VARCHAR(50) NOT NULL DEFAULT 'Unpaid'");
+
+            $checkDueDate = $db->query("SHOW COLUMNS FROM bills LIKE 'due_date'");
+            if ($checkDueDate->rowCount() === 0) {
+                $db->exec("ALTER TABLE bills ADD COLUMN due_date DATE NULL AFTER amount");
+            }
+
+            $checkPaidAmount = $db->query("SHOW COLUMNS FROM bills LIKE 'paid_amount'");
+            if ($checkPaidAmount->rowCount() === 0) {
+                $db->exec("ALTER TABLE bills ADD COLUMN paid_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00 AFTER due_date");
+            }
+
+            // Create vendors table
+            $db->exec("CREATE TABLE IF NOT EXISTS vendors (
+                vendor_name VARCHAR(255) PRIMARY KEY,
+                phone VARCHAR(50) NULL,
+                email VARCHAR(255) NULL,
+                gst_no VARCHAR(50) NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8");
+
+            // Dynamic Overdue / days diff calculator helper
+            function getBillStatusInfo($bill)
+            {
+                // Today's date context (User's system local date context: 2026-06-23)
+                $today = new DateTime('2026-06-23');
+
+                $paymentStatus = $bill['payment_status'];
+                $amount = (float) $bill['amount'];
+                $paidAmount = (float) $bill['paid_amount'];
+                $dueDateStr = $bill['due_date'];
+
+                if ($paymentStatus === 'Paid' || $paidAmount >= $amount) {
+                    return array(
+                        'status' => 'Paid',
+                        'class' => 'bill-status-paid',
+                        'label' => 'Paid',
+                        'subtext' => 'Fully Paid'
+                    );
+                }
+
+                $isOverdue = false;
+                $daysDiff = 0;
+                if (!empty($dueDateStr)) {
+                    $dueDate = new DateTime($dueDateStr);
+                    if ($dueDate < $today) {
+                        $isOverdue = true;
+                        $interval = $today->diff($dueDate);
+                        $daysDiff = $interval->days;
+                    } else {
+                        $interval = $today->diff($dueDate);
+                        $daysDiff = $interval->days;
+                    }
+                }
+
+                if ($isOverdue) {
+                    return array(
+                        'status' => 'Overdue',
+                        'class' => 'bill-status-overdue',
+                        'label' => 'Overdue',
+                        'subtext' => 'Overdue by ' . $daysDiff . ' ' . ($daysDiff === 1 ? 'day' : 'days')
+                    );
+                }
+
+                if ($paidAmount > 0) {
+                    return array(
+                        'status' => 'Partially Paid',
+                        'class' => 'bill-status-partially-paid',
+                        'label' => 'Partially Paid',
+                        'subtext' => 'Rs. ' . number_format($amount - $paidAmount, 2) . ' left'
+                    );
+                }
+
+                return array(
+                    'status' => 'Unpaid',
+                    'class' => 'bill-status-unpaid',
+                    'label' => 'Unpaid',
+                    'subtext' => !empty($dueDateStr) ? 'Due in ' . $daysDiff . ' ' . ($daysDiff === 1 ? 'day' : 'days') : 'No due date'
+                );
+            }
+
+            // POST handler
             if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bill_action'])) {
                 $action = $_POST['bill_action'];
-                $vendorName = trim(isset($_POST['vendor_name']) ? $_POST['vendor_name'] : '');
-                $amount = isset($_POST['amount']) ? (float) $_POST['amount'] : 0;
-                $paymentStatus = (isset($_POST['payment_status']) && $_POST['payment_status'] === 'Paid') ? 'Paid' : 'Unpaid';
-                $description = trim(isset($_POST['description']) ? $_POST['description'] : '');
 
-                if ($action === 'delete') {
-                    $billId = (int) $_POST['bill_id'];
-                    $fileStatement = $db->prepare('SELECT attached_file FROM bills WHERE bill_id = :bill_id');
-                    $fileStatement->execute(array(':bill_id' => $billId));
-                    $fileRow = $fileStatement->fetch(PDO::FETCH_ASSOC);
+                if ($action === 'save_vendor') {
+                    $vName = trim(isset($_POST['vendor_name']) ? $_POST['vendor_name'] : '');
+                    $vPhone = trim(isset($_POST['phone']) ? $_POST['phone'] : '');
+                    $vEmail = trim(isset($_POST['email']) ? $_POST['email'] : '');
+                    $vGst = trim(isset($_POST['gst_no']) ? $_POST['gst_no'] : '');
 
-                    $deleteStatement = $db->prepare('DELETE FROM bills WHERE bill_id = :bill_id');
-                    $deleteStatement->execute(array(':bill_id' => $billId));
-
-                    if ($fileRow && !empty($fileRow['attached_file']) && file_exists($fileRow['attached_file'])) {
-                        unlink($fileRow['attached_file']);
-                    }
-
-                    $message = 'Bill deleted successfully.';
-                } else if ($vendorName === '' || $amount < 0) {
-                    $errorMessage = 'Please enter a vendor name and a valid bill amount.';
-                } else if ($action === 'add') {
-                    $attachedFile = getBillUploadPath('attached_file', '', $uploadDir, $allowedExtensions, $allowedMimeTypes, $errorMessage);
-                    if ($attachedFile !== false) {
-                        $insertStatement = $db->prepare('INSERT INTO bills (vendor_name, amount, payment_status, description, attached_file) VALUES (:vendor_name, :amount, :payment_status, :description, :attached_file)');
-                        $insertStatement->execute(array(
-                            ':vendor_name' => $vendorName,
-                            ':amount' => $amount,
-                            ':payment_status' => $paymentStatus,
-                            ':description' => $description,
-                            ':attached_file' => $attachedFile
+                    if ($vName !== '') {
+                        $vendorStmt = $db->prepare('INSERT INTO vendors (vendor_name, phone, email, gst_no) VALUES (:vendor_name, :phone, :email, :gst_no) ON DUPLICATE KEY UPDATE phone = :phone2, email = :email2, gst_no = :gst_no2');
+                        $vendorStmt->execute(array(
+                            ':vendor_name' => $vName,
+                            ':phone' => $vPhone,
+                            ':email' => $vEmail,
+                            ':gst_no' => $vGst,
+                            ':phone2' => $vPhone,
+                            ':email2' => $vEmail,
+                            ':gst_no2' => $vGst
                         ));
-                        $message = 'Bill added successfully.';
+                        $message = 'Vendor details updated successfully.';
                     }
-                } else if ($action === 'edit') {
-                    $billId = (int) $_POST['bill_id'];
-                    $currentStatement = $db->prepare('SELECT attached_file FROM bills WHERE bill_id = :bill_id');
-                    $currentStatement->execute(array(':bill_id' => $billId));
-                    $currentBill = $currentStatement->fetch(PDO::FETCH_ASSOC);
-                    $attachedFile = getBillUploadPath('attached_file', $currentBill ? $currentBill['attached_file'] : '', $uploadDir, $allowedExtensions, $allowedMimeTypes, $errorMessage);
+                } else {
+                    $vendorName = trim(isset($_POST['vendor_name']) ? $_POST['vendor_name'] : '');
+                    $amount = isset($_POST['amount']) ? (float) $_POST['amount'] : 0;
+                    $dueDate = isset($_POST['due_date']) && !empty($_POST['due_date']) ? $_POST['due_date'] : null;
+                    $paidAmount = isset($_POST['paid_amount']) ? (float) $_POST['paid_amount'] : 0.00;
+                    $paymentStatus = isset($_POST['payment_status']) ? $_POST['payment_status'] : 'Unpaid';
+                    $description = trim(isset($_POST['description']) ? $_POST['description'] : '');
 
-                    if ($attachedFile !== false) {
-                        if ($currentBill && $attachedFile !== $currentBill['attached_file'] && !empty($currentBill['attached_file']) && file_exists($currentBill['attached_file'])) {
-                            unlink($currentBill['attached_file']);
+                    // Auto sanitize payment status & paid amounts
+                    if ($paymentStatus === 'Paid') {
+                        $paidAmount = $amount;
+                    } else if ($paymentStatus === 'Unpaid') {
+                        $paidAmount = 0.00;
+                    } else if ($paymentStatus === 'Partially Paid') {
+                        if ($paidAmount >= $amount) {
+                            $paymentStatus = 'Paid';
+                            $paidAmount = $amount;
+                        } else if ($paidAmount <= 0) {
+                            $paymentStatus = 'Unpaid';
+                            $paidAmount = 0.00;
+                        }
+                    }
+
+                    if ($action === 'delete') {
+                        $billId = (int) $_POST['bill_id'];
+                        $fileStatement = $db->prepare('SELECT attached_file FROM bills WHERE bill_id = :bill_id');
+                        $fileStatement->execute(array(':bill_id' => $billId));
+                        $fileRow = $fileStatement->fetch(PDO::FETCH_ASSOC);
+
+                        $deleteStatement = $db->prepare('DELETE FROM bills WHERE bill_id = :bill_id');
+                        $deleteStatement->execute(array(':bill_id' => $billId));
+
+                        if ($fileRow && !empty($fileRow['attached_file']) && file_exists($fileRow['attached_file'])) {
+                            unlink($fileRow['attached_file']);
                         }
 
-                        $updateStatement = $db->prepare('UPDATE bills SET vendor_name = :vendor_name, amount = :amount, payment_status = :payment_status, description = :description, attached_file = :attached_file WHERE bill_id = :bill_id');
-                        $updateStatement->execute(array(
-                            ':vendor_name' => $vendorName,
-                            ':amount' => $amount,
-                            ':payment_status' => $paymentStatus,
-                            ':description' => $description,
-                            ':attached_file' => $attachedFile,
-                            ':bill_id' => $billId
-                        ));
-                        $message = 'Bill updated successfully.';
+                        $message = 'Bill deleted successfully.';
+                    } else if ($vendorName === '' || $amount < 0) {
+                        $errorMessage = 'Please enter a vendor name and a valid bill amount.';
+                    } else if ($action === 'add') {
+                        $attachedFile = getBillUploadPath('attached_file', '', $uploadDir, $allowedExtensions, $allowedMimeTypes, $errorMessage);
+                        if ($attachedFile !== false) {
+                            $insertStatement = $db->prepare('INSERT INTO bills (vendor_name, amount, due_date, paid_amount, payment_status, description, attached_file) VALUES (:vendor_name, :amount, :due_date, :paid_amount, :payment_status, :description, :attached_file)');
+                            $insertStatement->execute(array(
+                                ':vendor_name' => $vendorName,
+                                ':amount' => $amount,
+                                ':due_date' => $dueDate,
+                                ':paid_amount' => $paidAmount,
+                                ':payment_status' => $paymentStatus,
+                                ':description' => $description,
+                                ':attached_file' => $attachedFile
+                            ));
+
+                            // Auto create vendor if missing
+                            $vCheck = $db->prepare('SELECT COUNT(*) FROM vendors WHERE vendor_name = :vendor_name');
+                            $vCheck->execute(array(':vendor_name' => $vendorName));
+                            if ($vCheck->fetchColumn() == 0) {
+                                $vInsert = $db->prepare('INSERT INTO vendors (vendor_name, phone, email, gst_no) VALUES (:vendor_name, "", "", "")');
+                                $vInsert->execute(array(':vendor_name' => $vendorName));
+                            }
+
+                            $message = 'Bill added successfully.';
+                        }
+                    } else if ($action === 'edit') {
+                        $billId = (int) $_POST['bill_id'];
+                        $currentStatement = $db->prepare('SELECT attached_file FROM bills WHERE bill_id = :bill_id');
+                        $currentStatement->execute(array(':bill_id' => $billId));
+                        $currentBill = $currentStatement->fetch(PDO::FETCH_ASSOC);
+                        $attachedFile = getBillUploadPath('attached_file', $currentBill ? $currentBill['attached_file'] : '', $uploadDir, $allowedExtensions, $allowedMimeTypes, $errorMessage);
+
+                        if ($attachedFile !== false) {
+                            if ($currentBill && $attachedFile !== $currentBill['attached_file'] && !empty($currentBill['attached_file']) && file_exists($currentBill['attached_file'])) {
+                                unlink($currentBill['attached_file']);
+                            }
+
+                            $updateStatement = $db->prepare('UPDATE bills SET vendor_name = :vendor_name, amount = :amount, due_date = :due_date, paid_amount = :paid_amount, payment_status = :payment_status, description = :description, attached_file = :attached_file WHERE bill_id = :bill_id');
+                            $updateStatement->execute(array(
+                                ':vendor_name' => $vendorName,
+                                ':amount' => $amount,
+                                ':due_date' => $dueDate,
+                                ':paid_amount' => $paidAmount,
+                                ':payment_status' => $paymentStatus,
+                                ':description' => $description,
+                                ':attached_file' => $attachedFile,
+                                ':bill_id' => $billId
+                            ));
+
+                            $vCheck = $db->prepare('SELECT COUNT(*) FROM vendors WHERE vendor_name = :vendor_name');
+                            $vCheck->execute(array(':vendor_name' => $vendorName));
+                            if ($vCheck->fetchColumn() == 0) {
+                                $vInsert = $db->prepare('INSERT INTO vendors (vendor_name, phone, email, gst_no) VALUES (:vendor_name, "", "", "")');
+                                $vInsert->execute(array(':vendor_name' => $vendorName));
+                            }
+
+                            $message = 'Bill updated successfully.';
+                        }
                     }
                 }
             }
 
+            // Fetch all bills
             $statement = $db->query('SELECT * FROM bills ORDER BY created_at DESC, bill_id DESC');
             $bills = $statement->fetchAll(PDO::FETCH_ASSOC);
 
-            $summaryStatement = $db->query("SELECT COUNT(*) AS total_bills, COALESCE(SUM(amount), 0) AS total_amount, COALESCE(SUM(CASE WHEN payment_status = 'Paid' THEN amount ELSE 0 END), 0) AS paid_amount, COALESCE(SUM(CASE WHEN payment_status = 'Unpaid' THEN amount ELSE 0 END), 0) AS unpaid_amount FROM bills");
+            // Fetch summaries for cards (with overdue detection based on User current date 2026-06-23)
+            $summaryStatement = $db->query("
+                SELECT 
+                    COUNT(*) AS total_bills, 
+                    COALESCE(SUM(amount), 0) AS total_amount, 
+                    COALESCE(SUM(paid_amount), 0) AS paid_amount, 
+                    COALESCE(SUM(amount - paid_amount), 0) AS remaining_amount,
+                    COALESCE(SUM(CASE WHEN payment_status != 'Paid' AND due_date < '2026-06-23' THEN amount - paid_amount ELSE 0 END), 0) AS overdue_amount,
+                    COUNT(CASE WHEN payment_status != 'Paid' AND due_date < '2026-06-23' THEN 1 END) AS overdue_count
+                FROM bills
+            ");
             $summary = $summaryStatement->fetch(PDO::FETCH_ASSOC);
+
+            // Fetch vendor profiles & summaries for the lookup popup
+            $vendorSummaryStmt = $db->query("
+                SELECT 
+                    v.vendor_name, 
+                    COALESCE(v.phone, '') AS phone, 
+                    COALESCE(v.email, '') AS email, 
+                    COALESCE(v.gst_no, '') AS gst_no,
+                    COUNT(b.bill_id) AS total_bills,
+                    COALESCE(SUM(b.amount - b.paid_amount), 0) AS total_outstanding
+                FROM vendors v
+                LEFT JOIN bills b ON v.vendor_name = b.vendor_name
+                GROUP BY v.vendor_name
+            ");
+            $vendorSummaries = $vendorSummaryStmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            $vendorLookup = array();
+            foreach ($vendorSummaries as $vSum) {
+                $vendorLookup[$vSum['vendor_name']] = array(
+                    'phone' => $vSum['phone'],
+                    'email' => $vSum['email'],
+                    'gst_no' => $vSum['gst_no'],
+                    'total_bills' => (int) $vSum['total_bills'],
+                    'total_outstanding' => (float) $vSum['total_outstanding']
+                );
+            }
+
         } catch (Exception $e) {
             error_log($e->getMessage());
-            $errorMessage = 'Unable to load bills right now.';
+            $errorMessage = 'Database migration or query error: ' . $e->getMessage();
             $bills = array();
-            $summary = array('total_bills' => 0, 'total_amount' => 0, 'paid_amount' => 0, 'unpaid_amount' => 0);
+            $summary = array('total_bills' => 0, 'total_amount' => 0, 'paid_amount' => 0, 'remaining_amount' => 0, 'overdue_amount' => 0, 'overdue_count' => 0);
+            $vendorSummaries = array();
+            $vendorLookup = array();
         }
     }
     ?>
 
     <style>
+        /* Import Outfit font for premium modern typography */
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+
         .bills-page {
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             min-height: calc(100vh - 70px);
-            padding: 30px 0 44px;
-            background: linear-gradient(180deg, #f8fbff 0%, #f3f7fc 100%);
-            color: #071d3a;
+            padding: 30px 0 50px;
+            background: radial-gradient(circle at 10% 20%, rgba(244, 247, 252, 1) 0%, rgba(230, 237, 248, 1) 90%);
+            color: #1e293b;
         }
 
         .bills-page .container {
-            width: 96%;
-            max-width: 1480px;
+            width: 95%;
+            max-width: 1400px;
         }
 
+        /* Premium Header Styling */
         .bills-header {
             position: relative;
             display: flex;
             justify-content: space-between;
             align-items: center;
             gap: 24px;
-            min-height: 185px;
-            margin-bottom: 34px;
-            padding: 42px 42px 42px 178px;
+            min-height: 140px;
+            margin-bottom: 30px;
+            padding: 30px 40px;
             overflow: hidden;
             color: #fff;
-            background: linear-gradient(112deg, #071f55 0%, #0b4fc2 54%, #248ff4 100%);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 28px;
-            box-shadow: 0 22px 60px rgba(11, 42, 98, 0.18);
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #3b82f6 100%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            box-shadow: 0 20px 40px rgba(15, 23, 42, 0.15);
+            isolation: isolate;
         }
 
         .bills-header:before {
             content: "";
             position: absolute;
-            right: -80px;
-            top: -100px;
-            width: 280px;
-            height: 280px;
+            right: -50px;
+            top: -50px;
+            width: 220px;
+            height: 220px;
             border-radius: 50%;
-            background: rgba(255, 255, 255, 0.13);
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.3) 0%, rgba(59, 130, 246, 0) 70%);
+            z-index: -1;
         }
 
         .bills-header:after {
             content: "";
             position: absolute;
-            right: 120px;
+            left: 20%;
             bottom: -80px;
-            width: 170px;
-            height: 170px;
+            width: 180px;
+            height: 180px;
             border-radius: 50%;
-            background: rgba(255, 255, 255, 0.08);
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, rgba(99, 102, 241, 0) 70%);
+            z-index: -1;
         }
 
-        .bills-header > * {
-            position: relative;
-            z-index: 1;
+        .bills-header-content {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .bills-hero-icon {
+            width: 64px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 26px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 18px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(12px);
         }
 
         .bills-title {
-            position: relative;
             margin: 0;
             color: #fff;
-            font-size: 48px;
-            font-weight: 900;
-            letter-spacing: -1.2px;
-        }
-
-        .bills-title:before {
-            content: "\f1c1";
-            position: absolute;
-            left: -132px;
-            top: 50%;
-            width: 96px;
-            height: 96px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-family: FontAwesome;
-            font-size: 48px;
-            color: #fff;
-            border-radius: 24px;
-            background: linear-gradient(145deg, #2f6ff2 0%, #1556d6 100%);
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 18px 38px rgba(0, 0, 0, 0.16);
-            transform: translateY(-50%);
-        }
-
-        .bills-title:after {
-            content: "\f155";
-            position: absolute;
-            left: -58px;
-            top: 57%;
-            width: 31px;
-            height: 31px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-family: FontAwesome;
-            font-size: 16px;
-            color: #1a64dc;
-            border-radius: 50%;
-            background: #fff;
-            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
+            font-size: 32px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
         }
 
         .bills-subtitle {
-            max-width: 680px;
-            margin: 16px 0 0;
-            color: rgba(255, 255, 255, 0.92);
-            font-size: 23px;
-            font-weight: 650;
-            line-height: 1.45;
+            margin: 6px 0 0;
+            color: #94a3b8;
+            font-size: 15px;
+            font-weight: 400;
         }
 
+        /* Modern Custom Buttons */
         .bills-btn {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 9px;
+            gap: 8px;
             border: 0;
-            border-radius: 999px;
-            padding: 11px 20px;
-            font-size: 13px;
-            font-weight: 800;
-            letter-spacing: 0.2px;
-            line-height: 1;
-            white-space: nowrap;
-            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
+            border-radius: 14px;
+            padding: 12px 22px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .bills-btn-primary {
             color: #fff;
-            background: linear-gradient(135deg, #18a0fb, #0d4d8b);
-            box-shadow: 0 14px 30px rgba(13, 77, 139, 0.28);
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.25);
         }
 
-        .bills-header .bills-btn-primary {
-            color: #0b2545;
-            background: #fff;
-            box-shadow: 0 18px 38px rgba(0, 0, 0, 0.18);
-        }
-
-        .bills-btn-primary:hover,
-        .bills-btn-primary:focus {
-            color: #fff;
+        .bills-btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 18px 38px rgba(13, 77, 139, 0.34);
-        }
-
-        .bills-header .bills-btn-primary:hover,
-        .bills-header .bills-btn-primary:focus {
-            color: #0b2545;
-            background: #f3f8ff;
+            box-shadow: 0 14px 28px rgba(59, 130, 246, 0.35);
+            filter: brightness(1.05);
         }
 
         .bills-btn-soft {
-            color: #0d4d8b;
-            background: #eef6ff;
-            border: 1px solid #d9e9fb;
+            color: #1e293b;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
         }
 
         .bills-btn-soft:hover {
-            color: #083966;
-            background: #e0f0ff;
+            background: #e2e8f0;
             transform: translateY(-1px);
         }
 
         .bills-btn-danger {
-            color: #dc2626;
-            background: #fff1f2;
-            border: 1px solid #ffe0e3;
+            color: #fff;
+            background: #ef4444;
+            box-shadow: 0 8px 16px rgba(239, 68, 68, 0.15);
         }
 
         .bills-btn-danger:hover {
-            color: #fff;
             background: #dc2626;
             transform: translateY(-1px);
         }
 
+        /* Modern Dashboard Layout Cards */
+        .bill-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .bill-summary-card {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 20px;
+            padding: 22px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.03);
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        .bill-summary-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px rgba(15, 23, 42, 0.07);
+        }
+
+        .bill-summary-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            flex-shrink: 0;
+        }
+
+        .bill-summary-blue {
+            color: #3b82f6;
+            background: #eff6ff;
+        }
+
+        .bill-summary-green {
+            color: #10b981;
+            background: #ecfdf5;
+        }
+
+        .bill-summary-indigo {
+            color: #6366f1;
+            background: #e0e7ff;
+        }
+
+        .bill-summary-red {
+            color: #ef4444;
+            background: #fef2f2;
+        }
+
+        .bill-summary-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .bill-summary-value {
+            font-size: 22px;
+            font-weight: 800;
+            color: #0f172a;
+            margin: 4px 0 2px;
+            letter-spacing: -0.5px;
+        }
+
+        .bill-summary-meta {
+            font-size: 12px;
+            color: #64748b;
+        }
+
+        /* Container Card Styling */
         .bills-card {
             position: relative;
-            margin-bottom: 30px;
-            overflow: hidden;
             background: #fff;
-            border: 1px solid #e0e9f5;
-            border-radius: 26px;
-            box-shadow: 0 18px 50px rgba(12, 35, 68, 0.08);
+            border: 1px solid #e2e8f0;
+            border-radius: 24px;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
+            margin-bottom: 24px;
+            overflow: hidden;
         }
 
         .bills-card-body {
-            padding: 32px;
+            padding: 26px;
         }
 
+        /* Modern Bill Filling Forms */
         .bill-form-panel {
             display: none;
-            border-color: rgba(24, 160, 251, 0.28);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
         }
 
         .bill-form-panel:before {
@@ -351,24 +584,29 @@
             top: 0;
             left: 0;
             right: 0;
-            height: 5px;
-            background: linear-gradient(90deg, #18a0fb, #2dd4bf, #0d4d8b);
+            height: 4px;
+            background: linear-gradient(90deg, #3b82f6, #6366f1, #10b981);
         }
 
         .bill-form-grid {
             display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 18px;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 20px;
+        }
+
+        .bill-form-group {
+            display: flex;
+            flex-direction: column;
         }
 
         .bill-form-group label {
             display: block;
             margin-bottom: 8px;
-            color: #304761;
-            font-size: 11px;
-            font-weight: 900;
+            color: #475569;
+            font-size: 12px;
+            font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.8px;
+            letter-spacing: 0.6px;
         }
 
         .bill-form-group input,
@@ -377,24 +615,20 @@
         .bills-filter-panel input,
         .bills-filter-panel select {
             width: 100%;
-            border: 1px solid #d6e4f0;
-            border-radius: 15px;
-            padding: 12px 14px;
-            color: #18324c;
-            background: #fbfdff;
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
-            transition: border 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
-        }
-
-        .bill-form-group input,
-        .bill-form-group select,
-        .bills-filter-panel input,
-        .bills-filter-panel select {
-            height: 76px;
+            height: 46px;
+            border: 1px solid #cbd5e1;
+            border-radius: 12px;
+            padding: 10px 16px;
+            color: #0f172a;
+            background: #fff;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
         }
 
         .bill-form-group textarea {
-            min-height: 110px;
+            height: auto;
+            min-height: 100px;
             resize: vertical;
         }
 
@@ -403,10 +637,10 @@
         .bill-form-group textarea:focus,
         .bills-filter-panel input:focus,
         .bills-filter-panel select:focus {
-            border-color: #18a0fb;
+            border-color: #3b82f6;
             outline: none;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
             background: #fff;
-            box-shadow: 0 0 0 4px rgba(24, 160, 251, 0.13);
         }
 
         .bill-form-full {
@@ -416,843 +650,647 @@
         .bill-form-actions {
             display: flex;
             justify-content: flex-end;
-            gap: 10px;
-            margin-top: 18px;
+            gap: 12px;
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid #f1f5f9;
         }
 
-        .bills-alert {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            border-radius: 16px;
-            padding: 14px 16px;
-            margin-bottom: 16px;
-            font-weight: 700;
-            box-shadow: 0 12px 28px rgba(15, 39, 68, 0.08);
-        }
-
-        .bills-alert-success {
-            color: #047857;
-            background: #ecfdf5;
-            border: 1px solid #a7f3d0;
-        }
-
-        .bills-alert-error {
-            color: #b91c1c;
-            background: #fff1f2;
-            border: 1px solid #fecaca;
-        }
-
+        /* Filter Panel */
         .bills-filter-panel {
             display: grid;
-            grid-template-columns: 1.65fr 0.78fr 0.95fr;
-            gap: 22px;
-            align-items: center;
-            margin-bottom: 32px;
-            padding: 0;
-            background: transparent;
-            border: 0;
-            border-radius: 0;
+            grid-template-columns: 2fr 1fr;
+            gap: 16px;
+            margin-bottom: 24px;
         }
 
         .bills-filter-panel .search-wrap {
             position: relative;
-            flex: 1 1 360px;
         }
 
         .bills-filter-panel .search-wrap i {
             position: absolute;
             top: 50%;
             left: 16px;
-            color: #0d4d8b;
+            color: #64748b;
             transform: translateY(-50%);
-            z-index: 1;
+            font-size: 16px;
         }
 
         .bills-filter-panel input {
-            padding-left: 66px;
-            font-size: 19px;
-            font-weight: 550;
+            padding-left: 46px;
         }
 
-        .bills-filter-panel select {
-            min-width: 180px;
-            padding-left: 58px;
-            font-size: 17px;
-            font-weight: 800;
-            color: #061b49;
-            appearance: none;
-            background-image: linear-gradient(45deg, transparent 50%, #071d3a 50%), linear-gradient(135deg, #071d3a 50%, transparent 50%);
-            background-position: calc(100% - 22px) 50%, calc(100% - 14px) 50%;
-            background-size: 8px 8px, 8px 8px;
-            background-repeat: no-repeat;
-        }
-
-        .bills-filter-panel:after {
-            content: "\f073  Select Date Range  \f107";
+        /* Alert notifications */
+        .bills-alert {
             display: flex;
             align-items: center;
-            height: 76px;
-            padding: 0 32px;
-            color: #63769b;
-            font-family: FontAwesome, Arial, sans-serif;
-            font-size: 19px;
-            font-weight: 700;
-            white-space: pre;
-            background: #fff;
-            border: 1px solid #e0e9f5;
-            border-radius: 18px;
-            box-shadow: 0 10px 28px rgba(14, 42, 82, 0.04);
+            gap: 12px;
+            border-radius: 16px;
+            padding: 16px 20px;
+            margin-bottom: 24px;
+            font-weight: 600;
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
         }
 
+        .bills-alert-success {
+            color: #065f46;
+            background: #ecfdf5;
+            border: 1px solid #a7f3d0;
+        }
+
+        .bills-alert-error {
+            color: #991b1b;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+        }
+
+        /* Modern Premium Table Styling */
         .table-responsive {
+            border: 1px solid #e2e8f0;
+            border-radius: 18px;
             overflow: hidden;
-            border: 1px solid #e4edf7;
-            border-radius: 22px;
-            background: #fff;
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 14px 34px rgba(15, 39, 68, 0.06);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
         }
 
         .bills-table {
+            width: 100%;
             margin-bottom: 0;
-            border: 0 !important;
-            border-collapse: separate !important;
+            border-collapse: separate;
             border-spacing: 0;
-            background: #fff;
         }
 
         .bills-table thead th {
-            padding: 18px 20px !important;
-            color: #61728a;
-            background: linear-gradient(180deg, #f8fbff 0%, #f2f7fd 100%);
-            border: 0 !important;
-            border-bottom: 1px solid #e7eef7 !important;
-            font-size: 11px;
-            font-weight: 900;
+            padding: 16px 20px;
+            color: #475569;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 12px;
+            font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.8px;
             white-space: nowrap;
         }
 
         .bills-table tbody td {
-            padding: 20px !important;
-            vertical-align: middle !important;
-            color: #243850;
+            padding: 16px 20px;
+            vertical-align: middle;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 14px;
+            color: #334155;
             background: #fff;
-            border: 0 !important;
-            border-bottom: 1px solid #edf3f8 !important;
-        }
-
-        .bills-table tbody tr.bill-row:nth-child(4n+3) td {
-            background: #fbfdff;
+            transition: background-color 0.2s ease;
         }
 
         .bills-table tbody tr.bill-row:hover td {
-            background: #f3f9ff;
+            background-color: #f8fafc;
         }
 
-        .bills-table tbody tr.bill-row td:first-child {
-            position: relative;
+        /* Vendor Details inside row */
+        .bill-vendor-cell {
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
 
-        .bills-table tbody tr.bill-row td:first-child:before {
-            content: "";
-            position: absolute;
-            left: 0;
-            top: 18px;
-            bottom: 18px;
-            width: 4px;
-            border-radius: 0 999px 999px 0;
-            background: linear-gradient(180deg, #18a0fb, #0d4d8b);
-            opacity: 0;
-            transition: opacity 0.2s ease;
+        .bill-vendor-icon {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            color: #3b82f6;
+            background: #eff6ff;
+            border: 1px solid #dbeafe;
+            flex-shrink: 0;
         }
 
-        .bills-table tbody tr.bill-row:hover td:first-child:before {
-            opacity: 1;
+        .vendor-name-link {
+            color: #0f172a;
+            font-weight: 600;
+            transition: color 0.15s ease;
         }
 
-        .bills-table tbody tr.bill-row td:first-child strong {
-            color: #102a43;
-            font-size: 15px;
-            font-weight: 900;
-            letter-spacing: -0.2px;
+        .bill-vendor-cell:hover .vendor-name-link {
+            color: #3b82f6;
+            text-decoration: underline;
         }
 
+        /* Amount Detail Stack in Table */
+        .amount-detail-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .amount-detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            font-size: 13px;
+        }
+
+        .amount-lbl {
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .amount-val {
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .amount-val.total-amt {
+            font-size: 14px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .amount-val.paid-amt {
+            color: #10b981;
+        }
+
+        .remaining-row {
+            border-top: 1px dashed #e2e8f0;
+            padding-top: 4px;
+            margin-top: 2px;
+        }
+
+        .remaining-row.has-remaining .amount-val {
+            color: #3b82f6;
+            font-weight: 700;
+        }
+
+        /* Dates Stack */
+        .date-detail-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 13px;
+        }
+
+        .date-detail-row {
+            display: flex;
+            gap: 6px;
+        }
+
+        .date-lbl {
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .date-val {
+            color: #334155;
+            font-weight: 600;
+        }
+
+        .due-date-highlight {
+            padding: 1px 6px;
+            border-radius: 6px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+        }
+
+        .due-date-highlight.due-overdue {
+            color: #ef4444;
+            background: #fef2f2;
+            border-color: #fecaca;
+            font-weight: 700;
+        }
+
+        /* Status Colors & Badges */
         .bill-status {
             display: inline-flex;
             align-items: center;
-            gap: 7px;
+            gap: 6px;
+            padding: 5px 12px;
             border-radius: 999px;
-            padding: 7px 12px;
-            font-size: 11px;
-            font-weight: 900;
-            letter-spacing: 0.3px;
-            text-transform: uppercase;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: capitalize;
+            border: 1px solid transparent;
         }
 
         .bill-status:before {
             content: "";
-            width: 7px;
-            height: 7px;
+            width: 6px;
+            height: 6px;
             border-radius: 50%;
             background: currentColor;
         }
 
         .bill-status-paid {
-            color: #047857;
-            background: #dcfce7;
+            color: #16a34a;
+            background: #f0fdf4;
+            border-color: #bbf7d0;
         }
 
         .bill-status-unpaid {
-            color: #d97706;
+            color: #ea580c;
             background: #fff7ed;
+            border-color: #ffedd5;
         }
 
-        .bill-file-link {
+        .bill-status-overdue {
+            color: #dc2626;
+            background: #fef2f2;
+            border-color: #fecaca;
+        }
+
+        .bill-status-partially-paid {
+            color: #2563eb;
+            background: #eff6ff;
+            border-color: #dbeafe;
+        }
+
+        /* Attachment Preview Miniature cards */
+        .attachment-preview-container {
+            position: relative;
+            width: 84px;
+            height: 52px;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid #cbd5e1;
+            cursor: pointer;
+            background: #f8fafc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+            transition: all 0.2s ease;
+        }
+
+        .attachment-preview-container:hover {
+            transform: translateY(-2px);
+            border-color: #3b82f6;
+            box-shadow: 0 6px 12px rgba(59, 130, 246, 0.15);
+        }
+
+        .attachment-thumbnail-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .attachment-preview-container.pdf-type {
+            flex-direction: column;
+            gap: 2px;
+            padding: 4px;
+            background: #fff5f5;
+            border-color: #fee2e2;
+        }
+
+        .attachment-pdf-icon {
+            color: #dc2626;
+            font-size: 16px;
+        }
+
+        .attachment-pdf-text {
+            font-size: 8px;
+            font-weight: 800;
+            color: #991b1b;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .attachment-preview-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.6);
+            color: #fff;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .attachment-preview-container:hover .attachment-preview-overlay {
+            opacity: 1;
+        }
+
+        .no-attachment-badge {
             display: inline-flex;
             align-items: center;
-            gap: 7px;
-            padding: 8px 12px;
-            color: #0d4d8b;
-            font-weight: 900;
-            text-decoration: none;
-            background: #eef6ff;
-            border: 1px solid #d8e9fb;
-            border-radius: 999px;
+            gap: 6px;
+            color: #94a3b8;
+            background: #f1f5f9;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
         }
 
-        .bill-file-link:hover {
-            color: #18a0fb;
-            text-decoration: none;
-        }
-
+        /* Actions buttons inside Table */
         .bill-action-row {
             display: flex;
-            gap: 10px;
+            gap: 6px;
             align-items: center;
         }
 
-        .bill-action-row .bills-btn {
-            min-width: 86px;
-            padding: 12px 18px;
+        .bill-action-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            transition: all 0.2s ease;
+            cursor: pointer;
         }
 
-        .bill-inline-form {
-            margin: 0;
+        .bill-action-btn:hover {
+            color: #3b82f6;
+            background: #eff6ff;
+            border-color: #bfdbfe;
+            transform: scale(1.05);
+        }
+
+        .bill-action-btn.bill-action-delete {
+            color: #ef4444;
+            background: #fef2f2;
+            border-color: #fecaca;
+        }
+
+        .bill-action-btn.bill-action-delete:hover {
+            color: #fff;
+            background: #ef4444;
+            border-color: #ef4444;
+        }
+
+        /* Inline edit panel styling */
+        .bill-edit-row td {
+            padding: 0 !important;
         }
 
         .bill-edit-panel {
             display: none;
-            padding: 20px;
-            background: linear-gradient(135deg, #ffffff 0%, #f4f9ff 100%);
-            border: 1px solid #d9e9fb;
-            border-radius: 18px;
-            box-shadow: inset 0 1px 0 #fff;
+            padding: 24px;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            box-shadow: inset 0 4px 10px rgba(0, 0, 0, 0.03);
         }
 
         .bill-empty {
-            padding: 36px;
+            padding: 40px;
             text-align: center;
-            color: #6b7c93;
-            font-size: 15px;
-            font-weight: 700;
-            background: #fff;
-        }
-
-        .bill-summary-grid {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 20px;
-            margin-top: 24px;
-        }
-
-        .bill-summary-card {
-            position: relative;
-            padding: 24px;
-            overflow: hidden;
-            border-radius: 24px;
-            background: #fff;
-            border: 1px solid rgba(216, 232, 248, 0.95);
-            box-shadow: 0 18px 48px rgba(15, 39, 68, 0.1);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-
-        .bill-summary-card:before {
-            content: "";
-            position: absolute;
-            right: -35px;
-            top: -35px;
-            width: 115px;
-            height: 115px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, rgba(24, 160, 251, 0.16), rgba(13, 77, 139, 0.08));
-        }
-
-        .bill-summary-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 24px 58px rgba(15, 39, 68, 0.14);
-        }
-
-        .bill-summary-label {
-            position: relative;
-            color: #66788f;
-            font-size: 11px;
-            font-weight: 900;
-            letter-spacing: 0.8px;
-            text-transform: uppercase;
-        }
-
-        .bill-summary-value {
-            position: relative;
-            margin-top: 10px;
-            color: #0b2545;
-            font-size: 28px;
-            font-weight: 950;
-            letter-spacing: -0.8px;
-        }
-
-        .bill-summary-meta {
-            position: relative;
-            margin-top: 8px;
-            color: #7c8da3;
-            font-size: 13px;
-            font-weight: 700;
-        }
-
-        .bills-header-content {
-            position: relative;
-            z-index: 1;
-            display: flex;
-            align-items: center;
-            gap: 24px;
-        }
-
-        .bills-hero-icon {
-            width: 80px;
-            height: 80px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            flex: 0 0 80px;
-            color: #fff;
-            font-size: 34px;
-            background: rgba(255, 255, 255, 0.12);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 24px;
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 18px 45px rgba(0, 0, 0, 0.12);
-            backdrop-filter: blur(18px);
-        }
-
-        .bills-title:before,
-        .bills-title:after {
-            display: none;
-        }
-
-        .bills-header .bills-btn-primary {
-            height: 64px;
-            padding: 0 32px;
-            border-radius: 20px;
-            color: #0f4da5;
-            font-size: 16px;
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.12);
-        }
-
-        .bills-header .bills-btn-primary:hover,
-        .bills-header .bills-btn-primary:focus {
-            transform: translateY(-3px);
-            box-shadow: 0 22px 48px rgba(0, 0, 0, 0.16);
-        }
-
-        .bills-header:before {
-            width: 360px;
-            height: 360px;
-            right: -120px;
-            top: -135px;
-            background: rgba(255, 255, 255, 0.12);
-            filter: blur(1px);
-        }
-
-        .bills-header:after {
-            right: 33%;
-            bottom: -115px;
-            width: 260px;
-            height: 260px;
-            background: rgba(255, 255, 255, 0.08);
-        }
-
-        .bills-header {
-            isolation: isolate;
-        }
-
-        .bills-header-content:after {
-            content: "";
-            position: absolute;
-            inset: -40px -520px -40px -50px;
-            z-index: -1;
-            opacity: 0.18;
-            background-image: radial-gradient(rgba(255,255,255,0.55) 1px, transparent 1px);
-            background-size: 18px 18px;
-            pointer-events: none;
-        }
-
-        .bills-card:not(.bill-form-panel) {
-            background: rgba(255,255,255,0.9);
-            border: 1px solid #e6eef8;
-            border-radius: 28px;
-            box-shadow: 0 15px 40px rgba(15,77,165,0.06);
-            backdrop-filter: blur(20px);
-        }
-
-        .bills-filter-panel .search-wrap i {
-            left: 26px;
-            color: #2d8dff;
-            font-size: 20px;
-        }
-
-        .bills-filter-panel input,
-        .bills-filter-panel select {
-            height: 70px;
-            border-radius: 18px;
-            background-color: #fafbfd;
-            border-color: #e5ecf4;
-            box-shadow: none;
-        }
-
-        .bills-filter-panel input::placeholder {
-            color: #94a3b8;
-        }
-
-        .table-responsive {
-            border-radius: 24px;
-            border-color: #e7eef7;
-            box-shadow: 0 10px 30px rgba(15,77,165,0.05);
-        }
-
-        .bills-table thead th {
-            height: 70px;
-            padding: 0 24px !important;
             color: #64748b;
-            font-size: 14px;
-            font-weight: 700;
-            letter-spacing: 1px;
-            background: #f8fbff;
-        }
-
-        .bills-table tbody td {
-            height: 100px;
-            padding: 22px 24px !important;
-            font-size: 16px;
-            font-weight: 500;
-            transition: background 0.3s ease;
-        }
-
-        .bill-vendor-cell {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-        }
-
-        .bill-vendor-icon {
-            width: 48px;
-            height: 48px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            flex: 0 0 48px;
-            color: #0f4da5;
-            font-size: 18px;
-            font-weight: 800;
-            background: #eef5ff;
-            border-radius: 50%;
-        }
-
-        .bills-table tbody tr.bill-row td:first-child strong {
-            font-size: 18px;
+            font-size: 15px;
             font-weight: 600;
+            background: #fff;
         }
 
-        .bill-amount {
-            color: #071d3a;
-            font-size: 18px;
+        /* Custom Premium Modal Styles (Popups) - Rendered over sidebar! */
+        .custom-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(8px);
+            z-index: 250000 !important; /* Extremely high to display on top of sidebar (10000) */
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            opacity: 0;
+            transition: opacity 0.30s ease;
+        }
+
+        .custom-modal-overlay.show {
+            display: flex !important;
+            opacity: 1;
+        }
+
+        .custom-modal-container {
+            background: #fff;
+            border-radius: 24px;
+            width: 100%;
+            max-width: 620px;
+            max-height: calc(100vh - 40px);
+            box-shadow: 0 30px 60px rgba(15, 23, 42, 0.3);
+            transform: scale(0.95);
+            transition: transform 0.30s cubic-bezier(0.34, 1.56, 0.64, 1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            margin: auto;
+        }
+
+        .custom-modal-overlay.show .custom-modal-container {
+            transform: scale(1);
+        }
+
+        .custom-modal-header {
+            padding: 22px 28px;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #fff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            flex-shrink: 0;
+        }
+
+        .custom-modal-title {
+            font-size: 19px;
             font-weight: 700;
+            margin: 0;
+            letter-spacing: -0.3px;
         }
 
-        .bill-status {
-            padding: 8px 16px;
-            border-radius: 999px;
-            font-size: 13px;
-            font-weight: 800;
-            letter-spacing: 0;
-            text-transform: none;
+        .custom-modal-close {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 24px;
+            cursor: pointer;
+            line-height: 1;
+            opacity: 0.8;
+            transition: all 0.2s;
         }
 
-        .bill-status-paid {
-            color: #16a34a;
-            background: #eafbf0;
+        .custom-modal-close:hover {
+            opacity: 1;
+            transform: scale(1.1);
         }
 
-        .bill-status-unpaid {
-            color: #f97316;
-            background: #fff4ea;
+        .custom-modal-body {
+            padding: 26px;
+            background: #fff;
+            overflow-y: auto;
         }
 
-        .bill-file-link {
-            padding: 10px 14px;
-            color: #0f4da5;
-            background: #f5f9ff;
-            border: 1px solid #d7e6ff;
-            border-radius: 14px;
+        /* Vendor Details Grid in Popup */
+        .vendor-details-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 20px;
         }
 
-        .bill-action-row {
-            gap: 10px;
+        .vendor-detail-item {
+            display: flex;
+            flex-direction: column;
         }
 
-        .bill-action-btn {
-            width: 48px;
-            height: 48px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            color: #0f4da5;
-            background: #f7faff;
-            border: 1px solid #e0eaf7;
-            border-radius: 14px;
-            transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
-        }
-
-        .bill-action-btn:hover {
-            color: #0f4da5;
-            text-decoration: none;
-            transform: scale(1.05);
-            box-shadow: 0 10px 24px rgba(15, 77, 165, 0.12);
-        }
-
-        .bill-action-delete {
-            color: #dc2626;
-            background: #fff1f2;
-            border-color: #ffe0e3;
-        }
-
-        .bill-action-delete:hover {
-            color: #dc2626;
-        }
-
-        .bill-summary-grid {
-            gap: 24px;
-            margin-top: 32px;
-        }
-
-        .bill-summary-card {
-            min-height: 200px;
-            padding: 30px;
-            border-radius: 28px;
-            border-color: #e7eef7;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.05);
-        }
-
-        .bill-summary-card:before {
-            right: -48px;
-            top: -48px;
-            width: 170px;
-            height: 170px;
-            opacity: 0.55;
-        }
-
-        .bill-summary-icon {
-            position: relative;
-            width: 72px;
-            height: 72px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 24px;
-            font-size: 28px;
-            border-radius: 22px;
-        }
-
-        .bill-summary-blue {
-            color: #0f4da5;
-            background: #eaf2ff;
-        }
-
-        .bill-summary-green {
-            color: #16a34a;
-            background: #eafbf0;
-        }
-
-        .bill-summary-orange {
-            color: #f97316;
-            background: #fff3ea;
-        }
-
-        .bill-summary-label {
-            font-size: 14px;
+        .vendor-detail-item label {
+            font-size: 11px;
             font-weight: 700;
             color: #64748b;
+            text-transform: uppercase;
             letter-spacing: 0.5px;
+            margin-bottom: 6px;
         }
 
-        .bill-summary-value {
-            margin-top: 12px;
-            font-size: 48px;
-            font-weight: 700;
-            color: #071d3a;
-            letter-spacing: -1.5px;
-        }
-
-        .bill-summary-meta {
-            margin-top: 10px;
-            font-size: 16px;
-            font-weight: 500;
-            color: #94a3b8;
-        }
-
-        /* Compact premium sizing so everything fits comfortably in the admin screen. */
-        .bills-page {
-            padding: 22px 0 32px;
-        }
-
-        .bills-page .container {
-            width: 94%;
-            max-width: 1320px;
-            padding-left: 18px;
-            padding-right: 18px;
-        }
-
-        .bills-header {
-            min-height: 132px;
-            margin-bottom: 22px;
-            padding: 26px 30px;
-            border-radius: 24px;
-        }
-
-        .bills-header-content {
-            gap: 18px;
-        }
-
-        .bills-hero-icon {
-            width: 62px;
-            height: 62px;
-            flex-basis: 62px;
-            border-radius: 18px;
-            font-size: 26px;
-        }
-
-        .bills-title {
-            font-size: 34px;
-            letter-spacing: -0.7px;
-        }
-
-        .bills-subtitle {
-            max-width: 620px;
-            margin-top: 8px;
-            font-size: 16px;
-            line-height: 1.45;
-        }
-
-        .bills-header .bills-btn-primary {
-            height: 52px;
-            padding: 0 24px;
-            border-radius: 16px;
-            font-size: 14px;
-        }
-
-        .bills-card:not(.bill-form-panel) {
-            margin-bottom: 22px;
-            border-radius: 24px;
-        }
-
-        .bills-card-body {
-            padding: 22px;
-        }
-
-        .bills-filter-panel {
-            grid-template-columns: minmax(320px, 1.45fr) minmax(180px, 0.62fr) minmax(230px, 0.78fr);
-            gap: 16px;
-            margin-bottom: 22px;
-        }
-
-        .bills-filter-panel input,
-        .bills-filter-panel select,
-        .bills-filter-panel:after {
-            height: 54px;
-            border-radius: 15px;
+        .vendor-detail-val {
             font-size: 15px;
+            font-weight: 600;
+            color: #0f172a;
+            padding: 8px 0;
         }
 
-        .bills-filter-panel input {
-            padding-left: 48px;
+        .vendor-stat-item {
+            background: #f8fafc;
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
         }
 
-        .bills-filter-panel .search-wrap i {
-            left: 18px;
-            font-size: 16px;
-        }
-
-        .bills-filter-panel select {
-            padding-left: 24px;
-            padding-right: 42px;
-            font-size: 14px;
-        }
-
-        .bills-filter-panel:after {
-            padding: 0 20px;
-            font-size: 15px;
-        }
-
-        .table-responsive {
-            border-radius: 20px;
-            overflow-x: auto;
-        }
-
-        .bills-table {
-            min-width: 980px;
-        }
-
-        .bills-table thead th {
-            height: 52px;
-            padding: 0 16px !important;
-            font-size: 12px;
-            letter-spacing: 0.6px;
-        }
-
-        .bills-table tbody td {
-            height: 72px;
-            padding: 14px 16px !important;
-            font-size: 14px;
-        }
-
-        .bill-vendor-cell {
-            gap: 10px;
-        }
-
-        .bill-vendor-icon {
-            width: 38px;
-            height: 38px;
-            flex-basis: 38px;
-            font-size: 15px;
-        }
-
-        .bills-table tbody tr.bill-row td:first-child strong,
-        .bill-amount {
-            font-size: 15px;
-        }
-
-        .bill-status {
-            padding: 6px 12px;
-            font-size: 12px;
-        }
-
-        .bill-file-link {
+        .vendor-edit-input {
+            width: 100%;
+            height: 40px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
             padding: 8px 12px;
-            border-radius: 12px;
-            font-size: 13px;
-        }
-
-        .bill-action-row {
-            gap: 8px;
-            flex-wrap: nowrap;
-        }
-
-        .bill-action-btn {
-            width: 38px;
-            height: 38px;
-            flex: 0 0 38px;
-            border-radius: 12px;
             font-size: 14px;
+            color: #0f172a;
+            transition: all 0.2s ease;
         }
 
-        .bill-summary-grid {
-            gap: 18px;
-            margin-top: 22px;
+        .vendor-edit-input:focus {
+            border-color: #3b82f6;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
         }
 
-        .bill-summary-card {
-            min-height: 142px;
-            padding: 20px;
-            border-radius: 22px;
+        /* Modal Input with Prepended Icons */
+        .modal-input-wrapper {
+            position: relative;
+            margin-top: 4px;
         }
 
-        .bill-summary-icon {
-            width: 48px;
-            height: 48px;
-            margin-bottom: 14px;
-            border-radius: 16px;
-            font-size: 20px;
+        .modal-input-wrapper .input-icon {
+            position: absolute;
+            top: 50%;
+            left: 14px;
+            transform: translateY(-50%);
+            color: #64748b;
+            font-size: 14px;
+            z-index: 2;
         }
 
-        .bill-summary-label {
-            font-size: 12px;
+        .modal-input-wrapper .vendor-edit-input {
+            width: 100%;
+            height: 44px;
+            border-radius: 12px;
+            border: 1px solid #cbd5e1;
+            padding: 10px 14px 10px 38px; /* Left padding for icons */
+            font-weight: 500;
+            color: #0f172a;
+            background: #f8fafc;
+            transition: all 0.2s ease;
         }
 
-        .bill-summary-value {
-            margin-top: 7px;
-            font-size: 30px;
-            letter-spacing: -0.7px;
+        .modal-input-wrapper .vendor-edit-input:focus {
+            border-color: #3b82f6;
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+            outline: none;
         }
 
-        .bill-summary-meta {
-            margin-top: 6px;
-            font-size: 13px;
-        }
-
+        /* Responsive styling */
         @media (max-width: 768px) {
             .bills-page .container { width: 100%; }
-            .bills-header, .bill-form-actions, .bill-action-row { align-items: stretch; flex-direction: column; }
-            .bills-header { padding: 22px; border-radius: 20px; }
-            .bills-title { font-size: 28px; }
-            .bill-form-grid, .bill-summary-grid { grid-template-columns: 1fr; }
+            .bills-header { flex-direction: column; align-items: stretch; padding: 24px; }
+            .bills-title { font-size: 26px; }
+            .bill-form-grid { grid-template-columns: 1fr; }
+            .bills-filter-panel { grid-template-columns: 1fr; }
+            .vendor-details-grid { grid-template-columns: 1fr; }
             .bills-btn { width: 100%; }
-            .bills-card-body { padding: 18px; }
         }
     </style>
 
     <div id="page-content-wrapper">
         <div class="page-content inset bills-page">
             <div class="container">
+                
+                <!-- Premium Header -->
                 <div class="bills-header">
                     <div class="bills-header-content">
                         <div class="bills-hero-icon"><i class="fa fa-file-text-o"></i></div>
                         <div>
                             <h1 class="bills-title">Bills Management</h1>
-                            <p class="bills-subtitle">Track vendor bills, payments, attachments, and cash flow in one premium dashboard.</p>
+                            <p class="bills-subtitle">Track vendor bills, payments, and outstanding dues .</p>
                         </div>
                     </div>
-                    <button type="button" class="bills-btn bills-btn-primary" id="toggleBillForm"><i class="fa fa-plus"></i> Add New Bill</button>
+                    <div class="bills-header-actions" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                        <button type="button" class="bills-btn bills-btn-soft" id="downloadBillsReport"><i class="fa fa-cloud-download"></i> Download Report</button>
+                        <button type="button" class="bills-btn bills-btn-primary" id="toggleBillForm"><i class="fa fa-plus"></i> Add New Bill</button>
+                    </div>
                 </div>
 
-                <?php if ($message !== '') { ?><div class="bills-alert bills-alert-success"><?php echo h($message); ?></div><?php } ?>
-                <?php if ($errorMessage !== '') { ?><div class="bills-alert bills-alert-error"><?php echo h($errorMessage); ?></div><?php } ?>
+                <!-- Alert Messages -->
+                <?php if ($message !== '') { ?><div class="bills-alert bills-alert-success"><i class="fa fa-check-circle"></i> <?php echo h($message); ?></div><?php } ?>
+                <?php if ($errorMessage !== '') { ?><div class="bills-alert bills-alert-error"><i class="fa fa-exclamation-circle"></i> <?php echo h($errorMessage); ?></div><?php } ?>
 
+                <!-- Add New Bill Panel -->
                 <div class="bills-card bill-form-panel" id="billFormPanel">
                     <div class="bills-card-body">
                         <form method="post" enctype="multipart/form-data">
                             <input type="hidden" name="bill_action" value="add">
                             <div class="bill-form-grid">
                                 <div class="bill-form-group">
-                                    <label>Add Vendor</label>
-                                    <input type="text" name="vendor_name" placeholder="Enter vendor name" required>
+                                    <label>Vendor Name</label>
+                                    <input type="text" name="vendor_name" list="vendorList" placeholder="Enter or select vendor" required autocomplete="off">
                                 </div>
                                 <div class="bill-form-group">
-                                    <label>Amount</label>
-                                    <input type="number" name="amount" min="0" step="0.01" placeholder="0.00" required>
+                                    <label>Bill Amount (INR)</label>
+                                    <input type="number" name="amount" class="amount-input" min="0" step="0.01" placeholder="0.00" required>
+                                </div>
+                                <div class="bill-form-group">
+                                    <label>Due Date</label>
+                                    <input type="date" name="due_date" value="<?php echo date('Y-m-d'); ?>" required>
                                 </div>
                                 <div class="bill-form-group">
                                     <label>Payment Status</label>
-                                    <select name="payment_status" required>
+                                    <select name="payment_status" class="status-select" required>
                                         <option value="Unpaid">Unpaid</option>
+                                        <option value="Partially Paid">Partially Paid</option>
                                         <option value="Paid">Paid</option>
                                     </select>
                                 </div>
+                                <div class="bill-form-group paid-amount-group">
+                                    <label>Paid Amount (INR)</label>
+                                    <input type="number" name="paid_amount" class="paid-amount-input" min="0" step="0.01" value="0.00" placeholder="0.00">
+                                    <span class="remaining-helper text-muted" style="font-size: 12px; margin-top: 6px; font-weight: 600; color: #64748b;">Remaining Amount: INR. <span class="calc-remaining">0.00</span></span>
+                                </div>
                                 <div class="bill-form-group">
-                                    <label>Attach File</label>
+                                    <label>Attach Bill File (JPG, PNG, PDF)</label>
                                     <input type="file" name="attached_file" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf">
                                 </div>
                                 <div class="bill-form-group bill-form-full">
-                                    <label>Description</label>
-                                    <textarea name="description" placeholder="Add bill details"></textarea>
+                                    <label>Description </label>
+                                    <textarea name="description" placeholder="Add specific bill details or payment instructions..."></textarea>
                                 </div>
                             </div>
                             <div class="bill-form-actions">
@@ -1263,59 +1301,150 @@
                     </div>
                 </div>
 
+                <!-- Dashboard Cards (Table ke Upar) -->
+                <div class="bill-summary-grid">
+                    <div class="bill-summary-card">
+                        <div class="bill-summary-icon bill-summary-blue"><i class="fa fa-file-text-o"></i></div>
+                        <div>
+                            <div class="bill-summary-label">Total Bills Amount</div>
+                            <div class="bill-summary-value">INR. <?php echo formatBillAmount($summary['total_amount']); ?></div>
+                            <div class="bill-summary-meta"><?php echo (int) $summary['total_bills']; ?> bills recorded</div>
+                        </div>
+                    </div>
+                    <div class="bill-summary-card">
+                        <div class="bill-summary-icon bill-summary-green"><i class="fa fa-check-circle-o"></i></div>
+                        <div>
+                            <div class="bill-summary-label">Total Paid Amount</div>
+                            <div class="bill-summary-value text-success">INR. <?php echo formatBillAmount($summary['paid_amount']); ?></div>
+                            <div class="bill-summary-meta">Settled Amount</div>
+                        </div>
+                    </div>
+                    <div class="bill-summary-card">
+                        <div class="bill-summary-icon bill-summary-indigo"><i class="fa fa-hourglass-half"></i></div>
+                        <div>
+                            <div class="bill-summary-label">Remaining Dues</div>
+                            <div class="bill-summary-value text-primary">INR. <?php echo formatBillAmount($summary['remaining_amount']); ?></div>
+                            <div class="bill-summary-meta">Outstanding balance</div>
+                        </div>
+                    </div>
+                    <div class="bill-summary-card">
+                        <div class="bill-summary-icon bill-summary-red"><i class="fa fa-exclamation-triangle"></i></div>
+                        <div>
+                            <div class="bill-summary-label">Overdue Amount</div>
+                            <div class="bill-summary-value text-danger">INR. <?php echo formatBillAmount($summary['overdue_amount']); ?></div>
+                            <div class="bill-summary-meta"><?php echo (int) $summary['overdue_count']; ?> overdue bills</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filters & Table Panel -->
                 <div class="bills-card">
                     <div class="bills-card-body">
+                        
+                        <!-- Premium Filter Panel -->
                         <div class="bills-filter-panel">
                             <div class="search-wrap">
                                 <i class="fa fa-search"></i>
-                                <input type="text" id="billSearch" placeholder="Search bills by vendor name or description">
+                                <input type="text" id="billSearch" placeholder="Search bills by vendor name or description...">
                             </div>
                             <select id="billStatusFilter">
-                                <option value="All">All Status</option>
+                                <option value="All">All Statuses</option>
                                 <option value="Paid">Paid</option>
                                 <option value="Unpaid">Unpaid</option>
+                                <option value="Partially Paid">Partially Paid</option>
+                                <option value="Overdue">Overdue</option>
                             </select>
                         </div>
 
+                        <!-- Table -->
                         <div class="table-responsive">
                             <table class="table table-hover bills-table" id="billsTable">
                                 <thead>
                                     <tr>
-                                        <th>Vendor name</th>
-                                        <th>Amount</th>
+                                        <th>Vendor Name</th>
+                                        <th>Date Details</th>
+                                        <th>Amount Details</th>
                                         <th>Status</th>
-                                        <th>Description</th>
-                                        <th>Attached file</th>
+                                        <th>Attachment</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($bills as $bill) { ?>
-                                        <tr class="bill-row" data-status="<?php echo h($bill['payment_status']); ?>" data-search="<?php echo h(strtolower($bill['vendor_name'] . ' ' . $bill['description'])); ?>">
+                                    <?php foreach ($bills as $bill) { 
+                                        $statusInfo = getBillStatusInfo($bill);
+                                        $isOverdueFlag = ($statusInfo['status'] === 'Overdue');
+                                    ?>
+                                        <tr class="bill-row" data-status="<?php echo h($statusInfo['status']); ?>" data-search="<?php echo h(strtolower($bill['vendor_name'] . ' ' . $bill['description'])); ?>">
                                             <td>
-                                                <div class="bill-vendor-cell">
+                                                <div class="bill-vendor-cell vendor-profile-trigger" data-vendor="<?php echo h($bill['vendor_name']); ?>" style="cursor: pointer;" title="Click to view vendor details">
                                                     <span class="bill-vendor-icon"><?php echo strtoupper(substr($bill['vendor_name'], 0, 1)); ?></span>
-                                                    <strong><?php echo h($bill['vendor_name']); ?></strong>
+                                                    <div>
+                                                        <strong class="vendor-name-link"><?php echo h($bill['vendor_name']); ?></strong>
+                                                        <div style="font-size: 11px; color: #64748b; margin-top: 2px;"><i class="fa fa-user"></i> View Profile</div>
+                                                    </div>
                                                 </div>
                                             </td>
-                                            <td><span class="bill-amount">Rs. <?php echo formatBillAmount($bill['amount']); ?></span></td>
-                                            <td><span class="bill-status <?php echo $bill['payment_status'] === 'Paid' ? 'bill-status-paid' : 'bill-status-unpaid'; ?>"><?php echo h($bill['payment_status']); ?></span></td>
-                                            <td><?php echo nl2br(h($bill['description'])); ?></td>
                                             <td>
-                                                <?php if (!empty($bill['attached_file'])) { ?>
-                                                    <a class="bill-file-link" href="<?php echo h($bill['attached_file']); ?>" target="_blank"><i class="fa fa-paperclip"></i> View</a>
+                                                <div class="date-detail-stack">
+                                                    <div class="date-detail-row">
+                                                        <span class="date-lbl">Billed:</span>
+                                                        <span class="date-val"><?php echo date('d M Y', strtotime($bill['created_at'])); ?></span>
+                                                    </div>
+                                                    <div class="date-detail-row">
+                                                        <span class="date-lbl">Due:</span>
+                                                        <span class="date-val due-date-highlight <?php echo $isOverdueFlag ? 'due-overdue' : ''; ?>">
+                                                            <?php echo !empty($bill['due_date']) ? date('d M Y', strtotime($bill['due_date'])) : 'N/A'; ?>
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="amount-detail-stack">
+                                                    <div class="amount-detail-row">
+                                                        <span class="amount-lbl">Total:</span>
+                                                        <span class="amount-val total-amt">INR. <?php echo formatBillAmount($bill['amount']); ?></span>
+                                                    </div>
+                                                    <div class="amount-detail-row">
+                                                        <span class="amount-lbl">Paid:</span>
+                                                        <span class="amount-val paid-amt">Rs. <?php echo formatBillAmount($bill['paid_amount']); ?></span>
+                                                    </div>
+                                                    <div class="amount-detail-row remaining-row <?php echo ((float)$bill['amount'] - (float)$bill['paid_amount']) > 0 ? 'has-remaining' : ''; ?>">
+                                                        <span class="amount-lbl">Remaining:</span>
+                                                        <span class="amount-val remaining-amt">INR. <?php echo formatBillAmount((float)$bill['amount'] - (float)$bill['paid_amount']); ?></span>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div style="display: flex; flex-direction: column; gap: 4px;">
+                                                    <span class="bill-status <?php echo $statusInfo['class']; ?>"><?php echo h($statusInfo['label']); ?></span>
+                                                    <span style="font-size: 11px; color: #64748b; font-weight: 500;"><?php echo h($statusInfo['subtext']); ?></span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <?php if (!empty($bill['attached_file'])) { 
+                                                    $ext = strtolower(pathinfo($bill['attached_file'], PATHINFO_EXTENSION));
+                                                    $isPdf = ($ext === 'pdf');
+                                                ?>
+                                                    <div class="attachment-preview-container <?php echo $isPdf ? 'pdf-type' : ''; ?>" data-url="<?php echo h($bill['attached_file']); ?>">
+                                                        <?php if ($isPdf) { ?>
+                                                            <div class="attachment-pdf-icon"><i class="fa fa-file-pdf-o"></i></div>
+                                                            <div class="attachment-pdf-text">PDF Document</div>
+                                                        <?php } else { ?>
+                                                            <img src="<?php echo h($bill['attached_file']); ?>" class="attachment-thumbnail-img" alt="Invoice Thumbnail">
+                                                        <?php } ?>
+                                                        <span class="attachment-preview-overlay"><i class="fa fa-eye"></i> View</span>
+                                                    </div>
                                                 <?php } else { ?>
-                                                    <span class="text-muted">No file</span>
+                                                    <span class="no-attachment-badge"><i class="fa fa-times-circle"></i> No File</span>
                                                 <?php } ?>
                                             </td>
                                             <td>
                                                 <div class="bill-action-row">
-                                                    <a class="bill-action-btn bill-action-view" href="<?php echo !empty($bill['attached_file']) ? h($bill['attached_file']) : '#'; ?>" target="_blank" title="View"><i class="fa fa-eye"></i></a>
-                                                    <button type="button" class="bill-action-btn bill-action-edit editBillToggle" data-target="editBill<?php echo (int) $bill['bill_id']; ?>" title="Edit"><i class="fa fa-pencil"></i></button>
-                                                    <form method="post" class="bill-inline-form" onsubmit="return confirm('Delete this bill?');">
+                                                    <button type="button" class="bill-action-btn editBillToggle" data-target="editBill<?php echo (int) $bill['bill_id']; ?>" title="Edit Bill"><i class="fa fa-pencil"></i></button>
+                                                    <form method="post" class="bill-inline-form" onsubmit="return confirm('Are you sure you want to delete this bill?');">
                                                         <input type="hidden" name="bill_action" value="delete">
                                                         <input type="hidden" name="bill_id" value="<?php echo (int) $bill['bill_id']; ?>">
-                                                        <button type="submit" class="bill-action-btn bill-action-delete" title="Delete"><i class="fa fa-trash"></i></button>
+                                                        <button type="submit" class="bill-action-btn bill-action-delete" title="Delete Bill"><i class="fa fa-trash"></i></button>
                                                     </form>
                                                 </div>
                                             </td>
@@ -1328,22 +1457,32 @@
                                                         <input type="hidden" name="bill_id" value="<?php echo (int) $bill['bill_id']; ?>">
                                                         <div class="bill-form-grid">
                                                             <div class="bill-form-group">
-                                                                <label>Add Vendor</label>
-                                                                <input type="text" name="vendor_name" value="<?php echo h($bill['vendor_name']); ?>" required>
+                                                                <label>Vendor Name</label>
+                                                                <input type="text" name="vendor_name" list="vendorList" value="<?php echo h($bill['vendor_name']); ?>" required autocomplete="off">
                                                             </div>
                                                             <div class="bill-form-group">
-                                                                <label>Amount</label>
-                                                                <input type="number" name="amount" min="0" step="0.01" value="<?php echo h($bill['amount']); ?>" required>
+                                                                <label>Bill Amount (INR.)</label>
+                                                                <input type="number" name="amount" class="amount-input" min="0" step="0.01" value="<?php echo h($bill['amount']); ?>" required>
+                                                            </div>
+                                                            <div class="bill-form-group">
+                                                                <label>Due Date</label>
+                                                                <input type="date" name="due_date" value="<?php echo !empty($bill['due_date']) ? h($bill['due_date']) : date('Y-m-d'); ?>" required>
                                                             </div>
                                                             <div class="bill-form-group">
                                                                 <label>Payment Status</label>
-                                                                <select name="payment_status" required>
+                                                                <select name="payment_status" class="status-select" required>
                                                                     <option value="Unpaid" <?php echo $bill['payment_status'] === 'Unpaid' ? 'selected' : ''; ?>>Unpaid</option>
+                                                                    <option value="Partially Paid" <?php echo $bill['payment_status'] === 'Partially Paid' ? 'selected' : ''; ?>>Partially Paid</option>
                                                                     <option value="Paid" <?php echo $bill['payment_status'] === 'Paid' ? 'selected' : ''; ?>>Paid</option>
                                                                 </select>
                                                             </div>
+                                                            <div class="bill-form-group paid-amount-group">
+                                                                <label>Paid Amount (INR.)</label>
+                                                                <input type="number" name="paid_amount" class="paid-amount-input" min="0" step="0.01" value="<?php echo h($bill['paid_amount']); ?>" placeholder="0.00">
+                                                                <span class="remaining-helper text-muted" style="font-size: 12px; margin-top: 6px; font-weight: 600; color: #64748b;">Remaining Amount: Rs. <span class="calc-remaining"><?php echo formatBillAmount((float)$bill['amount'] - (float)$bill['paid_amount']); ?></span></span>
+                                                            </div>
                                                             <div class="bill-form-group">
-                                                                <label>Attach File</label>
+                                                                <label>Replace Attached File</label>
                                                                 <input type="file" name="attached_file" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf">
                                                             </div>
                                                             <div class="bill-form-group bill-form-full">
@@ -1367,26 +1506,84 @@
                     </div>
                 </div>
 
-                <div class="bill-summary-grid">
-                    <div class="bill-summary-card">
-                        <div class="bill-summary-icon bill-summary-blue"><i class="fa fa-clipboard"></i></div>
-                        <div class="bill-summary-label">Total Bills</div>
-                        <div class="bill-summary-value"><?php echo (int) $summary['total_bills']; ?></div>
-                        <div class="bill-summary-meta">Rs. <?php echo formatBillAmount($summary['total_amount']); ?> combined amount</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Autocomplete datalist for Vendor names -->
+<datalist id="vendorList">
+    <?php foreach ($vendorSummaries as $vSum) { ?>
+        <option value="<?php echo h($vSum['vendor_name']); ?>">
+    <?php } ?>
+</datalist>
+
+<!-- Vendor Profile Details Modal -->
+<div class="custom-modal-overlay" id="vendorDetailsModal">
+    <div class="custom-modal-container">
+        <div class="custom-modal-header">
+            <h5 class="custom-modal-title"><i class="fa fa-vcard-o"></i> Vendor Profile</h5>
+            <button type="button" class="custom-modal-close closeModalBtn">&times;</button>
+        </div>
+        <div class="custom-modal-body">
+            <form id="vendorUpdateForm" method="post">
+                <input type="hidden" name="bill_action" value="save_vendor">
+                <input type="hidden" name="vendor_name" id="vendorModalFormName">
+                
+                <div class="vendor-details-grid">
+                    <div class="vendor-detail-item vendor-stat-item" style="grid-column: 1 / -1; display: flex; flex-direction: row; align-items: center; gap: 14px;">
+                        <div class="bill-vendor-icon" style="width: 50px; height: 50px; font-size: 20px;" id="vendorModalInitials">-</div>
+                        <div>
+                            <div style="font-size: 12px; color: #64748b; font-weight: 700; text-transform: uppercase;">Vendor Business Name</div>
+                            <div style="font-size: 18px; font-weight: 800; color: #0f172a;" id="vendorModalName">-</div>
+                        </div>
                     </div>
-                    <div class="bill-summary-card">
-                        <div class="bill-summary-icon bill-summary-green"><i class="fa fa-money"></i></div>
-                        <div class="bill-summary-label">Paid Amount</div>
-                        <div class="bill-summary-value">Rs. <?php echo formatBillAmount($summary['paid_amount']); ?></div>
-                        <div class="bill-summary-meta">Sum of all paid bills</div>
+                    
+                    <div class="vendor-detail-item">
+                        <label>GST Registration Number</label>
+                        <input type="text" name="gst_no" id="vendorModalGst" class="vendor-edit-input" placeholder="Enter GST Number (e.g. 07AAAAA1111A1Z1)">
                     </div>
-                    <div class="bill-summary-card">
-                        <div class="bill-summary-icon bill-summary-orange"><i class="fa fa-credit-card"></i></div>
-                        <div class="bill-summary-label">Unpaid Amount</div>
-                        <div class="bill-summary-value">Rs. <?php echo formatBillAmount($summary['unpaid_amount']); ?></div>
-                        <div class="bill-summary-meta">Sum of all unpaid bills</div>
+                    
+                    <div class="vendor-detail-item">
+                        <label>Contact Number</label>
+                        <input type="text" name="phone" id="vendorModalPhone" class="vendor-edit-input" placeholder="Enter Phone Number">
+                    </div>
+                    
+                    <div class="vendor-detail-item">
+                        <label>Email Address</label>
+                        <input type="email" name="email" id="vendorModalEmail" class="vendor-edit-input" placeholder="Enter Email Address">
+                    </div>
+                    
+                    <div class="vendor-detail-item vendor-stat-item">
+                        <label>Total Bills </label>
+                        <div class="vendor-detail-val" style="font-size: 20px; font-weight: 800;" id="vendorModalTotalBills">0</div>
+                    </div>
+                    
+                    <div class="vendor-detail-item vendor-stat-item" style="grid-column: 1 / -1;">
+                        <label>Total Outstanding Dues</label>
+                        <div class="vendor-detail-val text-primary" style="font-size: 20px; font-weight: 800;" id="vendorModalOutstanding">INR. 0.00</div>
                     </div>
                 </div>
+                
+                <div class="bill-form-actions">
+                    <button type="button" class="bills-btn bills-btn-soft closeModalBtn">Close</button>
+                    <button type="submit" class="bills-btn bills-btn-primary"><i class="fa fa-save"></i> Save Details</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Attachment Preview Modal -->
+<div class="custom-modal-overlay" id="attachmentPreviewModal">
+    <div class="custom-modal-container" style="max-width: 800px;">
+        <div class="custom-modal-header">
+            <h5 class="custom-modal-title"><i class="fa fa-file-image-o"></i> Preview</h5>
+            <button type="button" class="custom-modal-close closeModalBtn">&times;</button>
+        </div>
+        <div class="custom-modal-body" style="padding: 10px; background: #0f172a; min-height: 400px; display: flex; align-items: center; justify-content: center;">
+            <div id="attachmentPreviewContent" style="width: 100%; display: flex; align-items: center; justify-content: center;">
+                <!-- Dynamically populated -->
             </div>
         </div>
     </div>
@@ -1394,6 +1591,9 @@
 
 <script type="text/javascript">
     $(document).ready(function () {
+        // Vendor Lookup dataset injected from PHP
+        const vendorDetails = <?php echo json_encode($vendorLookup); ?>;
+
         function filterBills() {
             var query = $('#billSearch').val().toLowerCase();
             var status = $('#billStatusFilter').val();
@@ -1416,12 +1616,81 @@
             $('#billEmptyState').toggle(visibleRows === 0);
         }
 
+        // Toggle creation panel
         $('#toggleBillForm').click(function () {
-            $('#billFormPanel').slideToggle(180);
+            $('#billFormPanel').slideToggle(200);
         });
 
         $('#cancelBillForm').click(function () {
-            $('#billFormPanel').slideUp(180);
+            $('#billFormPanel').slideUp(200);
+        });
+
+        // Helper to update amounts and status in a form
+        function updateFormAmounts(form, triggerSource) {
+            var amountInput = form.find('.amount-input');
+            var paidAmountInput = form.find('.paid-amount-input');
+            var statusSelect = form.find('.status-select');
+            var remainingSpan = form.find('.calc-remaining');
+            
+            var amount = parseFloat(amountInput.val()) || 0;
+            var paidAmount = parseFloat(paidAmountInput.val()) || 0;
+            
+            // Limit paid amount to not exceed bill amount
+            if (paidAmount > amount) {
+                paidAmount = amount;
+                paidAmountInput.val(paidAmount.toFixed(2));
+            }
+            
+            var remaining = amount - paidAmount;
+            if (remaining < 0) remaining = 0;
+            
+            remainingSpan.text(remaining.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+            
+            // Auto update status if inputs are changed directly
+            if (triggerSource === 'input') {
+                if (amount === 0) {
+                    statusSelect.val('Unpaid');
+                } else if (paidAmount === 0) {
+                    statusSelect.val('Unpaid');
+                } else if (paidAmount >= amount) {
+                    statusSelect.val('Paid');
+                } else {
+                    statusSelect.val('Partially Paid');
+                }
+            }
+        }
+
+        // Live calculation and status auto-update on user typing
+        $(document).on('input change', '.amount-input, .paid-amount-input', function() {
+            var form = $(this).closest('form');
+            updateFormAmounts(form, 'input');
+        });
+
+        // Auto update paid amount when status changes manually
+        $(document).on('change', '.status-select', function() {
+            var status = $(this).val();
+            var form = $(this).closest('form');
+            var amountInput = form.find('.amount-input');
+            var paidAmountInput = form.find('.paid-amount-input');
+            var amountVal = parseFloat(amountInput.val()) || 0;
+            
+            if (status === 'Paid') {
+                paidAmountInput.val(amountVal > 0 ? amountVal.toFixed(2) : '0.00');
+            } else if (status === 'Unpaid') {
+                paidAmountInput.val('0.00');
+            } else if (status === 'Partially Paid') {
+                var paidVal = parseFloat(paidAmountInput.val()) || 0;
+                if (paidVal === 0 || paidVal === amountVal) {
+                    paidAmountInput.val('');
+                }
+            }
+            
+            updateFormAmounts(form, 'status');
+            
+            // Focus on paid amount to help user type
+            if (status === 'Partially Paid') {
+                paidAmountInput.focus();
+            }
         });
 
         $('#billSearch, #billStatusFilter').on('keyup change input', filterBills);
@@ -1437,7 +1706,80 @@
             $('#' + $(this).data('target')).slideUp(160, filterBills);
         });
 
+        // Vendor details profile popup handler
+        $('.vendor-profile-trigger').click(function(e) {
+            e.preventDefault();
+            var vName = $(this).data('vendor');
+            var profile = vendorDetails[vName] || { phone: '', email: '', gst_no: '', total_bills: 0, total_outstanding: 0 };
+            
+            $('#vendorModalFormName').val(vName);
+            $('#vendorModalName').text(vName);
+            $('#vendorModalInitials').text(vName.substring(0, 1).toUpperCase());
+            $('#vendorModalGst').val(profile.gst_no);
+            $('#vendorModalPhone').val(profile.phone);
+            $('#vendorModalEmail').val(profile.email);
+            $('#vendorModalTotalBills').text(profile.total_bills);
+            $('#vendorModalOutstanding').text('Rs. ' + profile.total_outstanding.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+            
+            openModal('#vendorDetailsModal');
+        });
+
+        // Attachment Preview popup handler
+        $('.attachment-preview-container').click(function() {
+            var url = $(this).data('url');
+            var ext = url.split('.').pop().toLowerCase();
+            var content = '';
+            
+            if (ext === 'pdf') {
+                content = '<iframe src="' + encodeURI(url) + '" style="width:100%; height:600px; border:none; border-radius:12px;"></iframe>';
+            } else {
+                content = '<img src="' + encodeURI(url) + '" style="max-width:100%; max-height:80vh; object-fit:contain; border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,0.5);">';
+            }
+            
+            $('#attachmentPreviewContent').html(content);
+            openModal('#attachmentPreviewModal');
+        });
+
+        // Modal Helpers
+        function openModal(selector) {
+            var modal = $(selector);
+            modal.css('display', 'flex');
+            setTimeout(function() {
+                modal.addClass('show');
+            }, 10);
+        }
+
+        function closeModal() {
+            $('.custom-modal-overlay').removeClass('show');
+            setTimeout(function() {
+                $('.custom-modal-overlay').css('display', 'none');
+            }, 300);
+        }
+
+        $('.closeModalBtn').click(closeModal);
+        
+        // Close modal when clicking outside content container
+        $('.custom-modal-overlay').click(function(e) {
+            if ($(e.target).hasClass('custom-modal-overlay')) {
+                closeModal();
+            }
+        });
+
+        // Download Report PDF Handler
+        $('#downloadBillsReport').click(function () {
+            var searchQuery = $('#billSearch').val();
+            var statusFilter = $('#billStatusFilter').val();
+            var url = 'exportBillsReport.php';
+            var form = $('<form action="' + url + '" method="post" target="_blank">' +
+                    '<input type="hidden" name="searchQuery" value="' + searchQuery + '" />' +
+                    '<input type="hidden" name="statusFilter" value="' + statusFilter + '" />' +
+                    '</form>');
+            $('body').append(form);
+            form.submit();
+            form.remove();
+        });
+
         $('.bill-edit-row').hide();
         filterBills();
     });
-</script> -->
+</script>

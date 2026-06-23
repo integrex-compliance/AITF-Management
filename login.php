@@ -10,14 +10,22 @@ if (file_exists($recaptchaHelperPath)) {
     require_once $recaptchaHelperPath;
 }
 
+function aitf_redirect_and_exit($location)
+{
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_write_close();
+    }
+    header("Location: " . $location);
+    exit;
+}
+
 
 if (isset($_POST['useremail']) && !empty($_POST['useremail']) && isset($_POST['password']) && !empty($_POST['password'])) {
     $recaptchaToken = trim($_POST['g-recaptcha-response'] ?? '');
     $captchaError = '';
     if (function_exists('aitf_verify_recaptcha') && !aitf_verify_recaptcha($recaptchaToken, $captchaError)) {
         $_SESSION['login_error'] = true;
-        header("Location: loginSelection.php");
-        exit;
+        aitf_redirect_and_exit("loginSelection.php");
     }
     try {
         // Single query fetch instead of count + fetch
@@ -33,41 +41,40 @@ if (isset($_POST['useremail']) && !empty($_POST['useremail']) && isset($_POST['p
             $_SESSION['role'] = $row['role'];
             $_SESSION['abbrevation'] = $row['abbreviation'];
             if (Utitlity::checkForUserAdmin()) {
-                header("Location: homePage.php");
+                aitf_redirect_and_exit("homePage.php");
+            } elseif (Utitlity::checkForOfficeStaff()) {
+                aitf_redirect_and_exit("homePage.php");
+            } elseif (Utitlity::checkForUserConsultant()) {
+                aitf_redirect_and_exit("auditPlanning.php");
+            } elseif (Utitlity::checkForUserFinance()) {
+                aitf_redirect_and_exit("paymentPage.php");
+            } elseif (Utitlity::checkForUserMarketing()) {
+                aitf_redirect_and_exit("marketingPage.php");
+            } elseif (Utitlity::checkForMainAdmin()) {
+                aitf_redirect_and_exit("adminDashboard.php");
+            } elseif (Utitlity::checkForStaff()) {
+                aitf_redirect_and_exit("homePage.php");
             }
-            if (Utitlity::checkForOfficeStaff()) {
-                header("Location: homePage.php");
-            }
-            if (Utitlity::checkForUserConsultant()) {
-                header("Location: auditPlanning.php");
-            }
-            if (Utitlity::checkForUserFinance()) {
-                header("Location: paymentPage.php");
-            }
-            if (Utitlity::checkForUserMarketing()) {
-                header("Location: marketingPage.php");
-            }
-            if (Utitlity::checkForMainAdmin()) {
-                header("Location: adminDashboard.php");
-            }
+
+            $_SESSION['login_error'] = true;
+            aitf_redirect_and_exit("loginSelection.php");
         } else {
             // Invalid credentials: mark login error in session and redirect to clean login URL
             $_SESSION['login_error'] = true;
-            header("Location: index.php");
+            aitf_redirect_and_exit("index.php");
         }
     } catch (Exception $exc) {
         // Log error instead of echoing to prevent AJAX parse errors
         error_log('Login Exception: ' . $exc->getTraceAsString());
         $_SESSION['login_error'] = true;
-        header("Location: index.php");
+        aitf_redirect_and_exit("index.php");
     }
 } else if (isset($_POST["clientemail"]) && !empty($_POST["clientemail"]) && isset($_POST["clientcid"]) && !empty($_POST["clientcid"])) {
     $recaptchaToken = trim($_POST['g-recaptcha-response'] ?? '');
     $captchaError = '';
     if (function_exists('aitf_verify_recaptcha') && !aitf_verify_recaptcha($recaptchaToken, $captchaError)) {
         $_SESSION['login_error'] = true;
-        header("Location: loginSelection.php");
-        exit;
+        aitf_redirect_and_exit("loginSelection.php");
     }
     try {
         $input = preg_replace("/[^a-zA-Z]+/", "", $_POST["clientemail"]);
@@ -88,21 +95,21 @@ if (isset($_POST['useremail']) && !empty($_POST['useremail']) && isset($_POST['p
                 $_SESSION['id'] = $customerinfo['id'];
                 $_SESSION['role'] = "client";
                 $_SESSION['uniqueid'] = $customerinfo['unique_id'];
-                header("Location: clientportal.php");
+                aitf_redirect_and_exit("clientportal.php");
             } else {
                 // Invalid client login: show generic error banner without query params
                 $_SESSION['login_error'] = true;
-                header("Location: index.php");
+                aitf_redirect_and_exit("index.php");
             }
         } else {
             $_SESSION['login_error'] = true;
-            header("Location: index.php");
+            aitf_redirect_and_exit("index.php");
         }
     } catch (Exception $ex) {
         // Log error instead of echoing to prevent AJAX parse errors
         error_log('Client Login Exception: ' . $ex->getMessage());
         $_SESSION['login_error'] = true;
-        header("Location: index.php");
+        aitf_redirect_and_exit("index.php");
     }
 } else if (isset($_POST["name"]) && !empty($_POST["name"]) && isset($_POST["cno"]) && !empty($_POST["cno"])) {
     try {
@@ -170,14 +177,14 @@ if (isset($_POST['useremail']) && !empty($_POST['useremail']) && isset($_POST['p
             $_SESSION['username'] = "External User";
             $_SESSION['id'] = $customerinfo['id'];
             $_SESSION['role'] = "External";
-            header("Location: certifiedClient.php");
+            aitf_redirect_and_exit("certifiedClient.php");
         } else {
             // No client found for this certificate number at all
             $_SESSION['validation_error'] = "invalid_client_warning";
-            header("Location: validation.php");
+            aitf_redirect_and_exit("validation.php");
         }
     } catch (Exception $ex) {
         $_SESSION['validation_error'] = "invalid_client_warning";
-        header("Location: validation.php");
+        aitf_redirect_and_exit("validation.php");
     }
 }

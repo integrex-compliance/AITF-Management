@@ -267,7 +267,7 @@
         .addAccountCss {
             background-color: #053c6d;
             top: 0%;
-            z-index: 111;
+            z-index: 10001;
             position: fixed;
             min-height: 50px;
             padding: 15px 14px;
@@ -287,17 +287,20 @@
             color: #0B2C6F;
             border-radius: 0;
             margin-bottom: 0;
-            z-index: 100;
+            z-index: 9999;
             min-height: 80px;
+            height: 80px;
+            top: 0;
             border-bottom: 1px solid #1e4ba8;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
             display: flex;
             align-items: center;
+            overflow: visible;
         }
         
         .navbar-bootsnipp:nth-of-type(2) {
             border-top-width: 1px;
-            z-index: 50
+            z-index: 9998
         }
         
         .navbar-bootsnipp.affix-top {

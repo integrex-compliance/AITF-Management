@@ -814,7 +814,6 @@ $recaptchaFrontendEnabled = $recaptchaReady && !$recaptchaBypass;
                     if (submitBtn) {
                         submitBtn.disabled = true;
                     }
-                    showLoginLoader();
                 });
             });
 
