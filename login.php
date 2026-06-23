@@ -51,7 +51,7 @@ if (isset($_POST['useremail']) && !empty($_POST['useremail']) && isset($_POST['p
             } elseif (Utitlity::checkForUserMarketing()) {
                 aitf_redirect_and_exit("marketingPage.php");
             } elseif (Utitlity::checkForMainAdmin()) {
-                aitf_redirect_and_exit("adminDashboard.php");
+                aitf_redirect_and_exit("homePage.php");
             } elseif (Utitlity::checkForStaff()) {
                 aitf_redirect_and_exit("homePage.php");
             }
