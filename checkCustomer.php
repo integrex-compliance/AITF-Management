@@ -10,6 +10,67 @@ session_start();
 include_once './dbConnect.php';
 date_default_timezone_set('Asia/Kolkata');
 
+function getNextAllotmentSequence($db, $customerId, $year, $month) {
+    $month = str_pad((int)$month, 2, '0', STR_PAD_LEFT);
+    $year = (string)(int)$year;
+    $monthName = date('M', mktime(0, 0, 0, (int)$month, 1));
+    $yy = substr($year, -2);
+    $monthPrefix = 'AITF/' . $monthName . '-' . $yy . '/%';
+
+    // 1. Get max client_count from allotment_count as a number.
+    $maxCountFromAllotment = 0;
+    $sql1 = "SELECT MAX(CAST(client_count AS UNSIGNED)) as max_count FROM allotment_count WHERE year = :year AND CAST(month AS UNSIGNED) = :month";
+    $stmt1 = $db->prepare($sql1);
+    $stmt1->bindParam(':year', $year);
+    $monthIntForCount = (int)$month;
+    $stmt1->bindParam(':month', $monthIntForCount, PDO::PARAM_INT);
+    $stmt1->execute();
+    $row1 = $stmt1->fetch(PDO::FETCH_ASSOC);
+    if ($row1 && $row1['max_count'] !== null) {
+        $maxCountFromAllotment = (int)$row1['max_count'];
+    }
+
+    // 2. Get max sequence from certification_aggrement for the same Agreement month/year.
+    $maxCountFromAgreement = 0;
+    $sql2 = "SELECT aggrement_no FROM certification_aggrement WHERE YEAR(aggrement_date) = :year AND MONTH(aggrement_date) = :month AND aggrement_no LIKE :prefix";
+    $stmt2 = $db->prepare($sql2);
+    $monthInt = (int)$month;
+    $stmt2->bindParam(':year', $year);
+    $stmt2->bindParam(':month', $monthInt, PDO::PARAM_INT);
+    $stmt2->bindParam(':prefix', $monthPrefix);
+    $stmt2->execute();
+    $rows2 = $stmt2->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($rows2 as $row2) {
+        $agNo = $row2['aggrement_no'];
+        if ($agNo && preg_match('/^AITF\/' . preg_quote($monthName, '/') . '-' . preg_quote($yy, '/') . '\/(\d+)(?:\s+Rc-\d+)?$/i', $agNo, $matches)) {
+            $seq = (int)$matches[1];
+            if ($seq > $maxCountFromAgreement) {
+                $maxCountFromAgreement = $seq;
+            }
+        }
+    }
+
+    $candidate = max($maxCountFromAllotment, $maxCountFromAgreement) + 1;
+
+    // Loop to ensure candidate number doesn't match any existing allotment number
+    while (true) {
+        $candidateNo = 'AITF/' . $monthName . '-' . $yy . '/' . $candidate;
+        
+        $sqlCheck = "SELECT COUNT(*) as count FROM certification_aggrement WHERE aggrement_no = :no";
+        $stmtCheck = $db->prepare($sqlCheck);
+        $stmtCheck->bindParam(':no', $candidateNo);
+        $stmtCheck->execute();
+        $resCheck = $stmtCheck->fetch();
+        
+        if (!$resCheck || (int)$resCheck['count'] === 0) {
+            break; // Unique!
+        }
+        $candidate++;
+    }
+
+    return $candidate;
+}
+
 if (isset($_POST['customerEmail']) && !empty($_POST['customerEmail'])) {
     try {
         $checkCustomer = "SELECT count(*) as exist from customer_info where email_id = '" . $_POST['customerEmail'] . "'";
@@ -88,10 +149,11 @@ if (isset($_POST['customerEmail']) && !empty($_POST['customerEmail'])) {
         $day = $orderdate[2];
         $year = $orderdate[0];
 
-        $clientCount = "SELECT client_count, certification_date FROM allotment_count WHERE year= :year and month = :month ORDER BY client_count DESC LIMIT 1";
+        $clientCount = "SELECT client_count, certification_date FROM allotment_count WHERE year= :year and CAST(month AS UNSIGNED) = :month ORDER BY CAST(client_count AS UNSIGNED) DESC LIMIT 1";
         $statement = $db->prepare($clientCount);
         $statement->bindParam(":year", $year);
-        $statement->bindParam(":month", $month);
+        $monthInt = (int)$month;
+        $statement->bindParam(":month", $monthInt, PDO::PARAM_INT);
         $statement->execute();
         $count = $statement->fetch();
         //echo "new date -> ".$date. " Prev date -> ". $count["certification_date"];
@@ -672,20 +734,11 @@ $lastDate = $lastDate->format('Y-m-d');
         $currentMonth = date('m');
         $currentYear = date('Y');
         
-        // Get the highest counter for current month/year
-        $countQuery = "SELECT MAX(client_count) as max_count FROM allotment_count WHERE month = :month AND year = :year";
-        $statement = $db->prepare($countQuery);
-        $statement->bindParam(":month", $currentMonth);
-        $statement->bindParam(":year", $currentYear);
-        $statement->execute();
-        $countResult = $statement->fetch();
+        // Get the highest counter for current month/year using helper
+        $newCounter = getNextAllotmentSequence($db, null, $currentYear, $currentMonth);
         
-        // Increment counter
-        $newCounter = ($countResult && $countResult['max_count']) ? ($countResult['max_count'] + 1) : 1;
-        
-        // Format the allotment number: AITF/MonthName-YY/Counter
-        $monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-        $monthName = $monthNames[intval($currentMonth) - 1];
+        // Format the allotment number: AITF/Mon-YY/Counter
+        $monthName = date('M', mktime(0, 0, 0, intval($currentMonth), 1));
         $year = date('y'); // 2-digit year
         
         $allotmentNumber = 'AITF/' . $monthName . '-' . $year . '/' . $newCounter;

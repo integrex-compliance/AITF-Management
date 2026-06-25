@@ -391,3 +391,85 @@ FULL PAYLOAD:
 ]
 
 ---------------------------------------------
+[2026-06-24 13:02:42] INSERT REQUEST RECEIVED -> Client ID: #99
+HTTP Code: 200
+FULL IAF REQUEST PAYLOAD:
+{
+    "certified_entity": {
+        "certified_entity_unique_id": "GUID-000099",
+        "certified_entity_name": "BCM Precision Engineering (Withdrawn)",
+        "certified_entity_street_address": "Gat No. 812, Pawarwasti, Kudalwadi, Chikhali, Tal. Haveli, Dist. Pune - 412 114, Maharashtra, India.",
+        "company_country": "India",
+        "business_registered_country": "India",
+        "business_registered_full_address": "Gat No. 812, Pawarwasti, Kudalwadi, Chikhali, Tal. Haveli, Dist. Pune - 412 114, Maharashtra, India."
+    },
+    "certification": {
+        "certificate_identity_number": "98",
+        "certificate_number": "3371216021417",
+        "certification_status": "Withdrawn",
+        "certificate_accreditation_status": "Accredited",
+        "certification_type": "Management System",
+        "certification_original_issue_date": "20160202",
+        "certification_issue_date": "20160202",
+        "certification_expiry_date": "20190201",
+        "certification_scope": "Manufacture and supply of precision machined components",
+        "certified_entity_unique_id": "GUID-000099",
+        "main_site_country": "India",
+        "main_site_full_address": "Gat No. 812, Pawarwasti, Kudalwadi, Chikhali, Tal. Haveli, Dist. Pune - 412 114, Maharashtra, India.",
+        "accreditation_body_name": "YOUR_AB_NAME",
+        "accreditation_body_acronym_name": "YOUR_AB_ACRONYM",
+        "schemes": [
+            {
+                "scheme_name": "QMS",
+                "standard_list": [
+                    {
+                        "standards_name": "ISO 9001:2015"
+                    }
+                ]
+            }
+        ]
+    }
+}
+API RESPONSE:
+{
+    "status": "success",
+    "message": "Mock IAF CertSearch upload accepted for Client #99.",
+    "iaf_payload": {
+        "certified_entity": {
+            "certified_entity_unique_id": "GUID-000099",
+            "certified_entity_name": "BCM Precision Engineering (Withdrawn)",
+            "certified_entity_street_address": "Gat No. 812, Pawarwasti, Kudalwadi, Chikhali, Tal. Haveli, Dist. Pune - 412 114, Maharashtra, India.",
+            "company_country": "India",
+            "business_registered_country": "India",
+            "business_registered_full_address": "Gat No. 812, Pawarwasti, Kudalwadi, Chikhali, Tal. Haveli, Dist. Pune - 412 114, Maharashtra, India."
+        },
+        "certification": {
+            "certificate_identity_number": "98",
+            "certificate_number": "3371216021417",
+            "certification_status": "Withdrawn",
+            "certificate_accreditation_status": "Accredited",
+            "certification_type": "Management System",
+            "certification_original_issue_date": "20160202",
+            "certification_issue_date": "20160202",
+            "certification_expiry_date": "20190201",
+            "certification_scope": "Manufacture and supply of precision machined components",
+            "certified_entity_unique_id": "GUID-000099",
+            "main_site_country": "India",
+            "main_site_full_address": "Gat No. 812, Pawarwasti, Kudalwadi, Chikhali, Tal. Haveli, Dist. Pune - 412 114, Maharashtra, India.",
+            "accreditation_body_name": "YOUR_AB_NAME",
+            "accreditation_body_acronym_name": "YOUR_AB_ACRONYM",
+            "schemes": [
+                {
+                    "scheme_name": "QMS",
+                    "standard_list": [
+                        {
+                            "standards_name": "ISO 9001:2015"
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+}
+
+---------------------------------------------

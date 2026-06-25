@@ -12,7 +12,97 @@ require_once('tcpdf_include.php');
 include_once './dbConnect.php';
 date_default_timezone_set('Asia/Kolkata');
 
+function getNextAllotmentSequence($db, $customerId, $year, $month) {
+    $month = str_pad((int)$month, 2, '0', STR_PAD_LEFT);
+    $year = (string)(int)$year;
+    $monthName = date('M', mktime(0, 0, 0, (int)$month, 1));
+    $yy = substr($year, -2);
+    $monthPrefix = 'AITF/' . $monthName . '-' . $yy . '/%';
+
+    // 1. Get max client_count from allotment_count as a number.
+    $maxCountFromAllotment = 0;
+    $sql1 = "SELECT MAX(CAST(client_count AS UNSIGNED)) as max_count FROM allotment_count WHERE year = :year AND CAST(month AS UNSIGNED) = :month";
+    $stmt1 = $db->prepare($sql1);
+    $stmt1->bindParam(':year', $year);
+    $monthIntForCount = (int)$month;
+    $stmt1->bindParam(':month', $monthIntForCount, PDO::PARAM_INT);
+    $stmt1->execute();
+    $row1 = $stmt1->fetch(PDO::FETCH_ASSOC);
+    if ($row1 && $row1['max_count'] !== null) {
+        $maxCountFromAllotment = (int)$row1['max_count'];
+    }
+
+    // 2. Get max sequence from certification_aggrement for the same Agreement month/year.
+    $maxCountFromAgreement = 0;
+    $sql2 = "SELECT aggrement_no FROM certification_aggrement WHERE YEAR(aggrement_date) = :year AND MONTH(aggrement_date) = :month AND aggrement_no LIKE :prefix";
+    $stmt2 = $db->prepare($sql2);
+    $monthInt = (int)$month;
+    $stmt2->bindParam(':year', $year);
+    $stmt2->bindParam(':month', $monthInt, PDO::PARAM_INT);
+    $stmt2->bindParam(':prefix', $monthPrefix);
+    $stmt2->execute();
+    $rows2 = $stmt2->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($rows2 as $row2) {
+        $agNo = $row2['aggrement_no'];
+        if ($agNo && preg_match('/^AITF\/' . preg_quote($monthName, '/') . '-' . preg_quote($yy, '/') . '\/(\d+)(?:\s+Rc-\d+)?$/i', $agNo, $matches)) {
+            $seq = (int)$matches[1];
+            if ($seq > $maxCountFromAgreement) {
+                $maxCountFromAgreement = $seq;
+            }
+        }
+    }
+
+    $candidate = max($maxCountFromAllotment, $maxCountFromAgreement) + 1;
+
+    // Loop to ensure candidate number doesn't match any existing allotment number
+    while (true) {
+        $candidateNo = 'AITF/' . $monthName . '-' . $yy . '/' . $candidate;
+        
+        $sqlCheck = "SELECT COUNT(*) as count FROM certification_aggrement WHERE aggrement_no = :no";
+        $stmtCheck = $db->prepare($sqlCheck);
+        $stmtCheck->bindParam(':no', $candidateNo);
+        $stmtCheck->execute();
+        $resCheck = $stmtCheck->fetch();
+        
+        if (!$resCheck || (int)$resCheck['count'] === 0) {
+            break; // Unique!
+        }
+        $candidate++;
+    }
+
+    return $candidate;
+}
+
+function formatAllotmentNo($year, $month, $sequence) {
+    $monthName = date('M', mktime(0, 0, 0, (int)$month, 1));
+    return 'AITF/' . $monthName . '-' . substr((string)$year, -2) . '/' . (int)$sequence;
+}
+
+function acquireAllotmentLock($db, $year, $month) {
+    $lockName = 'aitf_allotment_' . (int)$year . '_' . str_pad((int)$month, 2, '0', STR_PAD_LEFT);
+    $stmt = $db->prepare("SELECT GET_LOCK(:lock_name, 10) AS locked");
+    $stmt->bindParam(':lock_name', $lockName);
+    $stmt->execute();
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$row || (int)$row['locked'] !== 1) {
+        throw new Exception('Unable to reserve allotment number. Please try again.');
+    }
+
+    return $lockName;
+}
+
+function releaseAllotmentLock($db, $lockName) {
+    if (!$lockName) {
+        return;
+    }
+
+    $stmt = $db->prepare("SELECT RELEASE_LOCK(:lock_name)");
+    $stmt->bindParam(':lock_name', $lockName);
+    $stmt->execute();
+}
+
 if (isset($_POST["certificateid"]) && !empty($_POST["certificateid"])) {
+    $allotmentLockName = null;
     try {
         // Check if all required POST variables are set
         if (!isset($_POST["newRegistrationDate"]) || !isset($_POST["allotmentNo"]) || !isset($_POST["csId"]) || !isset($_POST["newCount"])) {
@@ -25,7 +115,22 @@ if (isset($_POST["certificateid"]) && !empty($_POST["certificateid"])) {
         $day = $orderdate[0];
         $month = $orderdate[1];
         $year = $orderdate[2];
+        $allotmentLockName = acquireAllotmentLock($db, $year, $month);
         
+        // Validation to prevent duplicate allotment numbers in Case A (Edit)
+        $checkSql = "SELECT COUNT(*) as count FROM certification_aggrement WHERE aggrement_no = :altno AND id != :id";
+        $stmtCheck = $db->prepare($checkSql);
+        $stmtCheck->bindParam(':altno', $_POST['allotmentNo']);
+        $stmtCheck->bindParam(':id', $_POST["certificateid"]);
+        $stmtCheck->execute();
+        $resCheck = $stmtCheck->fetch();
+        if ($resCheck && (int)$resCheck['count'] > 0) {
+            // It is a duplicate! Recalculate a unique one
+            $allocatedCount = getNextAllotmentSequence($db, $_POST["csId"], $year, $month);
+            $_POST['allotmentNo'] = formatAllotmentNo($year, $month, $allocatedCount);
+            $_POST['newCount'] = $allocatedCount;
+        }
+
         $sql = "UPDATE `certification_aggrement` SET `aggrement_date`= :date ,`aggrement_no`= :no  WHERE `id` = :id ";
         $statement = $db->prepare($sql);
         $statement->bindParam(":id", $_POST["certificateid"]);
@@ -49,11 +154,16 @@ if (isset($_POST["certificateid"]) && !empty($_POST["certificateid"])) {
         $statement->bindParam(":date", date("Y-m-d", strtotime($_POST["newRegistrationDate"])));
         $statement->execute();
 
+        releaseAllotmentLock($db, $allotmentLockName);
+        $allotmentLockName = null;
         header("Location: customerAccount.php?customerid=" . $_POST['csId']);
     } catch (Exception $ex) {
-        
+        releaseAllotmentLock($db, $allotmentLockName);
+        error_log('Allotment update failed: ' . $ex->getMessage());
+        header("Location: customerAccount.php?customerid=" . (isset($_POST['csId']) ? $_POST['csId'] : ''));
     }
 } else {
+    $allotmentLockName = null;
     try {
         // Check if all required POST variables are set
         if (!isset($_POST["service"]) || !isset($_POST["csId"]) || !isset($_POST["newRegistrationDate"]) || !isset($_POST["allotmentNo"])) {
@@ -66,6 +176,7 @@ if (isset($_POST["certificateid"]) && !empty($_POST["certificateid"])) {
         $day = $orderdate[0];
         $month = $orderdate[1];
         $year = $orderdate[2];
+        $allotmentLockName = acquireAllotmentLock($db, $year, $month);
         
         // Check if this service is an RC or CR service
         $serviceTypeCheck = "SELECT service_type FROM service WHERE service_id = :sid";
@@ -101,32 +212,19 @@ if (isset($_POST["certificateid"]) && !empty($_POST["certificateid"])) {
         $allocatedCount = null;
 
         if (!$row["id"] && $shouldAllocateBaseAllotment) {
-            $maxUsed = "SELECT MAX(ac.client_count) as max_count
-                        FROM allotment_count ac
-                        WHERE ac.year = :year AND ac.month = :month
-                          AND EXISTS (
-                            SELECT 1 FROM certification_aggrement ca
-                            WHERE ca.customer_id = ac.client_id
-                              AND YEAR(ca.aggrement_date) = :year2
-                              AND MONTH(ca.aggrement_date) = :month2
-                          )";
-            $statement = $db->prepare($maxUsed);
-            $statement->bindParam(":year", $year);
-            $statement->bindParam(":month", $month);
-            $statement->bindParam(":year2", $year);
-            $monthInt = (int)$month;
-            $statement->bindParam(":month2", $monthInt);
-            $statement->execute();
-            $maxRow = $statement->fetch(PDO::FETCH_ASSOC);
-
-            $allocatedCount = 1;
-            if (!empty($maxRow) && $maxRow['max_count'] !== null) {
-                $allocatedCount = ((int)$maxRow['max_count']) + 1;
+            $allocatedCount = getNextAllotmentSequence($db, $_POST["csId"], $year, $month);
+            $allotmentToStore = formatAllotmentNo($year, $month, $allocatedCount);
+        } else {
+            // Validate to prevent duplicate allotment numbers for any other base allotments
+            $checkSql = "SELECT COUNT(*) as count FROM certification_aggrement WHERE aggrement_no = :altno";
+            $stmtCheck = $db->prepare($checkSql);
+            $stmtCheck->bindParam(':altno', $allotmentToStore);
+            $stmtCheck->execute();
+            $resCheck = $stmtCheck->fetch();
+            if ($resCheck && (int)$resCheck['count'] > 0) {
+                $allocatedCount = getNextAllotmentSequence($db, $_POST["csId"], $year, $month);
+                $allotmentToStore = formatAllotmentNo($year, $month, $allocatedCount);
             }
-
-            $monthName = date('F', mktime(0, 0, 0, (int)$month, 1));
-            $yy = substr($year, -2);
-            $allotmentToStore = 'AITF/' . $monthName . '-' . $yy . '/' . $allocatedCount;
         }
 
         $sqlcertagrment = "INSERT INTO `certification_aggrement`(`service`, `customer_id`, `aggrement_date`, `aggrement_no`) VALUES (:svc, :customer, :date, :altno)";
@@ -154,9 +252,13 @@ if (isset($_POST["certificateid"]) && !empty($_POST["certificateid"])) {
             $statement->bindParam(":date", date("Y-m-d", strtotime($_POST["newRegistrationDate"])));
             $statement->execute();
         }
+        releaseAllotmentLock($db, $allotmentLockName);
+        $allotmentLockName = null;
         header("Location: customerAccount.php?customerid=" . $_POST['csId']);
     } catch (Exception $ex) {
-        
+        releaseAllotmentLock($db, $allotmentLockName);
+        error_log('Allotment insert failed: ' . $ex->getMessage());
+        header("Location: customerAccount.php?customerid=" . (isset($_POST['csId']) ? $_POST['csId'] : ''));
     }
 }
 //if (isset($_POST['csId']) && !empty($_POST['csId']) && isset($_POST["generate"]) && !empty($_POST["generate"]) && $_POST["generate"] == "create")  {

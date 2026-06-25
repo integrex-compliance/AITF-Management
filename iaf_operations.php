@@ -3,6 +3,8 @@
 header('Access-Control-Allow-Origin: *');
 header('Content-Type: application/json');
 
+require_once __DIR__ . '/include/iaf_certsearch_helper.php';
+
 $jsonPayload = file_get_contents('php://input');
 $request = json_decode($jsonPayload, true);
 
@@ -11,12 +13,12 @@ if (!$request) {
     exit;
 }
 
-$apiKey = 'YOUR_API_KEY_HERE'; // Replace with your API Key
+$apiKey = getenv('IAF_CERTSEARCH_API_KEY') ?: 'YOUR_API_KEY_HERE'; // Replace with your API Key or set env var
 $action = $request['action'] ?? '';
 
 $data = $request['data'] ?? [];
 
-function makeIafApiCall($method, $url, $payload, $apiKey)
+function makeIafApiCall($method, $url, $payload, $apiKey, $action = '')
 {
     $curl = curl_init();
     $curlOptions = [
@@ -41,17 +43,32 @@ function makeIafApiCall($method, $url, $payload, $apiKey)
     curl_setopt_array($curl, $curlOptions);
     $response = curl_exec($curl);
     $err = curl_error($curl);
+    $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
     curl_close($curl);
 
-    if ($err) {
-        return ['error' => true, 'message' => "cURL Error: $err"];
-    }
-
     $decoded = json_decode($response, true);
+    $responseForLog = $decoded === null ? $response : $decoded;
+    iafCertSearchLogApiCall($action, $method, $url, (array) $payload, $httpCode, $responseForLog, $err);
+
+    if ($err) {
+        return [
+            'error' => true,
+            'message' => "cURL Error: $err",
+            'http_code' => $httpCode,
+            'request_payload' => $payload,
+            'response' => $responseForLog
+        ];
+    }
 
     // Fallback if not JSON
     if ($decoded === null) {
-        return ['error' => true, 'message' => "Raw Response: " . substr(strip_tags($response), 0, 150)];
+        return [
+            'error' => true,
+            'message' => "Raw Response: " . substr(strip_tags($response), 0, 150),
+            'http_code' => $httpCode,
+            'request_payload' => $payload,
+            'response' => $response
+        ];
     }
 
     // Normalizing API Error structures (e.g. {"error": "Unauthorized"} lacks 'message')
@@ -61,51 +78,41 @@ function makeIafApiCall($method, $url, $payload, $apiKey)
     }
 
     // Explicit API response errors where 'message' might be inside something else
-    if (!isset($decoded['message']) && curl_getinfo($curl, CURLINFO_HTTP_CODE) >= 400) {
+    if (!isset($decoded['message']) && $httpCode >= 400) {
         $decoded['error'] = true;
         $decoded['message'] = $decoded['Message'] ?? $decoded['error_description'] ?? json_encode($decoded);
     }
+
+    if ($httpCode >= 400) {
+        $decoded['error'] = true;
+    }
+
+    $decoded['http_code'] = $httpCode;
+    $decoded['request_payload'] = $payload;
+    $decoded['response'] = $responseForLog;
 
     return $decoded;
 }
 
 switch ($action) {
     case 'insert':
-        $issueDate = str_replace('-', '', $data['issue_date']);
-        $expiryDate = str_replace('-', '', $data['expiry_date']);
-
-        $iafPayload = [
-            "certified_entity" => [
-                "certified_entity_unique_id" => (string) $data['internal_client_id'],
-                "certified_entity_name" => $data['customer_name'],
-                "business_registered_country" => $data['country'],
-                "business_registered_full_address" => $data['address']
-            ],
-            "certification" => [
-                "certificate_identity_number" => (string) $data['certificate_tracking_id'],
-                "certificate_number" => (string) $data['certificate_number'],
-                "certification_status" => $data['certification_status'],
-                "certificate_accreditation_status" => $data['certification_type'],
-                "certification_type" => "Management System",
-                "certification_issue_date" => $issueDate,
-                "certification_expiry_date" => $expiryDate,
-                "certified_entity_unique_id" => (string) $data['internal_client_id'],
-                "main_site_country" => $data['country'],
-                "main_site_full_address" => $data['address'],
-                "accreditation_body_name" => "YOUR_AB_NAME", // MUST UPDATE
-                "accreditation_body_acronym_name" => "YOUR_AB_ACRONYM", // MUST UPDATE
-                "schemes" => [
-                    [
-                        "scheme_name" => $data['schema_name'],
-                        "standard_list" => [["standards_name" => $data['standard_name']]]
-                    ]
-                ]
-            ]
-        ];
+        $iafPayload = iafCertSearchBuildPayload($data);
+        $missingFields = iafCertSearchValidatePayload($iafPayload);
+        if (!empty($missingFields)) {
+            $validationResponse = [
+                'error' => true,
+                'message' => 'Missing required IAF CertSearch payload fields.',
+                'missing_fields' => $missingFields,
+                'request_payload' => $iafPayload
+            ];
+            iafCertSearchLogApiCall($action, 'POST', 'validation', $iafPayload, 0, $validationResponse);
+            echo json_encode($validationResponse);
+            exit;
+        }
 
 
         $url = 'https://api.sandbox.iafcertsearch.org/api/client/v2/cb/upload-cert';
-        echo json_encode(makeIafApiCall('POST', $url, $iafPayload, $apiKey));
+        echo json_encode(makeIafApiCall('POST', $url, $iafPayload, $apiKey, $action));
         break;
 
     case 'update':
@@ -113,12 +120,22 @@ switch ($action) {
             echo json_encode(['error' => true, 'message' => 'GUID required for update.']);
             exit;
         }
-        $iafPayload = [
-            "company_guid" => $data['customer_guid'],
-            "company_name" => $data['customer_name']
-        ];
-        $url = 'https://api.sandbox.iafcertsearch.org/';
-        echo json_encode(makeIafApiCall('PUT', $url, $iafPayload, $apiKey));
+        $iafPayload = iafCertSearchBuildPayload($data);
+        $missingFields = iafCertSearchValidatePayload($iafPayload);
+        if (!empty($missingFields)) {
+            $validationResponse = [
+                'error' => true,
+                'message' => 'Missing required IAF CertSearch payload fields.',
+                'missing_fields' => $missingFields,
+                'request_payload' => $iafPayload
+            ];
+            iafCertSearchLogApiCall($action, 'PUT', 'validation', $iafPayload, 0, $validationResponse);
+            echo json_encode($validationResponse);
+            exit;
+        }
+
+        $url = 'https://api.sandbox.iafcertsearch.org/api/client/v2/cb/upload-cert';
+        echo json_encode(makeIafApiCall('PUT', $url, $iafPayload, $apiKey, $action));
         break;
 
     case 'delete':
@@ -128,7 +145,7 @@ switch ($action) {
             exit;
         }
         $url = 'https://api.iafcertsearch.org/api/client/v2/cb/certification/' . $certGuid;
-        echo json_encode(makeIafApiCall('DELETE', $url, [], $apiKey));
+        echo json_encode(makeIafApiCall('DELETE', $url, [], $apiKey, $action));
         break;
 
     default:

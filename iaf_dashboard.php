@@ -5,6 +5,7 @@
     if (!isset($db)) {
         include_once './dbConnect.php';
     }
+    require_once __DIR__ . '/include/iaf_certsearch_helper.php';
 
     $query = "SELECT 
         c.id as internal_client_id,
@@ -12,11 +13,14 @@
         c.customer_name,
         c.country,
         c.address,
+        c.scope,
         c.audit_status as certification_status, 
         cp.certificate_id as certificate_tracking_id,
         cp.certificate_no as certificate_number, 
         cp.registration_date as issue_date, 
+        cp.registration_date as original_issue_date,
         cp.valid_until as expiry_date, 
+        cp.certificate_scope,
         (SELECT asi.schedule_app_standard FROM audit_schedule_id asi WHERE asi.customer_ca_id = c.id ORDER BY asi.audit_schedule_id DESC LIMIT 1) as standard_name,
         c.schema_name
     FROM customer_info c 
@@ -34,11 +38,14 @@
         c.id as internal_client_id,
         c.customer_name,
         c.address,
+        c.scope,
         c.audit_status as certification_status, 
         cp.certificate_id as certificate_tracking_id,
         cp.certificate_no as certificate_number, 
         cp.registration_date as issue_date, 
+        cp.registration_date as original_issue_date,
         cp.valid_until as expiry_date, 
+        cp.certificate_scope,
         (SELECT asi.schedule_app_standard FROM audit_schedule_id asi WHERE asi.customer_ca_id = c.id ORDER BY asi.audit_schedule_id DESC LIMIT 1) as standard_name
     FROM customer_info c 
     LEFT JOIN certificate_print cp ON c.id = cp.customer_id 
@@ -51,30 +58,8 @@
 
     // Ensure columns that may not exist have a fallback
     foreach ($clients as &$client) {
-        if (!isset($client['customer_guid']))
-            $client['customer_guid'] = 'GUID-' . str_pad($client['internal_client_id'], 6, '0', STR_PAD_LEFT);
-        if (!isset($client['country']))
-            $client['country'] = 'India'; // Default or extracted
-    
-        // Extract scheme name from standard if schema_name is not available
-        if (!isset($client['schema_name']) || empty($client['schema_name'])) {
-            $std = $client['standard_name'];
-            if (strpos(strtoupper($std), '9001') !== false)
-                $client['schema_name'] = 'QMS';
-            elseif (strpos(strtoupper($std), '14001') !== false)
-                $client['schema_name'] = 'EMS';
-            elseif (strpos(strtoupper($std), '45001') !== false || strpos(strtoupper($std), '18001') !== false)
-                $client['schema_name'] = 'OHSMS';
-            elseif (strpos(strtoupper($std), '27001') !== false)
-                $client['schema_name'] = 'ISMS';
-            elseif (strpos(strtoupper($std), '22000') !== false)
-                $client['schema_name'] = 'FSMS';
-            else
-                $client['schema_name'] = 'Other';
-        }
-
-        // Derive Certification Type
-        $client['certification_type'] = $client['certification_status'] ? 'Accredited' : 'Unaccredited';
+        $client = iafCertSearchNormalizeClientData($client);
+        $client['certification_scope'] = iafCertSearchFirstValue($client, ['certificate_scope', 'scope']);
     }
     unset($client);
 
@@ -474,8 +459,6 @@
                         }
                     });
                 });
-                func
-
                 function handleAction(actionType, clientData, btnElement) {
                     const btn = $(btnElement);
                     const originalText = btn.html();

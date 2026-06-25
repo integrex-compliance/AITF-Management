@@ -1,6 +1,8 @@
 <?php
 header('Content-Type: application/json');
 
+require_once __DIR__ . '/include/iaf_certsearch_helper.php';
+
 // Mock API for testing Insert, Update, and Delete on IAF Dashboard
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -18,19 +20,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     if ($action === 'insert') {
         $clientData = $_POST['client_data'] ?? [];
+        if (is_string($clientData)) {
+            $clientData = json_decode($clientData, true);
+        }
+        if (!is_array($clientData)) {
+            echo json_encode(['status' => 'error', 'message' => 'Invalid client data payload.']);
+            exit;
+        }
+
+        $iafPayload = iafCertSearchBuildPayload($clientData);
+        $missingFields = iafCertSearchValidatePayload($iafPayload);
+        if (!empty($missingFields)) {
+            $response = [
+                'status' => 'error',
+                'message' => 'Missing required IAF CertSearch payload fields: ' . implode(', ', $missingFields),
+                'request_payload' => $iafPayload
+            ];
+            iafCertSearchLogApiCall('insert_validation', 'POST', 'local-dashboard-validation', $iafPayload, 0, $response);
+            echo json_encode($response);
+            exit;
+        }
         
-        // Mock insert: Log the complete data object instead of sending it over the internet so you can see it locally
+        // Mock insert: Log the final IAF request payload instead of sending it over the internet.
         $logFile = __DIR__ . '/test_logs/api_insert_log.txt';
+        if (!is_dir(dirname($logFile))) {
+            mkdir(dirname($logFile), 0775, true);
+        }
         $timestamp = date('Y-m-d H:i:s');
+        $mockResponse = [
+            'status' => 'success',
+            'message' => "Mock IAF CertSearch upload accepted for Client #$clientId.",
+            'iaf_payload' => $iafPayload
+        ];
         
-        // Format the entire client data object beautifully as JSON
-        $jsonData = json_encode([$clientData], JSON_PRETTY_PRINT);
-        $logMessage = "[$timestamp] INSERT REQUEST RECEIVED -> Client ID: #$clientId\nFULL PAYLOAD:\n$jsonData\n\n---------------------------------------------\n";
+        $jsonData = json_encode($iafPayload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        $logMessage = "[$timestamp] INSERT REQUEST RECEIVED -> Client ID: #$clientId\nHTTP Code: 200\nFULL IAF REQUEST PAYLOAD:\n$jsonData\nAPI RESPONSE:\n" . json_encode($mockResponse, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n\n---------------------------------------------\n";
         
-        // Write it to the log file (Append mode)
         file_put_contents($logFile, $logMessage, FILE_APPEND);
+        iafCertSearchLogApiCall('insert_mock', 'POST', 'local-dashboard-mock-upload-cert', $iafPayload, 200, $mockResponse);
         
-        echo json_encode(['status' => 'success', 'message' => "Successfully sent FULL data array format for Client #$clientId. Checked text file 'test_logs/api_insert_log.txt'!"]);
+        echo json_encode([
+            'status' => 'success',
+            'message' => "Successfully built IAF CertSearch payload for Client #$clientId. Check test_logs/api_insert_log.txt and logs/iaf_certsearch_api.log.",
+            'http_code' => 200,
+            'request_payload' => $iafPayload,
+            'response' => $mockResponse
+        ]);
         exit;
         
     } elseif ($action === 'update') {
@@ -45,13 +80,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (is_string($clientData)) $clientData = json_decode($clientData, true);
 
         // Fetch the fresh data from DB (using safe fallback logic as in dashboard)
-        $query = "SELECT c.id as internal_client_id, c.customer_guid, c.customer_name, c.country, c.address, c.audit_status as certification_status, cp.certificate_id as certificate_tracking_id, cp.certificate_no as certificate_number, cp.registration_date as issue_date, cp.valid_until as expiry_date, (SELECT asi.schedule_app_standard FROM audit_schedule_id asi WHERE asi.customer_ca_id = c.id ORDER BY asi.audit_schedule_id DESC LIMIT 1) as standard_name, c.schema_name FROM customer_info c LEFT JOIN certificate_print cp ON c.id = cp.customer_id WHERE c.id = :cid GROUP BY c.id ORDER BY c.id DESC LIMIT 1";
+        $query = "SELECT c.id as internal_client_id, c.customer_guid, c.customer_name, c.country, c.address, c.scope, c.audit_status as certification_status, cp.certificate_id as certificate_tracking_id, cp.certificate_no as certificate_number, cp.registration_date as issue_date, cp.registration_date as original_issue_date, cp.valid_until as expiry_date, cp.certificate_scope, (SELECT asi.schedule_app_standard FROM audit_schedule_id asi WHERE asi.customer_ca_id = c.id ORDER BY asi.audit_schedule_id DESC LIMIT 1) as standard_name, c.schema_name FROM customer_info c LEFT JOIN certificate_print cp ON c.id = cp.customer_id WHERE c.id = :cid GROUP BY c.id ORDER BY c.id DESC LIMIT 1";
         try {
             $stmt = $db->prepare($query);
             $stmt->execute([':cid' => $clientId]);
             $freshClient = $stmt->fetch(PDO::FETCH_ASSOC);
         } catch (Exception $e) {
-            $query = "SELECT c.id as internal_client_id, c.customer_name, c.address, c.audit_status as certification_status, cp.certificate_id as certificate_tracking_id, cp.certificate_no as certificate_number, cp.registration_date as issue_date, cp.valid_until as expiry_date, (SELECT asi.schedule_app_standard FROM audit_schedule_id asi WHERE asi.customer_ca_id = c.id ORDER BY asi.audit_schedule_id DESC LIMIT 1) as standard_name FROM customer_info c LEFT JOIN certificate_print cp ON c.id = cp.customer_id WHERE c.id = :cid GROUP BY c.id ORDER BY c.id DESC LIMIT 1";
+            $query = "SELECT c.id as internal_client_id, c.customer_name, c.address, c.scope, c.audit_status as certification_status, cp.certificate_id as certificate_tracking_id, cp.certificate_no as certificate_number, cp.registration_date as issue_date, cp.registration_date as original_issue_date, cp.valid_until as expiry_date, cp.certificate_scope, (SELECT asi.schedule_app_standard FROM audit_schedule_id asi WHERE asi.customer_ca_id = c.id ORDER BY asi.audit_schedule_id DESC LIMIT 1) as standard_name FROM customer_info c LEFT JOIN certificate_print cp ON c.id = cp.customer_id WHERE c.id = :cid GROUP BY c.id ORDER BY c.id DESC LIMIT 1";
             $stmt = $db->prepare($query);
             $stmt->execute([':cid' => $clientId]);
             $freshClient = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -63,19 +98,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // Apply same formatting logic as dashboard
-        if(!isset($freshClient['customer_guid'])) $freshClient['customer_guid'] = 'GUID-' . str_pad($freshClient['internal_client_id'], 6, '0', STR_PAD_LEFT);
-        if(!isset($freshClient['country'])) $freshClient['country'] = 'India';
-        
-        if(!isset($freshClient['schema_name']) || empty($freshClient['schema_name'])) {
-            $std = $freshClient['standard_name'];
-            if(strpos(strtoupper($std), '9001') !== false) $freshClient['schema_name'] = 'QMS';
-            elseif(strpos(strtoupper($std), '14001') !== false) $freshClient['schema_name'] = 'EMS';
-            elseif(strpos(strtoupper($std), '45001') !== false || strpos(strtoupper($std), '18001') !== false) $freshClient['schema_name'] = 'OHSMS';
-            elseif(strpos(strtoupper($std), '27001') !== false) $freshClient['schema_name'] = 'ISMS';
-            elseif(strpos(strtoupper($std), '22000') !== false) $freshClient['schema_name'] = 'FSMS';
-            else $freshClient['schema_name'] = 'Other';
-        }
-        $freshClient['certification_type'] = $freshClient['certification_status'] ? 'Accredited' : 'Unaccredited';
+        $freshClient = iafCertSearchNormalizeClientData($freshClient);
+        $freshClient['certification_scope'] = iafCertSearchFirstValue($freshClient, ['certificate_scope', 'scope']);
         
         // Ensure values are strings for precise comparison (since DB might return ints/nulls)
         foreach($freshClient as $k => $v) {

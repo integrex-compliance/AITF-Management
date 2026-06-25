@@ -23,6 +23,67 @@ function outputJSON($data, $statusCode = 200) {
     exit;
 }
 
+function getNextAllotmentSequence($db, $customerId, $year, $month) {
+    $month = str_pad((int)$month, 2, '0', STR_PAD_LEFT);
+    $year = (string)(int)$year;
+    $monthName = date('M', mktime(0, 0, 0, (int)$month, 1));
+    $yy = substr($year, -2);
+    $monthPrefix = 'AITF/' . $monthName . '-' . $yy . '/%';
+
+    // 1. Get max client_count from allotment_count as a number.
+    $maxCountFromAllotment = 0;
+    $sql1 = "SELECT MAX(CAST(client_count AS UNSIGNED)) as max_count FROM allotment_count WHERE year = :year AND CAST(month AS UNSIGNED) = :month";
+    $stmt1 = $db->prepare($sql1);
+    $stmt1->bindParam(':year', $year);
+    $monthIntForCount = (int)$month;
+    $stmt1->bindParam(':month', $monthIntForCount, PDO::PARAM_INT);
+    $stmt1->execute();
+    $row1 = $stmt1->fetch(PDO::FETCH_ASSOC);
+    if ($row1 && $row1['max_count'] !== null) {
+        $maxCountFromAllotment = (int)$row1['max_count'];
+    }
+
+    // 2. Get max sequence from certification_aggrement for the same Agreement month/year.
+    $maxCountFromAgreement = 0;
+    $sql2 = "SELECT aggrement_no FROM certification_aggrement WHERE YEAR(aggrement_date) = :year AND MONTH(aggrement_date) = :month AND aggrement_no LIKE :prefix";
+    $stmt2 = $db->prepare($sql2);
+    $monthInt = (int)$month;
+    $stmt2->bindParam(':year', $year);
+    $stmt2->bindParam(':month', $monthInt, PDO::PARAM_INT);
+    $stmt2->bindParam(':prefix', $monthPrefix);
+    $stmt2->execute();
+    $rows2 = $stmt2->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($rows2 as $row2) {
+        $agNo = $row2['aggrement_no'];
+        if ($agNo && preg_match('/^AITF\/' . preg_quote($monthName, '/') . '-' . preg_quote($yy, '/') . '\/(\d+)(?:\s+Rc-\d+)?$/i', $agNo, $matches)) {
+            $seq = (int)$matches[1];
+            if ($seq > $maxCountFromAgreement) {
+                $maxCountFromAgreement = $seq;
+            }
+        }
+    }
+
+    $candidate = max($maxCountFromAllotment, $maxCountFromAgreement) + 1;
+
+    // Loop to ensure candidate number doesn't match any existing allotment number
+    while (true) {
+        $candidateNo = 'AITF/' . $monthName . '-' . $yy . '/' . $candidate;
+        
+        $sqlCheck = "SELECT COUNT(*) as count FROM certification_aggrement WHERE aggrement_no = :no";
+        $stmtCheck = $db->prepare($sqlCheck);
+        $stmtCheck->bindParam(':no', $candidateNo);
+        $stmtCheck->execute();
+        $resCheck = $stmtCheck->fetch();
+        
+        if (!$resCheck || (int)$resCheck['count'] === 0) {
+            break; // Unique!
+        }
+        $candidate++;
+    }
+
+    return $candidate;
+}
+
 function getRequestHeadersSafe() {
     if (function_exists('getallheaders')) {
         $headers = getallheaders();
@@ -1532,16 +1593,30 @@ if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
         $statement->execute();
         $existingRow = $statement->fetch(PDO::FETCH_ASSOC);
 
+        $date = date("d-m-Y", strtotime($_GET["idval"]));
+        $orderdate = explode('-', $date);
+        $month = $orderdate[1];
+        $year = $orderdate[2];
+
         if ($existingRow && isset($existingRow['client_count'])) {
-            $hasAgreement = "SELECT COUNT(*) as cnt FROM certification_aggrement WHERE customer_id = :id";
-            $statement = $db->prepare($hasAgreement);
+            // Check if year and month are unchanged
+            $existingAllotmentQuery = "SELECT year, month FROM allotment_count WHERE client_id = :id LIMIT 1";
+            $statement = $db->prepare($existingAllotmentQuery);
             $statement->bindParam(":id", $_GET['customer']);
             $statement->execute();
-            $agreementRow = $statement->fetch(PDO::FETCH_ASSOC);
+            $existingAllotment = $statement->fetch(PDO::FETCH_ASSOC);
+            
+            if ($existingAllotment && $existingAllotment['year'] == $year && $existingAllotment['month'] == $month) {
+                $hasAgreement = "SELECT COUNT(*) as cnt FROM certification_aggrement WHERE customer_id = :id";
+                $statement = $db->prepare($hasAgreement);
+                $statement->bindParam(":id", $_GET['customer']);
+                $statement->execute();
+                $agreementRow = $statement->fetch(PDO::FETCH_ASSOC);
 
-            if (!empty($agreementRow) && (int)$agreementRow['cnt'] > 0) {
-                outputJSON((int)$existingRow['client_count']);
-                exit;
+                if (!empty($agreementRow) && (int)$agreementRow['cnt'] > 0) {
+                    outputJSON((int)$existingRow['client_count']);
+                    exit;
+                }
             }
 
             $cleanup = "DELETE FROM allotment_count WHERE client_id = :id";
@@ -1550,33 +1625,8 @@ if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
             $statement->execute();
         }
 
-        $date = date("d-m-Y", strtotime($_GET["idval"]));
-        $orderdate = explode('-', $date);
-        $month = $orderdate[1];
-        $year = $orderdate[2];
-
-        $maxUsed = "SELECT MAX(ac.client_count) as max_count
-                    FROM allotment_count ac
-                    WHERE ac.year = :year AND ac.month = :month
-                      AND EXISTS (
-                        SELECT 1 FROM certification_aggrement ca
-                        WHERE ca.customer_id = ac.client_id
-                          AND YEAR(ca.aggrement_date) = :year2
-                          AND MONTH(ca.aggrement_date) = :month2
-                      )";
-        $statement = $db->prepare($maxUsed);
-        $statement->bindParam(":year", $year);
-        $statement->bindParam(":month", $month);
-        $statement->bindParam(":year2", $year);
-        $monthInt = (int)$month;
-        $statement->bindParam(":month2", $monthInt);
-        $statement->execute();
-        $maxRow = $statement->fetch(PDO::FETCH_ASSOC);
-
-        $counter = 1;
-        if (!empty($maxRow) && $maxRow['max_count'] !== null) {
-            $counter = ((int)$maxRow['max_count']) + 1;
-        }
+        // Generate robust sequence number using helper function
+        $counter = getNextAllotmentSequence($db, $_GET['customer'], $year, $month);
 
         outputJSON($counter);
 //        echo json_encode($counter);

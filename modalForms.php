@@ -2511,10 +2511,11 @@ $csgttax = $taxationDetails["rate"];
                     console.log('✅ getClientInfo.php response:', data);
                     if (data && data !== "no data" && !isNaN(data)) {
                         var date = idval;
-                        var dateArray = date.split(".");
+                        var separator = date.indexOf('.') !== -1 ? '.' : (date.indexOf('-') !== -1 ? '-' : '/');
+                        var dateArray = date.split(separator);
                         if (dateArray.length >= 3) {
-                            var monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
-                                            'July', 'August', 'September', 'October', 'November', 'December'];
+                            var monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                                            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
                             var monthNumber = parseInt(dateArray[1], 10) - 1;
                             var monthName = monthNames[monthNumber] || dateArray[1];
                             var year = (typeof moment !== 'undefined') ? moment(dateArray[2], 'YYYY').format('YY') : dateArray[2].slice(-2);
