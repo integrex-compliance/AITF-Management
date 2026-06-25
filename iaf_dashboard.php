@@ -7,24 +7,47 @@
     }
     require_once __DIR__ . '/include/iaf_certsearch_helper.php';
 
-    $query = "SELECT 
+    $query = "SELECT
         c.id as internal_client_id,
         c.customer_guid,
         c.customer_name,
         c.country,
         c.address,
         c.scope,
-        c.audit_status as certification_status, 
+        c.audit_status as certification_status,
         cp.certificate_id as certificate_tracking_id,
-        cp.certificate_no as certificate_number, 
-        cp.registration_date as issue_date, 
+        cp.certificate_no as certificate_number,
+        cp.registration_date as certificate_issue_date,
+        cp.registration_date as issue_date,
         cp.registration_date as original_issue_date,
-        cp.valid_until as expiry_date, 
+        cp.valid_until as expiry_date,
+        cp.valid_until as expire_date,
         cp.certificate_scope,
-        (SELECT asi.schedule_app_standard FROM audit_schedule_id asi WHERE asi.customer_ca_id = c.id ORDER BY asi.audit_schedule_id DESC LIMIT 1) as standard_name,
-        c.schema_name
-    FROM customer_info c 
-    LEFT JOIN certificate_print cp ON c.id = cp.customer_id 
+        COALESCE(NULLIF(aa.proposed_scope, ''), cp.certificate_scope, c.scope) as certification_scope,
+        COALESCE(
+            (SELECT NULLIF(TRIM(aa_req.accereditation_requirement), '') FROM audit_application aa_req INNER JOIN service svc_req ON aa_req.uni_svc_id = svc_req.service_id OR aa_req.service_id = svc_req.service_id WHERE svc_req.customer_id = c.id AND TRIM(aa_req.accereditation_requirement) <> '' ORDER BY aa_req.audit_id DESC LIMIT 1),
+            (SELECT NULLIF(TRIM(aa_req.review_accredition), '') FROM audit_application aa_req INNER JOIN service svc_req ON aa_req.uni_svc_id = svc_req.service_id OR aa_req.service_id = svc_req.service_id WHERE svc_req.customer_id = c.id AND TRIM(aa_req.review_accredition) <> '' ORDER BY aa_req.audit_id DESC LIMIT 1),
+            NULLIF(TRIM(aa.accereditation_requirement), ''),
+            NULLIF(TRIM(aa.review_accredition), '')
+        ) as accreditation_body_name,
+        COALESCE(
+            (SELECT NULLIF(TRIM(aa_req.accereditation_requirement), '') FROM audit_application aa_req INNER JOIN service svc_req ON aa_req.uni_svc_id = svc_req.service_id OR aa_req.service_id = svc_req.service_id WHERE svc_req.customer_id = c.id AND TRIM(aa_req.accereditation_requirement) <> '' ORDER BY aa_req.audit_id DESC LIMIT 1),
+            (SELECT NULLIF(TRIM(aa_req.review_accredition), '') FROM audit_application aa_req INNER JOIN service svc_req ON aa_req.uni_svc_id = svc_req.service_id OR aa_req.service_id = svc_req.service_id WHERE svc_req.customer_id = c.id AND TRIM(aa_req.review_accredition) <> '' ORDER BY aa_req.audit_id DESC LIMIT 1),
+            NULLIF(TRIM(aa.accereditation_requirement), ''),
+            NULLIF(TRIM(aa.review_accredition), '')
+        ) as accreditation_body,
+        COALESCE(
+            (SELECT NULLIF(TRIM(aa_req.accereditation_requirement), '') FROM audit_application aa_req INNER JOIN service svc_req ON aa_req.uni_svc_id = svc_req.service_id OR aa_req.service_id = svc_req.service_id WHERE svc_req.customer_id = c.id AND TRIM(aa_req.accereditation_requirement) <> '' ORDER BY aa_req.audit_id DESC LIMIT 1),
+            NULLIF(TRIM(aa.accereditation_requirement), '')
+        ) as accreditation_requirement,
+        COALESCE(NULLIF(aa.assessment_standard, ''), (SELECT asi.schedule_app_standard FROM audit_schedule_id asi WHERE asi.customer_ca_id = c.id ORDER BY asi.audit_schedule_id DESC LIMIT 1)) as standard_name,
+        c.schema_name,
+        c.schema_name as scheme_name,
+        aa.n_location as site
+    FROM customer_info c
+    LEFT JOIN certificate_print cp ON c.id = cp.customer_id
+    LEFT JOIN service svc ON svc.customer_id = c.id AND svc.service_id = (SELECT MAX(tmp.service_id) FROM service tmp WHERE tmp.customer_id = c.id)
+    LEFT JOIN audit_application aa ON aa.uni_svc_id = svc.service_id OR aa.service_id = svc.service_id
     GROUP BY c.id
     ORDER BY c.id DESC";
 
@@ -34,21 +57,45 @@
         $clients = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (Exception $e) {
         // If some columns like customer_guid or schema_name don't exist, we fallback to a safer query
-        $query = "SELECT 
+        $query = "SELECT
         c.id as internal_client_id,
         c.customer_name,
         c.address,
         c.scope,
-        c.audit_status as certification_status, 
+        c.audit_status as certification_status,
         cp.certificate_id as certificate_tracking_id,
-        cp.certificate_no as certificate_number, 
-        cp.registration_date as issue_date, 
+        cp.certificate_no as certificate_number,
+        cp.registration_date as certificate_issue_date,
+        cp.registration_date as issue_date,
         cp.registration_date as original_issue_date,
-        cp.valid_until as expiry_date, 
+        cp.valid_until as expiry_date,
+        cp.valid_until as expire_date,
         cp.certificate_scope,
-        (SELECT asi.schedule_app_standard FROM audit_schedule_id asi WHERE asi.customer_ca_id = c.id ORDER BY asi.audit_schedule_id DESC LIMIT 1) as standard_name
-    FROM customer_info c 
-    LEFT JOIN certificate_print cp ON c.id = cp.customer_id 
+        COALESCE(NULLIF(aa.proposed_scope, ''), cp.certificate_scope, c.scope) as certification_scope,
+        COALESCE(
+            (SELECT NULLIF(TRIM(aa_req.accereditation_requirement), '') FROM audit_application aa_req INNER JOIN service svc_req ON aa_req.uni_svc_id = svc_req.service_id OR aa_req.service_id = svc_req.service_id WHERE svc_req.customer_id = c.id AND TRIM(aa_req.accereditation_requirement) <> '' ORDER BY aa_req.audit_id DESC LIMIT 1),
+            (SELECT NULLIF(TRIM(aa_req.review_accredition), '') FROM audit_application aa_req INNER JOIN service svc_req ON aa_req.uni_svc_id = svc_req.service_id OR aa_req.service_id = svc_req.service_id WHERE svc_req.customer_id = c.id AND TRIM(aa_req.review_accredition) <> '' ORDER BY aa_req.audit_id DESC LIMIT 1),
+            NULLIF(TRIM(aa.accereditation_requirement), ''),
+            NULLIF(TRIM(aa.review_accredition), '')
+        ) as accreditation_body_name,
+        COALESCE(
+            (SELECT NULLIF(TRIM(aa_req.accereditation_requirement), '') FROM audit_application aa_req INNER JOIN service svc_req ON aa_req.uni_svc_id = svc_req.service_id OR aa_req.service_id = svc_req.service_id WHERE svc_req.customer_id = c.id AND TRIM(aa_req.accereditation_requirement) <> '' ORDER BY aa_req.audit_id DESC LIMIT 1),
+            (SELECT NULLIF(TRIM(aa_req.review_accredition), '') FROM audit_application aa_req INNER JOIN service svc_req ON aa_req.uni_svc_id = svc_req.service_id OR aa_req.service_id = svc_req.service_id WHERE svc_req.customer_id = c.id AND TRIM(aa_req.review_accredition) <> '' ORDER BY aa_req.audit_id DESC LIMIT 1),
+            NULLIF(TRIM(aa.accereditation_requirement), ''),
+            NULLIF(TRIM(aa.review_accredition), '')
+        ) as accreditation_body,
+        COALESCE(
+            (SELECT NULLIF(TRIM(aa_req.accereditation_requirement), '') FROM audit_application aa_req INNER JOIN service svc_req ON aa_req.uni_svc_id = svc_req.service_id OR aa_req.service_id = svc_req.service_id WHERE svc_req.customer_id = c.id AND TRIM(aa_req.accereditation_requirement) <> '' ORDER BY aa_req.audit_id DESC LIMIT 1),
+            NULLIF(TRIM(aa.accereditation_requirement), '')
+        ) as accreditation_requirement,
+        COALESCE(NULLIF(aa.assessment_standard, ''), (SELECT asi.schedule_app_standard FROM audit_schedule_id asi WHERE asi.customer_ca_id = c.id ORDER BY asi.audit_schedule_id DESC LIMIT 1)) as standard_name,
+        '' as schema_name,
+        '' as scheme_name,
+        aa.n_location as site
+    FROM customer_info c
+    LEFT JOIN certificate_print cp ON c.id = cp.customer_id
+    LEFT JOIN service svc ON svc.customer_id = c.id AND svc.service_id = (SELECT MAX(tmp.service_id) FROM service tmp WHERE tmp.customer_id = c.id)
+    LEFT JOIN audit_application aa ON aa.uni_svc_id = svc.service_id OR aa.service_id = svc.service_id
     GROUP BY c.id
     ORDER BY c.id DESC";
         $stmt = $db->prepare($query);
@@ -59,7 +106,11 @@
     // Ensure columns that may not exist have a fallback
     foreach ($clients as &$client) {
         $client = iafCertSearchNormalizeClientData($client);
-        $client['certification_scope'] = iafCertSearchFirstValue($client, ['certificate_scope', 'scope']);
+        $client['certification_scope'] = iafCertSearchFirstValue($client, ['certification_scope', 'proposed_scope', 'certificate_scope', 'scope']);
+        $client['scheme_name'] = iafCertSearchFirstValue($client, ['scheme_name', 'schema_name']);
+        $client['accreditation_body'] = iafCertSearchFirstValue($client, ['accreditation_body', 'accreditation_body_name', 'accreditation_requirement', 'accereditation_requirement']);
+        $client['certificate_issue_date'] = iafCertSearchFirstValue($client, ['certificate_issue_date', 'issue_date']);
+        $client['expire_date'] = iafCertSearchFirstValue($client, ['expire_date', 'expiry_date']);
     }
     unset($client);
 
@@ -69,88 +120,228 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap4.min.css">
 
     <style>
+        :root {
+            --iaf-navbar-height: 0px;
+            --iaf-sidebar-width: 180px;
+            --iaf-sidebar-collapsed: 50px;
+            --iaf-radius: 14px;
+        }
+
         body {
             background-color: #f4f7f6;
             font-family: 'Inter', sans-serif;
         }
 
-        /* Modern Page Header Container */
-        .page-header-container {
-            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
-            border-radius: 12px;
-            padding: 30px;
-            margin-top: 90px;
-            margin-bottom: 30px;
-            color: white;
-            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.2);
+        body .navbar-bootsnipp {
+            display: none !important;
+        }
+
+        body #sidebar-wrapper {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            height: 100vh;
+            z-index: 11060;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        #wrapper {
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        #page-content-wrapper.iaf-dashboard-page {
+            height: 100vh;
+            margin-top: 0;
+            padding-top: 0;
+            overflow: hidden;
+            background: linear-gradient(180deg, #f8fafc 0%, #f4f7f6 42%, #eef4f7 100%);
+        }
+
+        .iaf-dashboard-page .page-content {
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .iaf-dashboard-page .container-fluid {
+            width: 100%;
+            max-width: 100%;
+            height: 100%;
             display: flex;
-            justify-content: space-between;
+            flex-direction: column;
+            padding: 8px 10px 10px !important;
+        }
+
+        .page-header-container {
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 58%, #3b82f6 100%);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 12px;
+            padding: 12px 18px;
+            margin: 0 0 8px;
+            color: #ffffff;
+            box-shadow: 0 10px 24px rgba(30, 58, 138, 0.14);
+            display: flex;
+            justify-content: flex-start;
             align-items: center;
+            min-height: 58px;
+            flex: 0 0 auto;
         }
 
         .page-title {
             margin: 0;
-            font-size: 28px;
+            font-size: 21px;
             font-weight: 700;
-            letter-spacing: -0.5px;
+            letter-spacing: -0.35px;
+            line-height: 1.15;
         }
 
         .page-subtitle {
-            margin: 5px 0 0 0;
-            font-size: 15px;
-            opacity: 0.9;
+            margin: 3px 0 0;
+            font-size: 12px;
+            font-weight: 400;
+            line-height: 1.3;
+            opacity: 0.92;
         }
 
-        /* Dashboard Card */
         .modern-card {
             background: #ffffff;
-            border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-            padding: 25px;
-            border: 1px solid rgba(0, 0, 0, 0.05);
-            margin-bottom: 50px;
+            border-radius: var(--iaf-radius);
+            box-shadow: 0 8px 26px rgba(15, 23, 42, 0.06);
+            padding: 12px;
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            margin-bottom: 0;
+            min-height: 0;
+            flex: 1 1 auto;
+            display: flex;
+            flex-direction: column;
         }
 
-        /* Table Styling */
+        .iaf-table-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-bottom: 8px;
+            flex: 0 0 auto;
+        }
+
+        .client-filter-label {
+            margin: 0;
+            color: #475569;
+            font-size: 13px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .client-filter-input {
+            width: min(320px, 100%);
+            height: 38px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            padding: 7px 12px;
+            outline: none;
+            background: #ffffff;
+            color: #1e293b;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .client-filter-input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+        }
+
+        .dataTables_wrapper {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .dataTables_wrapper .row:first-child,
+        .dataTables_wrapper .dataTables_length,
+        .dataTables_wrapper .dataTables_filter,
+        .dataTables_wrapper .dataTables_paginate {
+            display: none !important;
+        }
+
+        .dataTables_wrapper .dataTables_info {
+            color: #64748b;
+            font-size: 13px;
+            padding-top: 12px;
+        }
+
         table.dataTable {
-            border-collapse: collapse !important;
+            border-collapse: separate !important;
+            border-spacing: 0;
             width: 100% !important;
-            margin-top: 15px !important;
+            margin: 0 !important;
             white-space: nowrap;
         }
 
         table.dataTable thead th {
-            background-color: #f8fafc;
-            color: #475569;
-            font-weight: 600;
+            background: #eef4ff !important;
+            color: #334155;
+            font-weight: 700;
             text-transform: uppercase;
-            font-size: 12px;
-            letter-spacing: 0.5px;
-            padding: 15px;
-            border-bottom: 2px solid #e2e8f0;
-            border-top: none;
+            font-size: 11px;
+            letter-spacing: 0.55px;
+            padding: 12px 14px;
+            border-top: 1px solid #dbeafe;
+            border-bottom: 1px solid #cbd5e1;
+            vertical-align: middle;
         }
 
         table.dataTable tbody td {
-            padding: 16px 15px;
+            height: 48px;
+            padding: 10px 14px;
             vertical-align: middle;
             color: #334155;
-            font-size: 14px;
-            border-bottom: 1px solid #f1f5f9;
+            font-size: 13px;
+            border-bottom: 1px solid #edf2f7;
+            background: #ffffff;
         }
 
-        table.dataTable tbody tr:hover {
-            background-color: #f8fafc;
+        table.dataTable tbody tr {
+            transition: background-color 0.18s, box-shadow 0.18s;
         }
 
-        /* Status Badges */
+        table.dataTable tbody tr:hover td {
+            background-color: #f8fbff;
+            box-shadow: inset 0 1px 0 #e0edff, inset 0 -1px 0 #e0edff;
+        }
+
+        .table-responsive {
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            overflow-x: auto !important;
+            overflow-y: auto !important;
+            flex: 1 1 auto;
+            min-height: 0;
+            background: #ffffff;
+        }
+
+        #iafTable thead th {
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 30;
+            box-shadow: 0 2px 0 rgba(148, 163, 184, 0.28);
+        }
+
+        #iafTable th,
+        #iafTable td {
+            white-space: nowrap;
+        }
+
         .status-badge {
-            padding: 6px 12px;
-            border-radius: 50px;
-            font-size: 12px;
-            font-weight: 600;
-            display: inline-block;
-            text-align: center;
+            padding: 6px 11px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 26px;
             line-height: 1;
         }
 
@@ -178,32 +369,17 @@
             border: 1px solid #e2e8f0;
         }
 
-        /* DataTables custom controls */
-        .dataTables_wrapper .dataTables_filter input {
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            padding: 6px 12px;
-            margin-left: 8px;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-
-        .dataTables_wrapper .dataTables_filter input:focus {
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-
         .page-item.active .page-link {
             background-color: #3b82f6;
             border-color: #3b82f6;
-            border-radius: 6px;
+            border-radius: 8px;
         }
 
         .page-link {
             color: #475569;
-            border: none;
+            border: 1px solid transparent;
             margin: 0 2px;
-            border-radius: 6px;
+            border-radius: 8px;
         }
 
         .page-link:hover {
@@ -211,16 +387,14 @@
             color: #1e293b;
         }
 
-        /* Value Highlight */
         .company-name {
-            font-weight: 600;
+            font-weight: 700;
             color: #1e293b;
         }
 
         .company-link {
             text-decoration: none;
             color: #1e40af;
-            /* Deeper blue for link */
             transition: color 0.2s;
         }
 
@@ -230,31 +404,33 @@
         }
 
         .cert-number {
-            font-family: monospace;
-            background: #f1f5f9;
-            padding: 3px 6px;
-            border-radius: 4px;
-            color: #3b82f6;
-            font-weight: 600;
+            font-family: Consolas, Monaco, monospace;
+            background: #eff6ff;
+            padding: 4px 7px;
+            border-radius: 7px;
+            color: #2563eb;
+            font-weight: 700;
         }
 
-        /* Action Buttons */
         .action-btns-container {
             display: flex;
+            align-items: center;
             gap: 6px;
         }
 
         .action-btn {
-            padding: 4px 10px;
-            border-radius: 6px;
+            min-height: 30px;
+            padding: 5px 10px;
+            border-radius: 8px;
             font-size: 11px;
-            font-weight: 600;
+            font-weight: 700;
             cursor: pointer;
             border: none;
-            transition: all 0.2s;
-            display: flex;
+            transition: transform 0.18s, box-shadow 0.18s, background-color 0.18s;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
+            line-height: 1;
         }
 
         .btn-insert {
@@ -265,6 +441,7 @@
 
         .btn-insert:hover {
             background-color: #c7d2fe;
+            box-shadow: 0 6px 14px rgba(67, 56, 202, 0.14);
             transform: translateY(-1px);
         }
 
@@ -276,6 +453,7 @@
 
         .btn-update:hover {
             background-color: #bbf7d0;
+            box-shadow: 0 6px 14px rgba(22, 101, 52, 0.12);
             transform: translateY(-1px);
         }
 
@@ -287,6 +465,7 @@
 
         .btn-delete:hover {
             background-color: #fecaca;
+            box-shadow: 0 6px 14px rgba(185, 28, 28, 0.12);
             transform: translateY(-1px);
         }
 
@@ -298,15 +477,73 @@
             opacity: 0.6;
             cursor: not-allowed;
             transform: none !important;
+            box-shadow: none !important;
         }
 
-        /* Override page header margin because wrapper has header */
-        .page-header-container {
-            margin-top: 20px !important;
+        .cell-ellipsis {
+            max-width: 220px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        @media (max-width: 991px) {
+            .iaf-dashboard-page .container-fluid {
+                padding: 8px 10px 10px !important;
+            }
+
+            .page-header-container {
+                min-height: auto;
+                padding: 18px;
+            }
+
+            .modern-card {
+                padding: 12px;
+                min-height: calc(100vh - var(--iaf-navbar-height) - 16px);
+            }
+
+            .table-responsive {
+                max-height: calc(100vh - var(--iaf-navbar-height) - 86px);
+                min-height: calc(100vh - var(--iaf-navbar-height) - 104px);
+            }
+        }
+
+        @media (max-width: 767px) {
+            #page-content-wrapper.iaf-dashboard-page {
+                padding-top: 0;
+            }
+
+            body #sidebar-wrapper {
+                top: 0;
+                z-index: 11060;
+            }
+
+            .page-title {
+                font-size: 22px;
+            }
+
+            .page-subtitle {
+                font-size: 13px;
+            }
+
+            .iaf-table-toolbar {
+                align-items: stretch;
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .client-filter-input {
+                width: 100%;
+            }
+
+            .table-responsive {
+                max-height: calc(100vh - 136px);
+                min-height: calc(100vh - 150px);
+            }
         }
     </style>
 
-    <div id="page-content-wrapper">
+    <div id="page-content-wrapper" class="iaf-dashboard-page">
         <div class="page-content inset">
             <div class="container-fluid" style="padding: 0 30px;">
                 <div class="page-header-container">
@@ -314,34 +551,32 @@
                         <h1 class="page-title">IAF Dashboard</h1>
                         <p class="page-subtitle">Comprehensive Overview of Client Certifications</p>
                     </div>
-                    <div>
-                        <button class="btn btn-light"
-                            style="font-weight: 600; border-radius: 8px; padding: 10px 20px; color: #1e3a8a;"
-                            onclick="window.print()">
-                            <i class="fa fa-print"></i> Print Report
-                        </button>
-                    </div>
                 </div>
 
                 <div class="modern-card">
+                    <div class="iaf-table-toolbar">
+                        <label for="clientNameFilter" class="client-filter-label">Client Name</label>
+                        <input type="text" id="clientNameFilter" class="client-filter-input" placeholder="Search by client name">
+                    </div>
                     <div class="table-responsive">
                         <table id="iafTable" class="table table-hover nowrap" style="width:100%">
                             <thead>
                                 <tr>
                                     <th>Action</th>
-                                    <th>Company GUID</th>
-                                    <th>Int. Client ID</th>
                                     <th>Company Name</th>
                                     <th>Country</th>
                                     <th>Address</th>
-                                    <th>Cert. Track ID</th>
+                                    <th>Accreditation Body</th>
+                                    <th>Standard</th>
+                                    <th>Scheme</th>
+                                    <th>Scope</th>
                                     <th>Cert. Number</th>
                                     <th>Status</th>
                                     <th>Cert. Type</th>
+                                    <th>Certificate Issue Date</th>
                                     <th>Issue Date</th>
-                                    <th>Expiry Date</th>
-                                    <th>Scheme Name</th>
-                                    <th>Standard Name</th>
+                                    <th>Expire Date</th>
+                                    <th>Site</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -364,10 +599,6 @@
                                                 </button>
                                             </div>
                                         </td>
-                                        <td style="font-size: 12px; color: #64748b;">
-                                            <?php echo htmlspecialchars($c['customer_guid']); ?>
-                                        </td>
-                                        <td><strong>#<?php echo htmlspecialchars($c['internal_client_id']); ?></strong></td>
                                         <td class="company-name">
                                             <a href="customerAccount.php?customerid=<?php echo htmlspecialchars($c['internal_client_id']); ?>"
                                                 class="company-link" target="_blank">
@@ -376,12 +607,18 @@
                                         </td>
                                         <td><?php echo htmlspecialchars($c['country']); ?></td>
                                         <td>
-                                            <div style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
-                                                title="<?php echo htmlspecialchars($c['address']); ?>">
+                                            <div class="cell-ellipsis" title="<?php echo htmlspecialchars($c['address']); ?>">
                                                 <?php echo htmlspecialchars($c['address']); ?>
                                             </div>
                                         </td>
-                                        <td><?php echo htmlspecialchars($c['certificate_tracking_id'] ?: 'N/A'); ?></td>
+                                        <td><?php echo htmlspecialchars($c['accreditation_body'] ?: 'N/A'); ?></td>
+                                        <td><?php echo htmlspecialchars($c['standard_name'] ?: 'N/A'); ?></td>
+                                        <td><span style="font-weight: 600; color: #475569;"><?php echo htmlspecialchars($c['scheme_name']); ?></span></td>
+                                        <td>
+                                            <div class="cell-ellipsis" title="<?php echo htmlspecialchars($c['certification_scope']); ?>">
+                                                <?php echo htmlspecialchars($c['certification_scope'] ?: 'N/A'); ?>
+                                            </div>
+                                        </td>
                                         <td>
                                             <?php if ($c['certificate_number']): ?>
                                                 <span
@@ -408,14 +645,10 @@
                                             </span>
                                         </td>
                                         <td><?php echo htmlspecialchars($c['certification_type']); ?></td>
-                                        <td><?php echo $c['issue_date'] ? date('d M Y', strtotime($c['issue_date'])) : '-'; ?>
-                                        </td>
-                                        <td><?php echo $c['expiry_date'] ? date('d M Y', strtotime($c['expiry_date'])) : '-'; ?>
-                                        </td>
-                                        <td><span
-                                                style="font-weight: 600; color: #475569;"><?php echo htmlspecialchars($c['schema_name']); ?></span>
-                                        </td>
-                                        <td><?php echo htmlspecialchars($c['standard_name'] ?: 'N/A'); ?></td>
+                                        <td><?php echo $c['certificate_issue_date'] ? date('d M Y', strtotime($c['certificate_issue_date'])) : '-'; ?></td>
+                                        <td><?php echo $c['issue_date'] ? date('d M Y', strtotime($c['issue_date'])) : '-'; ?></td>
+                                        <td><?php echo $c['expire_date'] ? date('d M Y', strtotime($c['expire_date'])) : '-'; ?></td>
+                                        <td><?php echo htmlspecialchars($c['site'] ?: 'N/A'); ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
@@ -432,13 +665,17 @@
             <script>
                 $(document).ready(function () {
                     var table = $('#iafTable').DataTable({
-                        scrollX: true,
-                        pageLength: 25,
-                        language: {
-                            search: "Search Records:",
-                            lengthMenu: "Display _MENU_ clients per page"
-                        },
-                        order: [[2, 'desc']] // Sort by Client ID (originally index 1, now index 2 because action is 0)
+                        autoWidth: false,
+                        paging: false,
+                        info: true,
+                        ordering: true,
+                        searching: true,
+                        dom: 'rt<"row"<"col-sm-12"i>>',
+                        order: [[1, 'asc']]
+                    });
+
+                    $('#clientNameFilter').on('keyup input', function () {
+                        table.column(1).search(this.value).draw();
                     });
 
                     // Toggle Menu
@@ -446,7 +683,9 @@
                         e.preventDefault();
                         $("#wrapper").toggleClass("active");
                         $(".container-fluid").toggleClass("active");
-                        setTimeout(function () { table.columns.adjust().draw(); }, 300);
+                        setTimeout(function () {
+                            table.columns.adjust().draw();
+                        }, 300);
                     });
 
                     // Check localStorage to disable already inserted buttons on page load

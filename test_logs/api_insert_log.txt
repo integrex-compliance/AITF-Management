@@ -473,3 +473,171 @@ API RESPONSE:
 }
 
 ---------------------------------------------
+[2026-06-25 07:47:17] INSERT REQUEST RECEIVED -> Client ID: #77
+HTTP Code: 200
+FULL IAF REQUEST PAYLOAD:
+{
+    "certified_entity": {
+        "certified_entity_unique_id": "GUID-000077",
+        "certified_entity_name": "SIDDHESHWAR ENGINEERING WORKS",
+        "certified_entity_street_address": "Gat No.59, Milkat No-783,Near Pune- Nashik road, Chimbli, Tal- Khed , Pune-410 501 Maharashtra ,India",
+        "company_country": "India",
+        "business_registered_country": "India",
+        "business_registered_full_address": "Gat No.59, Milkat No-783,Near Pune- Nashik road, Chimbli, Tal- Khed , Pune-410 501 Maharashtra ,India"
+    },
+    "certification": {
+        "certificate_identity_number": "46",
+        "certificate_number": "24041741482",
+        "certification_status": "Expired",
+        "certificate_accreditation_status": "Accredited",
+        "certification_type": "Management System",
+        "certification_original_issue_date": "20170531",
+        "certification_issue_date": "20170531",
+        "certification_expiry_date": "20200530",
+        "certification_scope": "Manufacture of machined components for automobile industries.",
+        "certified_entity_unique_id": "GUID-000077",
+        "main_site_country": "India",
+        "main_site_full_address": "Gat No.59, Milkat No-783,Near Pune- Nashik road, Chimbli, Tal- Khed , Pune-410 501 Maharashtra ,India",
+        "accreditation_body_name": "YOUR_AB_NAME",
+        "accreditation_body_acronym_name": "YOUR_AB_ACRONYM",
+        "schemes": [
+            {
+                "scheme_name": "QMS",
+                "standard_list": [
+                    {
+                        "standards_name": "ISO 9001:2015"
+                    }
+                ]
+            }
+        ]
+    }
+}
+API RESPONSE:
+{
+    "status": "success",
+    "message": "Mock IAF CertSearch upload accepted for Client #77.",
+    "iaf_payload": {
+        "certified_entity": {
+            "certified_entity_unique_id": "GUID-000077",
+            "certified_entity_name": "SIDDHESHWAR ENGINEERING WORKS",
+            "certified_entity_street_address": "Gat No.59, Milkat No-783,Near Pune- Nashik road, Chimbli, Tal- Khed , Pune-410 501 Maharashtra ,India",
+            "company_country": "India",
+            "business_registered_country": "India",
+            "business_registered_full_address": "Gat No.59, Milkat No-783,Near Pune- Nashik road, Chimbli, Tal- Khed , Pune-410 501 Maharashtra ,India"
+        },
+        "certification": {
+            "certificate_identity_number": "46",
+            "certificate_number": "24041741482",
+            "certification_status": "Expired",
+            "certificate_accreditation_status": "Accredited",
+            "certification_type": "Management System",
+            "certification_original_issue_date": "20170531",
+            "certification_issue_date": "20170531",
+            "certification_expiry_date": "20200530",
+            "certification_scope": "Manufacture of machined components for automobile industries.",
+            "certified_entity_unique_id": "GUID-000077",
+            "main_site_country": "India",
+            "main_site_full_address": "Gat No.59, Milkat No-783,Near Pune- Nashik road, Chimbli, Tal- Khed , Pune-410 501 Maharashtra ,India",
+            "accreditation_body_name": "YOUR_AB_NAME",
+            "accreditation_body_acronym_name": "YOUR_AB_ACRONYM",
+            "schemes": [
+                {
+                    "scheme_name": "QMS",
+                    "standard_list": [
+                        {
+                            "standards_name": "ISO 9001:2015"
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+}
+
+---------------------------------------------
+[2026-06-25 08:50:06] INSERT REQUEST RECEIVED -> Client ID: #544
+HTTP Code: 200
+FULL IAF REQUEST PAYLOAD:
+{
+    "certified_entity": {
+        "certified_entity_unique_id": "GUID-000544",
+        "certified_entity_name": "Hindustan Techno Corporation",
+        "certified_entity_street_address": "Gat No. 15/82, Dehu- Alandi Road, Bhangre Industrial Zone, Chikhali, \r\nPune-411 062, Maharashtra, India",
+        "company_country": "India",
+        "business_registered_country": "India",
+        "business_registered_full_address": "Gat No. 15/82, Dehu- Alandi Road, Bhangre Industrial Zone, Chikhali, \r\nPune-411 062, Maharashtra, India"
+    },
+    "certification": {
+        "certificate_identity_number": "1129",
+        "certificate_number": "873723114429",
+        "certification_status": "suspend",
+        "certificate_accreditation_status": "Accredited",
+        "certification_type": "Management System",
+        "certification_original_issue_date": "20231013",
+        "certification_issue_date": "20231013",
+        "certification_expiry_date": "20261012",
+        "certification_scope": "Provision of Zinc Flake Coating on Metal Components",
+        "certified_entity_unique_id": "GUID-000544",
+        "main_site_country": "India",
+        "main_site_full_address": "Gat No. 15/82, Dehu- Alandi Road, Bhangre Industrial Zone, Chikhali, \r\nPune-411 062, Maharashtra, India",
+        "main_site_name": "",
+        "site": "",
+        "accreditation_body_name": "YOUR_AB_NAME",
+        "accreditation_body_acronym_name": "YOUR_AB_ACRONYM",
+        "schemes": [
+            {
+                "scheme_name": "EMS",
+                "standard_list": [
+                    {
+                        "standards_name": "ISO 14001:2015"
+                    }
+                ]
+            }
+        ]
+    }
+}
+API RESPONSE:
+{
+    "status": "success",
+    "message": "Mock IAF CertSearch upload accepted for Client #544.",
+    "iaf_payload": {
+        "certified_entity": {
+            "certified_entity_unique_id": "GUID-000544",
+            "certified_entity_name": "Hindustan Techno Corporation",
+            "certified_entity_street_address": "Gat No. 15/82, Dehu- Alandi Road, Bhangre Industrial Zone, Chikhali, \r\nPune-411 062, Maharashtra, India",
+            "company_country": "India",
+            "business_registered_country": "India",
+            "business_registered_full_address": "Gat No. 15/82, Dehu- Alandi Road, Bhangre Industrial Zone, Chikhali, \r\nPune-411 062, Maharashtra, India"
+        },
+        "certification": {
+            "certificate_identity_number": "1129",
+            "certificate_number": "873723114429",
+            "certification_status": "suspend",
+            "certificate_accreditation_status": "Accredited",
+            "certification_type": "Management System",
+            "certification_original_issue_date": "20231013",
+            "certification_issue_date": "20231013",
+            "certification_expiry_date": "20261012",
+            "certification_scope": "Provision of Zinc Flake Coating on Metal Components",
+            "certified_entity_unique_id": "GUID-000544",
+            "main_site_country": "India",
+            "main_site_full_address": "Gat No. 15/82, Dehu- Alandi Road, Bhangre Industrial Zone, Chikhali, \r\nPune-411 062, Maharashtra, India",
+            "main_site_name": "",
+            "site": "",
+            "accreditation_body_name": "YOUR_AB_NAME",
+            "accreditation_body_acronym_name": "YOUR_AB_ACRONYM",
+            "schemes": [
+                {
+                    "scheme_name": "EMS",
+                    "standard_list": [
+                        {
+                            "standards_name": "ISO 14001:2015"
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+}
+
+---------------------------------------------

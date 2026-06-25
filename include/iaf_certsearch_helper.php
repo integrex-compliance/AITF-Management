@@ -70,6 +70,22 @@ function iafCertSearchNormalizeClientData(array $data)
         $data['schema_name'] = iafCertSearchSchemeNameFromStandard($data['standard_name'] ?? '');
     }
 
+    if (!isset($data['scheme_name']) || trim((string) $data['scheme_name']) === '') {
+        $data['scheme_name'] = $data['schema_name'];
+    }
+
+    if (!isset($data['accreditation_body_name']) || trim((string) $data['accreditation_body_name']) === '') {
+        $data['accreditation_body_name'] = iafCertSearchFirstValue($data, ['accreditation_body', 'accreditation_requirement', 'accereditation_requirement', 'review_accredition']);
+    }
+
+    if (!isset($data['certificate_issue_date']) || trim((string) $data['certificate_issue_date']) === '') {
+        $data['certificate_issue_date'] = iafCertSearchFirstValue($data, ['issue_date', 'original_issue_date']);
+    }
+
+    if (!isset($data['expire_date']) || trim((string) $data['expire_date']) === '') {
+        $data['expire_date'] = iafCertSearchFirstValue($data, ['expiry_date']);
+    }
+
     $data['certification_type'] = 'Management System';
     $data['certificate_accreditation_status'] = 'Accredited';
 
@@ -84,9 +100,11 @@ function iafCertSearchBuildPayload(array $data)
     $entityName = iafCertSearchFirstValue($data, ['customer_name']);
     $streetAddress = iafCertSearchFirstValue($data, ['certified_entity_street_address', 'address']);
     $companyCountry = iafCertSearchFirstValue($data, ['company_country', 'country'], 'India');
-    $certScope = iafCertSearchFirstValue($data, ['certification_scope', 'certificate_scope', 'scope']);
-    $standardName = iafCertSearchFirstValue($data, ['standard_name']);
-    $schemeName = iafCertSearchFirstValue($data, ['schema_name', 'scheme_name'], iafCertSearchSchemeNameFromStandard($standardName));
+    $certScope = iafCertSearchFirstValue($data, ['certification_scope', 'proposed_scope', 'certificate_scope', 'scope']);
+    $standardName = iafCertSearchFirstValue($data, ['standard_name', 'assessment_standard']);
+    $schemeName = iafCertSearchFirstValue($data, ['scheme_name', 'schema_name'], iafCertSearchSchemeNameFromStandard($standardName));
+    $site = iafCertSearchFirstValue($data, ['site', 'n_location']);
+    $accreditationBody = iafCertSearchFirstValue($data, ['accreditation_body_name', 'accreditation_body', 'accreditation_requirement', 'accereditation_requirement', 'review_accredition'], 'YOUR_AB_NAME');
 
     return [
         'certified_entity' => [
@@ -103,14 +121,16 @@ function iafCertSearchBuildPayload(array $data)
             'certification_status' => iafCertSearchFirstValue($data, ['certification_status'], 'Active'),
             'certificate_accreditation_status' => 'Accredited',
             'certification_type' => 'Management System',
-            'certification_original_issue_date' => iafCertSearchFormatDate(iafCertSearchFirstValue($data, ['certification_original_issue_date', 'original_issue_date', 'issue_date'])),
-            'certification_issue_date' => iafCertSearchFormatDate(iafCertSearchFirstValue($data, ['certification_issue_date', 'issue_date'])),
-            'certification_expiry_date' => iafCertSearchFormatDate(iafCertSearchFirstValue($data, ['certification_expiry_date', 'expiry_date', 'expire_date'])),
+            'certification_original_issue_date' => iafCertSearchFormatDate(iafCertSearchFirstValue($data, ['certification_original_issue_date', 'original_issue_date', 'certificate_issue_date', 'issue_date'])),
+            'certification_issue_date' => iafCertSearchFormatDate(iafCertSearchFirstValue($data, ['certification_issue_date', 'issue_date', 'certificate_issue_date'])),
+            'certification_expiry_date' => iafCertSearchFormatDate(iafCertSearchFirstValue($data, ['certification_expiry_date', 'expire_date', 'expiry_date'])),
             'certification_scope' => $certScope,
             'certified_entity_unique_id' => $entityUniqueId,
             'main_site_country' => $companyCountry,
             'main_site_full_address' => $streetAddress,
-            'accreditation_body_name' => iafCertSearchFirstValue($data, ['accreditation_body_name'], 'YOUR_AB_NAME'),
+            'main_site_name' => $site,
+            'site' => $site,
+            'accreditation_body_name' => $accreditationBody,
             'accreditation_body_acronym_name' => iafCertSearchFirstValue($data, ['accreditation_body_acronym_name'], 'YOUR_AB_ACRONYM'),
             'schemes' => [
                 [
