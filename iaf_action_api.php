@@ -44,30 +44,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
         
-        // Mock insert: Log the final IAF request payload instead of sending it over the internet.
-        $logFile = __DIR__ . '/test_logs/api_insert_log.txt';
-        if (!is_dir(dirname($logFile))) {
-            mkdir(dirname($logFile), 0775, true);
+        include_once './dbConnect.php';
+        if (!isset($db) || !$db instanceof PDO) {
+            $response = [
+                'status' => 'error',
+                'message' => 'Database connection failed. IAF upload was not attempted.',
+                'request_payload' => $iafPayload
+            ];
+            iafCertSearchLogApiCall('insert_db_error', 'POST', 'iaf-api-not-called', $iafPayload, 0, $response);
+            echo json_encode($response);
+            exit;
         }
-        $timestamp = date('Y-m-d H:i:s');
-        $mockResponse = [
-            'status' => 'success',
-            'message' => "Mock IAF CertSearch upload accepted for Client #$clientId.",
-            'iaf_payload' => $iafPayload
-        ];
-        
-        $jsonData = json_encode($iafPayload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-        $logMessage = "[$timestamp] INSERT REQUEST RECEIVED -> Client ID: #$clientId\nHTTP Code: 200\nFULL IAF REQUEST PAYLOAD:\n$jsonData\nAPI RESPONSE:\n" . json_encode($mockResponse, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n\n---------------------------------------------\n";
-        
-        file_put_contents($logFile, $logMessage, FILE_APPEND);
-        iafCertSearchLogApiCall('insert_mock', 'POST', 'local-dashboard-mock-upload-cert', $iafPayload, 200, $mockResponse);
-        
+
+        $apiResult = iafCertSearchSendPayload($iafPayload, 'insert');
+        iafCertSearchLogApiCall(
+            'insert',
+            'POST',
+            $apiResult['url'],
+            $iafPayload,
+            $apiResult['http_code'],
+            $apiResult['response'] === null ? $apiResult['raw_response'] : $apiResult['response'],
+            $apiResult['curl_error']
+        );
+
+        try {
+            iafCertSearchSaveSyncResult($db, $clientId, 'insert', $iafPayload, $apiResult);
+        } catch (Exception $e) {
+            $apiResult['success'] = false;
+            $apiResult['error_message'] = trim($apiResult['error_message'] . ' Database sync save failed: ' . $e->getMessage());
+            iafCertSearchLogApiCall('insert_db_save_error', 'POST', $apiResult['url'], $iafPayload, $apiResult['http_code'], $apiResult, $e->getMessage());
+        }
+
+        if ($apiResult['success']) {
+            echo json_encode([
+                'status' => 'success',
+                'message' => "Successfully sent IAF CertSearch payload for Client #$clientId.",
+                'http_code' => $apiResult['http_code'],
+                'iaf_record_id' => $apiResult['iaf_record_id'],
+                'request_payload' => $iafPayload,
+                'response' => $apiResult['response']
+            ]);
+            exit;
+        }
+
         echo json_encode([
-            'status' => 'success',
-            'message' => "Successfully built IAF CertSearch payload for Client #$clientId. Check test_logs/api_insert_log.txt and logs/iaf_certsearch_api.log.",
-            'http_code' => 200,
+            'status' => 'error',
+            'message' => "IAF API upload failed for Client #$clientId: " . $apiResult['error_message'],
+            'http_code' => $apiResult['http_code'],
+            'iaf_record_id' => $apiResult['iaf_record_id'],
             'request_payload' => $iafPayload,
-            'response' => $mockResponse
+            'response' => $apiResult['response'],
+            'raw_response' => $apiResult['raw_response'],
+            'curl_error' => $apiResult['curl_error']
         ]);
         exit;
         
@@ -82,103 +110,128 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $clientData = $_POST['client_data'] ?? [];
         if (is_string($clientData)) $clientData = json_decode($clientData, true);
 
-        // Fetch the fresh data from DB (using safe fallback logic as in dashboard)
-        $query = "SELECT
-            c.id as internal_client_id,
-            c.customer_guid,
-            c.customer_name,
-            c.country,
-            c.address,
-            c.scope,
-            c.audit_status as certification_status,
-            cp.certificate_id as certificate_tracking_id,
-            cp.certificate_no as certificate_number,
-            cp.registration_date as certificate_issue_date,
-            cp.registration_date as issue_date,
-            cp.registration_date as original_issue_date,
-            cp.valid_until as expiry_date,
-            cp.valid_until as expire_date,
-            cp.certificate_scope,
-            COALESCE(NULLIF(aa.proposed_scope, ''), cp.certificate_scope, c.scope) as certification_scope,
-            COALESCE(
-                (SELECT NULLIF(TRIM(aa_req.accereditation_requirement), '') FROM audit_application aa_req WHERE aa_req.cust_id = c.id AND TRIM(aa_req.accereditation_requirement) <> '' ORDER BY aa_req.audit_id DESC LIMIT 1),
-                (SELECT NULLIF(TRIM(aa_req.review_accredition), '') FROM audit_application aa_req WHERE aa_req.cust_id = c.id AND TRIM(aa_req.review_accredition) <> '' ORDER BY aa_req.audit_id DESC LIMIT 1),
-                NULLIF(TRIM(aa.accereditation_requirement), ''),
-                NULLIF(TRIM(aa.review_accredition), '')
-            ) as accreditation_body_name,
-            COALESCE(
-                (SELECT NULLIF(TRIM(aa_req.accereditation_requirement), '') FROM audit_application aa_req WHERE aa_req.cust_id = c.id AND TRIM(aa_req.accereditation_requirement) <> '' ORDER BY aa_req.audit_id DESC LIMIT 1),
-                (SELECT NULLIF(TRIM(aa_req.review_accredition), '') FROM audit_application aa_req WHERE aa_req.cust_id = c.id AND TRIM(aa_req.review_accredition) <> '' ORDER BY aa_req.audit_id DESC LIMIT 1),
-                NULLIF(TRIM(aa.accereditation_requirement), ''),
-                NULLIF(TRIM(aa.review_accredition), '')
-            ) as accreditation_body,
-            COALESCE(
-                (SELECT NULLIF(TRIM(aa_req.accereditation_requirement), '') FROM audit_application aa_req WHERE aa_req.cust_id = c.id AND TRIM(aa_req.accereditation_requirement) <> '' ORDER BY aa_req.audit_id DESC LIMIT 1),
-                NULLIF(TRIM(aa.accereditation_requirement), '')
-            ) as accreditation_requirement,
-            COALESCE(NULLIF(aa.assessment_standard, ''), (SELECT asi.schedule_app_standard FROM audit_schedule_id asi WHERE asi.customer_ca_id = c.id ORDER BY asi.audit_schedule_id DESC LIMIT 1)) as standard_name,
-            c.schema_name,
-            c.schema_name as scheme_name,
-            aa.n_location as site
-        FROM customer_info c
-        LEFT JOIN certificate_print cp ON c.id = cp.customer_id
-        LEFT JOIN service svc ON svc.customer_id = c.id AND svc.service_id = (SELECT MAX(tmp.service_id) FROM service tmp WHERE tmp.customer_id = c.id)
-        LEFT JOIN audit_application aa ON aa.uni_svc_id = svc.service_id OR aa.service_id = svc.service_id
-        WHERE c.id = :cid
-        GROUP BY c.id
-        ORDER BY c.id DESC
-        LIMIT 1";
-        try {
-            $stmt = $db->prepare($query);
-            $stmt->execute([':cid' => $clientId]);
-            $freshClient = $stmt->fetch(PDO::FETCH_ASSOC);
-        } catch (Exception $e) {
+        // Get the service_id from client data (service-level query)
+        $svcId = $clientData['svc_id'] ?? '';
+        $officeUseId = isset($clientData['cdc_office_use_id']) ? (int) $clientData['cdc_office_use_id'] : 0;
+
+        // Fetch the fresh data from DB using service-level query (matching dashboard)
+        if (!empty($svcId)) {
+            // Service-level: fetch per-service data
             $query = "SELECT
                 c.id as internal_client_id,
                 c.customer_name,
+                'India' as country,
                 c.address,
                 c.scope,
-                c.audit_status as certification_status,
+                svc.service_id as svc_id,
+                svc.service_type as svc_type,
+                cou.id as cdc_office_use_id,
+                cou.iso_index as iso_index,
+                COALESCE(
+                    NULLIF(TRIM(cdc.cdc_status), ''),
+                    NULLIF(TRIM(svc.service_status), ''),
+                    c.audit_status
+                ) as certification_status,
                 cp.certificate_id as certificate_tracking_id,
-                cp.certificate_no as certificate_number,
-                cp.registration_date as certificate_issue_date,
-                cp.registration_date as issue_date,
-                cp.registration_date as original_issue_date,
-                cp.valid_until as expiry_date,
-                cp.valid_until as expire_date,
+                COALESCE(NULLIF(cou.certificate_no, ''), NULLIF(cp.certificate_no, ''), NULLIF(cdc.certificateNo, '')) as certificate_number,
+                COALESCE(cou.rev_date, cp.registration_date, cdc.Date) as certificate_issue_date,
+                COALESCE(cou.rev_date, cp.registration_date, cdc.Date) as issue_date,
+                COALESCE(cou.rev_date, cp.registration_date, cdc.Date) as original_issue_date,
+                COALESCE(cou.expire_date, cp.valid_until, cdc.expiredate) as expiry_date,
+                COALESCE(cou.expire_date, cp.valid_until, cdc.expiredate) as expire_date,
                 cp.certificate_scope,
                 COALESCE(NULLIF(aa.proposed_scope, ''), cp.certificate_scope, c.scope) as certification_scope,
                 COALESCE(
-                    (SELECT NULLIF(TRIM(aa_req.accereditation_requirement), '') FROM audit_application aa_req WHERE aa_req.cust_id = c.id AND TRIM(aa_req.accereditation_requirement) <> '' ORDER BY aa_req.audit_id DESC LIMIT 1),
-                    (SELECT NULLIF(TRIM(aa_req.review_accredition), '') FROM audit_application aa_req WHERE aa_req.cust_id = c.id AND TRIM(aa_req.review_accredition) <> '' ORDER BY aa_req.audit_id DESC LIMIT 1),
                     NULLIF(TRIM(aa.accereditation_requirement), ''),
                     NULLIF(TRIM(aa.review_accredition), '')
                 ) as accreditation_body_name,
                 COALESCE(
-                    (SELECT NULLIF(TRIM(aa_req.accereditation_requirement), '') FROM audit_application aa_req WHERE aa_req.cust_id = c.id AND TRIM(aa_req.accereditation_requirement) <> '' ORDER BY aa_req.audit_id DESC LIMIT 1),
-                    (SELECT NULLIF(TRIM(aa_req.review_accredition), '') FROM audit_application aa_req WHERE aa_req.cust_id = c.id AND TRIM(aa_req.review_accredition) <> '' ORDER BY aa_req.audit_id DESC LIMIT 1),
                     NULLIF(TRIM(aa.accereditation_requirement), ''),
                     NULLIF(TRIM(aa.review_accredition), '')
                 ) as accreditation_body,
+                NULLIF(TRIM(aa.accereditation_requirement), '') as accreditation_requirement,
                 COALESCE(
-                    (SELECT NULLIF(TRIM(aa_req.accereditation_requirement), '') FROM audit_application aa_req WHERE aa_req.cust_id = c.id AND TRIM(aa_req.accereditation_requirement) <> '' ORDER BY aa_req.audit_id DESC LIMIT 1),
-                    NULLIF(TRIM(aa.accereditation_requirement), '')
-                ) as accreditation_requirement,
-                COALESCE(NULLIF(aa.assessment_standard, ''), (SELECT asi.schedule_app_standard FROM audit_schedule_id asi WHERE asi.customer_ca_id = c.id ORDER BY asi.audit_schedule_id DESC LIMIT 1)) as standard_name,
+                    NULLIF(cou.iso_label, ''),
+                    NULLIF(aa.assessment_standard, ''),
+                    (SELECT asi.schedule_app_standard FROM audit_schedule_id asi WHERE asi.customer_ca_id = c.id AND asi.serviceca_id = stca.ca_id ORDER BY asi.audit_schedule_id DESC LIMIT 1),
+                    (SELECT asi2.schedule_app_standard FROM audit_schedule_id asi2 WHERE asi2.customer_ca_id = c.id ORDER BY asi2.audit_schedule_id DESC LIMIT 1)
+                ) as standard_name,
                 '' as schema_name,
                 '' as scheme_name,
                 aa.n_location as site
             FROM customer_info c
-            LEFT JOIN certificate_print cp ON c.id = cp.customer_id
-            LEFT JOIN service svc ON svc.customer_id = c.id AND svc.service_id = (SELECT MAX(tmp.service_id) FROM service tmp WHERE tmp.customer_id = c.id)
-            LEFT JOIN audit_application aa ON aa.uni_svc_id = svc.service_id OR aa.service_id = svc.service_id
+            INNER JOIN service svc ON svc.customer_id = c.id AND svc.service_id = :svc_id
+            LEFT JOIN certificate_print cp ON cp.service_id = svc.service_id
+                AND cp.certificate_id = (
+                    SELECT MAX(cp_s.certificate_id) FROM certificate_print cp_s WHERE cp_s.service_id = svc.service_id
+                )
+            LEFT JOIN service_type_ca stca ON stca.service = svc.service_id
+            LEFT JOIN cdc_report_review cdc ON cdc.ca_service_id = stca.ca_id
+                AND cdc.customer_id = c.id
+                AND cdc.crr_id = (
+                    SELECT MAX(cdc_s.crr_id) FROM cdc_report_review cdc_s
+                    WHERE cdc_s.ca_service_id = stca.ca_id AND cdc_s.customer_id = c.id
+                )
+            LEFT JOIN cdc_report_review_office_use cou ON cou.crr_id = cdc.crr_id
+            LEFT JOIN audit_application aa ON aa.audit_id = (
+                SELECT MAX(aa_s.audit_id) FROM audit_application aa_s
+                WHERE aa_s.uni_svc_id = svc.service_id OR aa_s.service_id = svc.service_id OR aa_s.service_id = stca.ca_id
+            )
             WHERE c.id = :cid
-            GROUP BY c.id
-            ORDER BY c.id DESC
+                AND (:office_use_id_filter = 0 OR cou.id = :office_use_id_match)
+            ORDER BY cou.iso_index ASC
             LIMIT 1";
-            $stmt = $db->prepare($query);
-            $stmt->execute([':cid' => $clientId]);
-            $freshClient = $stmt->fetch(PDO::FETCH_ASSOC);
+            try {
+                $stmt = $db->prepare($query);
+                $stmt->execute([':cid' => $clientId, ':svc_id' => $svcId, ':office_use_id_filter' => $officeUseId, ':office_use_id_match' => $officeUseId]);
+                $freshClient = $stmt->fetch(PDO::FETCH_ASSOC);
+            } catch (Exception $e) {
+                $freshClient = null;
+                error_log("IAF Update service-level query failed: " . $e->getMessage());
+            }
+        } else {
+            $freshClient = null;
+        }
+
+        // Fallback: client without service (no svc_id)
+        if (!$freshClient) {
+            $query = "SELECT
+                c.id as internal_client_id,
+                c.customer_name,
+                'India' as country,
+                c.address,
+                c.scope,
+                '' as svc_id,
+                '' as svc_type,
+                '' as cdc_office_use_id,
+                '' as iso_index,
+                c.audit_status as certification_status,
+                '' as certificate_tracking_id,
+                '' as certificate_number,
+                '' as certificate_issue_date,
+                '' as issue_date,
+                '' as original_issue_date,
+                '' as expiry_date,
+                '' as expire_date,
+                '' as certificate_scope,
+                c.scope as certification_scope,
+                '' as accreditation_body_name,
+                '' as accreditation_body,
+                '' as accreditation_requirement,
+                '' as standard_name,
+                '' as schema_name,
+                '' as scheme_name,
+                '' as site
+            FROM customer_info c
+            WHERE c.id = :cid
+            LIMIT 1";
+            try {
+                $stmt = $db->prepare($query);
+                $stmt->execute([':cid' => $clientId]);
+                $freshClient = $stmt->fetch(PDO::FETCH_ASSOC);
+            } catch (Exception $e) {
+                error_log("IAF Update fallback query failed: " . $e->getMessage());
+            }
         }
 
         if (!$freshClient) {
@@ -190,7 +243,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $freshClient = iafCertSearchNormalizeClientData($freshClient);
         $freshClient['certification_scope'] = iafCertSearchFirstValue($freshClient, ['certification_scope', 'proposed_scope', 'certificate_scope', 'scope']);
         $freshClient['scheme_name'] = iafCertSearchFirstValue($freshClient, ['scheme_name', 'schema_name']);
-        $freshClient['accreditation_body'] = iafCertSearchFirstValue($freshClient, ['accreditation_body', 'accreditation_body_name', 'accreditation_requirement', 'accereditation_requirement']);
+        $freshClient['accreditation_body'] = iafCertSearchNormalizeAccreditationBodyName(iafCertSearchFirstValue($freshClient, ['accreditation_body', 'accreditation_body_name', 'accreditation_requirement', 'accereditation_requirement'], 'NABCB'));
         $freshClient['certificate_issue_date'] = iafCertSearchFirstValue($freshClient, ['certificate_issue_date', 'issue_date']);
         $freshClient['expire_date'] = iafCertSearchFirstValue($freshClient, ['expire_date', 'expiry_date']);
         

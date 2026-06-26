@@ -1,4 +1,9 @@
 RewriteEngine On
+
+<Files ".env">
+    Require all denied
+</Files>
+
 RewriteCond %{HTTP_HOST} aitf\.co\.in [NC]
 RewriteCond %{SERVER_PORT} 80
 RewriteRule ^(.*)$ https://aitf.co.in/$1 [R,L]

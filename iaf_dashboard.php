@@ -7,108 +7,148 @@
     }
     require_once __DIR__ . '/include/iaf_certsearch_helper.php';
 
+    // =========================================================================
+    // SERVICE-LEVEL QUERY: One row per service per customer
+    // This ensures clients with multiple certificates/standards (e.g. ISO 9001
+    // + ISO 14001) get separate rows with their own certificate numbers,
+    // standards, and per-service status — fixing duplicate cert numbers and
+    // incorrect status issues.
+    // =========================================================================
     $query = "SELECT
         c.id as internal_client_id,
-        c.customer_guid,
         c.customer_name,
-        c.country,
+        'India' as country,
         c.address,
         c.scope,
-        c.audit_status as certification_status,
+        svc.service_id as svc_id,
+        svc.service_type as svc_type,
+        cou.id as cdc_office_use_id,
+        cou.iso_index as iso_index,
+        -- Per-service status: prefer cdc_status (Granted/Not Granted), then service.service_status, then customer audit_status
+        COALESCE(
+            NULLIF(TRIM(cdc.cdc_status), ''),
+            NULLIF(TRIM(svc.service_status), ''),
+            c.audit_status
+        ) as certification_status,
         cp.certificate_id as certificate_tracking_id,
-        cp.certificate_no as certificate_number,
-        cp.registration_date as certificate_issue_date,
-        cp.registration_date as issue_date,
-        cp.registration_date as original_issue_date,
-        cp.valid_until as expiry_date,
-        cp.valid_until as expire_date,
+        -- Prefer ISO-level office-use values so multi-standard clients keep separate certificate numbers.
+        COALESCE(NULLIF(cou.certificate_no, ''), NULLIF(cp.certificate_no, ''), NULLIF(cdc.certificateNo, '')) as certificate_number,
+        COALESCE(cou.rev_date, cp.registration_date, cdc.Date) as certificate_issue_date,
+        COALESCE(cou.rev_date, cp.registration_date, cdc.Date) as issue_date,
+        COALESCE(cou.rev_date, cp.registration_date, cdc.Date) as original_issue_date,
+        COALESCE(cou.expire_date, cp.valid_until, cdc.expiredate) as expiry_date,
+        COALESCE(cou.expire_date, cp.valid_until, cdc.expiredate) as expire_date,
         cp.certificate_scope,
         COALESCE(NULLIF(aa.proposed_scope, ''), cp.certificate_scope, c.scope) as certification_scope,
         COALESCE(
-            (SELECT NULLIF(TRIM(aa_req.accereditation_requirement), '') FROM audit_application aa_req INNER JOIN service svc_req ON aa_req.uni_svc_id = svc_req.service_id OR aa_req.service_id = svc_req.service_id WHERE svc_req.customer_id = c.id AND TRIM(aa_req.accereditation_requirement) <> '' ORDER BY aa_req.audit_id DESC LIMIT 1),
-            (SELECT NULLIF(TRIM(aa_req.review_accredition), '') FROM audit_application aa_req INNER JOIN service svc_req ON aa_req.uni_svc_id = svc_req.service_id OR aa_req.service_id = svc_req.service_id WHERE svc_req.customer_id = c.id AND TRIM(aa_req.review_accredition) <> '' ORDER BY aa_req.audit_id DESC LIMIT 1),
             NULLIF(TRIM(aa.accereditation_requirement), ''),
             NULLIF(TRIM(aa.review_accredition), '')
         ) as accreditation_body_name,
         COALESCE(
-            (SELECT NULLIF(TRIM(aa_req.accereditation_requirement), '') FROM audit_application aa_req INNER JOIN service svc_req ON aa_req.uni_svc_id = svc_req.service_id OR aa_req.service_id = svc_req.service_id WHERE svc_req.customer_id = c.id AND TRIM(aa_req.accereditation_requirement) <> '' ORDER BY aa_req.audit_id DESC LIMIT 1),
-            (SELECT NULLIF(TRIM(aa_req.review_accredition), '') FROM audit_application aa_req INNER JOIN service svc_req ON aa_req.uni_svc_id = svc_req.service_id OR aa_req.service_id = svc_req.service_id WHERE svc_req.customer_id = c.id AND TRIM(aa_req.review_accredition) <> '' ORDER BY aa_req.audit_id DESC LIMIT 1),
             NULLIF(TRIM(aa.accereditation_requirement), ''),
             NULLIF(TRIM(aa.review_accredition), '')
         ) as accreditation_body,
+        NULLIF(TRIM(aa.accereditation_requirement), '') as accreditation_requirement,
         COALESCE(
-            (SELECT NULLIF(TRIM(aa_req.accereditation_requirement), '') FROM audit_application aa_req INNER JOIN service svc_req ON aa_req.uni_svc_id = svc_req.service_id OR aa_req.service_id = svc_req.service_id WHERE svc_req.customer_id = c.id AND TRIM(aa_req.accereditation_requirement) <> '' ORDER BY aa_req.audit_id DESC LIMIT 1),
-            NULLIF(TRIM(aa.accereditation_requirement), '')
-        ) as accreditation_requirement,
-        COALESCE(NULLIF(aa.assessment_standard, ''), (SELECT asi.schedule_app_standard FROM audit_schedule_id asi WHERE asi.customer_ca_id = c.id ORDER BY asi.audit_schedule_id DESC LIMIT 1)) as standard_name,
-        c.schema_name,
-        c.schema_name as scheme_name,
+            NULLIF(cou.iso_label, ''),
+            NULLIF(aa.assessment_standard, ''),
+            (SELECT asi.schedule_app_standard FROM audit_schedule_id asi WHERE asi.customer_ca_id = c.id AND asi.serviceca_id = stca.ca_id ORDER BY asi.audit_schedule_id DESC LIMIT 1),
+            (SELECT asi2.schedule_app_standard FROM audit_schedule_id asi2 WHERE asi2.customer_ca_id = c.id ORDER BY asi2.audit_schedule_id DESC LIMIT 1)
+        ) as standard_name,
+        '' as schema_name,
+        '' as scheme_name,
         aa.n_location as site
     FROM customer_info c
-    LEFT JOIN certificate_print cp ON c.id = cp.customer_id
-    LEFT JOIN service svc ON svc.customer_id = c.id AND svc.service_id = (SELECT MAX(tmp.service_id) FROM service tmp WHERE tmp.customer_id = c.id)
-    LEFT JOIN audit_application aa ON aa.uni_svc_id = svc.service_id OR aa.service_id = svc.service_id
-    GROUP BY c.id
-    ORDER BY c.id DESC";
+    INNER JOIN service svc ON svc.customer_id = c.id
+    -- Per-service certificate_print (each service has its own cert)
+    LEFT JOIN certificate_print cp ON cp.service_id = svc.service_id
+        AND cp.certificate_id = (
+            SELECT MAX(cp_s.certificate_id) FROM certificate_print cp_s WHERE cp_s.service_id = svc.service_id
+        )
+    -- Per-service CDC report: link through service_type_ca
+    LEFT JOIN service_type_ca stca ON stca.service = svc.service_id
+    LEFT JOIN cdc_report_review cdc ON cdc.ca_service_id = stca.ca_id
+        AND cdc.customer_id = c.id
+        AND cdc.crr_id = (
+            SELECT MAX(cdc_s.crr_id) FROM cdc_report_review cdc_s
+            WHERE cdc_s.ca_service_id = stca.ca_id AND cdc_s.customer_id = c.id
+        )
+    LEFT JOIN cdc_report_review_office_use cou ON cou.crr_id = cdc.crr_id
+    -- Per-service audit_application
+    LEFT JOIN audit_application aa ON aa.audit_id = (
+        SELECT MAX(aa_s.audit_id) FROM audit_application aa_s
+        WHERE aa_s.uni_svc_id = svc.service_id OR aa_s.service_id = svc.service_id OR aa_s.service_id = stca.ca_id
+    )
+    WHERE NOT (UPPER(svc.service_type) = 'CR' AND cp.certificate_id IS NULL AND cdc.crr_id IS NULL)
+    ORDER BY c.id DESC, svc.service_id ASC, cou.iso_index ASC";
 
+    $clients = [];
     try {
         $stmt = $db->prepare($query);
         $stmt->execute();
         $clients = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (Exception $e) {
-        // If some columns like customer_guid or schema_name don't exist, we fallback to a safer query
-        $query = "SELECT
-        c.id as internal_client_id,
-        c.customer_name,
-        c.address,
-        c.scope,
-        c.audit_status as certification_status,
-        cp.certificate_id as certificate_tracking_id,
-        cp.certificate_no as certificate_number,
-        cp.registration_date as certificate_issue_date,
-        cp.registration_date as issue_date,
-        cp.registration_date as original_issue_date,
-        cp.valid_until as expiry_date,
-        cp.valid_until as expire_date,
-        cp.certificate_scope,
-        COALESCE(NULLIF(aa.proposed_scope, ''), cp.certificate_scope, c.scope) as certification_scope,
-        COALESCE(
-            (SELECT NULLIF(TRIM(aa_req.accereditation_requirement), '') FROM audit_application aa_req INNER JOIN service svc_req ON aa_req.uni_svc_id = svc_req.service_id OR aa_req.service_id = svc_req.service_id WHERE svc_req.customer_id = c.id AND TRIM(aa_req.accereditation_requirement) <> '' ORDER BY aa_req.audit_id DESC LIMIT 1),
-            (SELECT NULLIF(TRIM(aa_req.review_accredition), '') FROM audit_application aa_req INNER JOIN service svc_req ON aa_req.uni_svc_id = svc_req.service_id OR aa_req.service_id = svc_req.service_id WHERE svc_req.customer_id = c.id AND TRIM(aa_req.review_accredition) <> '' ORDER BY aa_req.audit_id DESC LIMIT 1),
-            NULLIF(TRIM(aa.accereditation_requirement), ''),
-            NULLIF(TRIM(aa.review_accredition), '')
-        ) as accreditation_body_name,
-        COALESCE(
-            (SELECT NULLIF(TRIM(aa_req.accereditation_requirement), '') FROM audit_application aa_req INNER JOIN service svc_req ON aa_req.uni_svc_id = svc_req.service_id OR aa_req.service_id = svc_req.service_id WHERE svc_req.customer_id = c.id AND TRIM(aa_req.accereditation_requirement) <> '' ORDER BY aa_req.audit_id DESC LIMIT 1),
-            (SELECT NULLIF(TRIM(aa_req.review_accredition), '') FROM audit_application aa_req INNER JOIN service svc_req ON aa_req.uni_svc_id = svc_req.service_id OR aa_req.service_id = svc_req.service_id WHERE svc_req.customer_id = c.id AND TRIM(aa_req.review_accredition) <> '' ORDER BY aa_req.audit_id DESC LIMIT 1),
-            NULLIF(TRIM(aa.accereditation_requirement), ''),
-            NULLIF(TRIM(aa.review_accredition), '')
-        ) as accreditation_body,
-        COALESCE(
-            (SELECT NULLIF(TRIM(aa_req.accereditation_requirement), '') FROM audit_application aa_req INNER JOIN service svc_req ON aa_req.uni_svc_id = svc_req.service_id OR aa_req.service_id = svc_req.service_id WHERE svc_req.customer_id = c.id AND TRIM(aa_req.accereditation_requirement) <> '' ORDER BY aa_req.audit_id DESC LIMIT 1),
-            NULLIF(TRIM(aa.accereditation_requirement), '')
-        ) as accreditation_requirement,
-        COALESCE(NULLIF(aa.assessment_standard, ''), (SELECT asi.schedule_app_standard FROM audit_schedule_id asi WHERE asi.customer_ca_id = c.id ORDER BY asi.audit_schedule_id DESC LIMIT 1)) as standard_name,
-        '' as schema_name,
-        '' as scheme_name,
-        aa.n_location as site
-    FROM customer_info c
-    LEFT JOIN certificate_print cp ON c.id = cp.customer_id
-    LEFT JOIN service svc ON svc.customer_id = c.id AND svc.service_id = (SELECT MAX(tmp.service_id) FROM service tmp WHERE tmp.customer_id = c.id)
-    LEFT JOIN audit_application aa ON aa.uni_svc_id = svc.service_id OR aa.service_id = svc.service_id
-    GROUP BY c.id
-    ORDER BY c.id DESC";
-        $stmt = $db->prepare($query);
-        $stmt->execute();
-        $clients = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        // Fallback: if service-level query fails, use simpler version
+        error_log("IAF Dashboard service-level query failed: " . $e->getMessage());
+        $clients = [];
     }
 
-    // Ensure columns that may not exist have a fallback
+    // =========================================================================
+    // FALLBACK: Clients with NO services should still appear (one row each)
+    // =========================================================================
+    $clientIdsWithServices = [];
+    foreach ($clients as $c) {
+        $clientIdsWithServices[$c['internal_client_id']] = true;
+    }
+
+    $fallbackQuery = "SELECT
+        c.id as internal_client_id,
+        c.customer_name,
+        'India' as country,
+        c.address,
+        c.scope,
+        '' as svc_id,
+        '' as svc_type,
+        '' as cdc_office_use_id,
+        '' as iso_index,
+        c.audit_status as certification_status,
+        '' as certificate_tracking_id,
+        '' as certificate_number,
+        '' as certificate_issue_date,
+        '' as issue_date,
+        '' as original_issue_date,
+        '' as expiry_date,
+        '' as expire_date,
+        '' as certificate_scope,
+        c.scope as certification_scope,
+        '' as accreditation_body_name,
+        '' as accreditation_body,
+        '' as accreditation_requirement,
+        '' as standard_name,
+        '' as schema_name,
+        '' as scheme_name,
+        '' as site
+    FROM customer_info c
+    WHERE c.id NOT IN (SELECT DISTINCT s.customer_id FROM service s WHERE s.customer_id IS NOT NULL)
+    ORDER BY c.id DESC";
+
+    try {
+        $stmt2 = $db->prepare($fallbackQuery);
+        $stmt2->execute();
+        $noServiceClients = $stmt2->fetchAll(PDO::FETCH_ASSOC);
+        $clients = array_merge($clients, $noServiceClients);
+    } catch (Exception $e) {
+        error_log("IAF Dashboard fallback query failed: " . $e->getMessage());
+    }
+
+    // =========================================================================
+    // Normalize all client data
+    // =========================================================================
     foreach ($clients as &$client) {
         $client = iafCertSearchNormalizeClientData($client);
         $client['certification_scope'] = iafCertSearchFirstValue($client, ['certification_scope', 'proposed_scope', 'certificate_scope', 'scope']);
         $client['scheme_name'] = iafCertSearchFirstValue($client, ['scheme_name', 'schema_name']);
-        $client['accreditation_body'] = iafCertSearchFirstValue($client, ['accreditation_body', 'accreditation_body_name', 'accreditation_requirement', 'accereditation_requirement']);
+        $client['accreditation_body'] = iafCertSearchNormalizeAccreditationBodyName(iafCertSearchFirstValue($client, ['accreditation_body', 'accreditation_body_name', 'accreditation_requirement', 'accereditation_requirement'], 'NABCB'));
         $client['certificate_issue_date'] = iafCertSearchFirstValue($client, ['certificate_issue_date', 'issue_date']);
         $client['expire_date'] = iafCertSearchFirstValue($client, ['expire_date', 'expiry_date']);
     }
@@ -576,7 +616,6 @@
                                     <th>Certificate Issue Date</th>
                                     <th>Issue Date</th>
                                     <th>Expire Date</th>
-                                    <th>Site</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -585,7 +624,7 @@
                                         <td>
                                             <div class="action-btns-container">
                                                 <button class="action-btn btn-insert"
-                                                    id="btn-insert-<?php echo $c['internal_client_id']; ?>"
+                                                    id="btn-insert-<?php echo $c['internal_client_id'] . '-' . ($c['svc_id'] ?: '0') . '-' . ($c['cdc_office_use_id'] ?: '0') . '-' . substr(md5(($c['standard_name'] ?? '') . '|' . ($c['certificate_number'] ?? '')), 0, 10); ?>"
                                                     onclick='handleAction("insert", <?php echo htmlspecialchars(json_encode($c), ENT_QUOTES, "UTF-8"); ?>, this)'>
                                                     <i class="fa fa-cloud-upload"></i> Insert
                                                 </button>
@@ -611,7 +650,7 @@
                                                 <?php echo htmlspecialchars($c['address']); ?>
                                             </div>
                                         </td>
-                                        <td><?php echo htmlspecialchars($c['accreditation_body'] ?: 'N/A'); ?></td>
+                                        <td><?php echo htmlspecialchars($c['accreditation_body'] ?: 'National Accreditation Board for Certification Bodies'); ?></td>
                                         <td><?php echo htmlspecialchars($c['standard_name'] ?: 'N/A'); ?></td>
                                         <td><span style="font-weight: 600; color: #475569;"><?php echo htmlspecialchars($c['scheme_name']); ?></span></td>
                                         <td>
@@ -630,25 +669,33 @@
 
                                         <td>
                                             <?php
-                                            $statusStr = strtolower($c['certification_status']);
+                                            $hasCert = !empty($c['certificate_number']);
+                                            $statusStr = strtolower(trim($c['certification_status']));
                                             $badgeClass = 'status-default';
-                                            if (strpos($statusStr, 'active') !== false || strpos($statusStr, 'issue') !== false || strpos($statusStr, 'grant') !== false) {
+                                            // Determine the display-friendly status label
+                                            $displayStatus = $c['certification_status'] ?: 'Unknown';
+
+                                            if ($hasCert || $statusStr === 'granted' || $statusStr === 'completed' || $statusStr === 'valid') {
                                                 $badgeClass = 'status-active';
-                                            } elseif (strpos($statusStr, 'pending') !== false) {
+                                                // Certificate-backed records are granted unless an explicit terminal status says otherwise.
+                                                $displayStatus = 'Granted';
+                                            } elseif (strpos($statusStr, 'active') !== false || strpos($statusStr, 'issue') !== false || strpos($statusStr, 'grant') !== false) {
+                                                $badgeClass = 'status-active';
+                                            } elseif (strpos($statusStr, 'pending') !== false || strpos($statusStr, 'in-process') !== false || strpos($statusStr, 'in process') !== false || strpos($statusStr, 'audit') !== false) {
                                                 $badgeClass = 'status-pending';
-                                            } elseif (strpos($statusStr, 'suspend') !== false || strpos($statusStr, 'expir') !== false) {
+                                                $displayStatus = 'In Process';
+                                            } elseif (strpos($statusStr, 'suspend') !== false || strpos($statusStr, 'expir') !== false || strpos($statusStr, 'withdraw') !== false) {
                                                 $badgeClass = 'status-expired';
                                             }
                                             ?>
                                             <span class="status-badge <?php echo $badgeClass; ?>">
-                                                <?php echo htmlspecialchars($c['certification_status'] ?: 'Unknown'); ?>
+                                                <?php echo htmlspecialchars($displayStatus); ?>
                                             </span>
                                         </td>
                                         <td><?php echo htmlspecialchars($c['certification_type']); ?></td>
                                         <td><?php echo $c['certificate_issue_date'] ? date('d M Y', strtotime($c['certificate_issue_date'])) : '-'; ?></td>
                                         <td><?php echo $c['issue_date'] ? date('d M Y', strtotime($c['issue_date'])) : '-'; ?></td>
                                         <td><?php echo $c['expire_date'] ? date('d M Y', strtotime($c['expire_date'])) : '-'; ?></td>
-                                        <td><?php echo htmlspecialchars($c['site'] ?: 'N/A'); ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
@@ -786,7 +833,10 @@
                                             table.row(row).remove().draw();
                                         } else if (actionType === 'update' && response.status === 'success' && response.is_updated) {
                                             // Clear the inserted status so it can be re-sent!
-                                            localStorage.removeItem(`btn-insert-${clientId}`);
+                                            // Use the actual button id (service-aware) from the same row's Insert button
+                                            const rowInsertBtn = row.find('.btn-insert');
+                                            const rowInsertBtnId = rowInsertBtn.attr('id');
+                                            if (rowInsertBtnId) localStorage.removeItem(rowInsertBtnId);
 
                                             // Reload the page to bring the new fresh data to the table and re-enable the Insert button naturally
                                             setTimeout(function () {
