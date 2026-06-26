@@ -14,6 +14,7 @@
     // standards, and per-service status — fixing duplicate cert numbers and
     // incorrect status issues.
     // =========================================================================
+    
     $query = "SELECT
         c.id as internal_client_id,
         c.customer_name,

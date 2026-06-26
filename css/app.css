@@ -9,13 +9,14 @@
         #sidebar-wrapper {
             margin-left: -180px;
             left: 50px;
+            top: 0;
             width: 180px;
             background: #053c6d;
             position: fixed;
-            height: 100%;
+            height: 100vh;
             z-index: 10000;
             transition: all .4s ease 0s;
-            overflow-y:scroll;
+            overflow-y: scroll;
         }
         /*.navbar {
   position: static;
@@ -30,6 +31,10 @@
             list-style: none;
             margin: 0;
             padding: 0;
+        }
+
+        #sidebar_menu {
+            margin-top: 0;
         }
         
         #page-content-wrapper {

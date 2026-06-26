@@ -340,110 +340,570 @@ function getFlatDate($inputStr)
                     class="sub_icon fa fa-eye fa-2x" style="vertical-align:middle"></i></a></li>
     </ul>
 </div>
-<!--do not display the customer add to customer-->
-<?php if (!(Utitlity::checkClient() || Utitlity::checkExternalUser())) { ?>
-    <div class="float-button-wrapper" style="text-align:center">
-        <a class="addAccountCss" style="text-align:center"><span class=" pull-right glyphicon glyphicon-plus "></span></a>
-    </div>
-<?php } ?>
+<nav class="navbar navbar-fixed-top modern-navbar" role="navigation">
+    <div class="navbar-container">
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+        </button>
 
-<nav class="navbar navbar-fixed-top navbar-bootsnipp animate " role="navigation">
-    <div class="container">
-        <!-- Brand and toggle get grouped for better mobile display -->
-        <div class="navbar-header ">
-            <button type="button" class="navbar-toggle " data-toggle="collapse"
-                data-target="#bs-example-navbar-collapse-1">
-                <span class="sr-only ">Toggle navigation</span>
-                <span class="icon-bar "></span>
-                <span class="icon-bar "></span>
-                <span class="icon-bar "></span>
-            </button>
-        </div>
-        <!-- Collect the nav links, forms, and other content for toggling -->
-        <div class="collapse navbar-collapse " id="bs-example-navbar-collapse-1">
-            <ul class="nav navbar-nav navbar-right">
-                <!--Adding hidden menu items here -->
-                <?php if (Utitlity::checkForUserMainAdmin()) { ?>
-                    <li class="visible-xs"><a href="adminDashboard.php"
-                            class="animate <?php echo isset($addAdminDashboardClass) ? $addAdminDashboardClass : ''; ?>">ADMIN
-                            DASHBOARD</a></li>
-                <?php } ?>
-                <li class="visible-xs"><a href="iaf_dashboard.php"
-                        class="animate <?php //echo isset($iafClass) ? $iafClass : ''; ?>">IAF DASHBOARD</a></li>
-                <li class="visible-xs"><a href="homePage.php"
-                        class="animate <?php //echo $addClass              ?>">CLIENTS</a></li>
-                <li class="visible-xs"><a href="marketingPage.php"
-                        class="animate <?php //echo $addMarketingClass              ?>">MARKETING</a></li>
-                <li class="visible-xs"><a href="paymentPage.php"
-                        class="animate <?php //echo $addMarketingClass              ?>">PAYMENT</a></li>
-                <li class="visible-xs"><a href="auditPlanning.php"
-                        class="animate <?php //echo $addWorkingClass              ?>">AUDIT PLANNING</a></li>
-                <li class="visible-xs"><a href="masterCreator.php"
-                        class="animate <?php //echo $addFinanceClass              ?>">MASTER CREATOR</a></li>
-                <li class="visible-xs"><a href="listOfTds.php"
-                        class="animate <?php //echo $addMarketingSetupClass              ?>">TDS DEDUCTED</a></li>
-                <li class="visible-xs"><a href="intimationLetter.php"
-                        class="animate <?php //echo $addMasterClass              ?> ">INTEMATION LETTERS</a></li>
-                <li class="visible-xs"><a href="inbox.php" target="_blank" class="animate">INBOX</a></li>
-                <li class="visible-xs"><a href="clientList.php"
-                        class="animate <?php //echo $addUserClass              ?>">CLIENT LIST</a></li>
-                <li class="visible-xs"><a href="invoicePage.php"
-                        class="animate <?php //echo $addUserClass              ?>">INVOICE</a></li>
-                <li class="visible-xs"><a href="billsPage.php" class="animate">BILLS</a></li>
-                <li class="visible-xs"><a href="quotationPage.php"
-                        class="animate <?php //echo $addUserClass              ?>">QUOTATION</a></li>
-                <li class="visible-xs"><a href="addUsers.php"
-                        class="animate <?php //echo $addUserClass              ?>">ADD USER</a></li>
-                <li class="visible-xs"><a href="clientRecycle.php"
-                        class="animate <?php //echo $addUserClass              ?>">RECYCLE BIN</a></li>
-                <!--<li><a href="clientRecycle.php" class="animate">RECYCLE CLIENT<i class="sub_icon fa fa-refresh fa-2x" style="vertical-align:middle"></i></a></li>-->
-                <!-- Adding ends here -->
-                <?php if (!(Utitlity::checkClient() || Utitlity::checkExternalUser())) { ?>
-                    <li>
-                        <input class="dropdown-toggle animate searchcustomer" data-toggle="dropdown"
-                            placeholder="Search Client"
-                            style="margin-top: 10px; padding-left: 30px; z-index: 2; border: 2px solid #dadada; border-radius: 7px;" />
-                        <ul class="dropdown-menu clientlistappend" role="menu" style="max-height: 300px; overflow-y: auto;">
-                            <!--<li class="client-list" data-id="" style="text-align: left">aabbcc</li>-->
-                        </ul>
-                        <style>
-                            .client-list:hover,
-                            .client-list.active-item {
-                                background-color: #4CAF50 !important;
-                                color: white !important;
-                            }
+        <div class="navbar-content">
+            <?php if (!(Utitlity::checkClient() || Utitlity::checkExternalUser())) { ?>
+                <div class="navbar-left">
+                    <a href="#" class="addAccountCss modern-add-btn" title="Add New Client">
+                        <i class="fa fa-plus" aria-hidden="true"></i>
+                        <span>Add New Client</span>
+                    </a>
+                </div>
 
-                            .client-list {
-                                transition: background-color 0.2s;
-                            }
+                <div class="navbar-center">
+                    <div class="search-wrapper">
+                        <i class="fa fa-search search-icon" aria-hidden="true"></i>
+                        <input class="dropdown-toggle searchcustomer modern-search" data-toggle="dropdown" placeholder="Search Client" autocomplete="off" />
+                        <ul class="dropdown-menu clientlistappend" role="menu"></ul>
+                    </div>
+                </div>
+            <?php } ?>
 
-                            .clientlistappend {
-                                max-height: 300px;
-                                overflow-y: auto;
-                            }
-                        </style>
-                    </li>
-                <?php } ?>
-                <li class="theme-toggle-item">
-                    <button type="button" id="themeToggle" class="theme-toggle-btn" aria-label="Toggle dark mode"
-                        aria-pressed="false">
-                        <i class="fa fa-moon-o" aria-hidden="true"></i>
-                    </button>
-                </li>
+            <div class="navbar-right">
+                <button type="button" id="themeToggle" class="modern-card-btn" aria-label="Toggle dark mode" title="Dark Mode">
+                    <i class="fa fa-moon-o" aria-hidden="true"></i>
+                </button>
+
                 <?php if (isset($_SESSION['username'])) { ?>
-                    <li><a class=" dropdown-toggle  animate " data-toggle="dropdown"
-                            href="#"><?php echo $_SESSION['username']; ?>&nbsp;</a>
-                        <ul class=" dropdown-menu " role="menu">
-                            <li><a class="passwordChange" href="#" data-id="<?php echo $_SESSION['id']; ?>">Change
-                                    Password</a></li>
+                    <div class="dropdown modern-user-dropdown">
+                        <a class="dropdown-toggle modern-card-btn modern-profile-card" data-toggle="dropdown" href="#" role="button">
+                            <div class="user-avatar">
+                                <i class="fa fa-user" aria-hidden="true"></i>
+                            </div>
+                            <div class="user-info">
+                                <span class="user-greeting">Hi,</span>
+                                <span class="user-name"><?php echo $_SESSION['username']; ?></span>
+                            </div>
+                            <i class="fa fa-chevron-down dropdown-arrow" aria-hidden="true"></i>
+                        </a>
+                        <ul class="dropdown-menu modern-dropdown-menu" role="menu">
+                            <li><a class="passwordChange" href="#" data-id="<?php echo $_SESSION['id']; ?>"><i class="fa fa-key"></i> Change Password</a></li>
                         </ul>
-                    </li>
-                    <li><a href="#" class="animate" data-toggle="modal" data-target="#logoutConfirmModal">Logout</a></li>
+                    </div>
+
+                    <a href="#" class="modern-card-btn modern-logout-card" data-toggle="modal" data-target="#logoutConfirmModal" title="Logout">
+                        <i class="fa fa-sign-out" aria-hidden="true"></i>
+                        <span>Logout</span>
+                    </a>
                 <?php } ?>
+            </div>
+        </div>
+
+        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+            <ul class="nav navbar-nav visible-xs">
+                <?php if (Utitlity::checkForUserMainAdmin()) { ?>
+                    <li><a href="adminDashboard.php">ADMIN DASHBOARD</a></li>
+                <?php } ?>
+                <li><a href="iaf_dashboard.php">IAF DASHBOARD</a></li>
+                <li><a href="homePage.php">CLIENTS</a></li>
+                <li><a href="marketingPage.php">MARKETING</a></li>
+                <li><a href="paymentPage.php">PAYMENT</a></li>
+                <li><a href="auditPlanning.php">AUDIT PLANNING</a></li>
+                <li><a href="masterCreator.php">MASTER CREATOR</a></li>
+                <li><a href="listOfTds.php">TDS DEDUCTED</a></li>
+                <li><a href="intimationLetter.php">INTIMATION LETTERS</a></li>
+                <li><a href="inbox.php" target="_blank">INBOX</a></li>
+                <li><a href="clientList.php">CLIENT LIST</a></li>
+                <li><a href="invoicePage.php">INVOICE</a></li>
+                <li><a href="billsPage.php">BILLS</a></li>
+                <li><a href="quotationPage.php">QUOTATION</a></li>
+                <li><a href="addUsers.php">ADD USER</a></li>
+                <li><a href="clientRecycle.php">RECYCLE BIN</a></li>
             </ul>
         </div>
     </div>
 </nav>
+
+<style>
+/* Navbar Base */
+.modern-navbar {
+    background: #ffffff;
+    border: none;
+    border-bottom: 1px solid #e5e7eb;
+    height: 72px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+    min-height: 72px;
+    position: fixed;
+    top: 0;
+    right: 0;
+    left: 0;
+    z-index: 999;
+    font-family: 'Inter', 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.navbar-container {
+    height: 100%;
+    padding: 0;
+    margin-left: 250px;
+}
+
+.navbar-content {
+    display: grid;
+    grid-template-columns: 200px 1fr auto;
+    align-items: center;
+    height: 72px;
+    padding: 0 30px;
+    gap: 40px;
+}
+
+/* Left Section - Add Client Button */
+.navbar-left {
+    display: flex;
+    align-items: center;
+    grid-column: 1;
+    height: 72px;
+    margin-left: 0;
+    padding-top: 0;
+}
+
+.modern-add-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 48px;
+    padding: 0 20px;
+    background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+    color: #ffffff !important;
+    border: none;
+    border-radius: 14px;
+    font-family: 'Inter', 'Poppins', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 8px rgba(37,99,235,0.24);
+    white-space: nowrap;
+    letter-spacing: -0.01em;
+}
+
+.modern-add-btn:hover {
+    background: linear-gradient(135deg, #1d4ed8 0%, #6d28d9 100%);
+    box-shadow: 0 4px 16px rgba(37,99,235,0.36);
+    text-decoration: none;
+    color: #ffffff !important;
+}
+
+.modern-add-btn:active {
+    box-shadow: 0 2px 8px rgba(37,99,235,0.24);
+}
+
+.modern-add-btn i {
+    font-size: 15px;
+}
+
+/* Center Section - Search */
+.navbar-center {
+    display: flex;
+    justify-content: flex-start;
+    grid-column: 2;
+    padding: 0 20px;
+}
+
+.search-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 520px;
+    isolation: isolate;
+}
+
+.search-wrapper::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, rgba(37,99,235,0.18), rgba(124,58,237,0.16));
+    opacity: 0;
+    transform: scale(0.98);
+    transition: all 0.25s ease;
+    z-index: -1;
+}
+
+.search-wrapper:focus-within::before {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.search-icon {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transform: translateY(-50%);
+    color: #2563eb;
+    font-size: 15px;
+    pointer-events: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #eff6ff 0%, #eef2ff 100%);
+    box-shadow: inset 0 0 0 1px rgba(37,99,235,0.08);
+    transition: all 0.25s ease;
+}
+
+.search-wrapper:focus-within .search-icon {
+    color: #ffffff;
+    background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+    box-shadow: 0 8px 18px rgba(37,99,235,0.22);
+}
+
+.modern-search {
+    width: 100%;
+    height: 48px;
+    padding: 0 22px 0 62px;
+    border: 1px solid #dbe3ef;
+    border-radius: 16px;
+    font-family: 'Inter', 'Poppins', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: #0f172a;
+    background: #ffffff;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+    box-shadow: 0 10px 28px rgba(15,23,42,0.06), inset 0 1px 0 rgba(255,255,255,0.75);
+    letter-spacing: -0.01em;
+}
+
+.modern-search::placeholder {
+    color: #8a98ad;
+    font-weight: 500;
+}
+
+.modern-search:hover {
+    border-color: #b9c6da;
+    background: #fbfdff;
+}
+
+.modern-search:focus {
+    outline: none;
+    border-color: #7aa2f7;
+    background: #ffffff;
+    box-shadow: 0 0 0 4px rgba(37,99,235,0.12), 0 14px 34px rgba(37,99,235,0.12);
+}
+
+.clientlistappend {
+    width: 100%;
+    max-height: 320px;
+    overflow-y: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    box-shadow: 0 18px 45px rgba(15,23,42,0.16);
+    margin-top: 10px;
+    padding: 6px;
+    background: #ffffff;
+    position: absolute;
+    z-index: 9999;
+}
+
+.client-list {
+    padding: 11px 14px !important;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-bottom: 1px solid #f1f5f9;
+    border-radius: 10px;
+    color: #334155;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.client-list:last-child {
+    border-bottom: none;
+}
+
+.client-list:hover, .client-list.active-item {
+    background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%) !important;
+    color: #ffffff !important;
+}
+
+/* Right Section - Separate Cards */
+.navbar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    grid-column: 3;
+}
+
+/* Base Card Style */
+.modern-card-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    text-decoration: none;
+}
+
+.modern-card-btn:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+    text-decoration: none;
+}
+
+/* Dark Mode Card */
+.modern-card-btn:not(.modern-profile-card):not(.modern-logout-card) {
+    width: 44px;
+    height: 44px;
+    color: #374151;
+    font-size: 17px;
+}
+
+/* Profile Card */
+.modern-user-dropdown {
+    position: relative;
+}
+
+.modern-profile-card {
+    gap: 10px;
+    padding: 6px 14px 6px 6px;
+    min-width: 160px;
+    color: #1f2937 !important;
+}
+
+.user-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #ffffff;
+    flex-shrink: 0;
+    font-size: 15px;
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+}
+
+.user-greeting {
+    font-size: 10px;
+    color: #9ca3af;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    line-height: 1.2;
+}
+
+.user-name {
+    font-size: 13px;
+    color: #1f2937;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+}
+
+.dropdown-arrow {
+    font-size: 9px;
+    color: #9ca3af;
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+}
+
+.modern-user-dropdown.open .dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+/* Logout Card */
+.modern-logout-card {
+    gap: 7px;
+    padding: 10px 16px;
+    background: #fef2f2 !important;
+    border-color: #fee2e2;
+    color: #dc2626 !important;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.modern-logout-card:hover {
+    background: #fee2e2 !important;
+    border-color: #fecaca;
+    color: #b91c1c !important;
+}
+
+.modern-logout-card i {
+    font-size: 14px;
+}
+
+.modern-dropdown-menu {
+    min-width: 100%;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    margin-top: 8px;
+    padding: 6px;
+    background: #ffffff;
+}
+
+.modern-dropdown-menu li {
+    list-style: none;
+}
+
+.modern-dropdown-menu li a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    color: #374151;
+    text-decoration: none;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.modern-dropdown-menu li a:hover {
+    background: #f3f4f6;
+    color: #6366f1;
+}
+
+.modern-dropdown-menu li a i {
+    font-size: 13px;
+    width: 14px;
+}
+
+/* Mobile Toggle */
+.navbar-toggle {
+    display: none;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 8px 10px;
+    background: #ffffff;
+    margin: 10px 0;
+}
+
+.navbar-toggle .icon-bar {
+    background-color: #374151;
+    height: 2px;
+    border-radius: 1px;
+}
+
+/* Mobile Menu */
+.navbar-collapse {
+    display: none;
+    border-top: 1px solid #e5e7eb;
+    background: #ffffff;
+    padding: 10px 0;
+    position: absolute;
+    top: 64px;
+    left: 0;
+    right: 0;
+}
+
+.navbar-collapse.in {
+    display: block;
+}
+
+.navbar-collapse .nav {
+    margin: 0;
+}
+
+.navbar-collapse .nav > li > a {
+    padding: 14px 24px;
+    color: #374151;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.navbar-collapse .nav > li > a:hover {
+    background: #f9fafb;
+    color: #4f46e5;
+}
+
+/* Responsive Design */
+@media (max-width: 991px) {
+    .navbar-container {
+        margin-left: 0;
+    }
+    
+    .navbar-content {
+        flex-wrap: wrap;
+        height: auto;
+        padding: 12px 20px;
+    }
+
+    .navbar-toggle {
+        display: block;
+    }
+
+    .navbar-left {
+        order: 2;
+        width: 100%;
+        justify-content: center;
+        margin: 12px 0 0 0;
+    }
+
+    .navbar-center {
+        order: 1;
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
+    }
+
+    .navbar-right {
+        order: 3;
+        width: 100%;
+        justify-content: space-between;
+        margin-top: 12px;
+    }
+}
+
+@media (max-width: 768px) {
+    .modern-add-btn span, .modern-logout-card span {
+        display: none;
+    }
+
+    .modern-add-btn {
+        padding: 10px 12px;
+        min-width: 44px;
+    }
+
+    .modern-profile-card {
+        min-width: auto;
+        max-width: 140px;
+    }
+
+    .user-name {
+        max-width: 70px;
+    }
+}
+
+@media (max-width: 480px) {
+    .navbar-container {
+        padding: 0 16px;
+    }
+    
+    .navbar-right {
+        gap: 8px;
+    }
+    
+    .modern-icon-btn {
+        width: 38px;
+        height: 38px;
+    }
+}
+</style>
 
 <script type="text/javascript">
     $(document).ready(function () {
