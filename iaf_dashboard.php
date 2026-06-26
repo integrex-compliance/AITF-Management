@@ -34,11 +34,11 @@
         cp.certificate_id as certificate_tracking_id,
         -- Prefer ISO-level office-use values so multi-standard clients keep separate certificate numbers.
         COALESCE(NULLIF(cou.certificate_no, ''), NULLIF(cp.certificate_no, ''), NULLIF(cdc.certificateNo, '')) as certificate_number,
-        COALESCE(cou.rev_date, cp.registration_date, cdc.Date) as certificate_issue_date,
-        COALESCE(cou.rev_date, cp.registration_date, cdc.Date) as issue_date,
+        CASE WHEN UPPER(latest_cert_svc.service_type) = 'RC' THEN COALESCE(latest_rc_cp.registration_date, latest_rc_cdc.Date) WHEN UPPER(latest_cert_svc.service_type) = 'CA' THEN COALESCE(latest_ca_cou.rev_date, latest_ca_cp.registration_date, latest_ca_cdc.Date) ELSE COALESCE(cou.rev_date, cp.registration_date, cdc.Date) END as certificate_issue_date,
+        CASE WHEN UPPER(latest_cert_svc.service_type) = 'RC' THEN COALESCE(latest_rc_cp.registration_date, latest_rc_cdc.Date) WHEN UPPER(latest_cert_svc.service_type) = 'CA' THEN COALESCE(latest_ca_cou.rev_date, latest_ca_cp.registration_date, latest_ca_cdc.Date) ELSE COALESCE(cou.rev_date, cp.registration_date, cdc.Date) END as issue_date,
         COALESCE(cou.rev_date, cp.registration_date, cdc.Date) as original_issue_date,
-        COALESCE(cou.expire_date, cp.valid_until, cdc.expiredate) as expiry_date,
-        COALESCE(cou.expire_date, cp.valid_until, cdc.expiredate) as expire_date,
+        CASE WHEN UPPER(latest_cert_svc.service_type) = 'RC' THEN COALESCE(latest_rc_cp.valid_until, latest_rc_cdc.expiredate) WHEN UPPER(latest_cert_svc.service_type) = 'CA' THEN COALESCE(latest_ca_cou.expire_date, latest_ca_cp.valid_until, latest_ca_cdc.expiredate) ELSE COALESCE(cou.expire_date, cp.valid_until, cdc.expiredate) END as expiry_date,
+        CASE WHEN UPPER(latest_cert_svc.service_type) = 'RC' THEN COALESCE(latest_rc_cp.valid_until, latest_rc_cdc.expiredate) WHEN UPPER(latest_cert_svc.service_type) = 'CA' THEN COALESCE(latest_ca_cou.expire_date, latest_ca_cp.valid_until, latest_ca_cdc.expiredate) ELSE COALESCE(cou.expire_date, cp.valid_until, cdc.expiredate) END as expire_date,
         cp.certificate_scope,
         COALESCE(NULLIF(aa.proposed_scope, ''), cp.certificate_scope, c.scope) as certification_scope,
         COALESCE(
@@ -61,6 +61,44 @@
         aa.n_location as site
     FROM customer_info c
     INNER JOIN service svc ON svc.customer_id = c.id
+    LEFT JOIN service latest_cert_svc ON latest_cert_svc.service_id = (
+        SELECT MAX(s_latest.service_id) FROM service s_latest
+        WHERE s_latest.customer_id = c.id AND UPPER(s_latest.service_type) IN ('CA', 'RC')
+    )
+    LEFT JOIN service_type_rc latest_rc ON latest_rc.rc_id = (
+        SELECT MAX(strc.rc_id) FROM service_type_rc strc
+        INNER JOIN service s_rc ON s_rc.service_id = strc.service
+        WHERE s_rc.customer_id = c.id AND UPPER(s_rc.service_type) = 'RC'
+    )
+    LEFT JOIN service_type_ca latest_ca ON latest_ca.ca_id = (
+        SELECT MAX(stca_latest.ca_id) FROM service_type_ca stca_latest
+        INNER JOIN service s_ca ON s_ca.service_id = stca_latest.service
+        WHERE s_ca.customer_id = c.id AND UPPER(s_ca.service_type) = 'CA'
+    )
+    LEFT JOIN certificate_print latest_ca_cp ON latest_ca_cp.service_id = latest_ca.ca_id
+        AND latest_ca_cp.certificate_id = (
+            SELECT MAX(cp_ca.certificate_id) FROM certificate_print cp_ca WHERE cp_ca.service_id = latest_ca.ca_id
+        )
+    LEFT JOIN cdc_report_review latest_ca_cdc ON latest_ca_cdc.ca_service_id = latest_ca.ca_id
+        AND latest_ca_cdc.customer_id = c.id
+        AND latest_ca_cdc.crr_id = (
+            SELECT MAX(cdc_ca.crr_id) FROM cdc_report_review cdc_ca
+            WHERE cdc_ca.ca_service_id = latest_ca.ca_id AND cdc_ca.customer_id = c.id
+        )
+    LEFT JOIN cdc_report_review_office_use latest_ca_cou ON latest_ca_cou.crr_id = latest_ca_cdc.crr_id
+        AND latest_ca_cou.id = (
+            SELECT MAX(cou_ca.id) FROM cdc_report_review_office_use cou_ca WHERE cou_ca.crr_id = latest_ca_cdc.crr_id
+        )
+    LEFT JOIN certificate_print latest_rc_cp ON latest_rc_cp.service_id = latest_rc.rc_id
+        AND latest_rc_cp.certificate_id = (
+            SELECT MAX(cp_rc.certificate_id) FROM certificate_print cp_rc WHERE cp_rc.service_id = latest_rc.rc_id
+        )
+    LEFT JOIN cdc_report_review latest_rc_cdc ON latest_rc_cdc.ca_service_id = latest_rc.rc_id
+        AND latest_rc_cdc.customer_id = c.id
+        AND latest_rc_cdc.crr_id = (
+            SELECT MAX(cdc_rc.crr_id) FROM cdc_report_review cdc_rc
+            WHERE cdc_rc.ca_service_id = latest_rc.rc_id AND cdc_rc.customer_id = c.id
+        )
     -- Per-service certificate_print (each service has its own cert)
     LEFT JOIN certificate_print cp ON cp.service_id = svc.service_id
         AND cp.certificate_id = (
