@@ -141,18 +141,75 @@
         error_log("IAF Dashboard fallback query failed: " . $e->getMessage());
     }
 
+    function iafDashboardHasRealValue($value)
+    {
+        $value = trim((string) $value);
+        return $value !== '' && $value !== '0000-00-00' && strtoupper($value) !== 'N/A';
+    }
+
+    function iafDashboardStandardKey($standardName)
+    {
+        $standardName = strtoupper(trim((string) $standardName));
+        if ($standardName === '') {
+            return 'NO_STANDARD';
+        }
+
+        if (preg_match('/(9001|14001|45001|18001|27001|22000|22301|13485|50001|20000|21001)/', $standardName, $matches)) {
+            return 'ISO_' . $matches[1];
+        }
+
+        return preg_replace('/[^A-Z0-9]+/', '_', $standardName);
+    }
+
+    function iafDashboardRowScore(array $client)
+    {
+        $status = strtolower(trim((string) ($client['certification_status'] ?? '')));
+        $score = 0;
+
+        if (iafDashboardHasRealValue($client['certificate_number'] ?? '')) {
+            $score += 1000;
+        }
+        if ($status === 'granted' || strpos($status, 'grant') !== false || strpos($status, 'active') !== false || strpos($status, 'valid') !== false) {
+            $score += 200;
+        }
+        if (iafDashboardHasRealValue($client['certificate_issue_date'] ?? '') || iafDashboardHasRealValue($client['issue_date'] ?? '')) {
+            $score += 80;
+        }
+        if (iafDashboardHasRealValue($client['expire_date'] ?? '') || iafDashboardHasRealValue($client['expiry_date'] ?? '')) {
+            $score += 80;
+        }
+        if (iafDashboardHasRealValue($client['cdc_office_use_id'] ?? '')) {
+            $score += 20;
+        }
+        if (iafDashboardHasRealValue($client['certificate_tracking_id'] ?? '')) {
+            $score += 10;
+        }
+
+        return $score;
+    }
+
     // =========================================================================
-    // Normalize all client data
+    // Normalize all client data and remove same-client/same-ISO duplicates.
+    // Multi-ISO clients still keep one row per ISO, but repeated services for the same ISO are merged.
     // =========================================================================
-    foreach ($clients as &$client) {
+    $dedupedClients = [];
+    foreach ($clients as $client) {
         $client = iafCertSearchNormalizeClientData($client);
         $client['certification_scope'] = iafCertSearchFirstValue($client, ['certification_scope', 'proposed_scope', 'certificate_scope', 'scope']);
         $client['scheme_name'] = iafCertSearchFirstValue($client, ['scheme_name', 'schema_name']);
         $client['accreditation_body'] = iafCertSearchNormalizeAccreditationBodyName(iafCertSearchFirstValue($client, ['accreditation_body', 'accreditation_body_name', 'accreditation_requirement', 'accereditation_requirement'], 'NABCB'));
         $client['certificate_issue_date'] = iafCertSearchFirstValue($client, ['certificate_issue_date', 'issue_date']);
+        $client['issue_date'] = iafCertSearchFirstValue($client, ['issue_date', 'certificate_issue_date']);
         $client['expire_date'] = iafCertSearchFirstValue($client, ['expire_date', 'expiry_date']);
+
+        $standardKey = iafDashboardStandardKey($client['standard_name'] ?? '');
+        $dedupeKey = ($client['internal_client_id'] ?? '') . '|' . $standardKey;
+
+        if (!isset($dedupedClients[$dedupeKey]) || iafDashboardRowScore($client) > iafDashboardRowScore($dedupedClients[$dedupeKey])) {
+            $dedupedClients[$dedupeKey] = $client;
+        }
     }
-    unset($client);
+    $clients = array_values($dedupedClients);
 
     ?>
 
