@@ -131,6 +131,39 @@ function iafCertSearchNormalizeClientData(array $data)
     return $data;
 }
 
+function iafCertSearchNormalizeCertifiedEntityUniqueId($uniqueId, array $data)
+{
+    // The IAF CertSearch "certified_entity_unique_id" (CEUID) identifies the
+    // ORGANISATION (our client), NOT the certificate. Per the IAF docs it must
+    // stay IDENTICAL across every certificate of a client so that all certs are
+    // grouped under one Certified Entity. If it changes between uploads the API
+    // rejects it with "CEUID already assigned to a different CE" (ce_ceuid_exists).
+    //
+    // We therefore send our own per-client unique id (customer_info.unique_id,
+    // e.g. "AITF/January-26/10") exactly as stored — no client suffix, no
+    // per-certificate token. Individual certificates are still distinguished by
+    // their own certificate_number.
+    //
+    // Recertification suffixes (" Rc-1", "-RC-2", etc.) are kept in our own
+    // system but stripped here, so a client's CEUID never changes between the
+    // original certification and its renewals.
+    $uniqueId = trim((string) $uniqueId);
+
+    // Some legacy clients have no unique_id stored. Fall back to a STABLE
+    // per-client id derived from the internal client id (GUID-000468) so the
+    // CEUID is never empty and never changes for that client.
+    if ($uniqueId === '') {
+        $clientId = preg_replace('/\D+/', '', iafCertSearchFirstValue($data, ['internal_client_id', 'client_id', 'customer_id']));
+        return $clientId === '' ? '' : 'GUID-' . str_pad($clientId, 6, '0', STR_PAD_LEFT);
+    }
+
+    // Strip the recertification suffix (" Rc-1", "-RC-2", etc.) so a client's
+    // CEUID stays identical across the original certification and its renewals.
+    $uniqueId = preg_replace('/[\s_-]*Rc-\d+\s*$/i', '', $uniqueId);
+
+    return trim((string) $uniqueId);
+}
+
 function iafCertSearchBuildPayload(array $data)
 {
     $data = iafCertSearchNormalizeClientData($data);
@@ -144,6 +177,10 @@ function iafCertSearchBuildPayload(array $data)
     $accreditationBody = iafCertSearchNormalizeAccreditationBodyName(iafCertSearchFirstValue($data, ['accreditation_body_name', 'accreditation_body', 'accreditation_requirement', 'accereditation_requirement', 'review_accredition'], 'NABCB'));
     $accreditationBodyAcronym = iafCertSearchNormalizeAccreditationBodyAcronym(iafCertSearchFirstValue($data, ['accreditation_body_acronym_name', 'accreditation_body_acronym', 'accreditation_body'], 'NABCB'));
     $status = iafCertSearchNormalizeStatus(iafCertSearchFirstValue($data, ['certification_status'], 'Active'));
+    $entityUniqueId = iafCertSearchNormalizeCertifiedEntityUniqueId(
+        iafCertSearchFirstValue($data, ['customer_guid', 'unique_id', 'aggrement_no', 'agreement_no', 'allotment_no', 'allotmentNo']),
+        $data
+    );
 
     return [
         'certificate_number' => iafCertSearchFirstValue($data, ['certificate_number', 'certificate_no']),
@@ -156,7 +193,7 @@ function iafCertSearchBuildPayload(array $data)
         'certification_issue_date' => iafCertSearchFormatDate(iafCertSearchFirstValue($data, ['certification_issue_date', 'issue_date', 'certificate_issue_date'])),
         'certification_expiry_date' => iafCertSearchFormatDate(iafCertSearchFirstValue($data, ['certification_expiry_date', 'expire_date', 'expiry_date'])),
         'certified_entity_name' => $entityName,
-        'certified_entity_unique_id' => iafCertSearchFirstValue($data, ['customer_guid', 'unique_id', 'aggrement_no', 'agreement_no', 'allotment_no', 'allotmentNo']),
+        'certified_entity_unique_id' => $entityUniqueId,
         'certified_entity_street_address' => $streetAddress,
         'certified_entity_country' => $companyCountry,
         'accreditation_body_name' => $accreditationBody,

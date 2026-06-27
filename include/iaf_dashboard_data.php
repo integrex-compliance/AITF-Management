@@ -95,8 +95,8 @@ function iafDashboardServiceRowsSql($whereSql = '')
 
     return "SELECT
         c.id as internal_client_id,
-        COALESCE((SELECT ca_ag.aggrement_no FROM certification_aggrement ca_ag WHERE ca_ag.customer_id = c.id AND ca_ag.aggrement_no IS NOT NULL AND ca_ag.aggrement_no <> '' ORDER BY ca_ag.id DESC LIMIT 1), NULLIF(c.unique_id, '')) as customer_guid,
-        COALESCE((SELECT ca_ag.aggrement_no FROM certification_aggrement ca_ag WHERE ca_ag.customer_id = c.id AND ca_ag.aggrement_no IS NOT NULL AND ca_ag.aggrement_no <> '' ORDER BY ca_ag.id DESC LIMIT 1), NULLIF(c.unique_id, '')) as unique_id,
+        NULLIF(TRIM(c.unique_id), '') as customer_guid,
+        NULLIF(TRIM(c.unique_id), '') as unique_id,
         c.customer_name,
         'India' as country,
         c.address,
