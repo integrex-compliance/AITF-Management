@@ -87,6 +87,11 @@ function iafDashboardServiceRowsSql($whereSql = '')
         WHEN UPPER(svc.service_type) = 'RC' THEN strc.rc_id
         ELSE svc.service_id
     END";
+    $certificatePrintExpiry = "CASE
+        WHEN UPPER(TRIM(cdc.audit_type)) = 'CA'
+            THEN DATE_SUB(DATE_ADD(COALESCE(ca_dates.certificate_issue_date, c.certification_stage_date, cdc.Date), INTERVAL 36 MONTH), INTERVAL 1 DAY)
+        ELSE NULL
+    END";
 
     return "SELECT
         c.id as internal_client_id,
@@ -112,8 +117,8 @@ function iafDashboardServiceRowsSql($whereSql = '')
         COALESCE(ca_dates.certificate_issue_date, c.certification_stage_date) as certificate_issue_date,
         COALESCE(cou.rev_date, cp.registration_date, cdc.Date) as issue_date,
         COALESCE(ca_dates.certificate_issue_date, c.certification_stage_date) as original_issue_date,
-        COALESCE(NULLIF(NULLIF(cp.valid_until, ''), '0000-00-00'), NULLIF(NULLIF(latest_customer_cp.valid_until, ''), '0000-00-00'), NULLIF(NULLIF(cou.expire_date, ''), '0000-00-00'), NULLIF(NULLIF(cdc.expiredate, ''), '0000-00-00')) as expiry_date,
-        COALESCE(NULLIF(NULLIF(cp.valid_until, ''), '0000-00-00'), NULLIF(NULLIF(latest_customer_cp.valid_until, ''), '0000-00-00'), NULLIF(NULLIF(cou.expire_date, ''), '0000-00-00'), NULLIF(NULLIF(cdc.expiredate, ''), '0000-00-00')) as expire_date,
+        COALESCE(NULLIF(NULLIF(cp.valid_until, ''), '0000-00-00'), $certificatePrintExpiry, NULLIF(NULLIF(latest_customer_cp.valid_until, ''), '0000-00-00'), NULLIF(NULLIF(cou.expire_date, ''), '0000-00-00'), NULLIF(NULLIF(cdc.expiredate, ''), '0000-00-00')) as expiry_date,
+        COALESCE(NULLIF(NULLIF(cp.valid_until, ''), '0000-00-00'), $certificatePrintExpiry, NULLIF(NULLIF(latest_customer_cp.valid_until, ''), '0000-00-00'), NULLIF(NULLIF(cou.expire_date, ''), '0000-00-00'), NULLIF(NULLIF(cdc.expiredate, ''), '0000-00-00')) as expire_date,
         cp.certificate_scope,
         COALESCE(NULLIF(aa.proposed_scope, ''), cp.certificate_scope, c.scope) as certification_scope,
         COALESCE(
@@ -251,6 +256,14 @@ function iafDashboardFormatDate($date)
 {
     if (!iafDashboardHasRealValue($date)) {
         return '-';
+    }
+
+    $date = trim((string) $date);
+    foreach (['Y-m-d', 'd.m.Y', 'd-m-Y', 'd/m/Y'] as $format) {
+        $dateTime = DateTime::createFromFormat('!' . $format, $date);
+        if ($dateTime instanceof DateTime && $dateTime->format($format) === $date) {
+            return $dateTime->format('d M Y');
+        }
     }
 
     $time = strtotime($date);
