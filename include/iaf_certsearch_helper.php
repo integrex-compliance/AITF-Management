@@ -94,9 +94,7 @@ function iafCertSearchNormalizeAccreditationBodyAcronym($name)
 function iafCertSearchNormalizeClientData(array $data)
 {
     if (!isset($data['customer_guid']) || trim((string) $data['customer_guid']) === '') {
-        $data['customer_guid'] = isset($data['internal_client_id'])
-            ? 'GUID-' . str_pad((string) $data['internal_client_id'], 6, '0', STR_PAD_LEFT)
-            : '';
+        $data['customer_guid'] = iafCertSearchFirstValue($data, ['unique_id', 'aggrement_no', 'agreement_no', 'allotment_no', 'allotmentNo']);
     }
 
     if (!isset($data['country']) || trim((string) $data['country']) === '') {
@@ -158,7 +156,7 @@ function iafCertSearchBuildPayload(array $data)
         'certification_issue_date' => iafCertSearchFormatDate(iafCertSearchFirstValue($data, ['certification_issue_date', 'issue_date', 'certificate_issue_date'])),
         'certification_expiry_date' => iafCertSearchFormatDate(iafCertSearchFirstValue($data, ['certification_expiry_date', 'expire_date', 'expiry_date'])),
         'certified_entity_name' => $entityName,
-        'certified_entity_unique_id' => iafCertSearchFirstValue($data, ['customer_guid']),
+        'certified_entity_unique_id' => iafCertSearchFirstValue($data, ['customer_guid', 'unique_id', 'aggrement_no', 'agreement_no', 'allotment_no', 'allotmentNo']),
         'certified_entity_street_address' => $streetAddress,
         'certified_entity_country' => $companyCountry,
         'accreditation_body_name' => $accreditationBody,
