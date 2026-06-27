@@ -5,7 +5,9 @@
     if (!isset($db)) {
         include_once './dbConnect.php';
     }
-    require_once __DIR__ . '/include/iaf_certsearch_helper.php';
+    require_once __DIR__ . '/include/iaf_dashboard_data.php';
+    $clients = [];
+    if (false) {
 
     // =========================================================================
     // SERVICE-LEVEL QUERY: One row per service per customer
@@ -249,6 +251,7 @@
         }
     }
     $clients = array_values($dedupedClients);
+    }
 
     ?>
 
@@ -812,13 +815,96 @@
                         paging: false,
                         info: true,
                         ordering: true,
-                        searching: true,
+                        searching: false,
                         dom: 'rt<"row"<"col-sm-12"i>>',
                         order: [[1, 'asc']]
                     });
+                    var iafOffset = 0;
+                    var iafLimit = 12;
+                    var iafHasMore = true;
+                    var iafLoading = false;
+                    var iafSearchTimer = null;
+                    var iafLoadedKeys = {};
+
+                    function applyInsertedButtonState(context) {
+                        $(context).find('.btn-insert').addBack('.btn-insert').each(function () {
+                            const btnId = $(this).attr('id');
+                            if (btnId && localStorage.getItem(btnId) === 'inserted') {
+                                $(this).prop('disabled', true);
+                                $(this).html('<i class="fa fa-check"></i> Inserted');
+                                $(this).css({ 'background-color': '#f1f5f9', 'color': '#94a3b8', 'border-color': '#e2e8f0' });
+                            }
+                        });
+                    }
+
+                    function loadIafRows(reset) {
+                        if (iafLoading || (!iafHasMore && !reset)) {
+                            return;
+                        }
+
+                        if (reset) {
+                            iafOffset = 0;
+                            iafHasMore = true;
+                            iafLoadedKeys = {};
+                            table.clear().draw();
+                        }
+
+                        iafLoading = true;
+                        $.ajax({
+                            url: 'iaf_dashboard_data.php',
+                            type: 'GET',
+                            dataType: 'json',
+                            data: {
+                                offset: iafOffset,
+                                limit: iafLimit,
+                                search: $('#clientNameFilter').val()
+                            },
+                            success: function (response) {
+                                if (response.status !== 'success') {
+                                    console.error(response.message || 'IAF dashboard load failed.');
+                                    return;
+                                }
+
+                                var nodes = $($.parseHTML(response.rows_html || '', document, true)).filter('tr');
+                                var freshNodes = [];
+                                nodes.each(function () {
+                                    var key = $(this).data('row-key');
+                                    if (!key || !iafLoadedKeys[key]) {
+                                        if (key) iafLoadedKeys[key] = true;
+                                        freshNodes.push(this);
+                                    }
+                                });
+
+                                if (freshNodes.length) {
+                                    table.rows.add($(freshNodes)).draw(false);
+                                    applyInsertedButtonState($(freshNodes));
+                                    table.columns.adjust();
+                                }
+
+                                iafOffset = parseInt(response.next_offset, 10) || iafOffset;
+                                iafHasMore = !!response.has_more;
+                            },
+                            complete: function () {
+                                iafLoading = false;
+                            },
+                            error: function () {
+                                console.error('IAF dashboard data request failed.');
+                            }
+                        });
+                    }
 
                     $('#clientNameFilter').on('keyup input', function () {
-                        table.column(1).search(this.value).draw();
+                        clearTimeout(iafSearchTimer);
+                        iafSearchTimer = setTimeout(function () {
+                            loadIafRows(true);
+                        }, 300);
+                    });
+
+                    $('.table-responsive').on('scroll', function () {
+                        var el = this;
+                        if (el.scrollTop + el.clientHeight >= el.scrollHeight - 120) {
+                            loadIafRows(false);
+                        }
                     });
 
                     // Toggle Menu
@@ -831,15 +917,7 @@
                         }, 300);
                     });
 
-                    // Check localStorage to disable already inserted buttons on page load
-                    $('.btn-insert').each(function () {
-                        const btnId = $(this).attr('id');
-                        if (btnId && localStorage.getItem(btnId) === 'inserted') {
-                            $(this).prop('disabled', true);
-                            $(this).html('<i class="fa fa-check"></i> Inserted');
-                            $(this).css({ 'background-color': '#f1f5f9', 'color': '#94a3b8', 'border-color': '#e2e8f0' });
-                        }
-                    });
+                    loadIafRows(true);
                 });
                 function handleAction(actionType, clientData, btnElement) {
                     const btn = $(btnElement);

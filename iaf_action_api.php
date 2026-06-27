@@ -4,7 +4,7 @@
 <?php
 header('Content-Type: application/json');
 
-require_once __DIR__ . '/include/iaf_certsearch_helper.php';
+require_once __DIR__ . '/include/iaf_dashboard_data.php';
 
 // Mock API for testing Insert, Update, and Delete on IAF Dashboard
 
@@ -113,9 +113,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Get the service_id from client data (service-level query)
         $svcId = $clientData['svc_id'] ?? '';
         $officeUseId = isset($clientData['cdc_office_use_id']) ? (int) $clientData['cdc_office_use_id'] : 0;
+        $freshClient = iafDashboardFetchClientRow($db, $clientId, $svcId, $officeUseId);
 
         // Fetch the fresh data from DB using service-level query (matching dashboard)
-        if (!empty($svcId)) {
+        if (!$freshClient && !empty($svcId)) {
             // Service-level: fetch per-service data
             $query = "SELECT
                 c.id as internal_client_id,
@@ -137,8 +138,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 COALESCE(cou.rev_date, cp.registration_date, cdc.Date) as certificate_issue_date,
                 COALESCE(cou.rev_date, cp.registration_date, cdc.Date) as issue_date,
                 COALESCE(cou.rev_date, cp.registration_date, cdc.Date) as original_issue_date,
-                COALESCE(cou.expire_date, cp.valid_until, cdc.expiredate) as expiry_date,
-                COALESCE(cou.expire_date, cp.valid_until, cdc.expiredate) as expire_date,
+                COALESCE(NULLIF(NULLIF(cp.valid_until, ''), '0000-00-00'), NULLIF(NULLIF(cou.expire_date, ''), '0000-00-00'), NULLIF(NULLIF(cdc.expiredate, ''), '0000-00-00')) as expiry_date,
+                COALESCE(NULLIF(NULLIF(cp.valid_until, ''), '0000-00-00'), NULLIF(NULLIF(cou.expire_date, ''), '0000-00-00'), NULLIF(NULLIF(cdc.expiredate, ''), '0000-00-00')) as expire_date,
                 cp.certificate_scope,
                 COALESCE(NULLIF(aa.proposed_scope, ''), cp.certificate_scope, c.scope) as certification_scope,
                 COALESCE(
