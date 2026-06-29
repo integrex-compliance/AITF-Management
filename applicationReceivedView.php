@@ -102,6 +102,26 @@ if ($application && !empty($application['created_at'])) {
         $createdAtDisplay = $application['created_at'];
     }
 }
+
+$supportAttachments = [];
+if ($application) {
+    $supportAttachmentDefs = [
+        ['label' => 'Process flow diagram', 'path_key' => 'process_flow_attachment_path', 'name_key' => 'process_flow_attachment_name'],
+        ['label' => 'Organisation brochure', 'path_key' => 'organisation_brochure_attachment_path', 'name_key' => 'organisation_brochure_attachment_name'],
+        ['label' => 'Customer specific requirements', 'path_key' => 'customer_requirements_attachment_path', 'name_key' => 'customer_requirements_attachment_name'],
+    ];
+    foreach ($supportAttachmentDefs as $attachmentDef) {
+        $path = trim((string)($application[$attachmentDef['path_key']] ?? ''));
+        if ($path === '') {
+            continue;
+        }
+        $supportAttachments[] = [
+            'label' => $attachmentDef['label'],
+            'path' => $path,
+            'name' => trim((string)($application[$attachmentDef['name_key']] ?? '')) ?: basename($path),
+        ];
+    }
+}
 ?>
     <div id="page-content-wrapper">
         <div class="page-content inset">
@@ -631,11 +651,28 @@ if ($application && !empty($application['created_at'])) {
                                         <th>Consultancy services taken</th>
                                         <td class="app-field" data-copy="<?php echo htmlspecialchars($application['consultancy_services_taken'], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($application['consultancy_services_taken'], ENT_QUOTES, 'UTF-8'); ?><button type="button" class="copy-btn" title="Copy"><i class="fa fa-clone"></i></button></td>
                                     </tr>
-                                    <tr>
-                                        <th>Consultancy details</th>
-                                        <td class="app-field" data-copy="<?php echo htmlspecialchars($application['consultancy_details'], ENT_QUOTES, 'UTF-8'); ?>"><?php echo nl2br(htmlspecialchars($application['consultancy_details'], ENT_QUOTES, 'UTF-8')); ?><button type="button" class="copy-btn" title="Copy"><i class="fa fa-clone"></i></button></td>
-                                    </tr>
-                                </tbody>
+                                        <tr>
+                                            <th>Consultancy details</th>
+                                            <td class="app-field" data-copy="<?php echo htmlspecialchars($application['consultancy_details'], ENT_QUOTES, 'UTF-8'); ?>"><?php echo nl2br(htmlspecialchars($application['consultancy_details'], ENT_QUOTES, 'UTF-8')); ?><button type="button" class="copy-btn" title="Copy"><i class="fa fa-clone"></i></button></td>
+                                        </tr>
+                                        <tr>
+                                            <th>Supporting attachment(s)</th>
+                                            <td>
+                                                <?php if (!empty($supportAttachments)) { ?>
+                                                    <div style="display:flex; flex-direction:column; gap:6px;">
+                                                        <?php foreach ($supportAttachments as $supportAttachment) { ?>
+                                                            <a href="<?php echo htmlspecialchars($supportAttachment['path'], ENT_QUOTES, 'UTF-8'); ?>" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; gap:7px; color:#2563eb; font-weight:600; text-decoration:none;">
+                                                                <i class="fa fa-paperclip"></i>
+                                                                <span><?php echo htmlspecialchars($supportAttachment['label'] . ': ' . $supportAttachment['name'], ENT_QUOTES, 'UTF-8'); ?></span>
+                                                            </a>
+                                                        <?php } ?>
+                                                    </div>
+                                                <?php } else { ?>
+                                                    <span style="color:#9ca3af; font-size:11px;">No supporting attachment uploaded.</span>
+                                                <?php } ?>
+                                            </td>
+                                        </tr>
+                                    </tbody>
                             </table>
 
                                 <h4 class="app-section-title">Declaration and Signature</h4>

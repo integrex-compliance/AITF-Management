@@ -516,7 +516,7 @@
                     <h3 class="section-title">7. Restoring following suspention</h3>
                     <p>If the required measures for a suspended certification has been implemented and demonstrated effectively by the established deadline, the AITF shall lift the suspension of the certificate and the certification shall be considered restored.</p>
 
-                    <h3 class="section-title">8. Withdrawing of certification</h3>
+                    <h3 class="section-title">8. Withdrawing of certificationinde</h3>
                     <p>AITF is entitled to terminate or withdraw the certification after giving written notice of intent if:</p>
                     <ul>
                         <li>If periodical audits reveal nonconformities of serious nature.</li>

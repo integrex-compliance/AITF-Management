@@ -85,6 +85,44 @@ if (!empty($application['created_at'])) {
     }
 }
 
+$supportAttachments = [
+    [
+        'label' => 'Process Flow',
+        'path_key' => 'process_flow_attachment_path',
+        'name_key' => 'process_flow_attachment_name',
+    ],
+    [
+        'label' => 'Organisation Brochure',
+        'path_key' => 'organisation_brochure_attachment_path',
+        'name_key' => 'organisation_brochure_attachment_name',
+    ],
+    [
+        'label' => 'Customer Specific Requirements',
+        'path_key' => 'customer_requirements_attachment_path',
+        'name_key' => 'customer_requirements_attachment_name',
+    ],
+];
+
+$supportAttachments = array_values(array_filter(array_map(function ($attachment) use ($application) {
+    $relativePath = trim((string)($application[$attachment['path_key']] ?? ''));
+    if ($relativePath === '') {
+        return null;
+    }
+    $fullPath = str_replace('\\', '/', __DIR__ . '/' . $relativePath);
+    if (!@file_exists($fullPath)) {
+        return null;
+    }
+    $extension = strtolower(pathinfo($fullPath, PATHINFO_EXTENSION));
+    $type = in_array($extension, ['png', 'jpg', 'jpeg'], true) ? 'image' : ($extension === 'pdf' ? 'pdf' : 'other');
+    return [
+        'label' => $attachment['label'],
+        'name' => trim((string)($application[$attachment['name_key']] ?? '')) ?: basename($fullPath),
+        'path' => $fullPath,
+        'extension' => $extension,
+        'type' => $type,
+    ];
+}, $supportAttachments)));
+
 $styleBlock = '<style>
     body { font-family: times; font-size: 11px; }
     .table { width: 100%; border-collapse: collapse; }
@@ -401,6 +439,31 @@ $html .= '<table class="emp-table" style="font-size:10px;" nobr="true">'
     . '</table>';
 
 // Section 6
+// Adaptive sizing: when the client fills long text in these free-text fields,
+// keep the whole section on the same page (avoid spilling 1-2 lines onto the
+// next page and leaving it almost blank). The more text, the smaller the font
+// and the tighter the row heights.
+$s6Fields = [
+    (string)($application['major_customers'] ?? ''),
+    (string)($application['main_products'] ?? ''),
+    (string)($application['raw_materials'] ?? ''),
+    (string)($application['operations'] ?? ''),
+    (string)($application['external_processes'] ?? ''),
+    (string)($application['design_responsibility'] ?? ''),
+];
+$s6Len = 0;
+foreach ($s6Fields as $s6f) {
+    $s6Len += function_exists('mb_strlen') ? mb_strlen($s6f) : strlen($s6f);
+}
+if ($s6Len > 1200) {
+    $s6Font = 7.5; $s6RowH = 16; $s6Pad = '3px 6px';
+} elseif ($s6Len > 700) {
+    $s6Font = 8.5; $s6RowH = 20; $s6Pad = '4px 7px';
+} elseif ($s6Len > 350) {
+    $s6Font = 9.5; $s6RowH = 26; $s6Pad = '5px 8px';
+} else {
+    $s6Font = 11; $s6RowH = 34; $s6Pad = '6px 8px';
+}
 $html .= '<div style="height:14px;"></div>';
 $html .= '<div class="section-title" style="margin-top:12px;">6. Describe your organization.</div>';
 $orgTypeRaw = strtolower(trim((string)$application['org_type']));
@@ -408,14 +471,15 @@ $manuChecked = strpos($orgTypeRaw, 'manufact') !== false;
 $serviceChecked = strpos($orgTypeRaw, 'service') !== false;
 $manuBox = ($manuChecked ? '&#9745;' : '&#9744;') . ' Manufacturer';
 $serviceBox = ($serviceChecked ? '&#9745;' : '&#9744;') . ' Service provider';
-$html .= '<table class="table section6" style="font-size:11px;">'
-    . '<tr><td width="35%" style="height:24px;"><strong>Describe your organization is:</strong></td><td width="65%" style="height:24px;">' . $manuBox . '&nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp;' . $serviceBox . '</td></tr>'
-    . '<tr><td style="height:34px;"><strong>Major customers:</strong></td><td style="height:34px;">' . nl2br($e('major_customers')) . '</td></tr>'
-    . '<tr><td style="height:34px;"><strong>Main products:</strong></td><td style="height:34px;">' . nl2br($e('main_products')) . '</td></tr>'
-    . '<tr><td style="height:34px;"><strong>Main raw materials used or processed:</strong></td><td style="height:34px;">' . nl2br($e('raw_materials')) . '</td></tr>'
-    . '<tr><td style="height:34px;"><strong>Operations involved in the service / manufacturing of your product:</strong></td><td style="height:34px;">' . nl2br($e('operations')) . '</td></tr>'
-    . '<tr><td style="height:34px;"><strong>Processes which are provided by external sources related to the product / service:</strong></td><td style="height:34px;">' . nl2br($e('external_processes')) . '</td></tr>'
-    . '<tr><td style="height:34px;"><strong>Design responsibility:</strong></td><td style="height:34px;">' . $e('design_responsibility') . '</td></tr>'
+$s6Cell = 'padding:' . $s6Pad . '; border:0.5px solid #000;';
+$html .= '<table class="section6" style="width:100%; border-collapse:collapse; font-size:' . $s6Font . 'px;">'
+    . '<tr><td width="35%" style="height:24px; ' . $s6Cell . '"><strong>Describe your organization is:</strong></td><td width="65%" style="height:24px; ' . $s6Cell . '">' . $manuBox . '&nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp;' . $serviceBox . '</td></tr>'
+    . '<tr><td style="height:' . $s6RowH . 'px; ' . $s6Cell . '"><strong>Major customers:</strong></td><td style="height:' . $s6RowH . 'px; ' . $s6Cell . '">' . nl2br($e('major_customers')) . '</td></tr>'
+    . '<tr><td style="height:' . $s6RowH . 'px; ' . $s6Cell . '"><strong>Main products:</strong></td><td style="height:' . $s6RowH . 'px; ' . $s6Cell . '">' . nl2br($e('main_products')) . '</td></tr>'
+    . '<tr><td style="height:' . $s6RowH . 'px; ' . $s6Cell . '"><strong>Main raw materials used or processed:</strong></td><td style="height:' . $s6RowH . 'px; ' . $s6Cell . '">' . nl2br($e('raw_materials')) . '</td></tr>'
+    . '<tr><td style="height:' . $s6RowH . 'px; ' . $s6Cell . '"><strong>Operations involved in the service / manufacturing of your product:</strong></td><td style="height:' . $s6RowH . 'px; ' . $s6Cell . '">' . nl2br($e('operations')) . '</td></tr>'
+    . '<tr><td style="height:' . $s6RowH . 'px; ' . $s6Cell . '"><strong>Processes which are provided by external sources related to the product / service:</strong></td><td style="height:' . $s6RowH . 'px; ' . $s6Cell . '">' . nl2br($e('external_processes')) . '</td></tr>'
+    . '<tr><td style="height:' . $s6RowH . 'px; ' . $s6Cell . '"><strong>Design responsibility:</strong></td><td style="height:' . $s6RowH . 'px; ' . $s6Cell . '">' . $e('design_responsibility') . '</td></tr>'
     . '</table>';
 
 // Render everything up to Section 6, then start a fresh page for Section 7
@@ -581,7 +645,70 @@ $html .= '<table border="1" cellpadding="3" cellspacing="0" class="form-table">'
 
 $pdf->writeHTML($html, true, false, true, false, '');
 
-$filename = 'Application_Form_' . $application['id'] . '.pdf';
+if (!empty($supportAttachments)) {
+    foreach ($supportAttachments as $attachment) {
+        $pdf->AddPage();
+        $pdf->SetY(34);
+        $safeLabel = htmlspecialchars($attachment['label'], ENT_QUOTES, 'UTF-8');
+        $safeName = htmlspecialchars($attachment['name'], ENT_QUOTES, 'UTF-8');
+        $headingHtml = '<div style="font-family:dejavusans; font-size:14px; font-weight:bold; margin-bottom:6px;">' . $safeLabel . ' Attached</div>'
+            . '<div style="font-family:dejavusans; font-size:10px; color:#333; margin-bottom:10px;">Original file: ' . $safeName . '</div>';
+
+        if ($attachment['type'] === 'image') {
+            $pdf->writeHTML($headingHtml, true, false, true, false, '');
+            $imageInfo = @getimagesize($attachment['path']);
+            if ($imageInfo && !empty($imageInfo[0]) && !empty($imageInfo[1])) {
+                $margins = $pdf->getMargins();
+                $x = $margins['left'];
+                $y = $pdf->GetY() + 2;
+                $maxWidth = $pdf->getPageWidth() - $margins['left'] - $margins['right'];
+                $maxHeight = $pdf->getPageHeight() - $y - $pdf->getBreakMargin() - 4;
+                $imgWidth = (float)$imageInfo[0];
+                $imgHeight = (float)$imageInfo[1];
+                $scale = min($maxWidth / $imgWidth, $maxHeight / $imgHeight);
+                $drawWidth = $imgWidth * $scale;
+                $drawHeight = $imgHeight * $scale;
+                $drawX = $x + (($maxWidth - $drawWidth) / 2);
+                $imageType = in_array($attachment['extension'], ['jpg', 'jpeg'], true) ? 'JPEG' : 'PNG';
+                $pdf->Image($attachment['path'], $drawX, $y, $drawWidth, $drawHeight, $imageType, '', '', false, 300, '', false, false, 1, false, false, true);
+            } else {
+                $pdf->writeHTML('<div style="font-size:10px;">The attached image could not be previewed in the generated PDF.</div>', true, false, true, false, '');
+            }
+        } elseif ($attachment['type'] === 'pdf') {
+            $pdf->writeHTML($headingHtml
+                . '<div style="font-family:dejavusans; font-size:10px; line-height:1.6;">The applicant uploaded this supporting PDF separately. Open the embedded file attachment or check the email attachment to view the original document.</div>',
+                true,
+                false,
+                true,
+                false,
+                ''
+            );
+            $pdf->Annotation(18, 58, 8, 8, $attachment['name'], [
+                'Subtype' => 'FileAttachment',
+                'Name' => 'PushPin',
+                'FS' => $attachment['path'],
+                'Contents' => $attachment['label'] . ': ' . $attachment['name']
+            ]);
+        } else {
+            $pdf->writeHTML($headingHtml
+                . '<div style="font-family:dejavusans; font-size:10px;">This supporting file is attached separately.</div>',
+                true,
+                false,
+                true,
+                false,
+                ''
+            );
+        }
+    }
+}
+
+// Name the file after the client (organization) instead of the numeric id.
+$clientNameForFile = preg_replace('/[^A-Za-z0-9]+/', '_', (string)($application['org_name'] ?? ''));
+$clientNameForFile = trim($clientNameForFile, '_');
+if ($clientNameForFile === '') {
+    $clientNameForFile = (string)$application['id'];
+}
+$filename = 'Application_form_' . $clientNameForFile . '.pdf';
 
 // Clear any previous output to avoid TCPDF header errors
 if (ob_get_length()) {

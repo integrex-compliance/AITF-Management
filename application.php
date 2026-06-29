@@ -87,6 +87,12 @@ if (isset($db)) {
             sign_designation VARCHAR(255) NULL,
             sign_date VARCHAR(50) NULL,
             sign_image_path VARCHAR(255) NULL,
+            process_flow_attachment_path VARCHAR(255) NULL,
+            process_flow_attachment_name VARCHAR(255) NULL,
+            organisation_brochure_attachment_path VARCHAR(255) NULL,
+            organisation_brochure_attachment_name VARCHAR(255) NULL,
+            customer_requirements_attachment_path VARCHAR(255) NULL,
+            customer_requirements_attachment_name VARCHAR(255) NULL,
             declaration_confirmed TINYINT(1) DEFAULT 0,
             read_flag TINYINT(1) DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -100,6 +106,12 @@ if (isset($db)) {
             "ALTER TABLE online_audit_applications ADD COLUMN sign_designation VARCHAR(255) NULL",
             "ALTER TABLE online_audit_applications ADD COLUMN sign_date VARCHAR(50) NULL",
             "ALTER TABLE online_audit_applications ADD COLUMN sign_image_path VARCHAR(255) NULL",
+            "ALTER TABLE online_audit_applications ADD COLUMN process_flow_attachment_path VARCHAR(255) NULL",
+            "ALTER TABLE online_audit_applications ADD COLUMN process_flow_attachment_name VARCHAR(255) NULL",
+            "ALTER TABLE online_audit_applications ADD COLUMN organisation_brochure_attachment_path VARCHAR(255) NULL",
+            "ALTER TABLE online_audit_applications ADD COLUMN organisation_brochure_attachment_name VARCHAR(255) NULL",
+            "ALTER TABLE online_audit_applications ADD COLUMN customer_requirements_attachment_path VARCHAR(255) NULL",
+            "ALTER TABLE online_audit_applications ADD COLUMN customer_requirements_attachment_name VARCHAR(255) NULL",
             "ALTER TABLE online_audit_applications ADD COLUMN declaration_confirmed TINYINT(1) DEFAULT 0",
             "ALTER TABLE online_audit_applications ADD COLUMN read_flag TINYINT(1) DEFAULT 0",
             "ALTER TABLE online_audit_applications MODIFY created_at DATETIME NULL"
@@ -118,6 +130,89 @@ if (isset($db)) {
             function getOnlineAuditPostValue($key)
             {
                 return isset($_POST[$key]) ? trim($_POST[$key]) : '';
+            }
+        }
+
+        if (!function_exists('saveOnlineAuditUploadedFile')) {
+            function saveOnlineAuditUploadedFile($fieldName, $label, $relativeDir, array $allowedExt, array $allowedMime, &$error_message)
+            {
+                if (!isset($_FILES[$fieldName]) || !is_array($_FILES[$fieldName])) {
+                    return ['path' => '', 'name' => '', 'mime' => '', 'extension' => ''];
+                }
+
+                $uploadError = isset($_FILES[$fieldName]['error']) ? (int)$_FILES[$fieldName]['error'] : UPLOAD_ERR_NO_FILE;
+                if ($uploadError === UPLOAD_ERR_NO_FILE) {
+                    return ['path' => '', 'name' => '', 'mime' => '', 'extension' => ''];
+                }
+                if ($uploadError !== UPLOAD_ERR_OK) {
+                    $error_message = 'Unable to upload ' . $label . '. Please try again.';
+                    return false;
+                }
+
+                $tmpName = $_FILES[$fieldName]['tmp_name'] ?? '';
+                if ($tmpName === '' || !is_uploaded_file($tmpName)) {
+                    $error_message = 'Unable to upload ' . $label . '. Please try again.';
+                    return false;
+                }
+
+                $maxBytes = 5 * 1024 * 1024;
+                $fileSize = isset($_FILES[$fieldName]['size']) ? (int)$_FILES[$fieldName]['size'] : 0;
+                if ($fileSize <= 0 || $fileSize > $maxBytes) {
+                    $error_message = $label . ' must be 5 MB or smaller.';
+                    return false;
+                }
+
+                $originalName = basename((string)($_FILES[$fieldName]['name'] ?? ''));
+                $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+                if (!in_array($extension, $allowedExt, true)) {
+                    $error_message = $label . ' must be a PDF, PNG, JPG or JPEG file.';
+                    return false;
+                }
+
+                $mime = '';
+                if (function_exists('finfo_open')) {
+                    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                    if ($finfo) {
+                        $mime = (string)finfo_file($finfo, $tmpName);
+                        finfo_close($finfo);
+                    }
+                }
+                if ($mime === '' && !empty($_FILES[$fieldName]['type'])) {
+                    $mime = (string)$_FILES[$fieldName]['type'];
+                }
+                if ($mime !== '' && !in_array($mime, $allowedMime, true)) {
+                    $error_message = $label . ' must be a valid PDF, PNG, JPG or JPEG file.';
+                    return false;
+                }
+
+                $uploadDir = __DIR__ . '/' . trim($relativeDir, '/');
+                if (!is_dir($uploadDir)) {
+                    @mkdir($uploadDir, 0755, true);
+                }
+                if (!is_dir($uploadDir) || !is_writable($uploadDir)) {
+                    $error_message = 'Upload folder is not writable for ' . $label . '.';
+                    return false;
+                }
+
+                $safeOriginal = preg_replace('/[^A-Za-z0-9._ -]+/', '_', $originalName);
+                $safeOriginal = trim((string)$safeOriginal);
+                if ($safeOriginal === '') {
+                    $safeOriginal = $label . '.' . $extension;
+                }
+                $basename = $fieldName . '_' . time() . '_' . mt_rand(1000, 9999) . '.' . $extension;
+                $targetPath = $uploadDir . '/' . $basename;
+
+                if (!@move_uploaded_file($tmpName, $targetPath)) {
+                    $error_message = 'Unable to save ' . $label . '. Please try again.';
+                    return false;
+                }
+
+                return [
+                    'path' => trim($relativeDir, '/') . '/' . $basename,
+                    'name' => $safeOriginal,
+                    'mime' => $mime,
+                    'extension' => $extension
+                ];
             }
         }
 
@@ -210,6 +305,13 @@ if (isset($db)) {
             $sign_designation = getOnlineAuditPostValue('sign_designation');
             $sign_date = getOnlineAuditPostValue('sign_date');
             $declaration_confirmed = isset($_POST['declaration_confirmed']) ? 1 : 0;
+            $process_flow_attachment_path = '';
+            $process_flow_attachment_name = '';
+            $organisation_brochure_attachment_path = '';
+            $organisation_brochure_attachment_name = '';
+            $customer_requirements_attachment_path = '';
+            $customer_requirements_attachment_name = '';
+            $uploadedSupportAttachments = [];
 
             // Multisite (Section 4) validation
             if ($multisite === 'Yes' && ($multisite_functions === '' || $multisite_sites === '')) {
@@ -223,8 +325,17 @@ if (isset($db)) {
                     $originalName = $_FILES['sign_image']['name'];
                     $ext = pathinfo($originalName, PATHINFO_EXTENSION);
                     $ext = $ext ? strtolower($ext) : 'png';
-                    $allowedExt = ['jpg', 'jpeg', 'png', 'gif'];
-                    if (in_array($ext, $allowedExt, true)) {
+                    $allowedExt = ['jpg', 'jpeg', 'png'];
+                    $allowedMime = ['image/jpeg', 'image/png'];
+                    $mime = '';
+                    if (function_exists('finfo_open')) {
+                        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                        if ($finfo) {
+                            $mime = (string)finfo_file($finfo, $tmpName);
+                            finfo_close($finfo);
+                        }
+                    }
+                    if (in_array($ext, $allowedExt, true) && ($mime === '' || in_array($mime, $allowedMime, true))) {
                         $uploadDir = __DIR__ . '/uploads/signatures';
                         if (!is_dir($uploadDir)) {
                             @mkdir($uploadDir, 0755, true);
@@ -236,10 +347,65 @@ if (isset($db)) {
                                 $sign_image_path = 'uploads/signatures/' . $basename;
                             }
                         }
+                    } else {
+                        $error_message = 'Signature must be a valid JPG or PNG image.';
+                    }
+                }
+
+                if ($error_message === '') {
+                    $supportAllowedExt = ['pdf', 'png', 'jpg', 'jpeg'];
+                    $supportAllowedMime = ['application/pdf', 'image/png', 'image/jpeg'];
+                    $supportUploadDir = 'uploads/audit_application_attachments';
+                    $processFlowUpload = saveOnlineAuditUploadedFile('process_flow_attachment', 'Process flow attachment', $supportUploadDir, $supportAllowedExt, $supportAllowedMime, $error_message);
+                    if ($processFlowUpload !== false) {
+                        $process_flow_attachment_path = $processFlowUpload['path'];
+                        $process_flow_attachment_name = $processFlowUpload['name'];
+                        if ($process_flow_attachment_path !== '') {
+                            $uploadedSupportAttachments[] = ['label' => 'Process Flow', 'path' => $process_flow_attachment_path, 'name' => $process_flow_attachment_name, 'mime' => $processFlowUpload['mime'], 'extension' => $processFlowUpload['extension']];
+                        }
+                    }
+                    if ($error_message === '') {
+                        $brochureUpload = saveOnlineAuditUploadedFile('organisation_brochure_attachment', 'Organisation brochure attachment', $supportUploadDir, $supportAllowedExt, $supportAllowedMime, $error_message);
+                        if ($brochureUpload !== false) {
+                            $organisation_brochure_attachment_path = $brochureUpload['path'];
+                            $organisation_brochure_attachment_name = $brochureUpload['name'];
+                            if ($organisation_brochure_attachment_path !== '') {
+                                $uploadedSupportAttachments[] = ['label' => 'Organisation Brochure', 'path' => $organisation_brochure_attachment_path, 'name' => $organisation_brochure_attachment_name, 'mime' => $brochureUpload['mime'], 'extension' => $brochureUpload['extension']];
+                            }
+                        }
+                    }
+                    if ($error_message === '') {
+                        $requirementsUpload = saveOnlineAuditUploadedFile('customer_requirements_attachment', 'Customer requirements attachment', $supportUploadDir, $supportAllowedExt, $supportAllowedMime, $error_message);
+                        if ($requirementsUpload !== false) {
+                            $customer_requirements_attachment_path = $requirementsUpload['path'];
+                            $customer_requirements_attachment_name = $requirementsUpload['name'];
+                            if ($customer_requirements_attachment_path !== '') {
+                                $uploadedSupportAttachments[] = ['label' => 'Customer Specific Requirements', 'path' => $customer_requirements_attachment_path, 'name' => $customer_requirements_attachment_name, 'mime' => $requirementsUpload['mime'], 'extension' => $requirementsUpload['extension']];
+                            }
+                        }
                     }
                 }
             }
 
+            if ($error_message !== '') {
+                $createdUploads = [
+                    $sign_image_path ?? '',
+                    $process_flow_attachment_path,
+                    $organisation_brochure_attachment_path,
+                    $customer_requirements_attachment_path
+                ];
+                foreach ($createdUploads as $createdUpload) {
+                    if ($createdUpload === '') {
+                        continue;
+                    }
+                    $createdUploadPath = __DIR__ . '/' . str_replace('\\', '/', $createdUpload);
+                    if (@file_exists($createdUploadPath)) {
+                        @unlink($createdUploadPath);
+                    }
+                }
+            }
+
+            if ($error_message === '') {
             try {
                 $created_at = (new DateTimeImmutable('now', $indiaTz))->format('Y-m-d H:i:s');
                 $insertSql = "INSERT INTO online_audit_applications (
@@ -254,7 +420,11 @@ if (isset($db)) {
                     org_type, major_customers, main_products, raw_materials, operations,
                     external_processes, design_responsibility, other_certificates,
                     system_implementation_date, proposed_audit_month,
-                    sign_name, sign_designation, sign_date, sign_image_path, declaration_confirmed, created_at
+                    sign_name, sign_designation, sign_date, sign_image_path,
+                    process_flow_attachment_path, process_flow_attachment_name,
+                    organisation_brochure_attachment_path, organisation_brochure_attachment_name,
+                    customer_requirements_attachment_path, customer_requirements_attachment_name,
+                    declaration_confirmed, created_at
                 ) VALUES (
                     :org_name, :site_address, :office_address, :contact_person, :contact_designation,
                     :phone, :email, :website, :gstin, :legal_status,
@@ -267,7 +437,11 @@ if (isset($db)) {
                     :org_type, :major_customers, :main_products, :raw_materials, :operations,
                     :external_processes, :design_responsibility, :other_certificates,
                     :system_implementation_date, :proposed_audit_month,
-                    :sign_name, :sign_designation, :sign_date, :sign_image_path, :declaration_confirmed, :created_at
+                    :sign_name, :sign_designation, :sign_date, :sign_image_path,
+                    :process_flow_attachment_path, :process_flow_attachment_name,
+                    :organisation_brochure_attachment_path, :organisation_brochure_attachment_name,
+                    :customer_requirements_attachment_path, :customer_requirements_attachment_name,
+                    :declaration_confirmed, :created_at
                 )";
 
                     $stmt = $db->prepare($insertSql);
@@ -315,6 +489,12 @@ if (isset($db)) {
                 $stmt->bindParam(':sign_designation', $sign_designation);
                 $stmt->bindParam(':sign_date', $sign_date);
                 $stmt->bindParam(':sign_image_path', $sign_image_path);
+                $stmt->bindParam(':process_flow_attachment_path', $process_flow_attachment_path);
+                $stmt->bindParam(':process_flow_attachment_name', $process_flow_attachment_name);
+                $stmt->bindParam(':organisation_brochure_attachment_path', $organisation_brochure_attachment_path);
+                $stmt->bindParam(':organisation_brochure_attachment_name', $organisation_brochure_attachment_name);
+                $stmt->bindParam(':customer_requirements_attachment_path', $customer_requirements_attachment_path);
+                $stmt->bindParam(':customer_requirements_attachment_name', $customer_requirements_attachment_name);
                     $stmt->bindParam(':declaration_confirmed', $declaration_confirmed, PDO::PARAM_INT);
                     $stmt->bindParam(':created_at', $created_at);
                     $stmt->execute();
@@ -342,6 +522,27 @@ if (isset($db)) {
                             }
                             $_GET = $oldGet;
                         }
+
+                        $supportAttachmentSummary = 'None uploaded';
+                        if (!empty($uploadedSupportAttachments)) {
+                            $summaryLines = [];
+                            foreach ($uploadedSupportAttachments as $supportAttachment) {
+                                $summaryLines[] = htmlspecialchars($supportAttachment['label'] . ': ' . $supportAttachment['name'], ENT_QUOTES, 'UTF-8');
+                            }
+                            $supportAttachmentSummary = implode('<br>', $summaryLines);
+                        }
+
+                        $addSupportAttachmentsToMail = function(PHPMailer $mailer) use ($uploadedSupportAttachments) {
+                            foreach ($uploadedSupportAttachments as $supportAttachment) {
+                                if (empty($supportAttachment['path'])) {
+                                    continue;
+                                }
+                                $fullPath = __DIR__ . '/' . str_replace('\\', '/', $supportAttachment['path']);
+                                if (@file_exists($fullPath)) {
+                                    $mailer->addAttachment($fullPath, $supportAttachment['name'] ?: basename($fullPath));
+                                }
+                            }
+                        };
 
                         $smtpOptions = [
                             'ssl' => [
@@ -407,14 +608,19 @@ if (isset($db)) {
                             . '<tr><th align="left">Web-site</th><td>' . htmlspecialchars($website, ENT_QUOTES, 'UTF-8') . '</td></tr>'
                             . '<tr><th align="left">Standards applied for</th><td>' . htmlspecialchars($standard_applied, ENT_QUOTES, 'UTF-8') . '</td></tr>'
                             . '<tr><th align="left">GSTIN Number</th><td>' . htmlspecialchars($gstin, ENT_QUOTES, 'UTF-8') . '</td></tr>'
+                            . '<tr><th align="left">Supporting attachment(s)</th><td>' . $supportAttachmentSummary . '</td></tr>'
                             . '</table>';
 
                         $adminMail->isHTML(true);
                         $adminMail->Body = $adminBody;
-                        $adminMail->AltBody = "Online audit application submitted via AITF website. Audit application form is attached for verification.\nOrganization: $org_name\nContact: $contactFull\nPhone: $phone\nEmail: $email\nSite address: $site_address\nOffice address: $office_address\nWebsite: $website\nStandards applied for: $standard_applied\nGSTIN: $gstin";
+                        $plainSupportSummary = empty($uploadedSupportAttachments) ? 'None uploaded' : implode(', ', array_map(function ($supportAttachment) {
+                            return $supportAttachment['label'] . ': ' . $supportAttachment['name'];
+                        }, $uploadedSupportAttachments));
+                        $adminMail->AltBody = "Online audit application submitted via AITF website. Audit application form is attached for verification.\nOrganization: $org_name\nContact: $contactFull\nPhone: $phone\nEmail: $email\nSite address: $site_address\nOffice address: $office_address\nWebsite: $website\nStandards applied for: $standard_applied\nGSTIN: $gstin\nSupporting attachments: $plainSupportSummary";
                         if ($pdfContent !== '') {
                             $adminMail->addStringAttachment($pdfContent, $pdfFilename, 'base64', 'application/pdf');
                         }
+                        $addSupportAttachmentsToMail($adminMail);
 
                         $adminSent = false;
                         foreach ($attempts as $attempt) {
@@ -445,7 +651,10 @@ if (isset($db)) {
                                 . "<p style=\"font-family:Arial,sans-serif; font-size:14px; margin:8px 0;\">Warm regards,<br><strong>AITF Team</strong><br>Assessment Department<br>AITF<br><br>📧 <a href=\"mailto:certification@aitf.co.in\">certification@aitf.co.in</a><br>📧 <a href=\"mailto:aitfmcl@gmail.com\">aitfmcl@gmail.com</a><br>🌐 <a href=\"http://www.aitf.in\" target=\"_blank\" rel=\"noopener\">www.aitf.in</a></p>";
                             $clientMail->isHTML(true);
                             $clientMail->Body = $clientBody;
-                            $clientMail->AltBody = "Dear $contact_person,\n\nThank you for submitting your audit application to AITF.\nWe have received your application and will review it.\n\nRegards,\nAITF Team";
+                            $clientMail->AltBody = "Dear $contact_person,\n\nThank you for submitting your audit application to AITF.\nWe have received your application and will review it.\nA copy of your submitted application form (system generated PDF) is attached for your reference.\n\nRegards,\nAITF Team";
+                            if ($pdfContent !== '') {
+                                $clientMail->addStringAttachment($pdfContent, $pdfFilename, 'base64', 'application/pdf');
+                            }
 
                             foreach ($attempts as $attempt) {
                                 $applySmtpConfig($clientMail, $attempt);
@@ -468,6 +677,7 @@ if (isset($db)) {
                 }
             }
         }
+    }
 
     try {
         $stmt = $db->query("SELECT id, org_name, contact_person, email, phone, DATE_FORMAT(created_at, '%d-%m-%Y %H:%i') AS created_at FROM online_audit_applications ORDER BY created_at DESC LIMIT 50");
@@ -673,6 +883,60 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
             height: auto;
             object-fit: contain;
         }
+
+        .optional-attachments {
+            margin-top: 14px;
+            padding: 14px;
+            background: #ffffff;
+            border: 1px solid #dbeafe;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.07);
+        }
+
+        .optional-attachments-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #1e3a8a;
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .optional-attachments-hint {
+            color: #64748b;
+            font-size: 0.82rem;
+            line-height: 1.5;
+            margin: 0 0 12px;
+        }
+
+        .attachment-upload-item {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 10px 0;
+            border-top: 1px solid #eef2ff;
+        }
+
+        .attachment-upload-item:first-of-type {
+            border-top: 0;
+            padding-top: 0;
+        }
+
+        .attachment-upload-item label {
+            margin-bottom: 0;
+            color: #334155;
+            font-size: 0.86rem;
+            font-weight: 700;
+        }
+
+        .attachment-upload-item input[type="file"] {
+            border: 1px dashed #93c5fd;
+            background: #f8fbff;
+            padding: 9px;
+            border-radius: 10px;
+            font-size: 0.86rem;
+        }
         
         .submit-btn {
             background: linear-gradient(135deg, #2563eb, #1d4ed8);
@@ -771,17 +1035,14 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
         .submit-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(15, 20, 25, 0.72);
-            backdrop-filter: blur(4px);
+            background: rgba(15, 23, 42, 0.68);
+            backdrop-filter: blur(7px);
+            -webkit-backdrop-filter: blur(7px);
             display: flex;
             align-items: center;
             justify-content: center;
-            flex-direction: column;
-            gap: 16px;
-            color: #e7e9ea;
-            font-weight: 700;
-            letter-spacing: 0.2px;
-            z-index: 2000;
+            padding: 20px;
+            z-index: 2500;
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.2s ease;
@@ -792,18 +1053,90 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
             pointer-events: all;
         }
 
+        .submit-modal {
+            width: min(420px, 92vw);
+            background: #ffffff;
+            border: 1px solid rgba(226, 232, 240, 0.96);
+            border-radius: 18px;
+            padding: 30px 28px 26px;
+            text-align: center;
+            box-shadow: 0 28px 70px rgba(15, 23, 42, 0.32);
+            transform: translateY(10px) scale(0.98);
+            transition: transform 0.2s ease;
+        }
+
+        .submit-overlay.show .submit-modal {
+            transform: translateY(0) scale(1);
+        }
+
         .loader-ring {
-            width: 56px;
-            height: 56px;
-            border: 4px solid rgba(255,255,255,0.16);
+            position: relative;
+            width: 74px;
+            height: 74px;
+            margin: 0 auto 18px;
+            border: 5px solid #e0f2fe;
             border-top-color: #2563eb;
+            border-right-color: #22c55e;
             border-radius: 50%;
-            animation: spin 1s linear infinite;
-            box-shadow: 0 0 0 1px rgba(255,255,255,0.05);
+            animation: spin 0.8s linear infinite;
+            box-shadow: 0 12px 24px rgba(37, 99, 235, 0.18);
+        }
+
+        .loader-ring::after {
+            content: '';
+            position: absolute;
+            inset: 17px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #2563eb, #22c55e);
+            box-shadow: inset 0 0 0 8px #ffffff;
+        }
+
+        .submit-modal h4 {
+            margin: 0 0 8px;
+            color: #0f172a;
+            font-size: 1.2rem;
+            font-weight: 800;
+            letter-spacing: 0;
+        }
+
+        .submit-modal p {
+            margin: 0;
+            color: #64748b;
+            font-size: 0.92rem;
+            line-height: 1.6;
+        }
+
+        .submit-progress {
+            display: flex;
+            justify-content: center;
+            gap: 7px;
+            margin-top: 18px;
+        }
+
+        .submit-progress span {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #2563eb;
+            opacity: 0.35;
+            animation: submitDot 1s ease-in-out infinite;
+        }
+
+        .submit-progress span:nth-child(2) {
+            animation-delay: 0.16s;
+        }
+
+        .submit-progress span:nth-child(3) {
+            animation-delay: 0.32s;
         }
 
         @keyframes spin {
             to { transform: rotate(360deg); }
+        }
+
+        @keyframes submitDot {
+            0%, 80%, 100% { transform: translateY(0); opacity: 0.35; }
+            40% { transform: translateY(-6px); opacity: 1; }
         }
 
         .required-label {
@@ -1814,6 +2147,22 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                                                     <li>If available, please attach process flow diagram, organisation brochure and any customer specific requirements.</li>
                                                 </ul>
                                             </div>
+                                            <div class="optional-attachments">
+                                                <div class="optional-attachments-title"><i class="fa fa-paperclip"></i> Optional supporting attachments</div>
+                                                <p class="optional-attachments-hint">Upload only if available. Allowed formats: PDF, PNG, JPG, JPEG. Each file can be up to 5 MB.</p>
+                                                <div class="attachment-upload-item">
+                                                    <label for="process-flow-attachment">Process flow diagram</label>
+                                                    <input type="file" name="process_flow_attachment" id="process-flow-attachment" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg">
+                                                </div>
+                                                <div class="attachment-upload-item">
+                                                    <label for="organisation-brochure-attachment">Organisation brochure</label>
+                                                    <input type="file" name="organisation_brochure_attachment" id="organisation-brochure-attachment" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg">
+                                                </div>
+                                                <div class="attachment-upload-item">
+                                                    <label for="customer-requirements-attachment">Customer specific requirements</label>
+                                                    <input type="file" name="customer_requirements_attachment" id="customer-requirements-attachment" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg">
+                                                </div>
+                                            </div>
                                         </div>
                                         <div class="col-md-5">
                                             <div class="signature-info-box">
@@ -1844,7 +2193,7 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                                         <div class="signature-upload">
                                             <div class="signature-upload-input">
                                                 <label style="font-weight: 600; font-size: 0.9rem;">Sign with duly stamped (upload image) <span class="required-label">*</span></label>
-                                                <input type="file" name="sign_image" accept="image/*" class="form-control" id="sign-image-input" required>
+                                                <input type="file" name="sign_image" accept=".jpg,.jpeg,.png,image/jpeg,image/png" class="form-control" id="sign-image-input" required>
                                                 <small style="font-size: 0.8rem; color: #6b7280;">Accepted formats: JPG, PNG. Max size approx. 2 MB.</small>
                                             </div>
                                             <div class="signature-preview" id="sign-image-preview">
@@ -1990,7 +2339,7 @@ If you are completing the application offline, please download our Audit Applica
                                         <i class="fa fa-envelope" style="font-size: 1.5rem; color: white;"></i>
                                     </div>
                                     <h5 style="color: #1a1a2e; font-weight: 600; margin-bottom: 10px;">Email Support</h5>
-                                    <p style="color: #4a5568; font-size: 0.95rem; margin-bottom: 0;">Send your completed forms to: <a href="mailto:aitfmcl@gmail.com" style="color: #2563eb; text-decoration: none; font-weight: 500;">aitfmcl@gmail.com</a></p>
+                                    <p style="color: #4a5568; font-size: 0.95rem; margin-bottom: 0;">Send your completed forms to: <a href="mailto:aitfmcl@gmail.com" style="color: #2563eb; text-decoration: none; font-weight: 500;">aitfmcla@gmail.com</a></p>
                                 </div></a>
                                 
                               
@@ -2008,8 +2357,12 @@ If you are completing the application offline, please download our Audit Applica
         <?php include './footerSource.php'; ?>
     </div>
     <div class="submit-overlay" id="submitOverlay" aria-live="polite" aria-busy="true">
-        <div class="loader-ring" aria-hidden="true"></div>
-        <div>Submitting your application to AITF...</div>
+        <div class="submit-modal" role="status">
+            <div class="loader-ring" aria-hidden="true"></div>
+            <h4>Submitting your application to AITF</h4>
+            <p>Please wait while we verify the details, prepare your application PDF and send it to our certification team.</p>
+            <div class="submit-progress" aria-hidden="true"><span></span><span></span><span></span></div>
+        </div>
     </div>
 
     <script>
@@ -2032,6 +2385,44 @@ If you are completing the application offline, please download our Audit Applica
             var captchaBox = form.querySelector('.g-recaptcha');
             var requiresVisibleCaptcha = Boolean(recaptchaEnabled && recaptchaVersion !== 'v3' && captchaBox);
             var recaptchaSubmitting = false;
+            var allowedSupportExtensions = ['pdf', 'png', 'jpg', 'jpeg'];
+            var allowedSupportMimes = ['application/pdf', 'image/png', 'image/jpeg', ''];
+            var maxSupportFileSize = 5 * 1024 * 1024;
+
+            function getFileExtension(fileName) {
+                var parts = String(fileName || '').split('.');
+                return parts.length > 1 ? parts.pop().toLowerCase() : '';
+            }
+
+            function validateOptionalAttachmentInput(input, showAlert) {
+                if (!input || !input.files || !input.files[0]) {
+                    return true;
+                }
+                var file = input.files[0];
+                var extension = getFileExtension(file.name);
+                if (allowedSupportExtensions.indexOf(extension) === -1 || allowedSupportMimes.indexOf(file.type || '') === -1) {
+                    if (showAlert) {
+                        alert('Please upload only PDF, PNG, JPG or JPEG files for optional attachments.');
+                    }
+                    input.value = '';
+                    return false;
+                }
+                if (file.size > maxSupportFileSize) {
+                    if (showAlert) {
+                        alert('Each optional attachment must be 5 MB or smaller.');
+                    }
+                    input.value = '';
+                    return false;
+                }
+                return true;
+            }
+
+            var optionalAttachmentInputs = form.querySelectorAll('input[type="file"][name$="_attachment"]');
+            for (var attachmentIndex = 0; attachmentIndex < optionalAttachmentInputs.length; attachmentIndex++) {
+                optionalAttachmentInputs[attachmentIndex].addEventListener('change', function () {
+                    validateOptionalAttachmentInput(this, true);
+                });
+            }
 
             function buildEmployeeStructureText() {
                 var table = document.getElementById('employee-structure-table');
@@ -2259,8 +2650,9 @@ If you are completing the application offline, please download our Audit Applica
                         signPreview.innerHTML = '<span style="font-size: 0.8rem; color: #9ca3af;">Signature preview will appear here.</span>';
                         return;
                     }
-                    if (!/^image\//.test(file.type)) {
-                        alert('Please upload a valid image file for the signature.');
+                    var signExt = getFileExtension(file.name);
+                    if (['jpg', 'jpeg', 'png'].indexOf(signExt) === -1 || ['image/jpeg', 'image/png', ''].indexOf(file.type || '') === -1) {
+                        alert('Please upload a valid JPG or PNG image file for the signature.');
                         this.value = '';
                         signPreview.innerHTML = '<span style="font-size: 0.8rem; color: #9ca3af;">Signature preview will appear here.</span>';
                         return;
@@ -2419,6 +2811,13 @@ If you are completing the application offline, please download our Audit Applica
                         alert('Please complete the captcha before submitting.');
                     }
                     return false;
+                }
+
+                for (var attachmentSubmitIndex = 0; attachmentSubmitIndex < optionalAttachmentInputs.length; attachmentSubmitIndex++) {
+                    if (!validateOptionalAttachmentInput(optionalAttachmentInputs[attachmentSubmitIndex], true)) {
+                        e.preventDefault();
+                        return false;
+                    }
                 }
 
                 var empField = document.getElementById('employee_structure_field');
