@@ -574,6 +574,33 @@
         background: #eff6ff !important;
     }
 
+    .dropdown-grid-col.training-section.disabled-training-section {
+        cursor: not-allowed !important;
+        opacity: 0.85 !important;
+    }
+
+    .dropdown-grid-col.training-section.disabled-training-section:hover {
+        transform: none !important;
+        box-shadow: none !important;
+        background: transparent !important;
+    }
+
+    .dropdown-grid-col.training-section.disabled-training-section:hover::before {
+        opacity: 0 !important;
+    }
+
+    .dropdown-grid-col.training-section.disabled-training-section:hover .dropdown-section-icon {
+        transform: none !important;
+        background: linear-gradient(135deg, #eff6ff, #dbeafe) !important;
+        color: #3b82f6 !important;
+        border-color: #dbeafe !important;
+        box-shadow: none !important;
+    }
+
+    .dropdown-grid-col.training-section.disabled-training-section:hover .dropdown-section-title {
+        color: #1e293b !important;
+    }
+
     /* Vertical Divider */
     .dropdown-divider-vertical {
         width: 1px !important;
@@ -756,6 +783,16 @@
         display: none !important;
     }
 
+    .dropdown-coming-soon-inline {
+        display: inline-block;
+        margin-top: 8px;
+        font-size: 11px;
+        font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+    }
+
     /* Links List - Hidden by default with dynamic lines */
     .dropdown-links-list {
         display: none !important;
@@ -790,6 +827,42 @@
         border-radius: 8px !important;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06) !important;
         letter-spacing: 0.2px !important;
+    }
+
+    .dropdown-links-list .coming-soon-item {
+        display: block !important;
+        font-family: 'Poppins', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif !important;
+        font-size: 13px !important;
+        font-weight: 700 !important;
+        color: #64748b !important;
+        text-decoration: none !important;
+        padding: 12px 16px !important;
+        border-radius: 8px !important;
+        background: #f8fafc !important;
+        border: 1px dashed #cbd5e1 !important;
+        cursor: not-allowed !important;
+        pointer-events: none !important;
+        text-transform: none !important;
+        letter-spacing: 0.2px !important;
+        line-height: 1.35 !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+    }
+
+    .dropdown-links-list .coming-soon-item .coming-soon-title {
+        display: block;
+        font-weight: 700;
+        color: #475569;
+    }
+
+    .dropdown-links-list .coming-soon-item .coming-soon-note {
+        display: block;
+        margin-top: 4px;
+        font-size: 11px;
+        font-weight: 800;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
     }
 
     /* Dynamic Highlighted Line */
@@ -982,6 +1055,11 @@
         $('.training-section').on('click', function (e) {
             e.stopPropagation();
             var $this = $(this);
+
+            if ($this.hasClass('disabled-training-section')) {
+                return;
+            }
+
             var $linksList = $this.find('.dropdown-links-list');
 
             // If clicking on a link inside, don't toggle
@@ -1026,11 +1104,11 @@
             <div class="aitf-public-announcement-group" aria-hidden="<?php echo $announcementSet === 0 ? 'false' : 'true'; ?>">
                 <span class="aitf-public-announcement-item"><i class="fa fa-certificate" aria-hidden="true"></i>NABCB Accredited Certification Body</span>
                 <span class="aitf-public-announcement-divider" aria-hidden="true"></span>
-                <span class="aitf-public-announcement-item"><i class="fa fa-balance-scale" aria-hidden="true"></i>Independent & Impartial Assessment</span>
+                <span class="aitf-public-announcement-item"><i class="fa fa-balance-scale" aria-hidden="true"></i> IMPARTIAL ASSESSMENT</span>
                 <span class="aitf-public-announcement-divider" aria-hidden="true"></span>
                 <span class="aitf-public-announcement-item"><i class="fa fa-shield" aria-hidden="true"></i>Trusted. Accredited. Independent.</span>
                 <span class="aitf-public-announcement-divider" aria-hidden="true"></span>
-                <span class="aitf-public-announcement-item"><i class="fa fa-handshake-o" aria-hidden="true"></i>Trusted Certification Partner</span>
+                <span class="aitf-public-announcement-item"><i class="fa fa-handshake-o" aria-hidden="true"></i>AUTHENTICATE CERTIFICATE</span>
                 <span class="aitf-public-announcement-divider" aria-hidden="true"></span>
             </div>
         <?php } ?>
@@ -1174,7 +1252,7 @@
                             <!-- First Row -->
                             <div class="dropdown-grid-row">
                                 <!-- EXEMPLAR GLOBAL CERTIFIED -->
-                                <div class="dropdown-grid-col training-section" data-section="exemplar">
+                                <div class="dropdown-grid-col training-section disabled-training-section" data-section="exemplar">
                                     <div class="dropdown-section-icon">
                                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
                                             xmlns="http://www.w3.org/2000/svg">
@@ -1185,23 +1263,10 @@
                                     </div>
                                     <div class="dropdown-section-content">
                                         <h3 class="dropdown-section-title">Exemplar Global Certified</h3>
+                                        <span class="dropdown-coming-soon-inline">Comming soon</span>
                                     </div>
                                     <div class="dropdown-links-list" style="display:none;">
-                                        <a href="qms_iso_9001_02.php"
-                                            style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
-                                                class="link-line"></span>QMS – ISO 9001:2015</a>
-                                        <a href="ems_iso_9001_02.php"
-                                            style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
-                                                class="link-line"></span>EMS – ISO 14001:2015</a>
-                                        <a href="ohsms_iso_45001_02.php"
-                                            style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
-                                                class="link-line"></span>OHSMS – ISO 45001:2018</a>
-                                        <a href="isms_iso_27001_02.php"
-                                            style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
-                                                class="link-line"></span>ISMS – ISO 27001:2013</a>
-                                        <a href="fsms_iso_22000.php"
-                                            style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
-                                                class="link-line"></span>FSMS – ISO 22000:2018</a>
+                                        <span class="coming-soon-item">Comming soon</span>
                                     </div>
                                 </div>
 
@@ -1376,9 +1441,7 @@
                                         <a href="certificationGuideline.php"
                                             style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
                                                 class="link-line"></span>Certification Guideline</a>
-                                        <a href="auditorGuideline.php"
-                                            style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
-                                                class="link-line"></span>Auditor Guideline</a>
+                                        <span class="coming-soon-item"><span class="coming-soon-title">Auditor Guideline</span><span class="coming-soon-note">Comming soon</span></span>
                                     </div>
                                 </div>
                             </div>
@@ -1554,11 +1617,7 @@
                     </div>
                     <ul class="mobile-nav-list">
                         <li class="mobile-nav-section-label">Exemplar Global Certified</li>
-                        <li><a class="mobile-nav-item" href="qms_iso_9001_02.php">QMS – ISO 9001:2015</a></li>
-                        <li><a class="mobile-nav-item" href="ems_iso_9001_02.php">EMS – ISO 14001:2015</a></li>
-                        <li><a class="mobile-nav-item" href="ohsms_iso_45001_02.php">OHSMS – ISO 45001:2018</a></li>
-                        <li><a class="mobile-nav-item" href="isms_iso_27001_02.php">ISMS – ISO 27001:2013</a></li>
-                        <li><a class="mobile-nav-item" href="fsms_iso_22000.php">FSMS – ISO 22000:2018</a></li>
+                        <li><span class="mobile-nav-item" style="display:block; opacity:0.7; cursor:not-allowed; pointer-events:none;">Comming soon</span></li>
                         <li class="mobile-nav-section-label">Awareness Training</li>
                         <li><a class="mobile-nav-item" href="qms_iso_9001_03.php">QMS ISO 9001:2015</a></li>
                         <li><a class="mobile-nav-item" href="ems_iso_9001_03.php">EMS ISO 14001:2015</a></li>
@@ -1597,7 +1656,7 @@
                         </li>
                         <li><a class="mobile-nav-item" href="certificationGuideline.php">Certification Guideline</a>
                         </li>
-                        <li><a class="mobile-nav-item" href="auditorGuideline.php">Auditor Guideline</a></li>
+                        <li><span class="mobile-nav-item" style="display:block; opacity:0.7; cursor:not-allowed; pointer-events:none;">Auditor Guideline - Comming soon</span></li>
                         <li class="mobile-nav-section-label">Guidelines</li>
                         <li><a class="mobile-nav-item" href="useOfLogo.php">Logo Usage Guidelines</a></li>
                         <li><a class="mobile-nav-item" href="transitionGuideline.php">Transition Guidelines</a></li>

@@ -1332,15 +1332,12 @@ session_start();
             background: #ffffff;
             background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
             background-size: 40px 40px;
-            padding: 100px 0;
+            padding: 90px 0 60px;
             position: relative;
             overflow: hidden;
             color: #0a192f;
             font-family: 'Inter', sans-serif;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
+            min-height: auto;
         }
 
         .journey-container {
@@ -1358,31 +1355,33 @@ session_start();
         /* Horizontal Timeline Styles */
         .horizontal-timeline-wrapper {
             position: relative;
-            padding: 150px 0;
-            margin: 40px 0;
+            padding: 45px 0 95px;
+            margin: 20px 0 10px;
             overflow: visible;
         }
 
         /* The Horizontal Spine */
         .timeline-spine {
             position: absolute;
-            top: 50%;
+            top: auto;
+            bottom: 14px;
             left: 0;
             width: 100%;
             height: 4px;
             background: #e2e8f0;
-            transform: translateY(-50%);
+            transform: none;
             z-index: 1;
         }
 
         .timeline-spine-progress {
             position: absolute;
-            top: 50%;
+            top: auto;
+            bottom: 14px;
             left: 0;
             width: 0%;
             height: 4px;
             background: #b8860b;
-            transform: translateY(-50%);
+            transform: none;
             z-index: 2;
             box-shadow: 0 0 15px rgba(184, 134, 11, 0.4);
         }
@@ -1407,7 +1406,7 @@ session_start();
 
         /* Alternating Top/Bottom Layout */
         .milestone-item.top {
-            padding-bottom: 220px;
+            padding-bottom: 90px;
         }
 
         .milestone-item.bottom {
@@ -1416,9 +1415,10 @@ session_start();
 
         .milestone-dot-wrapper {
             position: absolute;
-            top: 50%;
+            top: auto;
+            bottom: 14px;
             left: 50%;
-            transform: translate(-50%, -50%);
+            transform: translate(-50%, 50%);
             z-index: 5;
         }
 
@@ -1450,10 +1450,10 @@ session_start();
         }
 
         .milestone-item.top .milestone-connector {
-            bottom: 50%;
+            bottom: 14px;
             height: 0;
             /* Animated */
-            margin-bottom: 12px;
+            margin-bottom: 0;
         }
 
         .milestone-item.bottom .milestone-connector {
@@ -1465,7 +1465,7 @@ session_start();
 
         .milestone-item.active .milestone-connector {
             background: #b8860b;
-            height: 60px;
+            height: 46px;
         }
 
         /* Milestone Card */
@@ -1531,6 +1531,7 @@ session_start();
                 height: 100%;
                 transform: none;
                 top: 0;
+                bottom: auto;
             }
 
             .milestone-item {
@@ -1540,6 +1541,8 @@ session_start();
             }
 
             .milestone-dot-wrapper {
+                top: 50%;
+                bottom: auto;
                 left: 30px;
                 transform: translate(-50%, -50%);
             }
@@ -1568,7 +1571,7 @@ session_start();
                 <div class="hero-text-content">
                     <div class="hero-label">NABCB Accredited Certification Body</div>
                     <h1 class="hero-main-title">
-                        Your Trusted Partner In<span>Business Excellence Journey</span>
+                        Your Trusted Partner In<span>Management System</span>
                     </h1>
                     <p class="hero-sub-title">
                         Empowering organizations through accredited, authentic, impartial and ethical certification
@@ -1669,7 +1672,7 @@ session_start();
                         <div class="milestone-card" style="border-top: 5px solid #3b82f6;">
                             <span class="milestone-year" style="color: #3b82f6;">2011</span>
                             <h4>Foundation</h4>
-                            <p>AITF started in 2011 as a specialized assessment body, focusing on institutional integrity.</p>
+                            <p>AITF started as a specialized assessment body, focusing on institutional integrity.</p>
                         </div>
                     </div>
 
@@ -1681,9 +1684,9 @@ session_start();
                         <div class="milestone-connector"></div>
                         <div class="milestone-card nabcb-highlight-card" style="border-top: 5px solid #b8860b; transform: translateY(-40px) scale(1.08); box-shadow: 0 25px 70px rgba(184, 134, 11, 0.3);">
                             <img src="images/nabcb.png" alt="NABCB Logo" style="height: 60px; width: auto; margin-bottom: 15px;">
-                            <span class="milestone-year" style="color: #b8860b;">2016</span>
+                            <!-- <span class="milestone-year" style="color: #b8860b;">2016</span> -->
                             <h4 style="background: linear-gradient(135deg, #b8860b, #ffd700); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 19px; font-weight: 900;">NABCB ACCREDITATION</h4>
-                            <p>Accredited by NABCB in 2016 for QMS, EMS and OHSMS certification services.</p>
+                            <p>Accredited by NABCB for QMS, EMS and OHSMS certification services.</p>
                         </div>
                     </div>
 
@@ -1708,7 +1711,7 @@ session_start();
                     <div class="summary-card-head">
                         <span class="summary-icon"><i class="fa fa-handshake"></i></span>
                         <div>
-                            <span class="summary-kicker">Partnership Journey</span>
+                            <span class="summary-kicker">management System journey</span>
                             <h3>From first trust to long-term client relationships</h3>
                         </div>
                     </div>
@@ -1745,8 +1748,8 @@ session_start();
                     <div class="summary-card-head">
                         <span class="summary-icon"><i class="fa fa-chart-line"></i></span>
                         <div>
-                            <span class="summary-kicker">Assessment Capability</span>
-                            <h3>A steady evolution in audit readiness and service scope</h3>
+                            <span class="summary-kicker">Quality Management System</span>
+                            <h3>Assessment Journey</h3>
                         </div>
                     </div>
                     <div class="capability-flow">
@@ -1762,12 +1765,12 @@ session_start();
                         <div class="flow-arrow"><i class="fa fa-arrow-right"></i></div>
                         <div class="capability-node">
                             <span>OHSMS</span>
-                            <small>Workplace safety focus</small>
+                            <small>Workplace Health & Safety Focus</small>
                         </div>
                     </div>
                     <div class="summary-note">
                         <i class="fa fa-shield-alt"></i>
-                        <p>Each milestone reflects stronger technical capability, better audit discipline and a broader commitment to management system excellence.</p>
+                        <p>Assessment from the Qualified Assessors and Accredited Certification.</p>
                     </div>
                 </div>
             </div>
@@ -2051,7 +2054,7 @@ session_start();
                                 style="width: 45px; height: 45px; background: #b8860b; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px;">
                                 <i class="fa fa-chart-line"></i>
                             </div>
-                            <span style="font-weight: 600; color: #0a192f;">Business Growth</span>
+                            <span style="font-weight: 600; color: #0a192f;">Independent Assessment</span>
                         </div>
                         <div class="feature-item"
                             style="display: flex; align-items: center; gap: 15px; padding: 15px; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: transform 0.3s ease;">
@@ -2067,7 +2070,7 @@ session_start();
                                 style="width: 45px; height: 45px; background: #b8860b; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px;">
                                 <i class="fa fa-check-double"></i>
                             </div>
-                            <span style="font-weight: 600; color: #0a192f;">Process Integrity</span>
+                            <span style="font-weight: 600; color: #0a192f;">Accredited Certification</span>
                         </div>
                     </div>
                 </div>
@@ -2164,8 +2167,7 @@ session_start();
                     <p class="principle-text"
                         style="font-size: 18px; line-height: 1.8; color: #475569; margin-bottom: 35px; text-align: justify;">
                         We maintain the highest standards of <strong>competence, independence, and impartiality</strong>
-                        in our assessment processes. Our team of certified auditors is committed to helping
-                        organizations achieve and demonstrate compliance with international standards, driving
+                        in our assessment processes. Our team of certified auditors are  committed to provide assessment services that will justify the organisation achievement and  demonstrate its compliance as per international standards with 
                         continuous improvement and operational excellence across all business functions.
                     </p>
                 </div>
@@ -2196,10 +2198,10 @@ session_start();
     <section class="current-cert-services">
         <div class="container">
             <div class="cert-services-heading">
-                <span class="cert-services-kicker">Certification Services</span>
+                <span class="cert-services-kicker"> Our Certification Services</span>
                 <h2>Currently Providing Certification Services</h2>
                 <p>
-                    AITF currently provides professional certification services for Quality Management,
+                    AITF currently provides  certification services for Quality Management,
                     Environmental Management and Occupational Health &amp; Safety Management systems.
                 </p>
             </div>
@@ -2273,7 +2275,7 @@ session_start();
             </div>
 
             <div class="cert-services-cta">
-                <p>Need certification support for your organization?</p>
+                <p>Need system certification for your organization?</p>
                 <a href="application.php#online-application-form">Apply for Certification <i class="fa fa-arrow-right"></i></a>
             </div>
         </div>

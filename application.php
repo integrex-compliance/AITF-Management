@@ -1990,7 +1990,7 @@ If you are completing the application offline, please download our Audit Applica
                                         <i class="fa fa-envelope" style="font-size: 1.5rem; color: white;"></i>
                                     </div>
                                     <h5 style="color: #1a1a2e; font-weight: 600; margin-bottom: 10px;">Email Support</h5>
-                                    <p style="color: #4a5568; font-size: 0.95rem; margin-bottom: 0;">Send your completed forms to: <a href="mailto:aitfindia@gmail.com" style="color: #2563eb; text-decoration: none; font-weight: 500;">aitfindia@gmail.com</a></p>
+                                    <p style="color: #4a5568; font-size: 0.95rem; margin-bottom: 0;">Send your completed forms to: <a href="mailto:aitfmcl@gmail.com" style="color: #2563eb; text-decoration: none; font-weight: 500;">aitfmcl@gmail.com</a></p>
                                 </div></a>
                                 
                               

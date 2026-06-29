@@ -253,7 +253,7 @@ include './headSource.php';
     <div class="header-grey-section">
         <div class="container">
             <h1>ABOUT AITF</h1>
-            <p>Your trusted partner in management system certification since 2011</p>
+            <p>Your trusted partner in management system certification</p>
         </div>
     </div>
 
@@ -264,7 +264,7 @@ include './headSource.php';
                 <div class="service-card">
                     <i class="fas fa-users-viewfinder"></i>
                     <h3>Who We Are</h3>
-                    <p>AITF (Assessment & Institute for Technical Forum) is dedicated to providing high-quality assessments through qualified auditors to drive business excellence.</p>
+                    <p>AITF (Assessment & Institute for Technical Forum) is dedicated to providing high-quality assessments through qualified auditors to drive Management System.</p>
                 </div>
                 
                 <div class="service-card">
@@ -281,7 +281,7 @@ include './headSource.php';
         <div class="container">
             <div class="about-card">
                 <h3>Our Methodology</h3>
-                <p>We at AITF Management Certification Ltd. are committed to providing assessments through qualified auditors to improve the business performance of our customers with value-added audits of clients' processes and management systems.</p>
+                <p>We at AITF Management Certification Ltd. are committed to providing assessments through qualified auditors to improve the business performance of our customers with value-added audits of clients processes and management systems.</p>
                 <p>The National Accreditation Board for Certification Bodies (NABCB) serves as a constituent board of the Quality Council of India (QCI), ensuring that our operations align with international benchmarks.</p>
             </div>
             
@@ -302,7 +302,7 @@ include './headSource.php';
                 <div class="value-box">
                     <i class="fas fa-scale-balanced"></i>
                     <h4>Impartiality</h4>
-                    <p>Objectivity is the cornerstone of our assessment process, ensuring fair and unbiased outcomes for every client.</p>
+                    <p>Impartiality is the cornerstone of our assessment process, ensuring fair and unbiased outcomes for every client.</p>
                 </div>
                 
                 <div class="value-box">
