@@ -7,6 +7,23 @@
     }
     require_once __DIR__ . '/include/iaf_dashboard_data.php';
     $clients = [];
+    $iafInitialLimit = 30;
+    $iafInitialNextOffset = 0;
+    $iafInitialHasMore = false;
+
+    if (isset($db) && $db instanceof PDO) {
+        try {
+            $initialData = iafDashboardFetchRows($db, 0, $iafInitialLimit, '');
+            $clients = $initialData['rows'];
+            $iafInitialNextOffset = (int) ($initialData['next_offset'] ?? 0);
+            $iafInitialHasMore = !empty($initialData['has_more']);
+        } catch (Exception $e) {
+            error_log('IAF Dashboard initial preload failed: ' . $e->getMessage());
+            $clients = [];
+            $iafInitialNextOffset = 0;
+            $iafInitialHasMore = false;
+        }
+    }
     if (false) {
 
     // =========================================================================
@@ -275,6 +292,11 @@
             display: none !important;
         }
 
+        /* Hide top admin/profile/logout bar only on IAF dashboard. */
+        body .modern-navbar {
+            display: none !important;
+        }
+
         body #sidebar-wrapper {
             position: fixed;
             top: 0;
@@ -390,6 +412,174 @@
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
         }
 
+        /* ===== Search field: icon + clear button ===== */
+        .client-filter-field {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            width: min(320px, 100%);
+        }
+
+        .client-filter-field .client-filter-input {
+            width: 100%;
+            padding-left: 36px;
+            padding-right: 34px;
+        }
+
+        .client-filter-icon {
+            position: absolute;
+            left: 12px;
+            color: #94a3b8;
+            font-size: 14px;
+            pointer-events: none;
+        }
+
+        .client-filter-clear {
+            position: absolute;
+            right: 8px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            background: #e2e8f0;
+            color: #475569;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            font-size: 13px;
+            line-height: 1;
+            cursor: pointer;
+            padding: 0;
+            transition: background-color 0.15s;
+        }
+
+        .client-filter-clear:hover {
+            background: #cbd5e1;
+        }
+
+        .client-filter-field.has-value .client-filter-clear {
+            display: inline-flex;
+        }
+
+        /* ===== Loading states + empty state ===== */
+        .iaf-table-wrap {
+            position: relative;
+            flex: 1 1 auto;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        @keyframes iaf-spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .iaf-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e2e8f0;
+            border-top-color: #1e3a8a;
+            border-radius: 50%;
+            animation: iaf-spin 0.75s linear infinite;
+        }
+
+        .iaf-loading-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 30;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            background: rgba(255, 255, 255, 0.82);
+            border-radius: 12px;
+        }
+
+        .iaf-loading-overlay.active {
+            display: flex;
+        }
+
+        .iaf-loading-text {
+            color: #475569;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .iaf-pagination {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px 14px;
+            padding-top: 14px;
+            flex: 0 0 auto;
+        }
+
+        .iaf-pagination:empty {
+            display: none;
+        }
+
+        .iaf-page-info {
+            color: #64748b;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .iaf-page-controls {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+
+        .iaf-page-btn {
+            min-width: 38px;
+            height: 36px;
+            padding: 0 12px;
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+            color: #334155;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.15s, border-color 0.15s;
+        }
+
+        .iaf-page-btn:hover:not(:disabled):not(.current) {
+            background: #eef4ff;
+            border-color: #c7d7fe;
+        }
+
+        .iaf-page-btn.current {
+            background: #1e3a8a;
+            border-color: #1e3a8a;
+            color: #ffffff;
+            cursor: default;
+        }
+
+        .iaf-page-btn:disabled {
+            opacity: 0.45;
+            cursor: default;
+        }
+
+        .iaf-page-ellipsis {
+            padding: 0 4px;
+            color: #94a3b8;
+            align-self: center;
+        }
+
+        table.dataTable td.dataTables_empty {
+            text-align: center;
+            padding: 54px 16px !important;
+            color: #94a3b8;
+            font-size: 15px;
+            font-weight: 600;
+        }
+
         .dataTables_wrapper {
             width: 100%;
             height: 100%;
@@ -455,8 +645,9 @@
             border-radius: 12px;
             overflow-x: auto !important;
             overflow-y: auto !important;
-            flex: 1 1 auto;
+            flex: 0 1 auto;
             min-height: 0;
+            max-height: calc(100vh - var(--iaf-navbar-height) - 210px);
             background: #ffffff;
         }
 
@@ -695,10 +886,17 @@
                 <div class="modern-card">
                     <div class="iaf-table-toolbar">
                         <label for="clientNameFilter" class="client-filter-label">Client Name</label>
-                        <input type="text" id="clientNameFilter" class="client-filter-input" placeholder="Search by client name">
+                        <div class="client-filter-field">
+                            <i class="fa fa-search client-filter-icon"></i>
+                            <input type="text" id="clientNameFilter" class="client-filter-input"
+                                placeholder="Search by client name" autocomplete="off">
+                            <button type="button" class="client-filter-clear" id="clientFilterClear"
+                                aria-label="Clear search" title="Clear">&times;</button>
+                        </div>
                     </div>
-                    <div class="table-responsive">
-                        <table id="iafTable" class="table table-hover nowrap" style="width:100%">
+                    <div class="iaf-table-wrap">
+                        <div class="table-responsive">
+                            <table id="iafTable" class="table table-hover nowrap" style="width:100%">
                             <thead>
                                 <tr>
                                     <th>Action</th>
@@ -799,6 +997,18 @@
                                 <?php endforeach; ?>
                             </tbody>
                         </table>
+                        </div>
+                        <div class="iaf-pagination" id="iafPagination">
+                            <div class="iaf-page-info" id="iafPageInfo"></div>
+                            <div class="iaf-page-controls">
+                                <button type="button" class="iaf-page-btn" id="iafPrevBtn">Previous</button>
+                                <button type="button" class="iaf-page-btn" id="iafNextBtn">Next</button>
+                            </div>
+                        </div>
+                        <div class="iaf-loading-overlay" id="iafLoadingOverlay">
+                            <div class="iaf-spinner"></div>
+                            <div class="iaf-loading-text" id="iafLoadingText">Loading clients…</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -817,14 +1027,31 @@
                         ordering: true,
                         searching: false,
                         dom: 'rt<"row"<"col-sm-12"i>>',
-                        order: [[1, 'asc']]
+                        order: [[1, 'asc']],
+                        language: {
+                            emptyTable: 'No clients found',
+                            zeroRecords: 'No clients found'
+                        }
                     });
                     var iafOffset = 0;
-                    var iafLimit = 12;
-                    var iafHasMore = true;
+                    var iafNextOffset = <?php echo (int) $iafInitialNextOffset; ?>;
+                    var iafLimit = <?php echo (int) $iafInitialLimit; ?>;
+                    var iafCurrentPage = 1;
+                    var iafPageHistory = [0];
+                    var iafPageHistoryIndex = 0;
+                    var iafHasMore = <?php echo $iafInitialHasMore ? 'true' : 'false'; ?>;
                     var iafLoading = false;
                     var iafSearchTimer = null;
-                    var iafLoadedKeys = {};
+                    var iafLoadToken = 0;   // bumped on every search/reset to discard stale in-flight responses
+
+                    var $overlay = $('#iafLoadingOverlay');
+                    var $overlayText = $('#iafLoadingText');
+                    var $filter = $('#clientNameFilter');
+                    var $filterField = $('.client-filter-field');
+                    var $filterClear = $('#clientFilterClear');
+                    var $pageInfo = $('#iafPageInfo');
+                    var $prevBtn = $('#iafPrevBtn');
+                    var $nextBtn = $('#iafNextBtn');
 
                     function applyInsertedButtonState(context) {
                         $(context).find('.btn-insert').addBack('.btn-insert').each(function () {
@@ -837,74 +1064,165 @@
                         });
                     }
 
-                    function loadIafRows(reset) {
-                        if (iafLoading || (!iafHasMore && !reset)) {
+                    function updatePaginationUi(returnedRows) {
+                        var fromRow = returnedRows > 0 ? (iafOffset + 1) : 0;
+                        var toRow = iafOffset + returnedRows;
+                        var baseInfo = returnedRows > 0
+                            ? ('Showing ' + fromRow + ' to ' + toRow + ' (Page ' + iafCurrentPage + ')')
+                            : ('No clients found (Page ' + iafCurrentPage + ')');
+
+                        $pageInfo.text(baseInfo);
+                        $prevBtn.prop('disabled', iafPageHistoryIndex === 0 || iafLoading);
+                        $nextBtn.prop('disabled', !iafHasMore || iafLoading);
+                    }
+
+                    function loadIafRows(options) {
+                        var opts = options || {};
+                        var reset = !!opts.reset;
+                        var targetOffset = typeof opts.offset === 'number' ? opts.offset : 0;
+                        var targetPage = typeof opts.page === 'number' ? opts.page : 1;
+                        var historyOffset = typeof opts.historyOffset === 'number' ? opts.historyOffset : null;
+
+                        if (iafLoading) {
                             return;
                         }
 
                         if (reset) {
+                            iafLoadToken++;
                             iafOffset = 0;
+                            iafNextOffset = 0;
+                            iafCurrentPage = 1;
+                            iafPageHistory = [0];
+                            iafPageHistoryIndex = 0;
                             iafHasMore = true;
-                            iafLoadedKeys = {};
                             table.clear().draw();
+                            $overlayText.text($filter.val().trim() ? 'Searching…' : 'Loading clients…');
+                            $overlay.addClass('active');
+                        } else {
+                            $overlayText.text('Loading page...');
+                            $overlay.addClass('active');
                         }
 
+                        var token = iafLoadToken;
                         iafLoading = true;
+                        updatePaginationUi(table.rows().count());
+
                         $.ajax({
                             url: 'iaf_dashboard_data.php',
                             type: 'GET',
                             dataType: 'json',
                             data: {
-                                offset: iafOffset,
+                                offset: targetOffset,
                                 limit: iafLimit,
-                                search: $('#clientNameFilter').val()
+                                search: $filter.val()
                             },
                             success: function (response) {
+                                if (token !== iafLoadToken) {
+                                    return; // a newer search superseded this request
+                                }
                                 if (response.status !== 'success') {
                                     console.error(response.message || 'IAF dashboard load failed.');
                                     return;
                                 }
 
                                 var nodes = $($.parseHTML(response.rows_html || '', document, true)).filter('tr');
-                                var freshNodes = [];
-                                nodes.each(function () {
-                                    var key = $(this).data('row-key');
-                                    if (!key || !iafLoadedKeys[key]) {
-                                        if (key) iafLoadedKeys[key] = true;
-                                        freshNodes.push(this);
-                                    }
-                                });
+                                table.clear();
 
-                                if (freshNodes.length) {
-                                    table.rows.add($(freshNodes)).draw(false);
-                                    applyInsertedButtonState($(freshNodes));
+                                if (nodes.length) {
+                                    table.rows.add(nodes).draw(false);
+                                    applyInsertedButtonState($(nodes));
                                     table.columns.adjust();
+                                } else {
+                                    table.draw(false);
                                 }
 
-                                iafOffset = parseInt(response.next_offset, 10) || iafOffset;
+                                iafOffset = targetOffset;
+                                iafCurrentPage = targetPage;
+                                if (historyOffset !== null) {
+                                    iafPageHistory = iafPageHistory.slice(0, iafPageHistoryIndex + 1);
+                                    iafPageHistory.push(historyOffset);
+                                    iafPageHistoryIndex = iafPageHistory.length - 1;
+                                }
+
+                                iafNextOffset = parseInt(response.next_offset, 10) || (iafOffset + nodes.length);
                                 iafHasMore = !!response.has_more;
+                                updatePaginationUi(nodes.length);
                             },
                             complete: function () {
+                                if (token !== iafLoadToken) {
+                                    return; // stale; the newer request owns the UI state
+                                }
                                 iafLoading = false;
+                                $overlay.removeClass('active');
+                                updatePaginationUi(table.rows().count());
                             },
                             error: function () {
+                                if (token !== iafLoadToken) {
+                                    return;
+                                }
+                                iafLoading = false;
+                                $overlay.removeClass('active');
+                                updatePaginationUi(table.rows().count());
                                 console.error('IAF dashboard data request failed.');
                             }
                         });
                     }
 
-                    $('#clientNameFilter').on('keyup input', function () {
+                    function syncFilterUi() {
+                        $filterField.toggleClass('has-value', $filter.val().trim().length > 0);
+                    }
+
+                    $filter.on('input', function () {
+                        syncFilterUi();
                         clearTimeout(iafSearchTimer);
                         iafSearchTimer = setTimeout(function () {
-                            loadIafRows(true);
-                        }, 300);
+                            loadIafRows({ reset: true, offset: 0, page: 1 });
+                        }, 350);
                     });
 
-                    $('.table-responsive').on('scroll', function () {
-                        var el = this;
-                        if (el.scrollTop + el.clientHeight >= el.scrollHeight - 120) {
-                            loadIafRows(false);
+                    $filter.on('keydown', function (e) {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            clearTimeout(iafSearchTimer);
+                            loadIafRows({ reset: true, offset: 0, page: 1 });
+                        } else if (e.key === 'Escape' && $filter.val()) {
+                            e.preventDefault();
+                            $filterClear.trigger('click');
                         }
+                    });
+
+                    $filterClear.on('click', function () {
+                        $filter.val('');
+                        syncFilterUi();
+                        $filter.trigger('focus');
+                        clearTimeout(iafSearchTimer);
+                        loadIafRows({ reset: true, offset: 0, page: 1 });
+                    });
+
+                    $prevBtn.on('click', function () {
+                        if (iafLoading || iafPageHistoryIndex === 0) {
+                            return;
+                        }
+                        var previousIndex = iafPageHistoryIndex - 1;
+                        var previousOffset = iafPageHistory[previousIndex];
+                        iafPageHistoryIndex = previousIndex;
+                        loadIafRows({
+                            reset: false,
+                            offset: previousOffset,
+                            page: previousIndex + 1
+                        });
+                    });
+
+                    $nextBtn.on('click', function () {
+                        if (iafLoading || !iafHasMore) {
+                            return;
+                        }
+                        loadIafRows({
+                            reset: false,
+                            offset: iafNextOffset,
+                            page: iafCurrentPage + 1,
+                            historyOffset: iafNextOffset
+                        });
                     });
 
                     // Toggle Menu
@@ -917,7 +1235,10 @@
                         }, 300);
                     });
 
-                    loadIafRows(true);
+                    applyInsertedButtonState($('#iafTable tbody'));
+                    syncFilterUi();
+                    table.columns.adjust().draw(false);
+                    updatePaginationUi(table.rows().count());
                 });
                 function handleAction(actionType, clientData, btnElement) {
                     const btn = $(btnElement);

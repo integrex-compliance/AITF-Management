@@ -201,32 +201,52 @@ function iafDashboardServiceRowsSql($whereSql = '')
     $whereSql";
 }
 
-function iafDashboardFetchRows(PDO $db, $offset = 0, $limit = 12, $search = '')
+function iafDashboardFetchRows(PDO $db, $offset = 0, $limit = 30, $search = '')
 {
     $offset = max(0, (int) $offset);
     $limit = min(50, max(1, (int) $limit));
     $rawLimit = $limit;
-    $params = [];
-    $whereSql = '';
+    $search = trim((string) $search);
+    $prefetchLimit = min(250, max($rawLimit * 4, $rawLimit + 1));
 
-    if (trim((string) $search) !== '') {
-        $whereSql .= " AND c.customer_name LIKE :search";
-        $params[':search'] = '%' . trim((string) $search) . '%';
+    // Step 1: fetch only service ids for the requested page window.
+    $idSql = "SELECT svc.service_id
+        FROM customer_info c
+        INNER JOIN service svc ON svc.customer_id = c.id
+        WHERE 1=1";
+    $idParams = [];
+    if ($search !== '') {
+        $idSql .= " AND c.customer_name LIKE ?";
+        $idParams[] = '%' . $search . '%';
+    }
+    $idSql .= " ORDER BY c.id DESC, svc.service_id ASC LIMIT $prefetchLimit OFFSET $offset";
+
+    $idStmt = $db->prepare($idSql);
+    $idStmt->execute($idParams);
+    $serviceIds = array_map('intval', $idStmt->fetchAll(PDO::FETCH_COLUMN));
+
+    if (empty($serviceIds)) {
+        return [
+            'rows' => [],
+            'next_offset' => $offset,
+            'has_more' => false,
+        ];
     }
 
+    // Step 2: run the heavy query only for the preselected service ids.
+    $whereSql = " AND svc.service_id IN (" . implode(',', array_fill(0, count($serviceIds), '?')) . ")";
     $sql = iafDashboardServiceRowsSql($whereSql) . "
-        ORDER BY c.id DESC, svc.service_id ASC, cou.iso_index ASC
-        LIMIT $rawLimit OFFSET $offset";
+        ORDER BY c.id DESC, svc.service_id ASC, cou.iso_index ASC";
 
     $stmt = $db->prepare($sql);
-    $stmt->execute($params);
+    $stmt->execute($serviceIds);
     $rawRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    $rows = array_slice(iafDashboardDedupeRows($rawRows), 0, $limit);
+    $rows = array_slice(iafDashboardDedupeRows($rawRows), 0, $rawLimit);
 
     return [
         'rows' => $rows,
-        'next_offset' => $offset + count($rawRows),
-        'has_more' => count($rawRows) === $rawLimit,
+        'next_offset' => $offset + $rawLimit,
+        'has_more' => count($serviceIds) > $rawLimit,
     ];
 }
 

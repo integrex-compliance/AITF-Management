@@ -19,7 +19,7 @@ if (!isset($db) || !$db instanceof PDO) {
 }
 
 $offset = isset($_GET['offset']) ? (int) $_GET['offset'] : 0;
-$limit = isset($_GET['limit']) ? (int) $_GET['limit'] : 12;
+$limit = isset($_GET['limit']) ? (int) $_GET['limit'] : 30;
 $search = isset($_GET['search']) ? trim((string) $_GET['search']) : '';
 
 try {
