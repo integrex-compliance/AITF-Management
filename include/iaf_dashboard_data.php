@@ -254,6 +254,57 @@ function iafDashboardFetchClientRow(PDO $db, $clientId, $svcId, $officeUseId = 0
     return $row ? iafDashboardNormalizeClient($row) : null;
 }
 
+/**
+ * Minimal identity lookup used by the delete flow. We only need the fields
+ * required to rebuild the Certified Entity GUID and address/country for the
+ * ce-by-guid resolve call — not the full dashboard row.
+ *
+ * The GUID IS our system's agreement / unique id (e.g. "AITF/January-26/1"),
+ * generated in Contract Review under the certificate agreement section and
+ * stored in certification_aggrement.aggrement_no. That is exactly the value
+ * sent as certified_entity_unique_id on insert, so the Certified Entity on the
+ * IAF portal is keyed by it. We prefer customer_info.unique_id when present
+ * (it mirrors the same value) and fall back to the original (earliest)
+ * agreement number, since some clients have an empty customer_info.unique_id.
+ */
+function iafDashboardFetchClientIdentity(PDO $db, $clientId)
+{
+    $stmt = $db->prepare("SELECT
+            c.id AS internal_client_id,
+            c.customer_name,
+            c.address,
+            COALESCE(
+                NULLIF(TRIM(c.unique_id), ''),
+                (
+                    SELECT NULLIF(TRIM(ca.aggrement_no), '')
+                    FROM certification_aggrement ca
+                    WHERE ca.customer_id = c.id
+                      AND TRIM(COALESCE(ca.aggrement_no, '')) <> ''
+                    ORDER BY ca.aggrement_date ASC, ca.id ASC
+                    LIMIT 1
+                )
+            ) AS unique_id,
+            COALESCE(
+                NULLIF(TRIM(c.unique_id), ''),
+                (
+                    SELECT NULLIF(TRIM(ca.aggrement_no), '')
+                    FROM certification_aggrement ca
+                    WHERE ca.customer_id = c.id
+                      AND TRIM(COALESCE(ca.aggrement_no, '')) <> ''
+                    ORDER BY ca.aggrement_date ASC, ca.id ASC
+                    LIMIT 1
+                )
+            ) AS customer_guid,
+            'India' AS country
+        FROM customer_info c
+        WHERE c.id = :cid
+        LIMIT 1");
+    $stmt->execute([':cid' => (int) $clientId]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    return $row ?: null;
+}
+
 function iafDashboardFormatDate($date)
 {
     if (!iafDashboardHasRealValue($date)) {

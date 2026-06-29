@@ -285,10 +285,103 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
         
     } elseif ($action === 'delete') {
-        // Mock delete: Delete the client
-        echo json_encode(['status' => 'success', 'message' => "Client #$clientId was successfully deleted."]);
+        // Real delete: remove the Certified Entity (and its certifications) from
+        // the IAF CertSearch portal. We never touch our own database here.
+        include_once './dbConnect.php';
+        if (!isset($db) || !$db instanceof PDO) {
+            echo json_encode(['status' => 'error', 'message' => 'Database connection failed. IAF delete was not attempted.']);
+            exit;
+        }
+
+        // 1. Look up the client's identity so we can rebuild the same Certified
+        //    Entity GUID we sent to IAF on insert.
+        $clientRow = iafDashboardFetchClientIdentity($db, $clientId);
+        if (!$clientRow) {
+            echo json_encode(['status' => 'error', 'message' => "Client #$clientId not found in the database."]);
+            exit;
+        }
+
+        // 2. Resolve IAF's internal company_id (ce_...) from our GUID via the
+        //    ce-by-guid endpoint.
+        $resolve = iafCertSearchResolveCompanyId($clientRow);
+        iafCertSearchLogApiCall(
+            'delete_resolve_company_id',
+            'PUT',
+            $resolve['url'],
+            ['company_guid' => $resolve['company_guid'] ?? ''],
+            $resolve['http_code'],
+            $resolve['response'] === null ? $resolve['raw_response'] : $resolve['response'],
+            $resolve['curl_error']
+        );
+
+        if (empty($resolve['company_id'])) {
+            $reason = $resolve['error_message'] !== '' ? $resolve['error_message'] : 'IAF did not return a company_id for this client.';
+            echo json_encode([
+                'status' => 'error',
+                'message' => "Could not locate Client #$clientId on the IAF portal, so nothing was deleted. ($reason)",
+                'http_code' => $resolve['http_code'],
+            ]);
+            exit;
+        }
+
+        // 3. Delete the Certified Entity (and all its certifications) on IAF.
+        $deleteResult = iafCertSearchDeleteCertifiedEntity($resolve['company_id']);
+        iafCertSearchLogApiCall(
+            'delete',
+            'DELETE',
+            $deleteResult['url'],
+            ['company_id' => $resolve['company_id'], 'company_guid' => $resolve['company_guid'] ?? ''],
+            $deleteResult['http_code'],
+            $deleteResult['response'] === null ? $deleteResult['raw_response'] : $deleteResult['response'],
+            $deleteResult['curl_error']
+        );
+
+        // Treat 404 as already-removed (idempotent) so the dashboard row still clears.
+        $alreadyGone = $deleteResult['http_code'] === 404;
+
+        try {
+            $syncResult = $deleteResult;
+            $syncResult['iaf_record_id'] = $resolve['company_id'];
+            if ($alreadyGone) {
+                $syncResult['success'] = true;
+            }
+            iafCertSearchSaveSyncResult($db, $clientId, 'delete', ['certificate_number' => '', 'company_id' => $resolve['company_id']], $syncResult);
+        } catch (Exception $e) {
+            iafCertSearchLogApiCall('delete_db_save_error', 'DELETE', $deleteResult['url'], ['company_id' => $resolve['company_id']], $deleteResult['http_code'], $deleteResult, $e->getMessage());
+        }
+
+        if ($deleteResult['success']) {
+            echo json_encode([
+                'status' => 'success',
+                'message' => "Client #$clientId was deleted from the IAF CertSearch portal along with its certifications.",
+                'http_code' => $deleteResult['http_code'],
+                'company_id' => $resolve['company_id'],
+            ]);
+            exit;
+        }
+
+        if ($alreadyGone) {
+            echo json_encode([
+                'status' => 'success',
+                'title' => 'Already Removed',
+                'message' => "Client #$clientId was not found on the IAF portal (it may have been deleted already).",
+                'http_code' => $deleteResult['http_code'],
+                'company_id' => $resolve['company_id'],
+            ]);
+            exit;
+        }
+
+        echo json_encode([
+            'status' => 'error',
+            'message' => "IAF delete failed for Client #$clientId: " . $deleteResult['error_message'],
+            'http_code' => $deleteResult['http_code'],
+            'company_id' => $resolve['company_id'],
+            'response' => $deleteResult['response'],
+            'raw_response' => $deleteResult['raw_response'],
+            'curl_error' => $deleteResult['curl_error'],
+        ]);
         exit;
-        
+
     } else {
         echo json_encode(['status' => 'error', 'message' => 'Invalid action requested.']);
         exit;

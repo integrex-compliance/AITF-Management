@@ -451,6 +451,225 @@ function iafCertSearchSendPayload(array $payload, $action = 'insert')
     ];
 }
 
+/**
+ * Swap a /client/v1/ base for /client/v2/ (some CE endpoints — e.g. ce-by-guid
+ * and ce delete — are only served on v2 for certain accounts). Returns null if
+ * the URL is already v2 or has no recognisable version segment.
+ */
+function iafCertSearchPromoteUrlToV2($url)
+{
+    if (strpos($url, '/client/v1/') === false) {
+        return null;
+    }
+
+    return str_replace('/client/v1/', '/client/v2/', $url);
+}
+
+/**
+ * Run a request and, if it 404s on a v1 URL, transparently retry on v2. The
+ * insert/upload-cert path is left untouched; this only affects the CE
+ * resolve/delete endpoints whose version availability varies by account.
+ */
+function iafCertSearchRequestVersioned($url, $method, array $payload = null)
+{
+    $result = iafCertSearchRequest($url, $method, $payload);
+
+    if ($result['http_code'] === 404) {
+        $v2Url = iafCertSearchPromoteUrlToV2($url);
+        if ($v2Url !== null) {
+            $retry = iafCertSearchRequest($v2Url, $method, $payload);
+            // Prefer the retry unless it failed to even reach the server.
+            if ($retry['http_code'] !== 0) {
+                return $retry;
+            }
+        }
+    }
+
+    return $result;
+}
+
+/**
+ * Generic IAF CertSearch HTTP request (used for delete + company_id lookup).
+ *
+ * Mirrors the validation/return shape of iafCertSearchSendPayload() so the
+ * caller can log and inspect it the same way. $payload may be null for verbs
+ * that carry no body (e.g. DELETE).
+ */
+function iafCertSearchRequest($url, $method, array $payload = null)
+{
+    $config = iafCertSearchGetConfig();
+
+    $failure = function ($message) use ($url, $config) {
+        return [
+            'success' => false,
+            'http_code' => 0,
+            'response' => null,
+            'raw_response' => '',
+            'curl_error' => '',
+            'error_message' => $message,
+            'iaf_record_id' => '',
+            'url' => $url ?: $config['base_url'],
+        ];
+    };
+
+    if ($config['api_key'] === '') {
+        return $failure('IAF_API_KEY is missing from .env.');
+    }
+    if ($config['base_url'] === '' || !filter_var($config['base_url'], FILTER_VALIDATE_URL)) {
+        return $failure('IAF_API_BASE_URL is missing or invalid in .env.');
+    }
+    if (!filter_var($url, FILTER_VALIDATE_URL)) {
+        return $failure('IAF request URL could not be built.');
+    }
+    if (!function_exists('curl_init')) {
+        return $failure('PHP cURL extension is not enabled.');
+    }
+
+    $options = [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CUSTOMREQUEST => strtoupper($method),
+        CURLOPT_HTTPHEADER => [
+            'x-http-authorization: ' . $config['api_key'],
+            'Content-Type: application/json',
+            'Accept: application/json',
+        ],
+        CURLOPT_TIMEOUT => max(1, $config['timeout']),
+        CURLOPT_CONNECTTIMEOUT => max(1, $config['connect_timeout']),
+        CURLOPT_SSL_VERIFYPEER => true,
+        CURLOPT_SSL_VERIFYHOST => 2,
+    ];
+
+    if ($payload !== null) {
+        $jsonPayload = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        if ($jsonPayload === false) {
+            return $failure('Unable to encode IAF payload as JSON: ' . json_last_error_msg());
+        }
+        $options[CURLOPT_POSTFIELDS] = $jsonPayload;
+    }
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, $options);
+
+    $rawResponse = curl_exec($ch);
+    $curlError = curl_errno($ch) ? curl_error($ch) : '';
+    $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    $decodedResponse = null;
+    if (is_string($rawResponse) && trim($rawResponse) !== '') {
+        $decoded = json_decode($rawResponse, true);
+        $decodedResponse = json_last_error() === JSON_ERROR_NONE ? $decoded : $rawResponse;
+    }
+
+    $errorMessage = iafCertSearchExtractErrorMessage($decodedResponse, $curlError, $httpCode);
+    $success = $curlError === '' && $httpCode >= 200 && $httpCode < 300;
+
+    return [
+        'success' => $success,
+        'http_code' => $httpCode,
+        'response' => $decodedResponse,
+        'raw_response' => is_string($rawResponse) ? $rawResponse : '',
+        'curl_error' => $curlError,
+        'error_message' => $success ? '' : $errorMessage,
+        'iaf_record_id' => iafCertSearchExtractRecordId($decodedResponse),
+        'url' => $url,
+    ];
+}
+
+/**
+ * Pull IAF's internal Certified Entity id (company_id, e.g. "ce_abc123") out of
+ * a ce-by-guid response.
+ */
+function iafCertSearchExtractCompanyId($response)
+{
+    if (!is_array($response)) {
+        return '';
+    }
+
+    $paths = [
+        ['data', 'company_id'],
+        ['company_id'],
+        ['data', 'company_hash'],
+    ];
+
+    foreach ($paths as $path) {
+        $cursor = $response;
+        foreach ($path as $part) {
+            if (is_array($cursor) && array_key_exists($part, $cursor)) {
+                $cursor = $cursor[$part];
+            } else {
+                $cursor = null;
+                break;
+            }
+        }
+        if ($cursor !== null && trim((string) $cursor) !== '') {
+            return trim((string) $cursor);
+        }
+    }
+
+    return '';
+}
+
+/**
+ * Resolve IAF's Certified Entity company_id from our own per-client GUID.
+ *
+ * The upload-cert (insert) response only returns a certification id
+ * (company_certifications_id / "cert_..."), but the delete endpoint needs the
+ * Certified Entity id (company_id / "ce_..."). The ce-by-guid endpoint maps our
+ * stable GUID (the same certified_entity_unique_id we send on insert) to that
+ * company_id. The returned array adds 'company_id' and 'company_guid' keys to
+ * the standard request result.
+ */
+function iafCertSearchResolveCompanyId(array $clientData)
+{
+    $config = iafCertSearchGetConfig();
+
+    $guid = iafCertSearchNormalizeCertifiedEntityUniqueId(
+        iafCertSearchFirstValue($clientData, ['customer_guid', 'unique_id', 'aggrement_no', 'agreement_no', 'allotment_no', 'allotmentNo']),
+        $clientData
+    );
+
+    if ($guid === '') {
+        $result = iafCertSearchRequest('', 'PUT');
+        $result['error_message'] = 'Cannot determine the IAF Certified Entity GUID for this client (no unique_id / agreement number on record).';
+        $result['company_id'] = '';
+        $result['company_guid'] = '';
+        return $result;
+    }
+
+    $country = iafCertSearchFirstValue($clientData, ['company_country', 'country'], 'India');
+    $url = $config['base_url'] . '/cb/ce-by-guid';
+
+    $result = iafCertSearchRequestVersioned($url, 'PUT', [
+        'company_guid' => $guid,
+        'company_country' => $country,
+    ]);
+    $result['company_id'] = $result['success'] ? iafCertSearchExtractCompanyId($result['response']) : '';
+    $result['company_guid'] = $guid;
+
+    return $result;
+}
+
+/**
+ * Delete a Certified Entity (and all of its certifications) from IAF CertSearch.
+ * DELETE /api/client/v1/cb/ce/{company_id}
+ */
+function iafCertSearchDeleteCertifiedEntity($companyId)
+{
+    $config = iafCertSearchGetConfig();
+    $companyId = trim((string) $companyId);
+
+    if ($companyId === '') {
+        $result = iafCertSearchRequest('', 'DELETE');
+        $result['error_message'] = 'Missing IAF company_id; cannot delete the Certified Entity.';
+        return $result;
+    }
+
+    $url = $config['base_url'] . '/cb/ce/' . rawurlencode($companyId);
+
+    return iafCertSearchRequestVersioned($url, 'DELETE');
+}
+
 function iafCertSearchBuildUrl($baseUrl, $endpointPath)
 {
     $baseUrl = rtrim((string) $baseUrl, '/');

@@ -935,9 +935,9 @@
                     let ajaxData = { action: actionType };
 
                     if (actionType === 'delete') {
-                        confirmTitle = 'Delete Client Data?';
-                        confirmText = `Are you sure you want to delete client #${clientId}? This cannot be undone.`;
-                        confirmButtonText = 'Yes, Delete it!';
+                        confirmTitle = 'Delete client from IAF CertSearch?';
+                        confirmText = `Are you sure you want to delete client #${clientId} from the IAF CertSearch portal? This will permanently remove the certified entity and all of its certifications from IAF. This action cannot be undone.`;
+                        confirmButtonText = 'Yes, delete from IAF';
                         confirmColor = '#d33';
                         ajaxData.client_id = clientId;
                     } else if (actionType === 'update') {
