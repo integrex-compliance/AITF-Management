@@ -137,6 +137,73 @@ function generateRcClientStatusDates($db, $serviceId, $customerId)
     }
 }
 
+function activateCustomerAfterGrantedCaCdc($db, $customerId, $caServiceId, $cdcStatus, $certificateNo = '')
+{
+    if (!$db || empty($customerId) || empty($caServiceId) || $cdcStatus !== 'Granted') {
+        return;
+    }
+
+    try {
+        $caSql = "SELECT ca.service
+                  FROM service_type_ca ca
+                  INNER JOIN service svc ON ca.service = svc.service_id
+                  WHERE ca.ca_id = :ca_service_id
+                  AND ca.customer_id = :customer_id
+                  AND svc.service_type = 'CA'
+                  LIMIT 1";
+        $statement = $db->prepare($caSql);
+        $statement->bindParam(':ca_service_id', $caServiceId);
+        $statement->bindParam(':customer_id', $customerId);
+        $statement->execute();
+        $caService = $statement->fetch();
+
+        if (!$caService || empty($caService['service'])) {
+            return;
+        }
+
+        $hasCertificate = trim((string) $certificateNo) !== '';
+
+        if (!$hasCertificate) {
+            $certificateSql = "SELECT crr.crr_id
+                               FROM cdc_report_review crr
+                               LEFT JOIN cdc_report_review_office_use cou
+                                   ON cou.crr_id = crr.crr_id
+                                   AND TRIM(COALESCE(cou.certificate_no, '')) <> ''
+                               WHERE crr.ca_service_id = :ca_service_id
+                               AND crr.cdc_status = 'Granted'
+                               AND (
+                                   TRIM(COALESCE(crr.certificateNo, '')) <> ''
+                                   OR cou.crr_id IS NOT NULL
+                               )
+                               LIMIT 1";
+            $statement = $db->prepare($certificateSql);
+            $statement->bindParam(':ca_service_id', $caServiceId);
+            $statement->execute();
+            $hasCertificate = (bool) $statement->fetch();
+        }
+
+        if (!$hasCertificate) {
+            return;
+        }
+
+        $activeStatus = 'Active';
+        $updateSql = "UPDATE customer_info
+                      SET audit_status = :status
+                      WHERE id = :customer_id
+                      AND (
+                          audit_status IS NULL
+                          OR TRIM(audit_status) = ''
+                          OR LOWER(REPLACE(REPLACE(TRIM(audit_status), '-', ''), ' ', '')) IN ('inprocess', 'contractinprocess', 'valid', 'granted')
+                      )";
+        $statement = $db->prepare($updateSql);
+        $statement->bindParam(':status', $activeStatus);
+        $statement->bindParam(':customer_id', $customerId);
+        $statement->execute();
+    } catch (Exception $ex) {
+        error_log("CDC Active Status Update Error: " . $ex->getMessage());
+    }
+}
+
 if (strtoupper($_SERVER['REQUEST_METHOD']) == 'POST') {
 
     unset($_SESSION['cdc_error']);
@@ -569,6 +636,7 @@ if (strtoupper($_SERVER['REQUEST_METHOD']) == 'POST') {
                 $officeUsePayload = isset($_POST['office_use']) && is_array($_POST['office_use']) ? $_POST['office_use'] : [];
                 $officeUseEntries = normaliseCdcOfficePayload($officeUsePayload);
                 replaceCdcOfficeUse($db, (int) $_POST['crr_Id'], $officeUseEntries);
+                activateCustomerAfterGrantedCaCdc($db, $_POST['customer_Id'], $service, $cdc_status, $_POST['certificateNo']);
                 
                 // Save ISO decisions for RC services
                 if (isset($_POST['iso_decisions']) && !empty($_POST['iso_decisions'])) {
@@ -772,6 +840,7 @@ if (strtoupper($_SERVER['REQUEST_METHOD']) == 'POST') {
                     if ($newCrrId > 0) {
                         replaceCdcOfficeUse($db, $newCrrId, $officeUseEntries);
                     }
+                    activateCustomerAfterGrantedCaCdc($db, $_POST['customer_Id'], $service, $cdc_status, $_POST['certificateNo']);
                     
                     // Save ISO decisions for RC services
                     if ($newCrrId > 0 && isset($_POST['iso_decisions']) && !empty($_POST['iso_decisions'])) {
@@ -1322,6 +1391,7 @@ if (strtoupper($_SERVER['REQUEST_METHOD']) == 'POST') {
                 $officeUsePayload = isset($_POST['office_use']) && is_array($_POST['office_use']) ? $_POST['office_use'] : [];
                 $officeUseEntries = normaliseCdcOfficePayload($officeUsePayload);
                 replaceCdcOfficeUse($db, (int) $_POST['crr_Id'], $officeUseEntries);
+                activateCustomerAfterGrantedCaCdc($db, $_POST['customer_Id'], $service, $cdc_status, $_POST['certificateNo']);
 
                 header("Location: customerAccount.php?customerid=" . $_POST['customer_Id']);
                 exit();
@@ -1455,6 +1525,7 @@ if (strtoupper($_SERVER['REQUEST_METHOD']) == 'POST') {
                     if ($newCrrId > 0) {
                         replaceCdcOfficeUse($db, $newCrrId, $officeUseEntries);
                     }
+                    activateCustomerAfterGrantedCaCdc($db, $_POST['customer_Id'], $service, $cdc_status, $_POST['certificateNo']);
 
                     if ($cdc_status === 'Granted') {
                         $sqlRcService = "SELECT service FROM service_type_rc WHERE rc_id = :id";

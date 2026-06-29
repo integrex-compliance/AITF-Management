@@ -743,7 +743,13 @@
                         } else {
                             // Get ISO-specific status and decision date (if available from CDC)
                             // If not available, fall back to shared customer_info data for first ISO only
-                            $certStatus = !empty($cert['cdc_status']) ? $cert['cdc_status'] : ($i == 0 ? $clientInfo['audit_status'] : '');
+                            if (!empty($cert['cdc_status']) && $cert['cdc_status'] === 'Granted') {
+                                $certStatus = 'Active';
+                            } elseif (!empty($cert['cdc_status']) && $cert['cdc_status'] === 'Not-Granted') {
+                                $certStatus = ($i == 0 && !empty($clientInfo['audit_status'])) ? $clientInfo['audit_status'] : 'Inprocess';
+                            } else {
+                                $certStatus = ($i == 0 ? $clientInfo['audit_status'] : '');
+                            }
                         }
                         $decisionDate = !empty($cert['decision_date']) ? $cert['decision_date'] : ($i == 0 ? $clientInfo['certification_stage_date'] : '');
                         

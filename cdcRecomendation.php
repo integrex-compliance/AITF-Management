@@ -406,7 +406,7 @@ if (((isset($_POST['crr_Id']) && !empty($_POST['crr_Id'])) || (isset($_POST['crr
             $statement->execute();
 
             if (($maxsvcid["id"] == $ca["service"]) && ($mem3Grant == "Granted")) {
-                $customerStatus = "Valid";
+                $customerStatus = "Active";
                 $updateCustomerStatus = "UPDATE `customer_info` SET `audit_status` = :status where id = :customer";
                 $statement = $db->prepare($updateCustomerStatus);
                 $statement->bindParam(':status', $customerStatus);
@@ -435,7 +435,7 @@ if (((isset($_POST['crr_Id']) && !empty($_POST['crr_Id'])) || (isset($_POST['crr
             $statement->execute();
 
             if (($maxsvcid["id"] == $sai["service"]) && ($mem3Grant == "Granted")) {
-                $customerStatus = "Valid";
+                $customerStatus = "Active";
                 $updateCustomerStatus = "UPDATE `customer_info` SET `audit_status` = :status where id = :customer";
                 $statement = $db->prepare($updateCustomerStatus);
                 $statement->bindParam(':status', $customerStatus);
@@ -464,7 +464,7 @@ if (((isset($_POST['crr_Id']) && !empty($_POST['crr_Id'])) || (isset($_POST['crr
             $statement->execute();
 
             if (($maxsvcid["id"] == $saii["service"]) && ($mem3Grant == "Granted")) {
-                $customerStatus = "Valid";
+                $customerStatus = "Active";
                 $updateCustomerStatus = "UPDATE `customer_info` SET `audit_status` = :status where id = :customer";
                 $statement = $db->prepare($updateCustomerStatus);
                 $statement->bindParam(':status', $customerStatus);
@@ -493,7 +493,7 @@ if (((isset($_POST['crr_Id']) && !empty($_POST['crr_Id'])) || (isset($_POST['crr
             $statement->execute();
 
             if (($maxsvcid["id"] == $rc["service"]) && ($mem3Grant == "Granted")) {
-                $customerStatus = "Valid";
+                $customerStatus = "Active";
                 $updateCustomerStatus = "UPDATE `customer_info` SET `audit_status` = :status where id = :customer";
                 $statement = $db->prepare($updateCustomerStatus);
                 $statement->bindParam(':status', $customerStatus);
@@ -1518,9 +1518,9 @@ if (((isset($_POST['crr_Id']) && !empty($_POST['crr_Id'])) || (isset($_POST['crr
                 }
 
                 $servicestatus = "Completed";
-                $mem3Status = isset($_POST["cdc-status-mem3"]) ? $_POST["cdc-status-mem3"] : '';
+                $mem3Status = $mem3Grant;
                 if ($mem3Status === "Granted") {
-                    $customerStatus = "Valid";
+                    $customerStatus = "Active";
                 } else {
                     $customerStatus = "Withdrawn";
                 }
@@ -2696,4 +2696,3 @@ if (isset($_POST['crr_id'])) {
     $pdf->Output('CdcRecomendation.pdf', 'I');
     exit();
 }
-

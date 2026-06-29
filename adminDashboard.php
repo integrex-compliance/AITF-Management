@@ -108,6 +108,40 @@
         return str_replace(array(" ", "\t", "\n", "\r"), '', $value);
     }
 
+    function dashNormalizeClientStatus($value)
+    {
+        $status = trim((string) $value);
+        if ($status === '') {
+            return 'No Status';
+        }
+
+        $key = strtolower(str_replace(array('-', '_', ' '), '', $status));
+
+        if ($key === 'active' || $key === 'valid' || $key === 'granted') {
+            return 'Active';
+        }
+        if ($key === 'suspended' || $key === 'suspend') {
+            return 'Suspended';
+        }
+        if ($key === 'inprocess') {
+            return 'Inprocess';
+        }
+        if ($key === 'contractinprocess') {
+            return 'Contract-Inprocess';
+        }
+        if ($key === 'withdrawn' || $key === 'withdraw') {
+            return 'Withdrawn';
+        }
+        if ($key === 'applicationcanceled' || $key === 'applicationcancelled' || $key === 'cancelled' || $key === 'canceled') {
+            return 'Application canceled';
+        }
+        if ($key === 'expired' || $key === 'expire') {
+            return 'Expired';
+        }
+
+        return $status;
+    }
+
     function dashCandidateNumericId($value)
     {
         $raw = strtoupper(trim((string) $value));
@@ -359,7 +393,7 @@
     // Group clients by status for the breakdown modal
     $clientsByStatus = array();
     foreach ($allClientsDetail as $client) {
-        $st = ($client['audit_status'] === '' || $client['audit_status'] === null) ? 'No Status' : $client['audit_status'];
+        $st = dashNormalizeClientStatus($client['audit_status']);
         if (!isset($clientsByStatus[$st])) {
             $clientsByStatus[$st] = array();
         }
@@ -429,7 +463,23 @@
         ORDER BY ps.payment_date DESC, ps.payment_id DESC LIMIT 10");
 
     $clientTotals = dashFetchOne($db, "SELECT COUNT(*) total_clients, SUM(CASE WHEN audit_status = 'Application canceled' THEN 1 ELSE 0 END) canceled_clients, SUM(CASE WHEN audit_status = 'Withdrawn' THEN 1 ELSE 0 END) withdrawn_clients, SUM(CASE WHEN is_deleted = 'YES' THEN 1 ELSE 0 END) deleted_clients FROM customer_info");
-    $clientStatusRows = dashFetchAll($db, "SELECT IF(audit_status = '', 'No Status', audit_status) label, COUNT(*) total FROM customer_info WHERE is_deleted <> 'YES' GROUP BY audit_status ORDER BY total DESC LIMIT 8");
+    $clientStatusRows = array();
+    foreach ($clientsByStatus as $statusLabel => $statusClients) {
+        $clientStatusRows[] = array(
+            'label' => $statusLabel,
+            'total' => count($statusClients)
+        );
+    }
+    usort($clientStatusRows, function ($a, $b) {
+        if ($a['total'] == $b['total']) {
+            return strcmp($a['label'], $b['label']);
+        }
+        return ($a['total'] < $b['total']) ? 1 : -1;
+    });
+    $normalizedClientTotals = array();
+    foreach ($clientStatusRows as $sRow) {
+        $normalizedClientTotals[$sRow['label']] = $sRow['total'];
+    }
 
     $statusMetaParts = array();
     foreach ($clientStatusRows as $sRow) {
@@ -616,7 +666,7 @@
             array('label' => 'Total Registered Clients', 'value' => dashInt($activeClients), 'meta' => $clientStatusMeta, 'icon' => 'fa-building', 'raw' => $activeClients, 'format' => 'int'),
             array('label' => 'Online Applications', 'value' => dashInt(isset($applicationTotals['online_total']) ? $applicationTotals['online_total'] : 0), 'meta' => dashInt(isset($applicationTotals['unread_total']) ? $applicationTotals['unread_total'] : 0) . ' unread', 'icon' => 'fa-inbox', 'raw' => isset($applicationTotals['online_total']) ? $applicationTotals['online_total'] : 0, 'format' => 'int'),
             array('label' => 'Audit Applications', 'value' => dashInt(isset($auditApplicationTotals['audit_total']) ? $auditApplicationTotals['audit_total'] : 0), 'meta' => dashInt(isset($auditApplicationTotals['reviewed_total']) ? $auditApplicationTotals['reviewed_total'] : 0) . ' reviewed', 'icon' => 'fa-clipboard', 'raw' => isset($auditApplicationTotals['audit_total']) ? $auditApplicationTotals['audit_total'] : 0, 'format' => 'int'),
-            array('label' => 'Withdrawn Clients', 'value' => dashInt(isset($clientTotals['withdrawn_clients']) ? $clientTotals['withdrawn_clients'] : 0), 'meta' => 'Customer lifecycle risk', 'icon' => 'fa-sign-out', 'raw' => isset($clientTotals['withdrawn_clients']) ? $clientTotals['withdrawn_clients'] : 0, 'format' => 'int')
+            array('label' => 'Withdrawn Clients', 'value' => dashInt(isset($normalizedClientTotals['Withdrawn']) ? $normalizedClientTotals['Withdrawn'] : 0), 'meta' => 'Customer lifecycle risk', 'icon' => 'fa-sign-out', 'raw' => isset($normalizedClientTotals['Withdrawn']) ? $normalizedClientTotals['Withdrawn'] : 0, 'format' => 'int')
         )
     );
     $dashboardCards = isset($cardSets[$dashboardType]) ? $cardSets[$dashboardType] : $cardSets['business'];
@@ -644,7 +694,7 @@
         'clients' => array(
             array('title' => 'Client Base', 'text' => dashInt($activeClients) . ' active client accounts are available to open.'),
             array('title' => 'Applications', 'text' => dashInt(isset($applicationTotals['online_total']) ? $applicationTotals['online_total'] : 0) . ' online applications and ' . dashInt(isset($auditApplicationTotals['audit_total']) ? $auditApplicationTotals['audit_total'] : 0) . ' audit applications exist.'),
-            array('title' => 'Client Risk', 'text' => dashInt(isset($clientTotals['withdrawn_clients']) ? $clientTotals['withdrawn_clients'] : 0) . ' withdrawn and ' . dashInt(isset($clientTotals['canceled_clients']) ? $clientTotals['canceled_clients'] : 0) . ' canceled clients are visible.')
+            array('title' => 'Client Risk', 'text' => dashInt(isset($normalizedClientTotals['Withdrawn']) ? $normalizedClientTotals['Withdrawn'] : 0) . ' withdrawn and ' . dashInt(isset($normalizedClientTotals['Application canceled']) ? $normalizedClientTotals['Application canceled'] : 0) . ' canceled clients are visible.')
         )
     );
     $selectedInsights = isset($insightSets[$dashboardType]) ? $insightSets[$dashboardType] : $insightSets['business'];
@@ -1699,9 +1749,9 @@
                             'Active' => '#1f9d68',
                             'Withdrawn' => '#d14f62',
                             'Expired' => '#ef7b45',
-                            'Expire' => '#f59e0b',
-                            'in-process' => '#155e95',
                             'Inprocess' => '#155e95',
+                            'Contract-Inprocess' => '#7c3aed',
+                            'Suspended' => '#b45309',
                             'Application canceled' => '#64748b',
                             'No Status' => '#94a3b8'
                         ];
