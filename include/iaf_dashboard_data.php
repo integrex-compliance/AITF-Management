@@ -28,25 +28,25 @@ function iafDashboardRowScore(array $client)
     $score = 0;
 
     if (iafDashboardHasRealValue($client['certificate_number'] ?? '')) {
-        $score += 1000;
-    }
-    if ($status === 'granted' || strpos($status, 'grant') !== false || strpos($status, 'active') !== false || strpos($status, 'valid') !== false) {
-        $score += 200;
+        $score += 1000000000;
     }
     if (iafDashboardHasRealValue($client['certificate_issue_date'] ?? '') || iafDashboardHasRealValue($client['issue_date'] ?? '')) {
-        $score += 80;
+        $score += 100000000;
     }
     if (iafDashboardHasRealValue($client['expire_date'] ?? '') || iafDashboardHasRealValue($client['expiry_date'] ?? '')) {
-        $score += 80;
+        $score += 100000000;
     }
     if (iafDashboardHasRealValue($client['cdc_office_use_id'] ?? '')) {
-        $score += 20;
+        $score += 10000000;
     }
     if (iafDashboardHasRealValue($client['certificate_tracking_id'] ?? '')) {
-        $score += 10;
+        $score += 10000000;
+    }
+    if ($status === 'granted' || $status === 'completed' || strpos($status, 'grant') !== false || strpos($status, 'active') !== false || strpos($status, 'valid') !== false) {
+        $score += 1;
     }
 
-    return $score;
+    return $score + min(max((int) ($client['svc_id'] ?? 0), 0), 9999999);
 }
 
 function iafDashboardNormalizeClient(array $client)
@@ -117,10 +117,10 @@ function iafDashboardServiceRowsSql($whereSql = '')
         cp.certificate_id as certificate_tracking_id,
         COALESCE(NULLIF(cou.certificate_no, ''), NULLIF(cp.certificate_no, ''), NULLIF(cdc.certificateNo, '')) as certificate_number,
         COALESCE(ca_dates.certificate_issue_date, c.certification_stage_date) as certificate_issue_date,
-        COALESCE(cou.rev_date, cp.registration_date, cdc.Date) as issue_date,
+        COALESCE(NULLIF(NULLIF(cou.rev_date, ''), '0000-00-00'), NULLIF(NULLIF(cdc.revDatecdc, ''), '0000-00-00'), NULLIF(NULLIF(cp.registration_date, ''), '0000-00-00'), NULLIF(NULLIF(cdc.Date, ''), '0000-00-00')) as issue_date,
         COALESCE(ca_dates.certificate_issue_date, c.certification_stage_date) as original_issue_date,
-        COALESCE(NULLIF(NULLIF(cp.valid_until, ''), '0000-00-00'), $certificatePrintExpiry, NULLIF(NULLIF(latest_customer_cp.valid_until, ''), '0000-00-00'), NULLIF(NULLIF(cou.expire_date, ''), '0000-00-00'), NULLIF(NULLIF(cdc.expiredate, ''), '0000-00-00')) as expiry_date,
-        COALESCE(NULLIF(NULLIF(cp.valid_until, ''), '0000-00-00'), $certificatePrintExpiry, NULLIF(NULLIF(latest_customer_cp.valid_until, ''), '0000-00-00'), NULLIF(NULLIF(cou.expire_date, ''), '0000-00-00'), NULLIF(NULLIF(cdc.expiredate, ''), '0000-00-00')) as expire_date,
+        COALESCE(NULLIF(NULLIF(cp.valid_until, ''), '0000-00-00'), $certificatePrintExpiry, NULLIF(NULLIF(cou.expire_date, ''), '0000-00-00'), NULLIF(NULLIF(cdc.expiredate, ''), '0000-00-00')) as expiry_date,
+        COALESCE(NULLIF(NULLIF(cp.valid_until, ''), '0000-00-00'), $certificatePrintExpiry, NULLIF(NULLIF(cou.expire_date, ''), '0000-00-00'), NULLIF(NULLIF(cdc.expiredate, ''), '0000-00-00')) as expire_date,
         cp.certificate_scope,
         COALESCE(NULLIF(aa.proposed_scope, ''), cp.certificate_scope, c.scope) as certification_scope,
         COALESCE(
@@ -153,31 +153,6 @@ function iafDashboardServiceRowsSql($whereSql = '')
         GROUP BY cp_s.service_id
     ) cp_latest ON cp_latest.service_id = $currentServiceId
     LEFT JOIN certificate_print cp ON cp.certificate_id = cp_latest.certificate_id
-    LEFT JOIN (
-        SELECT latest_cp.customer_id, cp_latest_customer.valid_until
-        FROM (
-            SELECT customer_id, MAX(certificate_id) as certificate_id
-            FROM (
-                SELECT ca_cp.customer_id, cp_ca.certificate_id
-                FROM service_type_ca ca_cp
-                INNER JOIN certificate_print cp_ca ON cp_ca.service_id = ca_cp.ca_id
-                UNION ALL
-                SELECT sai_cp.customer_id, cp_sai.certificate_id
-                FROM service_type_sai sai_cp
-                INNER JOIN certificate_print cp_sai ON cp_sai.service_id = sai_cp.sai_id
-                UNION ALL
-                SELECT saii_cp.customer_id, cp_saii.certificate_id
-                FROM service_type_saii saii_cp
-                INNER JOIN certificate_print cp_saii ON cp_saii.service_id = saii_cp.saii_id
-                UNION ALL
-                SELECT rc_cp.rc_customer as customer_id, cp_rc.certificate_id
-                FROM service_type_rc rc_cp
-                INNER JOIN certificate_print cp_rc ON cp_rc.service_id = rc_cp.rc_id
-            ) all_customer_cp
-            GROUP BY customer_id
-        ) latest_cp
-        INNER JOIN certificate_print cp_latest_customer ON cp_latest_customer.certificate_id = latest_cp.certificate_id
-    ) latest_customer_cp ON latest_customer_cp.customer_id = c.id
     LEFT JOIN cdc_report_review cdc ON cdc.crr_id = COALESCE(stca.crr_id, stsai.crr_id, stsaii.crr_id, strc.crr_id)
     LEFT JOIN cdc_report_review_office_use cou ON cou.crr_id = cdc.crr_id
     LEFT JOIN (

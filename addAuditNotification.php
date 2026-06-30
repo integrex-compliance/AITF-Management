@@ -8,6 +8,7 @@
 
 session_start();
 include_once './dbConnect.php';
+include_once './include/cdc_audit_date_sync.php';
 date_default_timezone_set('Asia/Kolkata');
 if (isset($_POST["audit-noti-id-edit"]) && !empty($_POST["audit-noti-id-edit"])) {
 
@@ -280,6 +281,7 @@ if (isset($_POST["audit-noti-id-edit"]) && !empty($_POST["audit-noti-id-edit"]))
         $statement->bindParam(":id", $notiid);
         $statement->bindParam(":auditor", $auditorslist);
         $statement->execute();
+        aitfSyncCdcAuditDateFromStageNotifications($db, $service);
 
         header("Location: customerAccount.php?customerid=" . $customer);
 //        echo "success";
@@ -688,10 +690,11 @@ if (isset($_POST["audit-noti-id-edit"]) && !empty($_POST["audit-noti-id-edit"]))
             $statement->bindParam(":id", $row['id']);
             $statement->bindParam(":auditor", $auditorslist);
             $statement->execute();
+            aitfSyncCdcAuditDateFromStageNotifications($db, $service);
             header("Location: customerAccount.php?customerid=" . $customer);
 //            echo "success";
         }
     } catch (Exception $ex) {
         echo $ex;
     }
-} 
+}

@@ -190,8 +190,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $freshClient = null;
                 error_log("IAF Update service-level query failed: " . $e->getMessage());
             }
-        } else {
-            $freshClient = null;
         }
 
         // Fallback: client without service (no svc_id)

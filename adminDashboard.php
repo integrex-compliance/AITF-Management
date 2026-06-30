@@ -165,6 +165,25 @@
         return '';
     }
 
+    function dashCertificationRecordKey($client)
+    {
+        $uniqueId = dashNormalizeKey(isset($client['unique_id']) ? $client['unique_id'] : '');
+        $certificationNo = dashNormalizeKey(isset($client['certification_no']) ? $client['certification_no'] : '');
+
+        if ($uniqueId === '' || $certificationNo === '') {
+            return '';
+        }
+
+        return implode('|', array(
+            $uniqueId,
+            $certificationNo,
+            dashNormalizeKey(isset($client['updated_cerf']) ? $client['updated_cerf'] : ''),
+            dashNormalizeKey(dashNormalizeClientStatus(isset($client['audit_status']) ? $client['audit_status'] : '')),
+            trim((string) (isset($client['certification_stage_date']) ? $client['certification_stage_date'] : '')),
+            dashNormalizeKey(isset($client['standard_for']) ? $client['standard_for'] : '')
+        ));
+    }
+
     function dashResolveClientFromRow($row, $customerIdNameMap, $customerUniqueNameMap, $customerNameMap, $serviceIdNameMap, $paymentAliasNameMap, $paymentAliasIdMap)
     {
         $resolvedName = isset($row['customer_name']) ? trim((string) $row['customer_name']) : '';
@@ -388,7 +407,20 @@
     $recentLetters = dashFetchAll($db, "SELECT ci.id customer_id, ci.customer_name, svc.service_type, svcdt.action, svcdt.due_date, svcdt.sent_date, svcdt.status FROM ca_service_dates svcdt LEFT JOIN service svc ON svcdt.service_id = svc.service_id LEFT JOIN customer_info ci ON svc.customer_id = ci.id $letterWhere ORDER BY svcdt.due_date DESC, svcdt.action_id DESC LIMIT 8", $letterParams);
 
     // Lists for Modal view
-    $allClientsDetail = dashFetchAll($db, "SELECT id, customer_name, audit_status FROM customer_info WHERE is_deleted <> 'YES' ORDER BY customer_name ASC");
+    $allClientsDetailRows = dashFetchAll($db, "SELECT id, customer_name, audit_status, unique_id, certification_no, updated_cerf, certification_stage_date, standard_for FROM customer_info WHERE is_deleted <> 'YES' ORDER BY customer_name ASC, id ASC");
+    $allClientsDetail = array();
+    $seenCertificationRecords = array();
+
+    foreach ($allClientsDetailRows as $client) {
+        $recordKey = dashCertificationRecordKey($client);
+        if ($recordKey !== '' && isset($seenCertificationRecords[$recordKey])) {
+            continue;
+        }
+        if ($recordKey !== '') {
+            $seenCertificationRecords[$recordKey] = true;
+        }
+        $allClientsDetail[] = $client;
+    }
 
     // Group clients by status for the breakdown modal
     $clientsByStatus = array();
@@ -462,7 +494,12 @@
         WHERE ps.service_type <> 'TDS'
         ORDER BY ps.payment_date DESC, ps.payment_id DESC LIMIT 10");
 
-    $clientTotals = dashFetchOne($db, "SELECT COUNT(*) total_clients, SUM(CASE WHEN audit_status = 'Application canceled' THEN 1 ELSE 0 END) canceled_clients, SUM(CASE WHEN audit_status = 'Withdrawn' THEN 1 ELSE 0 END) withdrawn_clients, SUM(CASE WHEN is_deleted = 'YES' THEN 1 ELSE 0 END) deleted_clients FROM customer_info");
+    $clientTotals = array(
+        'total_clients' => count($allClientsDetail),
+        'canceled_clients' => isset($clientsByStatus['Application canceled']) ? count($clientsByStatus['Application canceled']) : 0,
+        'withdrawn_clients' => isset($clientsByStatus['Withdrawn']) ? count($clientsByStatus['Withdrawn']) : 0,
+        'deleted_clients' => 0
+    );
     $clientStatusRows = array();
     foreach ($clientsByStatus as $statusLabel => $statusClients) {
         $clientStatusRows[] = array(

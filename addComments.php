@@ -41,13 +41,46 @@ if (isset($_POST["certificationComment"]) && !empty($_POST["certificationComment
     }
 } else if (isset($_POST["rowidac"]) && !empty($_POST["rowidac"]) && isset($_POST["customer"]) && !empty($_POST["customer"])) {
     try {
-        $sql = "UPDATE `ca_service_dates` SET `is_deleted`= 'Y', sent_date = '0000-00-00' WHERE `action_id` = :id";
-        $statement = $db->prepare($sql);
+        $dateRowSql = "SELECT service_id, action, due_date FROM `ca_service_dates` WHERE `action_id` = :id LIMIT 1";
+        $statement = $db->prepare($dateRowSql);
         $statement->bindParam(":id", $_POST['rowidac']);
         $statement->execute();
+        $dateRow = $statement->fetch(PDO::FETCH_ASSOC);
+
+        if (!$dateRow) {
+            if (isset($_POST["ajax"]) && $_POST["ajax"] == "1") {
+                header('Content-Type: application/json');
+                echo json_encode(array('status' => 'error', 'message' => 'Letter/action row not found.'));
+                exit;
+            }
+            header("Location: customerAccount.php?customerid=" . $_POST['customer']);
+            exit;
+        }
+
+        $sql = "UPDATE `ca_service_dates`
+                SET `is_deleted`= 'Y', sent_date = '0000-00-00'
+                WHERE `service_id` = :service_id
+                AND `action` = :action
+                AND `due_date` = :due_date";
+        $statement = $db->prepare($sql);
+        $statement->bindParam(":service_id", $dateRow['service_id']);
+        $statement->bindParam(":action", $dateRow['action']);
+        $statement->bindParam(":due_date", $dateRow['due_date']);
+        $statement->execute();
+
+        if (isset($_POST["ajax"]) && $_POST["ajax"] == "1") {
+            header('Content-Type: application/json');
+            echo json_encode(array('status' => 'success'));
+            exit;
+        }
+
         header("Location: customerAccount.php?customerid=" . $_POST['customer']);
     } catch (Exception $ex) {
-        
+        if (isset($_POST["ajax"]) && $_POST["ajax"] == "1") {
+            header('Content-Type: application/json');
+            echo json_encode(array('status' => 'error', 'message' => 'Unable to delete this letter/action row.'));
+            exit;
+        }
     }
 } else if (isset($_GET["customerid"]) && !empty($_GET["customerid"]) && isset($_GET["customerstatus"]) && !empty($_GET["customerstatus"])) {
     try {

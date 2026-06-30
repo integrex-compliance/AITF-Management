@@ -542,6 +542,103 @@
             margin: 5px 1px 3px 0px;
             border: 1px solid rgba(81, 203, 238, 1);
         }
+
+        .letter-delete-modal {
+            align-items: center;
+            background: rgba(17, 24, 39, 0.58);
+            display: none;
+            inset: 0;
+            justify-content: center;
+            padding: 18px;
+            position: fixed;
+            z-index: 99999;
+        }
+
+        .letter-delete-modal.is-visible {
+            display: flex;
+        }
+
+        .letter-delete-dialog {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 18px 48px rgba(15, 23, 42, 0.28);
+            max-width: 390px;
+            padding: 26px 26px 22px;
+            position: relative;
+            text-align: center;
+            width: 100%;
+        }
+
+        .letter-delete-close {
+            background: transparent;
+            border: 0;
+            color: #6b7280;
+            font-size: 26px;
+            line-height: 1;
+            position: absolute;
+            right: 14px;
+            top: 10px;
+        }
+
+        .letter-delete-icon {
+            align-items: center;
+            background: #fff1f2;
+            border: 1px solid #fecdd3;
+            border-radius: 50%;
+            color: #dc2626;
+            display: flex;
+            font-size: 24px;
+            height: 58px;
+            justify-content: center;
+            margin: 0 auto 14px;
+            width: 58px;
+        }
+
+        .letter-delete-dialog h4 {
+            color: #111827;
+            font-size: 20px;
+            font-weight: 700;
+            margin: 0 0 8px;
+        }
+
+        .letter-delete-dialog p {
+            color: #4b5563;
+            font-size: 14px;
+            line-height: 1.5;
+            margin: 0 0 22px;
+        }
+
+        .letter-delete-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .letter-delete-actions .btn {
+            border-radius: 6px;
+            font-weight: 600;
+            min-width: 110px;
+            padding: 9px 16px;
+        }
+
+        .letter-delete-cancel {
+            background: #fff;
+            border: 1px solid #cbd5e1;
+            color: #334155;
+        }
+
+        .letter-delete-confirm {
+            background: #dc2626;
+            border: 1px solid #dc2626;
+            color: #fff;
+        }
+
+        .letter-delete-confirm:hover,
+        .letter-delete-confirm:focus {
+            background: #b91c1c;
+            border-color: #b91c1c;
+            color: #fff;
+        }
     </style>
 
     <div id="page-content-wrapper">       
@@ -1306,14 +1403,14 @@
                     }
                 }
 
-                $actiosDates = "SELECT MIN(action_id) as action_id, service_id, action, due_date, MAX(sent_date) as sent_date, MAX(is_deleted) as is_deleted FROM ca_service_dates WHERE service_id = :serviceID GROUP BY service_id, action, due_date ORDER BY due_date ASC";
+                $actiosDates = "SELECT MIN(action_id) as action_id, service_id, action, due_date, MAX(sent_date) as sent_date, MAX(is_deleted) as is_deleted FROM ca_service_dates WHERE service_id = :serviceID AND is_deleted = 'N' GROUP BY service_id, action, due_date ORDER BY due_date ASC";
                 $statement = $db->prepare($actiosDates);
                 $statement->bindParam(':serviceID', $caservice['service']);
                 $statement->execute();
                 $actionDate = $statement->fetchAll();
 
                 // Fetch dates for CA service itself
-                $caActionDatesQuery = "SELECT MIN(action_id) as action_id, service_id, action, due_date, MAX(sent_date) as sent_date, MAX(is_deleted) as is_deleted FROM ca_service_dates WHERE service_id = :caServiceId GROUP BY service_id, action, due_date ORDER BY due_date ASC";
+                $caActionDatesQuery = "SELECT MIN(action_id) as action_id, service_id, action, due_date, MAX(sent_date) as sent_date, MAX(is_deleted) as is_deleted FROM ca_service_dates WHERE service_id = :caServiceId AND is_deleted = 'N' GROUP BY service_id, action, due_date ORDER BY due_date ASC";
                 $statement = $db->prepare($caActionDatesQuery);
                 $statement->bindParam(':caServiceId', $caservice['service']);
                 $statement->execute();
@@ -2123,7 +2220,7 @@
                 
             
 
-                $saiActionDate = "SELECT MIN(action_id) as action_id, service_id, action, due_date, MAX(sent_date) as sent_date, MAX(is_deleted) as is_deleted FROM ca_service_dates WHERE service_id = :ssiService GROUP BY service_id, action, due_date ORDER BY due_date ASC";
+                $saiActionDate = "SELECT MIN(action_id) as action_id, service_id, action, due_date, MAX(sent_date) as sent_date, MAX(is_deleted) as is_deleted FROM ca_service_dates WHERE service_id = :ssiService AND is_deleted = 'N' GROUP BY service_id, action, due_date ORDER BY due_date ASC";
                 $statement = $db->prepare($saiActionDate);
                 $statement->bindParam(':ssiService', $saiService['service']);
                 $statement->execute();
@@ -2286,6 +2383,9 @@
                         }
                     }
                 }
+                $nextSaiiServiceDates = array_values(array_filter($nextSaiiServiceDates, function ($row) {
+                    return !isset($row['is_deleted']) || $row['is_deleted'] != 'Y';
+                }));
 
                 if ($letestService["c_service"] == $saiService['service']) {
                     $disp = "";
@@ -3117,6 +3217,9 @@
                         }
                     }
                 }
+                $saiiServiceDates = array_values(array_filter($saiiServiceDates, function ($row) {
+                    return !isset($row['is_deleted']) || $row['is_deleted'] != 'Y';
+                }));
 
                 if ($letestService["c_service"] == $saiiService['service']) {
                     $disp = "";
@@ -3902,6 +4005,9 @@
                         }
                     }
                 }
+                $rcServiceActionDates = array_values(array_filter($rcServiceActionDates, function ($row) {
+                    return !isset($row['is_deleted']) || $row['is_deleted'] != 'Y';
+                }));
                 if ($letestService["c_service"] == $rcServiceinfo['service']) {
                     $disp = "";
                 } else {
@@ -4576,7 +4682,7 @@
                 $statement->execute();
                 $spservices = $statement->fetch();
 
-                $allSPServiceAction = "SELECT MIN(action_id) as action_id, service_id, action, due_date, MAX(sent_date) as sent_date, MAX(is_deleted) as is_deleted FROM ca_service_dates WHERE service_id = :id GROUP BY service_id, action, due_date ORDER BY due_date ASC";
+                $allSPServiceAction = "SELECT MIN(action_id) as action_id, service_id, action, due_date, MAX(sent_date) as sent_date, MAX(is_deleted) as is_deleted FROM ca_service_dates WHERE service_id = :id AND is_deleted = 'N' GROUP BY service_id, action, due_date ORDER BY due_date ASC";
                 $statement = $db->prepare($allSPServiceAction);
                 $statement->bindParam(':id', $spservices['service']);
                 $statement->execute();
@@ -5815,6 +5921,23 @@
                 </div>
             </div>
         </div>
+
+        <div id="letterActionDeleteModal" class="letter-delete-modal" aria-hidden="true">
+            <div class="letter-delete-dialog" role="dialog" aria-modal="true" aria-labelledby="letterDeleteTitle">
+                <button type="button" class="letter-delete-close" aria-label="Close">&times;</button>
+                <div class="letter-delete-icon">
+                    <i class="fa fa-trash"></i>
+                </div>
+                <h4 id="letterDeleteTitle">Delete this row?</h4>
+                <p>This will remove the selected letter/action row from this client status section.</p>
+                <div class="letter-delete-actions">
+                    <button type="button" class="btn letter-delete-cancel">Cancel</button>
+                    <button type="button" class="btn letter-delete-confirm">
+                        <i class="fa fa-trash"></i> Delete
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script type="text/javascript">
@@ -6768,17 +6891,91 @@
                 });
             });
 
-            $(".deleteLetterAccount").click(function () {
-                //            alert($(this).attr("data-customer"));
-                var rowid = $(this).attr("data-action");
-                var customer = $(this).attr("data-customer");
-                var url = 'addComments.php';
-                var form = $('<form action="' + url + '" method="post">' +
-                        '<input type="hidden" name="rowidac" value="' + rowid + '" />' +
-                        '<input type="hidden" name="customer" value="' + customer + '" />' +
-                        '</form>');
-                $('body').append(form);
-                form.submit();
+            var pendingLetterDelete = null;
+
+            function closeLetterDeleteModal() {
+                $('#letterActionDeleteModal').removeClass('is-visible').attr('aria-hidden', 'true');
+                pendingLetterDelete = null;
+            }
+
+            function deletePendingLetterRow() {
+                if (!pendingLetterDelete || pendingLetterDelete.$link.data('deleting')) {
+                    return false;
+                }
+
+                var item = pendingLetterDelete;
+                item.$link.data('deleting', true).css('pointer-events', 'none');
+                $('#letterActionDeleteModal .letter-delete-confirm').prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Deleting');
+
+                $.ajax({
+                    url: 'addComments.php',
+                    type: 'POST',
+                    dataType: 'json',
+                    data: {
+                        rowidac: item.rowid,
+                        customer: item.customer,
+                        ajax: 1
+                    },
+                    success: function (response) {
+                        if (response && response.status === 'success') {
+                            item.$row.fadeOut(200, function () {
+                                $(this).remove();
+                            });
+                            closeLetterDeleteModal();
+                            return;
+                        }
+
+                        alert(response && response.message ? response.message : 'Unable to delete this row.');
+                        item.$link.data('deleting', false).css('pointer-events', '');
+                    },
+                    error: function () {
+                        alert('Unable to delete this row.');
+                        item.$link.data('deleting', false).css('pointer-events', '');
+                    },
+                    complete: function () {
+                        $('#letterActionDeleteModal .letter-delete-confirm').prop('disabled', false).html('<i class="fa fa-trash"></i> Delete');
+                    }
+                });
+            }
+
+            $('body').on('click', '.deleteLetterAccount', function (e) {
+                e.preventDefault();
+
+                var $link = $(this);
+                if ($link.is('[disabled]') || $link.data('deleting')) {
+                    return false;
+                }
+
+                var rowid = $link.attr('data-action');
+                var customer = $link.attr('data-customer');
+
+                if (!rowid || !customer) {
+                    alert('Unable to delete this row.');
+                    return false;
+                }
+
+                pendingLetterDelete = {
+                    $link: $link,
+                    $row: $link.closest('tr'),
+                    rowid: rowid,
+                    customer: customer
+                };
+
+                $('#letterActionDeleteModal').addClass('is-visible').attr('aria-hidden', 'false');
+            });
+
+            $('body').on('click', '.letter-delete-confirm', function () {
+                deletePendingLetterRow();
+            });
+
+            $('body').on('click', '.letter-delete-cancel, .letter-delete-close', function () {
+                closeLetterDeleteModal();
+            });
+
+            $('body').on('click', '#letterActionDeleteModal', function (e) {
+                if (e.target === this) {
+                    closeLetterDeleteModal();
+                }
             });
 
             $('body').on('click', ".cbComment", function (e) {

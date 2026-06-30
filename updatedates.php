@@ -1,114 +1,94 @@
 <?php
+    include_once './dbConnect.php';
 
-    $server = "localhost";
-    $username = "aitf-mcl";
-    $password='aitfmcl';
-    $dbname = "aitf_web";
-    
-    $conn = mysqli_connect($server,$username,$password,$dbname);
-    
-    
-    
-    // $action_id = $_GET['id'];
-    
-    
-    echo $due_date = $_POST['due_date'];
-    
+    function redirectWithAlert($message, $url)
+    {
+        echo '<script>';
+        echo 'alert(' . json_encode($message) . ');';
+        echo 'window.location.replace(' . json_encode($url) . ');';
+        echo '</script>';
+        exit;
+    }
+
+    if (!$db) {
+        redirectWithAlert('Database connection failed. Please check local MySQL settings in dbConnect.php.', 'javascript:history.back()');
+    }
+
+    $due_date = isset($_POST['due_date']) ? trim($_POST['due_date']) : '';
+    $sent_date = isset($_POST['sent_date']) ? trim($_POST['sent_date']) : '';
+    $action_id = filter_input(INPUT_POST, 'action_id', FILTER_VALIDATE_INT);
+
+    if (!$action_id || $due_date === '') {
+        redirectWithAlert('Invalid date update request.', 'javascript:history.back()');
+    }
+
     $dd = strtotime($due_date);
-    
-    echo $newdate = date('Y-m-d',$dd);
-    
-  
-    
-    
-    
-    $sent_date = $_POST['sent_date'];
-    
-    $action_id = $_POST['action_id'];
-    
-    // to find service id
-    
-    
-    $query = "SELECT * FROM `ca_service_dates` WHERE `action_id`=$action_id";
-    
-    $res = mysqli_query($conn , $query);
-    
-    $row = mysqli_fetch_assoc($res);
-    
-    $service_id = $row['service_id'];
-    
-    
-    // to find customer id
-    
-    
-    $query = "SELECT * FROM `service` WHERE `service_id`=$service_id";
-    
-    $res = mysqli_query($conn , $query);
-    
-    $row = mysqli_fetch_assoc($res);
-    
-    $cust_id = $row['customer_id'];
-    
-    
-    
-    
-    
-    
-    
-    
-    // Validation: Check if the action is a reminder (1st Reminder, 2nd Reminder, Expire Letter)
-    // and if so, validate that the due_date is greater than CA CDC date
-    $actionQuery = "SELECT action FROM `ca_service_dates` WHERE `action_id`=$action_id";
-    $actionRes = mysqli_query($conn, $actionQuery);
-    $actionRow = mysqli_fetch_assoc($actionRes);
-    $action = $actionRow['action'];
-    
-    // Check if this is a reminder action for RC service
-    if (in_array($action, ['1st Reminder', '2nd Reminder', 'Expire Letter'])) {
-        // Get CA CDC date for this customer
-        $caCdcQuery = "SELECT crr.Date FROM cdc_report_review crr 
-                       INNER JOIN service_type_ca ca ON crr.ca_service_id = ca.ca_id 
-                       INNER JOIN service s ON ca.service = s.service_id 
-                       WHERE s.customer_id = $cust_id AND s.service_type = 'CA' 
-                       ORDER BY crr.Date DESC LIMIT 1";
-        $caCdcRes = mysqli_query($conn, $caCdcQuery);
-        
-        if ($caCdcRes && mysqli_num_rows($caCdcRes) > 0) {
-            $caCdcRow = mysqli_fetch_assoc($caCdcRes);
-            $caCdcDate = $caCdcRow['Date'];
-            
-            // Validate that reminder date is greater than CA CDC date
-            if ($newdate <= $caCdcDate) {
-                echo "<script>
-                alert ('Error: " . $action . " date must be greater than CA CDC date (" . date('d.m.Y', strtotime($caCdcDate)) . ")');
-                window.location.replace('customerAccount.php?customerid=$cust_id');
-                </script>";
-                exit;
+    if ($dd === false) {
+        redirectWithAlert('Invalid due date.', 'javascript:history.back()');
+    }
+
+    $newdate = date('Y-m-d', $dd);
+    $cust_id = null;
+
+    try {
+        $stmt = $db->prepare("SELECT * FROM `ca_service_dates` WHERE `action_id` = :action_id");
+        $stmt->execute(array(':action_id' => $action_id));
+        $dateRow = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$dateRow) {
+            redirectWithAlert('Date record not found.', 'javascript:history.back()');
+        }
+
+        $service_id = (int)$dateRow['service_id'];
+        $action = $dateRow['action'];
+
+        $stmt = $db->prepare("SELECT * FROM `service` WHERE `service_id` = :service_id");
+        $stmt->execute(array(':service_id' => $service_id));
+        $serviceRow = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$serviceRow) {
+            redirectWithAlert('Service record not found.', 'javascript:history.back()');
+        }
+
+        $cust_id = (int)$serviceRow['customer_id'];
+
+        // Reminder due dates must be after the latest CA CDC date for the customer.
+        if (in_array($action, array('1st Reminder', '2nd Reminder', 'Expire Letter'), true)) {
+            $stmt = $db->prepare(
+                "SELECT crr.Date
+                 FROM cdc_report_review crr
+                 INNER JOIN service_type_ca ca ON crr.ca_service_id = ca.ca_id
+                 INNER JOIN service s ON ca.service = s.service_id
+                 WHERE s.customer_id = :cust_id AND s.service_type = 'CA'
+                 ORDER BY crr.Date DESC
+                 LIMIT 1"
+            );
+            $stmt->execute(array(':cust_id' => $cust_id));
+            $caCdcDate = $stmt->fetchColumn();
+
+            if ($caCdcDate && $newdate <= $caCdcDate) {
+                redirectWithAlert(
+                    'Error: ' . $action . ' date must be greater than CA CDC date (' . date('d.m.Y', strtotime($caCdcDate)) . ')',
+                    'customerAccount.php?customerid=' . $cust_id
+                );
             }
         }
+
+        $stmt = $db->prepare(
+            "UPDATE `ca_service_dates`
+             SET `due_date` = :due_date, `sent_date` = :sent_date
+             WHERE `action_id` = :action_id"
+        );
+        $stmt->execute(array(
+            ':due_date' => $newdate,
+            ':sent_date' => $sent_date,
+            ':action_id' => $action_id
+        ));
+
+        redirectWithAlert('Dates Updated Successfully!!', 'customerAccount.php?customerid=' . $cust_id);
+    } catch (Exception $e) {
+        error_log($e->getMessage());
+        $redirectUrl = $cust_id ? 'customerAccount.php?customerid=' . $cust_id : 'javascript:history.back()';
+        redirectWithAlert('Something Went Wrong', $redirectUrl);
     }
-    
-    $query = "UPDATE `ca_service_dates` SET `due_date`='$newdate',`sent_date`='$sent_date' WHERE `action_id`=$action_id ";
-    
-    $res = mysqli_query($conn,$query);
-    
-    if(!$res){
-        echo "<script>
-        alert ('Something Went Wrong');
-        window.location.replace('customerAccount.php?customerid=$cust_id');
-        
-        </script>";
-    }
-    
-    else{
-       echo "<script>
-        alert ('Dates Updated Successfully!!');
-        window.location.replace('customerAccount.php?customerid=$cust_id');
-        
-        </script>";
-    }
-    
-    
-    
-    
 ?>

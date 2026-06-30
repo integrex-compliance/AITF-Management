@@ -5,6 +5,7 @@
 session_start();
 include_once './dbConnect.php';
 include_once './include/cdc_office_use.php';
+include_once './include/cdc_audit_date_sync.php';
 date_default_timezone_set('Asia/Kolkata');
 
 if(isset ($_GET['report_Id']) && !empty ($_GET['report_Id']) && isset ($_GET['service_id']) && !empty ($_GET['service_id'])) {
@@ -130,6 +131,13 @@ if(isset ($_GET['crr_Id']) && !empty ($_GET['crr_Id']) && isset ($_GET['service'
         
         // Use the service ID from the cdc_report_review table itself for consistency
         $serviceIdToUse = $crrData ? $crrData['ca_service_id'] : $_GET['service'];
+        aitfSyncCdcAuditDateFromStageNotifications($db, $serviceIdToUse);
+
+        $crr= "SELECT * FROM `cdc_report_review` WHERE crr_id = :crr_Id";
+        $statement = $db->prepare($crr);
+        $statement->bindParam(':crr_Id', $_GET['crr_Id']);
+        $statement->execute();
+        $crrData = $statement->fetch();
         
         $rev1 = "SELECT review_date FROM `stage_i_audit_id` WHERE ca_service_id = :svc";
         $statement = $db->prepare($rev1);
@@ -201,4 +209,4 @@ if(isset ($_GET['crr_Id']) && !empty ($_GET['crr_Id']) && isset ($_GET['service'
         error_log("reviewReportData.php - Exception: " . $ex->getMessage());
         echo json_encode(array('error' => $ex->getMessage()));
     }
-}   
+}
