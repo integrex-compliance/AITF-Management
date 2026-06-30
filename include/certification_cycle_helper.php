@@ -1,0 +1,390 @@
+<?php
+
+function aitfCertificationServiceTypes()
+{
+    return array('CA', 'SA-I', 'SA-II', 'RC');
+}
+
+function aitfNextCertificationServiceType($serviceType)
+{
+    $sequence = array(
+        'CA' => 'SA-I',
+        'SA-I' => 'SA-II',
+        'SA-II' => 'RC',
+        'RC' => 'SA-I',
+    );
+
+    return isset($sequence[$serviceType]) ? $sequence[$serviceType] : '';
+}
+
+function aitfClientStatusActionsForServiceType($serviceType)
+{
+    return array_keys(aitfClientStatusOffsetsForServiceType($serviceType));
+}
+
+function aitfAllClientStatusActions()
+{
+    return array(
+        'Suspension Reminder',
+        'Suspend Letter',
+        'Withdrawal Reminder',
+        'Withdrawal Letter',
+        'Withdraw Letter',
+        '1st Reminder',
+        '2nd Reminder',
+        'Expire Letter',
+    );
+}
+
+function aitfClientStatusOffsetsForServiceType($serviceType)
+{
+    if ($serviceType === 'CA') {
+        return array(
+            'Suspension Reminder' => 11,
+            'Suspend Letter' => 12,
+            'Withdrawal Reminder' => 14,
+            'Withdraw Letter' => 16,
+        );
+    }
+
+    if ($serviceType === 'SA-I') {
+        return array(
+            'Suspension Reminder' => 23,
+            'Suspend Letter' => 24,
+            'Withdrawal Reminder' => 26,
+            'Withdraw Letter' => 28,
+        );
+    }
+
+    if ($serviceType === 'SA-II') {
+        return array(
+            '1st Reminder' => 34,
+            '2nd Reminder' => 35,
+            'Expire Letter' => 36,
+        );
+    }
+
+    if ($serviceType === 'RC') {
+        return array(
+            'Suspension Reminder' => 47,
+            'Suspend Letter' => 48,
+            'Withdrawal Reminder' => 50,
+            'Withdraw Letter' => 52,
+        );
+    }
+
+    return array();
+}
+
+function aitfGetUniversalService($db, $serviceId)
+{
+    if (empty($db) || empty($serviceId)) {
+        return null;
+    }
+
+    $statement = $db->prepare("SELECT service_id, customer_id, service_type FROM service WHERE service_id = :service_id LIMIT 1");
+    $statement->execute(array(':service_id' => $serviceId));
+    $row = $statement->fetch(PDO::FETCH_ASSOC);
+
+    return $row ? $row : null;
+}
+
+function aitfGetUniversalServiceIdFromTypedService($db, $typedServiceId, $serviceType)
+{
+    if (empty($db) || empty($typedServiceId) || empty($serviceType)) {
+        return null;
+    }
+
+    $queries = array(
+        'CA' => "SELECT service FROM service_type_ca WHERE ca_id = :id LIMIT 1",
+        'SA-I' => "SELECT service FROM service_type_sai WHERE sai_id = :id LIMIT 1",
+        'SA-II' => "SELECT service FROM service_type_saii WHERE saii_id = :id LIMIT 1",
+        'RC' => "SELECT service FROM service_type_rc WHERE rc_id = :id LIMIT 1",
+        'SP' => "SELECT service FROM service_type_sp WHERE sp_id = :id LIMIT 1",
+        'TA' => "SELECT service_id AS service FROM service_type_ta WHERE ta_id = :id LIMIT 1",
+        'PTR' => "SELECT service FROM service_type_ptr WHERE prt_id = :id LIMIT 1",
+    );
+
+    if (!isset($queries[$serviceType])) {
+        return null;
+    }
+
+    $statement = $db->prepare($queries[$serviceType]);
+    $statement->execute(array(':id' => $typedServiceId));
+    $row = $statement->fetch(PDO::FETCH_ASSOC);
+
+    return ($row && !empty($row['service'])) ? $row['service'] : null;
+}
+
+function aitfResolveUniversalServiceId($db, $universalServiceId, $typedServiceId = null, $serviceType = null)
+{
+    if (!empty($universalServiceId)) {
+        $service = aitfGetUniversalService($db, $universalServiceId);
+        if ($service) {
+            return $service['service_id'];
+        }
+    }
+
+    if (!empty($typedServiceId) && !empty($serviceType)) {
+        return aitfGetUniversalServiceIdFromTypedService($db, $typedServiceId, $serviceType);
+    }
+
+    return null;
+}
+
+function aitfGetBaseCertificationDate($db, $customerId, $fallbackDate = '')
+{
+    if (empty($db) || empty($customerId)) {
+        return !empty($fallbackDate) ? $fallbackDate : date('Y-m-d');
+    }
+
+    $statement = $db->prepare(
+        "SELECT MIN(crr.Date) AS first_date
+         FROM cdc_report_review crr
+         INNER JOIN service_type_ca ca ON crr.ca_service_id = ca.ca_id
+         INNER JOIN service s ON ca.service = s.service_id
+         WHERE s.customer_id = :customer_id
+         AND s.service_type = 'CA'
+         AND crr.Date IS NOT NULL
+         AND crr.Date <> ''
+         AND crr.Date <> '0000-00-00'"
+    );
+    $statement->execute(array(':customer_id' => $customerId));
+    $caCdcResult = $statement->fetch(PDO::FETCH_ASSOC);
+
+    if ($caCdcResult && !empty($caCdcResult['first_date'])) {
+        return $caCdcResult['first_date'];
+    }
+
+    $statement = $db->prepare("SELECT certification_stage_date FROM customer_info WHERE id = :customer_id LIMIT 1");
+    $statement->execute(array(':customer_id' => $customerId));
+    $customer = $statement->fetch(PDO::FETCH_ASSOC);
+
+    if ($customer && !empty($customer['certification_stage_date']) && $customer['certification_stage_date'] !== '0000-00-00') {
+        return $customer['certification_stage_date'];
+    }
+
+    return !empty($fallbackDate) ? $fallbackDate : date('Y-m-d');
+}
+
+function aitfGetServiceCycleIndex($db, $customerId, $serviceId, $serviceType)
+{
+    if (empty($db) || empty($customerId) || empty($serviceId) || !in_array($serviceType, aitfCertificationServiceTypes(), true)) {
+        return 0;
+    }
+
+    $statement = $db->prepare(
+        "SELECT service_id
+         FROM service
+         WHERE customer_id = :customer_id
+         AND service_type = :service_type
+         ORDER BY service_id ASC"
+    );
+    $statement->execute(array(
+        ':customer_id' => $customerId,
+        ':service_type' => $serviceType,
+    ));
+    $services = $statement->fetchAll(PDO::FETCH_COLUMN);
+
+    if (!$services) {
+        return 0;
+    }
+
+    $serviceOrder = array_values($services);
+    $index = array_search((string) $serviceId, array_map('strval', $serviceOrder), true);
+
+    if ($index === false) {
+        return max(0, count($serviceOrder) - 1);
+    }
+
+    return max(0, (int) $index);
+}
+
+function aitfBuildClientStatusDates($db, $serviceId, $customerId = null, $fallbackBaseDate = '')
+{
+    $service = aitfGetUniversalService($db, $serviceId);
+    if (!$service) {
+        return array();
+    }
+
+    $serviceType = $service['service_type'];
+    if (!in_array($serviceType, aitfCertificationServiceTypes(), true)) {
+        return array();
+    }
+
+    if (empty($customerId)) {
+        $customerId = $service['customer_id'];
+    }
+
+    $baseDate = aitfGetBaseCertificationDate($db, $customerId, $fallbackBaseDate);
+    $cycleIndex = aitfGetServiceCycleIndex($db, $customerId, $serviceId, $serviceType);
+    $cycleOffset = 36 * $cycleIndex;
+    $offsets = aitfClientStatusOffsetsForServiceType($serviceType);
+    $dates = array();
+
+    foreach ($offsets as $action => $months) {
+        $dateExpr = $baseDate . ' + ' . ($months + $cycleOffset) . ' MONTH';
+        $dates[$action] = date('Y-m-d', strtotime('-1 day', strtotime($dateExpr)));
+    }
+
+    return $dates;
+}
+
+function aitfSyncClientStatusDates($db, $serviceId, $customerId = null, $fallbackBaseDate = '')
+{
+    $expectedDates = aitfBuildClientStatusDates($db, $serviceId, $customerId, $fallbackBaseDate);
+    if (empty($expectedDates)) {
+        return array();
+    }
+
+    $expectedActions = array_keys($expectedDates);
+    $obsoleteActions = array_values(array_diff(aitfAllClientStatusActions(), $expectedActions));
+
+    $insertSql = "INSERT INTO ca_service_dates(service_id, action, due_date) VALUES (:service_id, :action, :due_date)";
+    $insertStatement = $db->prepare($insertSql);
+    $selectStatement = $db->prepare(
+        "SELECT action_id, status, is_deleted
+         FROM ca_service_dates
+         WHERE service_id = :service_id
+         AND action = :action
+         ORDER BY
+             CASE WHEN status = 'sent' THEN 0 ELSE 1 END,
+             CASE WHEN is_deleted = 'N' THEN 0 ELSE 1 END,
+             action_id ASC"
+    );
+    $updateStatement = $db->prepare(
+        "UPDATE ca_service_dates
+         SET action = :action, due_date = :due_date, is_deleted = 'N'
+         WHERE action_id = :action_id"
+    );
+    $hideDuplicateStatement = $db->prepare(
+        "UPDATE ca_service_dates
+         SET action = :action, due_date = :due_date, is_deleted = 'Y'
+         WHERE action_id = :action_id"
+    );
+
+    foreach ($expectedDates as $action => $dueDate) {
+        $selectStatement->execute(array(
+            ':service_id' => $serviceId,
+            ':action' => $action,
+        ));
+        $existingRows = $selectStatement->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($existingRows) && $action === 'Withdraw Letter') {
+            $legacyStatement = $db->prepare(
+                "SELECT action_id, status, is_deleted
+                 FROM ca_service_dates
+                 WHERE service_id = :service_id
+                 AND action = 'Withdrawal Letter'
+                 ORDER BY
+                     CASE WHEN status = 'sent' THEN 0 ELSE 1 END,
+                     CASE WHEN is_deleted = 'N' THEN 0 ELSE 1 END,
+                     action_id ASC"
+            );
+            $legacyStatement->execute(array(':service_id' => $serviceId));
+            $existingRows = $legacyStatement->fetchAll(PDO::FETCH_ASSOC);
+        }
+
+        if (empty($existingRows)) {
+            $insertStatement->execute(array(
+                ':service_id' => $serviceId,
+                ':action' => $action,
+                ':due_date' => $dueDate,
+            ));
+            continue;
+        }
+
+        $canonicalRow = array_shift($existingRows);
+        $updateStatement->execute(array(
+            ':action' => $action,
+            ':due_date' => $dueDate,
+            ':action_id' => $canonicalRow['action_id'],
+        ));
+
+        foreach ($existingRows as $duplicateRow) {
+            $hideDuplicateStatement->execute(array(
+                ':action' => $action,
+                ':due_date' => $dueDate,
+                ':action_id' => $duplicateRow['action_id'],
+            ));
+        }
+    }
+
+    if (!empty($obsoleteActions)) {
+        $obsoletePlaceholders = implode(',', array_fill(0, count($obsoleteActions), '?'));
+        $params = array_merge(array($serviceId), $obsoleteActions);
+        $statement = $db->prepare("UPDATE ca_service_dates SET is_deleted = 'Y' WHERE service_id = ? AND action IN ($obsoletePlaceholders)");
+        $statement->execute($params);
+    }
+
+    return $expectedDates;
+}
+
+function aitfSyncExistingClientStatusDatesForCustomer($db, $customerId, $fallbackBaseDate = '')
+{
+    if (empty($db) || empty($customerId)) {
+        return;
+    }
+
+    $actions = aitfAllClientStatusActions();
+    $placeholders = implode(',', array_fill(0, count($actions), '?'));
+    $params = array_merge(array($customerId), $actions);
+
+    $statement = $db->prepare(
+        "SELECT DISTINCT s.service_id
+         FROM service s
+         INNER JOIN ca_service_dates csd ON csd.service_id = s.service_id
+         WHERE s.customer_id = ?
+         AND s.service_type IN ('CA', 'SA-I', 'SA-II', 'RC')
+         AND csd.action IN ($placeholders)"
+    );
+    $statement->execute($params);
+    $serviceIds = $statement->fetchAll(PDO::FETCH_COLUMN);
+
+    foreach ($serviceIds as $serviceId) {
+        aitfSyncClientStatusDates($db, $serviceId, $customerId, $fallbackBaseDate);
+    }
+}
+
+function aitfFetchClientStatusDates($db, $serviceId, array $actions = array())
+{
+    if (empty($serviceId)) {
+        return array();
+    }
+
+    if (empty($actions)) {
+        $service = aitfGetUniversalService($db, $serviceId);
+        $actions = $service ? aitfClientStatusActionsForServiceType($service['service_type']) : array();
+    }
+
+    if (empty($actions)) {
+        return array();
+    }
+
+    $placeholders = implode(',', array_fill(0, count($actions), '?'));
+    $params = array_merge(array($serviceId), $actions);
+
+    $statement = $db->prepare(
+        "SELECT MIN(action_id) as action_id, service_id, action, due_date, MAX(sent_date) as sent_date, MAX(is_deleted) as is_deleted
+         FROM ca_service_dates
+         WHERE service_id = ?
+         AND action IN ($placeholders)
+         AND is_deleted = 'N'
+         GROUP BY service_id, action, due_date
+         ORDER BY due_date ASC"
+    );
+    $statement->execute($params);
+    $rows = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    return array_values(array_filter($rows, function ($row) {
+        return !isset($row['is_deleted']) || $row['is_deleted'] !== 'Y';
+    }));
+}
+
+function aitfLatestCertificationServiceSubquery($aliasName)
+{
+    return "(SELECT MAX(tmp.service_id)
+             FROM service tmp
+             WHERE tmp.customer_id = $aliasName.id
+             AND tmp.service_type IN ('CA', 'SA-I', 'SA-II', 'RC'))";
+}

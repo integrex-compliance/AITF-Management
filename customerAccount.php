@@ -2,6 +2,7 @@
     <?php
     include_once './header.php';
     include_once './dbConnect.php';
+    include_once './include/certification_cycle_helper.php';
     include_once './informationUpdationReviewModal.php';
     include_once './assessmentPlanningModal.php';
     include_once './modalForms.php';
@@ -638,6 +639,17 @@
             background: #b91c1c;
             border-color: #b91c1c;
             color: #fff;
+        }
+
+        .aitf_service_date {
+            background: #0b4f8a;
+            color: #ffffff;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0;
+            line-height: 1.4;
+            padding: 8px 10px;
+            text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
         }
     </style>
 
@@ -1385,6 +1397,7 @@
                 $statement->bindParam(':id', $service["service_id"]);
                 $statement->execute();
                 $caservice = $statement->fetch();
+                $caNextServiceType = aitfNextCertificationServiceType('CA');
                 
                 // Debug logging for CDC status
                 error_log("CustomerAccount CDC Check: ca_id=" . $caservice['ca_id'] . ", stage_ii_id=" . $caservice['stage_ii_id'] . ", crr_id=" . $caservice['crr_id']);
@@ -2090,7 +2103,7 @@
                         <div class="servicebox-bunch">
                             <div class="servicebox" style="display: ">
                                 <div class="row" id="service-row" class="service-row">
-                                    <div class="col-xs-12 aitf_service_date" style="text-align: center" data-row-id="">LETTERS &amp; ACTIONS OF CLIENT STATUS - for the next service: SA-I <span class="serviceStatus"></span></div>
+                                    <div class="col-xs-12 aitf_service_date" style="text-align: center" data-row-id="">LETTERS &amp; ACTIONS OF CLIENT STATUS - for the next service: <?php echo $caNextServiceType; ?> <span class="serviceStatus"></span></div>
                                 </div>
                                 <div class="servicebox-data" id="servicebox-data">
                                     <div class="row">
@@ -2158,14 +2171,14 @@
                                                             <?php } ?>
                                                             <td class="" style="padding: 0px;">
                                                                 <?php if (date("Y-m-d") >= $caActions['due_date']) { ?>
-                                                                    <a class="PreviewPDF" data-servicetype="SA-I" data-due="<?php echo simpleDateConversion($caActions['due_date']) ?>" data-action-pdf="<?php echo $caActions['action'] ?>" data-action="<?php echo $caActions['action_id'] ?>" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caActions['service_id'] ?>" data-column="pdf">
+                                                                    <a class="PreviewPDF" data-servicetype="<?php echo $caNextServiceType; ?>" data-due="<?php echo simpleDateConversion($caActions['due_date']) ?>" data-action-pdf="<?php echo $caActions['action'] ?>" data-action="<?php echo $caActions['action_id'] ?>" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $caActions['service_id'] ?>" data-column="pdf">
                                                                         <i class="fa fa-file-pdf-o" aria-hidden="true"></i>
                                                                     </a>
                                                                 <?php } ?>
                                                             </td>
                                                             <td class="" style="padding: 0px;">
                                                                 <?php if (date("Y-m-d") >= $caActions['due_date']) { ?>
-                                                                    <a class="caServiceGanerate" data-servicetype="SA-I" data-due="<?php echo simpleDateConversion($caActions['due_date']) ?>" data-action-pdf="<?php echo $caActions['action'] ?>" data-action="<?php echo $caActions['action_id'] ?>" data-service="<?php echo $caActions['service_id'] ?>" data-customer="<?php echo $_GET['customerid'] ?>" data-actiontype="<?php echo $caActions['action'] ?>" data-column="generate">
+                                                                    <a class="caServiceGanerate" data-servicetype="<?php echo $caNextServiceType; ?>" data-due="<?php echo simpleDateConversion($caActions['due_date']) ?>" data-action-pdf="<?php echo $caActions['action'] ?>" data-action="<?php echo $caActions['action_id'] ?>" data-service="<?php echo $caActions['service_id'] ?>" data-customer="<?php echo $_GET['customerid'] ?>" data-actiontype="<?php echo $caActions['action'] ?>" data-column="generate">
                                                                         <i class="fa fa-envelope-o" aria-hidden="true"></i>
                                                                     </a> 
                                                                 <?php } ?>
@@ -2217,6 +2230,7 @@
                 $statement->bindParam(':id', $service["service_id"]);
                 $statement->execute();
                 $saiService = $statement->fetch();
+                $saiNextServiceType = aitfNextCertificationServiceType('SA-I');
                 
             
 
@@ -2244,144 +2258,8 @@
 
                 // Check if SA-I's CDC has been saved (crr_id exists in service_type_sai)
                 if (isset($saiService['crr_id']) && !empty($saiService['crr_id'])) {
-                    $saiiActionDatesQuery = "SELECT MIN(action_id) as action_id, service_id, action, due_date, MAX(sent_date) as sent_date, MAX(is_deleted) as is_deleted 
-                                             FROM ca_service_dates 
-                                             WHERE service_id = :saiServiceId 
-                                             AND action IN ('Suspension Reminder', 'Suspend Letter', 'Withdrawal Reminder', 'Withdraw Letter')
-                                             GROUP BY service_id, action, due_date 
-                                             ORDER BY due_date ASC";
-                    $statement = $db->prepare($saiiActionDatesQuery);
-                    $statement->bindParam(':saiServiceId', $saiService['service']);
-                    $statement->execute();
-                    $nextSaiiServiceDates = $statement->fetchAll();
-
-                    // Determine base certification date: first CA CDC -> certification_stage_date
-                    $caCdcQuery = "SELECT MIN(crr.Date) AS first_date FROM cdc_report_review crr 
-                                   INNER JOIN service_type_ca ca ON crr.ca_service_id = ca.ca_id 
-                                   INNER JOIN service s ON ca.service = s.service_id 
-                                   WHERE s.customer_id = :customer_id AND s.service_type = 'CA'";
-                    $statement = $db->prepare($caCdcQuery);
-                    $statement->bindParam(':customer_id', $_GET['customerid']);
-                    $statement->execute();
-                    $caCdcResult = $statement->fetch();
-
-                    $certificationDateQuery = "SELECT certification_stage_date FROM customer_info WHERE id = :customer";
-                    $statement = $db->prepare($certificationDateQuery);
-                    $statement->bindParam(':customer', $_GET['customerid']);
-                    $statement->execute();
-                    $certifyInfo = $statement->fetch();
-
-                    $baseCertDate = '';
-                    if (isset($caCdcResult['first_date']) && !empty($caCdcResult['first_date'])) {
-                        $baseCertDate = $caCdcResult['first_date'];
-                    } else if (isset($certifyInfo['certification_stage_date']) && !empty($certifyInfo['certification_stage_date'])) {
-                        $baseCertDate = $certifyInfo['certification_stage_date'];
-                    }
-
-                    if (!empty($baseCertDate)) {
-                        // Determine cycle index for this SA-I service based on all SA-I services for this customer.
-                        // Use the service table to avoid missing legacy rows and join audit_date if present. If every SA-I
-                        // has a real audit_date, sort by earliest audit_date (then service id). Otherwise, keep service id
-                        // ordering so missing dates do not swap cycles.
-                        $allSaiServicesQuery = "SELECT s.service_id AS service, stsai.audit_date
-                                                 FROM service s
-                                                 LEFT JOIN service_type_sai stsai ON s.service_id = stsai.service
-                                                 WHERE s.customer_id = :customer_id AND s.service_type = 'SA-I'
-                                                 ORDER BY s.service_id ASC";
-                        $statement = $db->prepare($allSaiServicesQuery);
-                        $statement->bindParam(':customer_id', $_GET['customerid']);
-                        $statement->execute();
-                        $allSaiServices = $statement->fetchAll();
-
-                        $orderedSaiServices = $allSaiServices;
-                        if (!empty($allSaiServices)) {
-                            $allSaiHaveAuditDates = true;
-                            foreach ($allSaiServices as $row) {
-                                if (!isset($row['audit_date']) || empty($row['audit_date']) || $row['audit_date'] == '0000-00-00') {
-                                    $allSaiHaveAuditDates = false;
-                                    break;
-                                }
-                            }
-
-                            if ($allSaiHaveAuditDates) {
-                                usort($orderedSaiServices, function($a, $b) {
-                                    if ($a['audit_date'] == $b['audit_date']) {
-                                        return $a['service'] <=> $b['service'];
-                                    }
-                                    return strtotime($a['audit_date']) <=> strtotime($b['audit_date']);
-                                });
-                            }
-                        }
-
-                        $cycleIndex = 0; // 0 = first SA-I (first cycle), 1 = second SA-I (second cycle), etc.
-                        if (!empty($orderedSaiServices)) {
-                            $serviceOrder = array_values(array_column($orderedSaiServices, 'service'));
-                            $foundIndex = array_search($saiService['service'], $serviceOrder);
-                            if ($foundIndex === false) {
-                                // If somehow missing (data mismatch), treat current as latest cycle to avoid reusing first cycle dates
-                                $foundIndex = count($serviceOrder) - 1;
-                            }
-                            $cycleIndex = max(0, (int)$foundIndex);
-                        }
-
-                        $cycleOffset = 36 * max(0, $cycleIndex);
-
-                        // SA-II reminder offsets from baseCertDate + cycleOffset
-                        $saOffsets = array(
-                            'Suspension Reminder' => 23 + $cycleOffset,
-                            'Suspend Letter'      => 24 + $cycleOffset,
-                            'Withdrawal Reminder' => 26 + $cycleOffset,
-                            'Withdraw Letter'     => 28 + $cycleOffset,
-                        );
-
-                        // Build expected due dates
-                        $expectedDates = array();
-                        foreach ($saOffsets as $actionName => $months) {
-                            $dateExpr = $baseCertDate . ' + ' . $months . ' MONTH';
-                            $dateVal = date("Y-m-d", strtotime('-1 day', strtotime($dateExpr)));
-                            $expectedDates[$actionName] = $dateVal;
-                        }
-
-                        // Map existing actions for this SA-I
-                        $existingActions = array();
-                        foreach ($nextSaiiServiceDates as $row) {
-                            $existingActions[$row['action']] = $row['due_date'];
-                        }
-
-                        // Check if any expected action is missing or has different date
-                        $needsFix = false;
-                        foreach ($expectedDates as $actionName => $expectedDate) {
-                            if (!isset($existingActions[$actionName]) || $existingActions[$actionName] != $expectedDate) {
-                                $needsFix = true;
-                                break;
-                            }
-                        }
-
-                        if ($needsFix) {
-                            foreach ($expectedDates as $actionName => $dueDate) {
-                                if (isset($existingActions[$actionName])) {
-                                    $updateSql = "UPDATE ca_service_dates SET due_date = :due_date WHERE service_id = :serviceid AND action = :action";
-                                    $statement = $db->prepare($updateSql);
-                                    $statement->bindParam(':serviceid', $saiService['service']);
-                                    $statement->bindParam(':action', $actionName);
-                                    $statement->bindParam(':due_date', $dueDate);
-                                    $statement->execute();
-                                } else {
-                                    $insertSql = "INSERT INTO ca_service_dates(service_id, action, due_date) VALUES (:serviceid, :action, :due_date)";
-                                    $statement = $db->prepare($insertSql);
-                                    $statement->bindParam(':serviceid', $saiService['service']);
-                                    $statement->bindParam(':action', $actionName);
-                                    $statement->bindParam(':due_date', $dueDate);
-                                    $statement->execute();
-                                }
-                            }
-
-                            $statement = $db->prepare($saiiActionDatesQuery);
-                            $statement->bindParam(':saiServiceId', $saiService['service']);
-                            $statement->execute();
-                            $nextSaiiServiceDates = $statement->fetchAll();
-                        }
-                    }
+                    aitfSyncClientStatusDates($db, $saiService['service'], $_GET['customerid']);
+                    $nextSaiiServiceDates = aitfFetchClientStatusDates($db, $saiService['service'], array('Suspension Reminder', 'Suspend Letter', 'Withdrawal Reminder', 'Withdraw Letter'));
                 }
                 $nextSaiiServiceDates = array_values(array_filter($nextSaiiServiceDates, function ($row) {
                     return !isset($row['is_deleted']) || $row['is_deleted'] != 'Y';
@@ -2919,7 +2797,7 @@
                             <div class="servicebox" style="display: ">
                                 <div class="row" id="service-row" class="service-row">
                                     <div class="col-xs-12 aitf_service_date" style="text-align: center"  data-row-id="">
-                                        LETTERS &amp; ACTIONS OF CLIENT STATUS - for the next service: SA-II<span class="serviceStatus"></span>
+                                        LETTERS &amp; ACTIONS OF CLIENT STATUS - for the next service: <?php echo $saiNextServiceType; ?><span class="serviceStatus"></span>
                                     </div>
                                 </div>
                                 <div class="servicebox-data" id="servicebox-data">
@@ -2987,14 +2865,14 @@
                                                                 //echo date("Y-m-d")."->".$saiiActions['sent_date'];
                                                                 if (date("Y-m-d") >= $saiiActions['due_date']) {
                                                                     ?> 
-                                                                    <a class="PreviewPDF" data-servicetype="SA-II" data-due="<?php echo simpleDateConversion($saiiActions['due_date']) ?>" data-action-pdf="<?php echo $saiiActions['action'] ?>" data-action="<?php echo $saiiActions['action_id'] ?>" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiiActions['service_id'] ?>" data-column="pdf">
+                                                                    <a class="PreviewPDF" data-servicetype="<?php echo $saiNextServiceType; ?>" data-due="<?php echo simpleDateConversion($saiiActions['due_date']) ?>" data-action-pdf="<?php echo $saiiActions['action'] ?>" data-action="<?php echo $saiiActions['action_id'] ?>" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiiActions['service_id'] ?>" data-column="pdf">
                                                                         <i class="fa fa-file-pdf-o" aria-hidden="true"></i>
                                                                     </a>
                                                                 <?php } ?>
                                                             </td>
                                                             <td class="" style="padding: 0px;">
                                                                 <?php if (date("Y-m-d") >= $saiiActions['due_date']) { ?>
-                                                                    <a class="caServiceGanerate" data-servicetype="SA-II" data-due="<?php echo simpleDateConversion($saiiActions['due_date']) ?>" data-action-pdf="<?php echo $saiiActions['action'] ?>" data-action="<?php echo $saiiActions['action_id'] ?>" data-service="<?php echo $saiiActions['service_id'] ?>"  data-customer="<?php echo $_GET['customerid'] ?>" data-actiontype="<?php echo $saiiActions['action'] ?>" data-column="generate">
+                                                                    <a class="caServiceGanerate" data-servicetype="<?php echo $saiNextServiceType; ?>" data-due="<?php echo simpleDateConversion($saiiActions['due_date']) ?>" data-action-pdf="<?php echo $saiiActions['action'] ?>" data-action="<?php echo $saiiActions['action_id'] ?>" data-service="<?php echo $saiiActions['service_id'] ?>"  data-customer="<?php echo $_GET['customerid'] ?>" data-actiontype="<?php echo $saiiActions['action'] ?>" data-column="generate">
                                                                         <i class="fa fa-envelope-o" aria-hidden="true"></i>
                                                                     </a> 
                                                                 <?php } ?>
@@ -3070,6 +2948,7 @@
                 $statement->bindParam(':id', $service["service_id"]);
                 $statement->execute();
                 $saiiService = $statement->fetch();
+                $saiiNextServiceType = aitfNextCertificationServiceType('SA-II');
 
                 // Fetch RC dates for SA-II ONLY if SA-II CDC has been saved (crr_id exists)
                 $saiiServiceDates = array();
@@ -3088,134 +2967,8 @@
                 }
 
                 if (isset($saiiService['crr_id']) && !empty($saiiService['crr_id'])) {
-                    $saiiServiceDate = "SELECT MIN(action_id) as action_id, service_id, action, due_date, MAX(sent_date) as sent_date, MAX(is_deleted) as is_deleted FROM ca_service_dates WHERE service_id = :id AND action IN ('1st Reminder', '2nd Reminder', 'Expire Letter') GROUP BY service_id, action, due_date ORDER BY due_date ASC";
-                    $statement = $db->prepare($saiiServiceDate);
-                    $statement->bindParam(':id', $saiiService['service']);
-                    $statement->execute();
-                    $saiiServiceDates = $statement->fetchAll();
-
-                    if (!empty($saiiServiceDates)) {
-                        // Use earliest CA CDC date as master certification base date
-                        $caCdcQuery = "SELECT MIN(crr.Date) AS first_date FROM cdc_report_review crr 
-                                       INNER JOIN service_type_ca ca ON crr.ca_service_id = ca.ca_id 
-                                       INNER JOIN service s ON ca.service = s.service_id 
-                                       WHERE s.customer_id = :customer_id AND s.service_type = 'CA'";
-                        $statement = $db->prepare($caCdcQuery);
-                        $statement->bindParam(':customer_id', $_GET['customerid']);
-                        $statement->execute();
-                        $caCdcResult = $statement->fetch();
-
-                        $certificationDateQuery = "SELECT certification_stage_date FROM customer_info WHERE id = :customer";
-                        $statement = $db->prepare($certificationDateQuery);
-                        $statement->bindParam(':customer', $_GET['customerid']);
-                        $statement->execute();
-                        $certifyDate = $statement->fetch();
-
-                        $baseCertDate = '';
-                        if (isset($caCdcResult['first_date']) && !empty($caCdcResult['first_date'])) {
-                            $baseCertDate = $caCdcResult['first_date'];
-                        } else if (isset($certifyDate['certification_stage_date']) && !empty($certifyDate['certification_stage_date'])) {
-                            $baseCertDate = $certifyDate['certification_stage_date'];
-                        }
-
-                        if (!empty($baseCertDate)) {
-                            // Determine cycle index for this SA-II based on all SA-II services for the customer. Join audit_date
-                            // from SA-II table; if all have audit_date, order by it then service id; otherwise keep service id order.
-                            $allSaiiServicesQuery = "SELECT s.service_id AS service, st.audit_date
-                                                     FROM service s
-                                                     LEFT JOIN service_type_saii st ON s.service_id = st.service
-                                                     WHERE s.customer_id = :customer_id AND s.service_type = 'SA-II'
-                                                     ORDER BY s.service_id ASC";
-                            $statement = $db->prepare($allSaiiServicesQuery);
-                            $statement->bindParam(':customer_id', $_GET['customerid']);
-                            $statement->execute();
-                            $allSaiiServices = $statement->fetchAll();
-
-                            $orderedSaiiServices = $allSaiiServices;
-                            if (!empty($allSaiiServices)) {
-                                $allSaiiHaveAuditDates = true;
-                                foreach ($allSaiiServices as $row) {
-                                    if (!isset($row['audit_date']) || empty($row['audit_date']) || $row['audit_date'] == '0000-00-00') {
-                                        $allSaiiHaveAuditDates = false;
-                                        break;
-                                    }
-                                }
-
-                                if ($allSaiiHaveAuditDates) {
-                                    usort($orderedSaiiServices, function($a, $b) {
-                                        if ($a['audit_date'] == $b['audit_date']) {
-                                            return $a['service'] <=> $b['service'];
-                                        }
-                                        return strtotime($a['audit_date']) <=> strtotime($b['audit_date']);
-                                    });
-                                }
-                            }
-
-                            $cycleIndex = 0; // 0 = first SA-II (first cycle), 1 = second SA-II (second cycle), etc.
-                            if (!empty($orderedSaiiServices)) {
-                                $serviceOrder = array_values(array_column($orderedSaiiServices, 'service'));
-                                $foundIndex = array_search($saiiService['service'], $serviceOrder);
-                                if ($foundIndex === false) {
-                                    $foundIndex = count($serviceOrder) - 1;
-                                }
-                                $cycleIndex = max(0, (int)$foundIndex);
-                            }
-
-                            $cycleOffset = 36 * max(0, $cycleIndex);
-
-                            $reminderOffsets = array(
-                                '1st Reminder' => 34 + $cycleOffset,
-                                '2nd Reminder' => 35 + $cycleOffset,
-                                'Expire Letter' => 36 + $cycleOffset,
-                            );
-
-                            $expectedDates = array();
-                            foreach ($reminderOffsets as $actionName => $months) {
-                                $dateExpr = $baseCertDate . ' + ' . $months . ' MONTH';
-                                $dateVal = date("Y-m-d", strtotime('-1 day', strtotime($dateExpr)));
-                                $expectedDates[$actionName] = $dateVal;
-                            }
-
-                            // Map existing actions for this SA-II
-                            $existingActions = array();
-                            foreach ($saiiServiceDates as $row) {
-                                $existingActions[$row['action']] = $row['due_date'];
-                            }
-
-                            $needsFix = false;
-                            foreach ($expectedDates as $actionName => $expectedDate) {
-                                if (!isset($existingActions[$actionName]) || $existingActions[$actionName] != $expectedDate) {
-                                    $needsFix = true;
-                                    break;
-                                }
-                            }
-
-                            if ($needsFix) {
-                                foreach ($expectedDates as $actionName => $dueDate) {
-                                    if (isset($existingActions[$actionName])) {
-                                        $updateSql = "UPDATE ca_service_dates SET due_date = :due_date WHERE service_id = :serviceid AND action = :action";
-                                        $statement = $db->prepare($updateSql);
-                                        $statement->bindParam(':serviceid', $saiiService['service']);
-                                        $statement->bindParam(':action', $actionName);
-                                        $statement->bindParam(':due_date', $dueDate);
-                                        $statement->execute();
-                                    } else {
-                                        $insertSql = "INSERT INTO ca_service_dates(service_id, action, due_date) VALUES (:serviceid, :action, :due_date)";
-                                        $statement = $db->prepare($insertSql);
-                                        $statement->bindParam(':serviceid', $saiiService['service']);
-                                        $statement->bindParam(':action', $actionName);
-                                        $statement->bindParam(':due_date', $dueDate);
-                                        $statement->execute();
-                                    }
-                                }
-
-                                $statement = $db->prepare($saiiServiceDate);
-                                $statement->bindParam(':id', $saiiService['service']);
-                                $statement->execute();
-                                $saiiServiceDates = $statement->fetchAll();
-                            }
-                        }
-                    }
+                    aitfSyncClientStatusDates($db, $saiiService['service'], $_GET['customerid']);
+                    $saiiServiceDates = aitfFetchClientStatusDates($db, $saiiService['service'], array('1st Reminder', '2nd Reminder', 'Expire Letter'));
                 }
                 $saiiServiceDates = array_values(array_filter($saiiServiceDates, function ($row) {
                     return !isset($row['is_deleted']) || $row['is_deleted'] != 'Y';
@@ -3777,7 +3530,7 @@
                         <div class="servicebox-bunch">
                             <div class="servicebox" style="display: ">
                                 <div class="row" id="service-row" class="service-row">
-                                    <div class="col-xs-12 aitf_service_date" style="text-align: center" data-row-id="">LETTERS &amp; ACTIONS OF CLIENT STATUS - for the next service: RC
+                                    <div class="col-xs-12 aitf_service_date" style="text-align: center" data-row-id="">LETTERS &amp; ACTIONS OF CLIENT STATUS - for the next service: <?php echo $saiiNextServiceType; ?>
                                         <span class="serviceStatus"></span>
                                     </div>
                                 </div>
@@ -3837,14 +3590,14 @@
                                                                                                                         <?php } ?>
                                                             <td class="" style="padding: 0px;">
                                                                 <?php if (date("Y-m-d") >= $saiiActions['due_date']) { ?>
-                                                                    <a class="PreviewPDF" data-servicetype="SA-II" data-due="<?php echo simpleDateConversion($saiiActions['due_date']) ?>" data-action-pdf="<?php echo $saiiActions['action'] ?>" data-action="<?php echo $saiiActions['action_id'] ?>" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiiActions['service_id'] ?>" data-column="pdf">
+                                                                    <a class="PreviewPDF" data-servicetype="<?php echo $saiiNextServiceType; ?>" data-due="<?php echo simpleDateConversion($saiiActions['due_date']) ?>" data-action-pdf="<?php echo $saiiActions['action'] ?>" data-action="<?php echo $saiiActions['action_id'] ?>" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiiActions['service_id'] ?>" data-column="pdf">
                                                                         <i class="fa fa-file-pdf-o" aria-hidden="true"></i>
                                                                     </a>
                                                                 <?php } ?>
                                                             </td>
                                                             <td class="" style="padding: 0px;">
                                                                 <?php if (date("Y-m-d") >= $saiiActions['due_date']) { ?>
-                                                                    <a class="caServiceGanerate" data-servicetype="SA-II" data-due="<?php echo simpleDateConversion($saiiActions['due_date']) ?>" data-action-pdf="<?php echo $saiiActions['action'] ?>" data-action="<?php echo $saiiActions['action_id'] ?>" data-service="<?php echo $saiiActions['service_id'] ?>" data-customer="<?php echo $_GET['customerid'] ?>" data-actiontype="<?php echo $saiiActions['action'] ?>" data-column="generate">
+                                                                    <a class="caServiceGanerate" data-servicetype="<?php echo $saiiNextServiceType; ?>" data-due="<?php echo simpleDateConversion($saiiActions['due_date']) ?>" data-action-pdf="<?php echo $saiiActions['action'] ?>" data-action="<?php echo $saiiActions['action_id'] ?>" data-service="<?php echo $saiiActions['service_id'] ?>" data-customer="<?php echo $_GET['customerid'] ?>" data-actiontype="<?php echo $saiiActions['action'] ?>" data-column="generate">
                                                                         <i class="fa fa-envelope-o" aria-hidden="true"></i>
                                                                     </a> 
                                                                 <?php } ?>
@@ -3891,119 +3644,14 @@
                 $statement->bindParam(':id', $service["service_id"]);
                 $statement->execute();
                 $rcServiceinfo = $statement->fetch();
+                $rcNextServiceType = aitfNextCertificationServiceType('RC');
                 // Fetch RC next-cycle client-status letters for this RC service
                 $rcServiceActionDates = array();
-                $rcServiceDate = "SELECT MIN(action_id) as action_id, service_id, action, due_date, MAX(sent_date) as sent_date, MAX(is_deleted) as is_deleted
-                                   FROM ca_service_dates
-                                   WHERE service_id = :id
-                                   AND action IN ('Suspension Reminder','Suspend Letter','Withdrawal Reminder','Withdraw Letter')
-                                   GROUP BY service_id, action, due_date
-                                   ORDER BY due_date ASC";
-                $statement = $db->prepare($rcServiceDate);
-                $statement->bindParam(':id', $rcServiceinfo['service']);
-                $statement->execute();
-                $rcServiceActionDates = $statement->fetchAll();
-
-                // Recalculate RC next-cycle letters based on earliest CA CDC date and RC cycle index
-                if (!empty($rcServiceActionDates)) {
-                    // Determine base certification date: first CA CDC -> certification_stage_date
-                    $caCdcQuery = "SELECT MIN(crr.Date) AS first_date FROM cdc_report_review crr
-                                   INNER JOIN service_type_ca ca ON crr.ca_service_id = ca.ca_id
-                                   INNER JOIN service s ON ca.service = s.service_id
-                                   WHERE s.customer_id = :customer_id AND s.service_type = 'CA'";
-                    $statement = $db->prepare($caCdcQuery);
-                    $statement->bindParam(':customer_id', $_GET['customerid']);
-                    $statement->execute();
-                    $caCdcResult = $statement->fetch();
-
-                    $certificationDateQuery = "SELECT certification_stage_date FROM customer_info WHERE id = :customer";
-                    $statement = $db->prepare($certificationDateQuery);
-                    $statement->bindParam(':customer', $_GET['customerid']);
-                    $statement->execute();
-                    $certifyDate = $statement->fetch();
-
-                    $baseCertDate = '';
-                    if (isset($caCdcResult['first_date']) && !empty($caCdcResult['first_date'])) {
-                        $baseCertDate = $caCdcResult['first_date'];
-                    } elseif (isset($certifyDate['certification_stage_date']) && !empty($certifyDate['certification_stage_date'])) {
-                        $baseCertDate = $certifyDate['certification_stage_date'];
-                    }
-
-                    if (!empty($baseCertDate)) {
-                        // Determine cycle index for this RC service based on order of all RC services for the customer
-                        $allRcServicesQuery = "SELECT service FROM service_type_rc WHERE rc_customer = :customer_id ORDER BY service ASC";
-                        $statement = $db->prepare($allRcServicesQuery);
-                        $statement->bindParam(':customer_id', $_GET['customerid']);
-                        $statement->execute();
-                        $allRcServices = $statement->fetchAll();
-
-                        $cycleIndex = 0; // 0 = first RC (first cycle), 1 = second RC (second cycle), etc.
-                        if (!empty($allRcServices)) {
-                            foreach ($allRcServices as $idx => $row) {
-                                if ($row['service'] == $rcServiceinfo['service']) {
-                                    $cycleIndex = $idx;
-                                    break;
-                                }
-                            }
-                        }
-
-                        $cycleOffset = 36 * max(0, $cycleIndex);
-
-                        // RC reminder offsets from baseCertDate + cycleOffset
-                        $rcOffsets = array(
-                            'Suspension Reminder' => 47 + $cycleOffset,
-                            'Suspend Letter'      => 48 + $cycleOffset,
-                            'Withdrawal Reminder' => 50 + $cycleOffset,
-                            'Withdraw Letter'     => 52 + $cycleOffset,
-                        );
-
-                        $expectedDates = array();
-                        foreach ($rcOffsets as $actionName => $months) {
-                            $dateExpr = $baseCertDate . ' + ' . $months . ' MONTH';
-                            $dateVal = date("Y-m-d", strtotime('-1 day', strtotime($dateExpr)));
-                            $expectedDates[$actionName] = $dateVal;
-                        }
-
-                        // Map existing RC actions for this service
-                        $existingActions = array();
-                        foreach ($rcServiceActionDates as $row) {
-                            $existingActions[$row['action']] = $row['due_date'];
-                        }
-
-                        $needsFix = false;
-                        foreach ($expectedDates as $actionName => $expectedDate) {
-                            if (!isset($existingActions[$actionName]) || $existingActions[$actionName] != $expectedDate) {
-                                $needsFix = true;
-                                break;
-                            }
-                        }
-
-                        if ($needsFix) {
-                            foreach ($expectedDates as $actionName => $dueDate) {
-                                if (isset($existingActions[$actionName])) {
-                                    $updateSql = "UPDATE ca_service_dates SET due_date = :due_date WHERE service_id = :serviceid AND action = :action";
-                                    $statement = $db->prepare($updateSql);
-                                    $statement->bindParam(':serviceid', $rcServiceinfo['service']);
-                                    $statement->bindParam(':action', $actionName);
-                                    $statement->bindParam(':due_date', $dueDate);
-                                    $statement->execute();
-                                } else {
-                                    $insertSql = "INSERT INTO ca_service_dates(service_id, action, due_date) VALUES (:serviceid, :action, :due_date)";
-                                    $statement = $db->prepare($insertSql);
-                                    $statement->bindParam(':serviceid', $rcServiceinfo['service']);
-                                    $statement->bindParam(':action', $actionName);
-                                    $statement->bindParam(':due_date', $dueDate);
-                                    $statement->execute();
-                                }
-                            }
-
-                            // Re-fetch updated RC action dates
-                            $statement = $db->prepare($rcServiceDate);
-                            $statement->bindParam(':id', $rcServiceinfo['service']);
-                            $statement->execute();
-                            $rcServiceActionDates = $statement->fetchAll();
-                        }
-                    }
+                if (isset($rcServiceinfo['crr_id']) && !empty($rcServiceinfo['crr_id'])) {
+                    aitfSyncClientStatusDates($db, $rcServiceinfo['service'], $_GET['customerid']);
+                    $rcServiceActionDates = aitfFetchClientStatusDates($db, $rcServiceinfo['service'], array('Suspension Reminder', 'Suspend Letter', 'Withdrawal Reminder', 'Withdraw Letter'));
+                } else {
+                    $rcServiceActionDates = aitfFetchClientStatusDates($db, $rcServiceinfo['service'], array('Suspension Reminder', 'Suspend Letter', 'Withdrawal Reminder', 'Withdraw Letter'));
                 }
                 $rcServiceActionDates = array_values(array_filter($rcServiceActionDates, function ($row) {
                     return !isset($row['is_deleted']) || $row['is_deleted'] != 'Y';
@@ -4554,7 +4202,7 @@
                         <div class="servicebox-bunch">
                             <div class="servicebox" style="display: ">
                                 <div class="row" id="service-row" class="service-row">
-                                    <div class="col-xs-12 aitf_service_date" style="text-align: center" data-row-id="">LETTERS &amp; ACTIONS OF CLIENT STATUS - for the next service: RC
+                                    <div class="col-xs-12 aitf_service_date" style="text-align: center" data-row-id="">LETTERS &amp; ACTIONS OF CLIENT STATUS - for the next service: <?php echo $rcNextServiceType; ?>
                                         <span class="serviceStatus"></span>
                                     </div>
                                 </div>
@@ -4625,14 +4273,14 @@
                                                             <?php } ?>
                                                             <td class="" style="padding: 0px;">
                                                                 <?php if (date("Y-m-d") >= $rcActions['due_date']) { ?>
-                                                                    <a class="PreviewPDF" data-due="<?php echo simpleDateConversion($rcActions['due_date']) ?>" data-servicetype="RC" data-action-pdf="<?php echo $rcActions['action'] ?>" data-action="<?php echo $rcActions['action_id'] ?>" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $rcActions['service_id'] ?>" data-column="pdf">
+                                                                    <a class="PreviewPDF" data-due="<?php echo simpleDateConversion($rcActions['due_date']) ?>" data-servicetype="<?php echo $rcNextServiceType; ?>" data-action-pdf="<?php echo $rcActions['action'] ?>" data-action="<?php echo $rcActions['action_id'] ?>" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $rcActions['service_id'] ?>" data-column="pdf">
                                                                         <i class="fa fa-file-pdf-o" aria-hidden="true"></i>
                                                                     </a>
                                                                 <?php } ?>
                                                             </td>
                                                             <td class="" style="padding: 0px;">
                                                                 <?php if (date("Y-m-d") >= $rcActions['due_date']) { ?>
-                                                                    <a class="caServiceGanerate" data-servicetype="RC" data-due="<?php echo simpleDateConversion($rcActions['due_date']) ?>" data-action-pdf="<?php echo $rcActions['action'] ?>" data-action="<?php echo $rcActions['action_id'] ?>"  data-service="<?php echo $rcActions['service_id'] ?>" data-customer="<?php echo $_GET['customerid'] ?>" data-actiontype="<?php echo $rcActions['action'] ?>" data-column="generate">
+                                                                    <a class="caServiceGanerate" data-servicetype="<?php echo $rcNextServiceType; ?>" data-due="<?php echo simpleDateConversion($rcActions['due_date']) ?>" data-action-pdf="<?php echo $rcActions['action'] ?>" data-action="<?php echo $rcActions['action_id'] ?>"  data-service="<?php echo $rcActions['service_id'] ?>" data-customer="<?php echo $_GET['customerid'] ?>" data-actiontype="<?php echo $rcActions['action'] ?>" data-column="generate">
                                                                         <i class="fa fa-envelope-o" aria-hidden="true"></i>
                                                                     </a> 
                                                                 <?php } ?>

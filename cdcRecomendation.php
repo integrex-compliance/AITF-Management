@@ -32,6 +32,7 @@ ob_start(); // Start output buffering to prevent header errors
 session_start();
 include_once './dbConnect.php';
 include_once './include/cdc_office_use.php';
+include_once './include/certification_cycle_helper.php';
 date_default_timezone_set('Asia/Kolkata');
 
 // Debug: Check if crr_id is received
@@ -80,9 +81,10 @@ function parseCdcInputDate($value)
 if (strtoupper($_SERVER['REQUEST_METHOD']) === 'POST') {
     $customerIdForRedirect = isset($_POST['customer_Id']) ? $_POST['customer_Id'] : '';
     
-    // Check if this is a download request (only crr_id and customer_Id, no other fields)
-    $isDownloadRequest = (isset($_POST['crr_id']) && !empty($_POST['crr_id'])) && 
-                         (!isset($_POST['Date']) || empty($_POST['Date']));
+    // cdcRecomendation.php is used by the customer page for PDF generation. Treat crr_id
+    // posts as read-only unless a legacy save flag is explicitly present.
+    $isMutationRequest = isset($_POST['save_cdc']) || isset($_POST['update_cdc']);
+    $isDownloadRequest = (isset($_POST['crr_id']) && !empty($_POST['crr_id']) && !$isMutationRequest);
     
     error_log("CDC: isDownloadRequest = " . ($isDownloadRequest ? 'YES' : 'NO'));
     error_log("CDC: crr_id = " . (isset($_POST['crr_id']) ? $_POST['crr_id'] : 'NOT SET'));
@@ -1328,6 +1330,10 @@ if (((isset($_POST['crr_Id']) && !empty($_POST['crr_Id'])) || (isset($_POST['crr
         }
 
         $serviceid = $_POST['uni_serviceid'];
+        if (!empty($serviceid)) {
+            aitfSyncClientStatusDates($db, $serviceid, $_POST['customer_Id'], isset($Date) ? $Date : '');
+        }
+        aitfSyncExistingClientStatusDatesForCustomer($db, $_POST['customer_Id'], isset($Date) ? $Date : '');
 //        echo "in";
         header("Location: customerAccount.php?customerid=" . $_POST['customer_Id']);
     } catch (Exception $ex) {
@@ -2082,6 +2088,10 @@ if (((isset($_POST['crr_Id']) && !empty($_POST['crr_Id'])) || (isset($_POST['crr
                         }
                     }
                 }
+                if (!empty($serviceid)) {
+                    aitfSyncClientStatusDates($db, $serviceid, $_POST['customer_Id'], isset($Date) ? $Date : '');
+                }
+                aitfSyncExistingClientStatusDatesForCustomer($db, $_POST['customer_Id'], isset($Date) ? $Date : '');
                 header("Location: customerAccount.php?customerid=" . $_POST['customer_Id']);
             }
         } catch (Exception $ex) {

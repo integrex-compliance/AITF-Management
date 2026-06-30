@@ -3,6 +3,7 @@
     $pageIdentifier = "Admin Dashboard";
     include 'header.php';
     include 'dbConnect.php';
+    include_once './include/certification_cycle_helper.php';
     date_default_timezone_set('Asia/Kolkata');
 
     function dashMoney($value)
@@ -435,13 +436,14 @@
     // Define the specific actions tracked in intimationLetter.php
     $intimationActions = array('Suspension Reminder', 'Suspend Letter', 'Withdrawal Reminder', 'Withdrawal Letter', 'Withdraw Letter', '1st Reminder', '2nd Reminder', 'Expire Letter');
     $placeholders = implode(',', array_fill(0, count($intimationActions), '?'));
+    $latestCertificationService = aitfLatestCertificationServiceSubquery('ci');
 
-    // Fetch current pending letters matching intimationLetter.php logic (latest service only)
+    // Fetch current pending letters matching intimationLetter.php logic (latest certification service only)
     $pendingLettersDetail = dashFetchAll($db, "SELECT ci.id as customer_id, ci.customer_name, svcdt.action, svcdt.due_date
         FROM customer_info ci
         JOIN service svc ON ci.id = svc.customer_id
         JOIN ca_service_dates svcdt ON svc.service_id = svcdt.service_id
-        WHERE svc.service_id = (SELECT MAX(tmp.service_id) FROM service tmp WHERE tmp.customer_id = ci.id)
+        WHERE svc.service_id = $latestCertificationService
         AND svcdt.status <> 'sent'
         AND svcdt.due_date <= CURDATE()
         AND svcdt.is_deleted = 'N'

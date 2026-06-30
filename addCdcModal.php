@@ -6,6 +6,7 @@ ob_start(); // Start output buffering to prevent header errors
 session_start();
 include_once './dbConnect.php';
 include_once './include/cdc_office_use.php';
+include_once './include/certification_cycle_helper.php';
 date_default_timezone_set('Asia/Kolkata');
 
 function parseFormDate($key, &$dateObject = null) {
@@ -59,81 +60,10 @@ function validateCdcDates($applicationDateObj, $receivedDateObj, $reviewDateObj,
 
 function generateRcClientStatusDates($db, $serviceId, $customerId)
 {
-    if (empty($serviceId) || empty($customerId)) {
-        return;
-    }
-
     try {
-        $sqla = "SELECT service_count, certification_stage_date FROM customer_info WHERE id = :customer";
-        $statement = $db->prepare($sqla);
-        $statement->bindParam(':customer', $customerId);
-        $statement->execute();
-        $customer = $statement->fetch();
-
-        if (!$customer) {
-            return;
-        }
-
-        $certDate = '';
-
-        // Prefer the first CA CDC date as the master certification base date
-        $caCdcQuery = "SELECT MIN(crr.Date) AS first_date FROM cdc_report_review crr 
-                       INNER JOIN service_type_ca ca ON crr.ca_service_id = ca.ca_id 
-                       INNER JOIN service s ON ca.service = s.service_id 
-                       WHERE s.customer_id = :customer_id AND s.service_type = 'CA'";
-        $statement = $db->prepare($caCdcQuery);
-        $statement->bindParam(':customer_id', $customerId);
-        $statement->execute();
-        $caCdcResult = $statement->fetch();
-
-        if (isset($caCdcResult['first_date']) && !empty($caCdcResult['first_date'])) {
-            $certDate = $caCdcResult['first_date'];
-        } elseif (!empty($customer['certification_stage_date'])) {
-            $certDate = $customer['certification_stage_date'];
-        } else {
-            $certDate = date('Y-m-d');
-        }
-
-        $serviceCount = isset($customer['service_count']) ? (int) $customer['service_count'] : 0;
-        $svcCountSet = $serviceCount > 0 ? $serviceCount - 1 : 0;
-        $monthAdd = 36 * $svcCountSet;
-
-        $rc1 = $monthAdd + 47;
-        $rc2 = $monthAdd + 48;
-        $rc3 = $monthAdd + 50;
-        $rc4 = $monthAdd + 52;
-
-        $action1 = "Suspension Reminder";
-        $action2 = "Suspend Letter";
-        $action3 = "Withdrawal Reminder";
-        $action4 = "Withdraw Letter";
-
-        $deleteExisting = "DELETE FROM ca_service_dates WHERE service_id = :serviceid AND action IN ('Suspension Reminder', 'Suspend Letter', 'Withdrawal Reminder', 'Withdraw Letter')";
-        $statement = $db->prepare($deleteExisting);
-        $statement->bindParam(':serviceid', $serviceId);
-        $statement->execute();
-
-        $insertQuery = "INSERT INTO ca_service_dates(service_id, action, due_date) VALUES (:serviceid, :action, :dueDate)";
-
-        $dates = array(
-            array('action' => $action1, 'months' => $rc1),
-            array('action' => $action2, 'months' => $rc2),
-            array('action' => $action3, 'months' => $rc3),
-            array('action' => $action4, 'months' => $rc4),
-        );
-
-        foreach ($dates as $entry) {
-            $dateExpr = $certDate . ' + ' . $entry['months'] . ' MONTH';
-            $dueDate = date("Y-m-d", strtotime('-1 day', strtotime($dateExpr)));
-
-            $statement = $db->prepare($insertQuery);
-            $statement->bindParam(':serviceid', $serviceId);
-            $statement->bindParam(':action', $entry['action']);
-            $statement->bindParam(':dueDate', $dueDate);
-            $statement->execute();
-        }
+        aitfSyncClientStatusDates($db, $serviceId, $customerId);
     } catch (Exception $ex) {
-        error_log("RC DATES ERROR: " . $ex->getMessage());
+        error_log("CLIENT STATUS DATES ERROR: " . $ex->getMessage());
     }
 }
 
@@ -662,6 +592,11 @@ if (strtoupper($_SERVER['REQUEST_METHOD']) == 'POST') {
                         error_log("CDC UPDATE: Saved " . count($isoDecisions) . " ISO decisions for crr_id=" . $_POST['crr_Id']);
                     }
                 }
+
+                if (isset($universalServiceId) && !empty($universalServiceId)) {
+                    aitfSyncClientStatusDates($db, $universalServiceId, $_POST['customer_Id'], $Date);
+                }
+                aitfSyncExistingClientStatusDatesForCustomer($db, $_POST['customer_Id'], $Date);
 
                 header("Location: customerAccount.php?customerid=" . $_POST['customer_Id']);
                 exit();
@@ -1239,6 +1174,13 @@ if (strtoupper($_SERVER['REQUEST_METHOD']) == 'POST') {
                         }
                     }
 
+                    if (isset($universalServiceId) && !empty($universalServiceId)) {
+                        aitfSyncClientStatusDates($db, $universalServiceId, $_POST['customer_Id'], $Date);
+                    } elseif (!empty($_POST['uni_serviceid'])) {
+                        aitfSyncClientStatusDates($db, $_POST['uni_serviceid'], $_POST['customer_Id'], $Date);
+                    }
+                    aitfSyncExistingClientStatusDatesForCustomer($db, $_POST['customer_Id'], $Date);
+
                     header("Location: customerAccount.php?customerid=" . $_POST['customer_Id']);
                     exit();
                 } catch (Exception $ex) {
@@ -1393,6 +1335,12 @@ if (strtoupper($_SERVER['REQUEST_METHOD']) == 'POST') {
                 replaceCdcOfficeUse($db, (int) $_POST['crr_Id'], $officeUseEntries);
                 activateCustomerAfterGrantedCaCdc($db, $_POST['customer_Id'], $service, $cdc_status, $_POST['certificateNo']);
 
+                $resolvedServiceId = aitfResolveUniversalServiceId($db, isset($_POST['uni_serviceid']) ? $_POST['uni_serviceid'] : '', $service, isset($_POST['audit_type']) ? $_POST['audit_type'] : '');
+                if (!empty($resolvedServiceId)) {
+                    aitfSyncClientStatusDates($db, $resolvedServiceId, $_POST['customer_Id'], $Date);
+                }
+                aitfSyncExistingClientStatusDatesForCustomer($db, $_POST['customer_Id'], $Date);
+
                 header("Location: customerAccount.php?customerid=" . $_POST['customer_Id']);
                 exit();
             } catch (Exception $ex) {
@@ -1537,6 +1485,13 @@ if (strtoupper($_SERVER['REQUEST_METHOD']) == 'POST') {
                             generateRcClientStatusDates($db, $rcRow['service'], $_POST['customer_Id']);
                         }
                     }
+
+                    if (isset($universalServiceId) && !empty($universalServiceId)) {
+                        aitfSyncClientStatusDates($db, $universalServiceId, $_POST['customer_Id'], $Date);
+                    } elseif (!empty($_POST['uni_serviceid'])) {
+                        aitfSyncClientStatusDates($db, $_POST['uni_serviceid'], $_POST['customer_Id'], $Date);
+                    }
+                    aitfSyncExistingClientStatusDatesForCustomer($db, $_POST['customer_Id'], $Date);
 
                     header("Location: customerAccount.php?customerid=" . $_POST['customer_Id']);
                     exit();
