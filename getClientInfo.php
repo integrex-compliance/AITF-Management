@@ -7,6 +7,7 @@
  */
 session_start();
 include_once './dbConnect.php';
+include_once './include/certification_cycle_helper.php';
 date_default_timezone_set('Asia/Kolkata');
 
 // Set proper JSON headers
@@ -1907,6 +1908,25 @@ if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
         $statement->bindParam(':id', $_GET['cdc_ID']);
         $statement->execute();
         $cdcInfo = $statement->fetch();
+
+        if ($cdcInfo && is_array($cdcInfo)) {
+            $certificateDates = aitfBuildCertificatePrintDates(
+                $db,
+                $_GET['cust_id'],
+                $_GET['cdc_ID'],
+                null,
+                isset($cdcInfo['audit_type']) ? $cdcInfo['audit_type'] : '',
+                $cdcInfo
+            );
+
+            if (!empty($certificateDates)) {
+                $cdcInfo['certificate_registration_date'] = $certificateDates['registration_date'];
+                $cdcInfo['Date'] = $certificateDates['registration_date'];
+                $cdcInfo['expiredate'] = $certificateDates['valid_until'];
+                $cdcInfo['periodicalaudit'] = $certificateDates['before_date'];
+                $cdcInfo['certificate_service_type'] = $certificateDates['service_type'];
+            }
+        }
 
         $stage2 = "SELECT * FROM `audit_scheduleii_id` WHERE `ca_service` = :id";
         $statement = $db->prepare($stage2);

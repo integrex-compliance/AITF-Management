@@ -310,7 +310,7 @@
                     $('.certificationAddress').val(data[0]['address']);
                     $('.certificationNo').val(data[1]['certificateNo']);
                     $(".certifyScope").val(data[0]["scope"]);
-                    $('.certifyRegistrationDate').val(moment(data[0]['certification_stage_date']).format('DD.MM.YYYY'));
+                    $('.certifyRegistrationDate').val(moment(data[1]['certificate_registration_date'] || data[1]['Date']).format('DD.MM.YYYY'));
 //                    var revdate = moment($('.certifyRegistrationDate').val()).add(3, 'year');
 //                    alert(moment(data[1]['Date']).format('DD.MM.YYYY'));
 //                    alert(revdate);

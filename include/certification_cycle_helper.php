@@ -17,6 +17,30 @@ function aitfNextCertificationServiceType($serviceType)
     return isset($sequence[$serviceType]) ? $sequence[$serviceType] : '';
 }
 
+function aitfNormalizeCertificationServiceType($serviceType)
+{
+    $value = strtoupper(trim((string) $serviceType));
+    $compact = preg_replace('/[^A-Z0-9]/', '', $value);
+
+    if ($compact === 'CA') {
+        return 'CA';
+    }
+
+    if (in_array($compact, array('SAI', 'SA1', 'SURVEILLANCEI', 'SURVEILLANCE1', 'FIRSTSURVEILLANCE'), true)) {
+        return 'SA-I';
+    }
+
+    if (in_array($compact, array('SAII', 'SA2', 'SURVEILLANCEII', 'SURVEILLANCE2', 'SECONDSURVEILLANCE'), true)) {
+        return 'SA-II';
+    }
+
+    if (in_array($compact, array('RC', 'RECERTIFICATION', 'RECERTIFICATIONAUDIT'), true)) {
+        return 'RC';
+    }
+
+    return '';
+}
+
 function aitfClientStatusActionsForServiceType($serviceType)
 {
     return array_keys(aitfClientStatusOffsetsForServiceType($serviceType));
@@ -198,6 +222,257 @@ function aitfGetServiceCycleIndex($db, $customerId, $serviceId, $serviceType)
     }
 
     return max(0, (int) $index);
+}
+
+function aitfGetTypedServiceMap($serviceType = '')
+{
+    $map = array(
+        'CA' => array(
+            'table' => 'service_type_ca',
+            'typed_column' => 'ca_id',
+            'service_column' => 'service',
+            'customer_column' => 'customer_id',
+        ),
+        'SA-I' => array(
+            'table' => 'service_type_sai',
+            'typed_column' => 'sai_id',
+            'service_column' => 'service',
+            'customer_column' => 'customer_id',
+        ),
+        'SA-II' => array(
+            'table' => 'service_type_saii',
+            'typed_column' => 'saii_id',
+            'service_column' => 'service',
+            'customer_column' => 'customer_id',
+        ),
+        'RC' => array(
+            'table' => 'service_type_rc',
+            'typed_column' => 'rc_id',
+            'service_column' => 'service',
+            'customer_column' => 'rc_customer',
+        ),
+    );
+
+    if ($serviceType !== '') {
+        return isset($map[$serviceType]) ? $map[$serviceType] : null;
+    }
+
+    return $map;
+}
+
+function aitfFetchCertificationServiceByTypedId($db, $typedServiceId, $serviceType, $customerId = null)
+{
+    $map = aitfGetTypedServiceMap($serviceType);
+    if (!$map || empty($typedServiceId)) {
+        return null;
+    }
+
+    $sql = "SELECT s.service_id, s.customer_id, s.service_type, st." . $map['typed_column'] . " AS typed_service_id
+            FROM " . $map['table'] . " st
+            INNER JOIN service s ON st." . $map['service_column'] . " = s.service_id
+            WHERE st." . $map['typed_column'] . " = :typed_id
+            AND s.service_type = :service_type
+            LIMIT 1";
+    $statement = $db->prepare($sql);
+    $statement->execute(array(
+        ':typed_id' => $typedServiceId,
+        ':service_type' => $serviceType,
+    ));
+    $row = $statement->fetch(PDO::FETCH_ASSOC);
+
+    if (!$row) {
+        return null;
+    }
+
+    if (!empty($customerId) && (string) $row['customer_id'] !== (string) $customerId) {
+        return null;
+    }
+
+    return $row;
+}
+
+function aitfFetchTypedServiceIdForUniversalService($db, $universalServiceId, $serviceType, $customerId = null)
+{
+    $map = aitfGetTypedServiceMap($serviceType);
+    if (!$map || empty($universalServiceId)) {
+        return null;
+    }
+
+    $sql = "SELECT st." . $map['typed_column'] . " AS typed_service_id
+            FROM " . $map['table'] . " st
+            WHERE st." . $map['service_column'] . " = :service_id";
+    $params = array(':service_id' => $universalServiceId);
+
+    if (!empty($customerId)) {
+        $sql .= " AND st." . $map['customer_column'] . " = :customer_id";
+        $params[':customer_id'] = $customerId;
+    }
+
+    $sql .= " LIMIT 1";
+
+    $statement = $db->prepare($sql);
+    $statement->execute($params);
+    $row = $statement->fetch(PDO::FETCH_ASSOC);
+
+    return ($row && !empty($row['typed_service_id'])) ? $row['typed_service_id'] : null;
+}
+
+function aitfResolveCertificationService($db, $customerId = null, $typedServiceId = null, $universalServiceId = null, $serviceType = '')
+{
+    if (empty($db)) {
+        return null;
+    }
+
+    $serviceType = aitfNormalizeCertificationServiceType($serviceType);
+
+    if (!empty($universalServiceId)) {
+        $service = aitfGetUniversalService($db, $universalServiceId);
+        if ($service) {
+            $resolvedType = aitfNormalizeCertificationServiceType($service['service_type']);
+            if (in_array($resolvedType, aitfCertificationServiceTypes(), true)) {
+                if (!empty($customerId) && (string) $service['customer_id'] !== (string) $customerId) {
+                    return null;
+                }
+
+                $typedId = !empty($typedServiceId)
+                    ? $typedServiceId
+                    : aitfFetchTypedServiceIdForUniversalService($db, $service['service_id'], $resolvedType, $service['customer_id']);
+
+                return array(
+                    'service_id' => $service['service_id'],
+                    'typed_service_id' => $typedId,
+                    'customer_id' => $service['customer_id'],
+                    'service_type' => $resolvedType,
+                );
+            }
+        }
+    }
+
+    if (!empty($typedServiceId) && $serviceType !== '') {
+        $typedService = aitfFetchCertificationServiceByTypedId($db, $typedServiceId, $serviceType, $customerId);
+        if ($typedService) {
+            return array(
+                'service_id' => $typedService['service_id'],
+                'typed_service_id' => $typedService['typed_service_id'],
+                'customer_id' => $typedService['customer_id'],
+                'service_type' => $typedService['service_type'],
+            );
+        }
+    }
+
+    if (!empty($typedServiceId)) {
+        foreach (aitfCertificationServiceTypes() as $candidateType) {
+            $typedService = aitfFetchCertificationServiceByTypedId($db, $typedServiceId, $candidateType, $customerId);
+            if ($typedService) {
+                return array(
+                    'service_id' => $typedService['service_id'],
+                    'typed_service_id' => $typedService['typed_service_id'],
+                    'customer_id' => $typedService['customer_id'],
+                    'service_type' => $typedService['service_type'],
+                );
+            }
+        }
+    }
+
+    return null;
+}
+
+function aitfIsUsableDateValue($dateValue)
+{
+    return !empty($dateValue) && $dateValue !== '0000-00-00';
+}
+
+function aitfDateAfterMonthsMinusOneDay($baseDate, $months)
+{
+    if (!aitfIsUsableDateValue($baseDate)) {
+        return '';
+    }
+
+    try {
+        $date = new DateTime($baseDate);
+        if ((int) $months !== 0) {
+            $date->modify('+' . (int) $months . ' months');
+        }
+        $date->modify('-1 day');
+        return $date->format('Y-m-d');
+    } catch (Exception $ex) {
+        return '';
+    }
+}
+
+function aitfBuildCertificatePrintDates($db, $customerId, $typedServiceId = null, $universalServiceId = null, $serviceType = '', array $cdcInfo = array())
+{
+    $service = aitfResolveCertificationService($db, $customerId, $typedServiceId, $universalServiceId, $serviceType);
+    if (!$service) {
+        return array();
+    }
+
+    if (empty($customerId)) {
+        $customerId = $service['customer_id'];
+    }
+
+    if (empty($typedServiceId)) {
+        $typedServiceId = $service['typed_service_id'];
+    }
+
+    if (empty($cdcInfo) && !empty($typedServiceId)) {
+        $sql = "SELECT *
+                FROM cdc_report_review
+                WHERE ca_service_id = :typed_service_id
+                AND customer_id = :customer_id
+                ORDER BY crr_id DESC
+                LIMIT 1";
+        $statement = $db->prepare($sql);
+        $statement->execute(array(
+            ':typed_service_id' => $typedServiceId,
+            ':customer_id' => $customerId,
+        ));
+        $cdcInfo = $statement->fetch(PDO::FETCH_ASSOC);
+        if (!$cdcInfo) {
+            $cdcInfo = array();
+        }
+    }
+
+    $registrationDate = '';
+    if (isset($cdcInfo['Date']) && aitfIsUsableDateValue($cdcInfo['Date'])) {
+        $registrationDate = $cdcInfo['Date'];
+    }
+
+    $baseDate = aitfGetBaseCertificationDate($db, $customerId, $registrationDate);
+    $serviceType = $service['service_type'];
+    $serviceCycleIndex = aitfGetServiceCycleIndex($db, $customerId, $service['service_id'], $serviceType);
+    $certificateCycleIndex = ($serviceType === 'RC') ? $serviceCycleIndex + 1 : $serviceCycleIndex;
+    $cycleOffsetMonths = 36 * max(0, $certificateCycleIndex);
+
+    $beforeOffsets = array(
+        'CA' => 12,
+        'SA-I' => 24,
+        'SA-II' => 36,
+        'RC' => 12,
+    );
+    $nextAuditLabels = array(
+        'CA' => '1st surveillance',
+        'SA-I' => '2nd surveillance',
+        'SA-II' => 'Re-Certification',
+        'RC' => '1st surveillance',
+    );
+
+    if ($registrationDate === '') {
+        $registrationDate = $baseDate;
+    }
+
+    return array(
+        'customer_id' => $customerId,
+        'service_type' => $serviceType,
+        'universal_service_id' => $service['service_id'],
+        'typed_service_id' => $typedServiceId,
+        'base_date' => $baseDate,
+        'cycle_index' => $certificateCycleIndex,
+        'registration_date' => $registrationDate,
+        'valid_until' => aitfDateAfterMonthsMinusOneDay($baseDate, $cycleOffsetMonths + 36),
+        'before_date' => aitfDateAfterMonthsMinusOneDay($baseDate, $cycleOffsetMonths + $beforeOffsets[$serviceType]),
+        'next_audit_label' => $nextAuditLabels[$serviceType],
+    );
 }
 
 function aitfBuildClientStatusDates($db, $serviceId, $customerId = null, $fallbackBaseDate = '')

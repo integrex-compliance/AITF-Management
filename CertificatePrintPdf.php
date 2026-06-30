@@ -33,6 +33,7 @@ session_start();
 // Include the main TCPDF library (search for installation path).
 require_once('tcpdf_include.php');
 include_once './dbConnect.php';
+include_once './include/certification_cycle_helper.php';
 date_default_timezone_set('Asia/Kolkata');
 
 /**
@@ -324,7 +325,7 @@ if (!$cdcInfo || !is_array($cdcInfo)) {
     die('Error: CDC Report Review data not found. Please ensure the CDC report has been completed.');
 }
 
-$auditType = isset($cdcInfo['audit_type']) ? strtoupper(trim($cdcInfo['audit_type'])) : '';
+$auditType = aitfNormalizeCertificationServiceType(isset($cdcInfo['audit_type']) ? $cdcInfo['audit_type'] : '');
 
 // Get client data
 $clientDetails = "SELECT * FROM customer_info WHERE id = :id";
@@ -362,7 +363,7 @@ if (!$caBaseDate && !empty($clientInfo['certification_stage_date'])) {
     $caBaseDate = $cdcInfo['Date'];
 }
 
-$regSourceDate = $caBaseDate;
+$regSourceDate = isset($cdcInfo['Date']) ? $cdcInfo['Date'] : $caBaseDate;
 $currentCdcDate = isset($cdcInfo['Date']) ? $cdcInfo['Date'] : null;
 
 // NEW SIMPLIFIED LOGIC:
@@ -402,11 +403,25 @@ if ($currentServiceId == 0 && isset($cdcInfo['ca_service_id'])) {
 }
 
 // Calculate cycle number once - this will be used for all date calculations
-$auditType = isset($cdcInfo['audit_type']) ? strtoupper(trim($cdcInfo['audit_type'])) : '';
+$auditType = aitfNormalizeCertificationServiceType(isset($cdcInfo['audit_type']) ? $cdcInfo['audit_type'] : '');
 $customerId = isset($_POST['customer']) ? $_POST['customer'] : null;
 $currentCaServiceId = isset($cdcInfo['ca_service_id']) ? (int)$cdcInfo['ca_service_id'] : 0;
 $completedRcCount = countCompletedRCs($db, $customerId, $auditType, $currentCaServiceId, $currentCdcDate);
 $cycleNumber = determineCycleNumber($completedRcCount, $auditType);
+
+$certificateDates = aitfBuildCertificatePrintDates(
+    $db,
+    $customerId,
+    $currentCaServiceId,
+    null,
+    $auditType,
+    is_array($cdcInfo) ? $cdcInfo : array()
+);
+if (!empty($certificateDates)) {
+    $auditType = $certificateDates['service_type'];
+    $regSourceDate = $certificateDates['base_date'];
+    $cycleNumber = $certificateDates['cycle_index'] + 1;
+}
 
 // DEBUG - remove this after testing
 error_log("DEBUG CERTIFICATE: customerId=$customerId, auditType=$auditType, currentCaServiceId=$currentCaServiceId, currentCdcDate=$currentCdcDate, completedRcCount=$completedRcCount, cycleNumber=$cycleNumber");
@@ -420,24 +435,24 @@ if (isset($_POST['certify_id']) && !empty($_POST['certify_id'])) {
     $statement->execute();
     $certifyInfo = $statement->fetch();
 
-    // Ensure registration_date reflects the original CA certification date
+    // Ensure dates reflect the current certification service, not transition audits.
     if ($certifyInfo && is_array($certifyInfo)) {
-        if (!empty($regSourceDate)) {
-            try {
-                $originalRegDate = new DateTime($regSourceDate);
-                $certifyInfo['registration_date'] = $originalRegDate->format('Y-m-d');
-            } catch (Exception $e) {
-                // If parsing fails, keep existing registration_date from DB
-            }
+        if (!empty($certificateDates)) {
+            $certifyInfo['registration_date'] = $certificateDates['base_date'];
+            $certifyInfo['before_date'] = $certificateDates['before_date'];
+            $certifyInfo['valid_until'] = $certificateDates['valid_until'];
+        } elseif (!empty($regSourceDate)) {
+            $certifyInfo['registration_date'] = date('Y-m-d', strtotime($regSourceDate));
         }
 
-        // Recalculate dates using new simplified function
-        [$periodicalDate, $validDate, $nextAuditLabel] = computeCertificateCycleDates($caBaseDate, $cycleNumber, $auditType);
-        if ($periodicalDate instanceof DateTime) {
-            $certifyInfo['before_date'] = $periodicalDate->format('Y-m-d');
-        }
-        if ($validDate instanceof DateTime) {
-            $certifyInfo['valid_until'] = $validDate->format('Y-m-d');
+        if (empty($certificateDates)) {
+            [$periodicalDate, $validDate, $nextAuditLabel] = computeCertificateCycleDates($caBaseDate, $cycleNumber, $auditType);
+            if ($periodicalDate instanceof DateTime) {
+                $certifyInfo['before_date'] = $periodicalDate->format('Y-m-d');
+            }
+            if ($validDate instanceof DateTime) {
+                $certifyInfo['valid_until'] = $validDate->format('Y-m-d');
+            }
         }
     }
 }
@@ -452,8 +467,16 @@ if (!$certifyInfo || !is_array($certifyInfo)) {
 
     $certificationDate = $registrationDateObj->format('Y-m-d');
 
-    // Use new simplified function - only needs CA_CDC_DATE and cycle number
-    [$periodicalDate, $validityDate, $nextAuditLabel] = computeCertificateCycleDates($caBaseDate, $cycleNumber, $auditType);
+    if (!empty($certificateDates)) {
+        $certificationDate = $certificateDates['base_date'];
+        $validUntilDate = $certificateDates['valid_until'];
+        $beforeDate = $certificateDates['before_date'];
+        $nextAuditLabel = $certificateDates['next_audit_label'];
+    } else {
+        [$periodicalDate, $validityDate, $nextAuditLabel] = computeCertificateCycleDates($caBaseDate, $cycleNumber, $auditType);
+        $validUntilDate = $validityDate ? $validityDate->format('Y-m-d') : '';
+        $beforeDate = $periodicalDate ? $periodicalDate->format('Y-m-d') : '';
+    }
 
     // Create certificate info array from CDC and customer data
     $certifyInfo = array(
@@ -462,8 +485,8 @@ if (!$certifyInfo || !is_array($certifyInfo)) {
         'certificate_no' => isset($cdcInfo['certificateNo']) ? $cdcInfo['certificateNo'] : '',
         'certificate_scope' => $clientInfo['scope'],
         'registration_date' => $certificationDate,
-        'valid_until' => $validityDate ? $validityDate->format('Y-m-d') : '',
-        'before_date' => $periodicalDate ? $periodicalDate->format('Y-m-d') : ''
+        'valid_until' => $validUntilDate,
+        'before_date' => $beforeDate
     );
 }
 
@@ -519,8 +542,12 @@ if ($isoEntry) {
     }
     
     // Recalculate dates using new simplified function based on CA_CDC_DATE
-    if (!empty($caBaseDate)) {
-        $auditType = isset($cdcInfo['audit_type']) ? strtoupper(trim($cdcInfo['audit_type'])) : '';
+    if (!empty($certificateDates)) {
+        $certifyInfo['registration_date'] = $certificateDates['base_date'];
+        $certifyInfo['valid_until'] = $certificateDates['valid_until'];
+        $certifyInfo['before_date'] = $certificateDates['before_date'];
+    } elseif (!empty($caBaseDate)) {
+        $auditType = aitfNormalizeCertificationServiceType(isset($cdcInfo['audit_type']) ? $cdcInfo['audit_type'] : '');
         [$periodicalDate, $validDate, $nextAuditLabel] = computeCertificateCycleDates($caBaseDate, $cycleNumber, $auditType);
         if ($validDate instanceof DateTime) {
             $certifyInfo['valid_until'] = $validDate->format('Y-m-d');
@@ -546,8 +573,12 @@ if ($standardDisplay === '' && $selectedIsoIndex !== null && isset($isoEntries) 
 
 // Get the correct next audit label from our calculation function
 // This ensures consistency across all cycles
-$auditType = isset($cdcInfo['audit_type']) ? strtoupper(trim($cdcInfo['audit_type'])) : '';
-[$periodicalDateFinal, $validDateFinal, $nextaudit] = computeCertificateCycleDates($caBaseDate, $cycleNumber, $auditType);
+if (!empty($certificateDates)) {
+    $nextaudit = $certificateDates['next_audit_label'];
+} else {
+    $auditType = aitfNormalizeCertificationServiceType(isset($cdcInfo['audit_type']) ? $cdcInfo['audit_type'] : '');
+    [$periodicalDateFinal, $validDateFinal, $nextaudit] = computeCertificateCycleDates($caBaseDate, $cycleNumber, $auditType);
+}
 
 $expireDate = "";
 $reAuditDate = "";

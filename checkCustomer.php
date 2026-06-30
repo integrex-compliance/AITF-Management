@@ -8,6 +8,7 @@
 
 session_start();
 include_once './dbConnect.php';
+include_once './include/certification_cycle_helper.php';
 date_default_timezone_set('Asia/Kolkata');
 
 function getNextAllotmentSequence($db, $customerId, $year, $month) {
@@ -632,7 +633,16 @@ $lastDate = $lastDate->format('Y-m-d');
         $statement->bindParam(":svc", $_GET["certifyServiceId"]);
         $statement->execute();
         $cdcRegDate = $statement->fetch();
-        if ($cdcRegDate["Date"] != $date) {
+        if (!$cdcRegDate) {
+            echo "1";
+            return;
+        }
+        $expectedDate = $cdcRegDate["Date"];
+        $certificateDates = aitfBuildCertificatePrintDates($db, null, $_GET["certifyServiceId"], null, '', $cdcRegDate ? $cdcRegDate : array());
+        if (!empty($certificateDates) && !empty($certificateDates['registration_date'])) {
+            $expectedDate = $certificateDates['registration_date'];
+        }
+        if ($expectedDate != $date) {
             echo "1";
         }
     } catch (Exception $ex) {
@@ -641,12 +651,21 @@ $lastDate = $lastDate->format('Y-m-d');
 } else if (isset($_GET["certifyValidTill"]) && !empty($_GET["certifyValidTill"]) && isset($_GET["certifyService_Id"]) && !empty($_GET["certifyService_Id"])) {
     try {
         $date = date("Y-m-d", strtotime($_GET["certifyValidTill"]));
-        $expDate = "SELECT expiredate FROM cdc_report_review WHERE ca_service_id = :svc ";
+        $expDate = "SELECT * FROM cdc_report_review WHERE ca_service_id = :svc ";
         $statement = $db->prepare($expDate);
         $statement->bindParam(":svc", $_GET["certifyService_Id"]);
         $statement->execute();
         $expDateRoe = $statement->fetch();
-        if ($expDateRoe["expiredate"] != $date) {
+        if (!$expDateRoe) {
+            echo "1";
+            return;
+        }
+        $expectedDate = $expDateRoe["expiredate"];
+        $certificateDates = aitfBuildCertificatePrintDates($db, null, $_GET["certifyService_Id"], null, isset($expDateRoe['audit_type']) ? $expDateRoe['audit_type'] : '', $expDateRoe ? $expDateRoe : array());
+        if (!empty($certificateDates) && !empty($certificateDates['valid_until'])) {
+            $expectedDate = $certificateDates['valid_until'];
+        }
+        if ($expectedDate != $date) {
             echo "1";
         }
     } catch (Exception $ex) {
@@ -655,12 +674,21 @@ $lastDate = $lastDate->format('Y-m-d');
 } else if (isset($_GET["certifyBeforeDate"]) && !empty($_GET["certifyBeforeDate"]) && isset($_GET["certifyService_ID"]) && !empty($_GET["certifyService_ID"])) {
     try {
         $date = date("Y-m-d", strtotime($_GET["certifyBeforeDate"]));
-        $expDate = "SELECT periodicalaudit FROM cdc_report_review WHERE ca_service_id = :svc ";
+        $expDate = "SELECT * FROM cdc_report_review WHERE ca_service_id = :svc ";
         $statement = $db->prepare($expDate);
         $statement->bindParam(":svc", $_GET["certifyService_ID"]);
         $statement->execute();
         $expDateRoe = $statement->fetch();
-        if ($expDateRoe["periodicalaudit"] != $date) {
+        if (!$expDateRoe) {
+            echo "1";
+            return;
+        }
+        $expectedDate = $expDateRoe["periodicalaudit"];
+        $certificateDates = aitfBuildCertificatePrintDates($db, null, $_GET["certifyService_ID"], null, isset($expDateRoe['audit_type']) ? $expDateRoe['audit_type'] : '', $expDateRoe ? $expDateRoe : array());
+        if (!empty($certificateDates) && !empty($certificateDates['before_date'])) {
+            $expectedDate = $certificateDates['before_date'];
+        }
+        if ($expectedDate != $date) {
             echo "1";
         }
     } catch (Exception $ex) {
