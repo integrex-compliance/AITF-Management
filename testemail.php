@@ -15,7 +15,7 @@ $mailConfig = array_merge(
     is_array($mailConfig) ? $mailConfig : []
 );
 $mail = new PHPMailer(true);
-
+e
 class AITFServiceEmailSender {
 
     function sendEmail($toEmails, $toName, $body, $subject) {

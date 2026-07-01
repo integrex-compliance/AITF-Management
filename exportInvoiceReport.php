@@ -1,4 +1,4 @@
-f<?php
+<?php
 require_once('tcpdf_include.php');
 include_once './dbConnect.php';
 include_once './commonutil.php';
@@ -247,9 +247,9 @@ if (empty($invoices)) {
         if ($sgstVal !== null) $totalSgst += $sgstVal;
         if ($igstVal !== null) $totalIgst += $igstVal;
 
-        $cgstCell = ($cgstVal !== null) ? formatIndian($cgstVal) . '/-' : '-';
-        $sgstCell = ($sgstVal !== null) ? formatIndian($sgstVal) . '/-' : '-';
-        $igstCell = ($igstVal !== null) ? formatIndian($igstVal) . '/-' : '-';
+        $cgstCell = ($cgstVal !== null && $cgstVal != 0.0) ? formatIndian($cgstVal) : '0';
+        $sgstCell = ($sgstVal !== null && $sgstVal != 0.0) ? formatIndian($sgstVal) : '0';
+        $igstCell = ($igstVal !== null && $igstVal != 0.0) ? formatIndian($igstVal) : '0';
 
         $isPaid = (isset($inv['invoice_status']) && $inv['invoice_status'] == 'Rcv');
         $invoiceTax = ($cgstVal !== null ? $cgstVal : 0.0) + 
@@ -276,7 +276,7 @@ if (empty($invoices)) {
             <td width="11%">' . htmlspecialchars($invoiceNo) . '</td>
             <td align="center" width="7%">' . simpleDateConversion($inv['invoice_date']) . '</td>
             <td width="17%">' . htmlspecialchars($particulars) . '</td>
-            <td align="right" width="8%"><b>' . formatIndian($amount) . '/-</b></td>
+            <td align="right" width="8%"><b>' . formatIndian($amount) . '</b></td>
             <td align="right" width="7%">' . $cgstCell . '</td>
             <td align="right" width="7%">' . $sgstCell . '</td>
             <td align="right" width="7%">' . $igstCell . '</td>
@@ -304,27 +304,27 @@ $html .= '<div style="page-break-before: always;">
     </tr>
     <tr>
         <td width="50%" style="font-weight: bold;">TOTAL INVOICE AMOUNT (TAXABLE)</td>
-        <td width="50%" align="right" style="font-weight: bold; font-size: 12px; color: #0d4d8b;">Rs. ' . formatIndian($totalSum) . '/-</td>
+        <td width="50%" align="right" style="font-weight: bold; font-size: 12px; color: #0d4d8b;">Rs. ' . formatIndian($totalSum) . '</td>
     </tr>
     <tr>
         <td width="50%" style="font-weight: bold; background-color:#eaf3ff;">TOTAL CGST @9%</td>
-        <td width="50%" align="right" style="font-weight: bold; font-size: 11px; background-color:#eaf3ff; color:#0d4d8b;">Rs. ' . formatIndian($totalCgst) . '/-</td>
+        <td width="50%" align="right" style="font-weight: bold; font-size: 11px; background-color:#eaf3ff; color:#0d4d8b;">Rs. ' . formatIndian($totalCgst) . '</td>
     </tr>
     <tr>
         <td width="50%" style="font-weight: bold; background-color:#eaf3ff;">TOTAL SGST @9%</td>
-        <td width="50%" align="right" style="font-weight: bold; font-size: 11px; background-color:#eaf3ff; color:#0d4d8b;">Rs. ' . formatIndian($totalSgst) . '/-</td>
+        <td width="50%" align="right" style="font-weight: bold; font-size: 11px; background-color:#eaf3ff; color:#0d4d8b;">Rs. ' . formatIndian($totalSgst) . '</td>
     </tr>
     <tr>
         <td width="50%" style="font-weight: bold; background-color:#eaf3ff;">TOTAL IGST @18%</td>
-        <td width="50%" align="right" style="font-weight: bold; font-size: 11px; background-color:#eaf3ff; color:#0d4d8b;">Rs. ' . formatIndian($totalIgst) . '/-</td>
+        <td width="50%" align="right" style="font-weight: bold; font-size: 11px; background-color:#eaf3ff; color:#0d4d8b;">Rs. ' . formatIndian($totalIgst) . '</td>
     </tr>
     <tr>
         <td width="50%" style="font-weight: bold;">TOTAL TAX AMOUNT</td>
-        <td width="50%" align="right" style="font-weight: bold; font-size: 11px;">Rs. ' . formatIndian($totalTaxSum) . '/-</td>
+        <td width="50%" align="right" style="font-weight: bold; font-size: 11px;">Rs. ' . formatIndian($totalTaxSum) . '</td>
     </tr>
     <tr>
         <td width="50%" style="font-weight: bold; background-color:#0d4d8b; color:#ffffff;">GRAND TOTAL (INCL. TAX)</td>
-        <td width="50%" align="right" style="font-weight: bold; font-size: 13px; background-color:#0d4d8b; color:#ffffff;">Rs. ' . formatIndian($grandTotal) . '/-</td>
+        <td width="50%" align="right" style="font-weight: bold; font-size: 13px; background-color:#0d4d8b; color:#ffffff;">Rs. ' . formatIndian($grandTotal) . '</td>
     </tr>
     <tr>
         <td width="100%" colspan="2" style="font-style: italic;"><b>AMOUNT IN WORDS:</b> ' . strtoupper($amountInWords) . '</td>
@@ -345,12 +345,12 @@ $html .= '<br>
     <tr style="background-color:#dbeafe; color:#0d4d8b;">
         <td width="34%" align="center" style="font-weight: bold;">PAID</td>
         <td width="33%" align="center" style="font-weight: bold;">' . $paidCount . '</td>
-        <td width="33%" align="right" style="font-weight: bold;">Rs. ' . formatIndian($paidAmount) . '/-</td>
+        <td width="33%" align="right" style="font-weight: bold;">Rs. ' . formatIndian($paidAmount) . '</td>
     </tr>
     <tr>
         <td width="34%" align="center" style="font-weight: bold; color:#cc0000;">UNPAID</td>
         <td width="33%" align="center" style="font-weight: bold;">' . $unpaidCount . '</td>
-        <td width="33%" align="right" style="font-weight: bold;">Rs. ' . formatIndian($unpaidAmount) . '/-</td>
+        <td width="33%" align="right" style="font-weight: bold;">Rs. ' . formatIndian($unpaidAmount) . '</td>
     </tr>
 </table>
 </div>';
