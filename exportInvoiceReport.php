@@ -92,7 +92,7 @@ function convertToWord($number) {
 }
 
 $sql = "SELECT id.invoice_id, id.customer_id, id.profarma_prefix, id.invoice_no, id.final_prefix, id.final_invoice_no, 
-               id.invoice_date, id.final_amount, ci.customer_name, ci.gstin_no 
+               id.invoice_date, id.final_amount, id.igst, id.cgst, id.sgst, id.tax_type, id.invoice_status, ci.customer_name, ci.gstin_no 
         FROM invoice_details id 
         LEFT JOIN customer_info ci ON id.customer_id = ci.id 
         WHERE id.invoice_type = :invoiceType AND id.is_deleted = 'No'";
@@ -193,24 +193,39 @@ $pdf->SetAutoPageBreak(TRUE, 28);
 $pdf->AddPage();
 $pdf->SetFont('helvetica', '', 9);
 
+function taxAmount($val) {
+    if ($val === null || $val === '' || strtoupper($val) === 'NA') return null;
+    return cleanAmount($val);
+}
+
 $html = '<table border="1" cellpadding="6">
 <thead>
     <tr style="background-color:#eaf3ff; font-weight:bold; color:#0d4d8b;">
-        <th width="5%" align="center">Sr.</th>
-        <th width="20%">Client Name</th>
-        <th width="15%">GSTIN No</th>
-        <th width="15%">Invoice No.</th>
-        <th width="10%" align="center">Date</th>
-        <th width="25%">Particulars</th>
-        <th width="10%" align="right">Amount</th>
+        <th width="4%" align="center">Sr.</th>
+        <th width="13%">Client Name</th>
+        <th width="11%">GSTIN No</th>
+        <th width="11%">Invoice No.</th>
+        <th width="7%" align="center">Date</th>
+        <th width="17%">Particulars</th>
+        <th width="8%" align="right">Amount</th>
+        <th width="7%" align="right">CGST@9%</th>
+        <th width="7%" align="right">SGST@9%</th>
+        <th width="7%" align="right">IGST@18%</th>
+        <th width="8%" align="center">Payment Status</th>
     </tr>
 </thead>
 <tbody>';
 
 $totalSum = 0;
+$totalCgst = 0;
+$totalSgst = 0;
+$totalIgst = 0;
+$paidCount = 0;
+$unpaidCount = 0;
+$paidAmount = 0;
 $count = 1;
 if (empty($invoices)) {
-    $html .= '<tr><td colspan="7" align="center">No records found</td></tr>';
+    $html .= '<tr><td colspan="11" align="center">No records found</td></tr>';
 } else {
     foreach ($invoices as $inv) {
         $invoiceNo = ($invoiceType == 'proforma') 
@@ -223,14 +238,42 @@ if (empty($invoices)) {
         $amount = cleanAmount($inv['final_amount']);
         $totalSum += $amount;
 
-        $html .= '<tr>
-            <td align="center" width="5%">' . $count++ . '</td>
-            <td width="20%"><b>' . htmlspecialchars($inv['customer_name']) . '</b></td>
-            <td width="15%">' . htmlspecialchars($inv['gstin_no']) . '</td>
-            <td width="15%">' . htmlspecialchars($invoiceNo) . '</td>
-            <td align="center" width="10%">' . simpleDateConversion($inv['invoice_date']) . '</td>
-            <td width="25%">' . htmlspecialchars($particulars) . '</td>
-            <td align="right" width="10%"><b>' . formatIndian($amount) . '/-</b></td>
+        $cgstVal = taxAmount($inv['cgst']);
+        $sgstVal = taxAmount($inv['sgst']);
+        $igstVal = taxAmount($inv['igst']);
+
+        if ($cgstVal !== null) $totalCgst += $cgstVal;
+        if ($sgstVal !== null) $totalSgst += $sgstVal;
+        if ($igstVal !== null) $totalIgst += $igstVal;
+
+        $cgstCell = ($cgstVal !== null) ? formatIndian($cgstVal) . '/-' : '-';
+        $sgstCell = ($sgstVal !== null) ? formatIndian($sgstVal) . '/-' : '-';
+        $igstCell = ($igstVal !== null) ? formatIndian($igstVal) . '/-' : '-';
+
+        $isPaid = (isset($inv['invoice_status']) && $inv['invoice_status'] == 'Rcv');
+        if ($isPaid) {
+            $paidCount++;
+            $paidAmount += $amount;
+            $rowStyle = 'background-color:#dbeafe; color:#0d4d8b;';
+            $statusCell = '<b>PAID</b>';
+        } else {
+            $unpaidCount++;
+            $rowStyle = '';
+            $statusCell = '<span style="color:#cc0000;">UNPAID</span>';
+        }
+
+        $html .= '<tr style="' . $rowStyle . '">
+            <td align="center" width="4%">' . $count++ . '</td>
+            <td width="13%"><b>' . htmlspecialchars($inv['customer_name']) . '</b></td>
+            <td width="11%">' . htmlspecialchars($inv['gstin_no']) . '</td>
+            <td width="11%">' . htmlspecialchars($invoiceNo) . '</td>
+            <td align="center" width="7%">' . simpleDateConversion($inv['invoice_date']) . '</td>
+            <td width="17%">' . htmlspecialchars($particulars) . '</td>
+            <td align="right" width="8%"><b>' . formatIndian($amount) . '/-</b></td>
+            <td align="right" width="7%">' . $cgstCell . '</td>
+            <td align="right" width="7%">' . $sgstCell . '</td>
+            <td align="right" width="7%">' . $igstCell . '</td>
+            <td align="center" width="8%">' . $statusCell . '</td>
         </tr>';
     }
 }
@@ -240,6 +283,8 @@ $html .= '</tbody></table>';
 $invoiceCount = count($invoices);
 $summaryTitle = strtoupper($invoiceType) . ' INVOICE REPORT SUMMARY';
 $amountInWords = convertToWord($totalSum);
+$totalTaxSum = $totalCgst + $totalSgst + $totalIgst;
+$grandTotal = $totalSum + $totalTaxSum;
 
 $html .= '<br><br>
 <table border="1" cellpadding="8" style="background-color: #fcfcfc;">
@@ -251,13 +296,64 @@ $html .= '<br><br>
         <td width="50%" align="right" style="font-weight: bold; font-size: 11px;">' . $invoiceCount . '</td>
     </tr>
     <tr>
-        <td width="50%" style="font-weight: bold;">TOTAL INVOICE AMOUNT SUM</td>
+        <td width="50%" style="font-weight: bold;">TOTAL INVOICE AMOUNT (TAXABLE)</td>
         <td width="50%" align="right" style="font-weight: bold; font-size: 12px; color: #0d4d8b;">Rs. ' . formatIndian($totalSum) . '/-</td>
+    </tr>
+    <tr>
+        <td width="50%" style="font-weight: bold; background-color:#eaf3ff;">TOTAL CGST @9%</td>
+        <td width="50%" align="right" style="font-weight: bold; font-size: 11px; background-color:#eaf3ff; color:#0d4d8b;">Rs. ' . formatIndian($totalCgst) . '/-</td>
+    </tr>
+    <tr>
+        <td width="50%" style="font-weight: bold; background-color:#eaf3ff;">TOTAL SGST @9%</td>
+        <td width="50%" align="right" style="font-weight: bold; font-size: 11px; background-color:#eaf3ff; color:#0d4d8b;">Rs. ' . formatIndian($totalSgst) . '/-</td>
+    </tr>
+    <tr>
+        <td width="50%" style="font-weight: bold; background-color:#eaf3ff;">TOTAL IGST @18%</td>
+        <td width="50%" align="right" style="font-weight: bold; font-size: 11px; background-color:#eaf3ff; color:#0d4d8b;">Rs. ' . formatIndian($totalIgst) . '/-</td>
+    </tr>
+    <tr>
+        <td width="50%" style="font-weight: bold;">TOTAL TAX AMOUNT</td>
+        <td width="50%" align="right" style="font-weight: bold; font-size: 11px;">Rs. ' . formatIndian($totalTaxSum) . '/-</td>
+    </tr>
+    <tr>
+        <td width="50%" style="font-weight: bold; background-color:#0d4d8b; color:#ffffff;">GRAND TOTAL (INCL. TAX)</td>
+        <td width="50%" align="right" style="font-weight: bold; font-size: 13px; background-color:#0d4d8b; color:#ffffff;">Rs. ' . formatIndian($grandTotal) . '/-</td>
     </tr>
     <tr>
         <td width="100%" colspan="2" style="font-style: italic;"><b>AMOUNT IN WORDS:</b> ' . strtoupper($amountInWords) . '</td>
     </tr>
 </table>';
+
+// PAYMENT STATUS SUMMARY SECTION
+$unpaidAmount = $totalSum - $paidAmount;
+$html .= '<br>
+<table border="1" cellpadding="8" style="background-color: #fcfcfc;">
+    <tr>
+        <th colspan="3" align="center" style="background-color: #0d4d8b; color: #ffffff; font-weight: bold; font-size: 12px;">PAYMENT STATUS SUMMARY</th>
+    </tr>
+    <tr style="background-color:#eaf3ff; font-weight:bold; color:#0d4d8b; text-align:center;">
+        <th width="34%" align="center">Status</th>
+        <th width="33%" align="center">No. of Invoices</th>
+        <th width="33%" align="center">Invoice Amount</th>
+    </tr>
+    <tr style="background-color:#dbeafe; color:#0d4d8b;">
+        <td width="34%" align="center" style="font-weight: bold;">PAID</td>
+        <td width="33%" align="center" style="font-weight: bold;">' . $paidCount . '</td>
+        <td width="33%" align="right" style="font-weight: bold;">Rs. ' . formatIndian($paidAmount) . '/-</td>
+    </tr>
+    <tr>
+        <td width="34%" align="center" style="font-weight: bold; color:#cc0000;">UNPAID</td>
+        <td width="33%" align="center" style="font-weight: bold;">' . $unpaidCount . '</td>
+        <td width="33%" align="right" style="font-weight: bold;">Rs. ' . formatIndian($unpaidAmount) . '/-</td>
+    </tr>
+</table>';
+
+// LEGEND
+$html .= '<br><div style="font-size:9px; color:#555;">
+    <b>Legend:</b> 
+    <span style="background-color:#dbeafe; color:#0d4d8b; padding:2px 6px; font-weight:bold;">BLUE ROW</span> = Payment Received (PAID) &nbsp;|&nbsp; 
+    <span style="color:#cc0000; font-weight:bold;">UNPAID</span> = Payment Not Received
+</div>';
 
 $pdf->writeHTML($html, true, false, true, false, '');
 
