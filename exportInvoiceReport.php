@@ -1,4 +1,4 @@
-<?php
+f<?php
 require_once('tcpdf_include.php');
 include_once './dbConnect.php';
 include_once './commonutil.php';
@@ -223,6 +223,7 @@ $totalIgst = 0;
 $paidCount = 0;
 $unpaidCount = 0;
 $paidAmount = 0;
+$unpaidAmount = 0;
 $count = 1;
 if (empty($invoices)) {
     $html .= '<tr><td colspan="11" align="center">No records found</td></tr>';
@@ -251,13 +252,19 @@ if (empty($invoices)) {
         $igstCell = ($igstVal !== null) ? formatIndian($igstVal) . '/-' : '-';
 
         $isPaid = (isset($inv['invoice_status']) && $inv['invoice_status'] == 'Rcv');
+        $invoiceTax = ($cgstVal !== null ? $cgstVal : 0.0) + 
+                      ($sgstVal !== null ? $sgstVal : 0.0) + 
+                      ($igstVal !== null ? $igstVal : 0.0);
+        $invoiceTotal = $amount + $invoiceTax;
+
         if ($isPaid) {
             $paidCount++;
-            $paidAmount += $amount;
+            $paidAmount += $invoiceTotal;
             $rowStyle = 'background-color:#dbeafe; color:#0d4d8b;';
             $statusCell = '<b>PAID</b>';
         } else {
             $unpaidCount++;
+            $unpaidAmount += $invoiceTotal;
             $rowStyle = '';
             $statusCell = '<span style="color:#cc0000;">UNPAID</span>';
         }
@@ -282,12 +289,12 @@ $html .= '</tbody></table>';
 // REPORT SUMMARY SECTION
 $invoiceCount = count($invoices);
 $summaryTitle = strtoupper($invoiceType) . ' INVOICE REPORT SUMMARY';
-$amountInWords = convertToWord($totalSum);
 $totalTaxSum = $totalCgst + $totalSgst + $totalIgst;
 $grandTotal = $totalSum + $totalTaxSum;
+$amountInWords = convertToWord($grandTotal);
 
-$html .= '<br><br>
-<table border="1" cellpadding="8" style="background-color: #fcfcfc;">
+$html .= '<div style="page-break-before: always;">
+<table border="1" cellpadding="8" style="background-color: #fcfcfc;" nobr="true">
     <tr>
         <th colspan="2" align="center" style="background-color: #0d4d8b; color: #ffffff; font-weight: bold; font-size: 12px;">' . $summaryTitle . '</th>
     </tr>
@@ -325,9 +332,8 @@ $html .= '<br><br>
 </table>';
 
 // PAYMENT STATUS SUMMARY SECTION
-$unpaidAmount = $totalSum - $paidAmount;
 $html .= '<br>
-<table border="1" cellpadding="8" style="background-color: #fcfcfc;">
+<table border="1" cellpadding="8" style="background-color: #fcfcfc;" nobr="true">
     <tr>
         <th colspan="3" align="center" style="background-color: #0d4d8b; color: #ffffff; font-weight: bold; font-size: 12px;">PAYMENT STATUS SUMMARY</th>
     </tr>
@@ -346,14 +352,9 @@ $html .= '<br>
         <td width="33%" align="center" style="font-weight: bold;">' . $unpaidCount . '</td>
         <td width="33%" align="right" style="font-weight: bold;">Rs. ' . formatIndian($unpaidAmount) . '/-</td>
     </tr>
-</table>';
-
-// LEGEND
-$html .= '<br><div style="font-size:9px; color:#555;">
-    <b>Legend:</b> 
-    <span style="background-color:#dbeafe; color:#0d4d8b; padding:2px 6px; font-weight:bold;">BLUE ROW</span> = Payment Received (PAID) &nbsp;|&nbsp; 
-    <span style="color:#cc0000; font-weight:bold;">UNPAID</span> = Payment Not Received
+</table>
 </div>';
+
 
 $pdf->writeHTML($html, true, false, true, false, '');
 
