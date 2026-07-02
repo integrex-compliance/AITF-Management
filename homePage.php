@@ -73,11 +73,13 @@
         // Due dates for the latest non-SP service
         if (!empty($serviceIdsForDates)) {
             $inServiceIds = implode(',', array_fill(0, count($serviceIdsForDates), '?'));
-            $sqlDates = "SELECT service_id, action, due_date FROM ca_service_dates WHERE service_id IN ($inServiceIds) AND action IN ('Suspension Letter','Expire Letter','Withdrawal Letter')";
+            // Two naming conventions exist in the data: older 'Suspension/Withdrawal Letter'
+            // and newer 'Suspend/Withdraw Letter' (used for recent clients). Match both.
+            $sqlDates = "SELECT service_id, action, due_date FROM ca_service_dates WHERE service_id IN ($inServiceIds) AND TRIM(action) IN ('Suspension Letter','Suspend Letter','Expire Letter','Withdrawal Letter','Withdraw Letter')";
             $stmt = $db->prepare($sqlDates);
             $stmt->execute($serviceIdsForDates);
             foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-                $dueMap[$row['service_id']][$row['action']] = $row['due_date'];
+                $dueMap[$row['service_id']][trim($row['action'])] = $row['due_date'];
             }
         }
 
@@ -90,42 +92,267 @@
         }
     }
 
+    // Normalize audit_status into a canonical status group (used for colored badges + status tabs)
+    if (!function_exists('hpNormalizeStatus')) {
+        function hpNormalizeStatus($value) {
+            $status = trim((string) $value);
+            if ($status === '') {
+                return 'No Status';
+            }
+            $key = strtolower(str_replace(array('-', '_', ' '), '', $status));
+            if ($key === 'active' || $key === 'valid' || $key === 'granted') return 'Active';
+            if ($key === 'suspended' || $key === 'suspend') return 'Suspended';
+            if ($key === 'inprocess') return 'In-process';
+            if ($key === 'contractinprocess') return 'Contract In-process';
+            if ($key === 'withdrawn' || $key === 'withdraw') return 'Withdrawn';
+            if ($key === 'applicationcanceled' || $key === 'applicationcancelled' || $key === 'cancelled' || $key === 'canceled') return 'Application canceled';
+            if ($key === 'expired' || $key === 'expire') return 'Expired';
+            return $status;
+        }
+    }
+
+    // Derive the display status from the client's running service, falling back to audit_status:
+    //  - No service created yet            -> 'Awaiting Review'
+    //  - Running (latest) service is CR     -> 'Contract-Review' (created, completed or not)
+    //  - otherwise                          -> normalized audit_status
+    if (!function_exists('hpDerivedStatus')) {
+        function hpDerivedStatus($customer, $serviceMap) {
+            $norm = hpNormalizeStatus(isset($customer['audit_status']) ? $customer['audit_status'] : '');
+            // A cancelled application is a terminal state -> takes precedence, even if the
+            // client has no service or is still in contract review.
+            if ($norm === 'Application canceled') {
+                return 'Application canceled';
+            }
+            $cid = isset($customer['id']) ? $customer['id'] : null;
+            $svc = ($cid !== null && isset($serviceMap[$cid])) ? $serviceMap[$cid] : null;
+            // No service created yet (and not cancelled) -> just added, awaiting review
+            if (empty($svc)) {
+                return 'Awaiting Review';
+            }
+            // Running (latest) service is a Contract Review
+            if (isset($svc['service_type']) && strtoupper(trim($svc['service_type'])) === 'CR') {
+                return 'Contract-Review';
+            }
+            return $norm;
+        }
+    }
+
+    // Color theme + preferred ordering for each status
+    $statusColorMap = array(
+        'Active'               => 'green',
+        'In-process'           => 'yellow',
+        'Contract-Review'      => 'blue',
+        'Awaiting Review'      => 'purple',
+        'Contract In-process'  => 'amber',
+        'Suspended'            => 'orange',
+        'Expired'              => 'red',
+        'Withdrawn'            => 'grey',
+        'Application canceled' => 'slate',
+        'No Status'            => 'slate',
+    );
+    $statusPriority = array('Awaiting Review', 'Contract-Review', 'In-process', 'Active', 'Withdrawn', 'Suspended', 'Expired');
+
+    // Count clients per derived status for the tab badges
+    $statusCounts = array();
+    foreach ($listOfCustomer as $c) {
+        $ns = hpDerivedStatus($c, $serviceMap);
+        $statusCounts[$ns] = isset($statusCounts[$ns]) ? $statusCounts[$ns] + 1 : 1;
+    }
+    $totalClients = count($listOfCustomer);
+
+    // Build the ordered tab list for the client status navigation.
+    $tabStatuses = $statusPriority;
 
     ?>
 
   
 
     <style>
-        .custom-float-label-control {
-            margin-bottom: 0em;
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-        /* Added from agreementPage.php for consistency */
+        #page-content-wrapper,
+        #page-content-wrapper * {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        /* Keep FontAwesome glyphs working; the wildcard above otherwise forces Inter on <i> icons */
+        #page-content-wrapper .fa { font-family: 'FontAwesome' !important; }
+
+        .custom-float-label-control { margin-bottom: 0em; }
+
         .invoice-section-title {
             display: inline-block;
-            margin: 0 0 15px;
-            padding: 8px 16px;
+            margin: 0 0 18px;
+            padding: 0;
             font-size: 22px;
-            font-weight: 700;
-            color: #0d4d8b;
-            background: #eaf3ff;
-            border-left: 4px solid #0d4d8b;
-            border-radius: 4px;
+            font-weight: 800;
+            letter-spacing: -0.3px;
+            color: #0f172a;
+            background: transparent;
+            border: none;
         }
 
+        /* ===== Status Tabs ===== */
+        .hp-tabs-nav {
+            --hp-tab-border: #d6dbe6;
+            --hp-tab-bg: #ffffff;
+            --hp-tab-idle: #fafbfc;
+            position: relative;
+            display: flex;
+            align-items: flex-end;
+            gap: 0;
+            margin: 4px 0 18px;
+            padding: 8px 0 0;
+            overflow-x: auto;
+            overflow-y: visible;
+            border-bottom: 1px solid var(--hp-tab-border);
+            scrollbar-width: thin;
+            -webkit-overflow-scrolling: touch;
+        }
+        .hp-tabs-nav::-webkit-scrollbar { height: 6px; }
+        .hp-tabs-nav::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+        .hp-tab {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 42px;
+            min-width: max-content;
+            border: 1px solid var(--hp-tab-border);
+            border-right-width: 0;
+            border-bottom: 0;
+            background: var(--hp-tab-idle);
+            color: #475569;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0;
+            line-height: 1;
+            padding: 11px 18px 10px;
+            border-radius: 0;
+            cursor: pointer;
+            outline: none;
+            white-space: nowrap;
+            isolation: isolate;
+            box-shadow: inset 0 -1px 0 var(--hp-tab-border);
+            transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+        }
+        .hp-tab:first-child { border-top-left-radius: 2px; }
+        .hp-tab:last-child {
+            border-right-width: 1px;
+            border-top-right-radius: 2px;
+        }
+        .hp-tab:hover {
+            background: #ffffff;
+            color: #0f172a;
+            box-shadow: inset 0 -1px 0 var(--hp-tab-border), 0 -2px 7px rgba(15, 23, 42, 0.04);
+            z-index: 2;
+        }
+        .hp-tab .hp-dot {
+            width: 7px; height: 7px; border-radius: 50%;
+            background: currentColor; flex: 0 0 auto;
+            transition: transform 0.22s ease, background-color 0.22s ease;
+        }
+        .hp-tab .hp-count {
+            display: inline-flex; align-items: center; justify-content: center;
+            min-width: 22px; height: 20px; padding: 0 7px;
+            font-size: 11px; font-weight: 700; line-height: 1;
+            border-radius: 999px;
+            background: #eef2f7; color: #475569;
+            transition: color 0.22s ease, background-color 0.22s ease, transform 0.22s ease;
+        }
+        .hp-tab.active {
+            margin-bottom: -1px;
+            min-height: 48px;
+            color: #111827;
+            border: 1px solid var(--hp-tab-border);
+            border-bottom-color: var(--hp-tab-bg);
+            background: var(--hp-tab-bg);
+            border-radius: 15px 15px 0 0;
+            box-shadow: 0 -3px 8px rgba(15, 23, 42, 0.06);
+            transform: none;
+            z-index: 5;
+            animation: hpTabFloat 0.22s ease both;
+        }
+        .hp-tab.active::before,
+        .hp-tab.active::after {
+            content: "";
+            position: absolute;
+            bottom: -1px;
+            width: 14px;
+            height: 14px;
+            background: transparent;
+            pointer-events: none;
+            z-index: -1;
+        }
+        .hp-tab.active::before {
+            left: -14px;
+            border-bottom-right-radius: 14px;
+            box-shadow: 6px 6px 0 var(--hp-tab-bg);
+        }
+        .hp-tab.active::after {
+            right: -14px;
+            border-bottom-left-radius: 14px;
+            box-shadow: -6px 6px 0 var(--hp-tab-bg);
+        }
+        .hp-tab.active .hp-count { background: #111827; color: #ffffff; transform: scale(1.02); }
+        .hp-tab.active .hp-dot { transform: scale(1.14); }
+        @keyframes hpTabFloat {
+            from { box-shadow: 0 0 0 rgba(15, 23, 42, 0); }
+            to { box-shadow: 0 -3px 8px rgba(15, 23, 42, 0.06); }
+        }
+        /* idle dot colors per theme */
+        .hp-tab.hp-c-all    { color: #0d4d8b; }
+        .hp-tab.hp-c-green  { color: #059669; }
+        .hp-tab.hp-c-yellow { color: #ca8a04; }
+        .hp-tab.hp-c-amber  { color: #d97706; }
+        .hp-tab.hp-c-orange { color: #ea580c; }
+        .hp-tab.hp-c-red    { color: #dc2626; }
+        .hp-tab.hp-c-grey   { color: #475569; }
+        .hp-tab.hp-c-slate  { color: #64748b; }
+        .hp-tab.hp-c-blue   { color: #2563eb; }
+        .hp-tab.hp-c-purple { color: #7c3aed; }
+
+        /* ===== Status Badge (in table) ===== */
+        #page-content-wrapper .hp-badge {
+            display: inline-block !important;
+            padding: 4px 11px !important;
+            border-radius: 999px !important;
+            font-size: 12px !important;
+            font-weight: 700 !important;
+            line-height: 1.4 !important;
+            white-space: nowrap !important;
+        }
+        #page-content-wrapper .hp-badge::before {
+            content: "";
+            display: inline-block;
+            width: 7px; height: 7px; border-radius: 50%;
+            background: currentColor;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+        #page-content-wrapper .hp-c-green.hp-badge  { color: #047857 !important; background: #d1fae5 !important; }
+        #page-content-wrapper .hp-c-yellow.hp-badge { color: #a16207 !important; background: #fef9c3 !important; }
+        #page-content-wrapper .hp-c-amber.hp-badge  { color: #b45309 !important; background: #fef3c7 !important; }
+        #page-content-wrapper .hp-c-orange.hp-badge { color: #c2410c !important; background: #ffedd5 !important; }
+        #page-content-wrapper .hp-c-red.hp-badge    { color: #b91c1c !important; background: #fee2e2 !important; }
+        #page-content-wrapper .hp-c-grey.hp-badge   { color: #475569 !important; background: #e2e8f0 !important; }
+        #page-content-wrapper .hp-c-slate.hp-badge  { color: #64748b !important; background: #f1f5f9 !important; }
+        #page-content-wrapper .hp-c-blue.hp-badge   { color: #1d4ed8 !important; background: #dbeafe !important; }
+        #page-content-wrapper .hp-c-purple.hp-badge { color: #6d28d9 !important; background: #ede9fe !important; }
+
+        /* ===== Filter panel (modernized) ===== */
         .invoice-filter-panel {
             display: flex;
             flex-wrap: wrap;
             gap: 12px;
-            align-items: center; /* Aligned center for one-line look */
-            margin: 10px 0 20px;
-            padding: 12px 15px;
-            background: #f8fbff;
-            border: 1px solid #d6e4f0;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            align-items: center;
+            margin: 0 0 20px;
+            padding: 14px 16px;
+            background: #ffffff;
+            border: 1px solid #eef1f6;
+            border-radius: 14px;
+            box-shadow: 0 4px 24px rgba(15, 23, 42, 0.06);
         }
-
         .invoice-filter-item {
             flex: 1;
             min-width: 150px;
@@ -133,49 +360,34 @@
             flex-direction: column;
             position: relative;
         }
-
-        /* Search Box Specific Styling */
-        .search-item {
-            flex: 1.5;
-            min-width: 250px;
-        }
-
+        .search-item { flex: 1.5; min-width: 250px; }
         .search-item i {
             position: absolute;
-            left: 12px;
-            top: 50%;
+            left: 14px; top: 50%;
             transform: translateY(-50%);
-            color: #0d4d8b;
+            color: #94a3b8;
             z-index: 1;
             font-size: 14px;
         }
-
-        .search-item input {
-            padding-left: 35px !important;
-        }
-
+        .search-item input { padding-left: 38px !important; }
         .invoice-filter-item input, .invoice-filter-item select {
             width: 100%;
-            height: 40px; /* Slightly taller for better feel */
-            padding: 8px 12px;
-            border: 1px solid #bfd2e6;
-            border-radius: 6px;
+            height: 42px;
+            padding: 8px 14px;
+            border: 1px solid #d8dee9;
+            border-radius: 10px;
             box-sizing: border-box;
-            font-size: 13px;
+            font-size: 14px;
             background-color: #fff;
-            color: #333; /* Explicit dark text color */
+            color: #0f172a;
             transition: all 0.2s;
         }
-
-        .invoice-filter-item select option {
-            color: #333;
-            background-color: #fff;
-        }
-
+        .invoice-filter-item input::placeholder { color: #94a3b8; }
+        .invoice-filter-item select option { color: #0f172a; background-color: #fff; }
         .invoice-filter-item input:focus, .invoice-filter-item select:focus {
             border-color: #0d4d8b;
             outline: none;
-            box-shadow: 0 0 0 3px rgba(13, 77, 139, 0.1);
+            box-shadow: 0 0 0 4px rgba(13, 77, 139, 0.12);
             background-color: #fff;
         }
 
@@ -184,39 +396,110 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
-            height: 40px; /* Matches input height exactly */
+            height: 42px;
             margin: 0;
-            padding: 0 20px;
+            padding: 0 22px;
             box-sizing: border-box;
-            font-family: 'Inter', -apple-system, sans-serif;
-            font-size: 13px;
+            font-size: 14px;
             font-weight: 600;
             letter-spacing: 0.2px;
-            border-radius: 8px;
+            border-radius: 10px;
             cursor: pointer;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             text-transform: none;
             border: 1px solid transparent;
             white-space: nowrap;
         }
-
         .btn-solid-primary {
-            background-color: #0d4d8b;
+            background: linear-gradient(135deg, #0d4d8b 0%, #1468b3 100%);
             color: #ffffff;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(13, 77, 139, 0.1);
+            box-shadow: 0 4px 12px rgba(13, 77, 139, 0.25);
         }
-        .btn-solid-primary:hover {
-            background-color: #0b3d6e;
-            box-shadow: 0 4px 12px rgba(13, 77, 139, 0.15);
-            transform: translateY(-1px);
+        .btn-solid-primary:hover { box-shadow: 0 8px 20px rgba(13, 77, 139, 0.32); transform: translateY(-1px); }
+        .btn-solid-primary:active { transform: translateY(0); }
+
+        /* ===== Modern table ===== */
+        .table-responsive {
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 24px rgba(15, 23, 42, 0.06);
+            border: 1px solid #eef1f6;
+            background: #ffffff;
         }
-        .btn-solid-primary:active {
-            transform: translateY(0);
-            box-shadow: 0 2px 4px rgba(13, 77, 139, 0.1);
+        #tab_customer_list { margin-bottom: 0 !important; border-collapse: separate !important; border-spacing: 0; border: 0 !important; }
+        #tab_customer_list small { font-size: 13.5px !important; font-weight: 500; color: #334155; }
+        #tab_customer_list thead th {
+            background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%) !important;
+            border: 0 !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+            padding: 15px 12px !important;
+            vertical-align: middle;
+            position: sticky; top: 0; z-index: 2;
+        }
+        #tab_customer_list thead th small, #tab_customer_list thead th a {
+            color: #0f172a !important;
+            text-decoration: none !important;
+            font-weight: 700;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+        }
+        #tab_customer_list tbody td {
+            padding: 12px !important;
+            border-top: 0 !important;
+            border-right: 0 !important;
+            border-bottom: 1px solid #f1f5f9 !important;
+            vertical-align: middle;
+        }
+        #tab_customer_list tbody tr { transition: background 0.15s ease; }
+        #tab_customer_list tbody tr:hover { background-color: #f1f5f9 !important; }
+        .table-striped tbody tr:nth-of-type(odd) { background-color: #fcfdff; }
+        .customerAccount { cursor: pointer; }
+        #tab_customer_list textarea {
+            width: 100%; border: 1px solid #e2e8f0; border-radius: 8px;
+            padding: 6px 8px; font-size: 13px; color: #334155; resize: vertical;
+        }
+        #tab_customer_list .setHandler {
+            border: 1px solid #d8dee9; border-radius: 8px; height: 36px; font-size: 13px;
         }
 
-        #tab_customer_list_filter {
-            display: none;
+        #tab_customer_list_filter { display: none; }
+
+        /* Datepicker above sticky headers */
+        .ui-datepicker { z-index: 100000 !important; }
+
+        @media (max-width: 992px) {
+            .hp-tab { padding-left: 15px; padding-right: 15px; }
+        }
+        @media (max-width: 768px) {
+            .invoice-filter-item, .search-item { min-width: 100%; }
+            .hp-tabs-nav {
+                margin-bottom: 16px;
+                padding-top: 7px;
+            }
+            .hp-tab {
+                min-height: 40px;
+                font-size: 11px;
+                padding: 10px 13px 9px;
+            }
+            .hp-tab.active {
+                min-height: 45px;
+                border-radius: 13px 13px 0 0;
+            }
+        }
+        @media (max-width: 480px) {
+            .hp-tabs-nav { padding-top: 6px; }
+            .hp-tab {
+                gap: 6px;
+                padding-left: 12px;
+                padding-right: 12px;
+            }
+            .hp-tab .hp-count {
+                min-width: 20px;
+                height: 18px;
+                padding: 0 6px;
+                font-size: 10px;
+            }
         }
     </style>
 
@@ -226,6 +509,23 @@
                 <div class="row">
                     <div class="col-sm-12">
                         <h5 class="invoice-section-title">Client Management & Reports </h5>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-sm-12 main_content">
+                        <nav class="hp-tabs-nav" role="tablist" aria-label="Client Status Tabs">
+                            <button type="button" class="hp-tab hp-c-all active" data-status="" role="tab" aria-selected="true">
+                                <span class="hp-dot"></span> All Clients
+                                <span class="hp-count"><?php echo $totalClients ?></span>
+                            </button>
+                            <?php foreach ($tabStatuses as $st) {
+                                $c = isset($statusColorMap[$st]) ? $statusColorMap[$st] : 'slate'; ?>
+                                <button type="button" class="hp-tab hp-c-<?php echo $c ?>" data-status="<?php echo htmlspecialchars($st, ENT_QUOTES) ?>" role="tab" aria-selected="false">
+                                    <span class="hp-dot"></span> <?php echo htmlspecialchars($st) ?>
+                                    <span class="hp-count"><?php echo isset($statusCounts[$st]) ? $statusCounts[$st] : 0 ?></span>
+                                </button>
+                            <?php } ?>
+                        </nav>
                     </div>
                 </div>
                 <div class="row">
@@ -309,15 +609,19 @@
                                     $dueInfo = $dueInfoex = $sentInfo = array();
                                     $sid = isset($serviceNonSpMap[$customer['id']]) ? $serviceNonSpMap[$customer['id']] : null;
                                     if ($sid && isset($dueMap[$sid])) {
-                                        $dueInfo['due_date'] = isset($dueMap[$sid]['Suspension Letter']) ? $dueMap[$sid]['Suspension Letter'] : null;
+                                        $dueInfo['due_date'] = isset($dueMap[$sid]['Suspension Letter']) ? $dueMap[$sid]['Suspension Letter'] : (isset($dueMap[$sid]['Suspend Letter']) ? $dueMap[$sid]['Suspend Letter'] : null);
                                         $dueInfoex['due_date'] = isset($dueMap[$sid]['Expire Letter']) ? $dueMap[$sid]['Expire Letter'] : null;
-                                        $sentInfo['due_date'] = isset($dueMap[$sid]['Withdrawal Letter']) ? $dueMap[$sid]['Withdrawal Letter'] : null;
+                                        $sentInfo['due_date'] = isset($dueMap[$sid]['Withdrawal Letter']) ? $dueMap[$sid]['Withdrawal Letter'] : (isset($dueMap[$sid]['Withdraw Letter']) ? $dueMap[$sid]['Withdraw Letter'] : null);
                                     }
 
                                     // Payment due from map
                                     $payInfo = array('payment_due' => isset($paymentMap[$customer['id']]) ? $paymentMap[$customer['id']] : null);
+
+                                    // Derived status + color for badge / tab filtering
+                                    $normStatus = hpDerivedStatus($customer, $serviceMap);
+                                    $statusColor = isset($statusColorMap[$normStatus]) ? $statusColorMap[$normStatus] : 'slate';
                                     ?>
-                                    <tr id='addr<?php echo $customer['id'] ?>' class="<?php echo ($customer['audit_status'] === 'Application canceled') ? 'canceled-row' : ''; ?>">
+                                    <tr id='addr<?php echo $customer['id'] ?>' data-status="<?php echo htmlspecialchars($normStatus, ENT_QUOTES) ?>" class="<?php echo ($customer['audit_status'] === 'Application canceled') ? 'canceled-row' : ''; ?>">
                                         <td data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
                                             <small><?php echo $count ?></small>
                                         </td>
@@ -334,7 +638,7 @@
                                             <small><?php echo $customer['contact_person'] ?></small>
                                         </td>
                                         <td class="customerAccount<?php echo ($customer['audit_status'] === 'Application canceled') ? ' canceled-status-cell' : ''; ?>" data-id="<?php echo $customer['id'] ?>" data-name="desc" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                            <small><?php echo $customer['audit_status']; ?> <?php if($customer['audit_status'] == "in-process" ) echo '('. $serviceInfo["service_type"].')'; ?></small>
+                                            <small><span class="hp-badge hp-c-<?php echo $statusColor ?>"><?php echo htmlspecialchars($normStatus); ?><?php if($normStatus === "In-process" && !empty($serviceInfo["service_type"])) echo ' ('. htmlspecialchars($serviceInfo["service_type"]).')'; ?></span></small>
                                         </td>
                                         <td class="customerAccount" data-id="<?php echo $customer['id'] ?>" data-name="sel" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
                                             <small><span><?php if (isset($dueInfo["due_date"]) && !empty($dueInfo["due_date"])) { echo simpleDateConversion($dueInfo["due_date"]); } else {echo simpleDateConversion($dueInfoex["due_date"]);} ?>~</span><?php if (isset($dueInfo["due_date"]) && !empty($dueInfo["due_date"])) { echo simpleDateConversion($dueInfo["due_date"]); } else {echo simpleDateConversion($dueInfoex["due_date"]);} ?></small>
@@ -474,7 +778,32 @@
             }
     );
 
+    // Status tab filter (client-side, no reload). Empty = show all clients.
+    var hpSelectedStatus = '';
+    $.fn.DataTable.ext.search.push(
+            function (settings, data, dataIndex) {
+                if (settings.nTable.id !== 'tab_customer_list') {
+                    return true;
+                }
+                if (hpSelectedStatus === '') {
+                    return true;
+                }
+                var node = settings.aoData[dataIndex].nTr;
+                var rowStatus = node ? node.getAttribute('data-status') : '';
+                return rowStatus === hpSelectedStatus;
+            }
+    );
+
     $(document).ready(function () {
+
+        // Status tabs: filter instantly on click, no page reload
+        $('.hp-tab').on('click', function () {
+            if ($(this).hasClass('active')) { return; }
+            $('.hp-tab').removeClass('active').attr('aria-selected', 'false');
+            $(this).addClass('active').attr('aria-selected', 'true');
+            hpSelectedStatus = $(this).data('status') || '';
+            table.draw();
+        });
         
         var debouncedSearch = debounce(function () {
             table.column(3).search($('#clientSearch').val()).draw();
@@ -499,7 +828,7 @@
             form.remove();
         });
 
-        $(".setHandler").change(function () {
+        $("#tab_customer_list tbody").on("change", ".setHandler", function () {
             $handler = $(this).val();
             $customer = $(this).attr("data-id");
             $.ajax({
@@ -543,7 +872,7 @@
             //            e.preventDefault();
         });
 
-        $('.customerAccount').click(function () {
+        $("#tab_customer_list tbody").on("click", ".customerAccount", function () {
             var customerID = $(this).attr('data-id');
 //            alert(customerID);
             // open popup
@@ -563,7 +892,7 @@
             table.draw();
         });
 
-        $('.saveChanges').keyup(function (e) {
+        $("#tab_customer_list tbody").on("keyup", ".saveChanges", function (e) {
             saveData($(this));
         });
 

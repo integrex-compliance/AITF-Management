@@ -143,6 +143,29 @@
         return $status;
     }
 
+    function dashDerivedClientStatus($client, $latestServiceMap)
+    {
+        $norm = dashNormalizeClientStatus(isset($client['audit_status']) ? $client['audit_status'] : '');
+
+        // Cancelled applications are terminal and should not be moved into review buckets.
+        if ($norm === 'Application canceled') {
+            return 'Application canceled';
+        }
+
+        $cid = isset($client['id']) ? (int) $client['id'] : 0;
+        $service = ($cid > 0 && isset($latestServiceMap[$cid])) ? $latestServiceMap[$cid] : null;
+
+        if (empty($service)) {
+            return 'Awaiting Review';
+        }
+
+        if (isset($service['service_type']) && strtoupper(trim($service['service_type'])) === 'CR') {
+            return 'Contract-Review';
+        }
+
+        return $norm;
+    }
+
     function dashCandidateNumericId($value)
     {
         $raw = strtoupper(trim((string) $value));
@@ -409,6 +432,22 @@
 
     // Lists for Modal view
     $allClientsDetailRows = dashFetchAll($db, "SELECT id, customer_name, audit_status, unique_id, certification_no, updated_cerf, certification_stage_date, standard_for FROM customer_info WHERE is_deleted <> 'YES' ORDER BY customer_name ASC, id ASC");
+    $latestServiceMap = array();
+    $allClientIds = array();
+    foreach ($allClientsDetailRows as $clientRow) {
+        if (isset($clientRow['id'])) {
+            $allClientIds[] = (int) $clientRow['id'];
+        }
+    }
+    $allClientIds = array_values(array_unique(array_filter($allClientIds)));
+    if (!empty($allClientIds)) {
+        $servicePlaceholders = implode(',', array_fill(0, count($allClientIds), '?'));
+        $latestServiceRows = dashFetchAll($db, "SELECT s.customer_id, s.service_id, s.service_type FROM service s INNER JOIN (SELECT customer_id, MAX(service_id) AS max_sid FROM service WHERE customer_id IN ($servicePlaceholders) GROUP BY customer_id) t ON s.customer_id = t.customer_id AND s.service_id = t.max_sid", $allClientIds);
+        foreach ($latestServiceRows as $serviceRow) {
+            $latestServiceMap[(int) $serviceRow['customer_id']] = $serviceRow;
+        }
+    }
+
     $allClientsDetail = array();
     $seenCertificationRecords = array();
 
@@ -426,7 +465,8 @@
     // Group clients by status for the breakdown modal
     $clientsByStatus = array();
     foreach ($allClientsDetail as $client) {
-        $st = dashNormalizeClientStatus($client['audit_status']);
+        $st = dashDerivedClientStatus($client, $latestServiceMap);
+        $client['derived_status'] = $st;
         if (!isset($clientsByStatus[$st])) {
             $clientsByStatus[$st] = array();
         }
@@ -530,6 +570,9 @@
     $applicationTotals = dashFetchOne($db, "SELECT COUNT(*) online_total, SUM(CASE WHEN read_flag = 0 THEN 1 ELSE 0 END) unread_total FROM online_audit_applications");
     $auditApplicationTotals = dashFetchOne($db, "SELECT COUNT(*) audit_total, SUM(CASE WHEN review_date IS NOT NULL THEN 1 ELSE 0 END) reviewed_total FROM audit_application");
     $recentClients = dashFetchAll($db, "SELECT ci.id, ci.customer_name, ci.unique_id, ci.audit_status, ci.next_service, ci.contact_person, ci.contact, ci.email_id, COUNT(svc.service_id) service_count, COALESCE(SUM(CASE WHEN " . dashAmountExpr('ps.balance') . " > 0 THEN " . dashAmountExpr('ps.balance') . " ELSE 0 END),0) pending_amount FROM customer_info ci LEFT JOIN service svc ON ci.id = svc.customer_id LEFT JOIN payment_system ps ON ci.id = ps.customer_id AND ps.service_type <> 'TDS' WHERE ci.is_deleted <> 'YES' GROUP BY ci.id ORDER BY ci.id DESC LIMIT 10");
+    foreach ($recentClients as $idx => $row) {
+        $recentClients[$idx]['derived_status'] = dashDerivedClientStatus($row, $latestServiceMap);
+    }
     $recentOnlineApplications = dashFetchAll($db, "SELECT id, org_name, contact_person, phone, email, standard_applied, created_at, read_flag FROM online_audit_applications ORDER BY created_at DESC LIMIT 8");
 
     // Pending Payments Detailed List
@@ -1730,7 +1773,7 @@
                                                 / <?php echo htmlspecialchars($row['contact']); ?></small></td>
                                         <td><?php echo htmlspecialchars($row['unique_id']); ?></td>
                                         <td><span
-                                                class="dash-pill"><?php echo htmlspecialchars($row['audit_status']); ?></span>
+                                                class="dash-pill"><?php echo htmlspecialchars(isset($row['derived_status']) ? $row['derived_status'] : $row['audit_status']); ?></span>
                                         </td>
                                         <td><?php echo htmlspecialchars($row['next_service']); ?></td>
                                         <td><?php echo dashInt($row['service_count']); ?></td>
@@ -1789,6 +1832,9 @@
                             'Withdrawn' => '#d14f62',
                             'Expired' => '#ef7b45',
                             'Inprocess' => '#155e95',
+                            'In-process' => '#155e95',
+                            'Awaiting Review' => '#7c3aed',
+                            'Contract-Review' => '#2563eb',
                             'Contract-Inprocess' => '#7c3aed',
                             'Suspended' => '#b45309',
                             'Application canceled' => '#64748b',

@@ -72,11 +72,13 @@ if (!empty($customerIds)) {
 
     if (!empty($serviceIdsForDates)) {
         $inServiceIds = implode(',', array_fill(0, count($serviceIdsForDates), '?'));
-        $sqlDates = "SELECT service_id, action, due_date FROM ca_service_dates WHERE service_id IN ($inServiceIds) AND action IN ('Suspension Letter','Expire Letter','Withdrawal Letter')";
+        // Two naming conventions exist in the data: older 'Suspension/Withdrawal Letter'
+        // and newer 'Suspend/Withdraw Letter' (used for recent clients). Match both.
+        $sqlDates = "SELECT service_id, action, due_date FROM ca_service_dates WHERE service_id IN ($inServiceIds) AND TRIM(action) IN ('Suspension Letter','Suspend Letter','Expire Letter','Withdrawal Letter','Withdraw Letter')";
         $stmt = $db->prepare($sqlDates);
         $stmt->execute($serviceIdsForDates);
         foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-            $dueMap[$row['service_id']][$row['action']] = $row['due_date'];
+            $dueMap[$row['service_id']][trim($row['action'])] = $row['due_date'];
         }
     }
 }
@@ -98,7 +100,7 @@ foreach ($listOfCustomer as $customer) {
     $sid = isset($serviceNonSpMap[$customer['id']]) ? $serviceNonSpMap[$customer['id']] : null;
     $dueDate = null;
     if ($sid && isset($dueMap[$sid])) {
-        $dueDate = isset($dueMap[$sid]['Suspension Letter']) ? $dueMap[$sid]['Suspension Letter'] : (isset($dueMap[$sid]['Expire Letter']) ? $dueMap[$sid]['Expire Letter'] : null);
+        $dueDate = isset($dueMap[$sid]['Suspension Letter']) ? $dueMap[$sid]['Suspension Letter'] : (isset($dueMap[$sid]['Suspend Letter']) ? $dueMap[$sid]['Suspend Letter'] : (isset($dueMap[$sid]['Expire Letter']) ? $dueMap[$sid]['Expire Letter'] : null));
     }
 
     if ($fromDate != '') {
