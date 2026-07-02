@@ -64,6 +64,11 @@
             font-family: 'FontAwesome' !important;
         }
 
+        /* Datepicker must float above sticky table headers/cards (jQuery UI sets a low inline z-index) */
+        .ui-datepicker {
+            z-index: 100000 !important;
+        }
+
         /* ===== Modern Table styling ===== */
         .table-responsive {
             border-radius: 16px;
