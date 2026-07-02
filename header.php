@@ -238,8 +238,34 @@ function getFlatDate($inputStr)
 
 <div id="sidebar-wrapper" class="hidden-xs">
     <ul id="sidebar_menu" class="sidebar-nav">
-        <li class="sidebar-brand"><a class="" id="menu-toggle" href="#">AITF<span id="main_icon"
-                    class="glyphicon glyphicon-align-justify"></span></a></li>
+        <li class="sidebar-brand" style="height: 65px; overflow: hidden;"><a class="" id="menu-toggle" href="#" style="display: block; height: 65px; background: linear-gradient(180deg, #081524 0%, #053c6d 100%); padding: 5px 10px; text-decoration: none; box-sizing: border-box;">
+                <div style="display: inline-flex; flex-direction: column; align-items: center; justify-content: center; width: 120px; vertical-align: middle; height: 100%;">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 35" width="105" height="37">
+                      <defs>
+                        <mask id="aitf-logo-mask">
+                          <rect x="0" y="0" width="100" height="35" fill="#ffffff" />
+                          <rect x="0" y="8.5" width="100" height="1.5" fill="#000000" />
+                          <rect x="0" y="14.3" width="100" height="1.5" fill="#000000" />
+                          <rect x="0" y="20.1" width="100" height="1.5" fill="#000000" />
+                          <rect x="0" y="25.9" width="100" height="1.5" fill="#000000" />
+                        </mask>
+                      </defs>
+                      <g mask="url(#aitf-logo-mask)">
+                        <!-- A (Red: #e31e24) -->
+                        <path d="M 15 4 H 19.5 L 30 29.5 H 32 V 31 H 24.5 L 23.5 28.5 H 10.5 L 9.5 31 H 2 V 29.5 H 4.5 Z M 17.2 11 L 22 23 H 12 Z" fill="#e31e24" fill-rule="evenodd" />
+                        <!-- I (Original Blue: #0d3a6c) -->
+                        <path d="M 37 15.5 H 51 V 18.5 H 47 V 28 H 51 V 31 H 37 V 28 H 41 V 18.5 H 37 Z" fill="#0d3a6c" />
+                        <!-- T & Top Bar (Original Blue: #0d3a6c) -->
+                        <path d="M 64 5 H 94 V 8 H 78 V 36.2 H 73 V 8 H 68 V 16.4 H 64 Z" fill="#0d3a6c" />
+                        <!-- F Stem & Arms (Red: #e31e24) -->
+                        <path d="M 78 8 H 83 V 36.2 H 78 Z M 78 10 H 94 V 16.4 H 90 V 14.3 H 78 Z M 78 24.8 H 91 V 28.3 H 78 Z" fill="#e31e24" />
+                      </g>
+                      <!-- Solid red base line -->
+                      <rect x="2" y="32.5" width="80" height="1.5" fill="#e31e24" />
+                    </svg>
+                    <span style="font-family: 'Poppins', 'Inter', sans-serif; font-weight: 800; font-size: 11px; color: #f5821f; letter-spacing: 2px; margin-top: 1px; line-height: 1;">ERP</span>
+                </div>
+                <span id="main_icon" class="glyphicon glyphicon-align-justify" style="float: right; margin-top: 16px; margin-right: 15px; color: #ffffff; font-size: 18px;"></span></a></li>
     </ul>
     <ul class="sidebar-nav" id="sidebar">
         <?php if (Utitlity::checkForUserMainAdmin()) { ?>
