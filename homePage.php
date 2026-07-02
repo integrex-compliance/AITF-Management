@@ -150,7 +150,7 @@
         'Application canceled' => 'slate',
         'No Status'            => 'slate',
     );
-    $statusPriority = array('Awaiting Review', 'Contract-Review', 'In-process', 'Active', 'Withdrawn', 'Suspended', 'Expired');
+    $statusPriority = array('Awaiting Review', 'Contract-Review', 'In-process', 'Active', 'Withdrawn', 'Suspended', 'Expired', 'Application canceled');
 
     // Count clients per derived status for the tab badges
     $statusCounts = array();
@@ -516,13 +516,11 @@
                         <nav class="hp-tabs-nav" role="tablist" aria-label="Client Status Tabs">
                             <button type="button" class="hp-tab hp-c-all active" data-status="" role="tab" aria-selected="true">
                                 <span class="hp-dot"></span> All Clients
-                                <span class="hp-count"><?php echo $totalClients ?></span>
                             </button>
                             <?php foreach ($tabStatuses as $st) {
                                 $c = isset($statusColorMap[$st]) ? $statusColorMap[$st] : 'slate'; ?>
                                 <button type="button" class="hp-tab hp-c-<?php echo $c ?>" data-status="<?php echo htmlspecialchars($st, ENT_QUOTES) ?>" role="tab" aria-selected="false">
                                     <span class="hp-dot"></span> <?php echo htmlspecialchars($st) ?>
-                                    <span class="hp-count"><?php echo isset($statusCounts[$st]) ? $statusCounts[$st] : 0 ?></span>
                                 </button>
                             <?php } ?>
                         </nav>

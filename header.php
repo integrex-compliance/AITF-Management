@@ -268,11 +268,11 @@ function getFlatDate($inputStr)
                 <span id="main_icon" class="glyphicon glyphicon-align-justify" style="float: right; margin-top: 16px; margin-right: 15px; color: #ffffff; font-size: 18px;"></span></a></li>
     </ul>
     <ul class="sidebar-nav" id="sidebar">
-        <?php if (Utitlity::checkForUserMainAdmin()) { ?>
+        <?php /* Admin Dashboard hidden from left sidebar menu. if (Utitlity::checkForUserMainAdmin()) { ?>
             <li><a href="adminDashboard.php"
                     class="animate <?php echo isset($addAdminDashboardClass) ? $addAdminDashboardClass : ''; ?>">ADMIN
                     DASHBOARD<i class="sub_icon fa fa-line-chart fa-2x" style="vertical-align:middle"></i></a></li>
-        <?php } ?>
+        <?php } */ ?>
         <li><a href="iaf_dashboard.php" class="animate <?php echo isset($iafClass) ? $iafClass : ''; ?>">IAF DASHBOARD<i
                     class="sub_icon fa fa-dashboard fa-2x" style="vertical-align:middle"></i></a></li>
         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff()) { ?>
