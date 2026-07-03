@@ -16,3 +16,4 @@ dubug.php
 /config/mail_config.php
 dbConnect.php
 .env
+config/
