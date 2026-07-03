@@ -134,6 +134,90 @@
         #tab_customer_list_filter {
             display: none;
         }
+
+        /* =====================================================================
+           PREMIUM DARK MODE  —  paymentPage.php
+           Deep charcoal surfaces, soft slate text, accent-blue highlights.
+           Matches homePage / iaf_dashboard / applicationReceived treatment.
+           ===================================================================== */
+        html.theme-dark {
+            --pp-bg:        #0a0e14;
+            --pp-surface:   #111722;
+            --pp-surface-2: #161d2b;
+            --pp-border:    #232c3d;
+            --pp-border-2:  #2e3a4f;
+            --pp-text:      #dbe3f0;
+            --pp-text-dim:  #93a1b8;
+            --pp-text-faint:#6b7890;
+            --pp-accent:    #4a9eff;
+        }
+
+        html.theme-dark #page-content-wrapper { background: var(--pp-bg); color: var(--pp-text); }
+
+        /* Section title */
+        html.theme-dark .invoice-section-title {
+            background: rgba(74, 158, 255, 0.12);
+            color: #9cc4ff;
+            border-left-color: var(--pp-accent);
+        }
+
+        /* Filter panel */
+        html.theme-dark .invoice-filter-panel {
+            background: var(--pp-surface);
+            border-color: var(--pp-border);
+            box-shadow: 0 6px 26px rgba(0, 0, 0, 0.45);
+        }
+        html.theme-dark .search-item i { color: #7aa9f5; }
+        html.theme-dark .invoice-filter-item input {
+            background-color: var(--pp-surface-2);
+            border-color: var(--pp-border-2);
+            color: var(--pp-text);
+        }
+        html.theme-dark .invoice-filter-item input::placeholder { color: var(--pp-text-faint); }
+        html.theme-dark .invoice-filter-item input:focus {
+            border-color: var(--pp-accent);
+            box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.18);
+        }
+
+        /* Download button */
+        html.theme-dark .btn-solid-primary {
+            background-color: #1d63b0;
+            box-shadow: 0 4px 14px rgba(20, 104, 179, 0.4);
+        }
+        html.theme-dark .btn-solid-primary:hover { background-color: #2f81d6; box-shadow: 0 8px 22px rgba(20, 104, 179, 0.5); }
+
+        /* Table shell */
+        html.theme-dark .table-responsive {
+            background: var(--pp-surface);
+            border: 1px solid var(--pp-border);
+            border-radius: 12px;
+            box-shadow: 0 6px 26px rgba(0, 0, 0, 0.45);
+        }
+        html.theme-dark #tab_customer_list thead th {
+            background: linear-gradient(180deg, #161d2b 0%, #121926 100%) !important;
+            border-color: var(--pp-border-2) !important;
+        }
+        html.theme-dark #tab_customer_list thead th small,
+        html.theme-dark #tab_customer_list thead th a { color: #aeb9cc !important; }
+        html.theme-dark #tab_customer_list small { color: var(--pp-text-dim) !important; }
+        /* Override the inline white cell borders */
+        html.theme-dark #tab_customer_list tbody td {
+            border-color: var(--pp-border) !important;
+            color: var(--pp-text);
+            background-color: var(--pp-surface);
+        }
+        html.theme-dark #tab_customer_list tbody tr:hover td { background-color: var(--pp-surface-2) !important; }
+        html.theme-dark .table-striped tbody tr:nth-of-type(odd) td { background-color: rgba(255, 255, 255, 0.018); }
+        html.theme-dark #tab_customer_list a { color: #cdd6e5; }
+
+        /* Comment textarea */
+        html.theme-dark #tab_customer_list textarea,
+        html.theme-dark .saveChanges {
+            background-color: var(--pp-surface-2) !important;
+            border: 1px solid var(--pp-border-2) !important;
+            color: var(--pp-text) !important;
+        }
+        html.theme-dark .saveChanges::placeholder { color: var(--pp-text-faint); }
     </style>
 
     <div id="page-content-wrapper">

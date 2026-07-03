@@ -63,21 +63,21 @@ try {
         ];
     }
 
-    // Pura bulk payload ready karna
+    
     $payload = [
         "action" => "bulk_sync_customer",
         "total_records" => $totalCustomers,
-        "data" => $customerArray // Yeh wahi array hai jisme saare objects hain
+        "data" => $customerArray 
     ];
 
-    // Ab loop ke bahar sirf ek (1) baar cURL call hoga
+    
     $ch = curl_init($localUrl);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
     curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
 
-    // Timeout thoda zyada rakhte hain kyunki Next.js ko bulk array process karne me time lag sakta hai
+    
     curl_setopt($ch, CURLOPT_TIMEOUT, 30);
     // IPv4 Force
     curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
@@ -86,7 +86,7 @@ try {
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
 
-    // Completely remove HTML output and just return the structured JSON (like dummyJSON)
+    
     $finalOutput = [
         "Customer" => $customerArray, // Naming it products array of objects jaisa aapne image 1 me dikhaya
         "response" => json_decode($response, true), // Api ka reply

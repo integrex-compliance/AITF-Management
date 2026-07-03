@@ -211,7 +211,7 @@
                                         </div>
                                         <div class="invoice-filter-item">
                                             <label>Action</label>
-                                            <button type="button" onclick="exportReport()" class="btn-premium btn-solid-primary downloadTdsReport" style="width: 100%; height: 38px; background: #0d4d8b; color: #fff; border: none; border-radius: 6px; font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px;">
+                                            <button type="button" class="btn-premium btn-solid-primary downloadTdsReport" style="width: 100%; height: 38px; background: #0d4d8b; color: #fff; border: none; border-radius: 6px; font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px;">
                                                 <i class="fa fa-cloud-download" style="font-size: 15px;"></i> Download Report
                                             </button>
                                         </div>
@@ -294,42 +294,220 @@
 
 </div>
 
+<div id="tds-report-format-chooser" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.45); z-index:99999;">
+    <div style="max-width:440px; margin:10% auto; background:#fff; border-radius:10px; box-shadow:0 10px 40px rgba(0,0,0,0.3); overflow:hidden;">
+        <div style="background:#0d4d8b; color:#fff; padding:14px 18px; font-size:15px; font-weight:600;">
+            <i class="fa fa-cloud-download" style="margin-right:8px;"></i> Download TDS Report
+        </div>
+        <div class="tds-report-step tds-report-step-format" style="padding:22px 18px; text-align:center;">
+            <p style="font-size:13px; color:#333; margin:0 0 18px;">Which format would you like?</p>
+            <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+                <button type="button" class="btn btn-danger tds-report-format-pdf" style="min-width:130px;">
+                    <i class="fa fa-file-pdf-o"></i> PDF
+                </button>
+                <button type="button" class="btn btn-success tds-report-format-excel" style="min-width:130px;">
+                    <i class="fa fa-file-excel-o"></i> Excel
+                </button>
+            </div>
+            <div style="margin-top:18px;">
+                <button type="button" class="btn btn-default btn-sm tds-report-cancel">Cancel</button>
+            </div>
+        </div>
+        <div class="tds-report-step tds-report-step-action" style="display:none; padding:22px 18px; text-align:center;">
+            <p style="font-size:13px; color:#333; margin:0 0 4px;">Selected format: <strong class="tds-report-format-label">Excel</strong></p>
+            <p style="font-size:12px; color:#777; margin:0 0 18px;">How would you like to receive it?</p>
+            <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+                <button type="button" class="btn btn-primary tds-report-action-download" style="min-width:150px;">
+                    <i class="fa fa-download"></i> Download Report
+                </button>
+                <button type="button" class="btn btn-warning tds-report-action-email" style="min-width:150px;">
+                    <i class="fa fa-envelope"></i> Get Report on Email
+                </button>
+            </div>
+            <div class="tds-report-email-box" style="display:none; margin-top:18px; text-align:left;">
+                <label style="font-size:12px; font-weight:600; color:#333;">Enter email address</label>
+                <input type="email" class="tds-report-email-input form-control" placeholder="name@example.com" style="margin-top:6px;" autocomplete="off">
+                <div class="tds-report-email-msg" style="font-size:12px; margin-top:8px; min-height:16px;"></div>
+                <button type="button" class="btn btn-success tds-report-email-send" style="width:100%; margin-top:6px;">
+                    <i class="fa fa-paper-plane"></i> Get Report
+                </button>
+            </div>
+            <div style="margin-top:18px;">
+                <button type="button" class="btn btn-default btn-sm tds-report-step-back">Back</button>
+                <button type="button" class="btn btn-default btn-sm tds-report-cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script type="text/javascript">
-    function exportReport() {
-        var status = $('#status').val();
-        var startDate = $('#startDate').val();
-        var endDate = $('#endDate').val();
-        var clientSearch = $('#clientSearch').val();
-        var sortOrder = $('#sortOrder').val();
+    $(document).ready(function () {
+        var pendingTdsReport = null;
+        var pendingTdsFormat = null;
 
-        var form = document.createElement("form");
-        form.method = "POST";
-        form.action = "exportTdsReport.php";
-        form.target = "_blank";
-
-        var params = {
-            status: status,
-            startDate: startDate,
-            endDate: endDate,
-            clientSearch: clientSearch,
-            sortOrder: sortOrder,
-            action: "export"
-        };
-
-        for (var key in params) {
-            var input = document.createElement("input");
-            input.type = "hidden";
-            input.name = key;
-            input.value = params[key];
-            form.appendChild(input);
+        function getTdsReportParams() {
+            return {
+                status: $('#status').val(),
+                startDate: $('#startDate').val(),
+                endDate: $('#endDate').val(),
+                clientSearch: $('#clientSearch').val(),
+                sortOrder: $('#sortOrder').val()
+            };
         }
 
-        document.body.appendChild(form);
-        form.submit();
-        document.body.removeChild(form);
-    }
+        function showTdsReportStep(step) {
+            $('.tds-report-step').hide();
+            if (step === 'action') {
+                $('.tds-report-step-action').show();
+            } else {
+                $('.tds-report-step-format').show();
+            }
+        }
 
-    $(document).ready(function () {
+        function resetTdsChooser() {
+            pendingTdsFormat = null;
+            $('.tds-report-email-box').hide();
+            $('.tds-report-email-input').val('');
+            $('.tds-report-email-msg').text('');
+            $('.tds-report-email-send').prop('disabled', false).html('<i class="fa fa-paper-plane"></i> Get Report');
+            showTdsReportStep('format');
+        }
+
+        function openTdsChooser(params) {
+            pendingTdsReport = params;
+            resetTdsChooser();
+            $('#tds-report-format-chooser').css('display', 'block');
+        }
+
+        function closeTdsChooser() {
+            $('#tds-report-format-chooser').hide();
+            pendingTdsReport = null;
+            pendingTdsFormat = null;
+        }
+
+        function submitTdsReportDownload() {
+            if (!pendingTdsReport || !pendingTdsFormat) {
+                return;
+            }
+            var url = (pendingTdsFormat === 'excel') ? 'exportTdsReportExcel.php' : 'exportTdsReport.php';
+            var fallbackName = (pendingTdsFormat === 'excel') ? 'TDS_Report.xlsx' : 'TDS_Report.pdf';
+            var $btn = $('.tds-report-action-download');
+            if (!$btn.data('orig')) { $btn.data('orig', $btn.html()); }
+            $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Preparing...');
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', url, true);
+            xhr.responseType = 'blob';
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+            xhr.onload = function () {
+                $btn.prop('disabled', false).html($btn.data('orig'));
+                if (xhr.status === 200) {
+                    var cd = xhr.getResponseHeader('Content-Disposition') || '';
+                    var m = /filename="?([^"]+)"?/.exec(cd);
+                    var fname = m ? m[1] : fallbackName;
+                    var objUrl = URL.createObjectURL(xhr.response);
+                    var link = document.createElement('a');
+                    link.href = objUrl;
+                    link.download = fname;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    setTimeout(function () { URL.revokeObjectURL(objUrl); }, 4000);
+                    closeTdsChooser();
+                } else {
+                    alert('Download failed. Please try again.');
+                }
+            };
+            xhr.onerror = function () {
+                $btn.prop('disabled', false).html($btn.data('orig'));
+                alert('Download failed. Please try again.');
+            };
+            xhr.send('status=' + encodeURIComponent(pendingTdsReport.status) +
+                '&startDate=' + encodeURIComponent(pendingTdsReport.startDate) +
+                '&endDate=' + encodeURIComponent(pendingTdsReport.endDate) +
+                '&clientSearch=' + encodeURIComponent(pendingTdsReport.clientSearch) +
+                '&sortOrder=' + encodeURIComponent(pendingTdsReport.sortOrder));
+        }
+
+        $('.downloadTdsReport').click(function () {
+            openTdsChooser(getTdsReportParams());
+        });
+
+        $('.tds-report-format-pdf').click(function () {
+            pendingTdsFormat = 'pdf';
+            $('.tds-report-format-label').text('PDF');
+            $('.tds-report-email-box').hide();
+            showTdsReportStep('action');
+        });
+
+        $('.tds-report-format-excel').click(function () {
+            pendingTdsFormat = 'excel';
+            $('.tds-report-format-label').text('Excel');
+            $('.tds-report-email-box').hide();
+            showTdsReportStep('action');
+        });
+
+        $('.tds-report-action-download').click(function () {
+            submitTdsReportDownload();
+        });
+
+        $('.tds-report-action-email').click(function () {
+            $('.tds-report-email-msg').text('');
+            $('.tds-report-email-box').show();
+            $('.tds-report-email-input').focus();
+        });
+
+        $('.tds-report-email-send').click(function () {
+            if (!pendingTdsReport || !pendingTdsFormat) {
+                return;
+            }
+            var email = $.trim($('.tds-report-email-input').val());
+            var $msg = $('.tds-report-email-msg');
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                $msg.css('color', '#cc0000').text('Please enter a valid email address.');
+                return;
+            }
+
+            var $btn = $(this);
+            $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Sending...');
+            $msg.css('color', '#0d4d8b').text('Sending report, please wait...');
+
+            $.post('emailTdsReport.php', {
+                status: pendingTdsReport.status,
+                startDate: pendingTdsReport.startDate,
+                endDate: pendingTdsReport.endDate,
+                clientSearch: pendingTdsReport.clientSearch,
+                sortOrder: pendingTdsReport.sortOrder,
+                format: pendingTdsFormat,
+                email: email
+            }, null, 'json').done(function (res) {
+                if (res && res.success) {
+                    $msg.css('color', '#1a7f37').text(res.message || 'Report sent successfully.');
+                    setTimeout(closeTdsChooser, 2000);
+                } else {
+                    $msg.css('color', '#cc0000').text((res && res.message) ? res.message : 'Could not send the email.');
+                    $btn.prop('disabled', false).html('<i class="fa fa-paper-plane"></i> Get Report');
+                }
+            }).fail(function () {
+                $msg.css('color', '#cc0000').text('Server error. Please try again.');
+                $btn.prop('disabled', false).html('<i class="fa fa-paper-plane"></i> Get Report');
+            });
+        });
+
+        $('.tds-report-step-back').click(function () {
+            resetTdsChooser();
+        });
+
+        $('.tds-report-cancel').click(function () {
+            closeTdsChooser();
+        });
+
+        $('#tds-report-format-chooser').click(function (e) {
+            if (e.target === this) {
+                closeTdsChooser();
+            }
+        });
+
         // Use a slight delay to ensure all scripts are fully loaded
         setTimeout(function() {
             if (typeof $.fn.datepicker !== 'undefined') {

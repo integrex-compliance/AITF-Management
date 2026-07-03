@@ -871,6 +871,164 @@
                 min-height: calc(100vh - 150px);
             }
         }
+
+        /* =====================================================================
+           PREMIUM DARK MODE  —  iaf_dashboard.php
+           Deep charcoal canvas, soft slate text, jewel-toned accents.
+           Matches homePage.php dark treatment.
+           ===================================================================== */
+        html.theme-dark {
+            --iafd-bg:        #0a0e14;
+            --iafd-surface:   #111722;
+            --iafd-surface-2: #161d2b;
+            --iafd-border:    #232c3d;
+            --iafd-border-2:  #2e3a4f;
+            --iafd-text:      #dbe3f0;
+            --iafd-text-dim:  #93a1b8;
+            --iafd-text-faint:#6b7890;
+            --iafd-accent:    #4a9eff;
+        }
+
+        html.theme-dark body { background-color: var(--iafd-bg); }
+        html.theme-dark #page-content-wrapper.iaf-dashboard-page {
+            background: linear-gradient(180deg, #0b0f16 0%, #0a0e14 55%, #090c12 100%);
+        }
+
+        /* Header banner */
+        html.theme-dark .page-header-container {
+            background: linear-gradient(135deg, #16265a 0%, #1d47a8 58%, #2f6fe0 100%);
+            border-color: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Main card */
+        html.theme-dark .modern-card {
+            background: var(--iafd-surface);
+            border-color: var(--iafd-border);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Toolbar / search */
+        html.theme-dark .client-filter-label { color: var(--iafd-text-dim); }
+        html.theme-dark .client-filter-input {
+            background: var(--iafd-surface-2);
+            border-color: var(--iafd-border-2);
+            color: var(--iafd-text);
+        }
+        html.theme-dark .client-filter-input::placeholder { color: var(--iafd-text-faint); }
+        html.theme-dark .client-filter-input:focus {
+            border-color: var(--iafd-accent);
+            box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.18);
+        }
+        html.theme-dark .client-filter-icon { color: var(--iafd-text-faint); }
+        html.theme-dark .client-filter-clear {
+            background: #263043;
+            color: #b8c4d8;
+        }
+        html.theme-dark .client-filter-clear:hover { background: #313d54; }
+
+        /* Table shell */
+        html.theme-dark .table-responsive {
+            background: var(--iafd-surface);
+            border-color: var(--iafd-border);
+        }
+        html.theme-dark table.dataTable thead th {
+            background: linear-gradient(180deg, #161d2b 0%, #121926 100%) !important;
+            color: #aeb9cc;
+            border-top-color: var(--iafd-border-2);
+            border-bottom-color: var(--iafd-border-2);
+        }
+        html.theme-dark #iafTable thead th {
+            box-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
+        }
+        html.theme-dark table.dataTable tbody td {
+            background: var(--iafd-surface);
+            color: var(--iafd-text);
+            border-bottom-color: var(--iafd-border);
+        }
+        html.theme-dark table.dataTable tbody tr:hover td {
+            background-color: var(--iafd-surface-2);
+            box-shadow: inset 0 1px 0 #263043, inset 0 -1px 0 #263043;
+        }
+        html.theme-dark table.dataTable td.dataTables_empty { color: var(--iafd-text-faint); }
+        html.theme-dark .dataTables_wrapper .dataTables_info { color: var(--iafd-text-dim); }
+
+        /* Company + cert cells */
+        html.theme-dark .company-name { color: #e5eaf2; }
+        html.theme-dark .company-link { color: #7aa9f5; }
+        html.theme-dark .company-link:hover { color: #93c5fd; }
+        html.theme-dark .cert-number {
+            background: rgba(37, 99, 235, 0.16);
+            color: #93c5fd;
+        }
+
+        /* Status badges — translucent jewel tones */
+        html.theme-dark .status-active {
+            background-color: rgba(22, 163, 74, 0.16);
+            color: #6ee7b7;
+            border-color: rgba(22, 163, 74, 0.32);
+        }
+        html.theme-dark .status-pending {
+            background-color: rgba(202, 138, 4, 0.16);
+            color: #fde68a;
+            border-color: rgba(202, 138, 4, 0.32);
+        }
+        html.theme-dark .status-expired {
+            background-color: rgba(220, 38, 38, 0.16);
+            color: #fca5a5;
+            border-color: rgba(220, 38, 38, 0.32);
+        }
+        html.theme-dark .status-default {
+            background-color: rgba(100, 116, 139, 0.16);
+            color: #cbd5e1;
+            border-color: rgba(100, 116, 139, 0.3);
+        }
+
+        /* Action buttons */
+        html.theme-dark .btn-insert {
+            background-color: rgba(67, 56, 202, 0.2);
+            color: #a5b4fc;
+            border-color: rgba(99, 102, 241, 0.34);
+        }
+        html.theme-dark .btn-insert:hover { background-color: rgba(67, 56, 202, 0.32); }
+        html.theme-dark .btn-update {
+            background-color: rgba(22, 163, 74, 0.18);
+            color: #6ee7b7;
+            border-color: rgba(22, 163, 74, 0.32);
+        }
+        html.theme-dark .btn-update:hover { background-color: rgba(22, 163, 74, 0.28); }
+        html.theme-dark .btn-delete {
+            background-color: rgba(220, 38, 38, 0.16);
+            color: #fca5a5;
+            border-color: rgba(220, 38, 38, 0.32);
+        }
+        html.theme-dark .btn-delete:hover { background-color: rgba(220, 38, 38, 0.26); }
+
+        /* Pagination */
+        html.theme-dark .iaf-page-info { color: var(--iafd-text-dim); }
+        html.theme-dark .iaf-page-btn {
+            background: var(--iafd-surface-2);
+            border-color: var(--iafd-border-2);
+            color: var(--iafd-text);
+        }
+        html.theme-dark .iaf-page-btn:hover:not(:disabled):not(.current) {
+            background: #1c2942;
+            border-color: #2f4266;
+        }
+        html.theme-dark .iaf-page-btn.current {
+            background: var(--iafd-accent);
+            border-color: var(--iafd-accent);
+            color: #061020;
+        }
+        html.theme-dark .iaf-page-ellipsis { color: var(--iafd-text-faint); }
+
+        /* Loading overlay + spinner */
+        html.theme-dark .iaf-loading-overlay { background: rgba(10, 14, 20, 0.82); }
+        html.theme-dark .iaf-loading-text { color: var(--iafd-text-dim); }
+        html.theme-dark .iaf-spinner {
+            border-color: #263043;
+            border-top-color: var(--iafd-accent);
+        }
     </style>
 
     <div id="page-content-wrapper" class="iaf-dashboard-page">

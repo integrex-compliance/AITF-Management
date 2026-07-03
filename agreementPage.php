@@ -293,6 +293,53 @@
     </div>
 </div>
 
+<!-- Report chooser: choose PDF/Excel, then download or email -->
+<div id="agreement-report-format-chooser" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.45); z-index:99999;">
+    <div style="max-width:440px; margin:10% auto; background:#fff; border-radius:10px; box-shadow:0 10px 40px rgba(0,0,0,0.3); overflow:hidden;">
+        <div style="background:#0d4d8b; color:#fff; padding:14px 18px; font-size:15px; font-weight:600;">
+            <i class="fa fa-cloud-download" style="margin-right:8px;"></i> Download Agreement Report
+        </div>
+        <div class="agreement-report-step agreement-report-step-format" style="padding:22px 18px; text-align:center;">
+            <p style="font-size:13px; color:#333; margin:0 0 18px;">Which format would you like?</p>
+            <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+                <button type="button" class="btn btn-danger agreement-report-format-pdf" style="min-width:130px;">
+                    <i class="fa fa-file-pdf-o"></i> PDF
+                </button>
+                <button type="button" class="btn btn-success agreement-report-format-excel" style="min-width:130px;">
+                    <i class="fa fa-file-excel-o"></i> Excel
+                </button>
+            </div>
+            <div style="margin-top:18px;">
+                <button type="button" class="btn btn-default btn-sm agreement-report-cancel">Cancel</button>
+            </div>
+        </div>
+        <div class="agreement-report-step agreement-report-step-action" style="display:none; padding:22px 18px; text-align:center;">
+            <p style="font-size:13px; color:#333; margin:0 0 4px;">Selected format: <strong class="agreement-report-format-label">Excel</strong></p>
+            <p style="font-size:12px; color:#777; margin:0 0 18px;">How would you like to receive it?</p>
+            <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+                <button type="button" class="btn btn-primary agreement-report-action-download" style="min-width:150px;">
+                    <i class="fa fa-download"></i> Download Report
+                </button>
+                <button type="button" class="btn btn-warning agreement-report-action-email" style="min-width:150px;">
+                    <i class="fa fa-envelope"></i> Get Report on Email
+                </button>
+            </div>
+            <div class="agreement-report-email-box" style="display:none; margin-top:18px; text-align:left;">
+                <label style="font-size:12px; font-weight:600; color:#333;">Enter email address</label>
+                <input type="email" class="agreement-report-email-input form-control" placeholder="name@example.com" style="margin-top:6px;" autocomplete="off">
+                <div class="agreement-report-email-msg" style="font-size:12px; margin-top:8px; min-height:16px;"></div>
+                <button type="button" class="btn btn-success agreement-report-email-send" style="width:100%; margin-top:6px;">
+                    <i class="fa fa-paper-plane"></i> Get Report
+                </button>
+            </div>
+            <div style="margin-top:18px;">
+                <button type="button" class="btn btn-default btn-sm agreement-report-step-back">Back</button>
+                <button type="button" class="btn btn-default btn-sm agreement-report-cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script type="text/javascript">
     function debounce(callback, delay) {
         var debounceTimer;
@@ -433,19 +480,160 @@
 
         $('#agreementClientSearch').on('input', debouncedAgreementSearch);
 
+        var pendingAgreementReport = null;
+        var pendingAgreementFormat = null;
+
+        function showAgreementReportStep(step) {
+            $('.agreement-report-step').hide();
+            if (step === 'action') {
+                $('.agreement-report-step-action').show();
+            } else {
+                $('.agreement-report-step-format').show();
+            }
+        }
+
+        function resetAgreementChooser() {
+            pendingAgreementFormat = null;
+            $('.agreement-report-email-box').hide();
+            $('.agreement-report-email-input').val('');
+            $('.agreement-report-email-msg').text('');
+            $('.agreement-report-email-send').prop('disabled', false).html('<i class="fa fa-paper-plane"></i> Get Report');
+            showAgreementReportStep('format');
+        }
+
+        function openAgreementChooser(params) {
+            pendingAgreementReport = params;
+            resetAgreementChooser();
+            $('#agreement-report-format-chooser').css('display', 'block');
+        }
+
+        function closeAgreementChooser() {
+            $('#agreement-report-format-chooser').hide();
+            pendingAgreementReport = null;
+            pendingAgreementFormat = null;
+        }
+
+        function submitAgreementReportDownload() {
+            if (!pendingAgreementReport || !pendingAgreementFormat) {
+                return;
+            }
+            var url = (pendingAgreementFormat === 'excel') ? 'exportAgreementReportExcel.php' : 'exportAgreementReport.php';
+            var fallbackName = (pendingAgreementFormat === 'excel') ? 'Agreement_Report.xlsx' : 'Agreement_Report.pdf';
+            var $btn = $('.agreement-report-action-download');
+            if (!$btn.data('orig')) { $btn.data('orig', $btn.html()); }
+            $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Preparing...');
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', url, true);
+            xhr.responseType = 'blob';
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+            xhr.onload = function () {
+                $btn.prop('disabled', false).html($btn.data('orig'));
+                if (xhr.status === 200) {
+                    var cd = xhr.getResponseHeader('Content-Disposition') || '';
+                    var m = /filename="?([^"]+)"?/.exec(cd);
+                    var fname = m ? m[1] : fallbackName;
+                    var objUrl = URL.createObjectURL(xhr.response);
+                    var link = document.createElement('a');
+                    link.href = objUrl;
+                    link.download = fname;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    setTimeout(function () { URL.revokeObjectURL(objUrl); }, 4000);
+                    closeAgreementChooser();
+                } else {
+                    alert('Download failed. Please try again.');
+                }
+            };
+            xhr.onerror = function () {
+                $btn.prop('disabled', false).html($btn.data('orig'));
+                alert('Download failed. Please try again.');
+            };
+            xhr.send('fromDate=' + encodeURIComponent(pendingAgreementReport.fromDate) +
+                '&toDate=' + encodeURIComponent(pendingAgreementReport.toDate) +
+                '&clientName=' + encodeURIComponent(pendingAgreementReport.clientName));
+        }
+
         $('.downloadAgreementReport').click(function () {
-            var fromDate = $('#filterFromDate').val();
-            var toDate = $('#filterToDate').val();
-            var clientName = $('#agreementClientSearch').val();
-            var url = 'exportAgreementReport.php';
-            var form = $('<form action="' + url + '" method="post" target="_blank">' +
-                '<input type="hidden" name="fromDate" value="' + fromDate + '" />' +
-                '<input type="hidden" name="toDate" value="' + toDate + '" />' +
-                '<input type="hidden" name="clientName" value="' + clientName + '" />' +
-                '</form>');
-            $('body').append(form);
-            form.submit();
-            form.remove();
+            openAgreementChooser({
+                fromDate: $('#filterFromDate').val(),
+                toDate: $('#filterToDate').val(),
+                clientName: $('#agreementClientSearch').val()
+            });
+        });
+
+        $('.agreement-report-format-pdf').click(function () {
+            pendingAgreementFormat = 'pdf';
+            $('.agreement-report-format-label').text('PDF');
+            $('.agreement-report-email-box').hide();
+            showAgreementReportStep('action');
+        });
+
+        $('.agreement-report-format-excel').click(function () {
+            pendingAgreementFormat = 'excel';
+            $('.agreement-report-format-label').text('Excel');
+            $('.agreement-report-email-box').hide();
+            showAgreementReportStep('action');
+        });
+
+        $('.agreement-report-action-download').click(function () {
+            submitAgreementReportDownload();
+        });
+
+        $('.agreement-report-action-email').click(function () {
+            $('.agreement-report-email-msg').text('');
+            $('.agreement-report-email-box').show();
+            $('.agreement-report-email-input').focus();
+        });
+
+        $('.agreement-report-email-send').click(function () {
+            if (!pendingAgreementReport || !pendingAgreementFormat) {
+                return;
+            }
+            var email = $.trim($('.agreement-report-email-input').val());
+            var $msg = $('.agreement-report-email-msg');
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                $msg.css('color', '#cc0000').text('Please enter a valid email address.');
+                return;
+            }
+
+            var $btn = $(this);
+            $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Sending...');
+            $msg.css('color', '#0d4d8b').text('Sending report, please wait...');
+
+            $.post('emailAgreementReport.php', {
+                fromDate: pendingAgreementReport.fromDate,
+                toDate: pendingAgreementReport.toDate,
+                clientName: pendingAgreementReport.clientName,
+                format: pendingAgreementFormat,
+                email: email
+            }, null, 'json').done(function (res) {
+                if (res && res.success) {
+                    $msg.css('color', '#1a7f37').text(res.message || 'Report sent successfully.');
+                    setTimeout(closeAgreementChooser, 2000);
+                } else {
+                    $msg.css('color', '#cc0000').text((res && res.message) ? res.message : 'Could not send the email.');
+                    $btn.prop('disabled', false).html('<i class="fa fa-paper-plane"></i> Get Report');
+                }
+            }).fail(function () {
+                $msg.css('color', '#cc0000').text('Server error. Please try again.');
+                $btn.prop('disabled', false).html('<i class="fa fa-paper-plane"></i> Get Report');
+            });
+        });
+
+        $('.agreement-report-step-back').click(function () {
+            resetAgreementChooser();
+        });
+
+        $('.agreement-report-cancel').click(function () {
+            closeAgreementChooser();
+        });
+
+        $('#agreement-report-format-chooser').click(function (e) {
+            if (e.target === this) {
+                closeAgreementChooser();
+            }
         });
 
         $('#filterFromDate').datepicker({

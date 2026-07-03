@@ -651,6 +651,283 @@
             padding: 8px 10px;
             text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
         }
+
+        /* =====================================================================
+           PREMIUM DARK MODE  —  customerAccount.php
+           -----------------------------------------------------------------
+           This page relies heavily on inline styles (color:black / color:gray
+           / light backgrounds) and light-theme classes defined in
+           basic.css / app.css / float-label.css. Those cannot be edited
+           safely, so dark mode is applied here via page-scoped overrides
+           using the same attribute selectors + !important they require.
+
+           Structure follows a clear surface hierarchy so text contrast is
+           always correct (dark surface -> light text), matching the top
+           navbar dark language.
+           ===================================================================== */
+        html.theme-dark {
+            --ca-bg:         #0b111b;   /* page canvas                        */
+            --ca-surface:    #111827;   /* main cards / info panel            */
+            --ca-inner:      #182235;   /* inner panels, inputs, doc rows     */
+            --ca-thead:      #0f172a;   /* table header strip                 */
+            --ca-border:     #2a3a52;   /* dividers / borders                 */
+            --ca-text:       #f1f5f9;   /* primary text                       */
+            --ca-text-dim:   #94a3b8;   /* secondary / read-only values       */
+            --ca-text-faint: #6b7a92;   /* placeholders, hints                */
+            --ca-accent:     #4a9eff;   /* focus / links                      */
+            --ca-orange:     #f5a35a;   /* softened accent (was #f5821f)      */
+            --ca-shadow:     0 4px 12px rgba(0, 0, 0, 0.25);
+        }
+
+        html.theme-dark #page-content-wrapper { background: var(--ca-bg); color: var(--ca-text); }
+        html.theme-dark .page-content.inset { background: var(--ca-bg); }
+
+        /* ---------- 1. Client info panel & section wrappers ---------- */
+        html.theme-dark .top_qms_page,
+        html.theme-dark .background_lightblue,
+        html.theme-dark .servicebox {
+            background: var(--ca-surface) !important;
+            color: var(--ca-text) !important;
+            border-radius: 10px;
+            box-shadow: var(--ca-shadow);
+        }
+        html.theme-dark .servicebox { background: var(--ca-surface) !important; }
+
+        /* Client name banner + ISO/SERVICE/CONTRACT/TRANSITION headings:
+           navy header + light text + subtle orange icon accent
+           (replaces the bright orange headings). */
+        html.theme-dark .qms_customer_name {
+            background: #0a3a66 !important;
+            color: #f1f5f9 !important;
+        }
+        html.theme-dark .qms_customer_name .fa { color: var(--ca-orange) !important; }
+        html.theme-dark .canceled-client-header,
+        html.theme-dark .canceled-status-cell { background: #7f1d1d !important; color: #fff !important; }
+        html.theme-dark .table.table-striped > tbody > tr.canceled-row > td { background: #7f1d1d !important; color: #fff !important; }
+
+        /* Payment System / other coloured title bars -> muted navy */
+        html.theme-dark .service_title.payment-title,
+        html.theme-dark [style*="#7393B3"] { background: #1e2d44 !important; color: #e5eaf2 !important; }
+
+        /* ---------- 2. Text contrast (inline color overrides) ----------
+           Only affects text; backgrounds are darkened above so light text
+           always lands on a dark surface. */
+        html.theme-dark [style*="color: black"],
+        html.theme-dark [style*="color:black"] { color: var(--ca-text) !important; }
+        html.theme-dark [style*="color: gray"],
+        html.theme-dark [style*="color:gray"] { color: var(--ca-text-dim) !important; }
+        html.theme-dark [style*="color: #006400"] { color: #4ade80 !important; }   /* cert no. green */
+        html.theme-dark [style*="color: #999"] { color: var(--ca-text-dim) !important; } /* "Not Assigned" */
+        html.theme-dark hr[style*="slategray"] { border-color: var(--ca-border) !important; color: var(--ca-border) !important; }
+
+        /* ---------- 3. Document / action rows (basic.css .serviceContent*) ----------
+           Keep the semantic distinction: normal = muted blue, action = muted
+           green. Replace the bright grey glow with a subtle dark shadow. */
+        html.theme-dark .serviceContent,
+        html.theme-dark .serviceContentCompleted,
+        html.theme-dark .serviceContentwaiting {
+            box-shadow: var(--ca-shadow) !important;
+        }
+        html.theme-dark .serviceContent {          /* normal / pending  */
+            background-color: #17233b !important;
+            color: #cdd9ee !important;
+        }
+        html.theme-dark .serviceContentCompleted { /* normal document (was bright blue) */
+            background-color: #16294a !important;
+            color: #dbe7f8 !important;
+        }
+        html.theme-dark .serviceContentwaiting {   /* action-required (was bright green) */
+            background-color: #123626 !important;
+            color: #a7f3c6 !important;
+        }
+        html.theme-dark .serviceContent span,
+        html.theme-dark .serviceContentCompleted span,
+        html.theme-dark .serviceContentwaiting span { color: inherit !important; }
+        /* Icons inside document rows stay clearly visible */
+        html.theme-dark .serviceContent .fa,
+        html.theme-dark .serviceContentCompleted .fa,
+        html.theme-dark .serviceContentwaiting .fa { color: inherit !important; }
+
+        /* ---------- 4. Payment tabs (app.css .qms_complete_btn, orange) ----------
+           Dark tab + orange text/border accent instead of a big orange block. */
+        html.theme-dark .qms_complete_btn {
+            background: var(--ca-inner) !important;
+            color: var(--ca-orange) !important;
+            border: 1px solid var(--ca-border) !important;
+        }
+        html.theme-dark .qms_complete_btn:hover,
+        html.theme-dark .qms_complete_btn:active {
+            background: #202f47 !important;
+            color: #ffb877 !important;
+        }
+        html.theme-dark .qms_complete_btn .fa { color: inherit !important; }
+        /* "Create New Service" select (inline orange bg) */
+        html.theme-dark [style*="background-color: #f5821f"] {
+            background-color: var(--ca-inner) !important;
+            color: var(--ca-orange) !important;
+        }
+
+        /* ---------- 5. Tables (service_details, payments, invoice, letters & actions) ---------- */
+        html.theme-dark .service_details,
+        html.theme-dark .service_details_201 {
+            background: var(--ca-surface) !important;
+            color: var(--ca-text) !important;
+        }
+        html.theme-dark .table-bordered,
+        html.theme-dark .table-bordered > thead > tr > th,
+        html.theme-dark .table-bordered > tbody > tr > td,
+        html.theme-dark .table-bordered > tbody > tr > th,
+        html.theme-dark .table-bordered > tfoot > tr > td { border-color: var(--ca-border) !important; }
+        html.theme-dark .service_details thead th,
+        html.theme-dark .service_details_201 thead th,
+        html.theme-dark .table > thead > tr > th {
+            background: var(--ca-thead) !important;
+            color: #aeb9cc !important;
+            border-color: var(--ca-border) !important;
+        }
+        html.theme-dark .table > tbody > tr > td,
+        html.theme-dark .table > tbody > tr > th,
+        html.theme-dark .table > tfoot > tr > td {
+            color: var(--ca-text);
+            border-color: var(--ca-border) !important;
+        }
+        /* striped rows (app.css forces #e3eaf3) */
+        html.theme-dark .table-striped > tbody > tr:nth-child(odd) > td,
+        html.theme-dark .table-striped > tbody > tr:nth-child(odd) > th { background-color: #131c2e !important; }
+        html.theme-dark .table-striped > tbody > tr:nth-child(even) > td { background-color: var(--ca-surface) !important; }
+        html.theme-dark .table-hover > tbody > tr:hover > td,
+        html.theme-dark .table-hover > tbody > tr:hover > th { background-color: #1c2942 !important; }
+        html.theme-dark .table-striped span { color: var(--ca-text) !important; }
+
+        /* ---------- 6. Form fields / read-only values ---------- */
+        html.theme-dark .form-control,
+        html.theme-dark input[type="text"],
+        html.theme-dark input[type="number"],
+        html.theme-dark input[type="email"],
+        html.theme-dark input[type="date"],
+        html.theme-dark input[type="password"],
+        html.theme-dark textarea,
+        html.theme-dark select,
+        html.theme-dark .serviceTypeName {
+            background-color: var(--ca-inner) !important;
+            color: var(--ca-text) !important;
+            border-color: var(--ca-border) !important;
+        }
+        /* float-label + table-edit inputs are transparent by design; keep them
+           transparent (they sit on dark surfaces) but force readable text and
+           a subtle bottom border instead of the black one. */
+        html.theme-dark .float-label-control input,
+        html.theme-dark .float-label-control select,
+        html.theme-dark .float-label-control textarea,
+        html.theme-dark .table-edit-control input,
+        html.theme-dark .table-edit-control select,
+        html.theme-dark .table-edit-control textarea {
+            color: var(--ca-text) !important;
+            border-bottom-color: var(--ca-border) !important;
+        }
+        html.theme-dark .float-label-control input:focus,
+        html.theme-dark .table-edit-control input:focus,
+        html.theme-dark .table-edit-control textarea:focus,
+        html.theme-dark .table-edit-control select:focus { color: var(--ca-text) !important; }
+        html.theme-dark .float-label-control label,
+        html.theme-dark .table-edit-control label { color: var(--ca-text-dim) !important; }
+        /* Read-only "lookslike-label" cert fields (inline #f0f0f0 bg) */
+        html.theme-dark .lookslike-label,
+        html.theme-dark .cert-auto-field {
+            background-color: var(--ca-inner) !important;
+            color: var(--ca-text) !important;
+        }
+        html.theme-dark input::placeholder,
+        html.theme-dark textarea::placeholder { color: var(--ca-text-faint) !important; }
+        html.theme-dark input:focus,
+        html.theme-dark textarea:focus,
+        html.theme-dark select:focus,
+        html.theme-dark .form-control:focus {
+            border-color: var(--ca-accent) !important;
+            box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.16) !important;
+        }
+        html.theme-dark input[readonly],
+        html.theme-dark input[disabled],
+        html.theme-dark select[disabled],
+        html.theme-dark textarea[readonly] { color: var(--ca-text-dim) !important; opacity: 1 !important; }
+
+        /* Notes textarea (inline bg #e3eaf3) — clearly a textarea in dark mode */
+        html.theme-dark #add-notes,
+        html.theme-dark .notebox {
+            background-color: var(--ca-inner) !important;
+            color: var(--ca-text) !important;
+            border: 1px solid var(--ca-border) !important;
+        }
+        html.theme-dark #add-notes::placeholder { color: var(--ca-text-faint) !important; }
+        html.theme-dark .notebox:focus { border-color: var(--ca-accent) !important; box-shadow: 0 0 6px rgba(74, 158, 255, 0.35) !important; }
+
+        /* Inline light cell backgrounds (#f0f0f0 / #fff / #fefefe / #e0e0e0 / #f5f5f5) */
+        html.theme-dark [style*="background-color: #f0f0f0"],
+        html.theme-dark [style*="background-color: #fff"],
+        html.theme-dark [style*="background:#fff"],
+        html.theme-dark [style*="background: #fff"],
+        html.theme-dark [style*="background-color: #fefefe"],
+        html.theme-dark [style*="background: #e0e0e0"] {
+            background-color: var(--ca-inner) !important;
+            color: var(--ca-text) !important;
+        }
+
+        /* ---------- 7. Icons & buttons ---------- */
+        html.theme-dark .btn-default {
+            background-color: var(--ca-inner) !important;
+            color: #7aa9f5 !important;
+            border-color: var(--ca-border) !important;
+        }
+        html.theme-dark .btn-default:hover,
+        html.theme-dark .btn-default:focus,
+        html.theme-dark .btn-default:active {
+            background-color: var(--ca-accent) !important;
+            color: #061020 !important;
+            border-color: var(--ca-accent) !important;
+        }
+        /* Action icons on document rows keep their inline white where set;
+           default (uncoloured) fa icons get a readable light tone. */
+        html.theme-dark .pull-right .fa[style*="color: white"],
+        html.theme-dark .fa[style*="color:white"] { color: #eaf1fb !important; }
+
+        /* ---------- 8. Delete-confirm modal ---------- */
+        html.theme-dark .letter-delete-dialog { background: var(--ca-surface) !important; }
+        html.theme-dark .letter-delete-dialog h4 { color: #eef2f8 !important; }
+        html.theme-dark .letter-delete-dialog p { color: var(--ca-text-dim) !important; }
+        html.theme-dark .letter-delete-close { color: var(--ca-text-faint) !important; }
+        html.theme-dark .letter-delete-icon { background: rgba(220, 38, 38, 0.14) !important; border-color: rgba(220, 38, 38, 0.35) !important; }
+        html.theme-dark .letter-delete-cancel {
+            background: var(--ca-inner) !important;
+            border-color: var(--ca-border) !important;
+            color: var(--ca-text) !important;
+        }
+
+        /* ---------- 9. Loading overlays / panels ---------- */
+        html.theme-dark #loading-div-background,
+        html.theme-dark #loading-div-background-resend,
+        html.theme-dark #loading-div-background-meetedit { background: rgba(11, 17, 27, 0.6) !important; }
+        html.theme-dark #loading-div,
+        html.theme-dark #loading-div-user-info {
+            background-color: var(--ca-surface) !important;
+            color: var(--ca-text) !important;
+            border-color: var(--ca-accent) !important;
+        }
+        html.theme-dark .panel,
+        html.theme-dark .well {
+            background-color: var(--ca-surface) !important;
+            border-color: var(--ca-border) !important;
+            color: var(--ca-text);
+        }
+        html.theme-dark .panel-heading { background-color: var(--ca-inner) !important; color: var(--ca-text) !important; border-color: var(--ca-border) !important; }
+
+        /* ---------- 10. Misc inline light borders / JS highlight states ----------
+           Clickable certificate rows carry an inline light border. */
+        html.theme-dark [style*="border: 1px solid #ddd"] { border-color: var(--ca-border) !important; }
+        /* JS row-highlight colours (#fffacd / #d4edda / #f8d7da / #f0f8ff) keep
+           their dark text so they stay readable when applied over a light flash. */
+        html.theme-dark .clickable[style*="background-color: rgb(255, 250, 205)"],
+        html.theme-dark .clickable[style*="background-color: rgb(212, 237, 218)"],
+        html.theme-dark .clickable[style*="background-color: rgb(248, 215, 218)"] { color: #1a1a1a !important; }
     </style>
 
     <div id="page-content-wrapper">       

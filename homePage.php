@@ -501,6 +501,135 @@
                 font-size: 10px;
             }
         }
+
+        /* =====================================================================
+           PREMIUM DARK MODE  —  homePage.php
+           Palette: deep charcoal surfaces (not pure black), soft slate text
+           (not harsh white), and jewel-toned status accents.
+           ===================================================================== */
+        html.theme-dark {
+            --hpd-bg:        #0a0e14;   /* page canvas — deep near-black       */
+            --hpd-surface:   #111722;   /* cards / panels / table              */
+            --hpd-surface-2: #161d2b;   /* raised: header row, hover, inputs   */
+            --hpd-border:    #232c3d;   /* hairline dividers                   */
+            --hpd-border-2:  #2e3a4f;   /* stronger borders / input outline    */
+            --hpd-text:      #dbe3f0;   /* primary text — soft, easy on eyes   */
+            --hpd-text-dim:  #93a1b8;   /* secondary / muted                   */
+            --hpd-text-faint:#6b7890;   /* placeholders, icons                 */
+            --hpd-accent:    #4a9eff;   /* brand blue, brightened for dark     */
+        }
+
+        html.theme-dark #page-content-wrapper {
+            background: var(--hpd-bg);
+            color: var(--hpd-text);
+        }
+        html.theme-dark .page-content.inset { background: var(--hpd-bg); }
+
+        /* Section title */
+        html.theme-dark .invoice-section-title { color: #f2f6fc; }
+
+        /* ---- Status Tabs ---- */
+        html.theme-dark .hp-tabs-nav {
+            --hp-tab-border: #232c3d;
+            --hp-tab-bg: var(--hpd-surface);
+            --hp-tab-idle: #0e131c;
+            border-bottom-color: var(--hpd-border);
+        }
+        html.theme-dark .hp-tabs-nav::-webkit-scrollbar-thumb { background: #2e3a4f; }
+        html.theme-dark .hp-tab { color: var(--hpd-text-dim); }
+        html.theme-dark .hp-tab:hover {
+            background: var(--hpd-surface-2);
+            color: #ffffff;
+            box-shadow: inset 0 -1px 0 var(--hp-tab-border), 0 -2px 9px rgba(0, 0, 0, 0.45);
+        }
+        html.theme-dark .hp-tab .hp-count { background: #1c2534; color: #b8c4d8; }
+        html.theme-dark .hp-tab.active {
+            color: #ffffff;
+            background: var(--hpd-surface);
+            box-shadow: 0 -3px 10px rgba(0, 0, 0, 0.5);
+        }
+        html.theme-dark .hp-tab.active .hp-count { background: var(--hpd-accent); color: #061020; }
+        /* idle dot colors — brightened so they glow on dark */
+        html.theme-dark .hp-tab.hp-c-all    { color: #5aa9ff; }
+        html.theme-dark .hp-tab.hp-c-green  { color: #34d399; }
+        html.theme-dark .hp-tab.hp-c-yellow { color: #facc15; }
+        html.theme-dark .hp-tab.hp-c-amber  { color: #fbbf24; }
+        html.theme-dark .hp-tab.hp-c-orange { color: #fb923c; }
+        html.theme-dark .hp-tab.hp-c-red    { color: #f87171; }
+        html.theme-dark .hp-tab.hp-c-grey   { color: #94a3b8; }
+        html.theme-dark .hp-tab.hp-c-slate  { color: #94a3b8; }
+        html.theme-dark .hp-tab.hp-c-blue   { color: #60a5fa; }
+        html.theme-dark .hp-tab.hp-c-purple { color: #a78bfa; }
+
+        /* ---- Status badges (soft translucent fills, luminous text) ---- */
+        html.theme-dark #page-content-wrapper .hp-c-green.hp-badge  { color: #6ee7b7 !important; background: rgba(16, 185, 129, 0.15) !important; }
+        html.theme-dark #page-content-wrapper .hp-c-yellow.hp-badge { color: #fde68a !important; background: rgba(202, 138, 4, 0.16) !important; }
+        html.theme-dark #page-content-wrapper .hp-c-amber.hp-badge  { color: #fcd34d !important; background: rgba(217, 119, 6, 0.16) !important; }
+        html.theme-dark #page-content-wrapper .hp-c-orange.hp-badge { color: #fdba74 !important; background: rgba(234, 88, 12, 0.16) !important; }
+        html.theme-dark #page-content-wrapper .hp-c-red.hp-badge    { color: #fca5a5 !important; background: rgba(220, 38, 38, 0.16) !important; }
+        html.theme-dark #page-content-wrapper .hp-c-grey.hp-badge   { color: #cbd5e1 !important; background: rgba(148, 163, 184, 0.14) !important; }
+        html.theme-dark #page-content-wrapper .hp-c-slate.hp-badge  { color: #cbd5e1 !important; background: rgba(100, 116, 139, 0.16) !important; }
+        html.theme-dark #page-content-wrapper .hp-c-blue.hp-badge   { color: #93c5fd !important; background: rgba(37, 99, 235, 0.16) !important; }
+        html.theme-dark #page-content-wrapper .hp-c-purple.hp-badge { color: #c4b5fd !important; background: rgba(124, 58, 237, 0.16) !important; }
+
+        /* ---- Filter panel ---- */
+        html.theme-dark .invoice-filter-panel {
+            background: var(--hpd-surface);
+            border-color: var(--hpd-border);
+            box-shadow: 0 6px 26px rgba(0, 0, 0, 0.45);
+        }
+        html.theme-dark .search-item i { color: var(--hpd-text-faint); }
+        html.theme-dark .invoice-filter-item input,
+        html.theme-dark .invoice-filter-item select {
+            background-color: var(--hpd-surface-2);
+            border-color: var(--hpd-border-2);
+            color: var(--hpd-text);
+        }
+        html.theme-dark .invoice-filter-item input::placeholder { color: var(--hpd-text-faint); }
+        html.theme-dark .invoice-filter-item select option { color: var(--hpd-text); background-color: var(--hpd-surface-2); }
+        html.theme-dark .invoice-filter-item input:focus,
+        html.theme-dark .invoice-filter-item select:focus {
+            border-color: var(--hpd-accent);
+            box-shadow: 0 0 0 4px rgba(74, 158, 255, 0.18);
+            background-color: var(--hpd-surface-2);
+        }
+        html.theme-dark .btn-solid-primary {
+            background: linear-gradient(135deg, #1d63b0 0%, #2f81d6 100%);
+            box-shadow: 0 4px 14px rgba(20, 104, 179, 0.4);
+        }
+        html.theme-dark .btn-solid-primary:hover { box-shadow: 0 8px 22px rgba(20, 104, 179, 0.5); }
+
+        /* ---- Data table ---- */
+        html.theme-dark .table-responsive {
+            background: var(--hpd-surface);
+            border-color: var(--hpd-border);
+            box-shadow: 0 6px 26px rgba(0, 0, 0, 0.45);
+        }
+        html.theme-dark #tab_customer_list thead th {
+            background: linear-gradient(180deg, #161d2b 0%, #121926 100%) !important;
+            border-bottom: 1px solid var(--hpd-border-2) !important;
+        }
+        html.theme-dark #tab_customer_list thead th small,
+        html.theme-dark #tab_customer_list thead th a { color: #aeb9cc !important; }
+        html.theme-dark #tab_customer_list small { color: var(--hpd-text-dim) !important; }
+        html.theme-dark #tab_customer_list tbody td {
+            border-bottom: 1px solid var(--hpd-border) !important;
+            color: var(--hpd-text);
+        }
+        html.theme-dark #tab_customer_list tbody tr:hover { background-color: var(--hpd-surface-2) !important; }
+        html.theme-dark .table-striped tbody tr:nth-of-type(odd) { background-color: rgba(255, 255, 255, 0.018); }
+        html.theme-dark #tab_customer_list a { color: #cdd6e5; }
+        html.theme-dark #tab_customer_list textarea {
+            background-color: var(--hpd-surface-2);
+            border-color: var(--hpd-border-2);
+            color: var(--hpd-text);
+        }
+        html.theme-dark #tab_customer_list textarea::placeholder { color: var(--hpd-text-faint); }
+        html.theme-dark #tab_customer_list .setHandler {
+            background-color: var(--hpd-surface-2);
+            border-color: var(--hpd-border-2);
+            color: var(--hpd-text);
+        }
     </style>
 
     <div id="page-content-wrapper">

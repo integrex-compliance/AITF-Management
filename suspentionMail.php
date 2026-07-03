@@ -226,7 +226,7 @@ if($servicetype == 'CA'){
 } else if($servicetype == 'RC'){
    $servicedesc = "first surveillance audit due.";   
 }
-// ---------------------------------------------------------
+
 // set font
 $pdf->SetFont('Times', '', 11);
 

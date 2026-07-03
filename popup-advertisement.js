@@ -26,19 +26,16 @@ class PopupAdvertisement {
                     <button class="popup-close" onclick="popupAd.closePopup()">&times;</button>
                     <div class="popup-content">
                         <div class="popup-icon-header">📋</div>
-                        <h3>Apply Online Now!</h3>
+                        <h3>Fill Our Audit Application Form</h3>
                         <p class="popup-message">
-                            Submit your <strong>Audit Application</strong> or <strong>Information Update</strong> form quickly and easily.
+                             Submit your <strong> Audit Application</strong>form quickly and easily.
                         </p>
                         <div class="popup-buttons">
-                            <a href="addAuditApplication.php" class="popup-btn audit-btn">
+                            <a href="application.php" class="popup-btn audit-btn">
                                 <i class="fas fa-clipboard-check"></i>
                                 <span>Audit Application</span>
                             </a>
-                            <a href="info_updation_form.php" class="popup-btn info-btn">
-                                <i class="fas fa-edit"></i>
-                                <span>Information Update</span>
-                            </a>
+                         
                         </div>
                     </div>
                 </div>

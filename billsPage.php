@@ -1228,6 +1228,175 @@
             .vendor-details-grid { grid-template-columns: 1fr; }
             .bills-btn { width: 100%; }
         }
+
+        /* =====================================================================
+           PREMIUM DARK MODE  —  billsPage.php
+           Palette mirrors homePage.php: deep charcoal surfaces, soft slate text,
+           jewel-toned accents. Toggle handled globally (head.php + js/app.js).
+           ===================================================================== */
+        html.theme-dark {
+            --hpd-bg:        #0a0e14;
+            --hpd-surface:   #111722;
+            --hpd-surface-2: #161d2b;
+            --hpd-border:    #232c3d;
+            --hpd-border-2:  #2e3a4f;
+            --hpd-text:      #dbe3f0;
+            --hpd-text-dim:  #93a1b8;
+            --hpd-text-faint:#6b7890;
+            --hpd-accent:    #4a9eff;
+        }
+
+        html.theme-dark #page-content-wrapper { background: var(--hpd-bg); }
+        html.theme-dark .bills-page {
+            background: var(--hpd-bg);
+            color: var(--hpd-text);
+        }
+
+        /* Hero header — keep the blue gradient, it already reads on dark */
+        html.theme-dark .bills-header {
+            background: linear-gradient(135deg, #060a12 0%, #101827 50%, #1d63b0 100%);
+            border-color: var(--hpd-border-2);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+        }
+        html.theme-dark .bills-subtitle { color: var(--hpd-text-dim); }
+
+        /* Buttons */
+        html.theme-dark .bills-btn-primary {
+            background: linear-gradient(135deg, #2f81d6 0%, #1d4ed8 100%);
+            box-shadow: 0 10px 20px rgba(29, 99, 176, 0.35);
+        }
+        html.theme-dark .bills-btn-soft {
+            color: var(--hpd-text);
+            background: var(--hpd-surface-2);
+            border-color: var(--hpd-border-2);
+        }
+        html.theme-dark .bills-btn-soft:hover { background: #1f2a3d; }
+
+        /* Summary cards */
+        html.theme-dark .bill-summary-card,
+        html.theme-dark .bills-card {
+            background: var(--hpd-surface);
+            border-color: var(--hpd-border);
+            box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+        }
+        html.theme-dark .bill-summary-blue   { color: #7fb6ef; background: rgba(59,130,246,0.14); }
+        html.theme-dark .bill-summary-green  { color: #34d399; background: rgba(16,185,129,0.14); }
+        html.theme-dark .bill-summary-indigo { color: #a78bfa; background: rgba(99,102,241,0.16); }
+        html.theme-dark .bill-summary-red    { color: #f87171; background: rgba(239,68,68,0.14); }
+        html.theme-dark .bill-summary-label,
+        html.theme-dark .bill-summary-meta   { color: var(--hpd-text-dim); }
+        html.theme-dark .bill-summary-value  { color: #f2f6fc; }
+
+        /* Form panel */
+        html.theme-dark .bill-form-panel {
+            border-color: var(--hpd-border-2);
+            background: linear-gradient(180deg, #111722 0%, #0e131c 100%);
+        }
+        html.theme-dark .bill-form-group label { color: var(--hpd-text-dim); }
+        html.theme-dark .bill-form-group input,
+        html.theme-dark .bill-form-group select,
+        html.theme-dark .bill-form-group textarea,
+        html.theme-dark .bills-filter-panel input,
+        html.theme-dark .bills-filter-panel select,
+        html.theme-dark .vendor-edit-input,
+        html.theme-dark .modal-input-wrapper .vendor-edit-input {
+            background: var(--hpd-surface-2);
+            border-color: var(--hpd-border-2);
+            color: var(--hpd-text);
+        }
+        html.theme-dark .bill-form-group input:focus,
+        html.theme-dark .bill-form-group select:focus,
+        html.theme-dark .bill-form-group textarea:focus,
+        html.theme-dark .bills-filter-panel input:focus,
+        html.theme-dark .bills-filter-panel select:focus,
+        html.theme-dark .vendor-edit-input:focus,
+        html.theme-dark .modal-input-wrapper .vendor-edit-input:focus {
+            border-color: var(--hpd-accent);
+            box-shadow: 0 0 0 4px rgba(74, 158, 255, 0.18);
+            background: var(--hpd-surface-2);
+        }
+        html.theme-dark .bill-form-group input::placeholder,
+        html.theme-dark .bills-filter-panel input::placeholder,
+        html.theme-dark .vendor-edit-input::placeholder { color: var(--hpd-text-faint); }
+        html.theme-dark .bill-form-actions { border-top-color: var(--hpd-border); }
+        html.theme-dark .bills-filter-panel .search-wrap i { color: var(--hpd-text-faint); }
+
+        /* Alerts */
+        html.theme-dark .bills-alert-success {
+            color: #6ee7b7; background: rgba(16,185,129,0.14); border-color: rgba(16,185,129,0.3);
+        }
+        html.theme-dark .bills-alert-error {
+            color: #fca5a5; background: rgba(220,38,38,0.14); border-color: rgba(220,38,38,0.3);
+        }
+
+        /* Table */
+        html.theme-dark .table-responsive {
+            border-color: var(--hpd-border);
+            box-shadow: 0 6px 26px rgba(0, 0, 0, 0.45);
+        }
+        html.theme-dark .bills-table thead th {
+            color: #aeb9cc;
+            background: linear-gradient(180deg, #161d2b 0%, #121926 100%);
+            border-bottom: 1px solid var(--hpd-border-2);
+        }
+        html.theme-dark .bills-table tbody td {
+            color: var(--hpd-text);
+            background: var(--hpd-surface);
+            border-bottom: 1px solid var(--hpd-border);
+        }
+        html.theme-dark .bills-table tbody tr.bill-row:hover td { background-color: var(--hpd-surface-2); }
+        html.theme-dark .bill-empty { color: var(--hpd-text-dim); background: var(--hpd-surface); }
+
+        /* Vendor cell */
+        html.theme-dark .bill-vendor-icon { color: #7fb6ef; background: rgba(59,130,246,0.14); border-color: rgba(59,130,246,0.3); }
+        html.theme-dark .vendor-name-link { color: var(--hpd-text); }
+        html.theme-dark .bill-vendor-cell:hover .vendor-name-link { color: #7fb6ef; }
+
+        /* Amounts / dates */
+        html.theme-dark .amount-lbl,
+        html.theme-dark .date-lbl { color: var(--hpd-text-dim); }
+        html.theme-dark .amount-val,
+        html.theme-dark .date-val { color: var(--hpd-text); }
+        html.theme-dark .amount-val.total-amt { color: #f2f6fc; }
+        html.theme-dark .amount-val.paid-amt { color: #34d399; }
+        html.theme-dark .remaining-row { border-top-color: var(--hpd-border-2); }
+        html.theme-dark .remaining-row.has-remaining .amount-val { color: #7fb6ef; }
+        html.theme-dark .due-date-highlight { background: var(--hpd-surface-2); border-color: var(--hpd-border-2); }
+        html.theme-dark .due-date-highlight.due-overdue { color: #fca5a5; background: rgba(220,38,38,0.14); border-color: rgba(220,38,38,0.3); }
+
+        /* Status badges */
+        html.theme-dark .bill-status-paid { color: #6ee7b7; background: rgba(22,163,74,0.16); border-color: rgba(22,163,74,0.3); }
+        html.theme-dark .bill-status-unpaid { color: #fdba74; background: rgba(234,88,12,0.16); border-color: rgba(234,88,12,0.3); }
+        html.theme-dark .bill-status-overdue { color: #fca5a5; background: rgba(220,38,38,0.16); border-color: rgba(220,38,38,0.3); }
+        html.theme-dark .bill-status-partially-paid { color: #93c5fd; background: rgba(37,99,235,0.16); border-color: rgba(37,99,235,0.3); }
+
+        /* Attachments */
+        html.theme-dark .attachment-preview-container { background: var(--hpd-surface-2); border-color: var(--hpd-border-2); }
+        html.theme-dark .attachment-preview-container.pdf-type { background: rgba(220,38,38,0.1); border-color: rgba(220,38,38,0.28); }
+        html.theme-dark .attachment-pdf-text { color: #fca5a5; }
+        html.theme-dark .no-attachment-badge { color: var(--hpd-text-dim); background: var(--hpd-surface-2); }
+
+        /* Action buttons */
+        html.theme-dark .bill-action-btn {
+            color: var(--hpd-text-dim);
+            background: var(--hpd-surface-2);
+            border-color: var(--hpd-border);
+        }
+        html.theme-dark .bill-action-btn:hover { color: #7fb6ef; background: rgba(59,130,246,0.16); border-color: rgba(59,130,246,0.35); }
+        html.theme-dark .bill-action-btn.bill-action-delete { color: #f87171; background: rgba(220,38,38,0.14); border-color: rgba(220,38,38,0.3); }
+        html.theme-dark .bill-action-btn.bill-action-delete:hover { color: #fff; background: #dc2626; border-color: #dc2626; }
+
+        /* Inline edit panel */
+        html.theme-dark .bill-edit-panel { background: #0e131c; border-bottom-color: var(--hpd-border); }
+
+        /* Custom modal */
+        html.theme-dark .custom-modal-container { background: var(--hpd-surface); box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6); }
+        html.theme-dark .custom-modal-header { background: linear-gradient(135deg, #060a12 0%, #101827 100%); border-bottom-color: var(--hpd-border); }
+        html.theme-dark .custom-modal-body { background: var(--hpd-surface); color: var(--hpd-text); }
+        html.theme-dark .vendor-detail-item label { color: var(--hpd-text-dim); }
+        html.theme-dark .vendor-detail-val { color: var(--hpd-text); }
+        html.theme-dark .vendor-stat-item { background: var(--hpd-surface-2); border-color: var(--hpd-border); }
+        html.theme-dark .modal-input-wrapper .input-icon { color: var(--hpd-text-faint); }
     </style>
 
     <div id="page-content-wrapper">

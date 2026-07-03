@@ -392,6 +392,155 @@
             .btn-download, .btn-report-export { width: 100%; }
             .invoice-tab { padding: 9px 18px; font-size: 13px; }
         }
+
+        /* =====================================================================
+           PREMIUM DARK MODE  —  invoicePage.php
+           Palette mirrors homePage.php: deep charcoal surfaces, soft slate text,
+           jewel-toned accents. Toggle handled globally (head.php + js/app.js).
+           ===================================================================== */
+        html.theme-dark {
+            --hpd-bg:        #0a0e14;
+            --hpd-surface:   #111722;
+            --hpd-surface-2: #161d2b;
+            --hpd-border:    #232c3d;
+            --hpd-border-2:  #2e3a4f;
+            --hpd-text:      #dbe3f0;
+            --hpd-text-dim:  #93a1b8;
+            --hpd-text-faint:#6b7890;
+            --hpd-accent:    #4a9eff;
+        }
+
+        html.theme-dark #page-content-wrapper {
+            background: var(--hpd-bg);
+            color: var(--hpd-text);
+        }
+        html.theme-dark .page-content.inset { background: var(--hpd-bg); }
+
+        /* ---- Tables / cards ---- */
+        html.theme-dark .table-responsive,
+        html.theme-dark .invoice-table-card {
+            background: var(--hpd-surface);
+            border-color: var(--hpd-border);
+            box-shadow: 0 6px 26px rgba(0, 0, 0, 0.45);
+        }
+        html.theme-dark .table small { color: var(--hpd-text-dim); }
+        html.theme-dark #table_proforma_invoice thead th,
+        html.theme-dark #table_final_invoice thead th {
+            background: linear-gradient(180deg, #161d2b 0%, #121926 100%) !important;
+            border-bottom: 1px solid var(--hpd-border-2) !important;
+        }
+        html.theme-dark #table_proforma_invoice thead th a,
+        html.theme-dark #table_final_invoice thead th a { color: #aeb9cc !important; }
+        html.theme-dark .table tbody td {
+            border-bottom: 1px solid var(--hpd-border) !important;
+            color: var(--hpd-text);
+        }
+        html.theme-dark .table tbody tr:hover { background-color: var(--hpd-surface-2) !important; }
+        html.theme-dark .table-striped tbody tr:nth-of-type(odd) { background-color: rgba(255, 255, 255, 0.018) !important; }
+
+        /* Payment status — luminous on dark */
+        html.theme-dark .payment-rcv td,
+        html.theme-dark .payment-rcv small,
+        html.theme-dark .payment-rcv td:nth-child(10) small { color: #6ee7b7 !important; }
+        html.theme-dark .payment-not-rcv td,
+        html.theme-dark .payment-not-rcv small,
+        html.theme-dark .payment-not-rcv td:nth-child(10) small { color: #fca5a5 !important; }
+        html.theme-dark .payment-rcv td:first-child { box-shadow: inset 4px 0 0 #10b981; }
+        html.theme-dark .payment-not-rcv td:first-child { box-shadow: inset 4px 0 0 #f43f5e; }
+
+        /* Action icon chips */
+        html.theme-dark .table td a {
+            background-color: var(--hpd-surface-2);
+            color: var(--hpd-text-dim) !important;
+            border-color: var(--hpd-border);
+        }
+        html.theme-dark .table td a:hover { background-color: #1f2a3d; color: #ffffff !important; }
+        html.theme-dark .table td a.finalInvoice:hover { background-color: rgba(37,99,235,0.22); color: #93c5fd !important; }
+        html.theme-dark .table td a.editInvoice:hover,
+        html.theme-dark .table td a.editFinalInvoice:hover { background-color: rgba(202,138,4,0.22); color: #fde68a !important; }
+        html.theme-dark .table td a.viewInvoice:hover,
+        html.theme-dark .table td a.viewFinalInvoice:hover { background-color: rgba(22,163,74,0.22); color: #86efac !important; }
+        html.theme-dark .table td a.mailProformaInvoice:hover,
+        html.theme-dark .table td a.mailInvoice:hover { background-color: rgba(124,58,237,0.22); color: #c4b5fd !important; }
+        html.theme-dark .table td a.deleteInvoice:hover { background-color: rgba(220,38,38,0.22); color: #fca5a5 !important; }
+
+        /* ---- Toolbar / tabs ---- */
+        html.theme-dark .invoice-toolbar {
+            background: var(--hpd-surface);
+            border-color: var(--hpd-border);
+            box-shadow: 0 6px 26px rgba(0, 0, 0, 0.45);
+        }
+        html.theme-dark .invoice-tabs-nav { background: #0e131c; }
+        html.theme-dark .invoice-tab { color: var(--hpd-text-dim); }
+        html.theme-dark .invoice-tab:hover { color: #7fb6ef; }
+        html.theme-dark .invoice-tab.active {
+            background: linear-gradient(135deg, #1d63b0 0%, #2f81d6 100%);
+            color: #ffffff;
+            box-shadow: 0 6px 16px rgba(20, 104, 179, 0.4);
+        }
+
+        /* ---- Filters ---- */
+        html.theme-dark .invoice-filter-item label,
+        html.theme-dark .filter-field label { color: var(--hpd-text-dim); }
+        html.theme-dark .invoice-filter-item input,
+        html.theme-dark .filter-field input {
+            background-color: var(--hpd-surface-2);
+            border-color: var(--hpd-border-2);
+            color: var(--hpd-text);
+        }
+        html.theme-dark .invoice-filter-item input::placeholder,
+        html.theme-dark .filter-field input::placeholder { color: var(--hpd-text-faint); }
+        html.theme-dark .invoice-filter-item input:focus,
+        html.theme-dark .filter-field input:focus {
+            border-color: var(--hpd-accent);
+            box-shadow: 0 0 0 4px rgba(74, 158, 255, 0.18);
+        }
+
+        /* Buttons */
+        html.theme-dark .btn-solid-primary,
+        html.theme-dark .btn-download {
+            background: linear-gradient(135deg, #1d63b0 0%, #2f81d6 100%);
+            box-shadow: 0 4px 14px rgba(20, 104, 179, 0.4);
+            color: #ffffff;
+        }
+        html.theme-dark .btn-outlined-premium {
+            background-color: var(--hpd-surface-2);
+            color: #7fb6ef;
+            border-color: var(--hpd-border-2);
+        }
+        html.theme-dark .btn-outlined-premium:hover { border-color: var(--hpd-accent); background-color: #1a2334; color: #9ecbf5; }
+        html.theme-dark .btn-soft-filled {
+            background-color: rgba(74,158,255,0.14);
+            color: #7fb6ef;
+        }
+        html.theme-dark .btn-soft-filled:hover { background-color: rgba(74,158,255,0.22); color: #9ecbf5; }
+
+        /* ---- Modals ---- */
+        html.theme-dark .modal-content {
+            background: var(--hpd-surface);
+            border: 1px solid var(--hpd-border-2);
+            color: var(--hpd-text);
+        }
+        html.theme-dark .modal-header,
+        html.theme-dark .modal-footer { border-color: var(--hpd-border); }
+        html.theme-dark .modal-title { color: var(--hpd-text); }
+        html.theme-dark .invoice-mail-confirm {
+            background: var(--hpd-surface-2);
+            border-color: var(--hpd-border-2);
+            color: #9ecbf5;
+        }
+        html.theme-dark .invoice-mail-confirm strong { color: #bcd9f7; }
+
+        /* ---- Loading overlay / spinner ---- */
+        html.theme-dark #loading-div-background { background-color: rgba(4, 8, 14, 0.85) !important; }
+        html.theme-dark #loading-div,
+        html.theme-dark .spinner-container {
+            background-color: var(--hpd-surface) !important;
+            border-color: var(--hpd-accent);
+            color: var(--hpd-text);
+        }
+        html.theme-dark .spinner-circle { border-color: #232c3d; border-top-color: var(--hpd-accent); }
+        html.theme-dark .spinner-text { color: var(--hpd-text-dim); }
     </style>
 
     <div id="page-content-wrapper">
@@ -837,6 +986,61 @@
             </div>
         </div>
 
+        <!-- Report chooser: Step 1 pick format (PDF/Excel), Step 2 pick action (download / email) -->
+        <div id="report-format-chooser" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.45); z-index:99999;">
+            <div style="max-width:440px; margin:10% auto; background:#fff; border-radius:10px; box-shadow:0 10px 40px rgba(0,0,0,0.3); overflow:hidden;">
+                <div style="background:#0d4d8b; color:#fff; padding:14px 18px; font-size:15px; font-weight:600;">
+                    <i class="fa fa-cloud-download" style="margin-right:8px;"></i> Download Report
+                </div>
+
+                <!-- STEP 1: format -->
+                <div class="report-step report-step-format" style="padding:22px 18px; text-align:center;">
+                    <p style="font-size:13px; color:#333; margin:0 0 18px;">Which format would you like?</p>
+                    <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+                        <button type="button" class="btn btn-danger report-format-pdf" style="min-width:130px;">
+                            <i class="fa fa-file-pdf-o"></i> PDF
+                        </button>
+                        <button type="button" class="btn btn-success report-format-excel" style="min-width:130px;">
+                            <i class="fa fa-file-excel-o"></i> Excel
+                        </button>
+                    </div>
+                    <div style="margin-top:18px;">
+                        <button type="button" class="btn btn-default btn-sm report-format-cancel">Cancel</button>
+                    </div>
+                </div>
+
+                <!-- STEP 2: action (download or email) -->
+                <div class="report-step report-step-action" style="display:none; padding:22px 18px; text-align:center;">
+                    <p style="font-size:13px; color:#333; margin:0 0 4px;">Selected format: <strong class="report-format-label">Excel</strong></p>
+                    <p style="font-size:12px; color:#777; margin:0 0 18px;">How would you like to receive it?</p>
+                    <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+                        <button type="button" class="btn btn-primary report-action-download" style="min-width:150px;">
+                            <i class="fa fa-download"></i> Download Report
+                        </button>
+                        <button type="button" class="btn btn-warning report-action-email" style="min-width:150px;">
+                            <i class="fa fa-envelope"></i> Get Report on Email
+                        </button>
+                    </div>
+
+                    <!-- Email sub-form -->
+                    <div class="report-email-box" style="display:none; margin-top:18px; text-align:left;">
+                        <label style="font-size:12px; font-weight:600; color:#333;">Enter email address</label>
+                        <input type="email" class="report-email-input form-control" placeholder="name@example.com"
+                               style="margin-top:6px;" autocomplete="off">
+                        <div class="report-email-msg" style="font-size:12px; margin-top:8px; min-height:16px;"></div>
+                        <button type="button" class="btn btn-success report-email-send" style="width:100%; margin-top:6px;">
+                            <i class="fa fa-paper-plane"></i> Get Report
+                        </button>
+                    </div>
+
+                    <div style="margin-top:18px;">
+                        <button type="button" class="btn btn-default btn-sm report-step-back">Back</button>
+                        <button type="button" class="btn btn-default btn-sm report-format-cancel">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 
@@ -1130,36 +1334,188 @@
         $('#proformaClientSearch').on('input', debouncedProformaSearch);
         $('#finalClientSearch').on('input', debouncedFinalSearch);
 
+        // Holds the report parameters chosen when a Download Report button is clicked.
+        var pendingReport = null;
+        // Format selected in step 1 ('pdf' | 'excel').
+        var pendingFormat = null;
+
+        // Download via XHR->Blob (same path for PDF and Excel). This never navigates
+        // the page, so there is no browser tab spinner; the file is fetched in the
+        // background and pushed to the browser's download bar via a temporary <a download>.
+        // Result: PDF behaves exactly like Excel.
+        function submitReportDownload() {
+            if (!pendingReport || !pendingFormat) {
+                return;
+            }
+            var url = (pendingFormat === 'excel') ? 'exportInvoiceReportExcel.php' : 'exportInvoiceReport.php';
+            var fallbackName = (pendingFormat === 'excel') ? 'Invoice_Report.xlsx' : 'Invoice_Report.pdf';
+
+            var $btn = $('.report-action-download');
+            if (!$btn.data('orig')) { $btn.data('orig', $btn.html()); }
+            $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Preparing...');
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', url, true);
+            xhr.responseType = 'blob';
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+
+            xhr.onload = function () {
+                $btn.prop('disabled', false).html($btn.data('orig'));
+                if (xhr.status === 200) {
+                    var cd = xhr.getResponseHeader('Content-Disposition') || '';
+                    var m = /filename="?([^"]+)"?/.exec(cd);
+                    var fname = m ? m[1] : fallbackName;
+                    var objUrl = URL.createObjectURL(xhr.response);
+                    var link = document.createElement('a');
+                    link.href = objUrl;
+                    link.download = fname;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    setTimeout(function () { URL.revokeObjectURL(objUrl); }, 4000);
+                    closeFormatChooser();
+                } else {
+                    alert('Download failed. Please try again.');
+                }
+            };
+            xhr.onerror = function () {
+                $btn.prop('disabled', false).html($btn.data('orig'));
+                alert('Download failed. Please try again.');
+            };
+
+            var params = 'invoiceType=' + encodeURIComponent(pendingReport.invoiceType) +
+                         '&fromDate=' + encodeURIComponent(pendingReport.fromDate) +
+                         '&toDate=' + encodeURIComponent(pendingReport.toDate) +
+                         '&clientName=' + encodeURIComponent(pendingReport.clientName);
+            xhr.send(params);
+        }
+
+        function showReportStep(step) {
+            $('.report-step').hide();
+            if (step === 'action') {
+                $('.report-step-action').show();
+            } else {
+                $('.report-step-format').show();
+            }
+        }
+
+        function resetChooser() {
+            pendingFormat = null;
+            $('.report-email-box').hide();
+            $('.report-email-input').val('');
+            $('.report-email-msg').text('');
+            $('.report-email-send').prop('disabled', false).html('<i class="fa fa-paper-plane"></i> Get Report');
+            showReportStep('format');
+        }
+
+        function openFormatChooser(params) {
+            pendingReport = params;
+            resetChooser();
+            $('#report-format-chooser').css('display', 'block');
+        }
+
+        function closeFormatChooser() {
+            $('#report-format-chooser').hide();
+            pendingReport = null;
+            pendingFormat = null;
+        }
+
+        // --- Step 1: choose format ---
+        $('.report-format-pdf').click(function () {
+            pendingFormat = 'pdf';
+            $('.report-format-label').text('PDF');
+            $('.report-email-box').hide();
+            showReportStep('action');
+        });
+
+        $('.report-format-excel').click(function () {
+            pendingFormat = 'excel';
+            $('.report-format-label').text('Excel');
+            $('.report-email-box').hide();
+            showReportStep('action');
+        });
+
+        // --- Step 2: download (async; closes the chooser itself once the file is ready) ---
+        $('.report-action-download').click(function () {
+            submitReportDownload();
+        });
+
+        // --- Step 2: reveal the email sub-form ---
+        $('.report-action-email').click(function () {
+            $('.report-email-msg').text('');
+            $('.report-email-box').show();
+            $('.report-email-input').focus();
+        });
+
+        // --- Step 2 (email): send the report ---
+        $('.report-email-send').click(function () {
+            if (!pendingReport || !pendingFormat) {
+                return;
+            }
+            var email = $.trim($('.report-email-input').val());
+            var $msg = $('.report-email-msg');
+            var emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailPattern.test(email)) {
+                $msg.css('color', '#cc0000').text('Please enter a valid email address.');
+                return;
+            }
+
+            var $btn = $(this);
+            $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Sending...');
+            $msg.css('color', '#0d4d8b').text('Sending report, please wait...');
+
+            $.post('emailInvoiceReport.php', {
+                invoiceType: pendingReport.invoiceType,
+                fromDate: pendingReport.fromDate,
+                toDate: pendingReport.toDate,
+                clientName: pendingReport.clientName,
+                format: pendingFormat,
+                email: email
+            }, null, 'json').done(function (res) {
+                if (res && res.success) {
+                    $msg.css('color', '#1a7f37').text(res.message || 'Report sent successfully.');
+                    setTimeout(closeFormatChooser, 2000);
+                } else {
+                    $msg.css('color', '#cc0000').text((res && res.message) ? res.message : 'Could not send the email.');
+                    $btn.prop('disabled', false).html('<i class="fa fa-paper-plane"></i> Get Report');
+                }
+            }).fail(function () {
+                $msg.css('color', '#cc0000').text('Server error. Please try again.');
+                $btn.prop('disabled', false).html('<i class="fa fa-paper-plane"></i> Get Report');
+            });
+        });
+
+        $('.report-step-back').click(function () {
+            resetChooser();
+        });
+
+        $('.report-format-cancel').click(function () {
+            closeFormatChooser();
+        });
+
+        // Click on the dark backdrop (outside the dialog box) closes the chooser.
+        $('#report-format-chooser').click(function (e) {
+            if (e.target === this) {
+                closeFormatChooser();
+            }
+        });
+
         $('.downloadProformaReport').click(function () {
-            var fromDate = $('#proformaFromDate').val();
-            var toDate = $('#proformaToDate').val();
-            var clientName = $('#proformaClientSearch').val();
-            var url = 'exportInvoiceReport.php';
-            var form = $('<form action="' + url + '" method="post" target="_blank">' +
-                    '<input type="hidden" name="invoiceType" value="proforma" />' +
-                    '<input type="hidden" name="fromDate" value="' + fromDate + '" />' +
-                    '<input type="hidden" name="toDate" value="' + toDate + '" />' +
-                    '<input type="hidden" name="clientName" value="' + clientName + '" />' +
-                    '</form>');
-            $('body').append(form);
-            form.submit();
-            form.remove();
+            openFormatChooser({
+                invoiceType: 'proforma',
+                fromDate: $('#proformaFromDate').val(),
+                toDate: $('#proformaToDate').val(),
+                clientName: $('#proformaClientSearch').val()
+            });
         });
 
         $('.downloadFinalReport').click(function () {
-            var fromDate = $('#filterFromDate').val();
-            var toDate = $('#filterToDate').val();
-            var clientName = $('#finalClientSearch').val();
-            var url = 'exportInvoiceReport.php';
-            var form = $('<form action="' + url + '" method="post" target="_blank">' +
-                    '<input type="hidden" name="invoiceType" value="final" />' +
-                    '<input type="hidden" name="fromDate" value="' + fromDate + '" />' +
-                    '<input type="hidden" name="toDate" value="' + toDate + '" />' +
-                    '<input type="hidden" name="clientName" value="' + clientName + '" />' +
-                    '</form>');
-            $('body').append(form);
-            form.submit();
-            form.remove();
+            openFormatChooser({
+                invoiceType: 'final',
+                fromDate: $('#filterFromDate').val(),
+                toDate: $('#filterToDate').val(),
+                clientName: $('#finalClientSearch').val()
+            });
         });
 
         $('#filterFromDate').datepicker({

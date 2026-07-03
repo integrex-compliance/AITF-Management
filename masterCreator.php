@@ -1874,4 +1874,139 @@
             width: 100%;
             height: 100%;
         }
+
+        /* =====================================================================
+           PREMIUM DARK MODE  —  masterCreator.php
+           Palette mirrors homePage.php: deep charcoal surfaces, soft slate text,
+           jewel-toned accents. Toggle handled globally (head.php + js/app.js).
+           ===================================================================== */
+        html.theme-dark {
+            --hpd-bg:        #0a0e14;
+            --hpd-surface:   #111722;
+            --hpd-surface-2: #161d2b;
+            --hpd-border:    #232c3d;
+            --hpd-border-2:  #2e3a4f;
+            --hpd-text:      #dbe3f0;
+            --hpd-text-dim:  #93a1b8;
+            --hpd-text-faint:#6b7890;
+            --hpd-accent:    #4a9eff;
+        }
+
+        html.theme-dark #page-content-wrapper {
+            background: var(--hpd-bg);
+            color: var(--hpd-text);
+        }
+        html.theme-dark .page-content.inset { background: var(--hpd-bg); }
+
+        /* Well containers (list panels) */
+        html.theme-dark .well {
+            background: var(--hpd-surface);
+            border-color: var(--hpd-border);
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
+        }
+
+        /* List groups */
+        html.theme-dark .list-group-item {
+            background: var(--hpd-surface);
+            border-color: var(--hpd-border);
+            color: var(--hpd-text);
+        }
+        html.theme-dark .list-group-item:hover { background: var(--hpd-surface-2); }
+        html.theme-dark .list-group-item a { color: var(--hpd-text-dim); }
+        html.theme-dark .list-group-item a:hover { color: #7fb6ef; }
+        html.theme-dark .list-group-item b { color: #eaf1fb; }
+
+        /* Section heading buttons stay orange — reads well on dark; just deepen border */
+        html.theme-dark .qms_complete_btn { border-color: var(--hpd-border-2); }
+
+        /* Panels */
+        html.theme-dark .panel {
+            background: var(--hpd-surface);
+            border-color: var(--hpd-border);
+        }
+        html.theme-dark .panel-heading {
+            background: linear-gradient(180deg, #161d2b 0%, #121926 100%);
+            border-color: var(--hpd-border-2);
+            color: var(--hpd-text);
+        }
+        html.theme-dark .panel-title { color: #eaf1fb; }
+        html.theme-dark .panel-body { color: var(--hpd-text); }
+
+        /* Tables */
+        html.theme-dark .table { color: var(--hpd-text); }
+        html.theme-dark .table thead th {
+            background: linear-gradient(180deg, #161d2b 0%, #121926 100%);
+            border-bottom: 1px solid var(--hpd-border-2) !important;
+            color: #aeb9cc;
+        }
+        html.theme-dark .table tbody td,
+        html.theme-dark .table tbody th {
+            border-top: 1px solid var(--hpd-border) !important;
+            color: var(--hpd-text);
+        }
+        html.theme-dark .table-striped tbody tr:nth-of-type(odd) { background-color: rgba(255, 255, 255, 0.018); }
+        html.theme-dark .table-hover tbody tr:hover td { background-color: var(--hpd-surface-2); }
+
+        /* Form controls */
+        html.theme-dark .form-control {
+            background: var(--hpd-surface-2);
+            border-color: var(--hpd-border-2);
+            color: var(--hpd-text);
+        }
+        html.theme-dark .form-control:focus {
+            border-color: var(--hpd-accent);
+            box-shadow: 0 0 0 4px rgba(74, 158, 255, 0.18);
+            background: var(--hpd-surface-2);
+        }
+        html.theme-dark .form-control::placeholder { color: var(--hpd-text-faint); }
+        html.theme-dark .form-control[disabled],
+        html.theme-dark .form-control[readonly] { background: #0e131c; color: var(--hpd-text-dim); }
+        html.theme-dark select.form-control option { background: var(--hpd-surface-2); color: var(--hpd-text); }
+        html.theme-dark .form-group label,
+        html.theme-dark .control-label,
+        html.theme-dark .float-label-control label { color: var(--hpd-text-dim); }
+        html.theme-dark .input-group-addon {
+            background: #1c2534;
+            border-color: var(--hpd-border-2);
+            color: var(--hpd-text-dim);
+        }
+
+        /* Modals (shared model includes) */
+        html.theme-dark .modal-content {
+            background: var(--hpd-surface);
+            border: 1px solid var(--hpd-border-2);
+            color: var(--hpd-text);
+        }
+        html.theme-dark .modal-header,
+        html.theme-dark .modal-footer { border-color: var(--hpd-border); }
+        html.theme-dark .modal-title { color: var(--hpd-text); }
+        html.theme-dark .modal-body { color: var(--hpd-text); }
+        html.theme-dark .close { color: var(--hpd-text); text-shadow: none; opacity: 0.7; }
+        html.theme-dark .parentrow { border-color: var(--hpd-border); }
+
+        /* Buttons */
+        html.theme-dark .btn-info {
+            background: linear-gradient(135deg, #1d63b0 0%, #2f81d6 100%);
+            border-color: #2f81d6;
+            color: #eaf1fb;
+        }
+        html.theme-dark .btn-info:hover,
+        html.theme-dark .btn-info:focus { background: linear-gradient(135deg, #2470c4 0%, #3a8ee0 100%); color: #fff; }
+        html.theme-dark .btn-default {
+            background: var(--hpd-surface-2);
+            border-color: var(--hpd-border-2);
+            color: var(--hpd-text);
+        }
+        html.theme-dark .btn-default:hover { background: #1f2a3d; color: #fff; }
+
+        /* Loading overlays */
+        html.theme-dark #loading-div-background,
+        html.theme-dark #loading-div-background-resend,
+        html.theme-dark #loading-div-background-meetedit { background: rgba(4, 8, 14, 0.6); }
+        html.theme-dark #loading-div,
+        html.theme-dark #loading-div-user-info {
+            background-color: var(--hpd-surface);
+            border-color: var(--hpd-accent);
+            color: var(--hpd-text);
+        }
     </style>

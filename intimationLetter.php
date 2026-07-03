@@ -77,6 +77,103 @@
             opacity: 1.0;
             behavior: url("/css/pie/PIE.htc"); /* HANDLES IE */
         }
+
+        /* =====================================================================
+           PREMIUM DARK MODE  —  intimationLetter.php
+           Palette mirrors homePage.php: deep charcoal surfaces, soft slate text,
+           jewel-toned accents. Toggle handled globally (head.php + js/app.js).
+           ===================================================================== */
+        html.theme-dark {
+            --hpd-bg:        #0a0e14;
+            --hpd-surface:   #111722;
+            --hpd-surface-2: #161d2b;
+            --hpd-border:    #232c3d;
+            --hpd-border-2:  #2e3a4f;
+            --hpd-text:      #dbe3f0;
+            --hpd-text-dim:  #93a1b8;
+            --hpd-text-faint:#6b7890;
+            --hpd-accent:    #4a9eff;
+        }
+
+        html.theme-dark #page-content-wrapper {
+            background: var(--hpd-bg);
+            color: var(--hpd-text);
+        }
+        html.theme-dark .page-content.inset { background: var(--hpd-bg); }
+
+        /* Section heading labels (inline colored #053c6d) */
+        html.theme-dark .panel h4[style*="#053c6d"] { color: #7fb6ef !important; }
+
+        /* Panels / cards */
+        html.theme-dark .panel {
+            background: var(--hpd-surface);
+            border-color: var(--hpd-border);
+            box-shadow: 0 6px 26px rgba(0, 0, 0, 0.45);
+        }
+        html.theme-dark .panel-primary { border-color: var(--hpd-border-2); }
+        html.theme-dark .panel-primary > .panel-heading,
+        html.theme-dark .panel-heading[style*="#053c6d"] {
+            background: linear-gradient(180deg, #10395f 0%, #0c2c49 100%) !important;
+            border-color: var(--hpd-border-2);
+        }
+        html.theme-dark .panel-heading h4 { color: #eaf1fb !important; }
+
+        /* Event list rows */
+        html.theme-dark .panel-rightbody,
+        html.theme-dark .homePagePanel { background: transparent; }
+        html.theme-dark .event-row {
+            border-bottom: 1px solid var(--hpd-border);
+        }
+        html.theme-dark .event-list li { border-color: var(--hpd-border); }
+        html.theme-dark .info.showActionItem { color: var(--hpd-text); }
+
+        /* Customer name + meta text */
+        html.theme-dark .desc.text-primary,
+        html.theme-dark .customerName { color: #7fb6ef !important; }
+        html.theme-dark .other-info .text-muted,
+        html.theme-dark small.text-muted { color: var(--hpd-text-dim) !important; }
+        html.theme-dark .fa-calendar { color: var(--hpd-text-faint); }
+
+        /* Action buttons */
+        html.theme-dark .btn-info {
+            background: linear-gradient(135deg, #1d63b0 0%, #2f81d6 100%);
+            border-color: #2f81d6;
+            color: #eaf1fb;
+        }
+        html.theme-dark .btn-info:hover,
+        html.theme-dark .btn-info:focus {
+            background: linear-gradient(135deg, #2470c4 0%, #3a8ee0 100%);
+            border-color: #3a8ee0;
+            color: #ffffff;
+        }
+        html.theme-dark .deleteLetter.btn-info {
+            background: linear-gradient(135deg, #a12a2a 0%, #c23b3b 100%);
+            border-color: #c23b3b;
+        }
+
+        /* Modal */
+        html.theme-dark #sendConfirmModal .modal-content {
+            background: var(--hpd-surface);
+            border: 1px solid var(--hpd-border-2);
+            color: var(--hpd-text);
+        }
+        html.theme-dark #sendConfirmModal .modal-body p { color: var(--hpd-text) !important; }
+        html.theme-dark #sendConfirmModal .modal-footer,
+        html.theme-dark #sendConfirmModal .modal-header { border-color: var(--hpd-border); }
+        html.theme-dark #sendConfirmModal .btn-default {
+            background: var(--hpd-surface-2);
+            border-color: var(--hpd-border-2);
+            color: var(--hpd-text);
+        }
+
+        /* Loading overlay */
+        html.theme-dark #loading-div-background { background: rgba(4, 8, 14, 0.6); }
+        html.theme-dark #loading-div {
+            background-color: var(--hpd-surface);
+            border-color: var(--hpd-accent);
+            color: var(--hpd-text);
+        }
+        html.theme-dark #loading-div .meeting-loading-info { color: var(--hpd-text-dim); }
     </style>
 
     <div id="page-content-wrapper">

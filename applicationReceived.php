@@ -371,6 +371,107 @@ include 'header.php';
                             max-width: 900px;
                         }
                     }
+
+                    /* =============================================================
+                       PREMIUM DARK MODE  —  applicationReceived.php
+                       Deep charcoal surfaces, soft slate text, jewel accents.
+                       Matches homePage / iaf_dashboard dark treatment.
+                       ============================================================= */
+                    html.theme-dark {
+                        --ar-bg:        #0a0e14;
+                        --ar-surface:   #111722;
+                        --ar-surface-2: #161d2b;
+                        --ar-border:    #232c3d;
+                        --ar-text:      #dbe3f0;
+                        --ar-text-dim:  #93a1b8;
+                        --ar-text-faint:#6b7890;
+                    }
+
+                    html.theme-dark #page-content-wrapper { background: var(--ar-bg); color: var(--ar-text); }
+
+                    /* Cards — keep colored top accent, dark body */
+                    html.theme-dark .app-rec-card {
+                        background: var(--ar-surface);
+                        border-color: var(--ar-border);
+                        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+                    }
+                    html.theme-dark .app-rec-card.audit { border-top-color: #3b82f6; }
+                    html.theme-dark .app-rec-card.info  { border-top-color: #22c55e; }
+                    html.theme-dark .app-rec-card.job   { border-top-color: #8b5cf6; }
+
+                    /* Header text */
+                    html.theme-dark .app-rec-title-text-main { color: #eef2f8; }
+                    html.theme-dark .app-rec-title-text-sub  { color: var(--ar-text-faint); }
+
+                    /* Count + unread chips */
+                    html.theme-dark .app-rec-count {
+                        background: rgba(37, 99, 235, 0.16);
+                        color: #93c5fd;
+                    }
+                    html.theme-dark .app-rec-count.info { background: rgba(22, 163, 74, 0.16); color: #6ee7b7; }
+                    html.theme-dark .app-rec-count.job  { background: rgba(124, 58, 237, 0.18); color: #c4b5fd; }
+                    html.theme-dark .app-rec-unread,
+                    html.theme-dark .app-rec-unread.audit,
+                    html.theme-dark .app-rec-unread.info,
+                    html.theme-dark .app-rec-unread.job {
+                        background: rgba(217, 119, 6, 0.18);
+                        color: #fcd34d;
+                        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+                    }
+
+                    /* Table */
+                    html.theme-dark .app-rec-table thead th {
+                        background: linear-gradient(to right, #161d2b, #142033) !important;
+                        border-color: var(--ar-border) !important;
+                        color: #aeb9cc;
+                    }
+                    html.theme-dark .app-rec-table tbody td { border-top-color: var(--ar-border); color: var(--ar-text); }
+                    html.theme-dark .app-rec-table small { color: var(--ar-text-dim); }
+
+                    /* Rows: read / unread / hover */
+                    html.theme-dark .app-rec-row.read td { background: var(--ar-surface); }
+                    html.theme-dark .app-rec-row.unread td {
+                        background: rgba(22, 163, 74, 0.1);
+                        box-shadow: inset 3px 0 0 #22c55e;
+                    }
+                    html.theme-dark .app-rec-row:hover td {
+                        background: var(--ar-surface-2);
+                        box-shadow: inset 3px 0 0 #3b82f6;
+                    }
+                    html.theme-dark .app-rec-row.info_updation.unread td {
+                        background: rgba(217, 119, 6, 0.12);
+                        box-shadow: inset 3px 0 0 #f59e0b;
+                    }
+                    html.theme-dark .app-rec-row.info_updation:hover td {
+                        background: rgba(34, 197, 94, 0.08);
+                        box-shadow: inset 3px 0 0 #22c55e;
+                    }
+
+                    /* Icons + links */
+                    html.theme-dark .app-rec-date-icon,
+                    html.theme-dark .app-rec-org-icon { color: var(--ar-text-faint); }
+                    html.theme-dark .app-rec-org a { color: #7aa9f5; }
+                    html.theme-dark .app-rec-job-contact { color: var(--ar-text-dim); }
+
+                    /* Pills + badges — translucent jewel tones */
+                    html.theme-dark .app-rec-unread-pill {
+                        background: rgba(22, 163, 74, 0.18);
+                        color: #6ee7b7;
+                    }
+                    html.theme-dark .app-rec-unread-pill.info_updation {
+                        background: rgba(217, 119, 6, 0.18);
+                        color: #fcd34d;
+                    }
+                    html.theme-dark .app-rec-type-badge.audit_application { background: rgba(37, 99, 235, 0.18); color: #93c5fd; }
+                    html.theme-dark .app-rec-type-badge.info_updation     { background: rgba(22, 163, 74, 0.18); color: #6ee7b7; }
+                    html.theme-dark .app-rec-type-badge.job_application   { background: rgba(124, 58, 237, 0.2);  color: #c4b5fd; }
+
+                    /* Success alert */
+                    html.theme-dark .app-rec-wrapper .alert-success {
+                        background: rgba(22, 163, 74, 0.14);
+                        border-color: rgba(22, 163, 74, 0.3);
+                        color: #6ee7b7;
+                    }
                 </style>
                 <div class="row clearfix" >
                     <div class="col-sm-12 main_content">
