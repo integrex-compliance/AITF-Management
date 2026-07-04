@@ -1339,55 +1339,36 @@
         // Format selected in step 1 ('pdf' | 'excel').
         var pendingFormat = null;
 
-        // Download via XHR->Blob (same path for PDF and Excel). This never navigates
-        // the page, so there is no browser tab spinner; the file is fetched in the
-        // background and pushed to the browser's download bar via a temporary <a download>.
-        // Result: PDF behaves exactly like Excel.
+        // Submit the download as a normal browser form POST so Cloudflare treats it
+        // like a same-origin page action instead of an AJAX/XHR file request.
         function submitReportDownload() {
             if (!pendingReport || !pendingFormat) {
                 return;
             }
             var url = (pendingFormat === 'excel') ? 'exportInvoiceReportExcel.php' : 'exportInvoiceReport.php';
-            var fallbackName = (pendingFormat === 'excel') ? 'Invoice_Report.xlsx' : 'Invoice_Report.pdf';
-
-            var $btn = $('.report-action-download');
-            if (!$btn.data('orig')) { $btn.data('orig', $btn.html()); }
-            $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Preparing...');
-
-            var xhr = new XMLHttpRequest();
-            xhr.open('POST', url, true);
-            xhr.responseType = 'blob';
-            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-
-            xhr.onload = function () {
-                $btn.prop('disabled', false).html($btn.data('orig'));
-                if (xhr.status === 200) {
-                    var cd = xhr.getResponseHeader('Content-Disposition') || '';
-                    var m = /filename="?([^"]+)"?/.exec(cd);
-                    var fname = m ? m[1] : fallbackName;
-                    var objUrl = URL.createObjectURL(xhr.response);
-                    var link = document.createElement('a');
-                    link.href = objUrl;
-                    link.download = fname;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    setTimeout(function () { URL.revokeObjectURL(objUrl); }, 4000);
-                    closeFormatChooser();
-                } else {
-                    alert('Download failed. Please try again.');
-                }
+            var fields = {
+                invoiceType: pendingReport.invoiceType,
+                fromDate: pendingReport.fromDate,
+                toDate: pendingReport.toDate,
+                clientName: pendingReport.clientName
             };
-            xhr.onerror = function () {
-                $btn.prop('disabled', false).html($btn.data('orig'));
-                alert('Download failed. Please try again.');
-            };
+            var $form = $('<form>', {
+                method: 'post',
+                action: url
+            }).css('display', 'none');
 
-            var params = 'invoiceType=' + encodeURIComponent(pendingReport.invoiceType) +
-                         '&fromDate=' + encodeURIComponent(pendingReport.fromDate) +
-                         '&toDate=' + encodeURIComponent(pendingReport.toDate) +
-                         '&clientName=' + encodeURIComponent(pendingReport.clientName);
-            xhr.send(params);
+            $.each(fields, function (name, value) {
+                $('<input>', {
+                    type: 'hidden',
+                    name: name,
+                    value: value || ''
+                }).appendTo($form);
+            });
+
+            $('body').append($form);
+            $form[0].submit();
+            setTimeout(function () { $form.remove(); }, 1000);
+            closeFormatChooser();
         }
 
         function showReportStep(step) {
