@@ -112,7 +112,7 @@
     }
 
     // Derive the display status from the client's running service, falling back to audit_status:
-    //  - No service created yet            -> 'Awaiting Review'
+    //  - No service created yet            -> 'New Enquiry'
     //  - Running (latest) service is CR     -> 'Contract-Review' (created, completed or not)
     //  - otherwise                          -> normalized audit_status
     if (!function_exists('hpDerivedStatus')) {
@@ -125,9 +125,9 @@
             }
             $cid = isset($customer['id']) ? $customer['id'] : null;
             $svc = ($cid !== null && isset($serviceMap[$cid])) ? $serviceMap[$cid] : null;
-            // No service created yet (and not cancelled) -> just added, awaiting review
+            // No service created yet (and not cancelled) -> just added, new enquiry
             if (empty($svc)) {
-                return 'Awaiting Review';
+                return 'New Enquiry';
             }
             // Running (latest) service is a Contract Review
             if (isset($svc['service_type']) && strtoupper(trim($svc['service_type'])) === 'CR') {
@@ -142,7 +142,7 @@
         'Active'               => 'green',
         'In-process'           => 'yellow',
         'Contract-Review'      => 'blue',
-        'Awaiting Review'      => 'purple',
+        'New Enquiry'          => 'purple',
         'Contract In-process'  => 'amber',
         'Suspended'            => 'orange',
         'Expired'              => 'red',
@@ -150,7 +150,7 @@
         'Application canceled' => 'slate',
         'No Status'            => 'slate',
     );
-    $statusPriority = array('Awaiting Review', 'Contract-Review', 'In-process', 'Active', 'Withdrawn', 'Suspended', 'Expired', 'Application canceled');
+    $statusPriority = array('New Enquiry', 'Contract-Review', 'In-process', 'Active', 'Withdrawn', 'Suspended', 'Expired', 'Application canceled');
 
     // Count clients per derived status for the tab badges
     $statusCounts = array();
