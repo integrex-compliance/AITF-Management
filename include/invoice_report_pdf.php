@@ -77,6 +77,7 @@ function buildInvoiceReportPdfBytes($data, $invoiceType, $fromDate, $toDate, $cl
     $invoices = $data['invoices'];
     $svcMap   = $data['svcMap'];
 
+    $GLOBALS['invoiceExportStage'] = 'initializing TCPDF';
     invoiceReportLog('pdf.tcpdf.init.start', ['invoice_count' => count($invoices)]);
     $pdf = new REPORTPDF('L', PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
     $pdf->reportType       = $invoiceType;
@@ -96,6 +97,7 @@ function buildInvoiceReportPdfBytes($data, $invoiceType, $fromDate, $toDate, $cl
     $pdf->SetFont('helvetica', '', 9);
     invoiceReportLog('pdf.tcpdf.init.done');
 
+    $GLOBALS['invoiceExportStage'] = 'generating PDF HTML';
     invoiceReportLog('pdf.html.start', ['invoice_count' => count($invoices)]);
     $html = '<table border="1" cellpadding="6">
     <thead>
@@ -249,10 +251,12 @@ function buildInvoiceReportPdfBytes($data, $invoiceType, $fromDate, $toDate, $cl
     </table>';
     invoiceReportLog('pdf.html.done', ['html_bytes' => strlen($html)]);
 
+    $GLOBALS['invoiceExportStage'] = 'rendering PDF HTML with TCPDF';
     invoiceReportLog('pdf.write_html.start', ['html_bytes' => strlen($html)]);
     $pdf->writeHTML($html, true, false, true, false, '');
     invoiceReportLog('pdf.write_html.done', ['page_count' => $pdf->getNumPages()]);
 
+    $GLOBALS['invoiceExportStage'] = 'creating PDF output string';
     invoiceReportLog('pdf.output_string.start', ['page_count' => $pdf->getNumPages()]);
     $bytes = $pdf->Output('Invoice_Report.pdf', 'S');
     invoiceReportLog('pdf.output_string.done', ['bytes' => strlen($bytes)]);

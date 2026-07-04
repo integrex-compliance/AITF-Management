@@ -415,6 +415,7 @@ class SimpleXlsx {
 
     /** Build the .xlsx package and return it as a raw byte string. */
     public function toString($sheetName = 'Report') {
+        $GLOBALS['invoiceExportStage'] = 'creating Excel ZIP package';
         invoiceReportLog('excel.zip.start', ['sheet_name' => $sheetName]);
         if (!class_exists('ZipArchive')) {
             invoiceReportLog('excel.ziparchive_missing', [
@@ -513,6 +514,7 @@ function buildInvoiceReportXlsxBytes($data, $invoiceType, $fromDate, $toDate, $c
     $invoices = $data['invoices'];
     $svcMap   = $data['svcMap'];
 
+    $GLOBALS['invoiceExportStage'] = 'assembling Excel worksheet rows';
     invoiceReportLog('excel.rows.start', ['invoice_count' => count($invoices)]);
     $xlsx = new SimpleXlsx();
 
