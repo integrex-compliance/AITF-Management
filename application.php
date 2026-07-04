@@ -1,5 +1,6 @@
 <?php
 require_once './dbConnect.php';
+require_once __DIR__ . '/include/env_helper.php';
 $indiaTz = new DateTimeZone('Asia/Kolkata');
 date_default_timezone_set('Asia/Kolkata');
 $recaptchaHelperPath = __DIR__ . '/include/recaptcha_helper.php';
@@ -8,8 +9,8 @@ if (file_exists($recaptchaHelperPath)) {
 }
 
 $recaptchaConfig = function_exists('aitf_get_recaptcha_config') ? aitf_get_recaptcha_config() : [
-    'site_key' => '6LcIHKksAAAAAAtYeQDQaBpCAyHjg4PIa7XKFMer',
-    'secret_key' => '6LcIHKksAAAAAFU1KUQ2X601xzZ-BJNbQAwVjYdA',
+    'site_key' => '',
+    'secret_key' => '',
     'version' => 'v3',
     'action' => 'submit',
     'minimum_score' => 0.5,
@@ -24,20 +25,11 @@ $success_message = '';
 $error_message = '';
 $applications = [];
 
-$mailConfigPath = __DIR__ . '/config/mail_config.php';
-$mailConfig = file_exists($mailConfigPath) ? require $mailConfigPath : [];
-$mailConfig = array_merge(
-    [
-        'host' => 'smtpout.secureserver.net',
-        'port' => 587,
-        'secure' => 'tls',
-        'username' => 'certification@aitf.co.in',
-        'password' => 'AITF999@@HasTag#'
-    ],
-    is_array($mailConfig) ? $mailConfig : []
-);
-$mailConfig['from_email'] = 'certification@aitf.co.in';
-$mailConfig['from_name'] = 'AITF Website';
+$mailConfig = aitf_get_mail_config([
+    'from_name' => aitf_env('MAIL_FROM_NAME', 'AITF Website')
+]);
+$mailFromEmailHtml = htmlspecialchars($mailConfig['from_email'], ENT_QUOTES, 'UTF-8');
+$mailCcEmailHtml = htmlspecialchars($mailConfig['cc_email'], ENT_QUOTES, 'UTF-8');
 
 if (isset($db)) {
     try {
@@ -588,9 +580,10 @@ if (isset($db)) {
                         $adminMail->setFrom($mailConfig['from_email'] ?: 'no-reply@localhost', $mailConfig['from_name']);
                         $adminMail->Sender = $mailConfig['from_email'] ?: 'no-reply@localhost';
                         $adminMail->addCustomHeader('Return-Path', $mailConfig['from_email'] ?: 'no-reply@localhost');
-                        $adminMail->addAddress('certification@aitf.co.in', 'AITF Certification');
-                        $adminMail->addCC('aitfmcl@gmail.com', 'AITF Team');
-                        $adminMail->addCC('aitfmcl@gmail.com', 'AITF Notifications');
+                        $adminMail->addAddress($mailConfig['admin_email'], 'AITF Certification');
+                        if (!empty($mailConfig['cc_email'])) {
+                            $adminMail->addCC($mailConfig['cc_email'], 'AITF Team');
+                        }
                         $adminMail->Subject = 'New Audit Application Submitted - ' . $org_name;
 
                         $contactFull = $contact_person . ($contact_designation ? ' (' . $contact_designation . ')' : '');
@@ -648,7 +641,7 @@ if (isset($db)) {
                                 . "<p style=\"font-family:Arial,sans-serif; font-size:14px; margin:8px 0;\"><strong>Application Summary:</strong><br>Organization Name: " . htmlspecialchars($org_name, ENT_QUOTES, 'UTF-8') . "<br>Contact Number: " . htmlspecialchars($phone, ENT_QUOTES, 'UTF-8') . "<br>Email Address: " . htmlspecialchars($email, ENT_QUOTES, 'UTF-8') . "<br>Applied Assessment: " . htmlspecialchars($standard_applied, ENT_QUOTES, 'UTF-8') . "</p>"
                                 . "<p style=\"font-family:Arial,sans-serif; font-size:14px; margin:8px 0;\">A copy of your submitted Audit Application Form is attached for your reference.</p>"
                                 . "<p style=\"font-family:Arial,sans-serif; font-size:14px; margin:8px 0;\">If you have any questions in the meantime, feel free to reply to this email. Our team will be happy to assist you.</p>"
-                                . "<p style=\"font-family:Arial,sans-serif; font-size:14px; margin:8px 0;\">Warm regards,<br><strong>AITF Team</strong><br>Assessment Department<br>AITF<br><br>📧 <a href=\"mailto:certification@aitf.co.in\">certification@aitf.co.in</a><br>📧 <a href=\"mailto:aitfmcl@gmail.com\">aitfmcl@gmail.com</a><br>🌐 <a href=\"http://www.aitf.in\" target=\"_blank\" rel=\"noopener\">www.aitf.in</a></p>";
+                                . "<p style=\"font-family:Arial,sans-serif; font-size:14px; margin:8px 0;\">Warm regards,<br><strong>AITF Team</strong><br>Assessment Department<br>AITF<br><br>Email: <a href=\"mailto:" . $mailFromEmailHtml . "\">" . $mailFromEmailHtml . "</a><br>" . ($mailCcEmailHtml !== '' ? "Email: <a href=\"mailto:" . $mailCcEmailHtml . "\">" . $mailCcEmailHtml . "</a><br>" : "") . "Website: <a href=\"http://www.aitf.in\" target=\"_blank\" rel=\"noopener\">www.aitf.in</a></p>";
                             $clientMail->isHTML(true);
                             $clientMail->Body = $clientBody;
                             $clientMail->AltBody = "Dear $contact_person,\n\nThank you for submitting your audit application to AITF.\nWe have received your application and will review it.\nA copy of your submitted application form (system generated PDF) is attached for your reference.\n\nRegards,\nAITF Team";
@@ -2212,7 +2205,7 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                                             <input type="hidden" name="g-recaptcha-response" id="application-recaptcha-token">
                                             <div class="captcha-help">Spam protection is active. Your form will be verified automatically before submit.</div>
                                         <?php else: ?>
-                                            <div class="captcha-help">Captcha widget will appear after Google reCAPTCHA keys are added in `config/recaptcha_config.php`.</div>
+                                            <div class="captcha-help">Captcha widget will appear after Google reCAPTCHA keys are added in the `.env` file.</div>
                                         <?php endif; ?>
                                     </div>
                                     <div id="application-captcha-status" class="captcha-status">Please complete the captcha to enable the submit button.</div>
@@ -2339,7 +2332,7 @@ If you are completing the application offline, please download our Audit Applica
                                         <i class="fa fa-envelope" style="font-size: 1.5rem; color: white;"></i>
                                     </div>
                                     <h5 style="color: #1a1a2e; font-weight: 600; margin-bottom: 10px;">Email Support</h5>
-                                    <p style="color: #4a5568; font-size: 0.95rem; margin-bottom: 0;">Send your completed forms to: <a href="mailto:aitfmcl@gmail.com" style="color: #2563eb; text-decoration: none; font-weight: 500;">aitfmcla@gmail.com</a></p>
+                                    <p style="color: #4a5568; font-size: 0.95rem; margin-bottom: 0;">Send your completed forms to: <a href="mailto:<?php echo $mailFromEmailHtml; ?>" style="color: #2563eb; text-decoration: none; font-weight: 500;"><?php echo $mailFromEmailHtml; ?></a></p>
                                 </div></a>
                                 
                               

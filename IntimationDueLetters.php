@@ -28,22 +28,14 @@
 require_once('tcpdf_include.php');
 // database details get and display
 include_once './dbConnect.php';
+require_once __DIR__ . '/include/env_helper.php';
 date_default_timezone_set('Asia/Kolkata');
 
-$mailConfigPath = __DIR__ . '/config/mail_config.php';
-$mailConfig = file_exists($mailConfigPath) ? require $mailConfigPath : [];
-$mailConfig = array_merge(
-    [
-        'host' => 'smtpout.secureserver.net',
-        'port' => 587,
-        'secure' => 'tls',
-        'username' => 'certification@aitf.co.in',
-        'password' => 'AITF999@@HasTag#'
-    ],
-    is_array($mailConfig) ? $mailConfig : []
-);
-$mailConfig['from_email'] = 'certification@aitf.co.in';
-$mailConfig['from_name'] = 'AITF Intimation';
+$mailConfig = aitf_get_mail_config([
+    'from_name' => aitf_env('MAIL_FROM_NAME', 'AITF Intimation')
+]);
+$mailFromEmailHtml = htmlspecialchars($mailConfig['from_email'], ENT_QUOTES, 'UTF-8');
+$mailCcEmailHtml = htmlspecialchars($mailConfig['cc_email'], ENT_QUOTES, 'UTF-8');
 
 // buffer output to avoid TCPDF header issues if any notices/whitespace are emitted
 ob_start();
@@ -143,9 +135,9 @@ if ($lettertype == "Suspension Reminder") {
         . '<p>If you have already initiated communication regarding this matter, please consider this email as a reminder.</p>'
         . '<p>For any clarification or coordination, feel free to reply to this email.</p>'
         . '<p>Warm regards,<br><strong>AITF Team</strong><br>Assessment Department<br>AITF</p>'
-        . '<p>📧 <a href="mailto:certification@aitf.co.in">certification@aitf.co.in</a><br>'
-        . '📧 <a href="mailto:aitfmcl@gmail.com">aitfmcl@gmail.com</a><br>'
-        . '🌐 <a href="http://www.aitf.in">www.aitf.in</a></p>';
+        . '<p>Email: <a href="mailto:' . $mailFromEmailHtml . '">' . $mailFromEmailHtml . '</a><br>'
+        . ($mailCcEmailHtml !== '' ? 'Email: <a href="mailto:' . $mailCcEmailHtml . '">' . $mailCcEmailHtml . '</a><br>' : '')
+        . 'Website: <a href="http://www.aitf.in">www.aitf.in</a></p>';
 	
 	//build require parameters
 	$reg_date = date("d.m.Y", strtotime($customer['certification_stage_date']));
@@ -475,7 +467,7 @@ else if($PageAction == "SendMail"){
 		$officeMail->setFrom($mailConfig['from_email'], $mailConfig['from_name']);
 		$officeMail->addReplyTo($mailConfig['from_email'], $mailConfig['from_name']);
 		$officeMail->addCustomHeader('Return-Path', $mailConfig['from_email']);
-		$officeMail->addAddress('certification@aitf.co.in');
+		$officeMail->addAddress($mailConfig['admin_email']);
 		$officeMail->isHTML(true);
 		$officeMail->Subject = 'Letter Sent Confirmation';
 		$officeRecipients = implode(', ', array_filter($contactEmail));

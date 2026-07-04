@@ -1,11 +1,12 @@
 <?php
+require_once __DIR__ . '/include/env_helper.php';
 $recaptchaHelperPath = __DIR__ . '/include/recaptcha_helper.php';
 if (file_exists($recaptchaHelperPath)) {
     require_once $recaptchaHelperPath;
 }
 $recaptchaConfig = function_exists('aitf_get_recaptcha_config') ? aitf_get_recaptcha_config() : [
-    'site_key' => '6LcIHKksAAAAAAtYeQDQaBpCAyHjg4PIa7XKFMer',
-    'secret_key' => '6LcIHKksAAAAAFU1KUQ2X601xzZ-BJNbQAwVjYdA',
+    'site_key' => '',
+    'secret_key' => '',
     'version' => 'v3',
     'action' => 'submit',
     'minimum_score' => 0.5,
@@ -31,20 +32,10 @@ $serviceOptions = [
     'ISO 45001',
     'ISO 14001'
 ];
-$mailConfigPath = __DIR__ . '/config/mail_config.php';
-$mailConfig = file_exists($mailConfigPath) ? require $mailConfigPath : [];
-$mailConfig = array_merge(
-    [
-        'host' => 'smtpout.secureserver.net',
-        'port' => 587,
-        'secure' => 'tls',
-        'username' => 'certification@aitf.co.in',
-        'password' => 'AITF999@@HasTag#'
-    ],
-    is_array($mailConfig) ? $mailConfig : []
-);
-$mailConfig['from_email'] = 'certification@aitf.co.in';
-$mailConfig['from_name'] = 'AITF Website';
+$mailConfig = aitf_get_mail_config([
+    'from_name' => aitf_env('MAIL_FROM_NAME', 'AITF Website')
+]);
+$mailFromEmailHtml = htmlspecialchars($mailConfig['from_email'], ENT_QUOTES, 'UTF-8');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $formData['name'] = trim($_POST['name'] ?? '');
@@ -124,7 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $mail->Sender = $fromEmail;
         $mail->addCustomHeader('Return-Path', $fromEmail);
         $mail->addReplyTo($formData['email'], $formData['name']);
-        $mail->addAddress('certification@aitf.co.in', 'AITF Certification');
+        $mail->addAddress($mailConfig['admin_email'], 'AITF Certification');
         $mail->Subject = 'New Contact Enquiry from Website';
         $servicesText = implode(', ', $formData['services']);
         $mobileClean = preg_replace('/\D+/', '', $formData['mobile']);
@@ -179,12 +170,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 AITF Team<br>
                 Client Support Desk<br>
                 AITF – Assessment &amp; Institute for Technical Forum<br>
-                Email: <a href=\"mailto:support@aitf.co.in\">certification@aitf.co.in</a><br>
+                Email: <a href=\"mailto:{$mailFromEmailHtml}\">{$mailFromEmailHtml}</a><br>
                 Website: <a href=\"http://www.aitf.co.in\" target=\"_blank\" rel=\"noopener\">www.aitf.co.in</a></p>
             ";
             $confirm->isHTML(true);
             $confirm->Body = $confirmBody;
-            $confirm->AltBody = "Dear {$formData['name']},\n\nThank you for contacting AITF.\n\nWe acknowledge receipt of your enquiry and appreciate your interest in our assessment and certification services. Our team is currently reviewing the details shared by you and will contact you shortly with the relevant information or next steps.\n\nIf you have any additional details to provide or require urgent assistance, please feel free to reply to this email.\n\nThank you for considering AITF as your assessment and certification partner.\n\nWarm regards,\nAITF Team\nClient Support Desk\nAITF - Assessment & Institute for Technical Forum\nEmail: support@aitf.co.in\nWebsite: www.aitf.co.in";
+            $confirm->AltBody = "Dear {$formData['name']},\n\nThank you for contacting AITF.\n\nWe acknowledge receipt of your enquiry and appreciate your interest in our assessment and certification services. Our team is currently reviewing the details shared by you and will contact you shortly with the relevant information or next steps.\n\nIf you have any additional details to provide or require urgent assistance, please feel free to reply to this email.\n\nThank you for considering AITF as your assessment and certification partner.\n\nWarm regards,\nAITF Team\nClient Support Desk\nAITF - Assessment & Institute for Technical Forum\nEmail: {$mailConfig['from_email']}\nWebsite: www.aitf.co.in";
             $confirmOk = $confirm->send();
 
             $successMsg = $confirmOk
@@ -1041,11 +1032,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <strong>+91 9881691012</strong>
                 </div>
             </a>
-            <a href="mailto:certification@aitf.co.in" target="_blank" class="quick-item">
+            <a href="mailto:<?php echo $mailFromEmailHtml; ?>" target="_blank" class="quick-item">
                 <i class="fas fa-envelope"></i>
                 <div>
                     <span>Email Us</span>
-                    <strong>certification@aitf.co.in</strong>
+                    <strong><?php echo $mailFromEmailHtml; ?></strong>
                 </div>
             </a>
             <a href="https://wa.me/919881691012" class="quick-item" target="_blank">
@@ -1108,7 +1099,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     <div class="contact-item-content">
                         <h4>Email Address</h4>
-                        <a href="mailto:certification@aitf.co.in" target="_blank">certification@aitf.co.in</a>
+                        <a href="mailto:<?php echo $mailFromEmailHtml; ?>" target="_blank"><?php echo $mailFromEmailHtml; ?></a>
                     </div>
                 </div>
 
@@ -1204,7 +1195,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     automatically before submit.</div>
                             <?php else: ?>
                                 <div class="captcha-help">Captcha widget will appear after Google reCAPTCHA keys are added
-                                    in `config/recaptcha_config.php`.</div>
+                                    in the `.env` file.</div>
                             <?php endif; ?>
                         </div>
                         <button type="submit" class="submit-btn">Send Message</button>

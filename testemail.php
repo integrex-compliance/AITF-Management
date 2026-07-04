@@ -1,21 +1,13 @@
 <?php
 
 require 'PHPMailer/PHPMailerAutoload.php';
+require_once __DIR__ . '/include/env_helper.php';
 
-$mailConfigPath = __DIR__ . '/config/mail_config.php';
-$mailConfig = file_exists($mailConfigPath) ? require $mailConfigPath : [];
-$mailConfig = array_merge(
-    [
-        'host' => 'smtpout.secureserver.net',
-        'port' => 587,
-        'secure' => 'tls',
-        'username' => 'certification@aitf.co.in',
-        'password' => 'AITF999@@HasTag#'
-    ],
-    is_array($mailConfig) ? $mailConfig : []
-);
+$mailConfig = aitf_get_mail_config([
+    'from_name' => aitf_env('MAIL_FROM_NAME', 'AITF Service')
+]);
 $mail = new PHPMailer(true);
-e
+
 class AITFServiceEmailSender {
 
     function sendEmail($toEmails, $toName, $body, $subject) {
@@ -38,8 +30,8 @@ class AITFServiceEmailSender {
         
 
         $mail->AddAddress($toEmails, $toName);
-        $mail->From = 'test@gmail.com';
-        $mail->FromName = 'AITF Service';
+        $mail->From = $mailConfig['from_email'];
+        $mail->FromName = $mailConfig['from_name'];
         $mail->Subject = $subject; //"Please join Puzzleme; this is really challanging";
         $mail->Body = $body; //
         $mail->IsHTML(true);
@@ -154,8 +146,8 @@ class AITFServiceEmailSender {
             $mail->AddAddress($toEmails, $toName);
         }
         //$mail->AddAddress($toEmails, $toName);
-        $mail->From = 'test@gmail.com';
-        $mail->FromName = 'General Service';
+        $mail->From = $mailConfig['from_email'];
+        $mail->FromName = $mailConfig['from_name'];
         $mail->Subject = $subject; //"Please join Puzzleme; this is really challanging";
         $mail->Body = $body; //
         $mail->IsHTML(true);

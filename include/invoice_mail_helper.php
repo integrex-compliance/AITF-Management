@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/env_helper.php';
 
 if (!function_exists('aitfLoadPHPMailer')) {
     function aitfLoadPHPMailer() {
@@ -36,24 +37,10 @@ if (!function_exists('aitfLoadPHPMailer')) {
             return $config;
         }
 
-        $mailConfigPath = dirname(__DIR__) . '/config/mail_config.php';
-        $mailConfig = file_exists($mailConfigPath) ? require $mailConfigPath : array();
-
-        $config = array_merge(
-            array(
-                'host' => 'smtpout.secureserver.net',
-                'port' => 587,
-                'secure' => 'tls',
-                'username' => 'certification@aitf.co.in',
-                'password' => 'AITF999@@HasTag#',
-                'from_email' => 'certification@aitf.co.in',
-                'from_name' => 'AITF Management Certification Limited',
-                'reply_to_email' => 'certification@aitf.co.in',
-                'reply_to_name' => 'AITF Management Certification Limited',
-                'office_copy' => 'certification@aitf.co.in'
-            ),
-            is_array($mailConfig) ? $mailConfig : array()
-        );
+        $config = aitf_get_mail_config(array(
+            'from_name' => aitf_env('MAIL_FROM_NAME', 'AITF Management Certification Limited'),
+            'reply_to_name' => aitf_env('MAIL_REPLY_TO_NAME', 'AITF Management Certification Limited')
+        ));
 
         if (empty($config['reply_to_email'])) {
             $config['reply_to_email'] = $config['from_email'];

@@ -14,6 +14,7 @@ try {
 
     require_once './dbConnect.php';
     require_once __DIR__ . '/PHPMailer/PHPMailerAutoload.php';
+    require_once __DIR__ . '/include/env_helper.php';
 
     $customerId = isset($_POST['customer']) ? (int) $_POST['customer'] : 0;
     $serviceId  = isset($_POST['service']) ? (int) $_POST['service'] : 0;
@@ -143,24 +144,12 @@ try {
         exit;
     }
 
-    $adminEmail = 'certification@aitf.co.in'; // admin/office mailbox
+    $adminEmail = aitf_env('MAIL_ADMIN_EMAIL', aitf_env('MAIL_FROM_EMAIL', aitf_env('SMTP_USERNAME', ''))); // admin/office mailbox
 
-    // SMTP config: use certification@aitf.co.in (same as application form)
-    $mailConfigPath = __DIR__ . '/config/mail_config.php';
-    $mailConfig = file_exists($mailConfigPath) ? require $mailConfigPath : [];
-    $mailConfig = array_merge(
-        [
-            'host' => 'smtpout.secureserver.net',
-            'port' => 587,
-            'secure' => 'tls',
-            'username' => 'certification@aitf.co.in',
-            'password' => 'AITF999@@HasTag#'
-        ],
-        is_array($mailConfig) ? $mailConfig : []
-    );
+    $mailConfig = aitf_get_mail_config([
+        'from_name' => aitf_env('MAIL_FROM_NAME', 'AITF Certification Team')
+    ]);
     $mailConfig['smtp_auth'] = ($mailConfig['username'] ?? '') !== '' && ($mailConfig['password'] ?? '') !== '';
-    $mailConfig['from_email'] = 'certification@aitf.co.in';
-    $mailConfig['from_name'] = 'AITF Certification Team';
 
     $configureSmtp = function (PHPMailer $mailer, array $cfg) {
         $mailer->isSMTP();

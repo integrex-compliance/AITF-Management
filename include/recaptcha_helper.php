@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/env_helper.php';
 
 if (!function_exists('aitf_get_recaptcha_config')) {
     function aitf_get_recaptcha_config()
@@ -10,26 +11,22 @@ if (!function_exists('aitf_get_recaptcha_config')) {
         }
 
         $defaults = [
-            'site_key' => '6LcIHKksAAAAAAtYeQDQaBpCAyHjg4PIa7XKFMer',
-            'secret_key' => '6LcIHKksAAAAAFU1KUQ2X601xzZ-BJNbQAwVjYdA',
-            'version' => 'v3',
-            'action' => 'submit',
-            'minimum_score' => 0.5,
-            'bypass_on_localhost' => false,
+            'site_key' => aitf_env('RECAPTCHA_SITE_KEY', ''),
+            'secret_key' => aitf_env('RECAPTCHA_SECRET_KEY', ''),
+            'version' => aitf_env('RECAPTCHA_VERSION', 'v2_checkbox'),
+            'action' => aitf_env('RECAPTCHA_ACTION', 'submit'),
+            'minimum_score' => aitf_env_float('RECAPTCHA_MINIMUM_SCORE', 0.5),
+            'bypass_on_localhost' => aitf_env_bool('RECAPTCHA_BYPASS_ON_LOCALHOST', false),
             'localhost_hosts' => ['localhost', '127.0.0.1', '::1'],
-            'theme' => 'light',
-            'enabled' => true,
-            'use_test_keys_on_localhost' => false,
-            'local_test_site_key' => '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI',
-            'local_test_secret_key' => '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe',
-            'local_test_version' => 'v2_checkbox'
+            'theme' => aitf_env('RECAPTCHA_THEME', 'light'),
+            'enabled' => aitf_env_bool('RECAPTCHA_ENABLED', true),
+            'use_test_keys_on_localhost' => aitf_env_bool('RECAPTCHA_USE_TEST_KEYS_ON_LOCALHOST', false),
+            'local_test_site_key' => aitf_env('RECAPTCHA_LOCAL_TEST_SITE_KEY', '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'),
+            'local_test_secret_key' => aitf_env('RECAPTCHA_LOCAL_TEST_SECRET_KEY', '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe'),
+            'local_test_version' => aitf_env('RECAPTCHA_LOCAL_TEST_VERSION', 'v2_checkbox')
         ];
 
-            
-        $configPath = __DIR__ . '/../config/recaptcha_config.php';
-        $fileConfig = file_exists($configPath) ? require $configPath : [];
-
-        $config = array_merge($defaults, is_array($fileConfig) ? $fileConfig : []);
+        $config = $defaults;
         $config['site_key'] = trim((string)($config['site_key'] ?? ''));
         $config['secret_key'] = trim((string)($config['secret_key'] ?? ''));
         $config['version'] = strtolower(trim((string)($config['version'] ?? 'v2_checkbox')));
@@ -214,7 +211,7 @@ if (!function_exists('aitf_verify_recaptcha')) {
         }
 
         if ($config['site_key'] === '' || $config['secret_key'] === '') {
-            $errorMessage = 'Captcha keys are not configured yet. Please add the Google reCAPTCHA site key and secret key in config/recaptcha_config.php.';
+            $errorMessage = 'Captcha keys are not configured yet. Please add the Google reCAPTCHA site key and secret key in the .env file.';
             return false;
         }
 
