@@ -77,6 +77,7 @@ function buildInvoiceReportPdfBytes($data, $invoiceType, $fromDate, $toDate, $cl
     $invoices = $data['invoices'];
     $svcMap   = $data['svcMap'];
 
+    invoiceReportLog('pdf.tcpdf.init.start', ['invoice_count' => count($invoices)]);
     $pdf = new REPORTPDF('L', PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
     $pdf->reportType       = $invoiceType;
     $pdf->reportFromDate   = $fromDate;
@@ -93,7 +94,9 @@ function buildInvoiceReportPdfBytes($data, $invoiceType, $fromDate, $toDate, $cl
     }
     $pdf->AddPage();
     $pdf->SetFont('helvetica', '', 9);
+    invoiceReportLog('pdf.tcpdf.init.done');
 
+    invoiceReportLog('pdf.html.start', ['invoice_count' => count($invoices)]);
     $html = '<table border="1" cellpadding="6">
     <thead>
         <tr style="background-color:#eaf3ff; font-weight:bold; color:#0d4d8b;">
@@ -244,8 +247,14 @@ function buildInvoiceReportPdfBytes($data, $invoiceType, $fromDate, $toDate, $cl
             <td width="33%" align="right" style="font-weight: bold;">Rs. ' . formatIndian($unpaidAmount) . '/-</td>
         </tr>
     </table>';
+    invoiceReportLog('pdf.html.done', ['html_bytes' => strlen($html)]);
 
+    invoiceReportLog('pdf.write_html.start', ['html_bytes' => strlen($html)]);
     $pdf->writeHTML($html, true, false, true, false, '');
+    invoiceReportLog('pdf.write_html.done', ['page_count' => $pdf->getNumPages()]);
 
-    return $pdf->Output('Invoice_Report.pdf', 'S');
+    invoiceReportLog('pdf.output_string.start', ['page_count' => $pdf->getNumPages()]);
+    $bytes = $pdf->Output('Invoice_Report.pdf', 'S');
+    invoiceReportLog('pdf.output_string.done', ['bytes' => strlen($bytes)]);
+    return $bytes;
 }

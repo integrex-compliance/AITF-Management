@@ -7,12 +7,14 @@
  * Expects POST: invoiceType, fromDate, toDate, clientName, format (pdf|excel), email
  * Responds with JSON: { success: bool, message: string }
  */
+$invoiceReportStartTime = microtime(true);
 header('Content-Type: application/json');
 
-include_once './dbConnect.php';
-include_once './commonutil.php';
-include_once './include/invoice_report_lib.php';
-include_once './include/invoice_mail_helper.php';
+include_once __DIR__ . '/dbConnect.php';
+include_once __DIR__ . '/commonutil.php';
+include_once __DIR__ . '/include/invoice_report_lib.php';
+include_once __DIR__ . '/include/invoice_mail_helper.php';
+invoiceReportRegisterShutdownLogger('mail');
 
 function respond($success, $message) {
     echo json_encode(['success' => $success, 'message' => $message]);
@@ -37,16 +39,31 @@ if ($format !== 'pdf' && $format !== 'excel') {
 $typeLabel = ($invoiceType == 'proforma') ? 'PROFORMA' : 'FINAL';
 
 try {
+    invoiceReportLog('mail.fetch.start', [
+        'invoice_type' => $invoiceType,
+        'from_date' => $fromDate,
+        'to_date' => $toDate,
+        'client_filter' => ($clientName !== '') ? 'yes' : 'no',
+        'format' => $format,
+    ]);
     $data = fetchInvoiceReportData($db, $invoiceType, $fromDate, $toDate, $clientName);
+    invoiceReportLog('mail.fetch.done', [
+        'invoice_count' => count($data['invoices']),
+        'service_invoice_count' => count($data['svcMap']),
+    ]);
 
     if ($format === 'pdf') {
-        include_once './include/invoice_report_pdf.php';
+        include_once __DIR__ . '/include/invoice_report_pdf.php';
+        invoiceReportLog('mail.pdf_build.start', ['invoice_count' => count($data['invoices'])]);
         $bytes = buildInvoiceReportPdfBytes($data, $invoiceType, $fromDate, $toDate, $clientName);
+        invoiceReportLog('mail.pdf_build.done', ['bytes' => strlen($bytes)]);
         $attachmentName = 'Invoice_Report_' . $typeLabel . '_' . date('Ymd_His') . '.pdf';
         $mimeType = 'application/pdf';
         $formatWord = 'PDF';
     } else {
+        invoiceReportLog('mail.excel_build.start', ['invoice_count' => count($data['invoices'])]);
         $bytes = buildInvoiceReportXlsxBytes($data, $invoiceType, $fromDate, $toDate, $clientName);
+        invoiceReportLog('mail.excel_build.done', ['bytes' => strlen($bytes)]);
         $attachmentName = 'Invoice_Report_' . $typeLabel . '_' . date('Ymd_His') . '.xlsx';
         $mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
         $formatWord = 'Excel';

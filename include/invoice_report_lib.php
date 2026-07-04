@@ -13,6 +13,48 @@
  * Excel path does not have to load TCPDF).
  */
 
+if (!function_exists('invoiceReportBytes')) {
+    function invoiceReportBytes($bytes) {
+        $units = ['B', 'KB', 'MB', 'GB'];
+        $i = 0;
+        while ($bytes >= 1024 && $i < count($units) - 1) {
+            $bytes /= 1024;
+            $i++;
+        }
+        return round($bytes, 2) . $units[$i];
+    }
+}
+
+if (!function_exists('invoiceReportLog')) {
+    function invoiceReportLog($stage, array $context = []) {
+        $base = [
+            'stage' => $stage,
+            'elapsed' => isset($GLOBALS['invoiceReportStartTime']) ? round(microtime(true) - $GLOBALS['invoiceReportStartTime'], 3) : null,
+            'memory' => invoiceReportBytes(memory_get_usage(true)),
+            'peak' => invoiceReportBytes(memory_get_peak_usage(true)),
+            'memory_limit' => ini_get('memory_limit'),
+            'max_execution_time' => ini_get('max_execution_time'),
+        ];
+        error_log('INVOICE_REPORT ' . json_encode(array_merge($base, $context)));
+    }
+}
+
+if (!function_exists('invoiceReportRegisterShutdownLogger')) {
+    function invoiceReportRegisterShutdownLogger($format) {
+        register_shutdown_function(function () use ($format) {
+            $error = error_get_last();
+            if ($error && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
+                invoiceReportLog($format . '.fatal', [
+                    'error_type' => $error['type'],
+                    'message' => $error['message'],
+                    'file' => $error['file'],
+                    'line' => $error['line'],
+                ]);
+            }
+        });
+    }
+}
+
 /* ----------------- shared amount / number helpers ----------------- */
 if (!function_exists('cleanAmount')) {
     function cleanAmount($value) {
@@ -373,9 +415,40 @@ class SimpleXlsx {
 
     /** Build the .xlsx package and return it as a raw byte string. */
     public function toString($sheetName = 'Report') {
-        $tmp = tempnam(sys_get_temp_dir(), 'xlsx');
+        invoiceReportLog('excel.zip.start', ['sheet_name' => $sheetName]);
+        if (!class_exists('ZipArchive')) {
+            invoiceReportLog('excel.ziparchive_missing', [
+                'loaded_extensions' => implode(',', get_loaded_extensions()),
+            ]);
+            throw new RuntimeException('ZipArchive extension is not available.');
+        }
+
+        $tmpDir = sys_get_temp_dir();
+        if (!is_dir($tmpDir) || !is_writable($tmpDir)) {
+            invoiceReportLog('excel.temp_dir_not_writable', [
+                'tmp_dir' => $tmpDir,
+                'is_dir' => is_dir($tmpDir) ? 'yes' : 'no',
+                'is_writable' => is_writable($tmpDir) ? 'yes' : 'no',
+            ]);
+            throw new RuntimeException('Temporary directory is not writable.');
+        }
+
+        $tmp = tempnam($tmpDir, 'xlsx');
+        if ($tmp === false) {
+            invoiceReportLog('excel.tempnam_failed', ['tmp_dir' => $tmpDir]);
+            throw new RuntimeException('Could not create temporary XLSX file.');
+        }
+
         $zip = new ZipArchive();
-        $zip->open($tmp, ZipArchive::OVERWRITE);
+        $openResult = $zip->open($tmp, ZipArchive::OVERWRITE);
+        if ($openResult !== true) {
+            invoiceReportLog('excel.zip_open_failed', [
+                'tmp_file' => $tmp,
+                'zip_status' => $openResult,
+            ]);
+            @unlink($tmp);
+            throw new RuntimeException('Could not open XLSX zip package.');
+        }
 
         $zip->addFromString('[Content_Types].xml',
             '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
@@ -409,10 +482,19 @@ class SimpleXlsx {
 
         $zip->addFromString('xl/styles.xml', $this->stylesXml());
         $zip->addFromString('xl/worksheets/sheet1.xml', $this->sheetXml());
-        $zip->close();
+        if ($zip->close() !== true) {
+            invoiceReportLog('excel.zip_close_failed', ['tmp_file' => $tmp]);
+            @unlink($tmp);
+            throw new RuntimeException('Could not close XLSX zip package.');
+        }
 
         $data = file_get_contents($tmp);
         @unlink($tmp);
+        if ($data === false) {
+            invoiceReportLog('excel.read_tmp_failed', ['tmp_file' => $tmp]);
+            throw new RuntimeException('Could not read generated XLSX file.');
+        }
+        invoiceReportLog('excel.zip.done', ['bytes' => strlen($data)]);
         return $data;
     }
 }
@@ -431,6 +513,7 @@ function buildInvoiceReportXlsxBytes($data, $invoiceType, $fromDate, $toDate, $c
     $invoices = $data['invoices'];
     $svcMap   = $data['svcMap'];
 
+    invoiceReportLog('excel.rows.start', ['invoice_count' => count($invoices)]);
     $xlsx = new SimpleXlsx();
 
     // Keep the title + column-header rows (1-4) visible while scrolling the data.
@@ -654,5 +737,6 @@ function buildInvoiceReportXlsxBytes($data, $invoiceType, $fromDate, $toDate, $c
         ['v' => round($unpaidAmount, 2), 's' => 19, 't' => 'n'],
     ]);
 
+    invoiceReportLog('excel.rows.done', ['invoice_count' => count($invoices), 'last_row' => $curRow]);
     return $xlsx->toString($typeLabel . ' Invoices');
 }
