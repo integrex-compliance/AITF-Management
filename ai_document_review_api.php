@@ -115,6 +115,7 @@ try {
     if (!empty($documentKeys)) {
         $documents = aitfAiSelectDocumentsByKeys($documents, $documentKeys);
     }
+    $userPrompt = isset($_REQUEST['user_prompt']) ? trim((string) $_REQUEST['user_prompt']) : '';
 
     $apiKey = trim((string) aitf_env('GEMINI_API_KEY', ''));
     if ($apiKey === '') {
@@ -143,7 +144,7 @@ try {
         aitfAiJsonResponse(array('success' => false, 'message' => $message), 413);
     }
 
-    $prompt = aitfAiBuildPrompt($context, $documents, $rules);
+    $prompt = aitfAiBuildPrompt($context, $documents, $rules, $userPrompt);
     try {
         $gemini = aitfAiCallGemini($apiKey, $model, $prompt, $documents);
         $result = $gemini['result'];

@@ -548,7 +548,7 @@ if (!function_exists('aitfAiFetchLatestHistory')) {
 }
 
 if (!function_exists('aitfAiBuildPrompt')) {
-    function aitfAiBuildPrompt($context, $documents, $rules)
+    function aitfAiBuildPrompt($context, $documents, $rules, $userPrompt = '')
     {
         $docList = array();
         foreach ($documents as $index => $doc) {
@@ -566,7 +566,8 @@ if (!function_exists('aitfAiBuildPrompt')) {
         $payload = array(
             'client_context' => $context,
             'active_ai_rules_from_database' => $rules,
-            'documents_sent' => $docList
+            'documents_sent' => $docList,
+            'user_prompt' => trim((string) $userPrompt)
         );
 
         return "You are AI Powered by AITF, acting as a certification pre-audit document reviewer.\n"
@@ -575,6 +576,7 @@ if (!function_exists('aitfAiBuildPrompt')) {
             . "The active rules supplied in active_ai_rules_from_database are additional mandatory AITF checks. Apply every active rule where relevant, but do not limit your review to those rules.\n"
             . "If multiple PDFs are attached, analyze them together and cross-check names, addresses, GSTIN, contacts, ISO standards, scope, dates, mandays, service stage, certificate details, audit evidence, and other repeated facts across documents.\n"
             . "Use direct evidence from the documents and client_context. Do not invent expected values, dates, standards, mandays, or client details. If a value cannot be confirmed, write \"Manual verification required\".\n"
+            . "If user_prompt is not empty, answer that instruction directly while still performing the document risk review and mandatory AITF rule checks.\n"
             . "Return strict JSON only. Do not wrap in markdown.\n"
             . "JSON shape: {\"overall_status\":\"pass|review_required|manual_verification_required\",\"summary\":\"string\",\"findings\":[{\"severity\":\"critical|major|minor|info\",\"check_area\":\"string\",\"finding\":\"string\",\"evidence\":\"string\",\"current_value\":\"string\",\"expected_value\":\"string\",\"reason\":\"string\",\"rule_reference\":\"string\",\"affected_documents\":[\"string\"],\"confidence\":0.0,\"suggestion\":\"string\",\"recommended_action\":\"string\"}],\"issues\":[{\"severity\":\"critical|major|minor|info\",\"check_area\":\"string\",\"finding\":\"string\",\"evidence\":\"string\",\"current_value\":\"string\",\"expected_value\":\"string\",\"reason\":\"string\",\"rule_reference\":\"string\",\"affected_documents\":[\"string\"],\"confidence\":0.0,\"suggestion\":\"string\",\"recommended_action\":\"string\"}],\"manual_verifications\":[{\"check_area\":\"string\",\"reason\":\"string\",\"evidence\":\"string\",\"affected_documents\":[\"string\"]}],\"documents_reviewed\":[\"string\"]}.\n"
             . "Use rule_reference as the database rule_code/title when an issue is rule-based; otherwise use \"Document evidence\" or \"Manual verification required\".\n\n"
