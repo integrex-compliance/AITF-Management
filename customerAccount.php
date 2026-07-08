@@ -1275,6 +1275,179 @@
             color: #fff;
         }
 
+        .aitf-ai-review-open {
+            background: #123c69 !important;
+            border: 1px solid #0e335b !important;
+            color: #fff !important;
+            font-weight: 700;
+            height: auto !important;
+            margin-top: 8px;
+            padding: 8px 12px !important;
+        }
+
+        .aitf-ai-modal .modal-dialog {
+            width: min(1120px, 96vw);
+        }
+
+        .aitf-ai-modal .modal-content {
+            border: 0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .aitf-ai-modal .modal-header {
+            background: #0f2f4f;
+            color: #fff;
+        }
+
+        .aitf-ai-modal .modal-header .close {
+            color: #fff;
+            opacity: .9;
+        }
+
+        .aitf-ai-toolbar {
+            align-items: center;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: space-between;
+            margin-bottom: 14px;
+        }
+
+        .aitf-ai-metrics {
+            color: #475569;
+            font-size: 13px;
+        }
+
+        .aitf-ai-status {
+            border-radius: 6px;
+            font-weight: 700;
+            padding: 8px 10px;
+        }
+
+        .aitf-ai-status.pass { background: #dcfce7; color: #166534; }
+        .aitf-ai-status.review_required { background: #fef3c7; color: #92400e; }
+        .aitf-ai-status.manual_verification_required { background: #e0f2fe; color: #075985; }
+        .aitf-ai-status.failed { background: #fee2e2; color: #991b1b; }
+
+        .aitf-ai-issue {
+            border: 1px solid #d8e0ea;
+            border-left: 5px solid #64748b;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            padding: 12px;
+        }
+
+        .aitf-ai-issue.critical { border-left-color: #dc2626; }
+        .aitf-ai-issue.major { border-left-color: #f97316; }
+        .aitf-ai-issue.minor { border-left-color: #eab308; }
+        .aitf-ai-issue.info { border-left-color: #2563eb; }
+
+        .aitf-ai-issue-title {
+            color: #111827;
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .aitf-ai-field-grid {
+            display: grid;
+            gap: 8px 12px;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .aitf-ai-field {
+            background: #f8fafc;
+            border-radius: 6px;
+            padding: 8px;
+        }
+
+        .aitf-ai-field strong {
+            color: #475569;
+            display: block;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+
+        .aitf-ai-doc-list {
+            margin: 8px 0 0;
+            max-height: 130px;
+            overflow: auto;
+            padding-left: 18px;
+        }
+
+        .aitf-ai-doc-table-wrap {
+            border: 1px solid #d8e0ea;
+            border-radius: 8px;
+            max-height: 320px;
+            overflow: auto;
+        }
+
+        .aitf-ai-doc-table {
+            margin-bottom: 0;
+        }
+
+        .aitf-ai-doc-table th {
+            background: #f8fafc;
+            color: #334155;
+            font-size: 12px;
+            position: sticky;
+            text-transform: uppercase;
+            top: 0;
+            z-index: 1;
+        }
+
+        .aitf-ai-doc-name {
+            color: #111827;
+            font-weight: 700;
+            word-break: break-word;
+        }
+
+        .aitf-ai-doc-meta {
+            color: #64748b;
+            font-size: 12px;
+        }
+
+        .aitf-ai-scan-pill {
+            border-radius: 999px;
+            display: inline-block;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 4px 8px;
+            white-space: nowrap;
+        }
+
+        .aitf-ai-scan-pill.scanned {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .aitf-ai-scan-pill.not-scanned {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .aitf-ai-doc-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .aitf-ai-empty {
+            background: #f8fafc;
+            border: 1px dashed #cbd5e1;
+            border-radius: 8px;
+            color: #475569;
+            padding: 18px;
+            text-align: center;
+        }
+
+        @media (max-width: 767px) {
+            .aitf-ai-field-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
         .aitf_service_date {
             background: #0b4f8a;
             color: #ffffff;
@@ -2323,6 +2496,12 @@
             </div>
         </div>
 
+
+        <div class="row" style="margin: 8px 0 0;">
+            <div class="col-xs-12 text-center btn qms_complete_btn aitf-ai-review-open" data-customer="<?php echo $_GET['customerid']; ?>">
+                <span><i class="fa fa-magic"> AI Powered by AITF</i></span>
+            </div>
+        </div>
         <!--service add-->
         <?php // if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff() || Utitlity::checkForUserConsultant() || Utitlity::checkForUserFinance()) {  ?>
         <div class="servicebox-bunch">
@@ -6947,7 +7126,299 @@
         </div>
     </div>
 
+
+    <div class="modal fade aitf-ai-modal" id="aitfAiReviewModal" tabindex="-1" role="dialog" aria-labelledby="aitfAiReviewModalLabel">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="aitfAiReviewModalLabel"><i class="fa fa-magic"></i> AI Powered by AITF</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="aitf-ai-toolbar">
+                        <div>
+                            <div style="font-weight: 700; color: #111827;">Client document-level AI review</div>
+                            <div class="aitf-ai-metrics" id="aitfAiMetrics">Loading client documents and active rules...</div>
+                        </div>
+                        <div class="aitf-ai-doc-actions">
+                            <button type="button" class="btn btn-default" id="aitfSelectAllDocs"><i class="fa fa-check-square-o"></i> Select All</button>
+                            <button type="button" class="btn btn-primary" id="aitfAnalyzeSelectedDocs"><i class="fa fa-search"></i> Analyze Selected Documents</button>
+                            <button type="button" class="btn btn-primary" id="aitfAnalyzeAllDocs"><i class="fa fa-files-o"></i> Analyze All Documents</button>
+                        </div>
+                    </div>
+                    <div id="aitfAiStatus" class="aitf-ai-status manual_verification_required" style="display:none;"></div>
+                    <div class="row" style="margin-top: 14px;">
+                        <div class="col-sm-6">
+                            <div style="font-weight: 700; margin-bottom: 6px;">PDF Documents</div>
+                            <div id="aitfAiDocuments" class="aitf-ai-empty">No PDF documents loaded.</div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div style="font-weight: 700; margin-bottom: 6px;">AI Review Findings</div>
+                            <div id="aitfAiResults" class="aitf-ai-empty">Open the panel and run analysis to view pre-audit issues.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <span class="pull-left aitf-ai-metrics" id="aitfAiHistoryNote"></span>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
     <script type="text/javascript">
+        (function () {
+            var aitfAiDocuments = [];
+
+            function aitfEscapeHtml(value) {
+                return String(value === null || value === undefined ? '' : value)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            }
+
+            function aitfSetAiStatus(text, type) {
+                $('#aitfAiStatus')
+                    .removeClass('pass review_required manual_verification_required failed')
+                    .addClass(type || 'manual_verification_required')
+                    .text(text)
+                    .show();
+            }
+
+            function aitfSelectedDocumentKeys() {
+                var keys = [];
+                $('.aitf-ai-doc-check:checked').each(function () {
+                    keys.push($(this).val());
+                });
+                return keys;
+            }
+
+            function aitfDocumentKeys(documents) {
+                return (documents || []).map(function (doc) {
+                    return doc.document_key;
+                }).filter(function (key) {
+                    return !!key;
+                });
+            }
+
+            function aitfSetAnalyzeButtons(disabled) {
+                $('#aitfAnalyzeSelectedDocs, #aitfAnalyzeAllDocs, #aitfSelectAllDocs').prop('disabled', !!disabled || !aitfAiDocuments.length);
+            }
+
+            function aitfRenderAiDocuments(documents) {
+                aitfAiDocuments = documents || [];
+                if (!aitfAiDocuments.length) {
+                    $('#aitfAiDocuments').html('<div class="aitf-ai-empty">No uploaded PDF documents found for this client.</div>');
+                    aitfSetAnalyzeButtons(true);
+                    return;
+                }
+                var html = '<div class="aitf-ai-doc-table-wrap"><table class="table table-condensed aitf-ai-doc-table">';
+                html += '<thead><tr>';
+                html += '<th style="width:34px;"><input type="checkbox" id="aitfAiDocCheckAll"></th>';
+                html += '<th>Document</th><th>Status</th><th>Last Analyzed</th><th>Actions</th>';
+                html += '</tr></thead><tbody>';
+                aitfAiDocuments.forEach(function (doc) {
+                    var scanned = (doc.scan_status || 'Not Scanned') === 'Scanned';
+                    html += '<tr data-document-key="' + aitfEscapeHtml(doc.document_key || '') + '">';
+                    html += '<td><input type="checkbox" class="aitf-ai-doc-check" value="' + aitfEscapeHtml(doc.document_key || '') + '"></td>';
+                    html += '<td><div class="aitf-ai-doc-name">' + aitfEscapeHtml(doc.document_name || doc.file_name || '') + '</div>';
+                    html += '<div class="aitf-ai-doc-meta">' + aitfEscapeHtml(doc.label || '') + ' | ' + aitfEscapeHtml(doc.service_type || '') + ' #' + aitfEscapeHtml(doc.service_id || '') + '</div></td>';
+                    html += '<td><span class="aitf-ai-scan-pill ' + (scanned ? 'scanned' : 'not-scanned') + '">' + (scanned ? 'Scanned' : 'Not Scanned') + '</span></td>';
+                    html += '<td>' + aitfEscapeHtml(doc.last_analyzed_at || '-') + '</td>';
+                    html += '<td><div class="aitf-ai-doc-actions">';
+                    if (scanned) {
+                        html += '<button type="button" class="btn btn-xs btn-default aitf-view-ai-review" data-document-key="' + aitfEscapeHtml(doc.document_key || '') + '"><i class="fa fa-eye"></i> View AI Review</button>';
+                    }
+                    html += '<button type="button" class="btn btn-xs btn-primary aitf-reanalyze-ai-doc" data-document-key="' + aitfEscapeHtml(doc.document_key || '') + '"><i class="fa fa-refresh"></i> Re-Analyze</button>';
+                    html += '</div></td></tr>';
+                });
+                html += '</tbody></table></div>';
+                $('#aitfAiDocuments').html(html);
+                aitfSetAnalyzeButtons(false);
+            }
+
+            function aitfRenderAiIssues(result) {
+                if (!result) {
+                    $('#aitfAiResults').html('<div class="aitf-ai-empty">No structured AI result was returned.</div>');
+                    return;
+                }
+                var issues = Array.isArray(result.findings) && result.findings.length ? result.findings : (Array.isArray(result.issues) ? result.issues : []);
+                var manual = Array.isArray(result.manual_verifications) ? result.manual_verifications : [];
+                var html = '';
+                if (result.summary) {
+                    html += '<p style="color:#334155;">' + aitfEscapeHtml(result.summary) + '</p>';
+                }
+                if (!issues.length && !manual.length) {
+                    html += '<div class="aitf-ai-empty">No issues reported by the AI review.</div>';
+                    $('#aitfAiResults').html(html);
+                    return;
+                }
+                issues.forEach(function (issue) {
+                    var severity = (issue.severity || 'info').toLowerCase();
+                    var docs = Array.isArray(issue.affected_documents) ? issue.affected_documents.join(', ') : (issue.affected_documents || '');
+                    html += '<div class="aitf-ai-issue ' + aitfEscapeHtml(severity) + '">';
+                    html += '<div class="aitf-ai-issue-title">' + aitfEscapeHtml((issue.severity || 'Info').toUpperCase()) + ' - ' + aitfEscapeHtml(issue.check_area || 'Review issue') + '</div>';
+                    html += '<div class="aitf-ai-field-grid">';
+                    html += '<div class="aitf-ai-field" style="grid-column: 1 / -1;"><strong>Finding</strong>' + aitfEscapeHtml(issue.finding || issue.reason || '') + '</div>';
+                    html += '<div class="aitf-ai-field" style="grid-column: 1 / -1;"><strong>Evidence</strong>' + aitfEscapeHtml(issue.evidence || 'Manual verification required') + '</div>';
+                    html += '<div class="aitf-ai-field"><strong>Current Value</strong>' + aitfEscapeHtml(issue.current_value || 'Manual verification required') + '</div>';
+                    html += '<div class="aitf-ai-field"><strong>Expected Value</strong>' + aitfEscapeHtml(issue.expected_value || 'Manual verification required') + '</div>';
+                    html += '<div class="aitf-ai-field"><strong>Reason</strong>' + aitfEscapeHtml(issue.reason || '') + '</div>';
+                    html += '<div class="aitf-ai-field"><strong>Rule Reference</strong>' + aitfEscapeHtml(issue.rule_reference || 'Manual verification required') + '</div>';
+                    html += '<div class="aitf-ai-field"><strong>Affected Documents</strong>' + aitfEscapeHtml(docs || 'Manual verification required') + '</div>';
+                    html += '<div class="aitf-ai-field"><strong>Confidence</strong>' + aitfEscapeHtml(issue.confidence !== undefined ? issue.confidence : 'Manual verification required') + '</div>';
+                    html += '<div class="aitf-ai-field" style="grid-column: 1 / -1;"><strong>Suggestion</strong>' + aitfEscapeHtml(issue.suggestion || 'Manual verification required') + '</div>';
+                    html += '<div class="aitf-ai-field" style="grid-column: 1 / -1;"><strong>Recommended Action</strong>' + aitfEscapeHtml(issue.recommended_action || 'Manual verification required') + '</div>';
+                    html += '</div></div>';
+                });
+                manual.forEach(function (item) {
+                    var docs = Array.isArray(item.affected_documents) ? item.affected_documents.join(', ') : (item.affected_documents || '');
+                    html += '<div class="aitf-ai-issue info"><div class="aitf-ai-issue-title">MANUAL VERIFICATION - ' + aitfEscapeHtml(item.check_area || 'Review item') + '</div>';
+                    html += '<div class="aitf-ai-field-grid"><div class="aitf-ai-field"><strong>Reason</strong>' + aitfEscapeHtml(item.reason || 'Manual verification required') + '</div>';
+                    html += '<div class="aitf-ai-field"><strong>Affected Documents</strong>' + aitfEscapeHtml(docs || 'Manual verification required') + '</div></div></div>';
+                });
+                $('#aitfAiResults').html(html);
+            }
+
+            function aitfShowReviewResponse(response) {
+                if (!response || !response.success) {
+                    aitfSetAiStatus(response && response.message ? response.message : 'Unable to load AI review.', 'failed');
+                    return;
+                }
+                var result = response.result || {};
+                var status = result.overall_status || response.status || 'manual_verification_required';
+                var suffix = response.analyzed_at ? ' | analyzed ' + response.analyzed_at : '';
+                aitfSetAiStatus('AI review #' + response.history_id + ' (' + status.replace(/_/g, ' ') + ')' + suffix, status);
+                aitfRenderAiIssues(result);
+                $('#aitfAiHistoryNote').text('Model: ' + (response.model || '') + '. Analyzed by: ' + (response.analyzed_by || ''));
+            }
+
+            function aitfLoadAiOverview() {
+                $('#aitfAiMetrics').text('Loading client documents and active rules...');
+                $('#aitfAiHistoryNote').text('');
+                aitfSetAnalyzeButtons(true);
+                $.ajax({
+                    url: 'ai_document_review_api.php',
+                    type: 'GET',
+                    dataType: 'json',
+                    data: { action: 'overview' },
+                    success: function (response) {
+                        if (!response || !response.success) {
+                            aitfSetAiStatus(response && response.message ? response.message : 'Unable to load AI review overview.', 'failed');
+                            return;
+                        }
+                        aitfRenderAiDocuments(response.documents || []);
+                        $('#aitfAiMetrics').text((response.documents || []).length + ' PDF document(s) detected. ' + (response.active_rules_count || 0) + ' active AI rule(s).');
+                        if (response.latest_history && response.latest_history.created_at) {
+                            $('#aitfAiHistoryNote').text('Last review: ' + response.latest_history.created_at + ' (' + response.latest_history.status + ')');
+                        }
+                    },
+                    error: function (xhr) {
+                        aitfSetAiStatus(xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Unable to load AI review overview.', 'failed');
+                    }
+                });
+            }
+
+            function aitfAnalyzeDocuments(documentKeys, sourceButton) {
+                if (!documentKeys.length) {
+                    aitfSetAiStatus('Select at least one PDF document to analyze.', 'failed');
+                    return;
+                }
+                var $btn = sourceButton ? $(sourceButton) : $();
+                aitfSetAnalyzeButtons(true);
+                $btn.data('original-html', $btn.html()).html('<i class="fa fa-spinner fa-spin"></i> Analyzing...');
+                aitfSetAiStatus('AI Powered by AITF is analyzing ' + documentKeys.length + ' selected PDF document(s).', 'manual_verification_required');
+                $('#aitfAiResults').html('<div class="aitf-ai-empty">Review in progress...</div>');
+                $.ajax({
+                    url: 'ai_document_review_api.php',
+                    type: 'POST',
+                    dataType: 'json',
+                    data: { action: 'analyze', document_keys: documentKeys.join(',') },
+                    success: function (response) {
+                        if (!response || !response.success) {
+                            aitfSetAiStatus(response && response.message ? response.message : 'AI review failed.', 'failed');
+                            $('#aitfAiResults').html('<div class="aitf-ai-empty">No findings available.</div>');
+                            return;
+                        }
+                        var result = response.result || {};
+                        var status = result.overall_status || 'manual_verification_required';
+                        aitfSetAiStatus('Saved AI review #' + response.history_id + ' (' + status.replace(/_/g, ' ') + ')', status);
+                        aitfRenderAiIssues(result);
+                        $('#aitfAiHistoryNote').text('Saved review #' + response.history_id + ' using ' + response.model + '.');
+                        aitfLoadAiOverview();
+                    },
+                    error: function (xhr) {
+                        var message = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'AI review failed. Check server logs for details.';
+                        aitfSetAiStatus(message, 'failed');
+                        $('#aitfAiResults').html('<div class="aitf-ai-empty">' + aitfEscapeHtml(message) + '</div>');
+                    },
+                    complete: function () {
+                        if ($btn.length) {
+                            $btn.html($btn.data('original-html') || $btn.html());
+                        }
+                        aitfSetAnalyzeButtons(false);
+                    }
+                });
+            }
+
+            $(document).on('click', '.aitf-ai-review-open', function () {
+                $('#aitfAiReviewModal').modal('show');
+                $('#aitfAiStatus').hide();
+                $('#aitfAiResults').html('<div class="aitf-ai-empty">Run analysis to view pre-audit issues.</div>');
+                aitfLoadAiOverview();
+            });
+
+            $(document).on('change', '#aitfAiDocCheckAll', function () {
+                $('.aitf-ai-doc-check').prop('checked', $(this).prop('checked'));
+            });
+
+            $(document).on('change', '.aitf-ai-doc-check', function () {
+                var total = $('.aitf-ai-doc-check').length;
+                var checked = $('.aitf-ai-doc-check:checked').length;
+                $('#aitfAiDocCheckAll').prop('checked', total > 0 && checked === total);
+            });
+
+            $(document).on('click', '#aitfSelectAllDocs', function () {
+                var shouldCheck = $('.aitf-ai-doc-check:checked').length !== $('.aitf-ai-doc-check').length;
+                $('.aitf-ai-doc-check, #aitfAiDocCheckAll').prop('checked', shouldCheck);
+            });
+
+            $(document).on('click', '#aitfAnalyzeSelectedDocs', function () {
+                aitfAnalyzeDocuments(aitfSelectedDocumentKeys(), this);
+            });
+
+            $(document).on('click', '#aitfAnalyzeAllDocs', function () {
+                aitfAnalyzeDocuments(aitfDocumentKeys(aitfAiDocuments), this);
+            });
+
+            $(document).on('click', '.aitf-reanalyze-ai-doc', function () {
+                aitfAnalyzeDocuments([$(this).data('document-key')], this);
+            });
+
+            $(document).on('click', '.aitf-view-ai-review', function () {
+                var $btn = $(this);
+                $btn.data('original-html', $btn.html()).prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Loading');
+                $.ajax({
+                    url: 'ai_document_review_api.php',
+                    type: 'GET',
+                    dataType: 'json',
+                    data: { action: 'review', document_key: $btn.data('document-key') },
+                    success: function (response) {
+                        aitfShowReviewResponse(response);
+                    },
+                    error: function (xhr) {
+                        var message = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Unable to load saved AI review.';
+                        aitfSetAiStatus(message, 'failed');
+                        $('#aitfAiResults').html('<div class="aitf-ai-empty">' + aitfEscapeHtml(message) + '</div>');
+                    },
+                    complete: function () {
+                        $btn.prop('disabled', false).html($btn.data('original-html') || '<i class="fa fa-eye"></i> View AI Review');
+                    }
+                });
+            });
+        })();
+
         // Function to toggle ISO certificate sections
         function toggleISOSection(headerElement) {
             var section = headerElement.closest('.iso-cert-section');
