@@ -2,11 +2,627 @@
     <?php
     include_once './header.php';
     include_once './dbConnect.php';
+    include_once './include/supplier_helpers.php';
     include_once './include/certification_cycle_helper.php';
     include_once './informationUpdationReviewModal.php';
     include_once './assessmentPlanningModal.php';
     include_once './modalForms.php';
     date_default_timezone_set('Asia/Kolkata');
+
+    if (!function_exists('caDateGraphHasValue')) {
+        function caDateGraphHasValue($value)
+        {
+            $value = trim((string) $value);
+            return $value !== '' && strtolower($value) !== 'null' && $value !== '0000-00-00' && $value !== '0000-00-00 00:00:00';
+        }
+
+        function caDateGraphParseOneDate($value)
+        {
+            $value = trim((string) $value);
+            if (!caDateGraphHasValue($value)) {
+                return null;
+            }
+
+            $value = preg_replace('/\s+/', ' ', $value);
+            $formats = array('Y-m-d', 'Y/m/d', 'Y.m.d', 'd.m.Y', 'd-m-Y', 'd/m/Y', 'd M Y', 'd F Y', 'M d Y', 'F d Y');
+
+            foreach ($formats as $format) {
+                $date = DateTime::createFromFormat('!' . $format, $value);
+                if ($date instanceof DateTime) {
+                    $errors = DateTime::getLastErrors();
+                    if (($errors === false || ($errors['warning_count'] == 0 && $errors['error_count'] == 0)) && $date->format($format) === $value) {
+                        return array(
+                            'iso' => $date->format('Y-m-d'),
+                            'display' => $date->format('d.m.Y'),
+                            'timestamp' => $date->getTimestamp(),
+                        );
+                    }
+                }
+            }
+
+            $timestamp = strtotime($value);
+            if ($timestamp !== false) {
+                return array(
+                    'iso' => date('Y-m-d', $timestamp),
+                    'display' => date('d.m.Y', $timestamp),
+                    'timestamp' => $timestamp,
+                );
+            }
+
+            return null;
+        }
+
+        function caDateGraphParseDates($value)
+        {
+            if (!caDateGraphHasValue($value)) {
+                return array();
+            }
+
+            $value = trim((string) $value);
+            $candidates = array();
+            $patterns = array(
+                '/\b\d{4}[-\/.]\d{1,2}[-\/.]\d{1,2}\b/',
+                '/\b\d{1,2}[-\/.]\d{1,2}[-\/.]\d{4}\b/',
+                '/\b\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4}\b/',
+                '/\b[A-Za-z]{3,9}\s+\d{1,2}\s+\d{4}\b/',
+            );
+
+            foreach ($patterns as $pattern) {
+                if (preg_match_all($pattern, $value, $matches)) {
+                    foreach ($matches[0] as $match) {
+                        $candidates[] = trim($match);
+                    }
+                }
+            }
+
+            if (empty($candidates)) {
+                $candidates[] = $value;
+            }
+
+            $dates = array();
+            $seen = array();
+            foreach ($candidates as $candidate) {
+                $parsed = caDateGraphParseOneDate($candidate);
+                if ($parsed && !isset($seen[$parsed['iso']])) {
+                    $parsed['raw'] = $candidate;
+                    $dates[] = $parsed;
+                    $seen[$parsed['iso']] = true;
+                }
+            }
+
+            return $dates;
+        }
+
+        function caDateGraphFetchOne($db, $sql, array $params)
+        {
+            try {
+                $statement = $db->prepare($sql);
+                $statement->execute($params);
+                $row = $statement->fetch(PDO::FETCH_ASSOC);
+                return $row ? $row : array();
+            } catch (Exception $ex) {
+                error_log('Date graph fetch failed: ' . $ex->getMessage());
+                return array();
+            }
+        }
+
+        function caDateGraphFetchAll($db, $sql, array $params)
+        {
+            try {
+                $statement = $db->prepare($sql);
+                $statement->execute($params);
+                $rows = $statement->fetchAll(PDO::FETCH_ASSOC);
+                return $rows ? $rows : array();
+            } catch (Exception $ex) {
+                error_log('Date graph fetch failed: ' . $ex->getMessage());
+                return array();
+            }
+        }
+
+        function caDateGraphFirstValue(array $row, array $fields)
+        {
+            foreach ($fields as $field) {
+                if (isset($row[$field]) && caDateGraphHasValue($row[$field])) {
+                    return $row[$field];
+                }
+            }
+            return '';
+        }
+
+        function caDateGraphFetchAssessmentPlanning($db, $customerId, array $serviceIds)
+        {
+            $seen = array();
+            $fallback = array();
+            foreach ($serviceIds as $serviceId) {
+                $serviceId = trim((string) $serviceId);
+                if ($serviceId === '' || isset($seen[$serviceId])) {
+                    continue;
+                }
+                $seen[$serviceId] = true;
+
+                $row = caDateGraphFetchOne(
+                    $db,
+                    "SELECT assessment_id, service_id, qms_implementation_date, date
+                     FROM assessment_planning
+                     WHERE customer_id = :customer_id
+                     AND service_id = :service_id
+                     ORDER BY
+                        CASE
+                            WHEN qms_implementation_date IS NOT NULL AND qms_implementation_date <> '' AND qms_implementation_date <> '0000-00-00' THEN 0
+                            WHEN date IS NOT NULL AND date <> '' AND date <> '0000-00-00' THEN 1
+                            ELSE 2
+                        END,
+                        assessment_id DESC
+                     LIMIT 1",
+                    array(':customer_id' => $customerId, ':service_id' => $serviceId)
+                );
+
+                if (empty($row)) {
+                    continue;
+                }
+                if (empty($fallback)) {
+                    $fallback = $row;
+                }
+                if (caDateGraphFirstValue($row, array('qms_implementation_date', 'date')) !== '') {
+                    return $row;
+                }
+            }
+
+            return $fallback;
+        }
+
+        function caDateGraphFetchCdc($db, $customerId, $typedServiceId)
+        {
+            $latest = caDateGraphFetchOne(
+                $db,
+                "SELECT crr_id, assDate, Date, revDatecdc
+                 FROM cdc_report_review
+                 WHERE customer_id = :customer_id
+                 AND ca_service_id = :typed_id
+                 ORDER BY crr_id DESC
+                 LIMIT 1",
+                array(':customer_id' => $customerId, ':typed_id' => $typedServiceId)
+            );
+
+            if (empty($latest) || caDateGraphHasValue(isset($latest['assDate']) ? $latest['assDate'] : '')) {
+                return $latest;
+            }
+
+            $closingDateRow = caDateGraphFetchOne(
+                $db,
+                "SELECT assDate
+                 FROM cdc_report_review
+                 WHERE customer_id = :customer_id
+                 AND ca_service_id = :typed_id
+                 AND assDate IS NOT NULL
+                 AND assDate <> ''
+                 AND assDate <> '0000-00-00'
+                 ORDER BY crr_id DESC
+                 LIMIT 1",
+                array(':customer_id' => $customerId, ':typed_id' => $typedServiceId)
+            );
+
+            if (!empty($closingDateRow['assDate'])) {
+                $latest['assDate'] = $closingDateRow['assDate'];
+            }
+
+            return $latest;
+        }
+
+        function caDateGraphTargetForEntry($serviceType, $label, $source, $typedServiceId)
+        {
+            $rowSelector = '';
+            $fieldSelector = '';
+            if ($serviceType === 'CA') {
+                $rowSelector = '.ca-service-row[data-id="' . $typedServiceId . '"]';
+            } elseif ($serviceType === 'SA-I') {
+                $rowSelector = '.sai-service-row[data-id="' . $typedServiceId . '"]';
+            } elseif ($serviceType === 'SA-II') {
+                $rowSelector = '.saii-service-row[data-id="' . $typedServiceId . '"]';
+            } elseif ($serviceType === 'RC') {
+                $rowSelector = '.rc-service-row[data-id="' . $typedServiceId . '"]';
+            } elseif ($serviceType === 'CR') {
+                $rowSelector = '.cr-service-row[data-id="' . $typedServiceId . '"]';
+            }
+
+            $actionSelector = '';
+            if (strpos($source, 'assessment_planning.') !== false) {
+                $rowSelector = '.cr-service-row[data-id="' . $typedServiceId . '"], .rc-service-row[data-id="' . $typedServiceId . '"], .ca-service-row[data-id="' . $typedServiceId . '"]';
+                $actionSelector = '.editAssessmentPlanning[data-service="' . $typedServiceId . '"], .addAssessmentPlanning[data-service="' . $typedServiceId . '"]';
+                $fieldSelector = ($label === 'QMS Implementation Date') ? '.assessmentImplementationDate' : '.assessmentDate';
+            } elseif (strpos($source, 'cdc_report_review.assDate') !== false || strpos($source, 'cdc_report_review.Date') !== false || strpos($source, 'cdc_report_review_office_use') !== false) {
+                $actionSelector = '.editCDC[data-service="' . $typedServiceId . '"], .editCDCRC[data-service="' . $typedServiceId . '"], .cdcReport[data-service="' . $typedServiceId . '"]';
+                if (strpos($label, 'Assessment') !== false || strpos($label, 'NC(M)') !== false) {
+                    $fieldSelector = '.assDate';
+                } elseif (strpos($label, 'CDC Date') !== false) {
+                    $fieldSelector = '.Date';
+                } elseif (strpos($label, 'Rev Date') !== false || strpos($label, 'Issue Date') !== false || strpos($label, 'Certificate Issue Date') !== false) {
+                    $fieldSelector = '.revDatecdc';
+                }
+            } elseif (strpos($source, 'stage_ii_audit_id') !== false) {
+                $actionSelector = '.editstageIIAudit2[data-service="' . $typedServiceId . '"], .stageIIAudit[data-service="' . $typedServiceId . '"], .stageIIAuditSai[data-service="' . $typedServiceId . '"]';
+                $fieldSelector = (strpos($label, 'Audit Date') !== false) ? '.auditDateIIEdit, .audit_dateII' : '.revDateII2, .review_date';
+            } elseif (strpos($source, 'servelance_1_id') !== false) {
+                $actionSelector = '.editStage1Servelance[data-service="' . $typedServiceId . '"], .editStage2Servelance[data-service="' . $typedServiceId . '"], .servelancestage2[data-service="' . $typedServiceId . '"]';
+            } elseif (strpos($source, 'stage_oneaudit_id') !== false || strpos($source, 'stage_twoaudit_id') !== false) {
+                $actionSelector = '.editAuditNotification[data-service="' . $typedServiceId . '"], .editAuditNotificationii[data-service="' . $typedServiceId . '"], .createAuditNotification[data-service1="' . $typedServiceId . '"], .createAuditNotificationii[data-service="' . $typedServiceId . '"]';
+            } elseif (strpos($source, 'audit_application.') !== false) {
+                $actionSelector = '.editAuditApp[data-caservice-id="' . $typedServiceId . '"], .createAuditApp[data-caservice-id="' . $typedServiceId . '"], .editRCAuditApp[data-service="' . $typedServiceId . '"], .createRCAuditApp[data-service="' . $typedServiceId . '"]';
+            } elseif (strpos($source, 'contract_id.') !== false) {
+                $actionSelector = '.updateContractReview[data-service="' . $typedServiceId . '"], .createContractReview[data-service="' . $typedServiceId . '"]';
+            } elseif (strpos($source, 'certification_aggrement.') !== false) {
+                $actionSelector = '.editcertification[data-service="' . $typedServiceId . '"], .certificationBtn[data-service="' . $typedServiceId . '"]';
+            } elseif (strpos($source, 'info_update_review.') !== false || strpos($source, 'uploads/reviews') !== false) {
+                $actionSelector = '.openInfoUpdationReview[data-service="' . $typedServiceId . '"]';
+                $fieldSelector = 'input[name="review_date"]';
+            }
+
+            return array('row_selector' => $rowSelector, 'action_selector' => $actionSelector, 'field_selector' => $fieldSelector);
+        }
+
+        function caDateGraphAddEntry(array &$entries, $serviceType, $section, $label, $value, $source, $typedServiceId, $universalServiceId)
+        {
+            $target = caDateGraphTargetForEntry($serviceType, $label, $source, $typedServiceId);
+            $entries[] = array(
+                'service_type' => $serviceType,
+                'section' => $section,
+                'label' => $label,
+                'value' => caDateGraphHasValue($value) ? trim((string) $value) : '',
+                'source' => $source,
+                'typed_service_id' => $typedServiceId,
+                'universal_service_id' => $universalServiceId,
+                'dates' => caDateGraphParseDates($value),
+                'status' => 'missing',
+                'note' => '',
+                'row_selector' => $target['row_selector'],
+                'action_selector' => $target['action_selector'],
+                'field_selector' => $target['field_selector'],
+            );
+        }
+
+        function caDateGraphFormatMultiDateValue(array $rows, $dateField, $labelField = '')
+        {
+            $values = array();
+            foreach ($rows as $row) {
+                if (!isset($row[$dateField]) || !caDateGraphHasValue($row[$dateField])) {
+                    continue;
+                }
+                $label = ($labelField !== '' && isset($row[$labelField]) && trim((string) $row[$labelField]) !== '') ? trim((string) $row[$labelField]) . ': ' : '';
+                $values[] = $label . $row[$dateField];
+            }
+            return implode('; ', $values);
+        }
+
+        function caDateGraphInfoReviewDate($db, $typedServiceId, $customerId)
+        {
+            $row = caDateGraphFetchOne(
+                $db,
+                "SELECT review_date, info_form_received_date FROM info_update_review WHERE service_id = :service_id AND customer_id = :customer_id ORDER BY id DESC LIMIT 1",
+                array(':service_id' => $typedServiceId, ':customer_id' => $customerId)
+            );
+
+            $dateValue = caDateGraphFirstValue($row, array('review_date', 'info_form_received_date'));
+            if (caDateGraphHasValue($dateValue)) {
+                return $dateValue;
+            }
+
+            $jsonFile = __DIR__ . '/uploads/reviews/data_' . $typedServiceId . '_' . $customerId . '.json';
+            if (is_file($jsonFile)) {
+                $data = json_decode(file_get_contents($jsonFile), true);
+                if (is_array($data)) {
+                    return caDateGraphFirstValue($data, array('review_date', 'info_form_received_date'));
+                }
+            }
+
+            return '';
+        }
+
+        function caDateGraphCertificateIssueDate($db, array $cdcRow)
+        {
+            if (empty($cdcRow) || empty($cdcRow['crr_id'])) {
+                return '';
+            }
+
+            $officeRows = caDateGraphFetchAll(
+                $db,
+                "SELECT iso_label, rev_date FROM cdc_report_review_office_use WHERE crr_id = :crr_id AND rev_date IS NOT NULL AND rev_date <> '0000-00-00' ORDER BY iso_index ASC",
+                array(':crr_id' => $cdcRow['crr_id'])
+            );
+            $officeDates = caDateGraphFormatMultiDateValue($officeRows, 'rev_date', 'iso_label');
+            if (caDateGraphHasValue($officeDates)) {
+                return $officeDates;
+            }
+
+            return caDateGraphFirstValue($cdcRow, array('revDatecdc', 'Date'));
+        }
+
+        function caDateGraphResolveCrServiceForCa($db, $customerId, $caUniversalServiceId)
+        {
+            $row = caDateGraphFetchOne(
+                $db,
+                "SELECT crs.cr_id AS typed_service_id, s.service_id AS universal_service_id
+                 FROM service_type_cr crs
+                 INNER JOIN service s ON crs.service = s.service_id
+                 WHERE s.customer_id = :customer_id
+                 AND s.service_type = 'CR'
+                 AND s.service_id <= :ca_service_id
+                 ORDER BY s.service_id DESC
+                 LIMIT 1",
+                array(':customer_id' => $customerId, ':ca_service_id' => $caUniversalServiceId)
+            );
+
+            if (!empty($row['typed_service_id'])) {
+                return $row;
+            }
+
+            $row = caDateGraphFetchOne(
+                $db,
+                "SELECT crs.cr_id AS typed_service_id, s.service_id AS universal_service_id
+                 FROM service_type_cr crs
+                 INNER JOIN service s ON crs.service = s.service_id
+                 WHERE s.customer_id = :customer_id
+                 AND s.service_type = 'CR'
+                 ORDER BY s.service_id DESC
+                 LIMIT 1",
+                array(':customer_id' => $customerId)
+            );
+
+            return !empty($row['typed_service_id']) ? $row : array();
+        }
+
+        function caDateGraphAddProposedDates(array &$entries, $db, $serviceType, $section, $typedServiceId, $universalServiceId, array $actions)
+        {
+            if (empty($universalServiceId)) {
+                foreach ($actions as $action => $label) {
+                    caDateGraphAddEntry($entries, $serviceType, $section, $label, '', 'ca_service_dates.due_date', $typedServiceId, $universalServiceId);
+                }
+                return;
+            }
+
+            $rows = caDateGraphFetchAll(
+                $db,
+                "SELECT action, due_date FROM ca_service_dates WHERE service_id = :service_id AND is_deleted = 'N' ORDER BY due_date ASC, action_id ASC",
+                array(':service_id' => $universalServiceId)
+            );
+            $datesByAction = array();
+            foreach ($rows as $row) {
+                if (isset($row['action']) && !isset($datesByAction[$row['action']])) {
+                    $datesByAction[$row['action']] = isset($row['due_date']) ? $row['due_date'] : '';
+                }
+            }
+
+            foreach ($actions as $action => $label) {
+                caDateGraphAddEntry(
+                    $entries,
+                    $serviceType,
+                    $section,
+                    $label,
+                    isset($datesByAction[$action]) ? $datesByAction[$action] : '',
+                    'ca_service_dates.due_date',
+                    $typedServiceId,
+                    $universalServiceId
+                );
+            }
+        }
+
+        function caDateGraphBuildForCustomer($db, $customerId)
+        {
+            $entries = array();
+            if (empty($db) || empty($customerId)) {
+                return array('entries' => array(), 'summary' => array('ok' => 0, 'issue' => 0, 'missing' => 0, 'total' => 0));
+            }
+
+            $services = caDateGraphFetchAll(
+                $db,
+                "SELECT s.service_id, s.service_type, ca.ca_id, sai.sai_id, saii.saii_id, rc.rc_id
+                 FROM service s
+                 LEFT JOIN service_type_ca ca ON ca.service = s.service_id
+                 LEFT JOIN service_type_sai sai ON sai.service = s.service_id
+                 LEFT JOIN service_type_saii saii ON saii.service = s.service_id
+                 LEFT JOIN service_type_rc rc ON rc.service = s.service_id
+                 WHERE s.customer_id = :customer_id
+                 AND s.service_type IN ('CA', 'SA-I', 'SA-II', 'RC')
+                 ORDER BY s.service_id ASC",
+                array(':customer_id' => $customerId)
+            );
+
+            foreach ($services as $service) {
+                $serviceType = isset($service['service_type']) ? $service['service_type'] : '';
+                $universalServiceId = isset($service['service_id']) ? $service['service_id'] : '';
+                $typedServiceId = '';
+
+                if ($serviceType === 'CA') {
+                    $typedServiceId = isset($service['ca_id']) ? $service['ca_id'] : '';
+                } elseif ($serviceType === 'SA-I') {
+                    $typedServiceId = isset($service['sai_id']) ? $service['sai_id'] : '';
+                } elseif ($serviceType === 'SA-II') {
+                    $typedServiceId = isset($service['saii_id']) ? $service['saii_id'] : '';
+                } elseif ($serviceType === 'RC') {
+                    $typedServiceId = isset($service['rc_id']) ? $service['rc_id'] : '';
+                }
+
+                if (empty($typedServiceId)) {
+                    continue;
+                }
+
+                if ($serviceType === 'CA' || $serviceType === 'RC') {
+                    $section = ($serviceType === 'RC') ? 'RC Contract Review' : 'Contract Review';
+                    $contractTypedServiceId = $typedServiceId;
+                    $contractUniversalServiceId = $universalServiceId;
+
+                    if ($serviceType === 'CA' || $serviceType === 'RC') {
+                        $crService = caDateGraphResolveCrServiceForCa($db, $customerId, $universalServiceId);
+                        if (!empty($crService['typed_service_id'])) {
+                            $contractTypedServiceId = $crService['typed_service_id'];
+                            $contractUniversalServiceId = $crService['universal_service_id'];
+                        }
+                    }
+
+                    $auditApplication = caDateGraphFetchOne(
+                        $db,
+                        "SELECT application_date, application_rcv_date, review_date FROM audit_application WHERE (service_id = :typed_id OR uni_svc_id = :service_id) ORDER BY audit_id DESC LIMIT 1",
+                        array(':typed_id' => $contractTypedServiceId, ':service_id' => $contractUniversalServiceId)
+                    );
+                    $agreement = caDateGraphFetchOne(
+                        $db,
+                        "SELECT aggrement_date FROM certification_aggrement WHERE customer_id = :customer_id AND (service = :typed_id OR service = :service_id) ORDER BY id DESC LIMIT 1",
+                        array(':customer_id' => $customerId, ':typed_id' => $contractTypedServiceId, ':service_id' => $contractUniversalServiceId)
+                    );
+                    $contract = caDateGraphFetchOne(
+                        $db,
+                        "SELECT review_date FROM contract_id WHERE customer_id = :customer_id AND ca_service_id = :typed_id ORDER BY contractid DESC LIMIT 1",
+                        array(':customer_id' => $customerId, ':typed_id' => $contractTypedServiceId)
+                    );
+                    $assessment = caDateGraphFetchAssessmentPlanning($db, $customerId, array($contractTypedServiceId, $typedServiceId, $contractUniversalServiceId, $universalServiceId));
+
+                    $assessmentTypedServiceId = isset($assessment['service_id']) && caDateGraphHasValue($assessment['service_id']) ? $assessment['service_id'] : $contractTypedServiceId;
+
+                    caDateGraphAddEntry($entries, $serviceType, $section, 'Application Date', caDateGraphFirstValue($auditApplication, array('application_date')), 'audit_application.application_date', $contractTypedServiceId, $contractUniversalServiceId);
+                    caDateGraphAddEntry($entries, $serviceType, $section, 'Application Received Date', caDateGraphFirstValue($auditApplication, array('application_rcv_date')), 'audit_application.application_rcv_date', $contractTypedServiceId, $contractUniversalServiceId);
+                    caDateGraphAddEntry($entries, $serviceType, $section, 'Review Date', caDateGraphFirstValue($auditApplication, array('review_date')), 'audit_application.review_date', $contractTypedServiceId, $contractUniversalServiceId);
+                    caDateGraphAddEntry($entries, $serviceType, $section, 'Agreement Date', caDateGraphFirstValue($agreement, array('aggrement_date')), 'certification_aggrement.aggrement_date', $contractTypedServiceId, $contractUniversalServiceId);
+                    caDateGraphAddEntry($entries, $serviceType, $section, 'Contract Review Date', caDateGraphFirstValue($contract, array('review_date')), 'contract_id.review_date', $contractTypedServiceId, $contractUniversalServiceId);
+                    caDateGraphAddEntry($entries, $serviceType, $section, 'QMS Implementation Date', caDateGraphFirstValue($assessment, array('qms_implementation_date')), 'assessment_planning.qms_implementation_date', $assessmentTypedServiceId, $contractUniversalServiceId);
+                    caDateGraphAddEntry($entries, $serviceType, $section, 'Assessment Planning Date', caDateGraphFirstValue($assessment, array('date')), 'assessment_planning.date', $assessmentTypedServiceId, $contractUniversalServiceId);
+                }
+
+                $stageOne = caDateGraphFetchOne(
+                    $db,
+                    "SELECT intimation_date, audit_dates FROM stage_oneaudit_id WHERE ca_service_id = :typed_id ORDER BY audit_stage_id DESC LIMIT 1",
+                    array(':typed_id' => $typedServiceId)
+                );
+                $stageTwoNotice = caDateGraphFetchOne(
+                    $db,
+                    "SELECT intimation_date, audit_dates FROM stage_twoaudit_id WHERE service_id = :typed_id ORDER BY audit_stageii_id DESC LIMIT 1",
+                    array(':typed_id' => $typedServiceId)
+                );
+                $stageIReview = caDateGraphFetchOne(
+                    $db,
+                    "SELECT auditDate, review_date FROM stage_i_audit_id WHERE ca_service_id = :typed_id ORDER BY stage_i_id DESC LIMIT 1",
+                    array(':typed_id' => $typedServiceId)
+                );
+                $stageIIReview = caDateGraphFetchOne(
+                    $db,
+                    "SELECT audit_dates, review_date FROM stage_ii_audit_id WHERE ca_service_id = :typed_id ORDER BY stage_ii_id DESC LIMIT 1",
+                    array(':typed_id' => $typedServiceId)
+                );
+                $surveillancePlan = caDateGraphFetchOne(
+                    $db,
+                    "SELECT audit_dates, prepared_date FROM servelance_1_id WHERE service_id = :typed_id ORDER BY servelance_id DESC LIMIT 1",
+                    array(':typed_id' => $typedServiceId)
+                );
+                $rcAuditPlan = caDateGraphFetchOne(
+                    $db,
+                    "SELECT scheduleii_date, prepared_date FROM audit_scheduleii_id WHERE ca_service = :typed_id ORDER BY audit_scheduleii_id DESC LIMIT 1",
+                    array(':typed_id' => $typedServiceId)
+                );
+                $cdc = caDateGraphFetchCdc($db, $customerId, $typedServiceId);
+                $survey = caDateGraphFetchOne(
+                    $db,
+                    "SELECT survey_date, review_date FROM customer_survey_id WHERE customer_ca = :customer_id AND ca_serviceid = :typed_id ORDER BY survey_id DESC LIMIT 1",
+                    array(':customer_id' => $customerId, ':typed_id' => $typedServiceId)
+                );
+
+                if ($serviceType === 'CA') {
+                    caDateGraphAddEntry($entries, 'CA', 'CA', 'Stage-I Intimation Date', caDateGraphFirstValue($stageOne, array('intimation_date')), 'stage_oneaudit_id.intimation_date', $typedServiceId, $universalServiceId);
+                    caDateGraphAddEntry($entries, 'CA', 'CA', 'Stage-I Audit Date', caDateGraphFirstValue($stageIReview, array('auditDate')) ?: caDateGraphFirstValue($stageOne, array('audit_dates')), 'stage_i_audit_id.auditDate / stage_oneaudit_id.audit_dates', $typedServiceId, $universalServiceId);
+                    caDateGraphAddEntry($entries, 'CA', 'CA', 'Stage-I Review Date', caDateGraphFirstValue($stageIReview, array('review_date')), 'stage_i_audit_id.review_date', $typedServiceId, $universalServiceId);
+                    caDateGraphAddEntry($entries, 'CA', 'CA', 'Stage-II Intimation Date', caDateGraphFirstValue($stageTwoNotice, array('intimation_date')), 'stage_twoaudit_id.intimation_date', $typedServiceId, $universalServiceId);
+                    caDateGraphAddEntry($entries, 'CA', 'CA', 'Stage-II Audit Date', caDateGraphFirstValue($stageIIReview, array('audit_dates')) ?: caDateGraphFirstValue($stageTwoNotice, array('audit_dates')), 'stage_ii_audit_id.audit_dates / stage_twoaudit_id.audit_dates', $typedServiceId, $universalServiceId);
+                    caDateGraphAddEntry($entries, 'CA', 'CA', 'Stage-II Review Date', caDateGraphFirstValue($stageIIReview, array('review_date')), 'stage_ii_audit_id.review_date', $typedServiceId, $universalServiceId);
+                    caDateGraphAddEntry($entries, 'CA', 'CA', 'Assessment / NC(M) Closing Date', caDateGraphFirstValue($cdc, array('assDate', 'Date')), 'cdc_report_review.assDate', $typedServiceId, $universalServiceId);
+                    caDateGraphAddEntry($entries, 'CA', 'CA', 'CDC Date', caDateGraphFirstValue($cdc, array('Date')), 'cdc_report_review.Date', $typedServiceId, $universalServiceId);
+                    caDateGraphAddEntry($entries, 'CA', 'CA', 'Rev Date / Certificate Issue Date', caDateGraphCertificateIssueDate($db, $cdc), 'cdc_report_review_office_use.rev_date / cdc_report_review.revDatecdc', $typedServiceId, $universalServiceId);
+                    caDateGraphAddEntry($entries, 'CA', 'CA', 'Feedback Survey Date', caDateGraphFirstValue($survey, array('survey_date', 'review_date')), 'customer_survey_id.survey_date', $typedServiceId, $universalServiceId);
+                    caDateGraphAddProposedDates($entries, $db, 'CA', 'After CA - Proposed Dates for SA-I', $typedServiceId, $universalServiceId, array(
+                        'Suspension Reminder' => 'Suspension Reminder Proposed Date',
+                        'Suspend Letter' => 'Suspend Letter Proposed Date',
+                        'Withdrawal Reminder' => 'Withdrawal Reminder Proposed Date',
+                        'Withdraw Letter' => 'Withdraw Letter Proposed Date',
+                    ));
+                } elseif ($serviceType === 'SA-I' || $serviceType === 'SA-II') {
+                    $section = $serviceType;
+                    caDateGraphAddEntry($entries, $serviceType, $section, 'Information Updation Review Date', caDateGraphInfoReviewDate($db, $typedServiceId, $customerId), 'info_update_review.review_date / uploads/reviews JSON', $typedServiceId, $universalServiceId);
+                    caDateGraphAddEntry($entries, $serviceType, $section, 'Intimation Date', caDateGraphFirstValue($stageOne, array('intimation_date')), 'stage_oneaudit_id.intimation_date', $typedServiceId, $universalServiceId);
+                    caDateGraphAddEntry($entries, $serviceType, $section, 'Audit Date', caDateGraphFirstValue($stageIIReview, array('audit_dates')) ?: caDateGraphFirstValue($surveillancePlan, array('audit_dates')) ?: caDateGraphFirstValue($stageOne, array('audit_dates')), 'stage_ii_audit_id.audit_dates / servelance_1_id.audit_dates', $typedServiceId, $universalServiceId);
+                    caDateGraphAddEntry($entries, $serviceType, $section, 'Review Date', caDateGraphFirstValue($stageIIReview, array('review_date')), 'stage_ii_audit_id.review_date', $typedServiceId, $universalServiceId);
+                    caDateGraphAddEntry($entries, $serviceType, $section, 'Assessment / NC(M) Closing Date', caDateGraphFirstValue($cdc, array('assDate', 'Date')), 'cdc_report_review.assDate', $typedServiceId, $universalServiceId);
+                    caDateGraphAddEntry($entries, $serviceType, $section, 'CDC Date', caDateGraphFirstValue($cdc, array('Date')), 'cdc_report_review.Date', $typedServiceId, $universalServiceId);
+                    caDateGraphAddEntry($entries, $serviceType, $section, 'Rev Date / Issue Date', caDateGraphCertificateIssueDate($db, $cdc), 'cdc_report_review_office_use.rev_date / cdc_report_review.revDatecdc', $typedServiceId, $universalServiceId);
+                    caDateGraphAddEntry($entries, $serviceType, $section, 'Feedback Survey Date', caDateGraphFirstValue($survey, array('survey_date', 'review_date')), 'customer_survey_id.survey_date', $typedServiceId, $universalServiceId);
+
+                    if ($serviceType === 'SA-I') {
+                        caDateGraphAddProposedDates($entries, $db, 'SA-I', 'After SA-I - Proposed Dates for SA-II', $typedServiceId, $universalServiceId, array(
+                            'Suspension Reminder' => 'Suspension Reminder Proposed Date',
+                            'Suspend Letter' => 'Suspend Letter Proposed Date',
+                            'Withdrawal Reminder' => 'Withdrawal Reminder Proposed Date',
+                            'Withdraw Letter' => 'Withdraw Letter Proposed Date',
+                        ));
+                    } else {
+                        caDateGraphAddProposedDates($entries, $db, 'SA-II', 'After SA-II - Proposed Dates for RC', $typedServiceId, $universalServiceId, array(
+                            '1st Reminder' => '1st Reminder Proposed Date',
+                            '2nd Reminder' => '2nd Reminder Proposed Date',
+                            'Expire Letter' => 'Expire Letter Proposed Date',
+                        ));
+                    }
+                } elseif ($serviceType === 'RC') {
+                    caDateGraphAddEntry($entries, 'RC', 'RC Audit', 'Intimation Date', caDateGraphFirstValue($stageOne, array('intimation_date')) ?: caDateGraphFirstValue($stageTwoNotice, array('intimation_date')), 'stage_oneaudit_id.intimation_date / stage_twoaudit_id.intimation_date', $typedServiceId, $universalServiceId);
+                    caDateGraphAddEntry($entries, 'RC', 'RC Audit', 'Audit Date', caDateGraphFirstValue($stageIIReview, array('audit_dates')) ?: caDateGraphFirstValue($rcAuditPlan, array('scheduleii_date')) ?: caDateGraphFirstValue($stageOne, array('audit_dates')), 'stage_ii_audit_id.audit_dates / audit_scheduleii_id.scheduleii_date', $typedServiceId, $universalServiceId);
+                    caDateGraphAddEntry($entries, 'RC', 'RC Audit', 'Review Date', caDateGraphFirstValue($stageIIReview, array('review_date')) ?: caDateGraphFirstValue($stageIReview, array('review_date')), 'stage_ii_audit_id.review_date / stage_i_audit_id.review_date', $typedServiceId, $universalServiceId);
+                    caDateGraphAddEntry($entries, 'RC', 'RC Audit', 'Assessment / NC(M) Closing Date', caDateGraphFirstValue($cdc, array('assDate', 'Date')), 'cdc_report_review.assDate', $typedServiceId, $universalServiceId);
+                    caDateGraphAddEntry($entries, 'RC', 'RC Audit', 'CDC Date', caDateGraphFirstValue($cdc, array('Date')), 'cdc_report_review.Date', $typedServiceId, $universalServiceId);
+                    caDateGraphAddEntry($entries, 'RC', 'RC Audit', 'Rev Date / Issue Date', caDateGraphCertificateIssueDate($db, $cdc), 'cdc_report_review_office_use.rev_date / cdc_report_review.revDatecdc', $typedServiceId, $universalServiceId);
+                    caDateGraphAddEntry($entries, 'RC', 'RC Audit', 'Feedback Survey Date', caDateGraphFirstValue($survey, array('survey_date', 'review_date')), 'customer_survey_id.survey_date', $typedServiceId, $universalServiceId);
+                }
+            }
+
+            $lastTimestamp = null;
+            $lastLabel = '';
+            $summary = array('ok' => 0, 'issue' => 0, 'missing' => 0, 'total' => count($entries));
+
+            foreach ($entries as $index => $entry) {
+                if (empty($entry['dates'])) {
+                    $entries[$index]['status'] = 'missing';
+                    $entries[$index]['note'] = 'Date not available';
+                    $summary['missing']++;
+                    continue;
+                }
+
+                $dates = $entry['dates'];
+                $internalOk = true;
+                for ($i = 1; $i < count($dates); $i++) {
+                    if ($dates[$i]['timestamp'] < $dates[$i - 1]['timestamp']) {
+                        $internalOk = false;
+                        break;
+                    }
+                }
+
+                $minTimestamp = min(array_map(function ($date) { return $date['timestamp']; }, $dates));
+                $maxTimestamp = max(array_map(function ($date) { return $date['timestamp']; }, $dates));
+
+                if (!$internalOk) {
+                    $entries[$index]['status'] = 'issue';
+                    $entries[$index]['note'] = $entry['label'] . ' dates should be in correct order';
+                    $summary['issue']++;
+                } elseif ($lastTimestamp !== null && $minTimestamp < $lastTimestamp) {
+                    $entries[$index]['status'] = 'issue';
+                    $entries[$index]['note'] = $entry['section'] . ' - ' . $entry['label'] . ' should be greater than ' . $lastLabel;
+                    $summary['issue']++;
+                } else {
+                    $entries[$index]['status'] = 'ok';
+                    $entries[$index]['note'] = $entry['section'] . ' - ' . $entry['label'] . ' date is correct';
+                    $summary['ok']++;
+                }
+
+                if ($lastTimestamp === null || $maxTimestamp > $lastTimestamp) {
+                    $lastTimestamp = $maxTimestamp;
+                    $lastLabel = $entry['section'] . ' - ' . $entry['label'];
+                }
+            }
+
+            return array('entries' => $entries, 'summary' => $summary);
+        }
+    }
     
     // Manage current customer context without exposing customerid in the URL
     // 1) If called via POST (from dashboard or other lists), store the id in session and redirect back to this page
@@ -37,13 +653,24 @@
         exit;
     }
 
+    $dateGraphData = array('entries' => array(), 'summary' => array('ok' => 0, 'issue' => 0, 'missing' => 0, 'total' => 0));
+
     if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
         try {
+            aitfEnsureSupplierProfileSchema($db);
             $clientDetails = "SELECT * FROM customer_info WHERE id = :id";
             $statement = $db->prepare($clientDetails);
             $statement->bindParam(':id', $_GET['customerid']);
             $statement->execute();
             $clientInfo = $statement->fetch();
+            $isSupplierAccount = aitfCustomerIsSupplier($clientInfo);
+            $supplierTypeLabels = array(
+                'employee' => 'Employee',
+                'contractor' => 'Contractor / Service Provider',
+                'goods' => 'Goods Supplier'
+            );
+            $supplierTypeLabel = ($isSupplierAccount && isset($supplierTypeLabels[$clientInfo['supplier_type']])) ? $supplierTypeLabels[$clientInfo['supplier_type']] : 'Supplier';
+            $supplierVerified = ($isSupplierAccount && isset($clientInfo['verification_status']) && $clientInfo['verification_status'] === 'verified');
             
             // Fetch unique_id (agreement number) from certification_aggrement table
             try {
@@ -72,9 +699,11 @@
                 }
             }
 
-            // Fetch ALL certificate details for customers with multiple ISO standards
             $allCertificates = array();
             $customerId = $clientInfo['id'];
+
+            if (!$isSupplierAccount) {
+            // Fetch ALL certificate details for customers with multiple ISO standards
             
             // Get all ISO standards from audit_schedule_id table with their service IDs
             $allStandardsQuery = "SELECT 
@@ -277,6 +906,7 @@
                 $clientInfo['issue_date'] = $allCertificates[0]['issue_date'];
                 $clientInfo['expire_date'] = isset($allCertificates[0]['expire_date']) ? $allCertificates[0]['expire_date'] : '';
             }
+            }
 
             $serviceTypes = "SELECT * FROM service_types";
             $statement = $db->prepare($serviceTypes);
@@ -457,6 +1087,10 @@
             $statement->bindParam(":id", $_GET["customerid"]);
             $statement->execute();
             $totalSAII = $statement->fetch();
+
+            if (!$isSupplierAccount) {
+                $dateGraphData = caDateGraphBuildForCustomer($db, $_GET['customerid']);
+            }
         } catch (Exception $ex) {
             echo $ex;
         }
@@ -928,6 +1562,246 @@
         html.theme-dark .clickable[style*="background-color: rgb(255, 250, 205)"],
         html.theme-dark .clickable[style*="background-color: rgb(212, 237, 218)"],
         html.theme-dark .clickable[style*="background-color: rgb(248, 215, 218)"] { color: #1a1a1a !important; }
+
+        .qms_customer_name.supplier-account-header {
+            background: #6d28d9 !important;
+            color: #ffffff !important;
+        }
+
+        .supplier-type-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(255, 255, 255, 0.18);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 999px;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 800;
+            padding: 4px 9px;
+            text-transform: uppercase;
+        }
+
+        html.theme-dark .qms_customer_name.supplier-account-header {
+            background: #5b21b6 !important;
+        }
+
+        .date-graph-toggle {
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.55);
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 12px;
+            line-height: 1;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .date-graph-toggle:hover,
+        .date-graph-toggle:focus {
+            color: #fff;
+            text-decoration: none;
+            background: rgba(255, 255, 255, 0.16);
+        }
+
+        .date-graph-panel {
+            display: none;
+            margin: 12px 15px 18px;
+            border: 1px solid #d6dde8;
+            background: #ffffff;
+            color: #1f2937;
+        }
+
+        .date-graph-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 12px 14px;
+            background: #eef3f9;
+            border-bottom: 1px solid #d6dde8;
+        }
+
+        .date-graph-title {
+            font-size: 15px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .date-graph-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .date-graph-summary {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            padding: 10px 14px;
+            border-bottom: 1px solid #edf1f6;
+        }
+
+        .date-graph-pill {
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .date-graph-pill.ok { background: #dcfce7; color: #166534; }
+        .date-graph-pill.issue { background: #fee2e2; color: #991b1b; }
+        .date-graph-pill.missing { background: #f3f4f6; color: #4b5563; }
+
+        .date-graph-body {
+            padding: 12px 14px 16px;
+        }
+
+        .date-graph-section-title {
+            margin: 12px 0 8px;
+            padding: 7px 10px;
+            background: #334155;
+            color: #fff;
+            font-weight: 700;
+            font-size: 13px;
+        }
+
+        .date-graph-row {
+            display: grid;
+            grid-template-columns: 34px 1.35fr 1fr 1.25fr;
+            gap: 10px;
+            align-items: stretch;
+            border: 1px solid #e5e7eb;
+            border-left-width: 6px;
+            margin-bottom: 7px;
+            background: #fff;
+            cursor: pointer;
+        }
+
+        .date-graph-row:hover,
+        .date-graph-row:focus {
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.16);
+            outline: none;
+        }
+
+        .date-graph-row.ok { border-left-color: #16a34a; }
+        .date-graph-row.issue { border-left-color: #7f1d1d; background: #fee2e2; border-color: #b91c1c; }
+        .date-graph-row.missing { border-left-color: #374151; background: #e5e7eb; border-color: #6b7280; }
+
+        .date-graph-index {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: #475569;
+            background: #f8fafc;
+            min-height: 48px;
+        }
+
+        .date-graph-cell {
+            padding: 8px 4px;
+            min-width: 0;
+            overflow-wrap: anywhere;
+        }
+
+        .date-graph-label {
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .date-graph-meta {
+            color: #6b7280;
+            font-size: 11px;
+            margin-top: 2px;
+        }
+
+        .date-graph-date {
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .date-graph-row.issue .date-graph-label,
+        .date-graph-row.issue .date-graph-date,
+        .date-graph-row.issue .date-graph-meta {
+            color: #7f1d1d;
+        }
+
+        .date-graph-row.missing .date-graph-label,
+        .date-graph-row.missing .date-graph-date,
+        .date-graph-row.missing .date-graph-meta {
+            color: #374151;
+        }
+
+        .date-graph-status {
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .date-graph-status.ok { color: #166534; }
+        .date-graph-status.issue { color: #7f1d1d; }
+        .date-graph-status.missing { color: #374151; }
+
+        html.theme-dark .date-graph-panel {
+            background: var(--ca-surface) !important;
+            color: var(--ca-text) !important;
+            border-color: var(--ca-border) !important;
+        }
+        html.theme-dark .date-graph-header,
+        html.theme-dark .date-graph-section-title,
+        html.theme-dark .date-graph-index {
+            background: var(--ca-inner) !important;
+            color: var(--ca-text) !important;
+            border-color: var(--ca-border) !important;
+        }
+        html.theme-dark .date-graph-row {
+            background: var(--ca-surface) !important;
+            border-color: var(--ca-border) !important;
+        }
+        html.theme-dark .date-graph-label,
+        html.theme-dark .date-graph-date {
+            color: var(--ca-text) !important;
+        }
+        html.theme-dark .date-graph-meta {
+            color: var(--ca-text-dim) !important;
+        }
+
+        @media (max-width: 767px) {
+            .date-graph-header {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+            .date-graph-row {
+                grid-template-columns: 30px 1fr;
+            }
+            .date-graph-cell.source-cell,
+            .date-graph-cell.status-cell {
+                grid-column: 2;
+                padding-top: 0;
+            }
+        }
+
+        @media print {
+            body * {
+                visibility: hidden !important;
+            }
+            #dateGraphPanel,
+            #dateGraphPanel * {
+                visibility: visible !important;
+            }
+            #dateGraphPanel {
+                display: block !important;
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                margin: 0;
+                border: 0;
+            }
+            .date-graph-actions {
+                display: none !important;
+            }
+        }
     </style>
 
     <div id="page-content-wrapper">       
@@ -946,21 +1820,29 @@
             <div class="row" style="">
                 <div class="top_qms_page">
                     <div class="row">
-                        <div class="col-sm-12 qms_customer_name <?php if ($clientInfo['audit_status'] === 'Application canceled') echo 'canceled-client-header'; ?>" style="display: flex; align-items: center; gap: 8px;">
-                            <span><i class="fa fa-building"></i></span>
+                        <div class="col-sm-12 qms_customer_name <?php if (isset($clientInfo['audit_status']) && $clientInfo['audit_status'] === 'Application canceled') echo 'canceled-client-header'; ?> <?php if ($isSupplierAccount) echo 'supplier-account-header'; ?>" style="display: flex; align-items: center; gap: 8px;">
+                            <span><i class="fa <?php echo $isSupplierAccount ? 'fa-address-card-o' : 'fa-building'; ?>"></i></span>
                             <span style="flex: 1 1 auto;"><?php echo $clientInfo['customer_name']; ?></span>
+                            <?php if ($isSupplierAccount) { ?>
+                                <span class="supplier-type-pill"><?php echo htmlspecialchars($supplierTypeLabel); ?></span>
+                            <?php } ?>
                             <div style="margin-left: auto; display: flex; align-items: center; gap: 10px;">
+                                <?php if (!$isSupplierAccount) { ?>
+                                    <a href="#dateGraphPanel" id="toggleDateGraph" class="date-graph-toggle" title="Show chronological date graph" onclick="return toggleCustomerDateGraph();">
+                                        <i class="fa fa-line-chart"></i> Dates Graph
+                                    </a>
+                                <?php } ?>
                                 <a  class="editCustomerDetails" style="color: white;" data-id="<?php echo $clientInfo['id'] ?>" title="Edit client details">
                                     <span><i class="fa fa-edit"></i></span>
                                 </a> 
                                 <a class="deleteCustomerDetails" style="color: white;" data-id="<?php echo $clientInfo['id'] ?>" title="Delete customer details">
                                     <span><i class="fa fa-trash-o"></i></span>
                                 </a>
-                                <?php if ($clientInfo['audit_status'] === 'Application canceled') { ?>
+                                <?php if (!$isSupplierAccount && isset($clientInfo['audit_status']) && $clientInfo['audit_status'] === 'Application canceled') { ?>
                                     <a class="enableApplication" style="color: white;" data-id="<?php echo $clientInfo['id'] ?>" title="Enable application">
                                         <span><i class="fa fa-undo"></i></span>
                                     </a>
-                                <?php } else { ?>
+                                <?php } elseif (!$isSupplierAccount) { ?>
                                     <a class="cancelApplication" style="color: white;" data-id="<?php echo $clientInfo['id'] ?>" title="Cancel application">
                                         <span><i class="fa fa-ban"></i></span>
                                     </a>
@@ -980,10 +1862,10 @@
                             </div>
                             <div class="row" style="padding: 5px; padding-left: 20px">
                                 <div class="col-xs-3">
-                                    <span style="color: black" title="Unique Id">Unique Id</span>
+                                    <span style="color: black" title="<?php echo $isSupplierAccount ? 'Supplier Type' : 'Unique Id'; ?>"><?php echo $isSupplierAccount ? 'Supplier Type' : 'Unique Id'; ?></span>
                                 </div>
                                 <div class="col-xs-9">
-                                    <span style="color: gray"><?php echo $clientInfo['unique_id'] ?></span>
+                                    <span style="color: gray"><?php echo $isSupplierAccount ? htmlspecialchars($supplierTypeLabel) : $clientInfo['unique_id']; ?></span>
                                 </div>
                             </div>
                             <div class="row" style="padding: 5px; padding-left: 20px">
@@ -1053,6 +1935,186 @@
                         </div>
                     </div>
                     <hr style="color: slategray; margin: 0px; border: 1px solid slategray" />
+
+                    <?php if (!$isSupplierAccount) { ?>
+                    <div id="dateGraphPanel" class="date-graph-panel">
+                        <div class="date-graph-header">
+                            <div>
+                                <h3 class="date-graph-title">Date Graph - <?php echo htmlspecialchars($clientInfo['customer_name'], ENT_QUOTES, 'UTF-8'); ?></h3>
+                                <div class="date-graph-meta">Green means date order is valid. Red shows the exact date order issue. Gray means the date is not available.</div>
+                            </div>
+                            <div class="date-graph-actions">
+                                <button type="button" class="btn btn-default btn-sm" id="printDateGraph" onclick="printCustomerDateGraph();"><i class="fa fa-print"></i> Print</button>
+                                <button type="button" class="btn btn-default btn-sm" id="closeDateGraph" onclick="closeCustomerDateGraph();"><i class="fa fa-times"></i> Close</button>
+                            </div>
+                        </div>
+                        <div class="date-graph-summary">
+                            <span class="date-graph-pill ok">Valid: <?php echo (int) $dateGraphData['summary']['ok']; ?></span>
+                            <span class="date-graph-pill issue">Date Issues: <?php echo (int) $dateGraphData['summary']['issue']; ?></span>
+                            <span class="date-graph-pill missing">Missing: <?php echo (int) $dateGraphData['summary']['missing']; ?></span>
+                            <span class="date-graph-pill missing">Total Dates: <?php echo (int) $dateGraphData['summary']['total']; ?></span>
+                        </div>
+                        <div class="date-graph-body">
+                            <?php if (empty($dateGraphData['entries'])) { ?>
+                                <div class="alert alert-info" style="margin:0;">No certification workflow dates found for this client.</div>
+                            <?php } else { ?>
+                                <?php
+                                $currentGraphSection = '';
+                                $dateGraphIndex = 1;
+                                foreach ($dateGraphData['entries'] as $dateEntry) {
+                                    $sectionKey = $dateEntry['service_type'] . ' - ' . $dateEntry['section'];
+                                    if ($currentGraphSection !== $sectionKey) {
+                                        $currentGraphSection = $sectionKey;
+                                        echo '<div class="date-graph-section-title">' . htmlspecialchars($sectionKey, ENT_QUOTES, 'UTF-8') . '</div>';
+                                    }
+
+                                    $status = isset($dateEntry['status']) ? $dateEntry['status'] : 'missing';
+                                    $dateDisplayParts = array();
+                                    if (!empty($dateEntry['dates'])) {
+                                        foreach ($dateEntry['dates'] as $parsedDate) {
+                                            $dateDisplayParts[] = $parsedDate['display'];
+                                        }
+                                    }
+                                    $dateDisplay = !empty($dateDisplayParts) ? implode(', ', $dateDisplayParts) : 'Not available';
+                                    $rowSelector = isset($dateEntry['row_selector']) ? $dateEntry['row_selector'] : '';
+                                    $actionSelector = isset($dateEntry['action_selector']) ? $dateEntry['action_selector'] : '';
+                                    $fieldSelector = isset($dateEntry['field_selector']) ? $dateEntry['field_selector'] : '';
+                                    ?>
+                                    <div class="date-graph-row <?php echo htmlspecialchars($status, ENT_QUOTES, 'UTF-8'); ?>" tabindex="0" role="button" title="Open related workflow section" data-row-selector="<?php echo htmlspecialchars($rowSelector, ENT_QUOTES, 'UTF-8'); ?>" data-action-selector="<?php echo htmlspecialchars($actionSelector, ENT_QUOTES, 'UTF-8'); ?>" data-field-selector="<?php echo htmlspecialchars($fieldSelector, ENT_QUOTES, 'UTF-8'); ?>">
+                                        <div class="date-graph-index"><?php echo $dateGraphIndex; ?></div>
+                                        <div class="date-graph-cell">
+                                            <div class="date-graph-label"><?php echo htmlspecialchars($dateEntry['label'], ENT_QUOTES, 'UTF-8'); ?></div>
+                                            <div class="date-graph-meta">
+                                                <?php echo htmlspecialchars('Typed Service ID: ' . $dateEntry['typed_service_id'] . ' | Service ID: ' . $dateEntry['universal_service_id'], ENT_QUOTES, 'UTF-8'); ?>
+                                            </div>
+                                        </div>
+                                        <div class="date-graph-cell">
+                                            <div class="date-graph-date"><?php echo htmlspecialchars($dateDisplay, ENT_QUOTES, 'UTF-8'); ?></div>
+                                            <?php if (!empty($dateEntry['value']) && $dateEntry['value'] !== $dateDisplay) { ?>
+                                                <div class="date-graph-meta">Raw: <?php echo htmlspecialchars($dateEntry['value'], ENT_QUOTES, 'UTF-8'); ?></div>
+                                            <?php } ?>
+                                        </div>
+                                        <div class="date-graph-cell source-cell">
+                                            <div class="date-graph-meta">Source: <?php echo htmlspecialchars($dateEntry['source'], ENT_QUOTES, 'UTF-8'); ?></div>
+                                            <?php if (!empty($dateEntry['note'])) { ?>
+                                                <div class="date-graph-status <?php echo htmlspecialchars($status, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($dateEntry['note'], ENT_QUOTES, 'UTF-8'); ?></div>
+                                            <?php } ?>
+                                        </div>
+                                    </div>
+                                    <?php
+                                    $dateGraphIndex++;
+                                }
+                                ?>
+                            <?php } ?>
+                        </div>
+                    </div>
+                    <script>
+                        function toggleCustomerDateGraph() {
+                            var panel = document.getElementById('dateGraphPanel');
+                            if (!panel) {
+                                return false;
+                            }
+                            var isOpen = panel.style.display === 'block';
+                            panel.style.display = isOpen ? 'none' : 'block';
+                            if (!isOpen && panel.scrollIntoView) {
+                                panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }
+                            return false;
+                        }
+
+                        function closeCustomerDateGraph() {
+                            var panel = document.getElementById('dateGraphPanel');
+                            if (panel) {
+                                panel.style.display = 'none';
+                            }
+                        }
+
+                        function printCustomerDateGraph() {
+                            var panel = document.getElementById('dateGraphPanel');
+                            if (panel) {
+                                panel.style.display = 'block';
+                            }
+                            window.print();
+                        }
+
+                        function openCustomerDateGraphTarget(graphRow) {
+                            if (!graphRow) {
+                                return;
+                            }
+
+                            var rowSelector = graphRow.getAttribute('data-row-selector') || '';
+                            var actionSelector = graphRow.getAttribute('data-action-selector') || '';
+                            var fieldSelector = graphRow.getAttribute('data-field-selector') || '';
+                            var workflowRow = rowSelector ? document.querySelector(rowSelector) : null;
+
+                            if (workflowRow && window.jQuery) {
+                                var $workflowRow = window.jQuery(workflowRow);
+                                var serviceId = $workflowRow.attr('data-id');
+                                var descSelector = '';
+
+                                if ($workflowRow.hasClass('cr-service-row')) {
+                                    descSelector = '.cr-service-desc' + serviceId;
+                                } else if ($workflowRow.hasClass('ca-service-row')) {
+                                    descSelector = '.ca-service-desc' + serviceId + ', .cadates' + serviceId;
+                                } else if ($workflowRow.hasClass('sai-service-row')) {
+                                    descSelector = '.sai-service-desc' + serviceId + ', .saidates' + serviceId;
+                                } else if ($workflowRow.hasClass('saii-service-row')) {
+                                    descSelector = '.saii-service-desc' + serviceId + ', .saiidates' + serviceId;
+                                } else if ($workflowRow.hasClass('rc-service-row')) {
+                                    descSelector = '.rc-service-desc' + serviceId + ', .rcdates' + serviceId;
+                                }
+
+                                if (descSelector && !window.jQuery(descSelector).first().is(':visible')) {
+                                    $workflowRow.trigger('click');
+                                }
+                            }
+
+                            window.setTimeout(function () {
+                                var action = actionSelector ? document.querySelector(actionSelector) : null;
+                                if (action) {
+                                    action.click();
+                                    return;
+                                }
+                                if (workflowRow && workflowRow.scrollIntoView) {
+                                    workflowRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                }
+                            }, 120);
+                        }
+
+                        function focusCustomerDateGraphField(selector, attemptsLeft) {
+                            if (!selector || attemptsLeft < 0) {
+                                return;
+                            }
+
+                            var field = document.querySelector(selector);
+                            if (field && field.offsetParent !== null) {
+                                field.focus();
+                                if (typeof field.select === 'function') {
+                                    field.select();
+                                }
+                                return;
+                            }
+
+                            window.setTimeout(function () {
+                                focusCustomerDateGraphField(selector, attemptsLeft - 1);
+                            }, 180);
+                        }
+
+                        document.addEventListener('click', function (event) {
+                            var graphRow = event.target.closest ? event.target.closest('.date-graph-row') : null;
+                            if (graphRow) {
+                                openCustomerDateGraphTarget(graphRow);
+                            }
+                        });
+
+                        document.addEventListener('keydown', function (event) {
+                            if ((event.key === 'Enter' || event.key === ' ') && event.target && event.target.classList && event.target.classList.contains('date-graph-row')) {
+                                event.preventDefault();
+                                openCustomerDateGraphTarget(event.target);
+                            }
+                        });
+                    </script>
+                    <?php } ?>
                     
                     <?php
                     // TEMPORARY DEBUG OUTPUT - Remove after testing
@@ -1088,6 +2150,7 @@
                     
                     <?php
                     // Display certificate sections - one COMPLETE section for each ISO standard
+                    if (!$isSupplierAccount) {
                     if (!is_array($allCertificates)) {
                         $allCertificates = array();
                     }
@@ -1216,6 +2279,7 @@
                             echo '<div style="margin: 0; border-bottom: 3px double #999; padding-bottom: 0;"></div>';
                         }
                     } // End for loop
+                    }
                     ?>
                 </div>
             </div>
@@ -1230,6 +2294,7 @@
                 <div class="col-xs-3  text-center btn qms_complete_btn quotationBtn">
                     <span><i class="fa fa-quote-left ">Quotation</i></span>
                 </div>
+                <?php if (!$isSupplierAccount) { ?>
                 <div class="col-xs-3  text-center btn qms_complete_btn "  style="height: 28px">
                     <select name="service-type"  class="form-control service-type" id="service-type"  style="height: 20px; background-color: #f5821f; padding-top: 0px; font-size: 10px; color: white">
                         <option value="" style="color: white; font-size: 10px">Create New Service</option>
@@ -1238,6 +2303,23 @@
                         <?php } ?>
                     </select>
                 </div>
+                <?php } else {
+                    if ($supplierVerified) {
+                        $supplierBtnUrl = 'suppliers.php?tab=verified&open=' . (int) $_GET['customerid'];
+                        $supplierBtnIcon = 'fa-id-card-o';
+                        $supplierBtnLabel = 'Supplier Profile';
+                        $supplierBtnBg = '#059669';
+                    } else {
+                        $supplierBtnUrl = 'suppliers.php?open=' . (int) $_GET['customerid'] . '&action=verify';
+                        $supplierBtnIcon = 'fa-user-plus';
+                        $supplierBtnLabel = 'Complete Verification';
+                        $supplierBtnBg = '#f5821f';
+                    }
+                ?>
+                <div class="col-xs-3 text-center btn qms_complete_btn" style="background-color: <?php echo $supplierBtnBg; ?>; color: #fff;" onclick="window.location.href='<?php echo $supplierBtnUrl; ?>'">
+                    <span><i class="fa <?php echo $supplierBtnIcon; ?>" style="color:#fff;"> <?php echo $supplierBtnLabel; ?></i></span>
+                </div>
+                <?php } ?>
             </div>
         </div>
 
@@ -13102,7 +14184,7 @@
             // For example: document.getElementById('fileInput').click();
         }
     }
-    
+
     </script>
 
     <style>

@@ -3,6 +3,7 @@
     $pageIdentifier = "Bills";
     include 'header.php';
     include 'dbConnect.php';
+    include_once __DIR__ . '/include/supplier_helpers.php';
 
     $message = '';
     $errorMessage = '';
@@ -62,6 +63,7 @@
         $summary = array('total_bills' => 0, 'total_amount' => 0, 'paid_amount' => 0, 'remaining_amount' => 0, 'overdue_amount' => 0, 'overdue_count' => 0);
         $vendorSummaries = array();
         $vendorLookup = array();
+        $activeSuppliers = array();
     } else {
         try {
             // Migrations: ensure bills table exists
@@ -97,18 +99,45 @@
                 gst_no VARCHAR(50) NULL
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8");
 
+            aitfEnsureSupplierSchema($db);
+
+            // Backward-compatible vendor migration: legacy vendor names become contractor suppliers.
+            $legacyVendors = $db->query("SELECT vendor_name, phone, email, gst_no FROM vendors")->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($legacyVendors as $legacyVendor) {
+                $legacyCheck = $db->prepare("SELECT supplier_id FROM suppliers WHERE legacy_vendor_name = :legacy_vendor_name LIMIT 1");
+                $legacyCheck->execute(array(':legacy_vendor_name' => $legacyVendor['vendor_name']));
+                $legacySupplierId = $legacyCheck->fetchColumn();
+                if (!$legacySupplierId) {
+                    $legacyInsert = $db->prepare("INSERT INTO suppliers (supplier_type, supplier_name, gst_registration_status, gstin, contact_no, email, status, legacy_vendor_name)
+                        VALUES ('contractor', :supplier_name, :gst_registration_status, :gstin, :contact_no, :email, 'active', :legacy_vendor_name)");
+                    $legacyInsert->execute(array(
+                        ':supplier_name' => $legacyVendor['vendor_name'],
+                        ':gst_registration_status' => !empty($legacyVendor['gst_no']) ? 'registered' : 'unregistered',
+                        ':gstin' => $legacyVendor['gst_no'],
+                        ':contact_no' => $legacyVendor['phone'],
+                        ':email' => $legacyVendor['email'],
+                        ':legacy_vendor_name' => $legacyVendor['vendor_name']
+                    ));
+                    $legacySupplierId = $db->lastInsertId();
+                }
+                $mapStmt = $db->prepare("UPDATE bills SET supplier_id = :supplier_id, legacy_vendor_name = COALESCE(NULLIF(legacy_vendor_name, ''), vendor_name), bill_date = COALESCE(bill_date, DATE(created_at)) WHERE supplier_id IS NULL AND vendor_name = :vendor_name");
+                $mapStmt->execute(array(':supplier_id' => $legacySupplierId, ':vendor_name' => $legacyVendor['vendor_name']));
+            }
+
+            $activeSuppliers = aitfFetchActiveSuppliers($db);
+
             // Dynamic Overdue / days diff calculator helper
             function getBillStatusInfo($bill)
             {
-                // Today's date context (User's system local date context: 2026-06-23)
-                $today = new DateTime('2026-06-23');
+                $today = new DateTime(date('Y-m-d'));
 
-                $paymentStatus = $bill['payment_status'];
                 $amount = (float) $bill['amount'];
-                $paidAmount = (float) $bill['paid_amount'];
+                $paidAmount = isset($bill['derived_paid_amount']) ? (float) $bill['derived_paid_amount'] : (float) $bill['paid_amount'];
+                $tdsAmount = isset($bill['tds_amount']) ? (float) $bill['tds_amount'] : 0;
+                $settledAmount = $paidAmount + $tdsAmount;
                 $dueDateStr = $bill['due_date'];
 
-                if ($paymentStatus === 'Paid' || $paidAmount >= $amount) {
+                if ($settledAmount >= $amount) {
                     return array(
                         'status' => 'Paid',
                         'class' => 'bill-status-paid',
@@ -140,12 +169,12 @@
                     );
                 }
 
-                if ($paidAmount > 0) {
+                if ($settledAmount > 0) {
                     return array(
                         'status' => 'Partially Paid',
                         'class' => 'bill-status-partially-paid',
                         'label' => 'Partially Paid',
-                        'subtext' => 'Rs. ' . number_format($amount - $paidAmount, 2) . ' left'
+                        'subtext' => 'Rs. ' . number_format($amount - $settledAmount, 2) . ' left'
                     );
                 }
 
@@ -180,28 +209,66 @@
                         ));
                         $message = 'Vendor details updated successfully.';
                     }
-                } else {
-                    $vendorName = trim(isset($_POST['vendor_name']) ? $_POST['vendor_name'] : '');
-                    $amount = isset($_POST['amount']) ? (float) $_POST['amount'] : 0;
-                    $dueDate = isset($_POST['due_date']) && !empty($_POST['due_date']) ? $_POST['due_date'] : null;
-                    $paidAmount = isset($_POST['paid_amount']) ? (float) $_POST['paid_amount'] : 0.00;
-                    $paymentStatus = isset($_POST['payment_status']) ? $_POST['payment_status'] : 'Unpaid';
-                    $description = trim(isset($_POST['description']) ? $_POST['description'] : '');
+                } else if ($action === 'record_payment') {
+                    $billId = isset($_POST['bill_id']) ? (int) $_POST['bill_id'] : 0;
+                    $paymentAmount = isset($_POST['payment_amount']) ? (float) $_POST['payment_amount'] : 0;
+                    $tdsDeducted = isset($_POST['tds_deducted']) ? (float) $_POST['tds_deducted'] : 0;
+                    $paymentDate = isset($_POST['payment_date']) && $_POST['payment_date'] !== '' ? $_POST['payment_date'] : date('Y-m-d');
+                    $paymentMode = isset($_POST['payment_mode']) ? $_POST['payment_mode'] : 'bank_transfer';
+                    $accountReference = trim(isset($_POST['account_reference']) ? $_POST['account_reference'] : '');
+                    $utrNumber = trim(isset($_POST['utr_number']) ? $_POST['utr_number'] : '');
+                    $paymentNotes = trim(isset($_POST['payment_notes']) ? $_POST['payment_notes'] : '');
 
-                    // Auto sanitize payment status & paid amounts
-                    if ($paymentStatus === 'Paid') {
-                        $paidAmount = $amount;
-                    } else if ($paymentStatus === 'Unpaid') {
-                        $paidAmount = 0.00;
-                    } else if ($paymentStatus === 'Partially Paid') {
-                        if ($paidAmount >= $amount) {
-                            $paymentStatus = 'Paid';
-                            $paidAmount = $amount;
-                        } else if ($paidAmount <= 0) {
-                            $paymentStatus = 'Unpaid';
-                            $paidAmount = 0.00;
+                    $billStmt = $db->prepare("SELECT bill_id, supplier_id, amount FROM bills WHERE bill_id = :bill_id");
+                    $billStmt->execute(array(':bill_id' => $billId));
+                    $billForPayment = $billStmt->fetch(PDO::FETCH_ASSOC);
+                    if (!$billForPayment || empty($billForPayment['supplier_id'])) {
+                        $errorMessage = 'Please migrate/select a registered supplier before recording payment.';
+                    } elseif ($paymentAmount < 0 || $tdsDeducted < 0 || ($paymentAmount + $tdsDeducted) <= 0) {
+                        $errorMessage = 'Please enter a valid payment or TDS amount.';
+                    } else {
+                        $totals = aitfBillPaymentTotals($db, $billId);
+                        $settledAfter = $totals['paid_amount'] + $totals['tds_amount'] + $paymentAmount + $tdsDeducted;
+                        if ($settledAfter > ((float) $billForPayment['amount'] + 0.01)) {
+                            $errorMessage = 'Payment plus TDS cannot exceed the bill amount.';
+                        } else {
+                            $paymentProof = getBillUploadPath('payment_proof_file', '', $uploadDir, $allowedExtensions, $allowedMimeTypes, $errorMessage);
+                            if ($paymentProof !== false) {
+                                $payInsert = $db->prepare("INSERT INTO bill_payments (bill_id, supplier_id, payment_amount, payment_date, payment_mode, account_reference, utr_number, tds_deducted, notes, payment_proof_file, created_by)
+                                    VALUES (:bill_id, :supplier_id, :payment_amount, :payment_date, :payment_mode, :account_reference, :utr_number, :tds_deducted, :notes, :payment_proof_file, :created_by)");
+                                $payInsert->execute(array(
+                                    ':bill_id' => $billId,
+                                    ':supplier_id' => $billForPayment['supplier_id'],
+                                    ':payment_amount' => $paymentAmount,
+                                    ':payment_date' => $paymentDate,
+                                    ':payment_mode' => $paymentMode,
+                                    ':account_reference' => $accountReference,
+                                    ':utr_number' => $utrNumber,
+                                    ':tds_deducted' => $tdsDeducted,
+                                    ':notes' => $paymentNotes,
+                                    ':payment_proof_file' => $paymentProof,
+                                    ':created_by' => isset($_SESSION['id']) ? (int) $_SESSION['id'] : null
+                                ));
+                                aitfSyncBillPaymentCache($db, $billId);
+                                $message = 'Payment recorded successfully.';
+                            }
                         }
                     }
+                } else {
+                    $supplierId = isset($_POST['supplier_id']) ? (int) $_POST['supplier_id'] : 0;
+                    $vendorName = '';
+                    if ($supplierId > 0) {
+                        $supplierStmt = $db->prepare("SELECT supplier_name FROM suppliers WHERE supplier_id = :supplier_id AND status = 'active'");
+                        $supplierStmt->execute(array(':supplier_id' => $supplierId));
+                        $vendorName = (string) $supplierStmt->fetchColumn();
+                    }
+                    $billNumber = trim(isset($_POST['bill_number']) ? $_POST['bill_number'] : '');
+                    $billDate = isset($_POST['bill_date']) && !empty($_POST['bill_date']) ? $_POST['bill_date'] : date('Y-m-d');
+                    $amount = isset($_POST['amount']) ? (float) $_POST['amount'] : 0;
+                    $dueDate = isset($_POST['due_date']) && !empty($_POST['due_date']) ? $_POST['due_date'] : null;
+                    $paidAmount = 0.00;
+                    $paymentStatus = 'Unpaid';
+                    $description = trim(isset($_POST['description']) ? $_POST['description'] : '');
 
                     if ($action === 'delete') {
                         $billId = (int) $_POST['bill_id'];
@@ -217,14 +284,18 @@
                         }
 
                         $message = 'Bill deleted successfully.';
-                    } else if ($vendorName === '' || $amount < 0) {
-                        $errorMessage = 'Please enter a vendor name and a valid bill amount.';
+                    } else if ($vendorName === '' || $supplierId <= 0 || $amount < 0) {
+                        $errorMessage = 'Please select a registered supplier and enter a valid bill amount.';
                     } else if ($action === 'add') {
                         $attachedFile = getBillUploadPath('attached_file', '', $uploadDir, $allowedExtensions, $allowedMimeTypes, $errorMessage);
                         if ($attachedFile !== false) {
-                            $insertStatement = $db->prepare('INSERT INTO bills (vendor_name, amount, due_date, paid_amount, payment_status, description, attached_file) VALUES (:vendor_name, :amount, :due_date, :paid_amount, :payment_status, :description, :attached_file)');
+                            $insertStatement = $db->prepare('INSERT INTO bills (supplier_id, bill_number, bill_date, vendor_name, legacy_vendor_name, amount, due_date, paid_amount, payment_status, description, attached_file) VALUES (:supplier_id, :bill_number, :bill_date, :vendor_name, :legacy_vendor_name, :amount, :due_date, :paid_amount, :payment_status, :description, :attached_file)');
                             $insertStatement->execute(array(
+                                ':supplier_id' => $supplierId,
+                                ':bill_number' => $billNumber,
+                                ':bill_date' => $billDate,
                                 ':vendor_name' => $vendorName,
+                                ':legacy_vendor_name' => $vendorName,
                                 ':amount' => $amount,
                                 ':due_date' => $dueDate,
                                 ':paid_amount' => $paidAmount,
@@ -232,14 +303,6 @@
                                 ':description' => $description,
                                 ':attached_file' => $attachedFile
                             ));
-
-                            // Auto create vendor if missing
-                            $vCheck = $db->prepare('SELECT COUNT(*) FROM vendors WHERE vendor_name = :vendor_name');
-                            $vCheck->execute(array(':vendor_name' => $vendorName));
-                            if ($vCheck->fetchColumn() == 0) {
-                                $vInsert = $db->prepare('INSERT INTO vendors (vendor_name, phone, email, gst_no) VALUES (:vendor_name, "", "", "")');
-                                $vInsert->execute(array(':vendor_name' => $vendorName));
-                            }
 
                             $message = 'Bill added successfully.';
                         }
@@ -255,24 +318,19 @@
                                 unlink($currentBill['attached_file']);
                             }
 
-                            $updateStatement = $db->prepare('UPDATE bills SET vendor_name = :vendor_name, amount = :amount, due_date = :due_date, paid_amount = :paid_amount, payment_status = :payment_status, description = :description, attached_file = :attached_file WHERE bill_id = :bill_id');
+                            $updateStatement = $db->prepare('UPDATE bills SET supplier_id = :supplier_id, bill_number = :bill_number, bill_date = :bill_date, vendor_name = :vendor_name, amount = :amount, due_date = :due_date, description = :description, attached_file = :attached_file WHERE bill_id = :bill_id');
                             $updateStatement->execute(array(
+                                ':supplier_id' => $supplierId,
+                                ':bill_number' => $billNumber,
+                                ':bill_date' => $billDate,
                                 ':vendor_name' => $vendorName,
                                 ':amount' => $amount,
                                 ':due_date' => $dueDate,
-                                ':paid_amount' => $paidAmount,
-                                ':payment_status' => $paymentStatus,
                                 ':description' => $description,
                                 ':attached_file' => $attachedFile,
                                 ':bill_id' => $billId
                             ));
-
-                            $vCheck = $db->prepare('SELECT COUNT(*) FROM vendors WHERE vendor_name = :vendor_name');
-                            $vCheck->execute(array(':vendor_name' => $vendorName));
-                            if ($vCheck->fetchColumn() == 0) {
-                                $vInsert = $db->prepare('INSERT INTO vendors (vendor_name, phone, email, gst_no) VALUES (:vendor_name, "", "", "")');
-                                $vInsert->execute(array(':vendor_name' => $vendorName));
-                            }
+                            aitfSyncBillPaymentCache($db, $billId);
 
                             $message = 'Bill updated successfully.';
                         }
@@ -280,20 +338,42 @@
                 }
             }
 
-            // Fetch all bills
-            $statement = $db->query('SELECT * FROM bills ORDER BY created_at DESC, bill_id DESC');
+            // Fetch all bills with supplier and derived payment totals
+            $statement = $db->query("
+                SELECT b.*,
+                    COALESCE(s.supplier_name, b.vendor_name) AS supplier_display_name,
+                    s.supplier_type,
+                    COALESCE(pay.paid_amount, b.paid_amount, 0) AS derived_paid_amount,
+                    COALESCE(pay.tds_amount, 0) AS tds_amount
+                FROM bills b
+                LEFT JOIN suppliers s ON s.supplier_id = b.supplier_id
+                LEFT JOIN (
+                    SELECT bill_id, SUM(payment_amount) AS paid_amount, SUM(tds_deducted) AS tds_amount
+                    FROM bill_payments
+                    GROUP BY bill_id
+                ) pay ON pay.bill_id = b.bill_id
+                ORDER BY b.created_at DESC, b.bill_id DESC
+            ");
             $bills = $statement->fetchAll(PDO::FETCH_ASSOC);
 
-            // Fetch summaries for cards (with overdue detection based on User current date 2026-06-23)
+            // Fetch summaries for cards from derived payment totals.
             $summaryStatement = $db->query("
-                SELECT 
-                    COUNT(*) AS total_bills, 
-                    COALESCE(SUM(amount), 0) AS total_amount, 
-                    COALESCE(SUM(paid_amount), 0) AS paid_amount, 
-                    COALESCE(SUM(amount - paid_amount), 0) AS remaining_amount,
-                    COALESCE(SUM(CASE WHEN payment_status != 'Paid' AND due_date < '2026-06-23' THEN amount - paid_amount ELSE 0 END), 0) AS overdue_amount,
-                    COUNT(CASE WHEN payment_status != 'Paid' AND due_date < '2026-06-23' THEN 1 END) AS overdue_count
-                FROM bills
+                SELECT
+                    COUNT(*) AS total_bills,
+                    COALESCE(SUM(x.amount), 0) AS total_amount,
+                    COALESCE(SUM(x.paid_amount), 0) AS paid_amount,
+                    COALESCE(SUM(x.amount - x.paid_amount - x.tds_amount), 0) AS remaining_amount,
+                    COALESCE(SUM(CASE WHEN (x.amount - x.paid_amount - x.tds_amount) > 0 AND x.due_date < CURDATE() THEN x.amount - x.paid_amount - x.tds_amount ELSE 0 END), 0) AS overdue_amount,
+                    COUNT(CASE WHEN (x.amount - x.paid_amount - x.tds_amount) > 0 AND x.due_date < CURDATE() THEN 1 END) AS overdue_count
+                FROM (
+                    SELECT b.bill_id, b.amount, b.due_date, COALESCE(pay.paid_amount, b.paid_amount, 0) AS paid_amount, COALESCE(pay.tds_amount, 0) AS tds_amount
+                    FROM bills b
+                    LEFT JOIN (
+                        SELECT bill_id, SUM(payment_amount) AS paid_amount, SUM(tds_deducted) AS tds_amount
+                        FROM bill_payments
+                        GROUP BY bill_id
+                    ) pay ON pay.bill_id = b.bill_id
+                ) x
             ");
             $summary = $summaryStatement->fetch(PDO::FETCH_ASSOC);
 
@@ -330,6 +410,7 @@
             $summary = array('total_bills' => 0, 'total_amount' => 0, 'paid_amount' => 0, 'remaining_amount' => 0, 'overdue_amount' => 0, 'overdue_count' => 0);
             $vendorSummaries = array();
             $vendorLookup = array();
+            $activeSuppliers = array();
         }
     }
     ?>
@@ -1409,7 +1490,7 @@
                         <div class="bills-hero-icon"><i class="fa fa-file-text-o"></i></div>
                         <div>
                             <h1 class="bills-title">Bills Management</h1>
-                            <p class="bills-subtitle">Track vendor bills, payments, and outstanding dues .</p>
+                            <p class="bills-subtitle">Track supplier bills, payments, TDS, and outstanding dues.</p>
                         </div>
                     </div>
                     <div class="bills-header-actions" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
@@ -1429,8 +1510,21 @@
                             <input type="hidden" name="bill_action" value="add">
                             <div class="bill-form-grid">
                                 <div class="bill-form-group">
-                                    <label>Vendor Name</label>
-                                    <input type="text" name="vendor_name" list="vendorList" placeholder="Enter or select vendor" required autocomplete="off">
+                                    <label>Supplier</label>
+                                    <select name="supplier_id" required>
+                                        <option value="">Select registered supplier</option>
+                                        <?php foreach ($activeSuppliers as $supplier) { ?>
+                                            <option value="<?php echo (int) $supplier['supplier_id']; ?>"><?php echo h($supplier['supplier_name'] . ' - ' . aitfSupplierTypeLabel($supplier['supplier_type'])); ?></option>
+                                        <?php } ?>
+                                    </select>
+                                </div>
+                                <div class="bill-form-group">
+                                    <label>Bill Number</label>
+                                    <input type="text" name="bill_number" placeholder="Supplier bill/invoice number">
+                                </div>
+                                <div class="bill-form-group">
+                                    <label>Bill Date</label>
+                                    <input type="date" name="bill_date" value="<?php echo date('Y-m-d'); ?>" required>
                                 </div>
                                 <div class="bill-form-group">
                                     <label>Bill Amount (INR)</label>
@@ -1439,19 +1533,6 @@
                                 <div class="bill-form-group">
                                     <label>Due Date</label>
                                     <input type="date" name="due_date" value="<?php echo date('Y-m-d'); ?>" required>
-                                </div>
-                                <div class="bill-form-group">
-                                    <label>Payment Status</label>
-                                    <select name="payment_status" class="status-select" required>
-                                        <option value="Unpaid">Unpaid</option>
-                                        <option value="Partially Paid">Partially Paid</option>
-                                        <option value="Paid">Paid</option>
-                                    </select>
-                                </div>
-                                <div class="bill-form-group paid-amount-group">
-                                    <label>Paid Amount (INR)</label>
-                                    <input type="number" name="paid_amount" class="paid-amount-input" min="0" step="0.01" value="0.00" placeholder="0.00">
-                                    <span class="remaining-helper text-muted" style="font-size: 12px; margin-top: 6px; font-weight: 600; color: #64748b;">Remaining Amount: INR. <span class="calc-remaining">0.00</span></span>
                                 </div>
                                 <div class="bill-form-group">
                                     <label>Attach Bill File (JPG, PNG, PDF)</label>
@@ -1514,7 +1595,7 @@
                         <div class="bills-filter-panel">
                             <div class="search-wrap">
                                 <i class="fa fa-search"></i>
-                                <input type="text" id="billSearch" placeholder="Search bills by vendor name or description...">
+                                <input type="text" id="billSearch" placeholder="Search bills by supplier, bill number or description...">
                             </div>
                             <select id="billStatusFilter">
                                 <option value="All">All Statuses</option>
@@ -1530,7 +1611,7 @@
                             <table class="table table-hover bills-table" id="billsTable">
                                 <thead>
                                     <tr>
-                                        <th>Vendor Name</th>
+                                        <th>Supplier</th>
                                         <th>Date Details</th>
                                         <th>Amount Details</th>
                                         <th>Status</th>
@@ -1542,22 +1623,37 @@
                                     <?php foreach ($bills as $bill) { 
                                         $statusInfo = getBillStatusInfo($bill);
                                         $isOverdueFlag = ($statusInfo['status'] === 'Overdue');
+                                        $supplierDisplayName = !empty($bill['supplier_display_name']) ? $bill['supplier_display_name'] : $bill['vendor_name'];
+                                        $derivedPaidAmount = isset($bill['derived_paid_amount']) ? (float) $bill['derived_paid_amount'] : (float) $bill['paid_amount'];
+                                        $tdsAmount = isset($bill['tds_amount']) ? (float) $bill['tds_amount'] : 0;
+                                        $settledAmount = $derivedPaidAmount + $tdsAmount;
+                                        $remainingAmount = max(0, (float) $bill['amount'] - $settledAmount);
                                     ?>
-                                        <tr class="bill-row" data-status="<?php echo h($statusInfo['status']); ?>" data-search="<?php echo h(strtolower($bill['vendor_name'] . ' ' . $bill['description'])); ?>">
+                                        <tr class="bill-row" data-status="<?php echo h($statusInfo['status']); ?>" data-search="<?php echo h(strtolower($supplierDisplayName . ' ' . $bill['bill_number'] . ' ' . $bill['description'])); ?>">
                                             <td>
-                                                <div class="bill-vendor-cell vendor-profile-trigger" data-vendor="<?php echo h($bill['vendor_name']); ?>" style="cursor: pointer;" title="Click to view vendor details">
-                                                    <span class="bill-vendor-icon"><?php echo strtoupper(substr($bill['vendor_name'], 0, 1)); ?></span>
+                                                <div class="bill-vendor-cell" title="Supplier details">
+                                                    <span class="bill-vendor-icon"><?php echo strtoupper(substr($supplierDisplayName, 0, 1)); ?></span>
                                                     <div>
-                                                        <strong class="vendor-name-link"><?php echo h($bill['vendor_name']); ?></strong>
-                                                        <div style="font-size: 11px; color: #64748b; margin-top: 2px;"><i class="fa fa-user"></i> View Profile</div>
+                                                        <strong class="vendor-name-link"><?php echo h($supplierDisplayName); ?></strong>
+                                                        <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
+                                                            <?php if (!empty($bill['supplier_id'])) { ?>
+                                                                <a href="suppliers.php?action=edit&supplier_id=<?php echo (int) $bill['supplier_id']; ?>">View Supplier</a>
+                                                            <?php } else { ?>
+                                                                Legacy Vendor
+                                                            <?php } ?>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td>
                                                 <div class="date-detail-stack">
                                                     <div class="date-detail-row">
-                                                        <span class="date-lbl">Billed:</span>
-                                                        <span class="date-val"><?php echo date('d M Y', strtotime($bill['created_at'])); ?></span>
+                                                        <span class="date-lbl">Bill No:</span>
+                                                        <span class="date-val"><?php echo h($bill['bill_number'] ?: '-'); ?></span>
+                                                    </div>
+                                                    <div class="date-detail-row">
+                                                        <span class="date-lbl">Bill Date:</span>
+                                                        <span class="date-val"><?php echo !empty($bill['bill_date']) ? date('d M Y', strtotime($bill['bill_date'])) : date('d M Y', strtotime($bill['created_at'])); ?></span>
                                                     </div>
                                                     <div class="date-detail-row">
                                                         <span class="date-lbl">Due:</span>
@@ -1575,11 +1671,15 @@
                                                     </div>
                                                     <div class="amount-detail-row">
                                                         <span class="amount-lbl">Paid:</span>
-                                                        <span class="amount-val paid-amt">Rs. <?php echo formatBillAmount($bill['paid_amount']); ?></span>
+                                                        <span class="amount-val paid-amt">Rs. <?php echo formatBillAmount($derivedPaidAmount); ?></span>
                                                     </div>
-                                                    <div class="amount-detail-row remaining-row <?php echo ((float)$bill['amount'] - (float)$bill['paid_amount']) > 0 ? 'has-remaining' : ''; ?>">
+                                                    <div class="amount-detail-row">
+                                                        <span class="amount-lbl">TDS:</span>
+                                                        <span class="amount-val paid-amt">Rs. <?php echo formatBillAmount($tdsAmount); ?></span>
+                                                    </div>
+                                                    <div class="amount-detail-row remaining-row <?php echo $remainingAmount > 0 ? 'has-remaining' : ''; ?>">
                                                         <span class="amount-lbl">Remaining:</span>
-                                                        <span class="amount-val remaining-amt">INR. <?php echo formatBillAmount((float)$bill['amount'] - (float)$bill['paid_amount']); ?></span>
+                                                        <span class="amount-val remaining-amt">INR. <?php echo formatBillAmount($remainingAmount); ?></span>
                                                     </div>
                                                 </div>
                                             </td>
@@ -1609,11 +1709,67 @@
                                             </td>
                                             <td>
                                                 <div class="bill-action-row">
+                                                    <button type="button" class="bill-action-btn recordPaymentToggle" data-target="paymentBill<?php echo (int) $bill['bill_id']; ?>" title="Record Payment"><i class="fa fa-money"></i></button>
                                                     <button type="button" class="bill-action-btn editBillToggle" data-target="editBill<?php echo (int) $bill['bill_id']; ?>" title="Edit Bill"><i class="fa fa-pencil"></i></button>
                                                     <form method="post" class="bill-inline-form" onsubmit="return confirm('Are you sure you want to delete this bill?');">
                                                         <input type="hidden" name="bill_action" value="delete">
                                                         <input type="hidden" name="bill_id" value="<?php echo (int) $bill['bill_id']; ?>">
                                                         <button type="submit" class="bill-action-btn bill-action-delete" title="Delete Bill"><i class="fa fa-trash"></i></button>
+                                                    </form>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr class="bill-payment-row">
+                                            <td colspan="6">
+                                                <div class="bill-edit-panel" id="paymentBill<?php echo (int) $bill['bill_id']; ?>">
+                                                    <form method="post" enctype="multipart/form-data">
+                                                        <input type="hidden" name="bill_action" value="record_payment">
+                                                        <input type="hidden" name="bill_id" value="<?php echo (int) $bill['bill_id']; ?>">
+                                                        <div class="bill-form-grid">
+                                                            <div class="bill-form-group">
+                                                                <label>Payment Amount (INR)</label>
+                                                                <input type="number" name="payment_amount" min="0" step="0.01" value="<?php echo $remainingAmount > 0 ? h($remainingAmount) : '0.00'; ?>" required>
+                                                            </div>
+                                                            <div class="bill-form-group">
+                                                                <label>Payment Date</label>
+                                                                <input type="date" name="payment_date" value="<?php echo date('Y-m-d'); ?>" required>
+                                                            </div>
+                                                            <div class="bill-form-group">
+                                                                <label>Payment Mode</label>
+                                                                <select name="payment_mode" required>
+                                                                    <option value="bank_transfer">Bank Transfer</option>
+                                                                    <option value="upi">UPI</option>
+                                                                    <option value="cheque">Cheque</option>
+                                                                    <option value="cash">Cash</option>
+                                                                    <option value="card">Card</option>
+                                                                    <option value="other">Other</option>
+                                                                </select>
+                                                            </div>
+                                                            <div class="bill-form-group">
+                                                                <label>Account / Bank Reference</label>
+                                                                <input type="text" name="account_reference" placeholder="Bank/account reference">
+                                                            </div>
+                                                            <div class="bill-form-group">
+                                                                <label>Transaction / UTR Number</label>
+                                                                <input type="text" name="utr_number" placeholder="UTR / cheque / transaction id">
+                                                            </div>
+                                                            <div class="bill-form-group">
+                                                                <label>TDS Deducted (INR)</label>
+                                                                <input type="number" name="tds_deducted" min="0" step="0.01" value="0.00">
+                                                            </div>
+                                                            <div class="bill-form-group">
+                                                                <label>Payment Proof</label>
+                                                                <input type="file" name="payment_proof_file" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf">
+                                                            </div>
+                                                            <div class="bill-form-group bill-form-full">
+                                                                <label>Notes</label>
+                                                                <textarea name="payment_notes" placeholder="Payment notes or TDS details..."></textarea>
+                                                            </div>
+                                                        </div>
+                                                        <div class="bill-form-actions">
+                                                            <button type="button" class="bills-btn bills-btn-soft paymentBillCancel" data-target="paymentBill<?php echo (int) $bill['bill_id']; ?>">Cancel</button>
+                                                            <button type="submit" class="bills-btn bills-btn-primary">Record Payment</button>
+                                                        </div>
                                                     </form>
                                                 </div>
                                             </td>
@@ -1626,8 +1782,21 @@
                                                         <input type="hidden" name="bill_id" value="<?php echo (int) $bill['bill_id']; ?>">
                                                         <div class="bill-form-grid">
                                                             <div class="bill-form-group">
-                                                                <label>Vendor Name</label>
-                                                                <input type="text" name="vendor_name" list="vendorList" value="<?php echo h($bill['vendor_name']); ?>" required autocomplete="off">
+                                                                <label>Supplier</label>
+                                                                <select name="supplier_id" required>
+                                                                    <option value="">Select registered supplier</option>
+                                                                    <?php foreach ($activeSuppliers as $supplier) { ?>
+                                                                        <option value="<?php echo (int) $supplier['supplier_id']; ?>" <?php echo (int) $bill['supplier_id'] === (int) $supplier['supplier_id'] ? 'selected' : ''; ?>><?php echo h($supplier['supplier_name'] . ' - ' . aitfSupplierTypeLabel($supplier['supplier_type'])); ?></option>
+                                                                    <?php } ?>
+                                                                </select>
+                                                            </div>
+                                                            <div class="bill-form-group">
+                                                                <label>Bill Number</label>
+                                                                <input type="text" name="bill_number" value="<?php echo h($bill['bill_number']); ?>">
+                                                            </div>
+                                                            <div class="bill-form-group">
+                                                                <label>Bill Date</label>
+                                                                <input type="date" name="bill_date" value="<?php echo !empty($bill['bill_date']) ? h($bill['bill_date']) : date('Y-m-d', strtotime($bill['created_at'])); ?>" required>
                                                             </div>
                                                             <div class="bill-form-group">
                                                                 <label>Bill Amount (INR.)</label>
@@ -1636,19 +1805,6 @@
                                                             <div class="bill-form-group">
                                                                 <label>Due Date</label>
                                                                 <input type="date" name="due_date" value="<?php echo !empty($bill['due_date']) ? h($bill['due_date']) : date('Y-m-d'); ?>" required>
-                                                            </div>
-                                                            <div class="bill-form-group">
-                                                                <label>Payment Status</label>
-                                                                <select name="payment_status" class="status-select" required>
-                                                                    <option value="Unpaid" <?php echo $bill['payment_status'] === 'Unpaid' ? 'selected' : ''; ?>>Unpaid</option>
-                                                                    <option value="Partially Paid" <?php echo $bill['payment_status'] === 'Partially Paid' ? 'selected' : ''; ?>>Partially Paid</option>
-                                                                    <option value="Paid" <?php echo $bill['payment_status'] === 'Paid' ? 'selected' : ''; ?>>Paid</option>
-                                                                </select>
-                                                            </div>
-                                                            <div class="bill-form-group paid-amount-group">
-                                                                <label>Paid Amount (INR.)</label>
-                                                                <input type="number" name="paid_amount" class="paid-amount-input" min="0" step="0.01" value="<?php echo h($bill['paid_amount']); ?>" placeholder="0.00">
-                                                                <span class="remaining-helper text-muted" style="font-size: 12px; margin-top: 6px; font-weight: 600; color: #64748b;">Remaining Amount: Rs. <span class="calc-remaining"><?php echo formatBillAmount((float)$bill['amount'] - (float)$bill['paid_amount']); ?></span></span>
                                                             </div>
                                                             <div class="bill-form-group">
                                                                 <label>Replace Attached File</label>
@@ -1680,69 +1836,6 @@
     </div>
 </div>
 
-<!-- Autocomplete datalist for Vendor names -->
-<datalist id="vendorList">
-    <?php foreach ($vendorSummaries as $vSum) { ?>
-        <option value="<?php echo h($vSum['vendor_name']); ?>">
-    <?php } ?>
-</datalist>
-
-<!-- Vendor Profile Details Modal -->
-<div class="custom-modal-overlay" id="vendorDetailsModal">
-    <div class="custom-modal-container">
-        <div class="custom-modal-header">
-            <h5 class="custom-modal-title"><i class="fa fa-vcard-o"></i> Vendor Profile</h5>
-            <button type="button" class="custom-modal-close closeModalBtn">&times;</button>
-        </div>
-        <div class="custom-modal-body">
-            <form id="vendorUpdateForm" method="post">
-                <input type="hidden" name="bill_action" value="save_vendor">
-                <input type="hidden" name="vendor_name" id="vendorModalFormName">
-                
-                <div class="vendor-details-grid">
-                    <div class="vendor-detail-item vendor-stat-item" style="grid-column: 1 / -1; display: flex; flex-direction: row; align-items: center; gap: 14px;">
-                        <div class="bill-vendor-icon" style="width: 50px; height: 50px; font-size: 20px;" id="vendorModalInitials">-</div>
-                        <div>
-                            <div style="font-size: 12px; color: #64748b; font-weight: 700; text-transform: uppercase;">Vendor Business Name</div>
-                            <div style="font-size: 18px; font-weight: 800; color: #0f172a;" id="vendorModalName">-</div>
-                        </div>
-                    </div>
-                    
-                    <div class="vendor-detail-item">
-                        <label>GST Registration Number</label>
-                        <input type="text" name="gst_no" id="vendorModalGst" class="vendor-edit-input" placeholder="Enter GST Number (e.g. 07AAAAA1111A1Z1)">
-                    </div>
-                    
-                    <div class="vendor-detail-item">
-                        <label>Contact Number</label>
-                        <input type="text" name="phone" id="vendorModalPhone" class="vendor-edit-input" placeholder="Enter Phone Number">
-                    </div>
-                    
-                    <div class="vendor-detail-item">
-                        <label>Email Address</label>
-                        <input type="email" name="email" id="vendorModalEmail" class="vendor-edit-input" placeholder="Enter Email Address">
-                    </div>
-                    
-                    <div class="vendor-detail-item vendor-stat-item">
-                        <label>Total Bills </label>
-                        <div class="vendor-detail-val" style="font-size: 20px; font-weight: 800;" id="vendorModalTotalBills">0</div>
-                    </div>
-                    
-                    <div class="vendor-detail-item vendor-stat-item" style="grid-column: 1 / -1;">
-                        <label>Total Outstanding Dues</label>
-                        <div class="vendor-detail-val text-primary" style="font-size: 20px; font-weight: 800;" id="vendorModalOutstanding">INR. 0.00</div>
-                    </div>
-                </div>
-                
-                <div class="bill-form-actions">
-                    <button type="button" class="bills-btn bills-btn-soft closeModalBtn">Close</button>
-                    <button type="submit" class="bills-btn bills-btn-primary"><i class="fa fa-save"></i> Save Details</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
 <!-- Attachment Preview Modal -->
 <div class="custom-modal-overlay" id="attachmentPreviewModal">
     <div class="custom-modal-container" style="max-width: 800px;">
@@ -1760,9 +1853,6 @@
 
 <script type="text/javascript">
     $(document).ready(function () {
-        // Vendor Lookup dataset injected from PHP
-        const vendorDetails = <?php echo json_encode($vendorLookup); ?>;
-
         function filterBills() {
             var query = $('#billSearch').val().toLowerCase();
             var status = $('#billStatusFilter').val();
@@ -1772,10 +1862,12 @@
                 var matchesSearch = $(this).attr('data-search').indexOf(query) !== -1;
                 var matchesStatus = status === 'All' || $(this).attr('data-status') === status;
                 var showRow = matchesSearch && matchesStatus;
-                var editRow = $(this).next('.bill-edit-row');
+                var editRow = $(this).nextAll('.bill-edit-row:first');
+                var paymentRow = $(this).nextAll('.bill-payment-row:first');
 
                 $(this).toggle(showRow);
                 editRow.toggle(showRow && editRow.find('.bill-edit-panel').is(':visible'));
+                paymentRow.toggle(showRow && paymentRow.find('.bill-edit-panel').is(':visible'));
 
                 if (showRow) {
                     visibleRows++;
@@ -1867,6 +1959,7 @@
         $('.editBillToggle').click(function () {
             var target = $('#' + $(this).data('target'));
             $('.bill-edit-panel').not(target).slideUp(160).closest('.bill-edit-row').hide();
+            $('.bill-edit-panel').not(target).closest('.bill-payment-row').hide();
             target.closest('.bill-edit-row').show();
             target.slideToggle(160, filterBills);
         });
@@ -1875,22 +1968,16 @@
             $('#' + $(this).data('target')).slideUp(160, filterBills);
         });
 
-        // Vendor details profile popup handler
-        $('.vendor-profile-trigger').click(function(e) {
-            e.preventDefault();
-            var vName = $(this).data('vendor');
-            var profile = vendorDetails[vName] || { phone: '', email: '', gst_no: '', total_bills: 0, total_outstanding: 0 };
-            
-            $('#vendorModalFormName').val(vName);
-            $('#vendorModalName').text(vName);
-            $('#vendorModalInitials').text(vName.substring(0, 1).toUpperCase());
-            $('#vendorModalGst').val(profile.gst_no);
-            $('#vendorModalPhone').val(profile.phone);
-            $('#vendorModalEmail').val(profile.email);
-            $('#vendorModalTotalBills').text(profile.total_bills);
-            $('#vendorModalOutstanding').text('Rs. ' + profile.total_outstanding.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-            
-            openModal('#vendorDetailsModal');
+        $('.recordPaymentToggle').click(function () {
+            var target = $('#' + $(this).data('target'));
+            $('.bill-edit-panel').not(target).slideUp(160).closest('.bill-edit-row').hide();
+            $('.bill-edit-panel').not(target).closest('.bill-payment-row').hide();
+            target.closest('.bill-payment-row').show();
+            target.slideToggle(160, filterBills);
+        });
+
+        $('.paymentBillCancel').click(function () {
+            $('#' + $(this).data('target')).slideUp(160, filterBills);
         });
 
         // Attachment Preview popup handler
@@ -1948,7 +2035,7 @@
             form.remove();
         });
 
-        $('.bill-edit-row').hide();
+        $('.bill-edit-row, .bill-payment-row').hide();
         filterBills();
     });
 </script>

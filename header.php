@@ -125,6 +125,12 @@ if (!Utitlity::checkIfLoggedIn()) {
         header("Location: login");
         exit;
     }
+} else if (isset($pageIdentifier) && $pageIdentifier == "Suppliers") {
+    $addSuppliersClass = "active";
+    if (!(Utitlity::checkForUserAdmin() || Utitlity::checkForUserFinance() || Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin())) {
+        header("Location: login");
+        exit;
+    }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Quot") {
     $addquotClass = "active";
     if (!(Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin())) {
@@ -240,30 +246,10 @@ function getFlatDate($inputStr)
     <ul id="sidebar_menu" class="sidebar-nav">
         <li class="sidebar-brand" style="height: 65px; overflow: hidden;"><a class="" id="menu-toggle" href="#" style="display: block; height: 65px; background: linear-gradient(180deg, #081524 0%, #053c6d 100%); padding: 5px 10px; text-decoration: none; box-sizing: border-box;">
                 <div style="display: inline-flex; flex-direction: column; align-items: center; justify-content: center; width: 120px; vertical-align: middle; height: 100%;">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 35" width="105" height="37">
-                      <defs>
-                        <mask id="aitf-logo-mask">
-                          <rect x="0" y="0" width="100" height="35" fill="#ffffff" />
-                          <rect x="0" y="8.5" width="100" height="1.5" fill="#000000" />
-                          <rect x="0" y="14.3" width="100" height="1.5" fill="#000000" />
-                          <rect x="0" y="20.1" width="100" height="1.5" fill="#000000" />
-                          <rect x="0" y="25.9" width="100" height="1.5" fill="#000000" />
-                        </mask>
-                      </defs>
-                      <g mask="url(#aitf-logo-mask)">
-                        <!-- A (Red: #e31e24) -->
-                        <path d="M 15 4 H 19.5 L 30 29.5 H 32 V 31 H 24.5 L 23.5 28.5 H 10.5 L 9.5 31 H 2 V 29.5 H 4.5 Z M 17.2 11 L 22 23 H 12 Z" fill="#e31e24" fill-rule="evenodd" />
-                        <!-- I (Original Blue: #0d3a6c) -->
-                        <path d="M 37 15.5 H 51 V 18.5 H 47 V 28 H 51 V 31 H 37 V 28 H 41 V 18.5 H 37 Z" fill="#0d3a6c" />
-                        <!-- T & Top Bar (Original Blue: #0d3a6c) -->
-                        <path d="M 64 5 H 94 V 8 H 78 V 36.2 H 73 V 8 H 68 V 16.4 H 64 Z" fill="#0d3a6c" />
-                        <!-- F Stem & Arms (Red: #e31e24) -->
-                        <path d="M 78 8 H 83 V 36.2 H 78 Z M 78 10 H 94 V 16.4 H 90 V 14.3 H 78 Z M 78 24.8 H 91 V 28.3 H 78 Z" fill="#e31e24" />
-                      </g>
-                      <!-- Solid red base line -->
-                      <rect x="2" y="32.5" width="80" height="1.5" fill="#e31e24" />
-                    </svg>
-                    <span style="font-family: 'Poppins', 'Inter', sans-serif; font-weight: 800; font-size: 11px; color: #f5821f; letter-spacing: 2px; margin-top: 1px; line-height: 1;">ERP</span>
+                    <span style="font-family: 'Poppins', 'Inter', sans-serif; font-weight: 800; font-size: 26px; letter-spacing: 1px; line-height: 1;">
+                        <span style="color: #CF2120;">A</span><span style="color: #ffffff;">IT</span><span style="color: #CF2120;">F</span>
+                    </span>
+                    <span style="font-family: 'Poppins', 'Inter', sans-serif; font-weight: 600; font-size: 11px; color: #ffffff; letter-spacing: 2px; margin-top: 2px; line-height: 1;">ERP</span>
                 </div>
                 <span id="main_icon" class="glyphicon glyphicon-align-justify" style="float: right; margin-top: 16px; margin-right: 15px; color: #ffffff; font-size: 18px;"></span></a></li>
     </ul>
@@ -328,6 +314,10 @@ function getFlatDate($inputStr)
             <li><a href="billsPage.php" class="animate <?php echo isset($addBillsClass) ? $addBillsClass : ''; ?>">BILLS<i
                         class="sub_icon fa fa-file-text-o fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
+        <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForUserFinance() || Utitlity::checkForOfficeStaff()) { ?>
+            <li><a href="suppliers.php" class="animate <?php echo isset($addSuppliersClass) ? $addSuppliersClass : ''; ?>">SUPPLIERS<i
+                        class="sub_icon fa fa-address-card-o fa-2x" style="vertical-align:middle"></i></a></li>
+        <?php } ?>
         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
             <li><a href="quotationPage.php" class="animate <?php echo $addquotClass ?>">QUOTATIONS<i
                         class="sub_icon fa fa-quote-left fa-2x" style="vertical-align:middle"></i></a></li>
@@ -378,10 +368,33 @@ function getFlatDate($inputStr)
         <div class="navbar-content">
             <?php if (!(Utitlity::checkClient() || Utitlity::checkExternalUser())) { ?>
                 <div class="navbar-left">
-                    <a href="#" class="addAccountCss modern-add-btn" title="Add New Client">
-                        <i class="fa fa-plus" aria-hidden="true"></i>
-                        <span>Add New Client</span>
-                    </a>
+                    <div class="dropdown add-new-dropdown">
+                        <a href="#" class="dropdown-toggle modern-add-btn" data-toggle="dropdown" title="Add New">
+                            <i class="fa fa-plus" aria-hidden="true"></i>
+                            <span>Add New</span>
+                            <i class="fa fa-chevron-down" aria-hidden="true" style="font-size: 11px;"></i>
+                        </a>
+                        <div class="dropdown-menu add-new-menu" role="menu">
+                            <div class="add-new-panel">
+                                <a href="#" class="addAccountCss add-new-item add-new-item-client">
+                                    <span class="add-new-ico"><i class="fa fa-building"></i></span>
+                                    <span class="add-new-text">
+                                        <span class="add-new-title">Add New Client</span>
+                                        <span class="add-new-sub">Create a new client profile</span>
+                                    </span>
+                                    <span class="add-new-arrow"><i class="fa fa-angle-right"></i></span>
+                                </a>
+                                <a href="suppliers.php?add=1" class="add-new-item add-new-item-supplier">
+                                    <span class="add-new-ico"><i class="fa fa-truck"></i></span>
+                                    <span class="add-new-text">
+                                        <span class="add-new-title">Add New Supplier</span>
+                                        <span class="add-new-sub">Register a new supplier</span>
+                                    </span>
+                                    <span class="add-new-arrow"><i class="fa fa-angle-right"></i></span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="navbar-center">
@@ -440,6 +453,7 @@ function getFlatDate($inputStr)
                 <li><a href="clientList.php">CLIENT LIST</a></li>
                 <li><a href="invoicePage.php">INVOICE</a></li>
                 <li><a href="billsPage.php">BILLS</a></li>
+                <li><a href="suppliers.php">SUPPLIERS</a></li>
                 <li><a href="quotationPage.php">QUOTATION</a></li>
                 <li><a href="addUsers.php">ADD USER</a></li>
                 <li><a href="clientRecycle.php">RECYCLE BIN</a></li>
@@ -524,6 +538,133 @@ function getFlatDate($inputStr)
 
 .modern-add-btn i {
     font-size: 15px;
+}
+
+.add-new-dropdown {
+    position: relative;
+}
+
+/* ---- Premium "Add New" action dropdown ----
+   .add-new-menu is the Bootstrap/Popper positioning shell (kept transparent so
+   Popper's inline transform never conflicts with our open animation).
+   .add-new-panel carries all the visuals and the open animation. */
+.add-new-menu {
+    min-width: 336px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    z-index: 10001;
+}
+
+.add-new-panel {
+    margin-top: 10px;
+    width: 336px;
+    border: 1px solid #e6ebf3;
+    border-radius: 18px;
+    padding: 8px;
+    background: #ffffff;
+    box-shadow: 0 2px 6px rgba(15,23,42,0.05), 0 18px 44px rgba(15,23,42,0.14);
+}
+
+/* Open animation: fade + slide-down + slight scale */
+.add-new-menu.show .add-new-panel {
+    transform-origin: top center;
+    animation: addNewMenuIn 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes addNewMenuIn {
+    from { opacity: 0; transform: translateY(-8px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Each action row: icon chip + title/subtitle + chevron */
+.add-new-panel > a.add-new-item {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    height: 64px;
+    padding: 0 12px;
+    border-radius: 13px;
+    color: #0f172a;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.22s cubic-bezier(0.4,0,0.2,1),
+                transform 0.22s cubic-bezier(0.4,0,0.2,1);
+}
+
+.add-new-panel > a.add-new-item + a.add-new-item { margin-top: 4px; }
+
+.add-new-ico {
+    width: 46px;
+    height: 46px;
+    flex: 0 0 auto;
+    border-radius: 13px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    font-size: 18px;
+    box-shadow: 0 5px 13px rgba(15,23,42,0.14);
+    transition: transform 0.22s cubic-bezier(0.34,1.56,0.64,1);
+}
+
+.add-new-text {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    line-height: 1.3;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.add-new-title { font-size: 14px; font-weight: 700; letter-spacing: -0.01em; }
+.add-new-sub { font-size: 11.5px; font-weight: 500; color: #94a3b8; margin-top: 1px; }
+
+.add-new-arrow {
+    flex: 0 0 auto;
+    color: #cbd5e1;
+    font-size: 16px;
+    opacity: 0;
+    transform: translateX(-4px);
+    transition: opacity 0.22s ease, transform 0.22s ease;
+}
+.add-new-item:hover .add-new-arrow { opacity: 1; transform: translateX(0); }
+.add-new-item:hover .add-new-ico { transform: scale(1.08); }
+
+/* Client = blue */
+.add-new-item-client .add-new-ico { background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); }
+.add-new-panel > a.add-new-item-client:hover {
+    background: #eff6ff;
+    color: #1d4ed8;
+    transform: translateX(3px);
+}
+.add-new-item-client:hover .add-new-arrow { color: #1d4ed8; }
+
+/* Supplier = orange */
+.add-new-item-supplier .add-new-ico { background: linear-gradient(135deg, #f5821f 0%, #d9631a 100%); }
+.add-new-panel > a.add-new-item-supplier:hover {
+    background: #fff5eb;
+    color: #c2620f;
+    transform: translateX(3px);
+}
+.add-new-item-supplier:hover .add-new-arrow { color: #c2620f; }
+
+.add-new-item-supplier:hover .add-new-sub,
+.add-new-item-client:hover .add-new-sub { color: inherit; opacity: 0.7; }
+
+/* Dark theme */
+html.theme-dark .add-new-panel { background: #111827; border-color: #1f2937; box-shadow: 0 2px 6px rgba(0,0,0,0.4), 0 18px 44px rgba(0,0,0,0.5); }
+html.theme-dark .add-new-panel > a.add-new-item { color: #e5e7eb; }
+html.theme-dark .add-new-sub { color: #64748b; }
+html.theme-dark .add-new-item-client:hover { background: rgba(37,99,235,0.16); color: #93c5fd; }
+html.theme-dark .add-new-item-supplier:hover { background: rgba(245,130,31,0.16); color: #fdba74; }
+
+/* Responsive */
+@media (max-width: 420px) {
+    .add-new-menu { min-width: 300px; }
+    .add-new-panel { width: 300px; }
 }
 
 /* Center Section - Search */
@@ -1007,7 +1148,10 @@ function getFlatDate($inputStr)
                     $(".clientlistappend").empty();
                     //                    console.log(data);
                     for (var key in data) {
-                        $(".clientlistappend").append('<li class="client-list" style="text-align: left; padding: 8px 12px; cursor: pointer;" data-id="' + data[key]['id'] + '">' + data[key]['customer_name'] + '</li>');
+                        var isSupplier = data[key]['customer_category'] === 'supplier';
+                        var label = isSupplier ? '<span style="float:right; background:#ede9fe; color:#5b21b6; border-radius:999px; padding:2px 7px; font-size:10px; font-weight:700;">SUPPLIER</span>' : '';
+                        var itemStyle = isSupplier ? 'text-align: left; padding: 8px 12px; cursor: pointer; border-left: 4px solid #6d28d9;' : 'text-align: left; padding: 8px 12px; cursor: pointer;';
+                        $(".clientlistappend").append('<li class="client-list" style="' + itemStyle + '" data-id="' + data[key]['id'] + '">' + data[key]['customer_name'] + label + '</li>');
                     }
 
                     // Show dropdown if there are results

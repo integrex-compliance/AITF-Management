@@ -2,6 +2,7 @@
 require_once('tcpdf_include.php');
 include_once './dbConnect.php';
 include_once './commonutil.php';
+include_once __DIR__ . '/include/supplier_helpers.php';
 
 // Ensure no stray output
 while (ob_get_level() > 0) {
@@ -19,12 +20,13 @@ function getBillStatusInfoForReport($bill, $todayStr)
 {
     $today = new DateTime($todayStr);
 
-    $paymentStatus = $bill['payment_status'];
     $amount = (float) $bill['amount'];
-    $paidAmount = (float) $bill['paid_amount'];
+    $paidAmount = isset($bill['derived_paid_amount']) ? (float) $bill['derived_paid_amount'] : (float) $bill['paid_amount'];
+    $tdsAmount = isset($bill['tds_amount']) ? (float) $bill['tds_amount'] : 0;
+    $settledAmount = $paidAmount + $tdsAmount;
     $dueDateStr = $bill['due_date'];
 
-    if ($paymentStatus === 'Paid' || $paidAmount >= $amount) {
+    if ($settledAmount >= $amount) {
         return array(
             'status' => 'Paid',
             'label' => 'Paid',
@@ -46,7 +48,7 @@ function getBillStatusInfoForReport($bill, $todayStr)
         );
     }
 
-    if ($paidAmount > 0) {
+    if ($settledAmount > 0) {
         return array(
             'status' => 'Partially Paid',
             'label' => 'Partially Paid',
@@ -136,7 +138,21 @@ function convertToWord($number) {
 // Fetch all bills
 $bills = [];
 try {
-    $statement = $db->query('SELECT * FROM bills ORDER BY created_at DESC, bill_id DESC');
+    aitfEnsureSupplierSchema($db);
+    $statement = $db->query("
+        SELECT b.*,
+            COALESCE(s.supplier_name, b.vendor_name) AS supplier_display_name,
+            COALESCE(pay.paid_amount, b.paid_amount, 0) AS derived_paid_amount,
+            COALESCE(pay.tds_amount, 0) AS tds_amount
+        FROM bills b
+        LEFT JOIN suppliers s ON s.supplier_id = b.supplier_id
+        LEFT JOIN (
+            SELECT bill_id, SUM(payment_amount) AS paid_amount, SUM(tds_deducted) AS tds_amount
+            FROM bill_payments
+            GROUP BY bill_id
+        ) pay ON pay.bill_id = b.bill_id
+        ORDER BY b.created_at DESC, b.bill_id DESC
+    ");
     $allBills = $statement->fetchAll(PDO::FETCH_ASSOC);
 
     // Apply search and status filters
@@ -151,10 +167,11 @@ try {
         // Filter by Search Query
         if ($searchQuery !== '') {
             $searchLower = strtolower($searchQuery);
-            $vendorLower = strtolower($bill['vendor_name'] ?? '');
+            $vendorLower = strtolower($bill['supplier_display_name'] ?? $bill['vendor_name'] ?? '');
+            $billNumberLower = strtolower($bill['bill_number'] ?? '');
             $descLower = strtolower($bill['description'] ?? '');
             
-            if (strpos($vendorLower, $searchLower) === false && strpos($descLower, $searchLower) === false) {
+            if (strpos($vendorLower, $searchLower) === false && strpos($billNumberLower, $searchLower) === false && strpos($descLower, $searchLower) === false) {
                 continue;
             }
         }
@@ -183,7 +200,7 @@ class REPORTPDF extends TCPDF {
         // Subtitle
         $this->SetFont('helvetica', 'B', 15);
         $this->SetX(50);
-        $this->Cell(237, 10, 'VENDOR BILLS REPORT', 0, 1, 'C');
+                $this->Cell(237, 10, 'SUPPLIER BILLS REPORT', 0, 1, 'C');
         
         // Filters metadata
         $filters = "";
@@ -225,7 +242,7 @@ class REPORTPDF extends TCPDF {
 $pdf = new REPORTPDF('L', PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
 $pdf->SetCreator(PDF_CREATOR);
 $pdf->SetAuthor('AITF');
-$pdf->SetTitle('Vendor Bills Report');
+$pdf->SetTitle('Supplier Bills Report');
 $pdf->SetMargins(10, 42, 10);
 $pdf->SetAutoPageBreak(TRUE, 28);
 $pdf->AddPage();
@@ -235,13 +252,15 @@ $html = '<table border="1" cellpadding="6">
 <thead>
     <tr style="background-color:#eaf3ff; font-weight:bold; color:#0d4d8b;">
         <th width="5%" align="center">Sr.</th>
-        <th width="20%">Vendor Name</th>
-        <th width="12%" align="center">Due Date</th>
-        <th width="12%" align="center">Status</th>
-        <th width="23%">Description/Notes</th>
-        <th width="10%" align="right">Bill Amount</th>
-        <th width="9%" align="right">Paid Amount</th>
-        <th width="9%" align="right">Outstanding</th>
+        <th width="17%">Supplier</th>
+        <th width="9%" align="center">Bill No.</th>
+        <th width="9%" align="center">Due Date</th>
+        <th width="10%" align="center">Status</th>
+        <th width="18%">Description/Notes</th>
+        <th width="9%" align="right">Bill Amount</th>
+        <th width="7%" align="right">Paid</th>
+        <th width="6%" align="right">TDS</th>
+        <th width="10%" align="right">Outstanding</th>
     </tr>
 </thead>
 <tbody>';
@@ -256,8 +275,9 @@ if (empty($bills)) {
 } else {
     foreach ($bills as $bill) {
         $amt = (float)$bill['amount'];
-        $paid = (float)$bill['paid_amount'];
-        $outstanding = $amt - $paid;
+        $paid = isset($bill['derived_paid_amount']) ? (float)$bill['derived_paid_amount'] : (float)$bill['paid_amount'];
+        $tds = isset($bill['tds_amount']) ? (float)$bill['tds_amount'] : 0;
+        $outstanding = $amt - $paid - $tds;
         
         $totalAmount += $amt;
         $totalPaid += $paid;
@@ -279,13 +299,15 @@ if (empty($bills)) {
 
         $html .= '<tr>
             <td align="center" width="5%">' . $count++ . '</td>
-            <td width="20%"><b>' . htmlspecialchars($bill['vendor_name']) . '</b></td>
-            <td align="center" width="12%">' . $dueDateText . '</td>
-            <td align="center" width="12%"><span style="' . $statusStyle . '">' . htmlspecialchars($bill['calculated_status']) . '</span></td>
-            <td width="23%">' . htmlspecialchars($bill['description'] ?? '-') . '</td>
-            <td align="right" width="10%"><b>' . formatIndian($amt) . '/-</b></td>
-            <td align="right" width="9%">' . formatIndian($paid) . '/-</td>
-            <td align="right" width="9%"><b>' . formatIndian($outstanding) . '/-</b></td>
+            <td width="17%"><b>' . htmlspecialchars($bill['supplier_display_name'] ?: $bill['vendor_name']) . '</b></td>
+            <td align="center" width="9%">' . htmlspecialchars($bill['bill_number'] ?: '-') . '</td>
+            <td align="center" width="9%">' . $dueDateText . '</td>
+            <td align="center" width="10%"><span style="' . $statusStyle . '">' . htmlspecialchars($bill['calculated_status']) . '</span></td>
+            <td width="18%">' . htmlspecialchars($bill['description'] ?? '-') . '</td>
+            <td align="right" width="9%"><b>' . formatIndian($amt) . '/-</b></td>
+            <td align="right" width="7%">' . formatIndian($paid) . '/-</td>
+            <td align="right" width="6%">' . formatIndian($tds) . '/-</td>
+            <td align="right" width="10%"><b>' . formatIndian($outstanding) . '/-</b></td>
         </tr>';
     }
 }
@@ -293,7 +315,7 @@ $html .= '</tbody></table>';
 
 // SUMMARY SECTION
 $billCount = count($bills);
-$summaryTitle = 'VENDOR BILLS REPORT SUMMARY';
+$summaryTitle = 'SUPPLIER BILLS REPORT SUMMARY';
 $wordsOutstanding = convertToWord($totalOutstanding);
 
 $html .= '<br><br>
@@ -328,4 +350,4 @@ $pdf->writeHTML($html, true, false, true, false, '');
 while (ob_get_level() > 0) {
     ob_end_clean();
 }
-$pdf->Output('Vendor_Bills_Report.pdf', 'I');
+$pdf->Output('Supplier_Bills_Report.pdf', 'I');

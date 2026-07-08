@@ -7,6 +7,7 @@
  */
 session_start();
 include_once './dbConnect.php';
+include_once './include/supplier_helpers.php';
 date_default_timezone_set('Asia/Kolkata');
 
 if (isset($_GET['consultingFirm']) && !empty($_GET['consultingFirm'])) {
@@ -30,8 +31,9 @@ if (isset($_GET['consultingFirm']) && !empty($_GET['consultingFirm'])) {
     }
 } else if(isset ($_GET["customersearch"]) && !empty ($_GET["customersearch"])){
     try {
+        aitfEnsureSupplierCustomerColumns($db);
 //        $row_set = array();
-        $customerlist = "SELECT DISTINCT id, customer_name FROM customer_info where customer_name like '%" . $_GET["customersearch"] . "%' and is_deleted = 'NO'";
+        $customerlist = "SELECT DISTINCT id, customer_name, customer_category, supplier_type FROM customer_info where customer_name like '%" . $_GET["customersearch"] . "%' and is_deleted = 'NO'";
         $statement = $db->prepare($customerlist);
         $statement->execute();
         if ($statement->rowCount() > 0)

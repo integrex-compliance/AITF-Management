@@ -16,5 +16,6 @@ dubug.php
 /config/mail_config.php
 dbConnect.php
 .env
+repomix-output.xml
  .agents/
         .kiro/
