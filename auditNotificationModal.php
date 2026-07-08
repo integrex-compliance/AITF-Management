@@ -327,6 +327,51 @@ foreach ($auditors as $name) {
 
 
 <script type="text/javascript">
+    function formatStage1DateValue(rawValue) {
+        if (rawValue === null || rawValue === undefined) {
+            return "";
+        }
+
+        var value = String(rawValue).trim();
+        if (value === "" || value.toLowerCase() === "invalid date") {
+            return "";
+        }
+
+        var strictDate = moment(value, ['DD.MM.YYYY', 'DD-MM-YYYY', 'DD/MM/YYYY', 'YYYY-MM-DD', 'YYYY/MM/DD'], true);
+        if (strictDate.isValid()) {
+            return strictDate.format('DD.MM.YYYY');
+        }
+
+        var looseDate = moment(value);
+        if (looseDate.isValid()) {
+            return looseDate.format('DD.MM.YYYY');
+        }
+
+        return value;
+    }
+
+    function formatStage1DateList(rawValue) {
+        if (rawValue === null || rawValue === undefined) {
+            return "";
+        }
+
+        var value = String(rawValue).trim();
+        if (value === "" || value.toLowerCase() === "invalid date") {
+            return "";
+        }
+
+        var values = value.split(',');
+        var formattedValues = [];
+        for (var i = 0; i < values.length; i++) {
+            var formatted = formatStage1DateValue(values[i]);
+            if (formatted !== "") {
+                formattedValues.push(formatted);
+            }
+        }
+
+        return formattedValues.join(', ');
+    }
+
     $(function () {
         $('#intimationDate').datepicker({
             minDate: '-100Y',
@@ -709,13 +754,7 @@ if (($('.auditDates').val() != "") &&
                     $(".auditSubject").val(data[0]['audit_subject']);
                     $('.auditForOrg').val(data[0]['for_org']);
 
-                    // Intimation date - keep existing behaviour for valid values, avoid 'Invalid date' for legacy data
-                    if (data[0]['intimation_date'] == "" || data[0]['intimation_date'] == null) {
-                        $intimation_date = "";
-                    } else {
-                        var _intimation = moment(data[0]['intimation_date']);
-                        $intimation_date = _intimation.isValid() ? _intimation.format('DD.MM.YYYY') : data[0]['intimation_date'];
-                    }
+                    var $intimation_date = formatStage1DateValue(data[0]['intimation_date']);
                     $('.intimationDate').val($intimation_date);
 
                     $('.auditLocation').val(data[0]['location']);
@@ -723,32 +762,10 @@ if (($('.auditDates').val() != "") &&
                     $('.auditStandard').val(data[0]['audit_standard']);
                     $('.auditContactPerson').val(data[0]['audit_contact_person']);
 
-                    // Audit Date(s) - prevent 'Invalid date' for old clients while keeping formatting for valid dates
                     var rawAuditDates = data[0]['audit_dates'];
-                    var $audit_dates = "";
-
-                    if (rawAuditDates && String(rawAuditDates).trim() !== "" && String(rawAuditDates).toLowerCase() !== 'invalid date') {
-                        var _auditDatesMoment = moment(rawAuditDates);
-                        if (_auditDatesMoment.isValid()) {
-                            // Single proper date string
-                            $audit_dates = _auditDatesMoment.format('DD.MM.YYYY');
-                        } else {
-                            // Legacy or multi-date string, keep as-is
-                            $audit_dates = rawAuditDates;
-                        }
-                    } else {
-                        // Fallback: if no audit_dates stored, try using intimation_date
-                        var rawIntimation = data[0]['intimation_date'];
-                        if (rawIntimation && String(rawIntimation).trim() !== "") {
-                            var _intMoment = moment(rawIntimation);
-                            if (_intMoment.isValid()) {
-                                $audit_dates = _intMoment.format('DD.MM.YYYY');
-                            } else {
-                                $audit_dates = rawIntimation;
-                            }
-                        } else {
-                            $audit_dates = "";
-                        }
+                    var $audit_dates = formatStage1DateList(rawAuditDates);
+                    if ($audit_dates === "") {
+                        $audit_dates = $intimation_date;
                     }
                     $('.auditDates').val($audit_dates);
 
@@ -768,7 +785,7 @@ if (($('.auditDates').val() != "") &&
                         for (var key = 0; key < max; key++) {
 //                        alert(auditDate[key]);
                             //                        var no=contact[key];                        
-                            var no = key <= auditDateLen && auditDate[key] != null && String(auditDate[key]).trim() !== "" ? String(auditDate[key]).trim() : "";
+                            var no = key <= auditDateLen && auditDate[key] != null && String(auditDate[key]).trim() !== "" ? formatStage1DateValue(auditDate[key]) : "";
 //                        alert(no);
                             if (no === "") {
                                 continue;
