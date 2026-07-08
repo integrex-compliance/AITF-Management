@@ -181,11 +181,41 @@
     $statement = $db->prepare($rcCustomerReview);
     $statement->execute();
     $rcCustomerReviewPending = $statement->fetchAll();
+
+    if (!function_exists('uploadingSectionTitle')) {
+        function uploadingSectionTitle($label, $items)
+        {
+            return $label . ' <span class="uploading-section-count">(' . count($items) . ')</span>';
+        }
+    }
     ?>
 
     <div id="page-content-wrapper">
         <div class="page-content inset">
             <div class="container">
+                <style>
+                    .serviceContentwaiting,
+                    .serviceContentCompleted {
+                        height: auto;
+                        min-height: 23px;
+                        white-space: normal;
+                        overflow-wrap: anywhere;
+                        word-break: break-word;
+                        line-height: 1.2;
+                        padding: 3px 5px;
+                    }
+
+                    .serviceContentwaiting span,
+                    .serviceContentCompleted span {
+                        display: block;
+                    }
+
+                    .uploading-section-count {
+                        font-style: normal;
+                        font-size: 0.85em;
+                        margin-left: 4px;
+                    }
+                </style>
                 <br>
                 <br>
                 <div class="row">
@@ -209,10 +239,10 @@
                                     <div class="col-xs-12 col-sm-12">
                                         <div class="row" style="">
                                             <div class="col-xs-6 text-center btn qms_complete_btn">
-                                                <span><i class="fa">Application Form</i></span>
+                                                <span><i class="fa"><?php echo uploadingSectionTitle('Application Form', $crAuditApplicationPending); ?></i></span>
                                             </div>
                                             <div class="col-xs-6  text-center btn qms_complete_btn">
-                                                <span><i class="fa">Certification Agreement</i></span>
+                                                <span><i class="fa"><?php echo uploadingSectionTitle('Certification Agreement', $crCertificationAgreementPending); ?></i></span>
                                             </div>
                                         </div>
                                         <div class="row">
@@ -271,14 +301,14 @@
                                     <div class="col-xs-12 col-sm-12">
                                         <div class="row" style="">
                                             <div class="col-xs-4 text-center btn qms_complete_btn">
-                                                <span><i class="fa">Stage-1 Notification</i></span>
+                                                <span><i class="fa"><?php echo uploadingSectionTitle('Stage-1 Notification', $caSignedNotification1Pending); ?></i></span>
                                             </div>
                                             <div class="col-xs-4  text-center btn qms_complete_btn">
-                                                <span><i class="fa">Stage-1 Schedule</i></span>
+                                                <span><i class="fa"><?php echo uploadingSectionTitle('Stage-1 Schedule', $caStage1SchedulePending); ?></i></span>
                                             </div>
                                             <div class="col-xs-4  text-center btn qms_complete_btn "
                                                 style="height: 28px">
-                                                <span><i class="fa">Stage-1 Audit Report</i></span>
+                                                <span><i class="fa"><?php echo uploadingSectionTitle('Stage-1 Audit Report', $caStage1AuditReportPending); ?></i></span>
                                             </div>
                                         </div>
                                         <div class="row">
@@ -337,15 +367,15 @@
                                         <div class="row" style="">
                                             <div class="col-xs-4  text-center btn qms_complete_btn "
                                                 style="height: 28px">
-                                                <span><i class="fa">Stage-2 Notification</i></span>
+                                                <span><i class="fa"><?php echo uploadingSectionTitle('Stage-2 Notification', $caStage2SgnedCopyPending); ?></i></span>
                                             </div>
                                             <div class="col-xs-4  text-center btn qms_complete_btn "
                                                 style="height: 28px">
-                                                <span><i class="fa">Stage-2 Audit Report</i></span>
+                                                <span><i class="fa"><?php echo uploadingSectionTitle('Stage-2 Audit Report', $caAuditReport2Pending); ?></i></span>
                                             </div>
                                             <div class="col-xs-4  text-center btn qms_complete_btn "
                                                 style="height: 28px">
-                                                <span><i class="fa">Stage-2 Auditor Notes</i></span>
+                                                <span><i class="fa"><?php echo uploadingSectionTitle('Stage-2 Auditor Notes', $caAuditorNotesPending); ?></i></span>
                                             </div>
                                         </div>
                                         <div class="row">
@@ -404,15 +434,15 @@
                                         <div class="row" style="">
                                             <div class="col-xs-4  text-center btn qms_complete_btn "
                                                 style="height: 28px">
-                                                <span><i class="fa">NC and Evidances</i></span>
+                                                <span><i class="fa"><?php echo uploadingSectionTitle('NC and Evidances', $caAuditNCPending); ?></i></span>
                                             </div>
                                             <div class="col-xs-4  text-center btn qms_complete_btn "
                                                 style="height: 28px">
-                                                <span><i class="fa">Certificate</i></span>
+                                                <span><i class="fa"><?php echo uploadingSectionTitle('Certificate', $caCertificatePending); ?></i></span>
                                             </div>
                                             <div class="col-xs-4  text-center btn qms_complete_btn "
                                                 style="height: 28px">
-                                                <span><i class="fa">Client Feedback</i></span>
+                                                <span><i class="fa"><?php echo uploadingSectionTitle('Client Feedback', $caCustomerFeedbackPending); ?></i></span>
                                             </div>
                                         </div>
                                         <div class="row">
@@ -435,7 +465,7 @@
                                             </div>
                                             <div class="col-sm-4">
                                                 <?php
-                                                if ($caCertificatePending) {
+                                                if ($saiCustomerReviewPending) {
                                                     foreach ($caCertificatePending as $certificatePending) {
                                                         ?>
                                                         <div class="serviceContentwaiting">
@@ -489,13 +519,13 @@
                                         <div class="row" style="">
                                             <div class="col-xs-4  text-center btn qms_complete_btn "
                                                 style="height: 28px">
-                                                <span><i class="fa">Information Updation</i></span>
+                                                <span><i class="fa"><?php echo uploadingSectionTitle('Information Updation', $saiInformationUpdatoinPending); ?></i></span>
                                             </div>
                                             <div class="col-xs-4 text-center btn qms_complete_btn">
-                                                <span><i class="fa">Signed Notification</i></span>
+                                                <span><i class="fa"><?php echo uploadingSectionTitle('Signed Notification', $saiSignedNotificationPending); ?></i></span>
                                             </div>
                                             <div class="col-xs-4  text-center btn qms_complete_btn">
-                                                <span><i class="fa">Schedule Signed Copy</i></span>
+                                                <span><i class="fa"><?php echo uploadingSectionTitle('Schedule Signed Copy', $saiSignedCopyPending); ?></i></span>
                                             </div>
                                         </div>
                                         <div class="row">
@@ -554,15 +584,15 @@
                                         <div class="row" style="">
                                             <div class="col-xs-4  text-center btn qms_complete_btn "
                                                 style="height: 28px">
-                                                <span><i class="fa">Audit Report</i></span>
+                                                <span><i class="fa"><?php echo uploadingSectionTitle('Audit Report', $saiAuditReportPending); ?></i></span>
                                             </div>
                                             <div class="col-xs-4  text-center btn qms_complete_btn "
                                                 style="height: 28px">
-                                                <span><i class="fa">Auditor Notes</i></span>
+                                                <span><i class="fa"><?php echo uploadingSectionTitle('Auditor Notes', $saiAuditorNotesPending); ?></i></span>
                                             </div>
                                             <div class="col-xs-4  text-center btn qms_complete_btn "
                                                 style="height: 28px">
-                                                <span><i class="fa">NC and Evidences</i></span>
+                                                <span><i class="fa"><?php echo uploadingSectionTitle('NC and Evidences', $saiAuditEvidencePending); ?></i></span>
                                             </div>
 
                                         </div>
@@ -622,11 +652,11 @@
                                         <div class="row" style="">
                                             <div class="col-xs-4  text-center btn qms_complete_btn "
                                                 style="height: 28px">
-                                                <span><i class="fa">Certificate</i></span>
+                                                <span><i class="fa"><?php echo uploadingSectionTitle('Certificate', $saiCertificatePending); ?></i></span>
                                             </div>
                                             <div class="col-xs-4  text-center btn qms_complete_btn "
                                                 style="height: 28px">
-                                                <span><i class="fa">Client Feedback</i></span>
+                                                <span><i class="fa"><?php echo uploadingSectionTitle('Client Feedback', $saiCustomerReviewPending); ?></i></span>
                                             </div>
                                         </div>
                                         <div class="row">
@@ -649,7 +679,7 @@
                                             </div>
                                             <div class="col-sm-4">
                                                 <?php
-                                                if ($saiCertificatePending) {
+                                                if ($saiCustomerReviewPending) {
                                                     foreach ($saiCustomerReviewPending as $saiFeedbackPending) {
                                                         ?>
                                                         <div class="serviceContentwaiting">
@@ -686,13 +716,13 @@
                                         <div class="row" style="">
                                             <div class="col-xs-4  text-center btn qms_complete_btn "
                                                 style="height: 28px">
-                                                <span><i class="fa">Information Updation</i></span>
+                                                <span><i class="fa"><?php echo uploadingSectionTitle('Information Updation', $saiiInformationUpdatoinPending); ?></i></span>
                                             </div>
                                             <div class="col-xs-4 text-center btn qms_complete_btn">
-                                                <span><i class="fa">Signed Notification</i></span>
+                                                <span><i class="fa"><?php echo uploadingSectionTitle('Signed Notification', $saiiSignedNotificationPending); ?></i></span>
                                             </div>
                                             <div class="col-xs-4  text-center btn qms_complete_btn">
-                                                <span><i class="fa">Schedule Signed Copy</i></span>
+                                                <span><i class="fa"><?php echo uploadingSectionTitle('Schedule Signed Copy', $saiiSignedCopyPending); ?></i></span>
                                             </div>
                                         </div>
                                         <div class="row">
@@ -751,15 +781,15 @@
                                         <div class="row" style="">
                                             <div class="col-xs-4  text-center btn qms_complete_btn "
                                                 style="height: 28px">
-                                                <span><i class="fa">Audit Report</i></span>
+                                                <span><i class="fa"><?php echo uploadingSectionTitle('Audit Report', $saiiAuditReportPending); ?></i></span>
                                             </div>
                                             <div class="col-xs-4  text-center btn qms_complete_btn "
                                                 style="height: 28px">
-                                                <span><i class="fa">Auditor Notes</i></span>
+                                                <span><i class="fa"><?php echo uploadingSectionTitle('Auditor Notes', $saiiAuditorNotesPending); ?></i></span>
                                             </div>
                                             <div class="col-xs-4  text-center btn qms_complete_btn "
                                                 style="height: 28px">
-                                                <span><i class="fa">NC and Evidences</i></span>
+                                                <span><i class="fa"><?php echo uploadingSectionTitle('NC and Evidences', $saiiAuditorEvidencePending); ?></i></span>
                                             </div>
 
                                         </div>
@@ -819,11 +849,11 @@
                                         <div class="row" style="">
                                             <div class="col-xs-4  text-center btn qms_complete_btn "
                                                 style="height: 28px">
-                                                <span><i class="fa">Certificate</i></span>
+                                                <span><i class="fa"><?php echo uploadingSectionTitle('Certificate', $saiiCertificatePending); ?></i></span>
                                             </div>
                                             <div class="col-xs-4  text-center btn qms_complete_btn "
                                                 style="height: 28px">
-                                                <span><i class="fa">Client Feedback</i></span>
+                                                <span><i class="fa"><?php echo uploadingSectionTitle('Client Feedback', $saiiFeedbackPending); ?></i></span>
                                             </div>
                                         </div>
                                         <div class="row">
@@ -883,13 +913,13 @@
                                         <div class="row" style="">
                                             <div class="col-xs-4  text-center btn qms_complete_btn "
                                                 style="height: 28px">
-                                                <span><i class="fa">Signed Notification</i></span>
+                                                <span><i class="fa"><?php echo uploadingSectionTitle('Signed Notification', $rcNotificationPending); ?></i></span>
                                             </div>
                                             <div class="col-xs-4 text-center btn qms_complete_btn">
-                                                <span><i class="fa">Signed Schedule Copy</i></span>
+                                                <span><i class="fa"><?php echo uploadingSectionTitle('Signed Schedule Copy', $rcSignedSchedulePending); ?></i></span>
                                             </div>
                                             <div class="col-xs-4  text-center btn qms_complete_btn">
-                                                <span><i class="fa">Audit Report</i></span>
+                                                <span><i class="fa"><?php echo uploadingSectionTitle('Audit Report', $rcAuditReportPending); ?></i></span>
                                             </div>
                                         </div>
                                         <div class="row">
@@ -948,15 +978,15 @@
                                         <div class="row" style="">
                                             <div class="col-xs-4  text-center btn qms_complete_btn "
                                                 style="height: 28px">
-                                                <span><i class="fa">Auditor Notes</i></span>
+                                                <span><i class="fa"><?php echo uploadingSectionTitle('Auditor Notes', $rcAuditorNotesPending); ?></i></span>
                                             </div>
                                             <div class="col-xs-4  text-center btn qms_complete_btn "
                                                 style="height: 28px">
-                                                <span><i class="fa">NC and Evidences</i></span>
+                                                <span><i class="fa"><?php echo uploadingSectionTitle('NC and Evidences', $rcAudiEvidencePending); ?></i></span>
                                             </div>
                                             <div class="col-xs-4  text-center btn qms_complete_btn "
                                                 style="height: 28px">
-                                                <span><i class="fa">Certificate</i></span>
+                                                <span><i class="fa"><?php echo uploadingSectionTitle('Certificate', $rcCertificatePending); ?></i></span>
                                             </div>
 
                                         </div>
@@ -1016,7 +1046,7 @@
                                         <div class="row" style="">
                                             <div class="col-xs-4  text-center btn qms_complete_btn "
                                                 style="height: 28px">
-                                                <span><i class="fa">Client Feedback</i></span>
+                                                <span><i class="fa"><?php echo uploadingSectionTitle('Client Feedback', $rcCustomerReviewPending); ?></i></span>
                                             </div>
                                         </div>
                                         <div class="row">
