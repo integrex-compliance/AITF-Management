@@ -78,6 +78,85 @@ if (!function_exists('aitfAiJsonResponse')) {
     }
 }
 
+if (!class_exists('AitfAiProviderException')) {
+    class AitfAiProviderException extends Exception
+    {
+        private $rateLimited;
+        private $debugDetails;
+
+        public function __construct($message, $rateLimited = false, $code = 0, $debugDetails = array())
+        {
+            parent::__construct($message, $code);
+            $this->rateLimited = (bool) $rateLimited;
+            $this->debugDetails = is_array($debugDetails) ? $debugDetails : array();
+        }
+
+        public function isRateLimited()
+        {
+            return $this->rateLimited;
+        }
+
+        public function getDebugDetails()
+        {
+            return $this->debugDetails;
+        }
+    }
+}
+
+if (!function_exists('aitfAiModelConfigs')) {
+    function aitfAiModelConfigs()
+    {
+        return array(
+            'fly-512b' => array(
+                'provider' => 'gemini',
+                'display_name' => 'Fly-512B (MAX)',
+                'short_name' => 'Fly-512B',
+                'badge' => 'MAX'
+            ),
+            'swim-128b' => array(
+                'provider' => 'groq',
+                'model' => 'llama-3.1-8b-instant',
+                'display_name' => 'Swim-128B (HIGH)',
+                'short_name' => 'Swim-128B',
+                'badge' => 'HIGH'
+            )
+        );
+    }
+}
+
+if (!function_exists('aitfAiNormalizeModelId')) {
+    function aitfAiNormalizeModelId($modelId)
+    {
+        $modelId = trim((string) $modelId);
+        if ($modelId === '') {
+            return 'fly-512b';
+        }
+
+        $models = aitfAiModelConfigs();
+        return isset($models[$modelId]) ? $modelId : '';
+    }
+}
+
+if (!function_exists('aitfAiModelUnavailableMessage')) {
+    function aitfAiModelUnavailableMessage($modelId)
+    {
+        if ($modelId === 'swim-128b') {
+            return 'Swim-128B is temporarily unavailable. You can switch to Fly-512B and try again.';
+        }
+
+        return 'Fly-512B is temporarily unavailable. You can switch to Swim-128B and try again.';
+    }
+}
+
+if (!function_exists('aitfAiLogProviderError')) {
+    function aitfAiLogProviderError($message)
+    {
+        if (function_exists('error_log')) {
+            error_log('[AI Document Review] ' . $message);
+        }
+    }
+}
+
 if (!function_exists('aitfAiCurrentCustomerId')) {
     function aitfAiCurrentCustomerId()
     {
@@ -547,8 +626,8 @@ if (!function_exists('aitfAiFetchLatestHistory')) {
     }
 }
 
-if (!function_exists('aitfAiBuildPrompt')) {
-    function aitfAiBuildPrompt($context, $documents, $rules, $userPrompt = '')
+if (!function_exists('aitfAiBuildReviewPayload')) {
+    function aitfAiBuildReviewPayload($context, $documents, $rules, $userPrompt = '')
     {
         $docList = array();
         foreach ($documents as $index => $doc) {
@@ -563,15 +642,20 @@ if (!function_exists('aitfAiBuildPrompt')) {
             );
         }
 
-        $payload = array(
+        return array(
             'client_context' => $context,
             'active_ai_rules_from_database' => $rules,
             'documents_sent' => $docList,
             'user_prompt' => trim((string) $userPrompt)
         );
+    }
+}
 
+if (!function_exists('aitfAiBuildSharedSystemInstruction')) {
+    function aitfAiBuildSharedSystemInstruction()
+    {
         return "You are AI Powered by AITF, acting as a certification pre-audit document reviewer.\n"
-            . "Read the attached PDF files directly using your own document understanding and reasoning. Do not rely only on file names or database metadata.\n"
+            . "Read the supplied PDF document content and/or attached PDF files using your own document understanding and reasoning. Do not rely only on file names or database metadata.\n"
             . "Independently detect potential inconsistencies, contradictions, missing information, suspicious values, incorrect-looking information, date issues, chronology problems, client-detail mismatches, scope/standard/manday risks, and any other documentation risk visible in the PDFs or client context.\n"
             . "The active rules supplied in active_ai_rules_from_database are additional mandatory AITF checks. Apply every active rule where relevant, but do not limit your review to those rules.\n"
             . "If multiple PDFs are attached, analyze them together and cross-check names, addresses, GSTIN, contacts, ISO standards, scope, dates, mandays, service stage, certificate details, audit evidence, and other repeated facts across documents.\n"
@@ -579,8 +663,16 @@ if (!function_exists('aitfAiBuildPrompt')) {
             . "If user_prompt is not empty, answer that instruction directly while still performing the document risk review and mandatory AITF rule checks.\n"
             . "Return strict JSON only. Do not wrap in markdown.\n"
             . "JSON shape: {\"overall_status\":\"pass|review_required|manual_verification_required\",\"summary\":\"string\",\"findings\":[{\"severity\":\"critical|major|minor|info\",\"check_area\":\"string\",\"finding\":\"string\",\"evidence\":\"string\",\"current_value\":\"string\",\"expected_value\":\"string\",\"reason\":\"string\",\"rule_reference\":\"string\",\"affected_documents\":[\"string\"],\"confidence\":0.0,\"suggestion\":\"string\",\"recommended_action\":\"string\"}],\"issues\":[{\"severity\":\"critical|major|minor|info\",\"check_area\":\"string\",\"finding\":\"string\",\"evidence\":\"string\",\"current_value\":\"string\",\"expected_value\":\"string\",\"reason\":\"string\",\"rule_reference\":\"string\",\"affected_documents\":[\"string\"],\"confidence\":0.0,\"suggestion\":\"string\",\"recommended_action\":\"string\"}],\"manual_verifications\":[{\"check_area\":\"string\",\"reason\":\"string\",\"evidence\":\"string\",\"affected_documents\":[\"string\"]}],\"documents_reviewed\":[\"string\"]}.\n"
-            . "Use rule_reference as the database rule_code/title when an issue is rule-based; otherwise use \"Document evidence\" or \"Manual verification required\".\n\n"
-            . json_encode($payload);
+            . "Use rule_reference as the database rule_code/title when an issue is rule-based; otherwise use \"Document evidence\" or \"Manual verification required\".";
+    }
+}
+
+if (!function_exists('aitfAiBuildPrompt')) {
+    function aitfAiBuildPrompt($context, $documents, $rules, $userPrompt = '')
+    {
+        $payload = aitfAiBuildReviewPayload($context, $documents, $rules, $userPrompt);
+
+        return aitfAiBuildSharedSystemInstruction() . "\n\n" . json_encode($payload);
     }
 }
 
@@ -624,6 +716,194 @@ if (!function_exists('aitfAiDecodeJsonText')) {
     }
 }
 
+if (!function_exists('aitfAiNormalizeAiResult')) {
+    function aitfAiNormalizeAiResult($result)
+    {
+        if (!is_array($result)) {
+            throw new Exception('AI response was not valid structured JSON.');
+        }
+
+        $hasStructuredContent = isset($result['summary']) || isset($result['findings']) || isset($result['issues']) || isset($result['manual_verifications']);
+        if (!$hasStructuredContent) {
+            throw new Exception('AI response did not include the required review result structure.');
+        }
+
+        $allowedStatuses = array('pass', 'review_required', 'manual_verification_required');
+        if (empty($result['overall_status']) || !in_array($result['overall_status'], $allowedStatuses, true)) {
+            $result['overall_status'] = 'manual_verification_required';
+        }
+        if (!isset($result['summary'])) {
+            $result['summary'] = '';
+        }
+        foreach (array('findings', 'issues', 'manual_verifications', 'documents_reviewed') as $field) {
+            if (!isset($result[$field]) || !is_array($result[$field])) {
+                $result[$field] = array();
+            }
+        }
+
+        return $result;
+    }
+}
+
+if (!function_exists('aitfAiPdfDecodeTextString')) {
+    function aitfAiPdfDecodeTextString($text)
+    {
+        $text = preg_replace_callback('/\\\\([0-7]{1,3})/', function ($match) {
+            return chr(octdec($match[1]));
+        }, $text);
+        $text = str_replace(
+            array('\\n', '\\r', '\\t', '\\b', '\\f', '\\(', '\\)', '\\\\'),
+            array("\n", "\r", "\t", "\b", "\f", '(', ')', '\\'),
+            $text
+        );
+
+        return $text;
+    }
+}
+
+if (!function_exists('aitfAiPdfDecodeHexText')) {
+    function aitfAiPdfDecodeHexText($hex)
+    {
+        $hex = preg_replace('/[^0-9A-Fa-f]/', '', (string) $hex);
+        if ($hex === '') {
+            return '';
+        }
+        if (strlen($hex) % 2 === 1) {
+            $hex .= '0';
+        }
+
+        $binary = @pack('H*', $hex);
+        if ($binary === false) {
+            return '';
+        }
+
+        if (substr($binary, 0, 2) === "\xFE\xFF" && function_exists('mb_convert_encoding')) {
+            return mb_convert_encoding(substr($binary, 2), 'UTF-8', 'UTF-16BE');
+        }
+
+        return str_replace("\0", '', $binary);
+    }
+}
+
+if (!function_exists('aitfAiCleanExtractedPdfText')) {
+    function aitfAiCleanExtractedPdfText($text)
+    {
+        $rawText = (string) $text;
+        $text = preg_replace('/[^\P{C}\r\n\t]+/u', ' ', $rawText);
+        if ($text === null) {
+            $text = preg_replace('/[^\x09\x0A\x0D\x20-\x7E]/', ' ', $rawText);
+        }
+        $text = preg_replace('/[ \t]+/', ' ', $text);
+        $text = preg_replace('/\R{3,}/', "\n\n", $text);
+        return trim($text);
+    }
+}
+
+if (!function_exists('aitfAiExtractPdfText')) {
+    function aitfAiExtractPdfText($path, $maxChars = 60000)
+    {
+        $data = @file_get_contents($path);
+        if ($data === false || $data === '') {
+            return '';
+        }
+
+        $sources = array();
+        if (preg_match_all('/stream\s*(.*?)\s*endstream/s', $data, $streams)) {
+            foreach ($streams[1] as $stream) {
+                $stream = ltrim($stream, "\r\n");
+                $decoded = @gzuncompress($stream);
+                if ($decoded === false) {
+                    $decoded = @gzinflate($stream);
+                }
+                $sources[] = $decoded !== false ? $decoded : $stream;
+            }
+        }
+        $sources[] = $data;
+
+        $text = '';
+        foreach ($sources as $source) {
+            if (preg_match_all('/\((?:\\\\.|[^\\\\)])*\)/s', $source, $matches)) {
+                foreach ($matches[0] as $match) {
+                    $text .= aitfAiPdfDecodeTextString(substr($match, 1, -1)) . ' ';
+                    if (strlen($text) >= $maxChars) {
+                        break 2;
+                    }
+                }
+            }
+            if (preg_match_all('/<([0-9A-Fa-f\s]{4,})>/', $source, $hexMatches)) {
+                foreach ($hexMatches[1] as $hex) {
+                    $text .= aitfAiPdfDecodeHexText($hex) . ' ';
+                    if (strlen($text) >= $maxChars) {
+                        break 2;
+                    }
+                }
+            }
+        }
+
+        $text = aitfAiCleanExtractedPdfText($text);
+        if ($maxChars > 0 && strlen($text) > $maxChars) {
+            $text = substr($text, 0, $maxChars) . "\n[Text truncated for model input limit.]";
+        }
+
+        return $text;
+    }
+}
+
+if (!function_exists('aitfAiBuildGroqDocumentInput')) {
+    function aitfAiBuildGroqDocumentInput($context, $documents, $rules, $userPrompt = '', $maxChars = 120000, &$debugDetails = null)
+    {
+        $payload = aitfAiBuildReviewPayload($context, $documents, $rules, $userPrompt);
+        $input = "Analyze the client context, active AITF rules, selected document metadata, and extracted PDF text below.\n";
+        $input .= "If extracted text is incomplete or missing for a content-specific check, mark that item as Manual verification required rather than guessing.\n\n";
+        $input .= json_encode($payload) . "\n\n";
+
+        $totalExtractedTextLength = 0;
+        $documentDebug = array();
+        $remaining = $maxChars - strlen($input);
+        foreach ($documents as $index => $doc) {
+            if ($remaining <= 1000) {
+                $input .= "\n[Additional document text omitted because the selected model input limit was reached.]";
+                break;
+            }
+
+            $perDocLimit = max(1000, min(40000, $remaining - 500));
+            $text = aitfAiExtractPdfText($doc['full_path'], $perDocLimit);
+            if ($text === '') {
+                $text = '[No extractable PDF text found. Content-specific checks require manual verification for this document.]';
+            }
+            $textLength = strlen($text);
+            $totalExtractedTextLength += $textLength;
+            $documentDebug[] = array(
+                'label' => isset($doc['label']) ? $doc['label'] : '',
+                'file_name' => isset($doc['file_name']) ? $doc['file_name'] : '',
+                'extracted_text_length' => $textLength
+            );
+
+            $section = "\n\n--- DOCUMENT " . ($index + 1) . " ---\n"
+                . "Label: " . $doc['label'] . "\n"
+                . "File: " . $doc['file_name'] . "\n"
+                . "Service: " . $doc['service_type'] . " #" . $doc['service_id'] . "\n"
+                . "Database column: " . $doc['column_name'] . "\n"
+                . "Extracted PDF text:\n" . $text . "\n";
+
+            if (strlen($section) > $remaining) {
+                $section = substr($section, 0, $remaining) . "\n[Document text truncated for model input limit.]";
+            }
+            $input .= $section;
+            $remaining = $maxChars - strlen($input);
+        }
+
+        if (is_array($debugDetails)) {
+            $debugDetails['extracted_pdf_text_length'] = $totalExtractedTextLength;
+            $debugDetails['document_text_lengths'] = $documentDebug;
+            $debugDetails['user_message_length'] = strlen($input);
+            $debugDetails['input_max_chars'] = $maxChars;
+        }
+
+        return $input;
+    }
+}
+
 if (!function_exists('aitfAiCallGemini')) {
     function aitfAiCallGemini($apiKey, $model, $prompt, $documents)
     {
@@ -662,25 +942,157 @@ if (!function_exists('aitfAiCallGemini')) {
         curl_close($ch);
 
         if ($raw === false || $curlErr) {
-            throw new Exception('Gemini request failed: ' . $curlErr);
+            throw new AitfAiProviderException('Gemini request failed: ' . $curlErr);
         }
 
         $decoded = json_decode($raw, true);
         if ($status < 200 || $status >= 300) {
             $message = isset($decoded['error']['message']) ? $decoded['error']['message'] : ('HTTP ' . $status);
-            throw new Exception('Gemini API error: ' . $message);
+            throw new AitfAiProviderException('Gemini API error: ' . $message, $status === 429, $status);
         }
         if (!is_array($decoded)) {
-            throw new Exception('Gemini returned a non-JSON API response.');
+            throw new AitfAiProviderException('Gemini returned a non-JSON API response.');
         }
 
         $text = aitfAiExtractGeminiText($decoded);
         $result = aitfAiDecodeJsonText($text);
         if (!$result) {
-            throw new Exception('Gemini response could not be parsed as structured JSON.');
+            throw new AitfAiProviderException('Gemini response could not be parsed as structured JSON.');
         }
 
-        return array('result' => $result, 'raw' => $raw, 'model_text' => $text);
+        return array('result' => aitfAiNormalizeAiResult($result), 'raw' => $raw, 'model_text' => $text);
+    }
+}
+
+if (!function_exists('aitfAiGroqDebugSummary')) {
+    function aitfAiGroqDebugSummary(array $debugDetails)
+    {
+        $parts = array();
+        foreach (array(
+            'http_status',
+            'groq_error_type',
+            'groq_error_message',
+            'extracted_pdf_text_length',
+            'system_prompt_length',
+            'user_message_length',
+            'final_prompt_length',
+            'finish_reason',
+            'response_content_exists',
+            'response_content_length',
+            'json_parse_error'
+        ) as $key) {
+            if (array_key_exists($key, $debugDetails)) {
+                $value = $debugDetails[$key];
+                if (is_bool($value)) {
+                    $value = $value ? 'yes' : 'no';
+                }
+                $parts[] = $key . '=' . $value;
+            }
+        }
+
+        return implode('; ', $parts);
+    }
+}
+
+if (!function_exists('aitfAiSanitizeGroqErrorMessage')) {
+    function aitfAiSanitizeGroqErrorMessage($message)
+    {
+        $message = preg_replace('/organization `[^`]+`/i', 'organization [redacted]', (string) $message);
+        $message = preg_replace('#https?://\S+#i', '[link removed]', $message);
+        return trim($message);
+    }
+}
+
+if (!function_exists('aitfAiCallGroq')) {
+    function aitfAiCallGroq($apiKey, $model, $systemPrompt, $userMessage, $debugDetails = array())
+    {
+        if (!is_array($debugDetails)) {
+            $debugDetails = array();
+        }
+        $debugDetails['system_prompt_length'] = strlen((string) $systemPrompt);
+        $debugDetails['user_message_length'] = strlen((string) $userMessage);
+        $debugDetails['final_prompt_length'] = $debugDetails['system_prompt_length'] + $debugDetails['user_message_length'];
+        $debugDetails['http_status'] = 0;
+        $debugDetails['finish_reason'] = '';
+        $debugDetails['response_content_exists'] = 'no';
+        $debugDetails['response_content_length'] = 0;
+        $debugDetails['json_parse_error'] = '';
+
+        $payload = array(
+            'model' => $model,
+            'messages' => array(
+                array(
+                    'role' => 'system',
+                    'content' => $systemPrompt
+                ),
+                array(
+                    'role' => 'user',
+                    'content' => $userMessage
+                )
+            ),
+            'temperature' => 0.1,
+            'max_tokens' => 1200,
+            'response_format' => array('type' => 'json_object')
+        );
+
+        $ch = curl_init('https://api.groq.com/openai/v1/chat/completions');
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+            'Authorization: Bearer ' . $apiKey,
+            'Content-Type: application/json'
+        ));
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 20);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 180);
+        $raw = curl_exec($ch);
+        $curlErr = curl_error($ch);
+        $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        $debugDetails['http_status'] = $status;
+        if ($raw === false || $curlErr) {
+            $debugDetails['curl_error'] = $curlErr;
+            aitfAiLogProviderError('Groq debug: ' . aitfAiGroqDebugSummary($debugDetails) . '; curl_error=' . $curlErr);
+            throw new AitfAiProviderException('Groq request failed: ' . $curlErr, false, 0, $debugDetails);
+        }
+
+        $decoded = json_decode($raw, true);
+        if (is_array($decoded) && isset($decoded['choices'][0]['finish_reason'])) {
+            $debugDetails['finish_reason'] = (string) $decoded['choices'][0]['finish_reason'];
+        }
+        if (is_array($decoded) && isset($decoded['choices'][0]['message']['content'])) {
+            $contentForDebug = trim((string) $decoded['choices'][0]['message']['content']);
+            $debugDetails['response_content_exists'] = $contentForDebug !== '' ? 'yes' : 'no';
+            $debugDetails['response_content_length'] = strlen($contentForDebug);
+        }
+        if ($status < 200 || $status >= 300) {
+            $message = is_array($decoded) && isset($decoded['error']['message']) ? $decoded['error']['message'] : ('HTTP ' . $status);
+            $message = aitfAiSanitizeGroqErrorMessage($message);
+            $debugDetails['groq_error_type'] = is_array($decoded) && isset($decoded['error']['type']) ? $decoded['error']['type'] : '';
+            $debugDetails['groq_error_message'] = $message;
+            aitfAiLogProviderError('Groq debug: ' . aitfAiGroqDebugSummary($debugDetails));
+            throw new AitfAiProviderException('Groq API error: ' . $message, $status === 429, $status, $debugDetails);
+        }
+        if (!is_array($decoded)) {
+            $debugDetails['json_parse_error'] = 'Groq API envelope JSON decode failed: ' . json_last_error_msg();
+            aitfAiLogProviderError('Groq debug: ' . aitfAiGroqDebugSummary($debugDetails));
+            throw new AitfAiProviderException('Groq returned a non-JSON API response.', false, 0, $debugDetails);
+        }
+        if (!isset($decoded['choices'][0]['message']['content']) || trim((string) $decoded['choices'][0]['message']['content']) === '') {
+            aitfAiLogProviderError('Groq debug: ' . aitfAiGroqDebugSummary($debugDetails));
+            throw new AitfAiProviderException('Groq response did not include message content.', false, 0, $debugDetails);
+        }
+
+        $text = trim((string) $decoded['choices'][0]['message']['content']);
+        $result = aitfAiDecodeJsonText($text);
+        if (!$result) {
+            $debugDetails['json_parse_error'] = json_last_error_msg();
+            aitfAiLogProviderError('Groq debug: ' . aitfAiGroqDebugSummary($debugDetails));
+            throw new AitfAiProviderException('Groq response could not be parsed as structured JSON.', false, 0, $debugDetails);
+        }
+
+        return array('result' => aitfAiNormalizeAiResult($result), 'raw' => $raw, 'model_text' => $text);
     }
 }
 

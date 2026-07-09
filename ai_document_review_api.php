@@ -117,49 +117,88 @@ try {
     }
     $userPrompt = isset($_REQUEST['user_prompt']) ? trim((string) $_REQUEST['user_prompt']) : '';
 
-    $apiKey = trim((string) aitf_env('GEMINI_API_KEY', ''));
-    if ($apiKey === '') {
-        aitfAiInsertHistory($db, $customerId, isset($_SESSION['username']) ? $_SESSION['username'] : '', '', count($documents), count($rules), 'failed', '', '', '', 'GEMINI_API_KEY is not configured.');
-        aitfAiJsonResponse(array('success' => false, 'message' => 'GEMINI_API_KEY is not configured in .env/environment.'), 500);
+    $requestedModelId = isset($_REQUEST['model']) ? trim((string) $_REQUEST['model']) : '';
+    $modelId = aitfAiNormalizeModelId($requestedModelId);
+    if ($modelId === '') {
+        aitfAiJsonResponse(array('success' => false, 'message' => 'Invalid AI model selection.'), 400);
     }
+    $aiModels = aitfAiModelConfigs();
+    $selectedModel = $aiModels[$modelId];
+    $historyModelName = $selectedModel['display_name'];
 
     if (empty($documents)) {
-        aitfAiInsertHistory($db, $customerId, isset($_SESSION['username']) ? $_SESSION['username'] : '', '', 0, count($rules), 'failed', '', '', '', 'No selected uploaded PDF documents found for current client.');
+        aitfAiInsertHistory($db, $customerId, isset($_SESSION['username']) ? $_SESSION['username'] : '', $historyModelName, 0, count($rules), 'failed', '', '', '', 'No selected uploaded PDF documents found for current client.');
         aitfAiJsonResponse(array('success' => false, 'message' => 'No selected uploaded PDF documents found for this client.'), 400);
     }
 
-    $model = trim((string) aitf_env('GEMINI_MODEL', 'gemini-2.5-flash'));
-    if ($model === '') {
-        $model = 'gemini-2.5-flash';
-    }
-
-    $maxBytes = (int) aitf_env('GEMINI_MAX_INLINE_BYTES', 18000000);
     $totalBytes = 0;
     foreach ($documents as $doc) {
         $totalBytes += (int) $doc['size_bytes'];
     }
-    if ($maxBytes > 0 && $totalBytes > $maxBytes) {
-        $message = 'Client PDFs total ' . round($totalBytes / 1048576, 2) . ' MB, above GEMINI_MAX_INLINE_BYTES. Increase the limit or reduce file size.';
-        aitfAiInsertHistory($db, $customerId, isset($_SESSION['username']) ? $_SESSION['username'] : '', $model, count($documents), count($rules), 'failed', '', '', '', $message);
-        aitfAiJsonResponse(array('success' => false, 'message' => $message), 413);
-    }
 
-    $prompt = aitfAiBuildPrompt($context, $documents, $rules, $userPrompt);
     try {
-        $gemini = aitfAiCallGemini($apiKey, $model, $prompt, $documents);
-        $result = $gemini['result'];
+        if ($selectedModel['provider'] === 'gemini') {
+            $apiKey = trim((string) aitf_env('GEMINI_API_KEY', ''));
+            if ($apiKey === '') {
+                throw new AitfAiProviderException('GEMINI_API_KEY is not configured.');
+            }
+
+            $providerModel = trim((string) aitf_env('GEMINI_MODEL', 'gemini-2.5-flash'));
+            if ($providerModel === '') {
+                $providerModel = 'gemini-2.5-flash';
+            }
+
+            $maxBytes = (int) aitf_env('GEMINI_MAX_INLINE_BYTES', 18000000);
+            if ($maxBytes > 0 && $totalBytes > $maxBytes) {
+                $message = 'Client PDFs total ' . round($totalBytes / 1048576, 2) . ' MB, above GEMINI_MAX_INLINE_BYTES.';
+                aitfAiInsertHistory($db, $customerId, isset($_SESSION['username']) ? $_SESSION['username'] : '', $historyModelName, count($documents), count($rules), 'failed', '', '', '', $message);
+                aitfAiJsonResponse(array('success' => false, 'message' => 'Fly-512B can process large documents, but this selection exceeds the current upload analysis limit. Select fewer PDFs and try again.'), 413);
+            }
+
+            $providerResponse = aitfAiCallGemini($apiKey, $providerModel, aitfAiBuildPrompt($context, $documents, $rules, $userPrompt), $documents);
+        } elseif ($selectedModel['provider'] === 'groq') {
+            $apiKey = trim((string) aitf_env('GROQ_API_KEY', ''));
+            if ($apiKey === '') {
+                throw new AitfAiProviderException('GROQ_API_KEY is not configured.');
+            }
+
+            $maxBytes = (int) aitf_env('GROQ_MAX_SOURCE_BYTES', 8000000);
+            if ($maxBytes > 0 && $totalBytes > $maxBytes) {
+                $message = 'Client PDFs total ' . round($totalBytes / 1048576, 2) . ' MB, above GROQ_MAX_SOURCE_BYTES.';
+                aitfAiInsertHistory($db, $customerId, isset($_SESSION['username']) ? $_SESSION['username'] : '', $historyModelName, count($documents), count($rules), 'failed', '', '', '', $message);
+                aitfAiJsonResponse(array('success' => false, 'message' => 'Swim-128B is designed for smaller document sets. Select fewer PDFs or switch to Fly-512B and try again.'), 413);
+            }
+
+            $inputMaxChars = (int) aitf_env('GROQ_MAX_INPUT_CHARS', 6000);
+            if ($inputMaxChars <= 0) {
+                $inputMaxChars = 6000;
+            }
+            $groqDebugDetails = array();
+            $groqDocumentInput = aitfAiBuildGroqDocumentInput($context, $documents, $rules, $userPrompt, $inputMaxChars, $groqDebugDetails);
+            $providerResponse = aitfAiCallGroq(
+                $apiKey,
+                $selectedModel['model'],
+                aitfAiBuildSharedSystemInstruction(),
+                $groqDocumentInput,
+                $groqDebugDetails
+            );
+        } else {
+            aitfAiJsonResponse(array('success' => false, 'message' => 'Invalid AI model selection.'), 400);
+        }
+
+        $result = $providerResponse['result'];
         $summary = isset($result['summary']) ? $result['summary'] : '';
         $historyId = aitfAiInsertHistory(
             $db,
             $customerId,
             isset($_SESSION['username']) ? $_SESSION['username'] : '',
-            $model,
+            $historyModelName,
             count($documents),
             count($rules),
             'completed',
             $summary,
             json_encode($result),
-            isset($gemini['raw']) ? $gemini['raw'] : '',
+            isset($providerResponse['raw']) ? $providerResponse['raw'] : '',
             ''
         );
         aitfAiInsertDocumentHistory(
@@ -168,7 +207,7 @@ try {
             $customerId,
             $documents,
             isset($_SESSION['username']) ? $_SESSION['username'] : '',
-            $model,
+            $historyModelName,
             'completed',
             $summary
         );
@@ -180,11 +219,32 @@ try {
             'documents' => array_map('aitfAiPublicDocument', aitfAiAttachDocumentReviewStatus($db, $customerId, $documents)),
             'documents_count' => count($documents),
             'rules_count' => count($rules),
-            'model' => $model
+            'model' => $historyModelName
         ));
+    } catch (AitfAiProviderException $ex) {
+        aitfAiLogProviderError($ex->getMessage());
+        aitfAiInsertHistory($db, $customerId, isset($_SESSION['username']) ? $_SESSION['username'] : '', $historyModelName, count($documents), count($rules), 'failed', '', '', '', $ex->getMessage());
+        $statusCode = $ex->isRateLimited() ? 429 : 500;
+        $debugDetails = $ex->getDebugDetails();
+        $debugMessage = $modelId === 'swim-128b' && !empty($debugDetails)
+            ? 'Swim-128B debug failure: ' . aitfAiGroqDebugSummary($debugDetails)
+            : aitfAiModelUnavailableMessage($modelId);
+        aitfAiJsonResponse(array(
+            'success' => false,
+            'message' => $debugMessage,
+            'error_type' => $ex->isRateLimited() ? 'rate_limited' : 'model_unavailable',
+            'model' => $historyModelName,
+            'debug' => $modelId === 'swim-128b' ? $debugDetails : null
+        ), $statusCode);
     } catch (Exception $ex) {
-        aitfAiInsertHistory($db, $customerId, isset($_SESSION['username']) ? $_SESSION['username'] : '', $model, count($documents), count($rules), 'failed', '', '', '', $ex->getMessage());
-        aitfAiJsonResponse(array('success' => false, 'message' => $ex->getMessage()), 500);
+        aitfAiLogProviderError($ex->getMessage());
+        aitfAiInsertHistory($db, $customerId, isset($_SESSION['username']) ? $_SESSION['username'] : '', $historyModelName, count($documents), count($rules), 'failed', '', '', '', $ex->getMessage());
+        aitfAiJsonResponse(array(
+            'success' => false,
+            'message' => aitfAiModelUnavailableMessage($modelId),
+            'error_type' => 'model_unavailable',
+            'model' => $historyModelName
+        ), 500);
     }
 } catch (Exception $ex) {
     aitfAiJsonResponse(array('success' => false, 'message' => $ex->getMessage()), 500);
