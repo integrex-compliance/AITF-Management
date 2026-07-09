@@ -2023,6 +2023,19 @@
             font-size: 14px;
         }
 
+        .aitf-ai-doc-link {
+            color: #f1f5f9;
+            display: inline-flex;
+            align-items: center;
+            text-decoration: none;
+        }
+
+        .aitf-ai-doc-link:hover,
+        .aitf-ai-doc-link:focus {
+            color: #ffffff;
+            text-decoration: underline;
+        }
+
         .aitf-ai-doc-meta {
             color: #94a3b8;
             font-size: 13px;
@@ -8255,9 +8268,12 @@
                 html += '</tr></thead><tbody>';
                 aitfAiDocuments.forEach(function (doc) {
                     var scanned = (doc.scan_status || 'Not Scanned') === 'Scanned';
+                    var documentKey = doc.document_key || '';
+                    var documentName = doc.document_name || doc.file_name || '';
+                    var viewUrl = 'ai_document_review_api.php?action=view_document&document_key=' + encodeURIComponent(documentKey);
                     html += '<tr data-document-key="' + aitfEscapeHtml(doc.document_key || '') + '">';
                     html += '<td style="text-align: center;"><input type="checkbox" class="aitf-ai-doc-check" value="' + aitfEscapeHtml(doc.document_key || '') + '"></td>';
-                    html += '<td><div class="aitf-ai-doc-name"><i class="fa fa-file-pdf-o text-danger" style="margin-right: 6px;"></i>' + aitfEscapeHtml(doc.document_name || doc.file_name || '') + '</div></td>';
+                    html += '<td><div class="aitf-ai-doc-name"><a class="aitf-ai-doc-link" href="' + aitfEscapeHtml(viewUrl) + '" target="_blank" rel="noopener" title="Open PDF in new tab"><i class="fa fa-file-pdf-o text-danger" style="margin-right: 6px;"></i>' + aitfEscapeHtml(documentName) + '</a></div></td>';
                     html += '<td><div class="aitf-ai-doc-meta">' + aitfEscapeHtml(doc.label || '') + ' <span class="doc-meta-separator">|</span> ' + aitfEscapeHtml(doc.service_type || '') + ' #' + aitfEscapeHtml(doc.service_id || '') + '</div></td>';
                     html += '<td><span class="aitf-ai-scan-pill ' + (scanned ? 'scanned' : 'not-scanned') + '">' + (scanned ? 'Scanned' : 'Not Scanned') + '</span></td>';
                     html += '<td>' + aitfEscapeHtml(doc.last_analyzed_at || '-') + '</td>';

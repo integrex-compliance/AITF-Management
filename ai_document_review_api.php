@@ -32,6 +32,35 @@ try {
     $action = isset($_REQUEST['action']) ? $_REQUEST['action'] : 'overview';
     $documents = aitfAiFetchClientPdfDocuments($db, $customerId);
     $documents = aitfAiAttachDocumentReviewStatus($db, $customerId, $documents);
+
+    if ($action === 'view_document') {
+        $documentKey = isset($_GET['document_key']) ? trim((string) $_GET['document_key']) : '';
+        if ($documentKey === '' || !preg_match('/^[a-f0-9]{40}$/', $documentKey)) {
+            aitfAiJsonResponse(array('success' => false, 'message' => 'Invalid document selected.'), 400);
+        }
+
+        $selectedDocuments = aitfAiSelectDocumentsByKeys($documents, array($documentKey));
+        if (empty($selectedDocuments) || empty($selectedDocuments[0]['full_path']) || !is_file($selectedDocuments[0]['full_path'])) {
+            aitfAiJsonResponse(array('success' => false, 'message' => 'Document not found for this client.'), 404);
+        }
+
+        $document = $selectedDocuments[0];
+        $filePath = $document['full_path'];
+        $fileName = isset($document['document_name']) && $document['document_name'] !== '' ? $document['document_name'] : basename($filePath);
+        $fileName = str_replace(array("\r", "\n", '"'), '', $fileName);
+
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: inline; filename="' . $fileName . '"');
+        header('Content-Length: ' . filesize($filePath));
+        header('X-Content-Type-Options: nosniff');
+        readfile($filePath);
+        exit;
+    }
+
     $rules = aitfAiFetchActiveRules($db);
 
     if ($action === 'overview') {
