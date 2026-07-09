@@ -4,6 +4,7 @@
     include_once './dbConnect.php';
     include_once './include/supplier_helpers.php';
     include_once './include/certification_cycle_helper.php';
+    include_once './include/customer_feature_flags.php';
     include_once './informationUpdationReviewModal.php';
     include_once './assessmentPlanningModal.php';
     include_once './modalForms.php';
@@ -654,6 +655,8 @@
     }
 
     $dateGraphData = array('entries' => array(), 'summary' => array('ok' => 0, 'issue' => 0, 'missing' => 0, 'total' => 0));
+    $customerDocoraAiVisible = aitfCustomerFeatureIsEnabled($db, 'customer_docora_ai_visible');
+    $customerDateGraphVisible = aitfCustomerFeatureIsEnabled($db, 'customer_date_graph_visible');
 
     if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
         try {
@@ -2806,15 +2809,19 @@
                             <?php } ?>
                             <div style="margin-left: auto; display: flex; align-items: center; gap: 10px;">
                                 <?php if (!$isSupplierAccount) { ?>
-                                    <button type="button" class="aitf-ai-header-btn aitf-ai-review-open" data-customer="<?php echo $_GET['customerid']; ?>" title="Open docoraAI document review">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: #c084fc;">
-                                            <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
-                                        </svg>
-                                        docora<span style="font-weight: 800; color: #ffffff;">AI</span>
-                                    </button>
-                                    <a href="#dateGraphPanel" id="toggleDateGraph" class="date-graph-toggle" title="Show chronological date graph" onclick="return toggleCustomerDateGraph();">
-                                        <i class="fa fa-line-chart"></i> Dates Graph
-                                    </a>
+                                    <?php if ($customerDocoraAiVisible) { ?>
+                                        <button type="button" class="aitf-ai-header-btn aitf-ai-review-open" data-customer="<?php echo $_GET['customerid']; ?>" title="Open docoraAI document review">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: #c084fc;">
+                                                <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+                                            </svg>
+                                            docora<span style="font-weight: 800; color: #ffffff;">AI</span>
+                                        </button>
+                                    <?php } ?>
+                                    <?php if ($customerDateGraphVisible) { ?>
+                                        <a href="#dateGraphPanel" id="toggleDateGraph" class="date-graph-toggle" title="Show chronological date graph" onclick="return toggleCustomerDateGraph();">
+                                            <i class="fa fa-line-chart"></i> Dates Graph
+                                        </a>
+                                    <?php } ?>
                                 <?php } ?>
                                 <a  class="editCustomerDetails" style="color: white;" data-id="<?php echo $clientInfo['id'] ?>" title="Edit client details">
                                     <span><i class="fa fa-edit"></i></span>
@@ -2920,7 +2927,7 @@
                     </div>
                     <hr style="color: slategray; margin: 0px; border: 1px solid slategray" />
 
-                    <?php if (!$isSupplierAccount) { ?>
+                    <?php if (!$isSupplierAccount && $customerDateGraphVisible) { ?>
                     <div id="dateGraphPanel" class="date-graph-panel">
                         <div class="date-graph-header">
                             <div>
@@ -7929,6 +7936,7 @@
                 </div>
             </div>
         </div>
+        <?php if ($customerDocoraAiVisible) { ?>
         <div class="modal fade aitf-ai-modal" id="aitfAiReviewModal" tabindex="-1" role="dialog" aria-labelledby="aitfAiReviewModalLabel">
         <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content">
@@ -8073,6 +8081,7 @@
             </div>
         </div>
     </div>
+    <?php } ?>
     <script type="text/javascript">
         (function () {
             var aitfAiDocuments = [];

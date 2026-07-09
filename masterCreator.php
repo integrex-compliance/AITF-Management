@@ -4,7 +4,19 @@
     $pageIdentifier = "Master Data";
     include_once './header.php';
     include_once './dbConnect.php';
+    include_once './include/customer_feature_flags.php';
     date_default_timezone_set('Asia/Kolkata');
+
+    $featureToggleMessage = '';
+    $canManageCustomerFeatureToggles = Utitlity::checkForUserMainAdmin();
+    if ($canManageCustomerFeatureToggles && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save_customer_feature_toggles') {
+        aitfCustomerFeatureSet($db, 'customer_docora_ai_visible', isset($_POST['customer_docora_ai_visible']), isset($_SESSION['username']) ? $_SESSION['username'] : '');
+        aitfCustomerFeatureSet($db, 'customer_date_graph_visible', isset($_POST['customer_date_graph_visible']), isset($_SESSION['username']) ? $_SESSION['username'] : '');
+        $featureToggleMessage = 'Customer account feature visibility updated.';
+    }
+
+    $customerDocoraAiVisible = aitfCustomerFeatureIsEnabled($db, 'customer_docora_ai_visible');
+    $customerDateGraphVisible = aitfCustomerFeatureIsEnabled($db, 'customer_date_graph_visible');
 
 //    auditors
     $auditors = "SELECT * from auditors";
@@ -77,6 +89,46 @@
     <div id="page-content-wrapper">
         <div class="page-content inset">
             <div class="container" style="margin-top: 60px;">
+                <?php if ($canManageCustomerFeatureToggles) { ?>
+                    <div class="row">
+                        <div class="col-sm-12">
+                            <div class="well customer-feature-toggle-panel">
+                                <form method="post" action="masterCreator.php">
+                                    <input type="hidden" name="action" value="save_customer_feature_toggles">
+                                    <div class="feature-toggle-header">
+                                        <div>
+                                            <div class="feature-toggle-kicker">Super Admin Controls</div>
+                                            <h4 class="feature-toggle-title">Customer Account Feature Visibility</h4>
+                                            <p class="feature-toggle-note">Off karne par feature customerAccount.php me hide rahega jab tak yahan se dobara on nahi kiya jata.</p>
+                                        </div>
+                                        <button type="submit" class="btn btn-info feature-toggle-save"><i class="fa fa-save"></i> Save Toggles</button>
+                                    </div>
+                                    <?php if ($featureToggleMessage !== '') { ?>
+                                        <div class="alert alert-success" style="margin: 12px 0 0;"><?php echo htmlspecialchars($featureToggleMessage, ENT_QUOTES, 'UTF-8'); ?></div>
+                                    <?php } ?>
+                                    <div class="feature-toggle-grid">
+                                        <label class="feature-toggle-card">
+                                            <span>
+                                                <strong>docoraAI</strong>
+                                                <small>Customer account AI review button</small>
+                                            </span>
+                                            <input type="checkbox" name="customer_docora_ai_visible" value="1" <?php echo $customerDocoraAiVisible ? 'checked' : ''; ?>>
+                                            <span class="feature-switch"><span></span></span>
+                                        </label>
+                                        <label class="feature-toggle-card">
+                                            <span>
+                                                <strong>Date Graph</strong>
+                                                <small>Customer chronological dates graph</small>
+                                            </span>
+                                            <input type="checkbox" name="customer_date_graph_visible" value="1" <?php echo $customerDateGraphVisible ? 'checked' : ''; ?>>
+                                            <span class="feature-switch"><span></span></span>
+                                        </label>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                <?php } ?>
                 <div class="row">
                     <div class="col-sm-6">
                         <div class="row" style="">
@@ -1873,6 +1925,112 @@
             background: rgba(255, 255, 255, 0.5);
             width: 100%;
             height: 100%;
+        }
+
+        .customer-feature-toggle-panel {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #111827 100%);
+            border: 1px solid rgba(59, 130, 246, 0.24);
+            border-radius: 12px;
+            color: #e5eefc;
+            box-shadow: 0 14px 30px rgba(15, 23, 42, 0.22);
+        }
+
+        .feature-toggle-header {
+            align-items: center;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            justify-content: space-between;
+        }
+
+        .feature-toggle-kicker {
+            color: #93c5fd;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.09em;
+            text-transform: uppercase;
+        }
+
+        .feature-toggle-title {
+            color: #fff;
+            font-size: 18px;
+            font-weight: 800;
+            margin: 4px 0;
+        }
+
+        .feature-toggle-note {
+            color: #b6c3d6;
+            margin: 0;
+        }
+
+        .feature-toggle-save {
+            border-radius: 999px;
+            font-weight: 700;
+            padding: 8px 16px;
+        }
+
+        .feature-toggle-grid {
+            display: grid;
+            gap: 12px;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            margin-top: 16px;
+        }
+
+        .feature-toggle-card {
+            align-items: center;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            gap: 12px;
+            justify-content: space-between;
+            margin: 0;
+            padding: 14px;
+        }
+
+        .feature-toggle-card strong {
+            color: #fff;
+            display: block;
+            font-size: 15px;
+            margin-bottom: 2px;
+        }
+
+        .feature-toggle-card small {
+            color: #aab8cc;
+            display: block;
+            font-weight: 500;
+        }
+
+        .feature-toggle-card input {
+            display: none;
+        }
+
+        .feature-switch {
+            background: #475569;
+            border-radius: 999px;
+            flex: 0 0 auto;
+            height: 28px;
+            padding: 3px;
+            transition: background 0.2s ease;
+            width: 54px;
+        }
+
+        .feature-switch span {
+            background: #fff;
+            border-radius: 50%;
+            display: block;
+            height: 22px;
+            transition: transform 0.2s ease;
+            width: 22px;
+        }
+
+        .feature-toggle-card input:checked + .feature-switch {
+            background: linear-gradient(135deg, #16a34a, #22c55e);
+        }
+
+        .feature-toggle-card input:checked + .feature-switch span {
+            transform: translateX(26px);
         }
 
         /* =====================================================================
