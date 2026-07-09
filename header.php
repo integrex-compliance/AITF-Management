@@ -332,8 +332,6 @@ function getFlatDate($inputStr)
         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff()) { ?>
             <li><a href="auditPage.php" class="animate <?php echo $addAuditClass ?>">AUDIT LIST<i
                         class="sub_icon fa fa-list-alt fa-2x" style="vertical-align:middle"></i></a></li>
-            <li><a href="aiReviewRules.php" class="animate <?php echo isset($addAiRulesClass) ? $addAiRulesClass : ''; ?>">AI REVIEW RULES<i
-                        class="sub_icon fa fa-magic fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
         <?php if (Utitlity::checkForUserMainAdmin()) { ?>
             <li><a href="addUsers.php" class="animate <?php echo $addUserClass ?>">ADD USER<i

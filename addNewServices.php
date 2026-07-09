@@ -717,3 +717,105 @@ if (isset($_GET['auditors_Id']) && !empty($_GET['auditors_Id']) && isset($_GET['
         
     }
 }
+// AI Review Rules handlers
+else if (isset($_GET["ai_rule_Id"]) && !empty($_GET["ai_rule_Id"])) {
+    // Get AI Rule by ID for editing
+    try {
+        include_once './include/ai_document_review_lib.php';
+        aitfAiEnsureSchema($db);
+        
+        $stmt = $db->prepare("SELECT * FROM ai_review_rules WHERE id = :id");
+        $stmt->bindParam(":id", $_GET["ai_rule_Id"]);
+        $stmt->execute();
+        $aiRule = $stmt->fetch(PDO::FETCH_ASSOC);
+        echo json_encode($aiRule);
+    } catch (Exception $ex) {
+        echo json_encode(array('error' => $ex->getMessage()));
+    }
+} 
+else if (isset($_GET["newAiRule"]) && $_GET["newAiRule"] === 'save') {
+    // Create or Update AI Rule
+    try {
+        include_once './include/ai_document_review_lib.php';
+        aitfAiEnsureSchema($db);
+        
+        $ruleId = isset($_GET['aiRuleId']) && !empty($_GET['aiRuleId']) ? (int)$_GET['aiRuleId'] : 0;
+        $ruleCode = strtoupper(trim($_GET['aiRuleCode']));
+        $ruleTitle = trim($_GET['aiRuleTitle']);
+        $ruleCategory = trim($_GET['aiRuleCategory']);
+        $ruleText = trim($_GET['aiRuleText']);
+        $ruleExpected = trim($_GET['aiRuleExpected']);
+        $ruleActive = isset($_GET['aiRuleActive']) ? (int)$_GET['aiRuleActive'] : 0;
+        $username = isset($_SESSION['username']) ? $_SESSION['username'] : '';
+        
+        // Validation
+        if (empty($ruleCode) || empty($ruleTitle) || empty($ruleText)) {
+            echo json_encode(array('error' => 'Rule code, title, and rule text are required.'));
+            exit;
+        }
+        
+        if ($ruleId > 0) {
+            // Update existing rule
+            $stmt = $db->prepare("UPDATE ai_review_rules SET 
+                rule_code = :rule_code, 
+                title = :title, 
+                category = :category, 
+                rule_text = :rule_text, 
+                expected_value = :expected_value, 
+                is_active = :is_active, 
+                updated_by = :updated_by 
+                WHERE id = :id");
+            $stmt->bindParam(':rule_code', $ruleCode);
+            $stmt->bindParam(':title', $ruleTitle);
+            $stmt->bindParam(':category', $ruleCategory);
+            $stmt->bindParam(':rule_text', $ruleText);
+            $stmt->bindParam(':expected_value', $ruleExpected);
+            $stmt->bindParam(':is_active', $ruleActive);
+            $stmt->bindParam(':updated_by', $username);
+            $stmt->bindParam(':id', $ruleId);
+            $stmt->execute();
+        } else {
+            // Insert new rule
+            $stmt = $db->prepare("INSERT INTO ai_review_rules 
+                (rule_code, title, category, rule_text, expected_value, is_active, created_by, updated_by) 
+                VALUES 
+                (:rule_code, :title, :category, :rule_text, :expected_value, :is_active, :created_by, :updated_by)");
+            $stmt->bindParam(':rule_code', $ruleCode);
+            $stmt->bindParam(':title', $ruleTitle);
+            $stmt->bindParam(':category', $ruleCategory);
+            $stmt->bindParam(':rule_text', $ruleText);
+            $stmt->bindParam(':expected_value', $ruleExpected);
+            $stmt->bindParam(':is_active', $ruleActive);
+            $stmt->bindParam(':created_by', $username);
+            $stmt->bindParam(':updated_by', $username);
+            $stmt->execute();
+        }
+        
+        // Return updated list
+        $stmt = $db->prepare("SELECT * FROM ai_review_rules ORDER BY is_active DESC, category ASC, rule_code ASC");
+        $stmt->execute();
+        $aiRulesList = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode($aiRulesList);
+    } catch (Exception $ex) {
+        echo json_encode(array('error' => $ex->getMessage()));
+    }
+}
+else if (isset($_GET["aiRuleId"]) && !empty($_GET["aiRuleId"])) {
+    // Delete AI Rule
+    try {
+        include_once './include/ai_document_review_lib.php';
+        aitfAiEnsureSchema($db);
+        
+        $stmt = $db->prepare("DELETE FROM ai_review_rules WHERE id = :id");
+        $stmt->bindParam(":id", $_GET["aiRuleId"]);
+        $stmt->execute();
+        
+        // Return updated list
+        $stmt = $db->prepare("SELECT * FROM ai_review_rules ORDER BY is_active DESC, category ASC, rule_code ASC");
+        $stmt->execute();
+        $aiRulesList = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        echo json_encode($aiRulesList);
+    } catch (Exception $ex) {
+        echo json_encode(array('error' => $ex->getMessage()));
+    }
+}

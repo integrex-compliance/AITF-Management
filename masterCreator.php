@@ -15,6 +15,20 @@
         $featureToggleMessage = 'Customer account feature visibility updated.';
     }
 
+    // AI Review Rules handling
+    include_once './include/ai_document_review_lib.php';
+    aitfAiEnsureSchema($db);
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'toggle_ai_rule') {
+        $aiRuleId = (int) $_POST['ai_rule_id'];
+        $aiActive = (int) $_POST['ai_active'];
+        $stmt = $db->prepare("UPDATE ai_review_rules SET is_active = :active, updated_by = :updated_by WHERE id = :id");
+        $stmt->execute(array(
+            ':active' => $aiActive,
+            ':updated_by' => isset($_SESSION['username']) ? $_SESSION['username'] : '',
+            ':id' => $aiRuleId
+        ));
+    }
+
     $customerDocoraAiVisible = aitfCustomerFeatureIsEnabled($db, 'customer_docora_ai_visible');
     $customerDateGraphVisible = aitfCustomerFeatureIsEnabled($db, 'customer_date_graph_visible');
 
@@ -89,46 +103,6 @@
     <div id="page-content-wrapper">
         <div class="page-content inset">
             <div class="container" style="margin-top: 60px;">
-                <?php if ($canManageCustomerFeatureToggles) { ?>
-                    <div class="row">
-                        <div class="col-sm-12">
-                            <div class="well customer-feature-toggle-panel">
-                                <form method="post" action="masterCreator.php">
-                                    <input type="hidden" name="action" value="save_customer_feature_toggles">
-                                    <div class="feature-toggle-header">
-                                        <div>
-                                            <div class="feature-toggle-kicker">Super Admin Controls</div>
-                                            <h4 class="feature-toggle-title">Customer Account Feature Visibility</h4>
-                                            <p class="feature-toggle-note">Off karne par feature customerAccount.php me hide rahega jab tak yahan se dobara on nahi kiya jata.</p>
-                                        </div>
-                                        <button type="submit" class="btn btn-info feature-toggle-save"><i class="fa fa-save"></i> Save Toggles</button>
-                                    </div>
-                                    <?php if ($featureToggleMessage !== '') { ?>
-                                        <div class="alert alert-success" style="margin: 12px 0 0;"><?php echo htmlspecialchars($featureToggleMessage, ENT_QUOTES, 'UTF-8'); ?></div>
-                                    <?php } ?>
-                                    <div class="feature-toggle-grid">
-                                        <label class="feature-toggle-card">
-                                            <span>
-                                                <strong>docoraAI</strong>
-                                                <small>Customer account AI review button</small>
-                                            </span>
-                                            <input type="checkbox" name="customer_docora_ai_visible" value="1" <?php echo $customerDocoraAiVisible ? 'checked' : ''; ?>>
-                                            <span class="feature-switch"><span></span></span>
-                                        </label>
-                                        <label class="feature-toggle-card">
-                                            <span>
-                                                <strong>Date Graph</strong>
-                                                <small>Customer chronological dates graph</small>
-                                            </span>
-                                            <input type="checkbox" name="customer_date_graph_visible" value="1" <?php echo $customerDateGraphVisible ? 'checked' : ''; ?>>
-                                            <span class="feature-switch"><span></span></span>
-                                        </label>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                <?php } ?>
                 <div class="row">
                     <div class="col-sm-6">
                         <div class="row" style="">
@@ -458,6 +432,100 @@
                         <div class="row changeCertification"></div>
                     </div>
                 </div>
+                <!-- Customer Feature Toggles Section -->
+                <?php if ($canManageCustomerFeatureToggles) { ?>
+                <div class="row" style="margin-top: 30px;">
+                    <div class="col-sm-6">
+                        <div class="row">
+                            <div class="col-xs-12 text-center btn qms_complete_btn">
+                                <span><i class="fa fa-toggle-on"> Customer Feature Toggles</i></span>
+                            </div>
+                        </div>
+                        <div class="row" style="">
+                            <div class="well" style="max-height: 300px; overflow: auto;">
+                                <form method="post" action="masterCreator.php">
+                                    <input type="hidden" name="action" value="save_customer_feature_toggles">
+                                    <?php if ($featureToggleMessage !== '') { ?>
+                                        <div class="alert alert-success" style="margin: 0 0 15px;"><?php echo htmlspecialchars($featureToggleMessage, ENT_QUOTES, 'UTF-8'); ?></div>
+                                    <?php } ?>
+                                    <ul class="list-group">
+                                        <li class="list-group-item">
+                                            <strong>docoraAI</strong>
+                                            <small style="display: block; color: #777;">Customer account AI review button visibility</small>
+                                            <div style="margin-top: 8px;">
+                                                <label style="margin-right: 15px;">
+                                                    <input type="checkbox" name="customer_docora_ai_visible" value="1" <?php echo $customerDocoraAiVisible ? 'checked' : ''; ?>>
+                                                    Enable AI Review Button
+                                                </label>
+                                            </div>
+                                        </li>
+                                        <li class="list-group-item">
+                                            <strong>Date Graph</strong>
+                                            <small style="display: block; color: #777;">Customer chronological dates graph visibility</small>
+                                            <div style="margin-top: 8px;">
+                                                <label style="margin-right: 15px;">
+                                                    <input type="checkbox" name="customer_date_graph_visible" value="1" <?php echo $customerDateGraphVisible ? 'checked' : ''; ?>>
+                                                    Enable Date Graph
+                                                </label>
+                                            </div>
+                                        </li>
+                                    </ul>
+                                    <div style="text-align: right; margin-top: 10px;">
+                                        <button type="submit" class="btn btn-info btn-sm"><i class="fa fa-save"></i> Save Toggles</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <?php } ?>
+
+                <!-- AI Rules Section -->
+                <div class="row" style="margin-top: 30px;">
+                    <div class="col-sm-12">
+                        <div class="row">
+                            <div class="col-xs-8 text-center btn qms_complete_btn">
+                                <span><i class="fa fa-magic"> AI Review Rules</i></span>
+                            </div>
+                            <div class="col-xs-4 text-center btn qms_complete_btn addNewAiRule">
+                                <span><i class="fa fa-plus-square"> Add AI Rule</i></span>
+                            </div>
+                        </div>
+                        <div class="row" style="">
+                            <div class="well" style="max-height: 300px; overflow: auto;">
+                                <ul class="list-group checked-list-box operateAiRules">
+                                    <?php
+                                    // Fetch AI Review Rules
+                                    include_once './include/ai_document_review_lib.php';
+                                    aitfAiEnsureSchema($db);
+                                    $aiRulesStmt = $db->prepare("SELECT * FROM ai_review_rules ORDER BY is_active DESC, category ASC, rule_code ASC");
+                                    $aiRulesStmt->execute();
+                                    $aiRulesList = $aiRulesStmt->fetchAll();
+                                    foreach ($aiRulesList as $aiRule) { 
+                                        $statusBadge = $aiRule['is_active'] == 1 ? '<span class="label label-success">Active</span>' : '<span class="label label-default">Inactive</span>';
+                                    ?>
+                                        <li class="list-group-item">
+                                            <a class="editAiRule" data-id="<?php echo $aiRule['id'] ?>" style="float: left" title="Edit AI Rule"><i class="fa fa-pencil-square"></i></a>&emsp;
+                                            <strong><?php echo htmlspecialchars($aiRule['rule_code']) ?></strong> - <?php echo htmlspecialchars($aiRule['title']) ?>
+                                            <?php echo $statusBadge; ?>
+                                            <a class="deleteAiRule" data-id="<?php echo $aiRule['id'] ?>" style="float: right" title="Delete AI Rule"><i class="fa fa-trash"></i></a>
+                                            <form method="post" action="masterCreator.php" style="display: inline; float: right; margin-right: 10px;" class="toggleAiRuleForm">
+                                                <input type="hidden" name="action" value="toggle_ai_rule">
+                                                <input type="hidden" name="ai_rule_id" value="<?php echo $aiRule['id']; ?>">
+                                                <input type="hidden" name="ai_active" value="<?php echo $aiRule['is_active'] == 1 ? 0 : 1; ?>">
+                                                <button type="submit" class="btn btn-xs <?php echo $aiRule['is_active'] == 1 ? 'btn-warning' : 'btn-success'; ?>" style="padding: 2px 6px;">
+                                                    <?php echo $aiRule['is_active'] == 1 ? 'Deactivate' : 'Activate'; ?>
+                                                </button>
+                                            </form>
+                                        </li>
+                                    <?php } ?>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="row newAiRule"></div>
+                    </div>
+                </div>
+
                 <div id="delete-details" style="display: none">
                     <div id="loading-div" class="ui-corner-all">
                         <span style="font-size: 30pt;"><i style="padding: 5px;" class="fa fa-warning text-warning"></i></span>
@@ -1815,6 +1883,208 @@
                     });
                 });
             });
+
+            // AI Rules handlers
+            $(".addNewAiRule").click(function () {
+                $('.newAiRule').empty();
+                $('.newAiRule').append('<div class="col-sm-12"><div class="well">\n\
+                    <h4>Add New AI Review Rule</h4>\n\
+                    <div class="row">\n\
+                        <div class="col-sm-3 form-group">\n\
+                            <label>Rule Code <span style="color:red;">*</span></label>\n\
+                            <input type="text" name="aiRuleCode" class="form-control aiRuleCode" placeholder="e.g. ISO-DATE-001" maxlength="80" required>\n\
+                        </div>\n\
+                        <div class="col-sm-5 form-group">\n\
+                            <label>Title <span style="color:red;">*</span></label>\n\
+                            <input type="text" name="aiRuleTitle" class="form-control aiRuleTitle" placeholder="Rule Title" maxlength="255" required>\n\
+                        </div>\n\
+                        <div class="col-sm-3 form-group">\n\
+                            <label>Category</label>\n\
+                            <input type="text" name="aiRuleCategory" class="form-control aiRuleCategory" placeholder="Dates, Scope, etc" maxlength="120">\n\
+                        </div>\n\
+                        <div class="col-sm-1 form-group">\n\
+                            <label>Active</label><br>\n\
+                            <input type="checkbox" name="aiRuleActive" class="aiRuleActive" checked>\n\
+                        </div>\n\
+                    </div>\n\
+                    <div class="row">\n\
+                        <div class="col-sm-7 form-group">\n\
+                            <label>Rule Text <span style="color:red;">*</span></label>\n\
+                            <textarea name="aiRuleText" class="form-control aiRuleText" rows="4" required></textarea>\n\
+                        </div>\n\
+                        <div class="col-sm-5 form-group">\n\
+                            <label>Expected Value / Evidence Source</label>\n\
+                            <textarea name="aiRuleExpected" class="form-control aiRuleExpected" rows="4"></textarea>\n\
+                        </div>\n\
+                    </div>\n\
+                    <input type="hidden" class="aiRuleId" name="aiRuleId" value="">\n\
+                    <a class="btn btn-success btn-sm createAiRule"><i class="fa fa-check"></i> Save Rule</a>\n\
+                    <a class="btn btn-default btn-sm cancelAiRule"><i class="fa fa-times"></i> Cancel</a>\n\
+                    <div id="newAiRuleError" style="display: none; margin-top: 10px;">\n\
+                        <small><span id="newAiRuleErrorMsg" style="color: #c9513c; font-style: italic;"></span></small>\n\
+                    </div>\n\
+                </div></div>');
+            });
+
+            $("body").on("click", ".cancelAiRule", function () {
+                $('.newAiRule').empty();
+            });
+
+            $("body").on("click", ".editAiRule", function () {
+                $.ajax({
+                    url: "addNewServices.php",
+                    type: "GET",
+                    dataType: "json",
+                    data: {
+                        ai_rule_Id: $(this).attr('data-id'),
+                    },
+                    success: function (data) {
+                        $('.newAiRule').empty();
+                        $('.newAiRule').append('<div class="col-sm-12"><div class="well">\n\
+                            <h4>Edit AI Review Rule</h4>\n\
+                            <div class="row">\n\
+                                <div class="col-sm-3 form-group">\n\
+                                    <label>Rule Code <span style="color:red;">*</span></label>\n\
+                                    <input type="text" name="aiRuleCode" class="form-control aiRuleCode" placeholder="e.g. ISO-DATE-001" maxlength="80" value="' + data['rule_code'] + '" required>\n\
+                                </div>\n\
+                                <div class="col-sm-5 form-group">\n\
+                                    <label>Title <span style="color:red;">*</span></label>\n\
+                                    <input type="text" name="aiRuleTitle" class="form-control aiRuleTitle" placeholder="Rule Title" maxlength="255" value="' + data['title'] + '" required>\n\
+                                </div>\n\
+                                <div class="col-sm-3 form-group">\n\
+                                    <label>Category</label>\n\
+                                    <input type="text" name="aiRuleCategory" class="form-control aiRuleCategory" placeholder="Dates, Scope, etc" maxlength="120" value="' + (data['category'] || '') + '">\n\
+                                </div>\n\
+                                <div class="col-sm-1 form-group">\n\
+                                    <label>Active</label><br>\n\
+                                    <input type="checkbox" name="aiRuleActive" class="aiRuleActive" ' + (data['is_active'] == 1 ? 'checked' : '') + '>\n\
+                                </div>\n\
+                            </div>\n\
+                            <div class="row">\n\
+                                <div class="col-sm-7 form-group">\n\
+                                    <label>Rule Text <span style="color:red;">*</span></label>\n\
+                                    <textarea name="aiRuleText" class="form-control aiRuleText" rows="4" required>' + (data['rule_text'] || '') + '</textarea>\n\
+                                </div>\n\
+                                <div class="col-sm-5 form-group">\n\
+                                    <label>Expected Value / Evidence Source</label>\n\
+                                    <textarea name="aiRuleExpected" class="form-control aiRuleExpected" rows="4">' + (data['expected_value'] || '') + '</textarea>\n\
+                                </div>\n\
+                            </div>\n\
+                            <input type="hidden" class="aiRuleId" name="aiRuleId" value="' + data['id'] + '">\n\
+                            <a class="btn btn-success btn-sm createAiRule"><i class="fa fa-check"></i> Update Rule</a>\n\
+                            <a class="btn btn-default btn-sm cancelAiRule"><i class="fa fa-times"></i> Cancel</a>\n\
+                            <div id="newAiRuleError" style="display: none; margin-top: 10px;">\n\
+                                <small><span id="newAiRuleErrorMsg" style="color: #c9513c; font-style: italic;"></span></small>\n\
+                            </div>\n\
+                        </div></div>');
+                    },
+                    error: function (data, status, err) {
+                        alert("Error loading AI rule: " + status);
+                    }
+                });
+            });
+
+            $("body").on("click", ".createAiRule", function () {
+                var ruleCode = $('.aiRuleCode').val().trim().toUpperCase();
+                var ruleTitle = $('.aiRuleTitle').val().trim();
+                var ruleCategory = $('.aiRuleCategory').val().trim();
+                var ruleText = $('.aiRuleText').val().trim();
+                var ruleExpected = $('.aiRuleExpected').val().trim();
+                var ruleActive = $('.aiRuleActive').is(':checked') ? 1 : 0;
+                var ruleId = $('.aiRuleId').val();
+
+                // Validation
+                if (ruleCode === '' || ruleTitle === '' || ruleText === '') {
+                    $('#newAiRuleErrorMsg').text("Rule code, title, and rule text are required.");
+                    $('#newAiRuleError').show();
+                    return;
+                }
+
+                $.ajax({
+                    url: "addNewServices.php",
+                    type: "GET",
+                    dataType: "json",
+                    data: {
+                        newAiRule: 'save',
+                        aiRuleId: ruleId,
+                        aiRuleCode: ruleCode,
+                        aiRuleTitle: ruleTitle,
+                        aiRuleCategory: ruleCategory,
+                        aiRuleText: ruleText,
+                        aiRuleExpected: ruleExpected,
+                        aiRuleActive: ruleActive
+                    },
+                    success: function (data) {
+                        $('.newAiRule').empty();
+                        $('.operateAiRules').empty();
+                        for (var i in data) {
+                            var statusBadge = data[i]['is_active'] == 1 ? '<span class="label label-success">Active</span>' : '<span class="label label-default">Inactive</span>';
+                            var toggleBtn = data[i]['is_active'] == 1 ? 
+                                '<button type="submit" class="btn btn-xs btn-warning" style="padding: 2px 6px;">Deactivate</button>' :
+                                '<button type="submit" class="btn btn-xs btn-success" style="padding: 2px 6px;">Activate</button>';
+                            $('.operateAiRules').append('<li class="list-group-item">\n\
+                                <a class="editAiRule" data-id="' + data[i]['id'] + '" style="float: left" title="Edit AI Rule"><i class="fa fa-pencil-square"></i></a>&emsp;\n\
+                                <strong>' + data[i]['rule_code'] + '</strong> - ' + data[i]['title'] + ' ' + statusBadge + '\n\
+                                <a class="deleteAiRule" data-id="' + data[i]['id'] + '" style="float: right" title="Delete AI Rule"><i class="fa fa-trash"></i></a>\n\
+                                <form method="post" action="masterCreator.php" style="display: inline; float: right; margin-right: 10px;" class="toggleAiRuleForm">\n\
+                                    <input type="hidden" name="action" value="toggle_ai_rule">\n\
+                                    <input type="hidden" name="ai_rule_id" value="' + data[i]['id'] + '">\n\
+                                    <input type="hidden" name="ai_active" value="' + (data[i]['is_active'] == 1 ? 0 : 1) + '">\n\
+                                    ' + toggleBtn + '\n\
+                                </form>\n\
+                            </li>');
+                        }
+                    },
+                    error: function (data, status, err) {
+                        $('#newAiRuleErrorMsg').text("Error saving AI rule: " + status);
+                        $('#newAiRuleError').show();
+                    }
+                });
+            });
+
+            $("body").on("click", ".deleteAiRule", function () {
+                var id = $(this).attr('data-id');
+                $('#delete-details').show();
+                $('.delete-confirm-ok').click(function () {
+                    $.ajax({
+                        url: "addNewServices.php",
+                        type: "GET",
+                        dataType: "json",
+                        data: {
+                            aiRuleId: id,
+                        },
+                        success: function (data) {
+                            $('#delete-details').hide();
+                            $('.newAiRule').empty();
+                            $('.operateAiRules').empty();
+                            for (var i in data) {
+                                var statusBadge = data[i]['is_active'] == 1 ? '<span class="label label-success">Active</span>' : '<span class="label label-default">Inactive</span>';
+                                var toggleBtn = data[i]['is_active'] == 1 ? 
+                                    '<button type="submit" class="btn btn-xs btn-warning" style="padding: 2px 6px;">Deactivate</button>' :
+                                    '<button type="submit" class="btn btn-xs btn-success" style="padding: 2px 6px;">Activate</button>';
+                                $('.operateAiRules').append('<li class="list-group-item">\n\
+                                    <a class="editAiRule" data-id="' + data[i]['id'] + '" style="float: left" title="Edit AI Rule"><i class="fa fa-pencil-square"></i></a>&emsp;\n\
+                                    <strong>' + data[i]['rule_code'] + '</strong> - ' + data[i]['title'] + ' ' + statusBadge + '\n\
+                                    <a class="deleteAiRule" data-id="' + data[i]['id'] + '" style="float: right" title="Delete AI Rule"><i class="fa fa-trash"></i></a>\n\
+                                    <form method="post" action="masterCreator.php" style="display: inline; float: right; margin-right: 10px;" class="toggleAiRuleForm">\n\
+                                        <input type="hidden" name="action" value="toggle_ai_rule">\n\
+                                        <input type="hidden" name="ai_rule_id" value="' + data[i]['id'] + '">\n\
+                                        <input type="hidden" name="ai_active" value="' + (data[i]['is_active'] == 1 ? 0 : 1) + '">\n\
+                                        ' + toggleBtn + '\n\
+                                    </form>\n\
+                                </li>');
+                            }
+                        },
+                        error: function (data, status, err) {
+                            alert("Error deleting AI rule: " + status);
+                        }
+                    });
+                });
+                $('.delete-cancel').click(function () {
+                    $('#delete-details').hide();
+                });
+            });
+
             $('body').on('click', ".deleteTaxation", function (e) {
                 $id = $(this).attr('taxation-id');
                 $('#delete-details').show();
@@ -1925,112 +2195,6 @@
             background: rgba(255, 255, 255, 0.5);
             width: 100%;
             height: 100%;
-        }
-
-        .customer-feature-toggle-panel {
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #111827 100%);
-            border: 1px solid rgba(59, 130, 246, 0.24);
-            border-radius: 12px;
-            color: #e5eefc;
-            box-shadow: 0 14px 30px rgba(15, 23, 42, 0.22);
-        }
-
-        .feature-toggle-header {
-            align-items: center;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 14px;
-            justify-content: space-between;
-        }
-
-        .feature-toggle-kicker {
-            color: #93c5fd;
-            font-size: 11px;
-            font-weight: 800;
-            letter-spacing: 0.09em;
-            text-transform: uppercase;
-        }
-
-        .feature-toggle-title {
-            color: #fff;
-            font-size: 18px;
-            font-weight: 800;
-            margin: 4px 0;
-        }
-
-        .feature-toggle-note {
-            color: #b6c3d6;
-            margin: 0;
-        }
-
-        .feature-toggle-save {
-            border-radius: 999px;
-            font-weight: 700;
-            padding: 8px 16px;
-        }
-
-        .feature-toggle-grid {
-            display: grid;
-            gap: 12px;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            margin-top: 16px;
-        }
-
-        .feature-toggle-card {
-            align-items: center;
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            cursor: pointer;
-            display: flex;
-            gap: 12px;
-            justify-content: space-between;
-            margin: 0;
-            padding: 14px;
-        }
-
-        .feature-toggle-card strong {
-            color: #fff;
-            display: block;
-            font-size: 15px;
-            margin-bottom: 2px;
-        }
-
-        .feature-toggle-card small {
-            color: #aab8cc;
-            display: block;
-            font-weight: 500;
-        }
-
-        .feature-toggle-card input {
-            display: none;
-        }
-
-        .feature-switch {
-            background: #475569;
-            border-radius: 999px;
-            flex: 0 0 auto;
-            height: 28px;
-            padding: 3px;
-            transition: background 0.2s ease;
-            width: 54px;
-        }
-
-        .feature-switch span {
-            background: #fff;
-            border-radius: 50%;
-            display: block;
-            height: 22px;
-            transition: transform 0.2s ease;
-            width: 22px;
-        }
-
-        .feature-toggle-card input:checked + .feature-switch {
-            background: linear-gradient(135deg, #16a34a, #22c55e);
-        }
-
-        .feature-toggle-card input:checked + .feature-switch span {
-            transform: translateX(26px);
         }
 
         /* =====================================================================
@@ -2167,4 +2331,15 @@
             border-color: var(--hpd-accent);
             color: var(--hpd-text);
         }
+
+        /* AI Rules section - labels and badges */
+        html.theme-dark .label-success {
+            background-color: #22c55e;
+            color: #fff;
+        }
+        html.theme-dark .label-default {
+            background-color: var(--hpd-border-2);
+            color: var(--hpd-text-dim);
+        }
+        html.theme-dark .newAiRule h4 { color: var(--hpd-text); }
     </style>
