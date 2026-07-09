@@ -1571,7 +1571,7 @@ session_start();
                 <div class="hero-text-content">
                     <div class="hero-label">NABCB Accredited Certification Body</div>
                     <h1 class="hero-main-title">
-                        Your Trusted Partner In<span>Management System</span>
+                        Your Trusted Partner In<span>Management System Assessment</span>
                     </h1>
                     <p class="hero-sub-title">
                         Empowering organizations through accredited, authentic, impartial and ethical certification

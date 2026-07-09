@@ -1417,7 +1417,7 @@
             z-index: 100000 !important;
         }
 
-        .modal-backdrop {
+        body.aitf-ai-review-active .modal-backdrop {
             z-index: 99999 !important;
         }
 
@@ -8528,6 +8528,7 @@
             }
 
             $(document).on('click', '.aitf-ai-review-open', function () {
+                $('body').addClass('aitf-ai-review-active');
                 $('#aitfAiReviewModal').modal('show');
                 aitfSetSelectedAiModel(aitfSelectedAiModel);
                 $('#aitfAiStatus').hide();
@@ -8548,7 +8549,12 @@
                 aitfLoadAiOverview();
             });
 
+            $('#aitfAiReviewModal').on('shown.bs.modal', function () {
+                $('body').addClass('aitf-ai-review-active');
+            });
+
             $('#aitfAiReviewModal').on('hidden.bs.modal', function () {
+                $('body').removeClass('aitf-ai-review-active');
                 aitfStopWorkSteps(false);
             });
 

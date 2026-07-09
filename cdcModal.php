@@ -2500,7 +2500,8 @@ function checkCDCStatus() {
   }
 }
 
-    function validateCDC() {
+    function validateCDC(showAuditPerformanceAlert) {
+        showAuditPerformanceAlert = showAuditPerformanceAlert === true;
         console.log('=== validateCDC called ===');
         const applicationDateStr = $('.Date').val();
         // Removed validation for application_received_date and audit_dateII fields
@@ -2521,6 +2522,37 @@ function checkCDCStatus() {
         console.log('Office section visible:', isOfficeUseVisible);
 
         // Removed validation rules for Application Received Date and Review Date
+
+        if (showAuditPerformanceAlert) {
+            var auditPerformanceFields = [
+                { selector: '.ncval', label: 'NC' },
+                { selector: '.ofival', label: 'OFI' },
+                { selector: '.oplus', label: 'O+ve' }
+            ];
+            var missingAuditPerformance = [];
+            var firstMissingAuditPerformance = null;
+
+            auditPerformanceFields.forEach(function(field) {
+                var $field = $(field.selector).first();
+                if ($.trim($field.val()) === '') {
+                    missingAuditPerformance.push(field.label);
+                    $field.addClass('inputHighlight');
+                    if (!firstMissingAuditPerformance) {
+                        firstMissingAuditPerformance = $field;
+                    }
+                } else {
+                    $field.removeClass('inputHighlight');
+                }
+            });
+
+            if (missingAuditPerformance.length > 0) {
+                $isError = true;
+                alert('Please fill value in Audit Performance section (NC, OFI, O+ve).');
+                if (firstMissingAuditPerformance) {
+                    firstMissingAuditPerformance.focus();
+                }
+            }
+        }
 
         const auditDateEdit = $('.audit_date_CDC').val();
         const dates = auditDateEdit.split(", ");
@@ -2685,7 +2717,7 @@ $('#cdcOfficeContainer').on('change blur', '.revDatecdc', function() {
 });
 
         $(".save_cdc").click(function (e) {
-            var hasError = validateCDC();
+            var hasError = validateCDC(true);
             console.log('=== CDC FORM SUBMISSION ===');
             console.log('Validation result:', hasError);
             console.log('Office section visible:', $('#cdcOfficeContainer').is(':visible'));
@@ -3943,6 +3975,12 @@ removeUnwantedOptions('.granted-by', optionsToRemove);
         
         // Collect ISO decisions and sync legacy fields before form submission
         $('form[action="addCdcModal.php"]').on('submit', function(e) {
+            var hasError = validateCDC(true);
+            if (hasError) {
+                e.preventDefault();
+                return false;
+            }
+
             var isoDecisions = collectIsoDecisions();
             $('#iso_decisions').val(JSON.stringify(isoDecisions));
             console.log('ISO decisions collected:', isoDecisions);
@@ -3963,8 +4001,6 @@ removeUnwantedOptions('.granted-by', optionsToRemove);
     });
 
 </script>    
-
-
 
 
 

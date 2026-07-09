@@ -58,6 +58,22 @@ function validateCdcDates($applicationDateObj, $receivedDateObj, $reviewDateObj,
     // These fields were removed from the CDC form
 }
 
+function validateCdcAuditPerformance($customerId) {
+    $requiredFields = [
+        'ncval' => 'NC',
+        'ofival' => 'OFI',
+        'oplus' => 'O+ve',
+    ];
+
+    foreach ($requiredFields as $field => $label) {
+        if (!isset($_POST[$field]) || trim((string) $_POST[$field]) === '') {
+            $_SESSION['cdc_error'] = 'Please fill value in Audit Performance section (NC, OFI, O+ve).';
+            header("Location: customerAccount.php?customerid=" . $customerId);
+            exit;
+        }
+    }
+}
+
 function generateRcClientStatusDates($db, $serviceId, $customerId)
 {
     try {
@@ -137,6 +153,11 @@ function activateCustomerAfterGrantedCaCdc($db, $customerId, $caServiceId, $cdcS
 if (strtoupper($_SERVER['REQUEST_METHOD']) == 'POST') {
 
     unset($_SESSION['cdc_error']);
+
+    if (isset($_POST['save_cdc']) || isset($_POST['update_cdc'])) {
+        $customerIdForRedirect = isset($_POST['customer_Id']) ? $_POST['customer_Id'] : '';
+        validateCdcAuditPerformance($customerIdForRedirect);
+    }
 
     if (isset($_POST['save_cdc'])) {
         error_log("CDC Form submitted with save_cdc. crr_Id value: " . (isset($_POST['crr_Id']) ? $_POST['crr_Id'] : 'NOT SET'));
