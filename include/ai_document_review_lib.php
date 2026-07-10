@@ -204,6 +204,195 @@ if (!function_exists('aitfAiFilterExistingColumns')) {
     }
 }
 
+if (!function_exists('aitfAiCompactSoftwareValue')) {
+    function aitfAiCompactSoftwareValue($value)
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $value = trim((string) $value);
+        if ($value === '') {
+            return '';
+        }
+
+        $value = preg_replace('/\s+/', ' ', $value);
+        if (strlen($value) > 700) {
+            $value = substr($value, 0, 700) . '... [truncated]';
+        }
+        return $value;
+    }
+}
+
+if (!function_exists('aitfAiCompactSoftwareRows')) {
+    function aitfAiCompactSoftwareRows(array $rows)
+    {
+        $skip = array(
+            'result_json' => true,
+            'raw_response' => true,
+            'password' => true,
+            'pass' => true
+        );
+        $compact = array();
+        foreach ($rows as $row) {
+            $out = array();
+            foreach ($row as $key => $value) {
+                if (isset($skip[strtolower((string) $key)])) {
+                    continue;
+                }
+                $out[$key] = aitfAiCompactSoftwareValue($value);
+            }
+            $compact[] = $out;
+        }
+        return $compact;
+    }
+}
+
+if (!function_exists('aitfAiFetchRowsByColumnValues')) {
+    function aitfAiFetchRowsByColumnValues($db, $table, array $columnValues, $limit = 25)
+    {
+        $available = aitfAiTableColumns($db, $table);
+        if (empty($available)) {
+            return array();
+        }
+
+        $whereParts = array();
+        $params = array();
+        foreach ($columnValues as $column => $values) {
+            if (!isset($available[$column])) {
+                continue;
+            }
+            $values = array_values(array_unique(array_filter(array_map('strval', (array) $values), function ($value) {
+                return $value !== '';
+            })));
+            if (empty($values)) {
+                continue;
+            }
+
+            $placeholders = array();
+            foreach ($values as $index => $value) {
+                $param = ':' . preg_replace('/[^a-zA-Z0-9_]/', '_', $column) . '_' . count($params) . '_' . $index;
+                $placeholders[] = $param;
+                $params[$param] = $value;
+            }
+            $whereParts[] = '`' . str_replace('`', '', $column) . '` IN (' . implode(',', $placeholders) . ')';
+        }
+
+        if (empty($whereParts)) {
+            return array();
+        }
+
+        $limit = max(1, min(80, (int) $limit));
+        $stmt = $db->prepare("SELECT * FROM `" . str_replace('`', '', $table) . "` WHERE " . implode(' OR ', $whereParts) . " LIMIT " . $limit);
+        foreach ($params as $param => $value) {
+            $stmt->bindValue($param, $value);
+        }
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+}
+
+if (!function_exists('aitfAiSoftwareSection')) {
+    function aitfAiSoftwareSection($label, $table, array $rows)
+    {
+        return array(
+            'label' => $label,
+            'table' => $table,
+            'row_count' => count($rows),
+            'rows' => aitfAiCompactSoftwareRows($rows)
+        );
+    }
+}
+
+if (!function_exists('aitfAiFetchSoftwareFilledContext')) {
+    function aitfAiFetchSoftwareFilledContext($db, $customerId)
+    {
+        $context = array(
+            'instruction' => 'These rows are software-filled form data from the AITF application, not uploaded PDF content. Review completeness, date consistency, missing required values, contradictions, and user-requested form checks against client context and active rules.',
+            'sections' => array()
+        );
+
+        $serviceRows = aitfAiFetchRowsByColumnValues($db, 'service', array('customer_id' => array($customerId)), 80);
+        $context['sections'][] = aitfAiSoftwareSection('Client services', 'service', $serviceRows);
+
+        $serviceIds = array();
+        foreach ($serviceRows as $row) {
+            if (isset($row['service_id'])) {
+                $serviceIds[] = $row['service_id'];
+            }
+        }
+
+        $typedIds = array();
+        $serviceTables = array(
+            array('label' => 'Certification Audit service form', 'table' => 'service_type_ca', 'id' => 'ca_id'),
+            array('label' => 'Surveillance Audit I service form', 'table' => 'service_type_sai', 'id' => 'sai_id'),
+            array('label' => 'Surveillance Audit II service form', 'table' => 'service_type_saii', 'id' => 'saii_id'),
+            array('label' => 'Recertification service form', 'table' => 'service_type_rc', 'id' => 'rc_id'),
+            array('label' => 'Special Audit service form', 'table' => 'service_type_sp', 'id' => 'sp_id'),
+            array('label' => 'Pre-transfer review service form', 'table' => 'service_type_ptr', 'id' => 'prt_id'),
+            array('label' => 'Transfer Audit service form', 'table' => 'service_type_ta', 'id' => 'ta_id')
+        );
+
+        foreach ($serviceTables as $serviceTable) {
+            $rows = aitfAiFetchRowsByColumnValues($db, $serviceTable['table'], array(
+                'customer_id' => array($customerId),
+                'service' => $serviceIds,
+                'service_id' => $serviceIds
+            ), 40);
+            $context['sections'][] = aitfAiSoftwareSection($serviceTable['label'], $serviceTable['table'], $rows);
+            foreach ($rows as $row) {
+                if (isset($row[$serviceTable['id']])) {
+                    $typedIds[] = $row[$serviceTable['id']];
+                }
+            }
+        }
+
+        $directTables = array(
+            array('label' => 'Client profile', 'table' => 'customer_info', 'columns' => array('id' => array($customerId))),
+            array('label' => 'Certification agreements', 'table' => 'certification_aggrement', 'columns' => array('customer_id' => array($customerId), 'service' => $typedIds)),
+            array('label' => 'Audit application forms', 'table' => 'audit_application', 'columns' => array('customer_id' => array($customerId), 'service_id' => $typedIds)),
+            array('label' => 'Stage-I notification / release forms', 'table' => 'stage_oneaudit_id', 'columns' => array('ca_customer_id' => array($customerId), 'ca_service_id' => $typedIds)),
+            array('label' => 'Stage-II notification / release forms', 'table' => 'stage_twoaudit_id', 'columns' => array('customer_id' => array($customerId), 'service_id' => $typedIds)),
+            array('label' => 'Stage-I audit review forms', 'table' => 'stage_i_audit_id', 'columns' => array('customer_id' => array($customerId), 'ca_service_id' => $typedIds)),
+            array('label' => 'Stage-II / Annex II review forms', 'table' => 'stage_ii_audit_id', 'columns' => array('customer_id' => array($customerId), 'ca_service_id' => $typedIds)),
+            array('label' => 'Surveillance planning forms', 'table' => 'servelance_1_id', 'columns' => array('customer_id' => array($customerId), 'service_id' => $typedIds)),
+            array('label' => 'Audit schedule forms', 'table' => 'audit_schedule_id', 'columns' => array('customer_id' => array($customerId), 'serviceca_id' => $typedIds)),
+            array('label' => 'Audit schedule II forms', 'table' => 'audit_scheduleii_id', 'columns' => array('customer_id' => array($customerId), 'ca_service' => $typedIds)),
+            array('label' => 'Assessment planning forms', 'table' => 'assessment_planning', 'columns' => array('customer_id' => array($customerId), 'service_id' => $typedIds)),
+            array('label' => 'Control format I forms', 'table' => 'control_formati_id', 'columns' => array('customer_id' => array($customerId), 'caservice_id' => $typedIds)),
+            array('label' => 'Control format II forms', 'table' => 'control_formatii_id', 'columns' => array('customer_id' => array($customerId), 'caservice_id' => $typedIds)),
+            array('label' => 'CDC review forms', 'table' => 'cdc_report_review', 'columns' => array('customer_id' => array($customerId), 'ca_service_id' => $typedIds)),
+            array('label' => 'Customer survey forms', 'table' => 'customer_survey_id', 'columns' => array('customer_id' => array($customerId), 'ca_serviceid' => $typedIds)),
+            array('label' => 'Certificate print forms', 'table' => 'certificate_print', 'columns' => array('customer_id' => array($customerId), 'service_id' => $typedIds))
+        );
+
+        foreach ($directTables as $entry) {
+            $rows = aitfAiFetchRowsByColumnValues($db, $entry['table'], $entry['columns'], 40);
+            $context['sections'][] = aitfAiSoftwareSection($entry['label'], $entry['table'], $rows);
+        }
+
+        $contractIds = array();
+        $contractIdRows = aitfAiFetchRowsByColumnValues($db, 'contract_id', array(
+            'customer_id' => array($customerId),
+            'ca_service_id' => $typedIds
+        ), 40);
+        $context['sections'][] = aitfAiSoftwareSection('Contract review identifiers', 'contract_id', $contractIdRows);
+        foreach ($contractIdRows as $row) {
+            if (isset($row['contractid'])) {
+                $contractIds[] = $row['contractid'];
+            }
+        }
+
+        $contractReviewRows = aitfAiFetchRowsByColumnValues($db, 'contract_review', array(
+            'ca_service_contract' => $contractIds,
+            'ca_service' => $typedIds
+        ), 80);
+        $context['sections'][] = aitfAiSoftwareSection('Contract review checklist rows', 'contract_review', $contractReviewRows);
+
+        return $context;
+    }
+}
+
 if (!function_exists('aitfAiFetchClientContext')) {
     function aitfAiFetchClientContext($db, $customerId)
     {
@@ -654,8 +843,9 @@ if (!function_exists('aitfAiBuildReviewPayload')) {
 if (!function_exists('aitfAiBuildSharedSystemInstruction')) {
     function aitfAiBuildSharedSystemInstruction()
     {
-        return "You are AI Powered by AITF, acting as a certification pre-audit document reviewer.\n"
-            . "Read the supplied PDF document content and/or attached PDF files using your own document understanding and reasoning. Do not rely only on file names or database metadata.\n"
+        return "You are AI Powered by AITF, acting as a certification pre-audit document and software-form reviewer.\n"
+            . "Read the supplied PDF document content, attached PDF files, client_context, and any software_filled_forms rows using your own document understanding and reasoning. Do not rely only on file names.\n"
+            . "When software_filled_forms is supplied, treat it as filled form data from the application database: contract review, CA, SA-I, SA-II, RC, notifications/releases, schedules, audit review rows, agreement/certificate rows, and related form fields.\n"
             . "Independently detect potential inconsistencies, contradictions, missing information, suspicious values, incorrect-looking information, date issues, chronology problems, client-detail mismatches, scope/standard/manday risks, and any other documentation risk visible in the PDFs or client context.\n"
             . "The active rules supplied in active_ai_rules_from_database are additional mandatory AITF checks. Apply every active rule where relevant, but do not limit your review to those rules.\n"
             . "If multiple PDFs are attached, analyze them together and cross-check names, addresses, GSTIN, contacts, ISO standards, scope, dates, mandays, service stage, certificate details, audit evidence, and other repeated facts across documents.\n"

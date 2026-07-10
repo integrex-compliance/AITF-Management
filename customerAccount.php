@@ -1279,9 +1279,11 @@
         }
 
         .aitf-ai-review-open {
-            background: rgba(168, 85, 247, 0.08) !important;
-            border: 1px solid rgba(168, 85, 247, 0.4) !important;
-            color: #d8b4fe !important;
+            background:
+                linear-gradient(135deg, rgba(6, 15, 30, 0.98), rgba(11, 18, 35, 0.98)) padding-box,
+                linear-gradient(90deg, #a855f7 0%, #22d3ee 100%) border-box !important;
+            border: 1px solid transparent !important;
+            color: #e5e7eb !important;
             font-family: 'Outfit', 'Inter', system-ui, sans-serif !important;
             font-weight: 600 !important;
             font-size: 13px !important;
@@ -1297,42 +1299,121 @@
             gap: 8px;
             line-height: 1;
             cursor: pointer;
+            overflow: hidden;
         }
 
         .aitf-ai-review-open:hover {
-            background: rgba(168, 85, 247, 0.18) !important;
-            border-color: rgba(168, 85, 247, 0.8) !important;
+            background:
+                linear-gradient(135deg, rgba(8, 20, 42, 0.99), rgba(14, 22, 44, 0.99)) padding-box,
+                linear-gradient(90deg, #c084fc 0%, #67e8f9 100%) border-box !important;
             color: #ffffff !important;
-            box-shadow: 0 0 16px rgba(168, 85, 247, 0.45) !important;
+            box-shadow: 0 0 14px rgba(34, 211, 238, 0.18), 0 0 12px rgba(168, 85, 247, 0.22) !important;
             transform: translateY(-1px);
         }
 
-        /* ---- docoraAI Premium Icon Styles ---- */
+        /* ---- GO ai Premium Icon Styles ---- */
         .docora-btn-icon {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 20px;
-            height: 20px;
+            width: 22px;
+            height: 22px;
             position: relative;
             flex-shrink: 0;
             animation: docora-btn-glow 2.5s ease-in-out infinite;
-            filter: drop-shadow(0 0 5px rgba(192, 132, 252, 0.8));
+            filter: drop-shadow(0 0 4px rgba(34, 211, 238, 0.35));
         }
 
         .docora-btn-icon svg {
-            animation: docora-icon-spin 0s linear infinite;
+            display: block;
+            width: 100%;
+            height: 100%;
         }
 
         @keyframes docora-btn-glow {
             0%, 100% {
-                filter: drop-shadow(0 0 4px rgba(192, 132, 252, 0.7)) drop-shadow(0 0 8px rgba(99, 102, 241, 0.4));
+                filter: drop-shadow(0 0 3px rgba(34, 211, 238, 0.32)) drop-shadow(0 0 4px rgba(168, 85, 247, 0.22));
                 transform: scale(1);
             }
             50% {
-                filter: drop-shadow(0 0 8px rgba(192, 132, 252, 1)) drop-shadow(0 0 16px rgba(99, 102, 241, 0.8));
-                transform: scale(1.1);
+                filter: drop-shadow(0 0 5px rgba(34, 211, 238, 0.48)) drop-shadow(0 0 6px rgba(168, 85, 247, 0.34));
+                transform: scale(1.03);
             }
+        }
+
+        .go-ai-nav-robot .go-ai-nav-head {
+            fill: url(#goAiNavHeadGradient);
+            stroke: rgba(255, 255, 255, 0.86);
+            stroke-width: 0.75;
+        }
+
+        .go-ai-nav-robot .go-ai-nav-screen {
+            fill: url(#goAiNavScreenGradient);
+            stroke: rgba(103, 232, 249, 0.58);
+            stroke-width: 0.65;
+        }
+
+        .go-ai-nav-robot .go-ai-nav-ear {
+            fill: url(#goAiNavEarGradient);
+            stroke: rgba(226, 232, 240, 0.78);
+            stroke-width: 0.55;
+        }
+
+        .go-ai-nav-robot .go-ai-nav-antenna {
+            fill: none;
+            stroke: #cbd5e1;
+            stroke-width: 1.05;
+            stroke-linecap: round;
+        }
+
+        .go-ai-nav-robot .go-ai-nav-antenna-dot {
+            fill: #67e8f9;
+            filter: drop-shadow(0 0 2px rgba(103, 232, 249, 0.85));
+        }
+
+        .go-ai-nav-robot .go-ai-nav-letter {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 8.6px;
+            font-weight: 900;
+            dominant-baseline: middle;
+            text-anchor: middle;
+        }
+
+        .go-ai-nav-robot .go-ai-nav-letter-g {
+            fill: #67e8f9;
+            filter: drop-shadow(0 0 1.6px rgba(34, 211, 238, 0.95));
+        }
+
+        .go-ai-nav-robot .go-ai-nav-letter-o {
+            fill: #f0abfc;
+            filter: drop-shadow(0 0 1.6px rgba(217, 70, 239, 0.9));
+        }
+
+        .go-ai-nav-robot .go-ai-nav-smile {
+            fill: none;
+            stroke: rgba(226, 232, 240, 0.95);
+            stroke-width: 0.85;
+            stroke-linecap: round;
+        }
+
+        .go-ai-tab-word {
+            align-items: baseline;
+            display: inline-flex;
+            gap: 2px;
+            white-space: nowrap;
+        }
+
+        .go-ai-tab-go {
+            background: linear-gradient(90deg, #38bdf8 0%, #a78bfa 52%, #d946ef 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            font-weight: 900;
+        }
+
+        .go-ai-tab-ai {
+            color: #f8fafc;
+            font-weight: 800;
         }
 
         .docora-modal-icon {
@@ -1364,7 +1445,7 @@
         .docora-modal-icon svg {
             position: relative;
             z-index: 1;
-            stroke: #c084fc;
+            overflow: visible;
         }
 
         @keyframes docora-modal-pulse {
@@ -1395,7 +1476,39 @@
         }
 
         .docora-welcome-icon svg {
-            stroke: #a5b4fc;
+            overflow: visible;
+        }
+
+        .go-ai-robot-svg .go-ai-robot-body {
+            fill: rgba(15, 23, 42, 0.78);
+            stroke: #c084fc;
+        }
+
+        .go-ai-robot-svg .go-ai-eye {
+            fill: #eef2ff;
+            stroke: #a855f7;
+        }
+
+        .go-ai-robot-svg .go-ai-eye-text {
+            fill: #4c1d95;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 7px;
+            font-weight: 800;
+            dominant-baseline: middle;
+            text-anchor: middle;
+        }
+
+        .go-ai-robot-svg .go-ai-antenna,
+        .go-ai-robot-svg .go-ai-mouth,
+        .go-ai-robot-svg .go-ai-ear {
+            fill: none;
+            stroke: #c084fc;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .go-ai-robot-svg .go-ai-antenna-dot {
+            fill: #c084fc;
         }
 
         @keyframes aitf-pulse-icon {
@@ -2257,6 +2370,89 @@
             gap: 8px;
         }
 
+        .go-ai-conversation {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .go-ai-chat-message {
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            max-width: 94%;
+            padding: 14px 16px;
+        }
+
+        .go-ai-chat-message.assistant {
+            align-self: flex-start;
+            background: #f8fafc;
+        }
+
+        .go-ai-chat-message.user {
+            align-self: flex-end;
+            background: #eef2ff;
+            border-color: #c7d2fe;
+        }
+
+        .go-ai-chat-speaker {
+            color: #475569;
+            display: block;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .go-ai-chat-message.user .docora-response-para {
+            margin-bottom: 0;
+        }
+
+        .go-ai-reply-box {
+            border-top: 1px solid #f1f5f9;
+            margin-top: 18px;
+            padding-top: 16px;
+        }
+
+        .go-ai-reply-label {
+            color: #475569;
+            display: block;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .go-ai-reply-input-row {
+            align-items: flex-end;
+            display: flex;
+            gap: 10px;
+        }
+
+        #aitfAiReplyPrompt {
+            min-height: 54px;
+            resize: vertical;
+        }
+
+        .go-ai-reply-send {
+            border-radius: 8px;
+            flex: 0 0 auto;
+            min-height: 54px;
+            padding: 10px 16px;
+        }
+
+        @media (max-width: 767px) {
+            .go-ai-reply-input-row {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .go-ai-reply-send {
+                width: 100%;
+            }
+        }
+
         .modal-footer {
             background: #070a10;
             border-top: 1px solid rgba(99, 102, 241, 0.15);
@@ -2823,11 +3019,38 @@
                             <div style="margin-left: auto; display: flex; align-items: center; gap: 10px;">
                                 <?php if (!$isSupplierAccount) { ?>
                                     <?php if ($customerDocoraAiVisible) { ?>
-                                        <button type="button" class="aitf-ai-header-btn aitf-ai-review-open" data-customer="<?php echo $_GET['customerid']; ?>" title="Open docoraAI document review">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: #c084fc;">
-                                                <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
-                                            </svg>
-                                            docora<span style="font-weight: 800; color: #ffffff;">AI</span>
+                                        <button type="button" class="aitf-ai-header-btn aitf-ai-review-open" data-customer="<?php echo $_GET['customerid']; ?>" title="Open GO ai document review">
+                                            <span class="docora-btn-icon">
+                                                <svg class="go-ai-nav-robot" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" aria-hidden="true">
+                                                    <defs>
+                                                        <linearGradient id="goAiNavHeadGradient" x1="7" y1="7" x2="25" y2="26" gradientUnits="userSpaceOnUse">
+                                                            <stop offset="0" stop-color="#ffffff"></stop>
+                                                            <stop offset="0.55" stop-color="#dbeafe"></stop>
+                                                            <stop offset="1" stop-color="#94a3b8"></stop>
+                                                        </linearGradient>
+                                                        <linearGradient id="goAiNavScreenGradient" x1="9" y1="11" x2="23" y2="22" gradientUnits="userSpaceOnUse">
+                                                            <stop offset="0" stop-color="#172554"></stop>
+                                                            <stop offset="0.42" stop-color="#07111f"></stop>
+                                                            <stop offset="1" stop-color="#020617"></stop>
+                                                        </linearGradient>
+                                                        <linearGradient id="goAiNavEarGradient" x1="4" y1="14" x2="28" y2="21" gradientUnits="userSpaceOnUse">
+                                                            <stop offset="0" stop-color="#a78bfa"></stop>
+                                                            <stop offset="1" stop-color="#67e8f9"></stop>
+                                                        </linearGradient>
+                                                    </defs>
+                                                    <path class="go-ai-nav-antenna" d="M16 8V4.8"></path>
+                                                    <circle class="go-ai-nav-antenna-dot" cx="16" cy="3.8" r="1.5"></circle>
+                                                    <rect class="go-ai-nav-ear" x="5.8" y="15" width="3.2" height="7" rx="1.5"></rect>
+                                                    <rect class="go-ai-nav-ear" x="23" y="15" width="3.2" height="7" rx="1.5"></rect>
+                                                    <rect class="go-ai-nav-head" x="7.7" y="8.2" width="16.6" height="18.2" rx="6.2"></rect>
+                                                    <rect class="go-ai-nav-screen" x="10" y="12" width="12" height="9.5" rx="3.3"></rect>
+                                                    <path d="M11.4 13.2C13.2 12.1 18.6 11.8 21 13" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="0.7" stroke-linecap="round"></path>
+                                                    <text class="go-ai-nav-letter go-ai-nav-letter-g" x="13.7" y="16.8">G</text>
+                                                    <text class="go-ai-nav-letter go-ai-nav-letter-o" x="18.6" y="16.8">O</text>
+                                                    <path class="go-ai-nav-smile" d="M13.6 20.1c1.25 1 3.55 1 4.8 0"></path>
+                                                </svg>
+                                            </span>
+                                            <span class="go-ai-tab-word"><span class="go-ai-tab-go">GO</span><span class="go-ai-tab-ai">ai</span></span>
                                         </button>
                                     <?php } ?>
                                     <?php if ($customerDateGraphVisible) { ?>
@@ -7957,49 +8180,57 @@
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                     <h4 class="modal-title" id="aitfAiReviewModalLabel">
                         <span class="docora-modal-icon">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="3" y="11" width="18" height="10" rx="2"></rect>
-                                <circle cx="12" cy="5" r="2"></circle>
-                                <path d="M12 7v4"></path>
-                                <line x1="8" y1="16" x2="8" y2="16"></line>
-                                <line x1="16" y1="16" x2="16" y2="16"></line>
+                            <svg class="go-ai-robot-svg" xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 32 32" aria-hidden="true">
+                                <path class="go-ai-antenna" d="M16 7V4"></path>
+                                <circle class="go-ai-antenna-dot" cx="16" cy="3" r="1.8"></circle>
+                                <path class="go-ai-ear" d="M5 18h3M24 18h3"></path>
+                                <rect class="go-ai-robot-body" x="8" y="9" width="16" height="17" rx="5"></rect>
+                                <rect class="go-ai-eye" x="10.5" y="14" width="5.5" height="5" rx="1.4"></rect>
+                                <rect class="go-ai-eye" x="16" y="14" width="5.5" height="5" rx="1.4"></rect>
+                                <text class="go-ai-eye-text" x="13.25" y="16.9">G</text>
+                                <text class="go-ai-eye-text" x="18.75" y="16.9">O</text>
+                                <path class="go-ai-mouth" d="M13 23h6"></path>
                             </svg>
                         </span>
-                        docoraAI Powered by AITF
+                        GO ai Powered by AITF
                     </h4>
                 </div>
                 <div class="modal-body">
                     <div class="aitf-ai-welcome">
                         <div class="aitf-ai-welcome-title">
                             <span class="docora-welcome-icon">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M12 2a4 4 0 0 1 4 4c0 1.5-.8 2.8-2 3.5V12h-4V9.5A4 4 0 0 1 8 6a4 4 0 0 1 4-4z"/>
-                                    <circle cx="12" cy="15" r="3"/>
-                                    <path d="M6 9.5C4.3 10.4 3 12.1 3 14a5 5 0 0 0 5 5"/>
-                                    <path d="M18 9.5c1.7.9 3 2.6 3 4.5a5 5 0 0 1-5 5"/>
-                                    <path d="M9 19.5A5 5 0 0 0 12 21a5 5 0 0 0 3-1.5"/>
+                                <svg class="go-ai-robot-svg" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 32 32" aria-hidden="true">
+                                    <path class="go-ai-antenna" d="M16 7V4"></path>
+                                    <circle class="go-ai-antenna-dot" cx="16" cy="3" r="1.8"></circle>
+                                    <path class="go-ai-ear" d="M5 18h3M24 18h3"></path>
+                                    <rect class="go-ai-robot-body" x="8" y="9" width="16" height="17" rx="5"></rect>
+                                    <rect class="go-ai-eye" x="10.5" y="14" width="5.5" height="5" rx="1.4"></rect>
+                                    <rect class="go-ai-eye" x="16" y="14" width="5.5" height="5" rx="1.4"></rect>
+                                    <text class="go-ai-eye-text" x="13.25" y="16.9">G</text>
+                                    <text class="go-ai-eye-text" x="18.75" y="16.9">O</text>
+                                    <path class="go-ai-mouth" d="M13 23h6"></path>
                                 </svg>
                             </span>
-                            Welcome to docoraAI
+                            Welcome to GO ai
                         </div>
-                        <div class="aitf-ai-metrics">How may I assist you? Select client PDFs, add your prompt, and docoraAI will read the actual documents before replying.</div>
+                        <div class="aitf-ai-metrics" id="aitfAiMetrics">How may I assist you? Select client PDFs, add your prompt, and GO ai will read the actual documents before replying.</div>
                     </div>
                     <div class="aitf-ai-prompt-box">
                         <label for="aitfAiUserPrompt">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;">
                                 <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
                             </svg>
-                            PROMPT FOR DOCORAAI
+                            PROMPT FOR GO AI
                         </label>
                         <div class="aitf-ai-input-wrapper">
-                            <textarea id="aitfAiUserPrompt" class="form-control" placeholder="Ask docoraAI to analyze the documents... (e.g. Check name mismatch, incorrect dates, missing signatures)"></textarea>
-                            <button type="button" class="btn-ai-send" id="aitfSendPromptBtn" title="Send prompt to docoraAI">
+                            <textarea id="aitfAiUserPrompt" class="form-control" placeholder="Ask GO ai to analyze the documents... (e.g. Check name mismatch, incorrect dates, missing signatures)"></textarea>
+                            <button type="button" class="btn-ai-send" id="aitfSendPromptBtn" title="Send prompt to GO ai">
                                 <i class="fa fa-paper-plane"></i>
                             </button>
                         </div>
                         <div class="aitf-ai-model-strip">
                             <div class="aitf-ai-model-label">AI Model</div>
-                            <div class="aitf-ai-model-options" role="radiogroup" aria-label="docoraAI model selection">
+                            <div class="aitf-ai-model-options" role="radiogroup" aria-label="GO ai model selection">
                                 <button type="button" class="aitf-ai-model-option active" data-model="fly-512b" role="radio" aria-checked="true">
                                     <span class="aitf-ai-model-topline">
                                         <span class="aitf-ai-model-name">Fly-512B</span>
@@ -8019,7 +8250,7 @@
                     </div>
                     <div id="aitfAiStatus" class="aitf-ai-status manual_verification_required" style="display:none;"></div>
                     <div id="aitfAiWorkSteps" class="aitf-ai-work-steps">
-                        <div class="aitf-ai-work-title"><i class="fa fa-spinner fa-spin"></i> docoraAI Reasoning Process</div>
+                        <div class="aitf-ai-work-title"><i class="fa fa-spinner fa-spin"></i> GO ai Reasoning Process</div>
                         <div class="aitf-ai-work-content">
                             <div class="aitf-ai-orb-container">
                                 <div class="aitf-ai-orb-ring"></div>
@@ -8030,8 +8261,8 @@
                             </div>
                         </div>
                         <div class="aitf-ai-steps-grid">
-                            <div class="aitf-ai-step" data-step="0"><i class="fa fa-circle-o"></i> Reading selected PDF files</div>
-                            <div class="aitf-ai-step" data-step="1"><i class="fa fa-circle-o"></i> Vetting document details & rules</div>
+                            <div class="aitf-ai-step" data-step="0"><i class="fa fa-circle-o"></i> Reading selected records and PDFs</div>
+                            <div class="aitf-ai-step" data-step="1"><i class="fa fa-circle-o"></i> Vetting form details & rules</div>
                             <div class="aitf-ai-step" data-step="2"><i class="fa fa-circle-o"></i> Cross-checking client context</div>
                             <div class="aitf-ai-step" data-step="3"><i class="fa fa-circle-o"></i> Analyzing name & dates</div>
                             <div class="aitf-ai-step" data-step="4"><i class="fa fa-circle-o"></i> Loading mandatory risk checks</div>
@@ -8044,6 +8275,7 @@
                             <div class="aitf-ai-doc-actions">
                                 <button type="button" class="btn btn-ai-secondary" id="aitfSelectAllDocs"><i class="fa fa-check-square-o"></i> Select All</button>
                                 <button type="button" class="btn btn-ai-primary" id="aitfAnalyzeSelectedDocs" style="display: inline-flex;"><i class="fa fa-search"></i> Analyze Selected</button>
+                                <button type="button" class="btn btn-ai-primary" id="aitfScanSoftwareFill"><i class="fa fa-database"></i> Scan Software Fill</button>
                                 <button type="button" class="btn btn-ai-secondary" id="aitfAnalyzeAllDocs"><i class="fa fa-files-o"></i> Analyze All Documents</button>
                             </div>
                         </div>
@@ -8051,7 +8283,7 @@
                     </div>
                     <div class="aitf-ai-response-section" id="aitfAiResponseContainer">
                         <div class="docora-review-header">
-                            <div class="docora-review-title">docoraAI REVIEW <span id="docoraReviewId">-</span></div>
+                            <div class="docora-review-title">GO ai REVIEW <span id="docoraReviewId">-</span></div>
                             <div class="docora-review-meta-grid">
                                 <div class="docora-meta-item">
                                     <span class="docora-meta-label">Status</span>
@@ -8084,6 +8316,15 @@
                             <div id="aitfAiResults" class="docora-response-text">
                                 <p class="docora-empty-msg">Open the panel and run analysis to view pre-audit issues.</p>
                             </div>
+                            <div id="aitfAiReplyBox" class="go-ai-reply-box" style="display:none;">
+                                <label class="go-ai-reply-label" for="aitfAiReplyPrompt">Reply to GO ai</label>
+                                <div class="go-ai-reply-input-row">
+                                    <textarea id="aitfAiReplyPrompt" class="form-control" placeholder="Reply or ask a follow-up about this AI response..."></textarea>
+                                    <button type="button" class="btn btn-ai-primary go-ai-reply-send" id="aitfAiReplyBtn">
+                                        <i class="fa fa-reply"></i> Reply
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -8102,6 +8343,10 @@
             var aitfAiLogInterval = null;
             var aitfAiStepIndex = 0;
             var aitfSelectedAiModel = 'fly-512b';
+            var aitfLastAiDocumentKeys = [];
+            var aitfLastAiPrompt = '';
+            var aitfLastAiSummary = '';
+            var aitfLastAiScanScope = '';
             var aitfAiModelLabels = {
                 'fly-512b': 'Fly-512B',
                 'swim-128b': 'Swim-128B'
@@ -8133,6 +8378,40 @@
                 return 'Read the selected PDF documents carefully and behave like an AITF pre-audit reviewer. Find client name mismatch, address/GSTIN/contact mismatch, wrong or missing dates, scope mismatch, ISO standard mismatch, manday gaps, missing signatures, suspicious values, contradictions between documents, and any risk that can affect audit readiness. Give clear evidence, confidence, suggestion, and recommended action.';
             }
 
+            function aitfSetReplyBoxVisible(visible) {
+                $('#aitfAiReplyBox').toggle(!!visible);
+                if (!visible) {
+                    $('#aitfAiReplyPrompt').val('');
+                }
+            }
+
+            function aitfResponseDocumentKeys(response) {
+                var keys = [];
+                (response && response.documents ? response.documents : []).forEach(function (doc) {
+                    if (doc.document_key && keys.indexOf(doc.document_key) === -1) {
+                        keys.push(doc.document_key);
+                    }
+                });
+                return keys;
+            }
+
+            function aitfBuildReplyPrompt(replyText) {
+                var parts = [];
+                if ($.trim(aitfLastAiPrompt)) {
+                    parts.push('Previous prompt: ' + $.trim(aitfLastAiPrompt));
+                }
+                if ($.trim(aitfLastAiSummary)) {
+                    parts.push('Previous GO ai summary: ' + $.trim(aitfLastAiSummary));
+                }
+                parts.push('User follow-up reply: ' + $.trim(replyText));
+                parts.push('Answer this follow-up using the same selected documents, AITF rules, and the previous AI response context. Keep the answer focused on the user follow-up.');
+                return parts.join("\n\n");
+            }
+
+            function aitfSoftwareFillPrompt() {
+                return 'Scan all software-filled form data for this client. Read Contract Review, CA, SA-I, SA-II, RC, Release/Notification for Stage-I audit, Stage-II notification, audit schedules, agreements, certificate and review forms from the application database. Check whether forms are completely filled, required fields are missing, dates are wrong or inconsistent, client details mismatch, service stage values conflict, and whether any obvious mistake exists. Give clear evidence, affected form/table, current value, expected value if known, and recommended action.';
+            }
+
             function aitfRenderWorkSteps() {
                 $('#aitfAiWorkSteps .aitf-ai-step').each(function () {
                     var step = parseInt($(this).data('step'), 10);
@@ -8161,10 +8440,10 @@
                 $('#aitfAiWorkLog').html('<div class="aitf-ai-log-line highlight">> Starting audit-readiness analyzer...</div>');
 
                 var reasoningLogs = [
-                    { type: 'system', text: 'Connecting to docoraAI deep reasoning pipeline...' },
-                    { type: 'system', text: 'Secure PDF parsing layer initialized.' },
-                    { type: 'ai', text: 'Scanning document binary streams & extracting text...' },
-                    { type: 'ai', text: 'Driving into documents, scanning page templates...' },
+                    { type: 'system', text: 'Connecting to GO ai deep reasoning pipeline...' },
+                    { type: 'system', text: 'Secure record and PDF reading layer initialized.' },
+                    { type: 'ai', text: 'Scanning selected documents and software-filled forms...' },
+                    { type: 'ai', text: 'Reading form fields, page templates, and saved rows...' },
                     { type: 'ai', text: 'Reading ST-01 Signed Notifications & CA attachments...' },
                     { type: 'highlight', text: 'Extracted client name tokens. Verifying spelling consistency...' },
                     { type: 'ai', text: 'Locating dates, sign-offs, and compliance stamps...' },
@@ -8240,7 +8519,10 @@
             }
 
             function aitfSetAnalyzeButtons(disabled) {
-                $('#aitfAnalyzeSelectedDocs, #aitfAnalyzeAllDocs, #aitfSelectAllDocs, #aitfSendPromptBtn').prop('disabled', !!disabled || !aitfAiDocuments.length);
+                var isDisabled = !!disabled;
+                var hasDocuments = !!aitfAiDocuments.length;
+                $('#aitfAnalyzeSelectedDocs, #aitfAnalyzeAllDocs, #aitfSelectAllDocs').prop('disabled', isDisabled || !hasDocuments);
+                $('#aitfSendPromptBtn, #aitfScanSoftwareFill, #aitfAiReplyBtn').prop('disabled', isDisabled);
             }
 
             function aitfSetSelectedAiModel(modelId) {
@@ -8258,7 +8540,7 @@
                 aitfAiDocuments = documents || [];
                 if (!aitfAiDocuments.length) {
                     $('#aitfAiDocuments').html('<div class="aitf-ai-empty">No uploaded PDF documents found for this client.</div>');
-                    aitfSetAnalyzeButtons(true);
+                    aitfSetAnalyzeButtons(false);
                     return;
                 }
                 var html = '<div class="aitf-ai-doc-table-wrap"><table class="table table-condensed aitf-ai-doc-table">';
@@ -8289,10 +8571,35 @@
                 aitfSetAnalyzeButtons(false);
             }
 
-            function aitfRenderAiIssues(result) {
+            function aitfConversationMessage(role, speaker, bodyHtml, extraId) {
+                var idAttr = extraId ? ' id="' + aitfEscapeHtml(extraId) + '"' : '';
+                return '<div' + idAttr + ' class="go-ai-chat-message ' + aitfEscapeHtml(role) + '">' +
+                    '<span class="go-ai-chat-speaker">' + aitfEscapeHtml(speaker) + '</span>' +
+                    bodyHtml +
+                    '</div>';
+            }
+
+            function aitfEnsureConversation() {
+                if (!$('#aitfAiResults .go-ai-conversation').length) {
+                    $('#aitfAiResults').html('<div class="go-ai-conversation"></div>');
+                }
+                return $('#aitfAiResults .go-ai-conversation');
+            }
+
+            function aitfAppendUserReply(replyText) {
+                var $conversation = aitfEnsureConversation();
+                $conversation.append(aitfConversationMessage('user', 'You', '<p class="docora-response-para">' + aitfEscapeHtml(replyText) + '</p>'));
+            }
+
+            function aitfAppendAssistantLoading() {
+                var $conversation = aitfEnsureConversation();
+                $('#aitfAiReplyLoading').remove();
+                $conversation.append(aitfConversationMessage('assistant', 'GO ai', '<div class="docora-loading-msg"><i class="fa fa-spinner fa-spin"></i> Reply in progress...</div>', 'aitfAiReplyLoading'));
+            }
+
+            function aitfBuildAiIssuesHtml(result) {
                 if (!result) {
-                    $('#aitfAiResults').html('<p class="docora-empty-msg">No structured AI result was returned.</p>');
-                    return;
+                    return '<p class="docora-empty-msg">No structured AI result was returned.</p>';
                 }
                 var issues = Array.isArray(result.findings) && result.findings.length ? result.findings : (Array.isArray(result.issues) ? result.issues : []);
                 var manual = Array.isArray(result.manual_verifications) ? result.manual_verifications : [];
@@ -8307,9 +8614,8 @@
                 }
                 
                 if (!issues.length && !manual.length) {
-                    html += '<p class="docora-empty-msg">No issues reported by docoraAI.</p>';
-                    $('#aitfAiResults').html(html);
-                    return;
+                    html += '<p class="docora-empty-msg">No issues reported by GO ai.</p>';
+                    return html;
                 }
                 
                 // 2. Render each finding as a clean readable paragraph
@@ -8393,11 +8699,22 @@
                 
                 // 6. Disclaimer/Note
                 html += '<p class="docora-response-para" style="font-size: 13px; color: #64748b; margin-top: 24px; border-top: 1px solid #f1f5f9; padding-top: 12px;"><strong>Note:</strong> Document evidence requires visual/manual verification for some sections.</p>';
-                
-                $('#aitfAiResults').html(html);
+                return html;
             }
 
-            function aitfShowReviewResponse(response) {
+            function aitfRenderAiIssues(result, appendToConversation) {
+                var html = aitfBuildAiIssuesHtml(result);
+                var messageHtml = aitfConversationMessage('assistant', 'GO ai', html);
+                if (appendToConversation) {
+                    var $conversation = aitfEnsureConversation();
+                    $('#aitfAiReplyLoading').remove();
+                    $conversation.append(messageHtml);
+                } else {
+                    $('#aitfAiResults').html('<div class="go-ai-conversation">' + messageHtml + '</div>');
+                }
+            }
+
+            function aitfShowReviewResponse(response, appendToConversation) {
                 if (!response || !response.success) {
                     aitfSetAiStatus(response && response.message ? response.message : 'Unable to load AI review.', 'failed');
                     return;
@@ -8405,7 +8722,15 @@
                 var result = response.result || {};
                 var status = result.overall_status || response.status || 'manual_verification_required';
                 var suffix = response.analyzed_at ? ' | analyzed ' + response.analyzed_at : '';
-                aitfSetAiStatus('docoraAI review #' + response.history_id + ' (' + status.replace(/_/g, ' ') + ')' + suffix, status);
+                aitfSetAiStatus('GO ai review #' + response.history_id + ' (' + status.replace(/_/g, ' ') + ')' + suffix, status);
+                var responseKeys = aitfResponseDocumentKeys(response);
+                if (responseKeys.length) {
+                    aitfLastAiDocumentKeys = responseKeys;
+                }
+                if (response.scan_scope === 'software_fill') {
+                    aitfLastAiScanScope = 'software_fill';
+                }
+                aitfLastAiSummary = result.summary || response.summary || '';
                 
                 // Populate review metadata header
                 $('#docoraReviewId').text('#' + response.history_id);
@@ -8448,7 +8773,8 @@
                 var rulesCount = response.rules_count || 0;
                 $('#docoraReviewRulesCount').text(rulesCount + ' rule(s)');
                 
-                aitfRenderAiIssues(result);
+                aitfRenderAiIssues(result, !!appendToConversation);
+                aitfSetReplyBoxVisible(aitfLastAiDocumentKeys.length > 0 || aitfLastAiScanScope === 'software_fill' || $.trim(aitfLastAiPrompt) !== '');
                 
                 $('#aitfAiHistoryNote').text('Model: ' + (response.model || '') + '. Analyzed by: ' + (response.analyzed_by || ''));
                 
@@ -8456,7 +8782,9 @@
                 var $modal = $('#aitfAiReviewModal');
                 var $container = $('#aitfAiResponseContainer');
                 if ($modal.length && $container.length) {
-                    var scrollTop = $modal.scrollTop() + $container.position().top - 20;
+                    var scrollTop = appendToConversation
+                        ? $modal.scrollTop() + $container.position().top + $container.outerHeight()
+                        : $modal.scrollTop() + $container.position().top - 20;
                     $modal.animate({ scrollTop: scrollTop }, 800);
                 }
             }
@@ -8472,7 +8800,7 @@
                     data: { action: 'overview' },
                     success: function (response) {
                         if (!response || !response.success) {
-                            aitfSetAiStatus(response && response.message ? response.message : 'Unable to load docoraAI overview.', 'failed');
+                            aitfSetAiStatus(response && response.message ? response.message : 'Unable to load GO ai overview.', 'failed');
                             return;
                         }
                         aitfRenderAiDocuments(response.documents || []);
@@ -8482,56 +8810,80 @@
                         }
                     },
                     error: function (xhr) {
-                        aitfSetAiStatus(xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Unable to load docoraAI overview.', 'failed');
+                        aitfSetAiStatus(xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Unable to load GO ai overview.', 'failed');
                     }
                 });
             }
 
-            function aitfAnalyzeDocuments(documentKeys, sourceButton) {
-                if (!documentKeys.length) {
-                    aitfSetAiStatus('Select at least one PDF document to analyze.', 'failed');
-                    return;
-                }
+            function aitfAnalyzeDocuments(documentKeys, sourceButton, overridePrompt, preserveConversation, displayPrompt, scanScope) {
                 var $btn = sourceButton ? $(sourceButton) : $();
                 var selectedModel = aitfSelectedAiModel;
-                var selectedModelLabel = aitfAiModelLabels[selectedModel] || 'docoraAI';
+                var selectedModelLabel = aitfAiModelLabels[selectedModel] || 'GO ai';
+                var promptText = overridePrompt !== undefined ? overridePrompt : $('#aitfAiUserPrompt').val();
+                var normalizedScanScope = scanScope === 'software_fill' || !documentKeys.length ? 'software_fill' : '';
+                if (!documentKeys.length && !$.trim(promptText) && normalizedScanScope !== 'software_fill') {
+                    aitfSetAiStatus('Type a prompt or use Scan Software Fill.', 'failed');
+                    $('#aitfAiUserPrompt').focus();
+                    return;
+                }
+                aitfLastAiDocumentKeys = documentKeys.slice(0);
+                aitfLastAiPrompt = displayPrompt !== undefined ? displayPrompt : promptText;
+                aitfLastAiScanScope = normalizedScanScope;
                 aitfSetAnalyzeButtons(true);
                 $btn.data('original-html', $btn.html()).html('<i class="fa fa-spinner fa-spin"></i>');
                 aitfStartWorkSteps();
-                aitfSetAiStatus(selectedModelLabel + ' is analyzing ' + documentKeys.length + ' selected PDF document(s).', 'manual_verification_required');
+                var targetLabel = normalizedScanScope === 'software_fill' && !documentKeys.length
+                    ? 'client software-filled forms'
+                    : documentKeys.length + ' selected PDF document(s)';
+                aitfSetAiStatus(selectedModelLabel + ' is analyzing ' + targetLabel + '.', 'manual_verification_required');
                 
-                // Clear response section / show loading state
-                $('#docoraReviewId').text('-');
-                $('#docoraReviewStatusBadge').removeClass().addClass('docora-badge').text('-');
-                $('#docoraReviewRiskBadge').removeClass().addClass('docora-badge').text('-');
-                $('#docoraReviewDate').text('-');
-                $('#docoraReviewModel').text('-');
-                $('#docoraReviewDocCount').text('-');
-                $('#docoraReviewRulesCount').text('-');
-                $('#aitfAiResults').html('<div class="docora-loading-msg"><i class="fa fa-spinner fa-spin"></i> Review in progress...</div>');
+                if (preserveConversation) {
+                    aitfAppendAssistantLoading();
+                } else {
+                    // Clear response section / show loading state
+                    $('#docoraReviewId').text('-');
+                    $('#docoraReviewStatusBadge').removeClass().addClass('docora-badge').text('-');
+                    $('#docoraReviewRiskBadge').removeClass().addClass('docora-badge').text('-');
+                    $('#docoraReviewDate').text('-');
+                    $('#docoraReviewModel').text('-');
+                    $('#docoraReviewDocCount').text('-');
+                    $('#docoraReviewRulesCount').text('-');
+                    $('#aitfAiResults').html('<div class="docora-loading-msg"><i class="fa fa-spinner fa-spin"></i> Review in progress...</div>');
+                    aitfSetReplyBoxVisible(false);
+                }
                 
                 $.ajax({
                     url: 'ai_document_review_api.php',
                     type: 'POST',
                     dataType: 'json',
-                    data: { action: 'analyze', document_keys: documentKeys.join(','), user_prompt: $('#aitfAiUserPrompt').val(), model: selectedModel },
+                    data: { action: 'analyze', document_keys: documentKeys.join(','), user_prompt: promptText, model: selectedModel, scan_scope: normalizedScanScope },
                     success: function (response) {
                         if (!response || !response.success) {
                             aitfSetAiStatus(response && response.message ? response.message : 'AI review failed.', 'failed');
-                            $('#aitfAiResults').html('<p class="docora-empty-msg">No findings available.</p>');
+                            if (preserveConversation) {
+                                $('#aitfAiReplyLoading').remove();
+                                aitfEnsureConversation().append(aitfConversationMessage('assistant', 'GO ai', '<p class="docora-empty-msg">No findings available.</p>'));
+                            } else {
+                                $('#aitfAiResults').html('<p class="docora-empty-msg">No findings available.</p>');
+                            }
                             return;
                         }
                         
                         response.status = response.result ? (response.result.overall_status || 'manual_verification_required') : 'manual_verification_required';
                         response.analyzed_at = new Date().toLocaleString();
                         
-                        aitfShowReviewResponse(response);
+                        aitfShowReviewResponse(response, !!preserveConversation);
                         aitfLoadAiOverview();
                     },
                     error: function (xhr) {
                         var message = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'AI review failed. Check server logs for details.';
                         aitfSetAiStatus(message, 'failed');
-                        $('#aitfAiResults').html('<p class="docora-empty-msg">' + aitfEscapeHtml(message) + '</p>');
+                        if (preserveConversation) {
+                            $('#aitfAiReplyLoading').remove();
+                            aitfEnsureConversation().append(aitfConversationMessage('assistant', 'GO ai', '<p class="docora-empty-msg">' + aitfEscapeHtml(message) + '</p>'));
+                        } else {
+                            $('#aitfAiResults').html('<p class="docora-empty-msg">' + aitfEscapeHtml(message) + '</p>');
+                        }
                     },
                     complete: function () {
                         aitfStopWorkSteps(true);
@@ -8561,6 +8913,7 @@
                 $('#docoraReviewDocCount').text('-');
                 $('#docoraReviewRulesCount').text('-');
                 $('#aitfAiResults').html('<p class="docora-empty-msg">Open the panel and run analysis to view pre-audit issues.</p>');
+                aitfSetReplyBoxVisible(false);
                 
                 aitfLoadAiOverview();
             });
@@ -8598,13 +8951,42 @@
             });
 
             $(document).on('click', '#aitfSendPromptBtn', function () {
-                aitfAnalyzeDocuments(aitfSelectedDocumentKeys(), this);
+                aitfAnalyzeDocuments(aitfSelectedDocumentKeys(), this, $('#aitfAiUserPrompt').val(), false, $('#aitfAiUserPrompt').val(), aitfSelectedDocumentKeys().length ? '' : 'software_fill');
+            });
+
+            $(document).on('click', '#aitfScanSoftwareFill', function () {
+                aitfAnalyzeDocuments([], this, aitfSoftwareFillPrompt(), false, 'Scan Software Fill', 'software_fill');
+            });
+
+            $(document).on('click', '#aitfAiReplyBtn', function () {
+                var replyText = $.trim($('#aitfAiReplyPrompt').val());
+                var replyDocumentKeys = aitfLastAiDocumentKeys.length ? aitfLastAiDocumentKeys : aitfSelectedDocumentKeys();
+                if (!replyText) {
+                    aitfSetAiStatus('Type a reply before sending it to GO ai.', 'failed');
+                    $('#aitfAiReplyPrompt').focus();
+                    return;
+                }
+                var replyScanScope = aitfLastAiScanScope || (replyDocumentKeys.length ? '' : 'software_fill');
+                if (!replyDocumentKeys.length && replyScanScope !== 'software_fill') {
+                    aitfSetAiStatus('Select at least one PDF document before replying.', 'failed');
+                    return;
+                }
+                aitfAppendUserReply(replyText);
+                $('#aitfAiReplyPrompt').val('');
+                aitfAnalyzeDocuments(replyDocumentKeys, this, aitfBuildReplyPrompt(replyText), true, replyText, replyScanScope);
             });
 
             $(document).on('keydown', '#aitfAiUserPrompt', function (e) {
                 if (e.which === 13 && !e.shiftKey) {
                     e.preventDefault();
                     $('#aitfSendPromptBtn').click();
+                }
+            });
+
+            $(document).on('keydown', '#aitfAiReplyPrompt', function (e) {
+                if (e.which === 13 && !e.shiftKey) {
+                    e.preventDefault();
+                    $('#aitfAiReplyBtn').click();
                 }
             });
 

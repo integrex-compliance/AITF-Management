@@ -450,12 +450,12 @@
                                     <?php } ?>
                                     <ul class="list-group">
                                         <li class="list-group-item">
-                                            <strong>docoraAI</strong>
-                                            <small style="display: block; color: #777;">Customer account AI review button visibility</small>
+                                            <strong>GO ai</strong>
+                                            <small style="display: block; color: #777;">Customer account GO ai review button visibility</small>
                                             <div style="margin-top: 8px;">
                                                 <label style="margin-right: 15px;">
                                                     <input type="checkbox" name="customer_docora_ai_visible" value="1" <?php echo $customerDocoraAiVisible ? 'checked' : ''; ?>>
-                                                    Enable AI Review Button
+                                                    Enable GO ai Button
                                                 </label>
                                             </div>
                                         </li>

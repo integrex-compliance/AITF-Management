@@ -145,6 +145,13 @@ try {
         $documents = aitfAiSelectDocumentsByKeys($documents, $documentKeys);
     }
     $userPrompt = isset($_REQUEST['user_prompt']) ? trim((string) $_REQUEST['user_prompt']) : '';
+    $scanScope = isset($_REQUEST['scan_scope']) ? trim((string) $_REQUEST['scan_scope']) : '';
+    if ($scanScope !== 'software_fill') {
+        $scanScope = '';
+    }
+    if ($scanScope === 'software_fill' || empty($documents)) {
+        $context['software_filled_forms'] = aitfAiFetchSoftwareFilledContext($db, $customerId);
+    }
 
     $requestedModelId = isset($_REQUEST['model']) ? trim((string) $_REQUEST['model']) : '';
     $modelId = aitfAiNormalizeModelId($requestedModelId);
@@ -155,9 +162,9 @@ try {
     $selectedModel = $aiModels[$modelId];
     $historyModelName = $selectedModel['display_name'];
 
-    if (empty($documents)) {
-        aitfAiInsertHistory($db, $customerId, isset($_SESSION['username']) ? $_SESSION['username'] : '', $historyModelName, 0, count($rules), 'failed', '', '', '', 'No selected uploaded PDF documents found for current client.');
-        aitfAiJsonResponse(array('success' => false, 'message' => 'No selected uploaded PDF documents found for this client.'), 400);
+    if (empty($documents) && $userPrompt === '' && $scanScope !== 'software_fill') {
+        aitfAiInsertHistory($db, $customerId, isset($_SESSION['username']) ? $_SESSION['username'] : '', $historyModelName, 0, count($rules), 'failed', '', '', '', 'No prompt or scan target supplied.');
+        aitfAiJsonResponse(array('success' => false, 'message' => 'Type a prompt or use Scan Software Fill.'), 400);
     }
 
     $totalBytes = 0;
@@ -248,7 +255,8 @@ try {
             'documents' => array_map('aitfAiPublicDocument', aitfAiAttachDocumentReviewStatus($db, $customerId, $documents)),
             'documents_count' => count($documents),
             'rules_count' => count($rules),
-            'model' => $historyModelName
+            'model' => $historyModelName,
+            'scan_scope' => $scanScope
         ));
     } catch (AitfAiProviderException $ex) {
         aitfAiLogProviderError($ex->getMessage());
