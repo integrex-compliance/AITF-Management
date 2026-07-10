@@ -226,7 +226,7 @@
             <div class="container">
                 <div class="row">
                     <div class="col-sm-12">
-                        <h5 class="invoice-section-title">Payments & Reports</h5>
+                        <h5 class="invoice-section-title"> Due Payments & Follow-Up</h5>
                     </div>
                 </div>
                 <div class="row">

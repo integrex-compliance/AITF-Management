@@ -1,760 +1,521 @@
-    <?php
+<?php
+include_once './dbConnect.php';
 
- include_once './dbConnect.php';
+function cleanName($name)
+{
+    $name = trim((string)$name);
+    $name = preg_replace('/\s+/', ' ', $name);
 
+    return $name;
+}
 
+function normalizeName($name)
+{
+    $name = cleanName($name);
+    return strtoupper($name);
+}
+
+function isValidPerson($name)
+{
+    $name = normalizeName($name);
+
+    return !in_array($name, [
+        '',
+        'NA',
+        'N.A.',
+        'N/A',
+        'N.A',
+        '-',
+        '--',
+        '---',
+        'NOT REQUIRED',
+        'SAME LA'
+    ], true);
+}
+
+function splitPersons($value)
+{
+    $parts = preg_split(
+        '/[,;\r\n]+/',
+        (string)$value
+    );
+
+    $persons = [];
+
+    foreach ($parts as $part) {
+
+        $name = cleanName($part);
+
+        if (!isValidPerson($name)) {
+            continue;
+        }
+
+        $key = normalizeName($name);
+
+        $persons[$key] = $name;
+    }
+
+    return $persons;
+}
 
 $sql = "
-
-WITH RECURSIVE
-
-numbers AS (
-
-    SELECT 1 AS n
-
-    UNION ALL
-
-    SELECT n + 1
-
-    FROM numbers
-
-    WHERE n < 20
-
-),
-
-
-
-all_audits AS (
-
     SELECT
-
-        'CA-STAGE-I' AS service_type,
-
-        ca.customer_id,
-
-        ci.customer_name AS client_name,
-
-        ca.audit_date,
-
-        ca.stage1_auditor AS auditors
-
-    FROM service_type_ca ca
-
-    LEFT JOIN customer_info ci
-
-        ON ci.id = CAST(ca.customer_id AS UNSIGNED)
-
-
-
-    UNION ALL
-
-
-
-    SELECT
-
-        'CA-STAGE-II',
-
-        ca.customer_id,
-
-        ci.customer_name,
-
-        ca.stage2_audit,
-
-        ca.stage2_auditor
-
-    FROM service_type_ca ca
-
-    LEFT JOIN customer_info ci
-
-        ON ci.id = CAST(ca.customer_id AS UNSIGNED)
-
-
-
-    UNION ALL
-
-
-
-    SELECT
-
-        'SA-I',
-
-        sai.customer_id,
-
-        ci.customer_name,
-
-        sai.audit_date,
-
-        sai.auditors
-
-    FROM service_type_sai sai
-
-    LEFT JOIN customer_info ci
-
-        ON ci.id = CAST(sai.customer_id AS UNSIGNED)
-
-
-
-    UNION ALL
-
-
-
-    SELECT
-
-        'SA-II',
-
-        saii.customer_id,
-
-        ci.customer_name,
-
-        saii.audit_date,
-
-        saii.auditors
-
-    FROM service_type_saii saii
-
-    LEFT JOIN customer_info ci
-
-        ON ci.id = CAST(saii.customer_id AS UNSIGNED)
-
-
-
-    UNION ALL
-
-
-
-    SELECT
-
-        'RC',
-
-        rc.rc_customer,
-
-        ci.customer_name,
-
-        rc.audit_date,
-
-        rc.auditors
-
-    FROM service_type_rc rc
-
-    LEFT JOIN customer_info ci
-
-        ON ci.id = CAST(rc.rc_customer AS UNSIGNED)
-
-),
-
-
-
-split_dates AS (
-
-    SELECT
-
-        aa.service_type,
-
-        aa.customer_id,
-
-        aa.client_name,
-
-        aa.auditors,
-
-        TRIM(
-
-            SUBSTRING_INDEX(
-
-                SUBSTRING_INDEX(aa.audit_date, ',', numbers.n),
-
-                ',',
-
-                -1
-
-            )
-
-        ) AS audit_date_text
-
-    FROM all_audits aa
-
-    JOIN numbers
-
-        ON numbers.n <= 1
-
-        + LENGTH(COALESCE(aa.audit_date, ''))
-
-        - LENGTH(REPLACE(COALESCE(aa.audit_date, ''), ',', ''))
-
-    WHERE aa.audit_date IS NOT NULL
-
-      AND TRIM(aa.audit_date) <> ''
-
-),
-
-
-
-split_auditors AS (
-
-    SELECT
-
-        sd.service_type,
-
-        sd.customer_id,
-
-        sd.client_name,
-
-        STR_TO_DATE(sd.audit_date_text, '%d.%m.%Y') AS audit_dt,
-
-        TRIM(
-
-            SUBSTRING_INDEX(
-
-                SUBSTRING_INDEX(sd.auditors, ',', numbers.n),
-
-                ',',
-
-                -1
-
-            )
-
-        ) AS auditor
-
-    FROM split_dates sd
-
-    JOIN numbers
-
-        ON numbers.n <= 1
-
-        + LENGTH(COALESCE(sd.auditors, ''))
-
-        - LENGTH(REPLACE(COALESCE(sd.auditors, ''), ',', ''))
-
-),
-
-
-
-clean_data AS (
-
-    SELECT DISTINCT
-
-        service_type,
-
-        CAST(customer_id AS UNSIGNED) AS customer_id,
-
-        client_name,
-
-        audit_dt,
-
-        auditor
-
-    FROM split_auditors
-
-    WHERE audit_dt IS NOT NULL
-
-      AND auditor IS NOT NULL
-
-      AND TRIM(auditor) <> ''
-
-      AND UPPER(TRIM(auditor)) NOT IN (
-
-          'NA',
-
-          'N.A.',
-
-          'N/A',
-
-          'SAME LA',
-
-          'NOT REQUIRED'
-
-      )
-
-),
-
-
-
-conflicts AS (
-
-    SELECT
-
-        auditor,
-
-        audit_dt
-
-    FROM clean_data
-
-    GROUP BY auditor, audit_dt
-
-    HAVING COUNT(DISTINCT customer_id) > 1
-
-)
-
-
-
-SELECT
-
-    cd.auditor,
-
-    cd.audit_dt,
-
-    cd.customer_id,
-
-    cd.client_name,
-
-    cd.service_type
-
-FROM clean_data cd
-
-INNER JOIN conflicts c
-
-    ON c.auditor = cd.auditor
-
-    AND c.audit_dt = cd.audit_dt
-
-ORDER BY
-
-    cd.audit_dt DESC,
-
-    cd.auditor ASC,
-
-    cd.client_name ASC
-
+        crr_id,
+        customer_id,
+        audit_organization,
+        audit_date,
+        audit_type,
+        lead_auditor,
+        auditors,
+        reviewer_1,
+        reviewer_2,
+        granted_by,
+        cdc_status
+    FROM cdc_report_review
+    ORDER BY crr_id DESC
 ";
 
-
-
 $stmt = $db->prepare($sql);
-
 $stmt->execute();
 
 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-
-
-$report = [];
-
-
+$conflicts = [];
 
 foreach ($rows as $row) {
 
-    $key = $row['auditor'] . '|' . $row['audit_dt'];
+    $auditTeam = [];
 
+    /*
+    |--------------------------------------------------------------------------
+    | Lead Auditor
+    |--------------------------------------------------------------------------
+    */
 
+    if (isValidPerson($row['lead_auditor'])) {
 
-    if (!isset($report[$key])) {
+        $key = normalizeName(
+            $row['lead_auditor']
+        );
 
-        $report[$key] = [
-
-            'auditor' => $row['auditor'],
-
-            'audit_date' => $row['audit_dt'],
-
-            'clients' => []
-
+        $auditTeam[$key] = [
+            'name' => cleanName(
+                $row['lead_auditor']
+            ),
+            'roles' => [
+                'Lead Auditor'
+            ]
         ];
-
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Other Auditors
+    |--------------------------------------------------------------------------
+    */
 
+    $auditors = splitPersons(
+        $row['auditors']
+    );
 
-    $report[$key]['clients'][] = $row;
+    foreach ($auditors as $key => $name) {
 
+        if (!isset($auditTeam[$key])) {
+
+            $auditTeam[$key] = [
+                'name' => $name,
+                'roles' => []
+            ];
+        }
+
+        $auditTeam[$key]['roles'][] =
+            'Auditor';
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Review / Granting Roles
+    |--------------------------------------------------------------------------
+    */
+
+    $reviewRoles = [
+        'Reviewer 1' => $row['reviewer_1'],
+        'Reviewer 2' => $row['reviewer_2'],
+        'Granted By' => $row['granted_by']
+    ];
+
+    foreach ($reviewRoles as $role => $person) {
+
+        if (!isValidPerson($person)) {
+            continue;
+        }
+
+        $personKey = normalizeName($person);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Conflict Found
+        |--------------------------------------------------------------------------
+        */
+
+        if (isset($auditTeam[$personKey])) {
+
+            $conflicts[] = [
+
+                'crr_id' =>
+                    $row['crr_id'],
+
+                'customer_id' =>
+                    $row['customer_id'],
+
+                'client_name' =>
+                    $row['audit_organization'],
+
+                'audit_date' =>
+                    $row['audit_date'],
+
+                'audit_type' =>
+                    $row['audit_type'],
+
+                'person' =>
+                    $auditTeam[$personKey]['name'],
+
+                'audit_role' =>
+                    implode(
+                        ', ',
+                        array_unique(
+                            $auditTeam[$personKey]['roles']
+                        )
+                    ),
+
+                'conflict_role' =>
+                    $role,
+
+                'cdc_status' =>
+                    $row['cdc_status']
+            ];
+        }
+    }
 }
 
 ?>
-
-
-
 <!DOCTYPE html>
-
 <html lang="en">
-
-
 
 <head>
 
-    <meta charset="UTF-8">
-
-    <title>Auditor Audit Conflict Report</title>
-
-
-
-    <style>
-
-        body {
-
-            font-family: Arial, sans-serif;
-
-            background: #f5f6fa;
-
-            margin: 0;
-
-            padding: 30px;
-
-            color: #222;
-
-        }
-
-
-
-        .container {
-
-            max-width: 1400px;
-
-            margin: auto;
-
-            background: #fff;
-
-            padding: 25px;
-
-            border-radius: 8px;
-
-        }
-
-
-
-        h1 {
-
-            margin-top: 0;
-
-            font-size: 26px;
-
-        }
-
-
-
-        .summary {
-
-            margin-bottom: 20px;
-
-            font-size: 16px;
-
-        }
-
-
-
-        table {
-
-            width: 100%;
-
-            border-collapse: collapse;
-
-        }
-
-
-
-        th {
-
-            background: #0d4d7d;
-
-            color: #fff;
-
-            padding: 12px;
-
-            text-align: left;
-
-            border: 1px solid #ddd;
-
-        }
-
-
-
-        td {
-
-            padding: 11px;
-
-            border: 1px solid #ddd;
-
-            vertical-align: top;
-
-        }
-
-
-
-        .conflict-start td {
-
-            border-top: 3px solid #d32f2f;
-
-        }
-
-
-
-        .count {
-
-            font-weight: bold;
-
-            text-align: center;
-
-        }
-
-
-
-        .danger {
-
-            color: #c62828;
-
-            font-weight: bold;
-
-        }
-
-
-
-        .print-btn {
-
-            background: #0d4d7d;
-
-            color: white;
-
-            border: 0;
-
-            padding: 10px 20px;
-
-            cursor: pointer;
-
-            margin-bottom: 20px;
-
-            font-size: 15px;
-
-        }
-
-
-
-        @media print {
-
-            body {
-
-                background: white;
-
-                padding: 0;
-
-            }
-
-
-
-            .container {
-
-                max-width: none;
-
-                padding: 0;
-
-            }
-
-
-
-            .print-btn {
-
-                display: none;
-
-            }
-
-        }
-
-    </style>
+<meta charset="UTF-8">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
+
+<title>
+Reviewer Independence Conflict Report
+</title>
+
+<style>
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 30px;
+    font-family: Arial, Helvetica, sans-serif;
+    background: #f4f6f8;
+    color: #1f2937;
+}
+
+.report {
+    max-width: 1500px;
+    margin: auto;
+    background: white;
+    padding: 28px;
+    border: 1px solid #ddd;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 25px;
+}
+
+h1 {
+    margin: 0 0 8px;
+    font-size: 26px;
+}
+
+.subtitle {
+    margin: 0;
+    color: #667085;
+    font-size: 14px;
+}
+
+.summary {
+    margin-bottom: 20px;
+}
+
+.summary-box {
+    display: inline-block;
+    min-width: 220px;
+    padding: 15px 20px;
+    border: 1px solid #ddd;
+    background: #fafafa;
+}
+
+.summary-label {
+    display: block;
+    color: #667085;
+    font-size: 12px;
+    margin-bottom: 5px;
+}
+
+.summary-value {
+    font-size: 25px;
+    font-weight: bold;
+}
+
+.print-btn {
+    border: 0;
+    padding: 10px 18px;
+    background: #174f7a;
+    color: white;
+    cursor: pointer;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+th {
+    background: #174f7a;
+    color: white;
+    padding: 11px 9px;
+    border: 1px solid #123d5e;
+    text-align: left;
+}
+
+td {
+    padding: 10px 9px;
+    border: 1px solid #ddd;
+    vertical-align: top;
+}
+
+.conflict {
+    font-weight: bold;
+}
+
+.no-data {
+    text-align: center;
+    padding: 30px;
+}
+
+@media print {
+
+    body {
+        background: white;
+        padding: 0;
+    }
+
+    .report {
+        max-width: none;
+        border: 0;
+        padding: 0;
+    }
+
+    .print-btn {
+        display: none;
+    }
+
+    table {
+        font-size: 10px;
+    }
+
+    th,
+    td {
+        padding: 6px;
+    }
+}
+
+</style>
 
 </head>
 
-
-
 <body>
 
+<div class="report">
 
+<div class="header">
 
-<div class="container">
+<div>
 
+<h1>
+Reviewer Independence Conflict Report
+</h1>
 
+<p class="subtitle">
+Audit team members appearing in Reviewer 1,
+Reviewer 2 or Granted By roles.
+</p>
 
-    <h1>Auditor Same Date Audit Conflict Report</h1>
+</div>
 
-
-
-    <div class="summary">
-
-        Total Conflict Groups:
-
-        <strong><?= count($report) ?></strong>
-
-    </div>
-
-
-
-    <button class="print-btn" onclick="window.print()">
-
-        Print Report
-
-    </button>
-
-
-
-    <table>
-
-
-
-        <thead>
-
-        <tr>
-
-            <th>Sr.</th>
-
-            <th>Auditor</th>
-
-            <th>Audit Date</th>
-
-            <th>Client Count</th>
-
-            <th>Client Name</th>
-
-            <th>Client ID</th>
-
-            <th>Service Type</th>
-
-        </tr>
-
-        </thead>
-
-
-
-        <tbody>
-
-
-
-        <?php
-
-        $sr = 1;
-
-
-
-        foreach ($report as $group):
-
-
-
-            $clientCount = count(
-
-                array_unique(
-
-                    array_column($group['clients'], 'customer_id')
-
-                )
-
-            );
-
-
-
-            $first = true;
-
-
-
-            foreach ($group['clients'] as $client):
-
-        ?>
-
-
-
-        <tr class="<?= $first ? 'conflict-start' : '' ?>">
-
-
-
-            <?php if ($first): ?>
-
-
-
-                <td rowspan="<?= count($group['clients']) ?>">
-
-                    <?= $sr ?>
-
-                </td>
-
-
-
-                <td rowspan="<?= count($group['clients']) ?>">
-
-                    <strong>
-
-                        <?= htmlspecialchars($group['auditor']) ?>
-
-                    </strong>
-
-                </td>
-
-
-
-                <td rowspan="<?= count($group['clients']) ?>">
-
-                    <?= date('d.m.Y', strtotime($group['audit_date'])) ?>
-
-                </td>
-
-
-
-                <td
-
-                    rowspan="<?= count($group['clients']) ?>"
-
-                    class="count danger"
-
-                >
-
-                    <?= $clientCount ?>
-
-                </td>
-
-
-
-            <?php endif; ?>
-
-
-
-            <td>
-
-                <?= htmlspecialchars($client['client_name'] ?? 'Unknown Client') ?>
-
-            </td>
-
-
-
-            <td>
-
-                <?= (int)$client['customer_id'] ?>
-
-            </td>
-
-
-
-            <td>
-
-                <?= htmlspecialchars($client['service_type']) ?>
-
-            </td>
-
-
-
-        </tr>
-
-
-
-        <?php
-
-                $first = false;
-
-            endforeach;
-
-
-
-            $sr++;
-
-
-
-        endforeach;
-
-        ?>
-
-
-
-        </tbody>
-
-
-
-    </table>
-
-
+<button
+    class="print-btn"
+    onclick="window.print()"
+>
+Print Report
+</button>
 
 </div>
 
 
+<div class="summary">
+
+<div class="summary-box">
+
+<span class="summary-label">
+Total Conflicts
+</span>
+
+<span class="summary-value">
+<?= count($conflicts) ?>
+</span>
+
+</div>
+
+</div>
+
+
+<table>
+
+<thead>
+
+<tr>
+
+<th>Sr.</th>
+
+<th>Client Name</th>
+
+<th>Client ID</th>
+
+<th>Audit Date</th>
+
+<th>Audit Type</th>
+
+<th>Person</th>
+
+<th>Audit Role</th>
+
+<th>Conflicting Role</th>
+
+<th>CDC Status</th>
+
+<th>CRR ID</th>
+
+</tr>
+
+</thead>
+
+
+<tbody>
+
+<?php if (empty($conflicts)): ?>
+
+<tr>
+
+<td
+    colspan="10"
+    class="no-data"
+>
+
+No reviewer independence conflicts found.
+
+</td>
+
+</tr>
+
+<?php else: ?>
+
+
+<?php foreach (
+    $conflicts as $index => $conflict
+): ?>
+
+<tr>
+
+<td>
+<?= $index + 1 ?>
+</td>
+
+<td>
+<?= htmlspecialchars(
+    $conflict['client_name']
+) ?>
+</td>
+
+<td>
+<?= (int)$conflict['customer_id'] ?>
+</td>
+
+<td>
+<?= htmlspecialchars(
+    $conflict['audit_date']
+) ?>
+</td>
+
+<td>
+<?= htmlspecialchars(
+    $conflict['audit_type']
+) ?>
+</td>
+
+<td class="conflict">
+<?= htmlspecialchars(
+    $conflict['person']
+) ?>
+</td>
+
+<td>
+<?= htmlspecialchars(
+    $conflict['audit_role']
+) ?>
+</td>
+
+<td class="conflict">
+<?= htmlspecialchars(
+    $conflict['conflict_role']
+) ?>
+</td>
+
+<td>
+<?= htmlspecialchars(
+    $conflict['cdc_status']
+) ?>
+</td>
+
+<td>
+<?= (int)$conflict['crr_id'] ?>
+</td>
+
+</tr>
+
+<?php endforeach; ?>
+
+<?php endif; ?>
+
+</tbody>
+
+</table>
+
+</div>
 
 </body>
 
