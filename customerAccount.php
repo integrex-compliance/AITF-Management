@@ -3290,6 +3290,7 @@
                                 <div class="date-graph-meta">Green means date order is valid. Red shows the exact date order issue. Gray means the date is not available.</div>
                             </div>
                             <div class="date-graph-actions">
+                                <a href="dateGraphOverallReport.php" target="_blank" class="btn btn-default btn-sm" id="overallDateGraphReport"><i class="fa fa-file-pdf-o"></i> Overall Report PDF</a>
                                 <button type="button" class="btn btn-default btn-sm" id="printDateGraph" onclick="printCustomerDateGraph();"><i class="fa fa-print"></i> Print</button>
                                 <button type="button" class="btn btn-default btn-sm" id="closeDateGraph" onclick="closeCustomerDateGraph();"><i class="fa fa-times"></i> Close</button>
                             </div>
