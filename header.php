@@ -197,6 +197,12 @@ if (!Utitlity::checkIfLoggedIn()) {
         header("Location: login");
         exit;
     }
+} else if (isset($pageIdentifier) && $pageIdentifier == "GoAI") {
+    $addGoAiClass = "active";
+    if (Utitlity::checkExternalUser()) {
+        header("Location: login");
+        exit;
+    }
 } else if (isset($pageIdentifier) && $pageIdentifier == "IAF Dashboard") {
     $iafClass = "active";
     if (Utitlity::checkExternalUser()) {
@@ -354,6 +360,10 @@ function getFlatDate($inputStr)
         <?php } ?>
         <li><a href="uploadingStatus.php" class="animate <?php echo $docobj ?>">DOC.UPLOAD STATUS<i
                     class="sub_icon fa fa-eye fa-2x" style="vertical-align:middle"></i></a></li>
+        <?php if (!(Utitlity::checkClient() || Utitlity::checkExternalUser())) { ?>
+            <li><a href="goAi.php" class="animate <?php echo isset($addGoAiClass) ? $addGoAiClass : ''; ?>">GoAI<i
+                        class="sub_icon fa fa-magic fa-2x" style="vertical-align:middle"></i></a></li>
+        <?php } ?>
     </ul>
 </div>
 <nav class="navbar navbar-fixed-top modern-navbar" role="navigation">
@@ -457,6 +467,7 @@ function getFlatDate($inputStr)
                 <li><a href="quotationPage.php">QUOTATION</a></li>
                 <li><a href="addUsers.php">ADD USER</a></li>
                 <li><a href="clientRecycle.php">RECYCLE BIN</a></li>
+                <li><a href="goAi.php">GoAI</a></li>
             </ul>
         </div>
     </div>

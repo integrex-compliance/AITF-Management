@@ -141,7 +141,9 @@ try {
         return $key !== '' && preg_match('/^[a-f0-9]{40}$/', $key);
     }));
 
-    if (!empty($documentKeys)) {
+    if ($scanScope === 'software_fill' && empty($documentKeys)) {
+        $documents = array();
+    } elseif (!empty($documentKeys)) {
         $documents = aitfAiSelectDocumentsByKeys($documents, $documentKeys);
     }
     $userPrompt = isset($_REQUEST['user_prompt']) ? trim((string) $_REQUEST['user_prompt']) : '';
@@ -163,7 +165,7 @@ try {
     $historyModelName = $selectedModel['display_name'];
 
     if (empty($documents) && $userPrompt === '' && $scanScope !== 'software_fill') {
-        aitfAiInsertHistory($db, $customerId, isset($_SESSION['username']) ? $_SESSION['username'] : '', $historyModelName, 0, count($rules), 'failed', '', '', '', 'No prompt or scan target supplied.');
+        aitfAiInsertHistory($db, $customerId, isset($_SESSION['username']) ? $_SESSION['username'] : '', $historyModelName, 0, count($rules), 'failed', '', '', '', 'No prompt or scan target supplied.', $scanScope);
         aitfAiJsonResponse(array('success' => false, 'message' => 'Type a prompt or use Scan Software Fill.'), 400);
     }
 
@@ -187,7 +189,7 @@ try {
             $maxBytes = (int) aitf_env('GEMINI_MAX_INLINE_BYTES', 18000000);
             if ($maxBytes > 0 && $totalBytes > $maxBytes) {
                 $message = 'Client PDFs total ' . round($totalBytes / 1048576, 2) . ' MB, above GEMINI_MAX_INLINE_BYTES.';
-                aitfAiInsertHistory($db, $customerId, isset($_SESSION['username']) ? $_SESSION['username'] : '', $historyModelName, count($documents), count($rules), 'failed', '', '', '', $message);
+                aitfAiInsertHistory($db, $customerId, isset($_SESSION['username']) ? $_SESSION['username'] : '', $historyModelName, count($documents), count($rules), 'failed', '', '', '', $message, $scanScope);
                 aitfAiJsonResponse(array('success' => false, 'message' => 'Fly-512B can process large documents, but this selection exceeds the current upload analysis limit. Select fewer PDFs and try again.'), 413);
             }
 
@@ -201,7 +203,7 @@ try {
             $maxBytes = (int) aitf_env('GROQ_MAX_SOURCE_BYTES', 8000000);
             if ($maxBytes > 0 && $totalBytes > $maxBytes) {
                 $message = 'Client PDFs total ' . round($totalBytes / 1048576, 2) . ' MB, above GROQ_MAX_SOURCE_BYTES.';
-                aitfAiInsertHistory($db, $customerId, isset($_SESSION['username']) ? $_SESSION['username'] : '', $historyModelName, count($documents), count($rules), 'failed', '', '', '', $message);
+                aitfAiInsertHistory($db, $customerId, isset($_SESSION['username']) ? $_SESSION['username'] : '', $historyModelName, count($documents), count($rules), 'failed', '', '', '', $message, $scanScope);
                 aitfAiJsonResponse(array('success' => false, 'message' => 'Swim-128B is designed for smaller document sets. Select fewer PDFs or switch to Fly-512B and try again.'), 413);
             }
 
@@ -235,7 +237,8 @@ try {
             $summary,
             json_encode($result),
             isset($providerResponse['raw']) ? $providerResponse['raw'] : '',
-            ''
+            '',
+            $scanScope
         );
         aitfAiInsertDocumentHistory(
             $db,
@@ -260,7 +263,7 @@ try {
         ));
     } catch (AitfAiProviderException $ex) {
         aitfAiLogProviderError($ex->getMessage());
-        aitfAiInsertHistory($db, $customerId, isset($_SESSION['username']) ? $_SESSION['username'] : '', $historyModelName, count($documents), count($rules), 'failed', '', '', '', $ex->getMessage());
+        aitfAiInsertHistory($db, $customerId, isset($_SESSION['username']) ? $_SESSION['username'] : '', $historyModelName, count($documents), count($rules), 'failed', '', '', '', $ex->getMessage(), $scanScope);
         $statusCode = $ex->isRateLimited() ? 429 : 500;
         $debugDetails = $ex->getDebugDetails();
         $debugMessage = $modelId === 'swim-128b' && !empty($debugDetails)
@@ -275,7 +278,7 @@ try {
         ), $statusCode);
     } catch (Exception $ex) {
         aitfAiLogProviderError($ex->getMessage());
-        aitfAiInsertHistory($db, $customerId, isset($_SESSION['username']) ? $_SESSION['username'] : '', $historyModelName, count($documents), count($rules), 'failed', '', '', '', $ex->getMessage());
+        aitfAiInsertHistory($db, $customerId, isset($_SESSION['username']) ? $_SESSION['username'] : '', $historyModelName, count($documents), count($rules), 'failed', '', '', '', $ex->getMessage(), $scanScope);
         aitfAiJsonResponse(array(
             'success' => false,
             'message' => aitfAiModelUnavailableMessage($modelId),

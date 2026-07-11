@@ -126,6 +126,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 c.scope,
                 svc.service_id as svc_id,
                 svc.service_type as svc_type,
+                c.audit_status as audit_status,
+                latest_svc.service_id as latest_service_id,
+                latest_svc.service_type as latest_service_type,
                 cou.id as cdc_office_use_id,
                 cou.iso_index as iso_index,
                 COALESCE(
@@ -162,6 +165,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 aa.n_location as site
             FROM customer_info c
             INNER JOIN service svc ON svc.customer_id = c.id AND svc.service_id = :svc_id
+            LEFT JOIN service latest_svc ON latest_svc.service_id = (
+                SELECT MAX(s_latest.service_id)
+                FROM service s_latest
+                WHERE s_latest.customer_id = c.id
+            )
             LEFT JOIN certificate_print cp ON cp.service_id = svc.service_id
                 AND cp.certificate_id = (
                     SELECT MAX(cp_s.certificate_id) FROM certificate_print cp_s WHERE cp_s.service_id = svc.service_id
@@ -202,6 +210,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 c.scope,
                 '' as svc_id,
                 '' as svc_type,
+                c.audit_status as audit_status,
+                '' as latest_service_id,
+                '' as latest_service_type,
                 '' as cdc_office_use_id,
                 '' as iso_index,
                 c.audit_status as certification_status,
@@ -239,12 +250,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // Apply same formatting logic as dashboard
-        $freshClient = iafCertSearchNormalizeClientData($freshClient);
-        $freshClient['certification_scope'] = iafCertSearchFirstValue($freshClient, ['certification_scope', 'proposed_scope', 'certificate_scope', 'scope']);
-        $freshClient['scheme_name'] = iafCertSearchFirstValue($freshClient, ['scheme_name', 'schema_name']);
-        $freshClient['accreditation_body'] = iafCertSearchNormalizeAccreditationBodyName(iafCertSearchFirstValue($freshClient, ['accreditation_body', 'accreditation_body_name', 'accreditation_requirement', 'accereditation_requirement'], 'NABCB'));
-        $freshClient['certificate_issue_date'] = iafCertSearchFirstValue($freshClient, ['certificate_issue_date', 'issue_date']);
-        $freshClient['expire_date'] = iafCertSearchFirstValue($freshClient, ['expire_date', 'expiry_date']);
+        $freshClient = iafDashboardNormalizeClient($freshClient);
         
         // Ensure values are strings for precise comparison (since DB might return ints/nulls)
         foreach($freshClient as $k => $v) {

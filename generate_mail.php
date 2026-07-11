@@ -42,7 +42,7 @@ $mail->Password = $mailConfig['password'];
 $mail->setFrom('aitfmcl@gmail.com');
 
 //$mail->addAddress('vaibhavaajbe@gmail.com');
-$mail->addAddress('harishajabe@gmail.com');
+$mail->addAddress('aitfmcl@gmail.com');
 $mail->addReplyTo('aitfmcl@gmail.com');
 
 $mail->isHTML(true);

@@ -7,6 +7,7 @@
     }
     require_once __DIR__ . '/include/iaf_dashboard_data.php';
     $clients = [];
+    $iafStatusOptions = [];
     $iafInitialLimit = 30;
     $iafInitialNextOffset = 0;
     $iafInitialHasMore = false;
@@ -17,9 +18,11 @@
             $clients = $initialData['rows'];
             $iafInitialNextOffset = (int) ($initialData['next_offset'] ?? 0);
             $iafInitialHasMore = !empty($initialData['has_more']);
+            $iafStatusOptions = iafDashboardFetchStatusOptions($db);
         } catch (Exception $e) {
             error_log('IAF Dashboard initial preload failed: ' . $e->getMessage());
             $clients = [];
+            $iafStatusOptions = [];
             $iafInitialNextOffset = 0;
             $iafInitialHasMore = false;
         }
@@ -385,6 +388,13 @@
             gap: 10px;
             margin-bottom: 8px;
             flex: 0 0 auto;
+            flex-wrap: wrap;
+        }
+
+        .iaf-filter-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .client-filter-label {
@@ -408,6 +418,24 @@
         }
 
         .client-filter-input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+        }
+
+        .status-filter-select {
+            width: min(220px, 100%);
+            height: 38px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            padding: 7px 34px 7px 12px;
+            outline: none;
+            background: #ffffff;
+            color: #1e293b;
+            font-weight: 600;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .status-filter-select:focus {
             border-color: #3b82f6;
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
         }
@@ -862,7 +890,10 @@
                 gap: 8px;
             }
 
-            .client-filter-input {
+            .client-filter-input,
+            .iaf-filter-group,
+            .client-filter-field,
+            .status-filter-select {
                 width: 100%;
             }
 
@@ -917,6 +948,15 @@
         }
         html.theme-dark .client-filter-input::placeholder { color: var(--iafd-text-faint); }
         html.theme-dark .client-filter-input:focus {
+            border-color: var(--iafd-accent);
+            box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.18);
+        }
+        html.theme-dark .status-filter-select {
+            background: var(--iafd-surface-2);
+            border-color: var(--iafd-border-2);
+            color: var(--iafd-text);
+        }
+        html.theme-dark .status-filter-select:focus {
             border-color: var(--iafd-accent);
             box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.18);
         }
@@ -1043,13 +1083,26 @@
 
                 <div class="modern-card">
                     <div class="iaf-table-toolbar">
-                        <label for="clientNameFilter" class="client-filter-label">Client Name</label>
-                        <div class="client-filter-field">
-                            <i class="fa fa-search client-filter-icon"></i>
-                            <input type="text" id="clientNameFilter" class="client-filter-input"
-                                placeholder="Search by client name" autocomplete="off">
-                            <button type="button" class="client-filter-clear" id="clientFilterClear"
-                                aria-label="Clear search" title="Clear">&times;</button>
+                        <div class="iaf-filter-group">
+                            <label for="iafStatusFilter" class="client-filter-label">Select by Status</label>
+                            <select id="iafStatusFilter" class="status-filter-select">
+                                <option value="">All Status</option>
+                                <?php foreach ($iafStatusOptions as $statusOption): ?>
+                                    <option value="<?php echo htmlspecialchars($statusOption, ENT_QUOTES, 'UTF-8'); ?>">
+                                        <?php echo htmlspecialchars($statusOption); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="iaf-filter-group">
+                            <label for="clientNameFilter" class="client-filter-label">Client Name</label>
+                            <div class="client-filter-field">
+                                <i class="fa fa-search client-filter-icon"></i>
+                                <input type="text" id="clientNameFilter" class="client-filter-input"
+                                    placeholder="Search by client name" autocomplete="off">
+                                <button type="button" class="client-filter-clear" id="clientFilterClear"
+                                    aria-label="Clear search" title="Clear">&times;</button>
+                            </div>
                         </div>
                     </div>
                     <div class="iaf-table-wrap">
@@ -1068,90 +1121,14 @@
                                     <th>Cert. Number</th>
                                     <th>Status</th>
                                     <th>Cert. Type</th>
-                                    <th>Certificate Issue Date</th>
+                                    <th>CDC Date</th>
                                     <th>Issue Date</th>
                                     <th>Expire Date</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($clients as $c): ?>
-                                    <tr>
-                                        <td>
-                                            <div class="action-btns-container">
-                                                <button class="action-btn btn-insert"
-                                                    id="btn-insert-<?php echo $c['internal_client_id'] . '-' . ($c['svc_id'] ?: '0') . '-' . ($c['cdc_office_use_id'] ?: '0') . '-' . substr(md5(($c['standard_name'] ?? '') . '|' . ($c['certificate_number'] ?? '')), 0, 10); ?>"
-                                                    onclick='handleAction("insert", <?php echo htmlspecialchars(json_encode($c), ENT_QUOTES, "UTF-8"); ?>, this)'>
-                                                    <i class="fa fa-cloud-upload"></i> Insert
-                                                </button>
-                                                <button class="action-btn btn-update"
-                                                    onclick='handleAction("update", <?php echo htmlspecialchars(json_encode($c), ENT_QUOTES, "UTF-8"); ?>, this)'>
-                                                    <i class="fa fa-refresh"></i> Update
-                                                </button>
-                                                <button class="action-btn btn-delete"
-                                                    onclick='handleAction("delete", "<?php echo htmlspecialchars($c['internal_client_id']); ?>", this)'>
-                                                    <i class="fa fa-trash"></i> Delete
-                                                </button>
-                                            </div>
-                                        </td>
-                                        <td class="company-name">
-                                            <a href="customerAccount.php?customerid=<?php echo htmlspecialchars($c['internal_client_id']); ?>"
-                                                class="company-link" target="_blank">
-                                                <?php echo htmlspecialchars($c['customer_name']); ?>
-                                            </a>
-                                        </td>
-                                        <td><?php echo htmlspecialchars($c['country']); ?></td>
-                                        <td>
-                                            <div class="cell-ellipsis" title="<?php echo htmlspecialchars($c['address']); ?>">
-                                                <?php echo htmlspecialchars($c['address']); ?>
-                                            </div>
-                                        </td>
-                                        <td><?php echo htmlspecialchars($c['accreditation_body'] ?: 'National Accreditation Board for Certification Bodies'); ?></td>
-                                        <td><?php echo htmlspecialchars($c['standard_name'] ?: 'N/A'); ?></td>
-                                        <td><span style="font-weight: 600; color: #475569;"><?php echo htmlspecialchars($c['scheme_name']); ?></span></td>
-                                        <td>
-                                            <div class="cell-ellipsis" title="<?php echo htmlspecialchars($c['certification_scope']); ?>">
-                                                <?php echo htmlspecialchars($c['certification_scope'] ?: 'N/A'); ?>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <?php if ($c['certificate_number']): ?>
-                                                <span
-                                                    class="cert-number"><?php echo htmlspecialchars($c['certificate_number']); ?></span>
-                                            <?php else: ?>
-                                                <span style="color: #94a3b8;">Pending</span>
-                                            <?php endif; ?>
-                                        </td>
-
-                                        <td>
-                                            <?php
-                                            $hasCert = !empty($c['certificate_number']);
-                                            $statusStr = strtolower(trim($c['certification_status']));
-                                            $badgeClass = 'status-default';
-                                            // Determine the display-friendly status label
-                                            $displayStatus = $c['certification_status'] ?: 'Unknown';
-
-                                            if ($hasCert || $statusStr === 'granted' || $statusStr === 'completed' || $statusStr === 'valid') {
-                                                $badgeClass = 'status-active';
-                                                // Certificate-backed records are granted unless an explicit terminal status says otherwise.
-                                                $displayStatus = 'Granted';
-                                            } elseif (strpos($statusStr, 'active') !== false || strpos($statusStr, 'issue') !== false || strpos($statusStr, 'grant') !== false) {
-                                                $badgeClass = 'status-active';
-                                            } elseif (strpos($statusStr, 'pending') !== false || strpos($statusStr, 'in-process') !== false || strpos($statusStr, 'in process') !== false || strpos($statusStr, 'audit') !== false) {
-                                                $badgeClass = 'status-pending';
-                                                $displayStatus = 'In Process';
-                                            } elseif (strpos($statusStr, 'suspend') !== false || strpos($statusStr, 'expir') !== false || strpos($statusStr, 'withdraw') !== false) {
-                                                $badgeClass = 'status-expired';
-                                            }
-                                            ?>
-                                            <span class="status-badge <?php echo $badgeClass; ?>">
-                                                <?php echo htmlspecialchars($displayStatus); ?>
-                                            </span>
-                                        </td>
-                                        <td><?php echo htmlspecialchars($c['certification_type']); ?></td>
-                                        <td><?php echo $c['certificate_issue_date'] ? date('d M Y', strtotime($c['certificate_issue_date'])) : '-'; ?></td>
-                                        <td><?php echo $c['issue_date'] ? date('d M Y', strtotime($c['issue_date'])) : '-'; ?></td>
-                                        <td><?php echo $c['expire_date'] ? date('d M Y', strtotime($c['expire_date'])) : '-'; ?></td>
-                                    </tr>
+                                    <?php echo iafDashboardRenderRow($c); ?>
                                 <?php endforeach; ?>
                             </tbody>
                         </table>
@@ -1207,6 +1184,7 @@
                     var $filter = $('#clientNameFilter');
                     var $filterField = $('.client-filter-field');
                     var $filterClear = $('#clientFilterClear');
+                    var $statusFilter = $('#iafStatusFilter');
                     var $pageInfo = $('#iafPageInfo');
                     var $prevBtn = $('#iafPrevBtn');
                     var $nextBtn = $('#iafNextBtn');
@@ -1254,7 +1232,7 @@
                             iafPageHistoryIndex = 0;
                             iafHasMore = true;
                             table.clear().draw();
-                            $overlayText.text($filter.val().trim() ? 'Searching…' : 'Loading clients…');
+                            $overlayText.text(($filter.val().trim() || $statusFilter.val()) ? 'Filtering clients…' : 'Loading clients…');
                             $overlay.addClass('active');
                         } else {
                             $overlayText.text('Loading page...');
@@ -1272,7 +1250,8 @@
                             data: {
                                 offset: targetOffset,
                                 limit: iafLimit,
-                                search: $filter.val()
+                                search: $filter.val(),
+                                status: $statusFilter.val()
                             },
                             success: function (response) {
                                 if (token !== iafLoadToken) {
@@ -1353,6 +1332,11 @@
                         $filter.val('');
                         syncFilterUi();
                         $filter.trigger('focus');
+                        clearTimeout(iafSearchTimer);
+                        loadIafRows({ reset: true, offset: 0, page: 1 });
+                    });
+
+                    $statusFilter.on('change', function () {
                         clearTimeout(iafSearchTimer);
                         loadIafRows({ reset: true, offset: 0, page: 1 });
                     });

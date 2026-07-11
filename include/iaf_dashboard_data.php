@@ -22,6 +22,138 @@ function iafDashboardStandardKey($standardName)
     return preg_replace('/[^A-Z0-9]+/', '_', $standardName);
 }
 
+function iafDashboardNormalizeApplicationStatus($value)
+{
+    $status = trim((string) $value);
+    if ($status === '') {
+        return 'No Status';
+    }
+
+    $key = strtolower(str_replace(['-', '_', ' '], '', $status));
+    if ($key === 'active' || $key === 'valid' || $key === 'granted' || $key === 'completed' || $key === 'issued') {
+        return 'Active';
+    }
+    if ($key === 'suspended' || $key === 'suspend') {
+        return 'Suspended';
+    }
+    if ($key === 'inprocess' || $key === 'pending') {
+        return 'In-process';
+    }
+    if ($key === 'contractinprocess') {
+        return 'Contract In-process';
+    }
+    if ($key === 'withdrawn' || $key === 'withdraw') {
+        return 'Withdrawn';
+    }
+    if ($key === 'applicationcanceled' || $key === 'applicationcancelled' || $key === 'cancelled' || $key === 'canceled') {
+        return 'Application canceled';
+    }
+    if ($key === 'expired' || $key === 'expire') {
+        return 'Expired';
+    }
+
+    return $status;
+}
+
+function iafDashboardDeriveApplicationStatus(array $client)
+{
+    $norm = iafDashboardNormalizeApplicationStatus($client['audit_status'] ?? ($client['certification_status'] ?? ''));
+    if ($norm === 'Application canceled') {
+        return $norm;
+    }
+
+    $latestServiceId = trim((string) ($client['latest_service_id'] ?? ''));
+    $latestServiceType = trim((string) ($client['latest_service_type'] ?? ''));
+    if ($latestServiceId === '' && $latestServiceType === '') {
+        $latestServiceId = trim((string) ($client['svc_id'] ?? ''));
+        $latestServiceType = trim((string) ($client['svc_type'] ?? ''));
+    }
+
+    if ($latestServiceId === '' && $latestServiceType === '') {
+        return 'New Enquiry';
+    }
+    if (strtoupper($latestServiceType) === 'CR') {
+        return 'Contract-Review';
+    }
+
+    return $norm;
+}
+
+function iafDashboardStatusSqlExpression()
+{
+    $statusKey = "LOWER(REPLACE(REPLACE(REPLACE(TRIM(COALESCE(c.audit_status, '')), '-', ''), '_', ''), ' ', ''))";
+
+    return "CASE
+        WHEN $statusKey IN ('applicationcanceled', 'applicationcancelled', 'cancelled', 'canceled') THEN 'Application canceled'
+        WHEN latest_svc.service_id IS NULL THEN 'New Enquiry'
+        WHEN UPPER(TRIM(latest_svc.service_type)) = 'CR' THEN 'Contract-Review'
+        WHEN $statusKey IN ('active', 'valid', 'granted', 'completed', 'issued') THEN 'Active'
+        WHEN $statusKey IN ('suspended', 'suspend') THEN 'Suspended'
+        WHEN $statusKey IN ('inprocess', 'pending') THEN 'In-process'
+        WHEN $statusKey = 'contractinprocess' THEN 'Contract In-process'
+        WHEN $statusKey IN ('withdrawn', 'withdraw') THEN 'Withdrawn'
+        WHEN $statusKey IN ('expired', 'expire') THEN 'Expired'
+        WHEN $statusKey = '' THEN 'No Status'
+        ELSE TRIM(c.audit_status)
+    END";
+}
+
+function iafDashboardSortStatuses(array $statuses)
+{
+    $priority = [
+        'New Enquiry',
+        'Contract-Review',
+        'In-process',
+        'Active',
+        'Contract In-process',
+        'Withdrawn',
+        'Suspended',
+        'Expired',
+        'Application canceled',
+        'No Status',
+    ];
+    $priorityMap = array_flip($priority);
+    $statuses = array_values(array_unique(array_filter(array_map('trim', $statuses), 'strlen')));
+
+    usort($statuses, function ($a, $b) use ($priorityMap) {
+        $aKnown = array_key_exists($a, $priorityMap);
+        $bKnown = array_key_exists($b, $priorityMap);
+        if ($aKnown && $bKnown) {
+            return $priorityMap[$a] <=> $priorityMap[$b];
+        }
+        if ($aKnown) {
+            return -1;
+        }
+        if ($bKnown) {
+            return 1;
+        }
+        return strcasecmp($a, $b);
+    });
+
+    return $statuses;
+}
+
+function iafDashboardFetchStatusOptions(PDO $db)
+{
+    $statusExpr = iafDashboardStatusSqlExpression();
+    $sql = "SELECT DISTINCT $statusExpr AS application_status
+        FROM customer_info c
+        INNER JOIN (
+            SELECT customer_id, MAX(service_id) AS latest_service_id
+            FROM service
+            WHERE customer_id IS NOT NULL
+            GROUP BY customer_id
+        ) latest_idx ON latest_idx.customer_id = c.id
+        LEFT JOIN service latest_svc ON latest_svc.service_id = latest_idx.latest_service_id
+        WHERE c.is_deleted <> 'YES'
+        ORDER BY application_status ASC";
+
+    $stmt = $db->prepare($sql);
+    $stmt->execute();
+
+    return iafDashboardSortStatuses($stmt->fetchAll(PDO::FETCH_COLUMN));
+}
+
 function iafDashboardRowScore(array $client)
 {
     $status = strtolower(trim((string) ($client['certification_status'] ?? '')));
@@ -52,6 +184,7 @@ function iafDashboardRowScore(array $client)
 function iafDashboardNormalizeClient(array $client)
 {
     $client = iafCertSearchNormalizeClientData($client);
+    $client['certification_status'] = iafDashboardDeriveApplicationStatus($client);
     $client['certification_scope'] = iafCertSearchFirstValue($client, ['certification_scope', 'proposed_scope', 'certificate_scope', 'scope']);
     $client['scheme_name'] = iafCertSearchFirstValue($client, ['scheme_name', 'schema_name']);
     $client['accreditation_body'] = iafCertSearchNormalizeAccreditationBodyName(iafCertSearchFirstValue($client, ['accreditation_body', 'accreditation_body_name', 'accreditation_requirement', 'accereditation_requirement'], 'NABCB'));
@@ -103,6 +236,9 @@ function iafDashboardServiceRowsSql($whereSql = '')
         c.scope,
         svc.service_id as svc_id,
         svc.service_type as svc_type,
+        c.audit_status as audit_status,
+        latest_svc.service_id as latest_service_id,
+        latest_svc.service_type as latest_service_type,
         cou.id as cdc_office_use_id,
         cou.iso_index as iso_index,
         COALESCE(
@@ -143,6 +279,11 @@ function iafDashboardServiceRowsSql($whereSql = '')
         aa.n_location as site
     FROM customer_info c
     INNER JOIN service svc ON svc.customer_id = c.id
+    LEFT JOIN service latest_svc ON latest_svc.service_id = (
+        SELECT MAX(s_latest.service_id)
+        FROM service s_latest
+        WHERE s_latest.customer_id = c.id
+    )
     LEFT JOIN service_type_ca stca ON stca.service = svc.service_id
     LEFT JOIN service_type_sai stsai ON stsai.service = svc.service_id
     LEFT JOIN service_type_saii stsaii ON stsaii.service = svc.service_id
@@ -176,25 +317,45 @@ function iafDashboardServiceRowsSql($whereSql = '')
     $whereSql";
 }
 
-function iafDashboardFetchRows(PDO $db, $offset = 0, $limit = 30, $search = '')
+function iafDashboardFetchRows(PDO $db, $offset = 0, $limit = 30, $search = '', $status = '')
 {
     $offset = max(0, (int) $offset);
     $limit = min(50, max(1, (int) $limit));
     $rawLimit = $limit;
     $search = trim((string) $search);
+    $status = trim((string) $status);
+    $statusExpr = iafDashboardStatusSqlExpression();
+    $useDedupedPagination = ($search !== '' || $status !== '');
     $prefetchLimit = min(250, max($rawLimit * 4, $rawLimit + 1));
 
-    // Step 1: fetch only service ids for the requested page window.
+    // Pagination must be based on the final deduped dashboard rows, not raw
+    // services. A client can have multiple service rows for the same displayed
+    // certificate/standard, so raw-service offsets can repeat rows and keep
+    // "Next" enabled after the filtered client list is exhausted.
     $idSql = "SELECT svc.service_id
         FROM customer_info c
         INNER JOIN service svc ON svc.customer_id = c.id
+        LEFT JOIN (
+            SELECT customer_id, MAX(service_id) AS latest_service_id
+            FROM service
+            WHERE customer_id IS NOT NULL
+            GROUP BY customer_id
+        ) latest_idx ON latest_idx.customer_id = c.id
+        LEFT JOIN service latest_svc ON latest_svc.service_id = latest_idx.latest_service_id
         WHERE 1=1";
     $idParams = [];
     if ($search !== '') {
         $idSql .= " AND c.customer_name LIKE ?";
         $idParams[] = '%' . $search . '%';
     }
-    $idSql .= " ORDER BY c.id DESC, svc.service_id ASC LIMIT $prefetchLimit OFFSET $offset";
+    if ($status !== '') {
+        $idSql .= " AND $statusExpr = ?";
+        $idParams[] = $status;
+    }
+    $idSql .= " ORDER BY c.id DESC, svc.service_id ASC";
+    if (!$useDedupedPagination) {
+        $idSql .= " LIMIT $prefetchLimit OFFSET $offset";
+    }
 
     $idStmt = $db->prepare($idSql);
     $idStmt->execute($idParams);
@@ -208,20 +369,45 @@ function iafDashboardFetchRows(PDO $db, $offset = 0, $limit = 30, $search = '')
         ];
     }
 
-    // Step 2: run the heavy query only for the preselected service ids.
-    $whereSql = " AND svc.service_id IN (" . implode(',', array_fill(0, count($serviceIds), '?')) . ")";
-    $sql = iafDashboardServiceRowsSql($whereSql) . "
-        ORDER BY c.id DESC, svc.service_id ASC, cou.iso_index ASC";
+    if (!$useDedupedPagination) {
+        $whereSql = " AND svc.service_id IN (" . implode(',', array_fill(0, count($serviceIds), '?')) . ")";
+        $sql = iafDashboardServiceRowsSql($whereSql) . "
+            ORDER BY c.id DESC, svc.service_id ASC, cou.iso_index ASC";
 
-    $stmt = $db->prepare($sql);
-    $stmt->execute($serviceIds);
-    $rawRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    $rows = array_slice(iafDashboardDedupeRows($rawRows), 0, $rawLimit);
+        $stmt = $db->prepare($sql);
+        $stmt->execute($serviceIds);
+        $rawRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $rows = array_slice(iafDashboardDedupeRows($rawRows), 0, $rawLimit);
+
+        return [
+            'rows' => $rows,
+            'next_offset' => $offset + $rawLimit,
+            'has_more' => count($serviceIds) > $rawLimit,
+        ];
+    }
+
+    $rawRows = [];
+    foreach (array_chunk($serviceIds, 250) as $serviceIdChunk) {
+        $whereSql = " AND svc.service_id IN (" . implode(',', array_fill(0, count($serviceIdChunk), '?')) . ")";
+        $sql = iafDashboardServiceRowsSql($whereSql) . "
+            ORDER BY c.id DESC, svc.service_id ASC, cou.iso_index ASC";
+
+        $stmt = $db->prepare($sql);
+        $stmt->execute($serviceIdChunk);
+        $chunkRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        if (!empty($chunkRows)) {
+            $rawRows = array_merge($rawRows, $chunkRows);
+        }
+    }
+
+    $dedupedRows = iafDashboardDedupeRows($rawRows);
+    $rows = array_slice($dedupedRows, $offset, $rawLimit);
+    $nextOffset = $offset + count($rows);
 
     return [
         'rows' => $rows,
-        'next_offset' => $offset + $rawLimit,
-        'has_more' => count($serviceIds) > $rawLimit,
+        'next_offset' => $nextOffset,
+        'has_more' => count($dedupedRows) > $nextOffset,
     ];
 }
 
@@ -318,6 +504,27 @@ function iafDashboardFormatDate($date)
     return $time ? date('d M Y', $time) : '-';
 }
 
+function iafDashboardStatusBadge(array $client)
+{
+    $displayStatus = iafDashboardNormalizeApplicationStatus($client['certification_status'] ?? '');
+    $statusKey = strtolower(str_replace(['-', '_', ' '], '', $displayStatus));
+    $badgeClass = 'status-default';
+
+    if ($statusKey === 'active' || $statusKey === 'granted' || $statusKey === 'valid' || $statusKey === 'completed' || $statusKey === 'issued') {
+        $badgeClass = 'status-active';
+        $displayStatus = 'Active';
+    } elseif ($statusKey === 'inprocess' || $statusKey === 'contractreview' || $statusKey === 'newenquiry' || $statusKey === 'contractinprocess' || $statusKey === 'pending') {
+        $badgeClass = 'status-pending';
+    } elseif ($statusKey === 'suspended' || $statusKey === 'expired' || $statusKey === 'withdrawn' || $statusKey === 'applicationcanceled' || $statusKey === 'cancelled' || $statusKey === 'canceled') {
+        $badgeClass = 'status-expired';
+    }
+
+    return [
+        'class' => $badgeClass,
+        'label' => $displayStatus !== '' ? $displayStatus : 'Unknown',
+    ];
+}
+
 function iafDashboardRenderRow(array $c)
 {
     $insertId = 'btn-insert-' . ($c['internal_client_id'] ?? '') . '-' . (($c['svc_id'] ?? '') ?: '0') . '-' . (($c['cdc_office_use_id'] ?? '') ?: '0') . '-' . substr(md5(($c['standard_name'] ?? '') . '|' . ($c['certificate_number'] ?? '')), 0, 10);
@@ -325,22 +532,9 @@ function iafDashboardRenderRow(array $c)
     $clientId = htmlspecialchars($c['internal_client_id'] ?? '', ENT_QUOTES, 'UTF-8');
     $rowKey = htmlspecialchars(($c['internal_client_id'] ?? '') . '|' . (($c['svc_id'] ?? '') ?: '0') . '|' . (($c['cdc_office_use_id'] ?? '') ?: '0') . '|' . iafDashboardStandardKey($c['standard_name'] ?? ''), ENT_QUOTES, 'UTF-8');
 
-    $hasCert = !empty($c['certificate_number']);
-    $statusStr = strtolower(trim((string) ($c['certification_status'] ?? '')));
-    $badgeClass = 'status-default';
-    $displayStatus = ($c['certification_status'] ?? '') ?: 'Unknown';
-
-    if ($hasCert || $statusStr === 'granted' || $statusStr === 'completed' || $statusStr === 'valid') {
-        $badgeClass = 'status-active';
-        $displayStatus = 'Granted';
-    } elseif (strpos($statusStr, 'active') !== false || strpos($statusStr, 'issue') !== false || strpos($statusStr, 'grant') !== false) {
-        $badgeClass = 'status-active';
-    } elseif (strpos($statusStr, 'pending') !== false || strpos($statusStr, 'in-process') !== false || strpos($statusStr, 'in process') !== false || strpos($statusStr, 'audit') !== false) {
-        $badgeClass = 'status-pending';
-        $displayStatus = 'In Process';
-    } elseif (strpos($statusStr, 'suspend') !== false || strpos($statusStr, 'expir') !== false || strpos($statusStr, 'withdraw') !== false) {
-        $badgeClass = 'status-expired';
-    }
+    $statusBadge = iafDashboardStatusBadge($c);
+    $badgeClass = $statusBadge['class'];
+    $displayStatus = $statusBadge['label'];
 
     ob_start();
     ?>

@@ -21,9 +21,10 @@ if (!isset($db) || !$db instanceof PDO) {
 $offset = isset($_GET['offset']) ? (int) $_GET['offset'] : 0;
 $limit = isset($_GET['limit']) ? (int) $_GET['limit'] : 30;
 $search = isset($_GET['search']) ? trim((string) $_GET['search']) : '';
+$statusFilter = isset($_GET['status']) ? trim((string) $_GET['status']) : '';
 
 try {
-    $result = iafDashboardFetchRows($db, $offset, $limit, $search);
+    $result = iafDashboardFetchRows($db, $offset, $limit, $search, $statusFilter);
     $rowsHtml = '';
     foreach ($result['rows'] as $row) {
         $rowsHtml .= iafDashboardRenderRow($row);

@@ -2,6 +2,7 @@
     <?php
     include_once './header.php';
     include_once './dbConnect.php';
+    include_once './include/ai_document_review_lib.php';
     include_once './include/supplier_helpers.php';
     include_once './include/certification_cycle_helper.php';
     include_once './include/customer_feature_flags.php';
@@ -406,6 +407,82 @@
             }
         }
 
+        function caDateGraphEntryMinTimestamp(array $entry)
+        {
+            if (empty($entry['dates'])) {
+                return null;
+            }
+
+            return min(array_map(function ($date) { return $date['timestamp']; }, $entry['dates']));
+        }
+
+        function caDateGraphEntryMaxTimestamp(array $entry)
+        {
+            if (empty($entry['dates'])) {
+                return null;
+            }
+
+            return max(array_map(function ($date) { return $date['timestamp']; }, $entry['dates']));
+        }
+
+        function caDateGraphEntryInternalDatesOk(array $entry)
+        {
+            if (empty($entry['dates'])) {
+                return true;
+            }
+
+            $dates = $entry['dates'];
+            for ($i = 1; $i < count($dates); $i++) {
+                if ($dates[$i]['timestamp'] < $dates[$i - 1]['timestamp']) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        function caDateGraphValidationIssueForEntry(array $entry, array $workflowContext, $lastTimestamp, $lastLabel)
+        {
+            $label = isset($entry['label']) ? $entry['label'] : '';
+            $serviceType = isset($entry['service_type']) ? $entry['service_type'] : '';
+            $section = isset($entry['section']) ? $entry['section'] : '';
+            $minTimestamp = caDateGraphEntryMinTimestamp($entry);
+
+            if ($label === 'Application Date' && isset($workflowContext['QMS Implementation Date'])) {
+                $qmsMaxTimestamp = caDateGraphEntryMaxTimestamp($workflowContext['QMS Implementation Date']);
+                if ($qmsMaxTimestamp !== null && $minTimestamp !== null && $minTimestamp <= $qmsMaxTimestamp) {
+                    return 'Application Date should be after QMS Implementation Date';
+                }
+            }
+
+            if ($serviceType === 'CA' && $label === 'Stage-I Audit Date' && isset($workflowContext['QMS Implementation Date'])) {
+                $qmsMaxTimestamp = caDateGraphEntryMaxTimestamp($workflowContext['QMS Implementation Date']);
+                if ($qmsMaxTimestamp !== null && $minTimestamp !== null) {
+                    $minimumStageOneTimestamp = strtotime('+2 months', $qmsMaxTimestamp);
+                    if ($minimumStageOneTimestamp !== false && $minTimestamp < $minimumStageOneTimestamp) {
+                        return 'Stage-I Audit Date should be at least 2 months after QMS Implementation Date';
+                    }
+                }
+            }
+
+            if ($label === 'Assessment / NC(M) Closing Date') {
+                $auditReferenceLabel = ($serviceType === 'CA') ? 'Stage-II Audit Date' : 'Audit Date';
+                if (isset($workflowContext[$auditReferenceLabel])) {
+                    $auditMaxTimestamp = caDateGraphEntryMaxTimestamp($workflowContext[$auditReferenceLabel]);
+                    if ($auditMaxTimestamp !== null && $minTimestamp !== null && $minTimestamp < $auditMaxTimestamp) {
+                        return $label . ' should be greater than or equal to ' . $auditReferenceLabel;
+                    }
+                }
+                return '';
+            }
+
+            if ($lastTimestamp !== null && $minTimestamp !== null && $minTimestamp < $lastTimestamp) {
+                return $section . ' - ' . $label . ' should be greater than ' . $lastLabel;
+            }
+
+            return '';
+        }
+
         function caDateGraphBuildForCustomer($db, $customerId)
         {
             $entries = array();
@@ -428,6 +505,7 @@
             );
 
             foreach ($services as $service) {
+                $serviceEntryStart = count($entries);
                 $serviceType = isset($service['service_type']) ? $service['service_type'] : '';
                 $universalServiceId = isset($service['service_id']) ? $service['service_id'] : '';
                 $typedServiceId = '';
@@ -469,21 +547,15 @@
                         "SELECT aggrement_date FROM certification_aggrement WHERE customer_id = :customer_id AND (service = :typed_id OR service = :service_id) ORDER BY id DESC LIMIT 1",
                         array(':customer_id' => $customerId, ':typed_id' => $contractTypedServiceId, ':service_id' => $contractUniversalServiceId)
                     );
-                    $contract = caDateGraphFetchOne(
-                        $db,
-                        "SELECT review_date FROM contract_id WHERE customer_id = :customer_id AND ca_service_id = :typed_id ORDER BY contractid DESC LIMIT 1",
-                        array(':customer_id' => $customerId, ':typed_id' => $contractTypedServiceId)
-                    );
                     $assessment = caDateGraphFetchAssessmentPlanning($db, $customerId, array($contractTypedServiceId, $typedServiceId, $contractUniversalServiceId, $universalServiceId));
 
                     $assessmentTypedServiceId = isset($assessment['service_id']) && caDateGraphHasValue($assessment['service_id']) ? $assessment['service_id'] : $contractTypedServiceId;
 
+                    caDateGraphAddEntry($entries, $serviceType, $section, 'QMS Implementation Date', caDateGraphFirstValue($assessment, array('qms_implementation_date')), 'assessment_planning.qms_implementation_date', $assessmentTypedServiceId, $contractUniversalServiceId);
                     caDateGraphAddEntry($entries, $serviceType, $section, 'Application Date', caDateGraphFirstValue($auditApplication, array('application_date')), 'audit_application.application_date', $contractTypedServiceId, $contractUniversalServiceId);
                     caDateGraphAddEntry($entries, $serviceType, $section, 'Application Received Date', caDateGraphFirstValue($auditApplication, array('application_rcv_date')), 'audit_application.application_rcv_date', $contractTypedServiceId, $contractUniversalServiceId);
                     caDateGraphAddEntry($entries, $serviceType, $section, 'Review Date', caDateGraphFirstValue($auditApplication, array('review_date')), 'audit_application.review_date', $contractTypedServiceId, $contractUniversalServiceId);
                     caDateGraphAddEntry($entries, $serviceType, $section, 'Agreement Date', caDateGraphFirstValue($agreement, array('aggrement_date')), 'certification_aggrement.aggrement_date', $contractTypedServiceId, $contractUniversalServiceId);
-                    caDateGraphAddEntry($entries, $serviceType, $section, 'Contract Review Date', caDateGraphFirstValue($contract, array('review_date')), 'contract_id.review_date', $contractTypedServiceId, $contractUniversalServiceId);
-                    caDateGraphAddEntry($entries, $serviceType, $section, 'QMS Implementation Date', caDateGraphFirstValue($assessment, array('qms_implementation_date')), 'assessment_planning.qms_implementation_date', $assessmentTypedServiceId, $contractUniversalServiceId);
                     caDateGraphAddEntry($entries, $serviceType, $section, 'Assessment Planning Date', caDateGraphFirstValue($assessment, array('date')), 'assessment_planning.date', $assessmentTypedServiceId, $contractUniversalServiceId);
                 }
 
@@ -530,8 +602,8 @@
                     caDateGraphAddEntry($entries, 'CA', 'CA', 'Stage-I Review Date', caDateGraphFirstValue($stageIReview, array('review_date')), 'stage_i_audit_id.review_date', $typedServiceId, $universalServiceId);
                     caDateGraphAddEntry($entries, 'CA', 'CA', 'Stage-II Intimation Date', caDateGraphFirstValue($stageTwoNotice, array('intimation_date')), 'stage_twoaudit_id.intimation_date', $typedServiceId, $universalServiceId);
                     caDateGraphAddEntry($entries, 'CA', 'CA', 'Stage-II Audit Date', caDateGraphFirstValue($stageIIReview, array('audit_dates')) ?: caDateGraphFirstValue($stageTwoNotice, array('audit_dates')), 'stage_ii_audit_id.audit_dates / stage_twoaudit_id.audit_dates', $typedServiceId, $universalServiceId);
-                    caDateGraphAddEntry($entries, 'CA', 'CA', 'Stage-II Review Date', caDateGraphFirstValue($stageIIReview, array('review_date')), 'stage_ii_audit_id.review_date', $typedServiceId, $universalServiceId);
                     caDateGraphAddEntry($entries, 'CA', 'CA', 'Assessment / NC(M) Closing Date', caDateGraphFirstValue($cdc, array('assDate', 'Date')), 'cdc_report_review.assDate', $typedServiceId, $universalServiceId);
+                    caDateGraphAddEntry($entries, 'CA', 'CA', 'Stage-II Review Date', caDateGraphFirstValue($stageIIReview, array('review_date')), 'stage_ii_audit_id.review_date', $typedServiceId, $universalServiceId);
                     caDateGraphAddEntry($entries, 'CA', 'CA', 'CDC Date', caDateGraphFirstValue($cdc, array('Date')), 'cdc_report_review.Date', $typedServiceId, $universalServiceId);
                     caDateGraphAddEntry($entries, 'CA', 'CA', 'Rev Date / Certificate Issue Date', caDateGraphCertificateIssueDate($db, $cdc), 'cdc_report_review_office_use.rev_date / cdc_report_review.revDatecdc', $typedServiceId, $universalServiceId);
                     caDateGraphAddEntry($entries, 'CA', 'CA', 'Feedback Survey Date', caDateGraphFirstValue($survey, array('survey_date', 'review_date')), 'customer_survey_id.survey_date', $typedServiceId, $universalServiceId);
@@ -546,8 +618,8 @@
                     caDateGraphAddEntry($entries, $serviceType, $section, 'Information Updation Review Date', caDateGraphInfoReviewDate($db, $typedServiceId, $customerId), 'info_update_review.review_date / uploads/reviews JSON', $typedServiceId, $universalServiceId);
                     caDateGraphAddEntry($entries, $serviceType, $section, 'Intimation Date', caDateGraphFirstValue($stageOne, array('intimation_date')), 'stage_oneaudit_id.intimation_date', $typedServiceId, $universalServiceId);
                     caDateGraphAddEntry($entries, $serviceType, $section, 'Audit Date', caDateGraphFirstValue($stageIIReview, array('audit_dates')) ?: caDateGraphFirstValue($surveillancePlan, array('audit_dates')) ?: caDateGraphFirstValue($stageOne, array('audit_dates')), 'stage_ii_audit_id.audit_dates / servelance_1_id.audit_dates', $typedServiceId, $universalServiceId);
-                    caDateGraphAddEntry($entries, $serviceType, $section, 'Review Date', caDateGraphFirstValue($stageIIReview, array('review_date')), 'stage_ii_audit_id.review_date', $typedServiceId, $universalServiceId);
                     caDateGraphAddEntry($entries, $serviceType, $section, 'Assessment / NC(M) Closing Date', caDateGraphFirstValue($cdc, array('assDate', 'Date')), 'cdc_report_review.assDate', $typedServiceId, $universalServiceId);
+                    caDateGraphAddEntry($entries, $serviceType, $section, 'Review Date', caDateGraphFirstValue($stageIIReview, array('review_date')), 'stage_ii_audit_id.review_date', $typedServiceId, $universalServiceId);
                     caDateGraphAddEntry($entries, $serviceType, $section, 'CDC Date', caDateGraphFirstValue($cdc, array('Date')), 'cdc_report_review.Date', $typedServiceId, $universalServiceId);
                     caDateGraphAddEntry($entries, $serviceType, $section, 'Rev Date / Issue Date', caDateGraphCertificateIssueDate($db, $cdc), 'cdc_report_review_office_use.rev_date / cdc_report_review.revDatecdc', $typedServiceId, $universalServiceId);
                     caDateGraphAddEntry($entries, $serviceType, $section, 'Feedback Survey Date', caDateGraphFirstValue($survey, array('survey_date', 'review_date')), 'customer_survey_id.survey_date', $typedServiceId, $universalServiceId);
@@ -569,19 +641,34 @@
                 } elseif ($serviceType === 'RC') {
                     caDateGraphAddEntry($entries, 'RC', 'RC Audit', 'Intimation Date', caDateGraphFirstValue($stageOne, array('intimation_date')) ?: caDateGraphFirstValue($stageTwoNotice, array('intimation_date')), 'stage_oneaudit_id.intimation_date / stage_twoaudit_id.intimation_date', $typedServiceId, $universalServiceId);
                     caDateGraphAddEntry($entries, 'RC', 'RC Audit', 'Audit Date', caDateGraphFirstValue($stageIIReview, array('audit_dates')) ?: caDateGraphFirstValue($rcAuditPlan, array('scheduleii_date')) ?: caDateGraphFirstValue($stageOne, array('audit_dates')), 'stage_ii_audit_id.audit_dates / audit_scheduleii_id.scheduleii_date', $typedServiceId, $universalServiceId);
-                    caDateGraphAddEntry($entries, 'RC', 'RC Audit', 'Review Date', caDateGraphFirstValue($stageIIReview, array('review_date')) ?: caDateGraphFirstValue($stageIReview, array('review_date')), 'stage_ii_audit_id.review_date / stage_i_audit_id.review_date', $typedServiceId, $universalServiceId);
                     caDateGraphAddEntry($entries, 'RC', 'RC Audit', 'Assessment / NC(M) Closing Date', caDateGraphFirstValue($cdc, array('assDate', 'Date')), 'cdc_report_review.assDate', $typedServiceId, $universalServiceId);
+                    caDateGraphAddEntry($entries, 'RC', 'RC Audit', 'Review Date', caDateGraphFirstValue($stageIIReview, array('review_date')) ?: caDateGraphFirstValue($stageIReview, array('review_date')), 'stage_ii_audit_id.review_date / stage_i_audit_id.review_date', $typedServiceId, $universalServiceId);
                     caDateGraphAddEntry($entries, 'RC', 'RC Audit', 'CDC Date', caDateGraphFirstValue($cdc, array('Date')), 'cdc_report_review.Date', $typedServiceId, $universalServiceId);
                     caDateGraphAddEntry($entries, 'RC', 'RC Audit', 'Rev Date / Issue Date', caDateGraphCertificateIssueDate($db, $cdc), 'cdc_report_review_office_use.rev_date / cdc_report_review.revDatecdc', $typedServiceId, $universalServiceId);
                     caDateGraphAddEntry($entries, 'RC', 'RC Audit', 'Feedback Survey Date', caDateGraphFirstValue($survey, array('survey_date', 'review_date')), 'customer_survey_id.survey_date', $typedServiceId, $universalServiceId);
+                }
+
+                $workflowKey = $serviceType . ':' . $universalServiceId . ':' . $typedServiceId;
+                for ($i = $serviceEntryStart; $i < count($entries); $i++) {
+                    $entries[$i]['workflow_key'] = $workflowKey;
                 }
             }
 
             $lastTimestamp = null;
             $lastLabel = '';
+            $lastWorkflowKey = '';
+            $workflowContext = array();
             $summary = array('ok' => 0, 'issue' => 0, 'missing' => 0, 'total' => count($entries));
 
             foreach ($entries as $index => $entry) {
+                $workflowKey = isset($entry['workflow_key']) ? $entry['workflow_key'] : '';
+                if ($workflowKey !== $lastWorkflowKey) {
+                    $lastTimestamp = null;
+                    $lastLabel = '';
+                    $workflowContext = array();
+                    $lastWorkflowKey = $workflowKey;
+                }
+
                 if (empty($entry['dates'])) {
                     $entries[$index]['status'] = 'missing';
                     $entries[$index]['note'] = 'Date not available';
@@ -589,31 +676,26 @@
                     continue;
                 }
 
-                $dates = $entry['dates'];
-                $internalOk = true;
-                for ($i = 1; $i < count($dates); $i++) {
-                    if ($dates[$i]['timestamp'] < $dates[$i - 1]['timestamp']) {
-                        $internalOk = false;
-                        break;
-                    }
-                }
-
-                $minTimestamp = min(array_map(function ($date) { return $date['timestamp']; }, $dates));
-                $maxTimestamp = max(array_map(function ($date) { return $date['timestamp']; }, $dates));
+                $internalOk = caDateGraphEntryInternalDatesOk($entry);
+                $minTimestamp = caDateGraphEntryMinTimestamp($entry);
+                $maxTimestamp = caDateGraphEntryMaxTimestamp($entry);
+                $validationIssue = $internalOk ? caDateGraphValidationIssueForEntry($entry, $workflowContext, $lastTimestamp, $lastLabel) : '';
 
                 if (!$internalOk) {
                     $entries[$index]['status'] = 'issue';
                     $entries[$index]['note'] = $entry['label'] . ' dates should be in correct order';
                     $summary['issue']++;
-                } elseif ($lastTimestamp !== null && $minTimestamp < $lastTimestamp) {
+                } elseif ($validationIssue !== '') {
                     $entries[$index]['status'] = 'issue';
-                    $entries[$index]['note'] = $entry['section'] . ' - ' . $entry['label'] . ' should be greater than ' . $lastLabel;
+                    $entries[$index]['note'] = $validationIssue;
                     $summary['issue']++;
                 } else {
                     $entries[$index]['status'] = 'ok';
                     $entries[$index]['note'] = $entry['section'] . ' - ' . $entry['label'] . ' date is correct';
                     $summary['ok']++;
                 }
+
+                $workflowContext[$entry['label']] = $entry;
 
                 if ($lastTimestamp === null || $maxTimestamp > $lastTimestamp) {
                     $lastTimestamp = $maxTimestamp;
@@ -657,16 +739,27 @@
     $dateGraphData = array('entries' => array(), 'summary' => array('ok' => 0, 'issue' => 0, 'missing' => 0, 'total' => 0));
     $customerDocoraAiVisible = aitfCustomerFeatureIsEnabled($db, 'customer_docora_ai_visible');
     $customerDateGraphVisible = aitfCustomerFeatureIsEnabled($db, 'customer_date_graph_visible');
+    $customerAiScanSummary = array(
+        'document_scan_completed' => false,
+        'software_fill_completed' => false,
+        'both_completed' => false,
+        'last_document_scan_at' => '',
+        'last_software_fill_at' => ''
+    );
 
     if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
         try {
             aitfEnsureSupplierProfileSchema($db);
+            aitfAiEnsureSchema($db);
             $clientDetails = "SELECT * FROM customer_info WHERE id = :id";
             $statement = $db->prepare($clientDetails);
             $statement->bindParam(':id', $_GET['customerid']);
             $statement->execute();
             $clientInfo = $statement->fetch();
             $isSupplierAccount = aitfCustomerIsSupplier($clientInfo);
+            if (!$isSupplierAccount) {
+                $customerAiScanSummary = aitfAiFetchCustomerScanCompletion($db, $_GET['customerid']);
+            }
             $supplierTypeLabels = array(
                 'employee' => 'Employee',
                 'contractor' => 'Contractor / Service Provider',
@@ -1041,7 +1134,7 @@
             $customerStatus = "SELECT * FROM customer_status";
             $statement = $db->prepare($customerStatus);
             $statement->execute();
-            $status = $statement->fetchAll();
+            $applicationStatusOptions = $statement->fetchAll();
 
             $sql = "SELECT max(service_id) as c_service FROM `service` where customer_id = :id";
             $statement = $db->prepare($sql);
@@ -1524,6 +1617,27 @@
             line-height: 1;
             margin-top: 0 !important;
             padding: 7px 10px !important;
+        }
+
+        .aitf-ai-done-badge {
+            align-items: center;
+            background: rgba(16, 185, 129, 0.18);
+            border: 1px solid rgba(187, 247, 208, 0.55);
+            border-radius: 999px;
+            color: #ecfdf5;
+            display: inline-flex;
+            font-size: 11px;
+            font-weight: 800;
+            gap: 5px;
+            letter-spacing: 0.02em;
+            line-height: 1;
+            padding: 6px 9px;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .aitf-ai-done-badge i {
+            color: #86efac;
         }
 
         .aitf-ai-modal {
@@ -3016,6 +3130,11 @@
                             <?php if ($isSupplierAccount) { ?>
                                 <span class="supplier-type-pill"><?php echo htmlspecialchars($supplierTypeLabel); ?></span>
                             <?php } ?>
+                            <?php if (!$isSupplierAccount && !empty($customerAiScanSummary['both_completed'])) { ?>
+                                <span class="aitf-ai-done-badge" title="GO ai document scan and software-fill scan completed">
+                                    <i class="fa fa-check-circle"></i> AI Scanned Done
+                                </span>
+                            <?php } ?>
                             <div style="margin-left: auto; display: flex; align-items: center; gap: 10px;">
                                 <?php if (!$isSupplierAccount) { ?>
                                     <?php if ($customerDocoraAiVisible) { ?>
@@ -3413,20 +3532,7 @@
                         $issueDate = isset($cert['issue_date']) ? $cert['issue_date'] : '';
                         $expireDate = isset($cert['expire_date']) ? $cert['expire_date'] : '';
 
-                        // If overall customer status is Application canceled, always show that
-                        if (isset($clientInfo['audit_status']) && $clientInfo['audit_status'] === 'Application canceled') {
-                            $certStatus = 'Application canceled';
-                        } else {
-                            // Get ISO-specific status and decision date (if available from CDC)
-                            // If not available, fall back to shared customer_info data for first ISO only
-                            if (!empty($cert['cdc_status']) && $cert['cdc_status'] === 'Granted') {
-                                $certStatus = 'Active';
-                            } elseif (!empty($cert['cdc_status']) && $cert['cdc_status'] === 'Not-Granted') {
-                                $certStatus = ($i == 0 && !empty($clientInfo['audit_status'])) ? $clientInfo['audit_status'] : 'Inprocess';
-                            } else {
-                                $certStatus = ($i == 0 ? $clientInfo['audit_status'] : '');
-                            }
-                        }
+                        $certStatus = isset($clientInfo['audit_status']) ? trim((string) $clientInfo['audit_status']) : '';
                         $decisionDate = !empty($cert['decision_date']) ? $cert['decision_date'] : ($i == 0 ? $clientInfo['certification_stage_date'] : '');
                         
                         // Add prominent section header for all certificates (single or multiple)
@@ -3457,16 +3563,15 @@
                             <span>Certification Status:</span>
                         </div>
                         <div class="col-sm-2 form-group float-label-control" > 
-                            <select class="customer_status" name="customer_status" data-customer="<?php echo $_GET["customerid"]; ?>" data-iso-index="<?php echo $i; ?>" style="color: black" <?php if ($i > 0) echo 'disabled'; ?>>                                        
-                                <option value="<?php echo htmlspecialchars($certStatus); ?>"><?php
-                                    if (!empty($certStatus)) {
-                                        echo htmlspecialchars($certStatus);
-                                    } else {
-                                        echo "Select Status";
+                            <select class="manual-application-status" name="customer_status" data-customer="<?php echo (int) $_GET["customerid"]; ?>" data-previous="<?php echo htmlspecialchars($certStatus, ENT_QUOTES, 'UTF-8'); ?>" data-iso-index="<?php echo $i; ?>" style="color: black">
+                                <option value="<?php echo htmlspecialchars($certStatus, ENT_QUOTES, 'UTF-8'); ?>"><?php echo !empty($certStatus) ? htmlspecialchars($certStatus) : 'Select Status'; ?></option>
+                                <?php foreach ($applicationStatusOptions as $stat) {
+                                    $statusValue = trim((string) $stat["status"]);
+                                    if ($statusValue === '' || $statusValue === $certStatus) {
+                                        continue;
                                     }
-                                ?></option>
-                                <?php foreach ($status as $stat) { ?>
-                                    <option value="<?php echo $stat["status"]; ?>"><?php echo $stat["status"]; ?></option>
+                                    ?>
+                                    <option value="<?php echo htmlspecialchars($statusValue, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($statusValue); ?></option>
                                 <?php } ?>
                             </select>
                         </div>
@@ -3525,8 +3630,10 @@
                 <div class="col-xs-3  text-center btn qms_complete_btn "  style="height: 28px">
                     <select name="service-type"  class="form-control service-type" id="service-type"  style="height: 20px; background-color: #f5821f; padding-top: 0px; font-size: 10px; color: white">
                         <option value="" style="color: white; font-size: 10px">Create New Service</option>
-                        <?php foreach ($servicess as $service) { ?>
-                            <option value="<?php echo $service['service_id'] ?>"  style="color: white; font-size: 10px"><?php echo $service['service_type'] ?></option>
+                        <?php foreach ($servicess as $service) {
+                            $serviceTypeLabel = (isset($service['service_type']) && trim((string) $service['service_type']) === 'CR') ? 'Contract Review' : $service['service_type'];
+                            ?>
+                            <option value="<?php echo $service['service_id'] ?>"  style="color: white; font-size: 10px"><?php echo htmlspecialchars($serviceTypeLabel, ENT_QUOTES, 'UTF-8') ?></option>
                         <?php } ?>
                     </select>
                 </div>
@@ -3926,42 +4033,19 @@
                                 <div class="row">
                                     <div class="col-sm-6">
                                         <?php
-                                        if (isset($crservice['certification_aggrement']) && empty($crservice['certification_aggrement'])) {
-                                            $addClass3 = "serviceContent";
-                                        } else if (isset($crservice['certification_aggrement']) && !empty($crservice['certification_aggrement']) && empty($crservice['contractid'])) {
-                                            $addClass3 = "serviceContentwaiting";
-                                        } else if (isset($crservice['contractid']) && !empty($crservice['contractid'])) {
-                                            $addClass3 = "serviceContentCompleted";
-                                        } else {
-                                            $addClass3 = "serviceContent";
-                                        }
-                                        ?>
-                                        <div class="<?php echo $addClass3 ?>"><span>Contract Review </span>
-                                            <?php if (isset($crservice['certification_aggrement']) && !empty($crservice['certification_aggrement']) && empty($crservice['contractid']))  { ?>
-                                                <a class=" createContractReview pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $crservice['cr_id'] ?>" data-row-count="" title="Add contract review" style="padding: 1px 5px;">
-                                                    <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
-                                                </a> 
-                                            <?php } ?>
-                                            <?php if (isset($crservice['contractid']) && !empty($crservice['contractid'])) { ?>
-                                                <a class="updateContractReview  pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-contract="<?php echo $crservice['contractid'] ?>" data-service="<?php echo $crservice['cr_id'] ?>" data-row-count="" title="Edit contract review" style="padding: 1px 5px;"> <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i></a> 
-                                                <a class="downloadContractReview pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-caservice-id="<?php echo $crservice['cr_id'] ?>" data-contract="<?php echo $crservice['contractid'] ?>" title="Download contract review" style="padding: 1px 5px;"> <i class="fa fa-download fa-lg " style="padding: 3px"></i></a> 
-                                            <?php } ?>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <?php
-                                        if (empty($crservice['contractid'])) {
+                                        $assessmentReady = (isset($crservice['certification_aggrement']) && !empty($crservice['certification_aggrement'])) || (isset($crservice['contractid']) && !empty($crservice['contractid']));
+                                        if (!$assessmentReady) {
                                             $assessmentClass = 'serviceContent';
-                                        } else if (isset($crservice['contractid']) && !empty($crservice['contractid']) && empty($crservice['assessment_id'])) {
+                                        } else if ($assessmentReady && empty($crservice['assessment_id'])) {
                                             $assessmentClass = 'serviceContentwaiting';
-                                        } else if (isset($crservice['contractid']) && !empty($crservice['contractid']) && isset($crservice['assessment_id']) && !empty($crservice['assessment_id'])) {
+                                        } else if ($assessmentReady && isset($crservice['assessment_id']) && !empty($crservice['assessment_id'])) {
                                             $assessmentClass = 'serviceContentCompleted';
                                         } else {
                                             $assessmentClass = 'serviceContent';
                                         }
                                         ?>
                                         <div class="<?php echo $assessmentClass ?>"><span>Assessment Planning</span>
-                                            <?php if (isset($crservice['contractid']) && !empty($crservice['contractid']) && empty($crservice['assessment_id'])) { ?>
+                                            <?php if ($assessmentReady && empty($crservice['assessment_id'])) { ?>
                                                 <a class="addAssessmentPlanning pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $crservice['cr_id'] ?>" title="Review Report (Annex II)" style="padding: 1px 5px;"><i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i></a>
                                             <?php } else if (isset($crservice['assessment_id']) && !empty($crservice['assessment_id'])) { ?>
                                                 <a class="editAssessmentPlanning  pull-right" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $crservice['cr_id'] ?>" data-assessment="<?php echo $crservice['assessment_id'] ?>" title="Add Review Report(Annex II)" style="padding: 1px 5px;"><i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i></a> 
@@ -7572,7 +7656,7 @@
         <div class="servicebox-bunch <?php //echo $class2                                                                                          ?> new-cr-service-add" style="display: none">
             <div class="servicebox">
                 <form id="caService" action="serviceTypeCA.php" method="post" enctype="multipart/form-data">
-                    <div class="row" id="service-row" class="service-row">
+                        <div class="row" id="service-row" class="service-row">
                         <div class="col-xs-12 qms_customer_name service_title" style="text-align: center" data-row-id="">
                             Contract Review<span class="serviceStatus"></span> 
                         </div>
@@ -7609,9 +7693,6 @@
                             </div>
                         </div>
                         <div class="row">                            
-                            <div class="col-sm-6">
-                                <div class="serviceContent"><span>Contract Review</span></div>
-                            </div>
                             <div class="col-sm-6">
                                 <div class="serviceContent"><span>Assessment Planning</span></div>
                             </div>
@@ -9967,6 +10048,131 @@
                     },
                     error: function (data, status, err) {
                         alert(status);
+                    }
+                });
+            });
+
+            function showApplicationStatusDialog(options) {
+                var opts = options || {};
+                var $existing = $('#applicationStatusConfirmModal');
+                if (!$existing.length) {
+                    $('body').append(
+                        '<div id="applicationStatusConfirmModal" class="app-status-modal" aria-hidden="true">' +
+                            '<div class="app-status-modal__panel" role="dialog" aria-modal="true">' +
+                                '<div class="app-status-modal__icon"><i class="fa fa-exchange"></i></div>' +
+                                '<h3 class="app-status-modal__title"></h3>' +
+                                '<p class="app-status-modal__message"></p>' +
+                                '<div class="app-status-modal__actions">' +
+                                    '<button type="button" class="app-status-modal__btn app-status-modal__cancel">Cancel</button>' +
+                                    '<button type="button" class="app-status-modal__btn app-status-modal__confirm">Save Status</button>' +
+                                '</div>' +
+                            '</div>' +
+                        '</div>'
+                    );
+                    $existing = $('#applicationStatusConfirmModal');
+                }
+
+                $existing.find('.app-status-modal__title').text(opts.title || 'Confirm Status Change');
+                $existing.find('.app-status-modal__message').text(opts.message || '');
+                $existing.find('.app-status-modal__confirm').text(opts.confirmText || 'Save Status').show().prop('disabled', false);
+                $existing.find('.app-status-modal__cancel').text(opts.cancelText || 'Cancel').show();
+                $existing.toggleClass('app-status-modal--info', !!opts.infoOnly);
+                $existing.addClass('is-visible').attr('aria-hidden', 'false');
+
+                if (opts.infoOnly) {
+                    $existing.find('.app-status-modal__cancel').hide();
+                    $existing.find('.app-status-modal__confirm').text(opts.confirmText || 'OK');
+                }
+
+                $existing.off('click.appStatus');
+                $existing.on('click.appStatus', '.app-status-modal__cancel', function () {
+                    $existing.removeClass('is-visible').attr('aria-hidden', 'true');
+                    if (typeof opts.onCancel === 'function') {
+                        opts.onCancel();
+                    }
+                });
+                $existing.on('click.appStatus', '.app-status-modal__confirm', function () {
+                    $existing.removeClass('is-visible').attr('aria-hidden', 'true');
+                    if (typeof opts.onConfirm === 'function') {
+                        opts.onConfirm();
+                    }
+                });
+                $existing.on('click.appStatus', function (event) {
+                    if (event.target === this && !opts.infoOnly) {
+                        $existing.find('.app-status-modal__cancel').trigger('click');
+                    }
+                });
+            }
+
+            $(document).on('change', '.manual-application-status', function () {
+                var $select = $(this);
+                var newStatus = $select.val();
+                var previousStatus = $select.attr('data-previous') || '';
+                var customer = $select.attr('data-customer');
+
+                if (!newStatus || newStatus === previousStatus) {
+                    $select.val(previousStatus);
+                    return;
+                }
+
+                showApplicationStatusDialog({
+                    title: 'Change Application Status?',
+                    message: 'This will update the client application status to "' + newStatus + '". The same status will appear on Home Page and IAF Dashboard after refresh.',
+                    confirmText: 'Yes, Save Status',
+                    cancelText: 'Keep Current',
+                    onCancel: function () {
+                        $select.val(previousStatus);
+                    },
+                    onConfirm: function () {
+                        $select.prop('disabled', true);
+                        $.ajax({
+                            url: "addComments.php",
+                            type: 'GET',
+                            data: {
+                                customerid: customer,
+                                customerstatus: newStatus
+                            },
+                            success: function (data) {
+                                if (typeof data === 'string' && data.trim().toLowerCase().indexOf('success') !== -1) {
+                                    $('.manual-application-status').each(function () {
+                                        var $statusSelect = $(this);
+                                        var hasOption = $statusSelect.find('option').filter(function () {
+                                            return $(this).val() === newStatus;
+                                        }).length > 0;
+                                        if (!hasOption) {
+                                            $statusSelect.append($('<option>', { value: newStatus, text: newStatus }));
+                                        }
+                                        $statusSelect.val(newStatus).attr('data-previous', newStatus);
+                                    });
+                                    showApplicationStatusDialog({
+                                        title: 'Status Saved',
+                                        message: 'Application status has been updated successfully.',
+                                        confirmText: 'OK',
+                                        infoOnly: true
+                                    });
+                                } else {
+                                    $select.val(previousStatus);
+                                    showApplicationStatusDialog({
+                                        title: 'Status Not Saved',
+                                        message: 'Unable to save the application status. Please try again.',
+                                        confirmText: 'OK',
+                                        infoOnly: true
+                                    });
+                                }
+                            },
+                            error: function (data, status, err) {
+                                $select.val(previousStatus);
+                                showApplicationStatusDialog({
+                                    title: 'Status Not Saved',
+                                    message: 'Unable to save the application status. Error: ' + status,
+                                    confirmText: 'OK',
+                                    infoOnly: true
+                                });
+                            },
+                            complete: function () {
+                                $('.manual-application-status').prop('disabled', false);
+                            }
+                        });
                     }
                 });
             });
@@ -16337,6 +16543,102 @@
             background: rgba(255, 255, 255, 0.5);
             width: 100%;
             height: 100%;
+        }
+
+        .app-status-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 20000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 18px;
+            background: rgba(15, 23, 42, 0.58);
+        }
+
+        .app-status-modal.is-visible {
+            display: flex;
+        }
+
+        .app-status-modal__panel {
+            width: min(430px, 100%);
+            background: #ffffff;
+            border: 1px solid rgba(148, 163, 184, 0.28);
+            border-radius: 8px;
+            box-shadow: 0 22px 55px rgba(15, 23, 42, 0.28);
+            padding: 24px 24px 20px;
+            text-align: center;
+            color: #0f172a;
+        }
+
+        .app-status-modal__icon {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: #eff6ff;
+            color: #1d4ed8;
+            font-size: 20px;
+        }
+
+        .app-status-modal__title {
+            margin: 0 0 8px;
+            font-size: 20px;
+            font-weight: 700;
+            line-height: 1.25;
+        }
+
+        .app-status-modal__message {
+            margin: 0;
+            color: #475569;
+            font-size: 14px;
+            line-height: 1.55;
+        }
+
+        .app-status-modal__actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 22px;
+        }
+
+        .app-status-modal__btn {
+            min-width: 116px;
+            border: 1px solid transparent;
+            border-radius: 6px;
+            padding: 9px 14px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .app-status-modal__cancel {
+            background: #ffffff;
+            border-color: #cbd5e1;
+            color: #334155;
+        }
+
+        .app-status-modal__confirm {
+            background: #1d4ed8;
+            border-color: #1d4ed8;
+            color: #ffffff;
+        }
+
+        .app-status-modal__cancel:hover {
+            background: #f8fafc;
+        }
+
+        .app-status-modal__confirm:hover {
+            background: #1e40af;
+            border-color: #1e40af;
+        }
+
+        .app-status-modal--info .app-status-modal__icon {
+            background: #ecfdf5;
+            color: #047857;
         }
     </style>
  

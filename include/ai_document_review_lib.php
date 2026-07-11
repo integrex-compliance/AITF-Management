@@ -14,6 +14,7 @@ if (!function_exists('aitfAiEnsureSchema')) {
             category VARCHAR(120) DEFAULT NULL,
             rule_text TEXT NOT NULL,
             expected_value TEXT DEFAULT NULL,
+            rule_scope VARCHAR(40) NOT NULL DEFAULT 'document_scan',
             is_active TINYINT(1) NOT NULL DEFAULT 1,
             created_by VARCHAR(120) DEFAULT NULL,
             updated_by VARCHAR(120) DEFAULT NULL,
@@ -65,6 +66,37 @@ if (!function_exists('aitfAiEnsureSchema')) {
             KEY idx_ai_doc_history_review (review_history_id),
             KEY idx_ai_doc_history_analyzed (analyzed_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8");
+
+        aitfAiEnsureColumn($db, 'ai_review_rules', 'rule_scope', "VARCHAR(40) NOT NULL DEFAULT 'document_scan'");
+        aitfAiEnsureColumn($db, 'ai_review_history', 'scan_scope', "VARCHAR(40) NOT NULL DEFAULT 'document_scan'");
+        try {
+            $db->exec("UPDATE ai_review_rules SET rule_scope = 'document_scan' WHERE rule_scope IS NULL OR rule_scope = ''");
+            $db->exec("UPDATE ai_review_history
+                SET scan_scope = CASE
+                    WHEN document_count = 0 AND status = 'completed' THEN 'software_fill'
+                    ELSE 'document_scan'
+                END
+                WHERE scan_scope IS NULL OR scan_scope = ''");
+        } catch (Exception $ex) {
+            aitfAiLogProviderError('AI schema backfill failed: ' . $ex->getMessage());
+        }
+
+        aitfAiSeedDefaultRules($db);
+    }
+}
+
+if (!function_exists('aitfAiEnsureColumn')) {
+    function aitfAiEnsureColumn($db, $table, $column, $definition)
+    {
+        try {
+            $stmt = $db->prepare("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :table_name AND COLUMN_NAME = :column_name");
+            $stmt->execute(array(':table_name' => $table, ':column_name' => $column));
+            if ((int) $stmt->fetchColumn() === 0) {
+                $db->exec("ALTER TABLE `" . str_replace('`', '', $table) . "` ADD COLUMN `" . str_replace('`', '', $column) . "` " . $definition);
+            }
+        } catch (Exception $ex) {
+            aitfAiLogProviderError('AI schema column check failed: ' . $table . '.' . $column . ' - ' . $ex->getMessage());
+        }
     }
 }
 
@@ -201,6 +233,82 @@ if (!function_exists('aitfAiFilterExistingColumns')) {
             }
         }
         return $existing;
+    }
+}
+
+if (!function_exists('aitfAiNormalizeRuleScope')) {
+    function aitfAiNormalizeRuleScope($ruleScope)
+    {
+        $ruleScope = trim((string) $ruleScope);
+        if (in_array($ruleScope, array('document_scan', 'software_fill', 'both'), true)) {
+            return $ruleScope;
+        }
+        return 'document_scan';
+    }
+}
+
+if (!function_exists('aitfAiRuleScopeLabel')) {
+    function aitfAiRuleScopeLabel($ruleScope)
+    {
+        $ruleScope = aitfAiNormalizeRuleScope($ruleScope);
+        if ($ruleScope === 'software_fill') {
+            return 'Software Fill Scan';
+        }
+        if ($ruleScope === 'both') {
+            return 'Both Scans';
+        }
+        return 'Document Scan';
+    }
+}
+
+if (!function_exists('aitfAiSeedDefaultRules')) {
+    function aitfAiSeedDefaultRules($db)
+    {
+        try {
+            $stmt = $db->prepare("INSERT INTO ai_review_rules (rule_code, title, category, rule_text, expected_value, rule_scope, is_active)
+                VALUES (:rule_code, :title, :category, :rule_text, :expected_value, :rule_scope, 1)
+                ON DUPLICATE KEY UPDATE rule_code = VALUES(rule_code)");
+
+            $rules = array(
+                array(
+                    'AITF-SOFT-001',
+                    'Software form mandatory fields',
+                    'Software Fill',
+                    'Software-filled client, service, audit, agreement, certificate, CDC, schedule, and review rows must not have missing mandatory values for client identity, service type, standard, scope, key dates, certification decision, auditor/reviewer fields, and certificate data where those forms exist.',
+                    'If a required value is empty, null, placeholder, 0000-00-00, or contradictory, report it with table/field evidence.',
+                    'software_fill'
+                ),
+                array(
+                    'AITF-SOFT-002',
+                    'Software date chronology',
+                    'Software Fill',
+                    'Dates saved in software forms should follow the certification workflow sequence: application/agreement before planning, notification before audit, audit before review/CDC, CDC before certificate issue, and certificate validity after registration.',
+                    'Use saved database rows as evidence. If dates are missing or cannot be compared, mark Manual verification required.',
+                    'software_fill'
+                ),
+                array(
+                    'AITF-SOFT-003',
+                    'Software client identity consistency',
+                    'Software Fill',
+                    'Client name, unique id, certification number, GSTIN, address, contact, scope, ISO standard, and service references should remain consistent across customer_info and related software-filled form tables.',
+                    'Compare available software rows. Report mismatches and suspicious placeholder values.',
+                    'software_fill'
+                )
+            );
+
+            foreach ($rules as $rule) {
+                $stmt->execute(array(
+                    ':rule_code' => $rule[0],
+                    ':title' => $rule[1],
+                    ':category' => $rule[2],
+                    ':rule_text' => $rule[3],
+                    ':expected_value' => $rule[4],
+                    ':rule_scope' => $rule[5]
+                ));
+            }
+        } catch (Exception $ex) {
+            aitfAiLogProviderError('AI default rule seed failed: ' . $ex->getMessage());
+        }
     }
 }
 
@@ -809,9 +917,56 @@ if (!function_exists('aitfAiFetchActiveRules')) {
 if (!function_exists('aitfAiFetchLatestHistory')) {
     function aitfAiFetchLatestHistory($db, $customerId)
     {
-        $stmt = $db->prepare("SELECT id, customer_id, requested_by, model_name, document_count, rules_count, status, summary, result_json, error_message, created_at FROM ai_review_history WHERE customer_id = :customer_id ORDER BY id DESC LIMIT 1");
+        $stmt = $db->prepare("SELECT id, customer_id, requested_by, model_name, document_count, rules_count, scan_scope, status, summary, result_json, error_message, created_at FROM ai_review_history WHERE customer_id = :customer_id ORDER BY id DESC LIMIT 1");
         $stmt->execute(array(':customer_id' => $customerId));
         return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+}
+
+if (!function_exists('aitfAiNormalizeScanScope')) {
+    function aitfAiNormalizeScanScope($scanScope, $documentCount)
+    {
+        $scanScope = trim((string) $scanScope);
+        if ($scanScope === 'software_fill') {
+            return 'software_fill';
+        }
+        return ((int) $documentCount > 0) ? 'document_scan' : 'software_fill';
+    }
+}
+
+if (!function_exists('aitfAiFetchCustomerScanCompletion')) {
+    function aitfAiFetchCustomerScanCompletion($db, $customerId)
+    {
+        $summary = array(
+            'document_scan_completed' => false,
+            'software_fill_completed' => false,
+            'both_completed' => false,
+            'last_document_scan_at' => '',
+            'last_software_fill_at' => ''
+        );
+
+        try {
+            $docStmt = $db->prepare("SELECT MAX(analyzed_at) FROM ai_review_document_history WHERE customer_id = :customer_id AND status = 'completed'");
+            $docStmt->execute(array(':customer_id' => $customerId));
+            $docDate = $docStmt->fetchColumn();
+            if ($docDate) {
+                $summary['document_scan_completed'] = true;
+                $summary['last_document_scan_at'] = $docDate;
+            }
+
+            $softwareStmt = $db->prepare("SELECT MAX(created_at) FROM ai_review_history WHERE customer_id = :customer_id AND status = 'completed' AND scan_scope = 'software_fill'");
+            $softwareStmt->execute(array(':customer_id' => $customerId));
+            $softwareDate = $softwareStmt->fetchColumn();
+            if ($softwareDate) {
+                $summary['software_fill_completed'] = true;
+                $summary['last_software_fill_at'] = $softwareDate;
+            }
+        } catch (Exception $ex) {
+            aitfAiLogProviderError('AI customer scan completion failed: ' . $ex->getMessage());
+        }
+
+        $summary['both_completed'] = $summary['document_scan_completed'] && $summary['software_fill_completed'];
+        return $summary;
     }
 }
 
@@ -1287,15 +1442,17 @@ if (!function_exists('aitfAiCallGroq')) {
 }
 
 if (!function_exists('aitfAiInsertHistory')) {
-    function aitfAiInsertHistory($db, $customerId, $requestedBy, $model, $documentCount, $rulesCount, $status, $summary, $resultJson, $rawResponse, $errorMessage)
+    function aitfAiInsertHistory($db, $customerId, $requestedBy, $model, $documentCount, $rulesCount, $status, $summary, $resultJson, $rawResponse, $errorMessage, $scanScope = '')
     {
-        $stmt = $db->prepare("INSERT INTO ai_review_history (customer_id, requested_by, model_name, document_count, rules_count, status, summary, result_json, raw_response, error_message) VALUES (:customer_id, :requested_by, :model_name, :document_count, :rules_count, :status, :summary, :result_json, :raw_response, :error_message)");
+        $scanScope = aitfAiNormalizeScanScope($scanScope, $documentCount);
+        $stmt = $db->prepare("INSERT INTO ai_review_history (customer_id, requested_by, model_name, document_count, rules_count, scan_scope, status, summary, result_json, raw_response, error_message) VALUES (:customer_id, :requested_by, :model_name, :document_count, :rules_count, :scan_scope, :status, :summary, :result_json, :raw_response, :error_message)");
         $stmt->execute(array(
             ':customer_id' => $customerId,
             ':requested_by' => $requestedBy,
             ':model_name' => $model,
             ':document_count' => $documentCount,
             ':rules_count' => $rulesCount,
+            ':scan_scope' => $scanScope,
             ':status' => $status,
             ':summary' => $summary,
             ':result_json' => $resultJson,

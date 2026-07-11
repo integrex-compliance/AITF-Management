@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS ai_review_history (
     model_name VARCHAR(120) DEFAULT NULL,
     document_count INT NOT NULL DEFAULT 0,
     rules_count INT NOT NULL DEFAULT 0,
+    scan_scope VARCHAR(40) NOT NULL DEFAULT 'document_scan',
     status VARCHAR(40) NOT NULL DEFAULT 'pending',
     summary TEXT DEFAULT NULL,
     result_json LONGTEXT DEFAULT NULL,
