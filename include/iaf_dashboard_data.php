@@ -435,6 +435,17 @@ function iafDashboardFetchClientRow(PDO $db, $clientId, $svcId, $officeUseId = 0
     return $row ? iafDashboardNormalizeClient($row) : null;
 }
 
+function iafDashboardFetchClientRows(PDO $db, $clientId)
+{
+    $sql = iafDashboardServiceRowsSql(" AND c.id = :client_id") . "
+        ORDER BY c.id DESC, svc.service_id ASC, cou.iso_index ASC";
+    $stmt = $db->prepare($sql);
+    $stmt->execute([':client_id' => (int) $clientId]);
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    return iafDashboardDedupeRows($rows ?: []);
+}
+
 /**
  * Minimal identity lookup used by the delete flow. We only need the fields
  * required to rebuild the Certified Entity GUID and address/country for the

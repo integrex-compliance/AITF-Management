@@ -407,6 +407,7 @@
                                     <option value="ST-1">ST-1</option>
                                         <option value="ST-2">ST-2</option>
                                     <?php foreach ($servicesTypes as $service) { ?>
+                                        <?php if ($service['service_type'] === 'CA') { continue; } ?>
                                         <option value="<?php echo $service['service_type'] ?>">
                                             <?php echo $service['service_type'] ?>
                                         </option>
@@ -694,14 +695,14 @@
     </div>
 </div>
 
-<button type="button" class="audit-conflict-tab" id="auditConflictTab" title="Check audit conflict">
-    Audit Conflict
+<button type="button" class="audit-conflict-tab" id="auditConflictTab" title="Check Date  conflict">
+    Date  Conflict
     <span class="audit-conflict-count"><?php echo count($auditConflictGroups); ?></span>
 </button>
 
 <div class="audit-conflict-panel" id="auditConflictPanel" aria-hidden="true">
     <div class="audit-conflict-panel-header">
-        <h4 class="audit-conflict-panel-title">Check Audit Conflict</h4>
+        <h4 class="audit-conflict-panel-title">Check Date Conflict</h4>
         <button type="button" class="audit-conflict-close" id="auditConflictClose" aria-label="Close">&times;</button>
     </div>
     <div class="audit-conflict-panel-body">

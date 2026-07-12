@@ -6,6 +6,7 @@
     include_once './include/supplier_helpers.php';
     include_once './include/certification_cycle_helper.php';
     include_once './include/customer_feature_flags.php';
+    require_once __DIR__ . '/include/iaf_dashboard_data.php';
     include_once './informationUpdationReviewModal.php';
     include_once './assessmentPlanningModal.php';
     include_once './modalForms.php';
@@ -336,6 +337,247 @@
             }
 
             return caDateGraphFirstValue($cdcRow, array('revDatecdc', 'Date'));
+        }
+
+        function caNormalizeIsoLabelForMatch($label)
+        {
+            $label = trim((string) $label);
+            if ($label === '') {
+                return '';
+            }
+
+            $label = preg_replace('/iso[\s-]*/i', '', $label);
+            $label = preg_replace('/[\s:]/', '', $label);
+            return strtolower(trim($label));
+        }
+
+        function caFindOfficeUseRowForIso(array $officeRows, $isoLabel, $isoIndex = null)
+        {
+            if (empty($officeRows)) {
+                return array();
+            }
+
+            $normalizedTarget = caNormalizeIsoLabelForMatch($isoLabel);
+
+            if ($normalizedTarget !== '') {
+                foreach ($officeRows as $row) {
+                    $normalizedRow = caNormalizeIsoLabelForMatch(isset($row['iso_label']) ? $row['iso_label'] : '');
+                    if ($normalizedRow !== '' && $normalizedRow === $normalizedTarget) {
+                        return $row;
+                    }
+                }
+
+                foreach ($officeRows as $row) {
+                    $normalizedRow = caNormalizeIsoLabelForMatch(isset($row['iso_label']) ? $row['iso_label'] : '');
+                    if ($normalizedRow !== '' && (strpos($normalizedTarget, $normalizedRow) !== false || strpos($normalizedRow, $normalizedTarget) !== false)) {
+                        return $row;
+                    }
+                }
+            }
+
+            if (preg_match('/\d+/', (string) $isoLabel, $targetNumberMatch)) {
+                foreach ($officeRows as $row) {
+                    if (preg_match('/\d+/', isset($row['iso_label']) ? (string) $row['iso_label'] : '', $rowNumberMatch) && $rowNumberMatch[0] === $targetNumberMatch[0]) {
+                        return $row;
+                    }
+                }
+            }
+
+            if ($isoIndex !== null) {
+                foreach ($officeRows as $row) {
+                    if (isset($row['iso_index']) && (int) $row['iso_index'] === (int) $isoIndex) {
+                        return $row;
+                    }
+                }
+
+                if (isset($officeRows[(int) $isoIndex])) {
+                    return $officeRows[(int) $isoIndex];
+                }
+            }
+
+            return count($officeRows) === 1 ? $officeRows[0] : array();
+        }
+
+        function caCertHeaderHasRealDate($value)
+        {
+            $value = trim((string) $value);
+            return $value !== '' && $value !== '0000-00-00' && $value !== '0000-00-00 00:00:00' && strtoupper($value) !== 'N/A';
+        }
+
+        function caCertHeaderDateAfterMonthsMinusOneDay($baseDate, $months)
+        {
+            if (!caCertHeaderHasRealDate($baseDate)) {
+                return '';
+            }
+
+            try {
+                $date = new DateTime($baseDate);
+                $date->modify('+' . (int) $months . ' months');
+                $date->modify('-1 day');
+                return $date->format('Y-m-d');
+            } catch (Exception $ex) {
+                return '';
+            }
+        }
+
+        function caCertHeaderStandardSchemeKeys($standardName)
+        {
+            $standard = strtoupper((string) $standardName);
+
+            if (strpos($standard, '14001') !== false) {
+                return array('EMS', 'ENVIRONMENTAL');
+            }
+            if (strpos($standard, '45001') !== false || strpos($standard, '18001') !== false) {
+                return array('OHSMS', 'OH&SMS', 'OHS', 'OH&S');
+            }
+            if (strpos($standard, '9001') !== false) {
+                return array('QMS', 'QUALITY');
+            }
+            if (strpos($standard, '27001') !== false) {
+                return array('ISMS', 'INFORMATION');
+            }
+            if (strpos($standard, '22000') !== false) {
+                return array('FSMS', 'FOOD');
+            }
+
+            return array();
+        }
+
+        function caCertHeaderCertificateFromComment($comment, $standardName, $isoIndex = null)
+        {
+            $comment = trim((string) $comment);
+            if ($comment === '') {
+                return '';
+            }
+
+            $certBlock = $comment;
+            if (preg_match('/certificate\s*no\s*:?\s*(.+)$/is', $comment, $blockMatch)) {
+                $certBlock = $blockMatch[1];
+            }
+
+            $schemeKeys = caCertHeaderStandardSchemeKeys($standardName);
+            foreach ($schemeKeys as $schemeKey) {
+                if (preg_match('/\b' . preg_quote($schemeKey, '/') . '\b\s*:?\s*([A-Z0-9\/.-]+)/i', $certBlock, $matches)) {
+                    return trim($matches[1], " \t\n\r\0\x0B;,. ");
+                }
+            }
+
+            if (preg_match_all('/(?:^|[;\n,])\s*([A-Z&]+)\s*:?\s*([A-Z0-9\/.-]+)/i', $certBlock, $pairs, PREG_SET_ORDER)) {
+                foreach ($pairs as $pair) {
+                    $label = strtoupper(trim($pair[1]));
+                    foreach ($schemeKeys as $schemeKey) {
+                        if ($label === strtoupper($schemeKey)) {
+                            return trim($pair[2], " \t\n\r\0\x0B;,. ");
+                        }
+                    }
+                }
+            }
+
+            if ($isoIndex !== null && preg_match_all('/\b[A-Z0-9][A-Z0-9\/.-]*\d[A-Z0-9\/.-]*\b/i', $certBlock, $numbers)) {
+                $values = array_values(array_filter(array_map('trim', $numbers[0])));
+                return isset($values[(int) $isoIndex]) ? $values[(int) $isoIndex] : '';
+            }
+
+            return '';
+        }
+
+        function caCertHeaderDashboardDate(array $row, array $keys)
+        {
+            foreach ($keys as $key) {
+                if (isset($row[$key]) && caCertHeaderHasRealDate($row[$key])) {
+                    return trim((string) $row[$key]);
+                }
+            }
+
+            return '';
+        }
+
+        function caCertHeaderFindDashboardRow(array $dashboardRows, array $cert, $certIndex)
+        {
+            if (empty($dashboardRows)) {
+                return array();
+            }
+
+            $standardName = isset($cert['standard_name']) ? $cert['standard_name'] : '';
+            $standardKey = function_exists('iafDashboardStandardKey') ? iafDashboardStandardKey($standardName) : caNormalizeIsoLabelForMatch($standardName);
+            $normalizedStandard = caNormalizeIsoLabelForMatch($standardName);
+
+            foreach ($dashboardRows as $row) {
+                $rowStandard = isset($row['standard_name']) ? $row['standard_name'] : '';
+                $rowKey = function_exists('iafDashboardStandardKey') ? iafDashboardStandardKey($rowStandard) : caNormalizeIsoLabelForMatch($rowStandard);
+                if ($standardKey !== '' && $standardKey !== 'NO_STANDARD' && $rowKey === $standardKey) {
+                    return $row;
+                }
+            }
+
+            foreach ($dashboardRows as $row) {
+                $rowNormalized = caNormalizeIsoLabelForMatch(isset($row['standard_name']) ? $row['standard_name'] : '');
+                if ($normalizedStandard !== '' && $rowNormalized !== '' && ($normalizedStandard === $rowNormalized || strpos($normalizedStandard, $rowNormalized) !== false || strpos($rowNormalized, $normalizedStandard) !== false)) {
+                    return $row;
+                }
+            }
+
+            if (isset($cert['iso_index'])) {
+                foreach ($dashboardRows as $row) {
+                    if (isset($row['iso_index']) && (int) $row['iso_index'] === (int) $cert['iso_index']) {
+                        return $row;
+                    }
+                }
+            }
+
+            return isset($dashboardRows[$certIndex]) ? $dashboardRows[$certIndex] : (count($dashboardRows) === 1 ? $dashboardRows[0] : array());
+        }
+
+        function caCertHeaderApplyDashboardRows(array $certificates, array $dashboardRows)
+        {
+            if (empty($dashboardRows)) {
+                return $certificates;
+            }
+
+            foreach ($certificates as $index => $cert) {
+                $dashboardRow = caCertHeaderFindDashboardRow($dashboardRows, $cert, $index);
+                if (empty($dashboardRow)) {
+                    continue;
+                }
+
+                if (!empty($dashboardRow['standard_name'])) {
+                    $certificates[$index]['standard_name'] = $dashboardRow['standard_name'];
+                }
+                if (!empty($dashboardRow['certificate_number'])) {
+                    $certificates[$index]['certification_no'] = trim((string) $dashboardRow['certificate_number']);
+                }
+                if (!empty($dashboardRow['certification_status'])) {
+                    $certificates[$index]['cdc_status'] = trim((string) $dashboardRow['certification_status']);
+                }
+
+                $certificates[$index]['decision_date'] = caCertHeaderDashboardDate($dashboardRow, array('certificate_issue_date'));
+                $certificates[$index]['issue_date'] = caCertHeaderDashboardDate($dashboardRow, array('issue_date'));
+                $certificates[$index]['expire_date'] = caCertHeaderDashboardDate($dashboardRow, array('expire_date', 'expiry_date'));
+                $certificates[$index]['dashboard_synced'] = true;
+            }
+
+            return $certificates;
+        }
+
+        function caCertHeaderCertificatesFromDashboardRows(array $dashboardRows)
+        {
+            $certificates = array();
+
+            foreach ($dashboardRows as $row) {
+                $certificates[] = array(
+                    'certification_no' => isset($row['certificate_number']) ? trim((string) $row['certificate_number']) : '',
+                    'standard_name' => isset($row['standard_name']) ? trim((string) $row['standard_name']) : '',
+                    'issue_date' => caCertHeaderDashboardDate($row, array('issue_date')),
+                    'expire_date' => caCertHeaderDashboardDate($row, array('expire_date', 'expiry_date')),
+                    'decision_date' => caCertHeaderDashboardDate($row, array('certificate_issue_date')),
+                    'cdc_status' => isset($row['certification_status']) ? trim((string) $row['certification_status']) : '',
+                    'serviceca_id' => isset($row['svc_id']) ? $row['svc_id'] : '',
+                    'iso_index' => isset($row['iso_index']) ? $row['iso_index'] : '',
+                    'dashboard_synced' => true,
+                );
+            }
+
+            return $certificates;
         }
 
         function caDateGraphResolveCrServiceForCa($db, $customerId, $caUniversalServiceId)
@@ -797,6 +1039,16 @@
 
             $allCertificates = array();
             $customerId = $clientInfo['id'];
+            $dashboardCertificateRows = array();
+
+            if (!$isSupplierAccount && function_exists('iafDashboardFetchClientRows')) {
+                try {
+                    $dashboardCertificateRows = iafDashboardFetchClientRows($db, $customerId);
+                } catch (Exception $dashboardRowsEx) {
+                    error_log('Customer account dashboard certificate rows failed: ' . $dashboardRowsEx->getMessage());
+                    $dashboardCertificateRows = array();
+                }
+            }
 
             if (!$isSupplierAccount) {
             // Fetch ALL certificate details for customers with multiple ISO standards
@@ -824,14 +1076,15 @@
                 // Split comma-separated standards (e.g., "ISO 9001:2015,ISO 45001:2018")
                 $standardNames = array_map('trim', explode(',', $standard['standard_name']));
                 
-                foreach ($standardNames as $singleStandard) {
+                foreach ($standardNames as $standardIndex => $singleStandard) {
                     if (empty($singleStandard)) continue;
                     
                     $certInfo = array();
                     $certInfo['standard_name'] = $singleStandard;
-                    $certInfo['issue_date'] = $standard['issue_date'];
+                    $certInfo['issue_date'] = '';
                     $certInfo['ref_no'] = $standard['ref_no'];
                     $certInfo['serviceca_id'] = $standard['serviceca_id'];
+                    $certInfo['iso_index'] = $standardIndex;
                     
                     // Initialize certificate number and ISO-specific fields
                     $certInfo['certification_no'] = '';
@@ -842,7 +1095,7 @@
                     // This is for multi-ISO clients where each ISO has its own certificate number and status
                     if (!empty($standard['serviceca_id'])) {
                         // Get the crr_id and ISO-specific status/dates for this service
-                        $crrQuery = "SELECT crr_id, cdc_status, Date as decision_date FROM cdc_report_review WHERE ca_service_id = :svcId ORDER BY Date DESC LIMIT 1";
+                        $crrQuery = "SELECT crr_id, cdc_status, Date as decision_date, revDatecdc as issue_date, expiredate as expire_date, certificateNo, audit_type FROM cdc_report_review WHERE ca_service_id = :svcId ORDER BY Date DESC LIMIT 1";
                         $crrStmt = $db->prepare($crrQuery);
                         $crrStmt->bindParam(':svcId', $standard['serviceca_id']);
                         $crrStmt->execute();
@@ -857,54 +1110,38 @@
                                 $certInfo['decision_date'] = $crrData['decision_date'];
                             }
                             
-                            // Try to get certificate from the NEW office_use table by matching ISO label
-                            $officeUseQuery = "SELECT certificate_no, rev_date as issue_date, expire_date 
+                            // Try to get certificate and dates from office_use using the same ISO matching strategy as the CDC modal.
+                            $officeUseQuery = "SELECT iso_index, iso_label, certificate_no, rev_date as issue_date, expire_date
                                               FROM cdc_report_review_office_use 
                                               WHERE crr_id = :crrId 
-                                              AND iso_label LIKE :isoLabel
-                                              AND certificate_no IS NOT NULL 
-                                              AND certificate_no != ''
-                                              ORDER BY iso_index ASC LIMIT 1";
+                                              ORDER BY iso_index ASC";
                             $officeStmt = $db->prepare($officeUseQuery);
                             $officeStmt->bindParam(':crrId', $crrData['crr_id']);
-                            $isoLikePattern = '%' . $singleStandard . '%';
-                            $officeStmt->bindParam(':isoLabel', $isoLikePattern);
-                            
-                            // DEBUG: Check what records exist for this crr_id
-                            $debugQuery = "SELECT iso_label, certificate_no FROM cdc_report_review_office_use WHERE crr_id = :debugCrrId";
-                            $debugStmt = $db->prepare($debugQuery);
-                            $debugStmt->bindParam(':debugCrrId', $crrData['crr_id']);
-                            $debugStmt->execute();
-                            $debugRecords = $debugStmt->fetchAll(PDO::FETCH_ASSOC);
-                            error_log("DEBUG - All office_use records for crr_id {$crrData['crr_id']}: " . json_encode($debugRecords));
-                            error_log("DEBUG - Looking for pattern '{$isoLikePattern}' for standard '{$singleStandard}'");
-                            
                             $officeStmt->execute();
-                            $officeData = $officeStmt->fetch(PDO::FETCH_ASSOC);
+                            $officeRows = $officeStmt->fetchAll(PDO::FETCH_ASSOC);
+                            $officeData = caFindOfficeUseRowForIso($officeRows, $singleStandard, $standardIndex);
                             
-                            if (!$officeData) {
-                                error_log("DEBUG - No matching record found for pattern '{$isoLikePattern}' in crr_id {$crrData['crr_id']}");
-                            }
-                            
-                            if ($officeData && !empty(trim($officeData['certificate_no']))) {
-                                $certInfo['certification_no'] = trim($officeData['certificate_no']);
+                            if (!empty($officeData)) {
+                                if (!empty($officeData['certificate_no']) && trim($officeData['certificate_no']) != '') {
+                                    $certInfo['certification_no'] = trim($officeData['certificate_no']);
+                                }
                                 if (!empty($officeData['issue_date'])) {
                                     $certInfo['issue_date'] = $officeData['issue_date'];
                                 }
                                 if (!empty($officeData['expire_date'])) {
                                     $certInfo['expire_date'] = $officeData['expire_date'];
                                 }
-                                error_log("Found cert number in office_use table for {$singleStandard}: " . $certInfo['certification_no']);
+                                error_log("Found office_use row for {$singleStandard}: " . json_encode($officeData));
+                            } else {
+                                error_log("No matching office_use row found for {$singleStandard} in crr_id {$crrData['crr_id']}");
                             }
                         }
                         
-                        // FALLBACK to old cdc_report_review table if not found in office_use
-                        if (empty($certInfo['certification_no'])) {
+                        // FALLBACK to old cdc_report_review table only for fields not found in office_use
+                        if (empty($certInfo['certification_no']) || empty($certInfo['issue_date']) || empty($certInfo['expire_date'])) {
                             $certQuery = "SELECT revDatecdc as issue_date, expiredate as expire_date, certificateNo
                                           FROM cdc_report_review 
                                           WHERE ca_service_id = :svcId 
-                                          AND certificateNo IS NOT NULL 
-                                          AND certificateNo != ''
                                           ORDER BY Date DESC LIMIT 1";
                             $certStmt = $db->prepare($certQuery);
                             $certStmt->bindParam(':svcId', $standard['serviceca_id']);
@@ -912,40 +1149,22 @@
                             $certData = $certStmt->fetch(PDO::FETCH_ASSOC);
                             
                             if ($certData) {
-                                if (!empty($certData['certificateNo']) && trim($certData['certificateNo']) != '') {
+                                if (empty($certInfo['certification_no']) && !empty($certData['certificateNo']) && trim($certData['certificateNo']) != '') {
                                     $certInfo['certification_no'] = trim($certData['certificateNo']);
                                 }
-                                if (!empty($certData['issue_date'])) {
+                                if (empty($certInfo['issue_date']) && !empty($certData['issue_date'])) {
                                     $certInfo['issue_date'] = $certData['issue_date'];
                                 }
-                                if (!empty($certData['expire_date'])) {
+                                if (empty($certInfo['expire_date']) && !empty($certData['expire_date'])) {
                                     $certInfo['expire_date'] = $certData['expire_date'];
                                 }
                             }
                         }
                     }
-                    
-                    // SPECIAL FIX: For ALLY INTERNATIONAL - Fix ISO 45001:2018 certificate number
-                    if (stripos($clientInfo['customer_name'], 'ALLY INTERNATIONAL') !== false && 
-                        stripos($singleStandard, '45001') !== false) {
-                        
-                        error_log("ALLY INTERNATIONAL FIX: Forcing ISO 45001:2018 certificate number to 383425814511");
-                        
-                        // FORCE UPDATE: Always update the database record to have the correct certificate number
-                        $correctNumber = "383425814511";
-                        $forceUpdateQuery = "UPDATE cdc_report_review_office_use 
-                                            SET certificate_no = :cert_no 
-                                            WHERE crr_id = :crrId AND iso_label LIKE '%45001%'";
-                        $forceUpdateStmt = $db->prepare($forceUpdateQuery);
-                        $forceUpdateStmt->bindParam(':crrId', $crrData['crr_id']);
-                        $forceUpdateStmt->bindValue(':cert_no', $correctNumber);
-                        $forceUpdateStmt->execute();
-                        
-                        // Set the correct certificate info
-                        $certInfo['certification_no'] = $correctNumber;
-                        $certInfo['issue_date'] = '2025-12-24';
-                        $certInfo['expire_date'] = '2028-10-11';
-                        error_log("ALLY INTERNATIONAL FIX: FORCED certificate number to $correctNumber");
+
+                    $commentCertNo = caCertHeaderCertificateFromComment(isset($clientInfo['comment']) ? $clientInfo['comment'] : '', $singleStandard, $standardIndex);
+                    if ($commentCertNo !== '') {
+                        $certInfo['certification_no'] = $commentCertNo;
                     }
                     
                     // FALLBACK: If CDC table is empty, use customer_info.certification_no (for single ISO clients)
@@ -956,6 +1175,36 @@
                         error_log("Using CDC cert number: " . $certInfo['certification_no'] . " for " . $singleStandard . " (service_id: " . $standard['serviceca_id'] . ")");
                     } else {
                         error_log("No certificate number found for " . $singleStandard . " (service_id: " . $standard['serviceca_id'] . ")");
+                    }
+
+                    if (empty($certInfo['issue_date']) && !empty($standard['issue_date'])) {
+                        $certInfo['issue_date'] = $standard['issue_date'];
+                    }
+
+                    if (!empty($crrData) && strtoupper(trim(isset($crrData['audit_type']) ? $crrData['audit_type'] : '')) === 'CA') {
+                        $certPrintValidUntil = '';
+                        try {
+                            $certPrintQuery = "SELECT valid_until FROM certificate_print WHERE service_id = :svcId AND valid_until IS NOT NULL AND valid_until <> '' AND valid_until <> '0000-00-00' ORDER BY certificate_id DESC LIMIT 1";
+                            $certPrintStmt = $db->prepare($certPrintQuery);
+                            $certPrintStmt->bindParam(':svcId', $standard['serviceca_id']);
+                            $certPrintStmt->execute();
+                            $certPrintRow = $certPrintStmt->fetch(PDO::FETCH_ASSOC);
+                            if ($certPrintRow && caCertHeaderHasRealDate(isset($certPrintRow['valid_until']) ? $certPrintRow['valid_until'] : '')) {
+                                $certPrintValidUntil = $certPrintRow['valid_until'];
+                            }
+                        } catch (Exception $certPrintEx) {
+                            $certPrintValidUntil = '';
+                        }
+
+                        if ($certPrintValidUntil !== '') {
+                            $certInfo['expire_date'] = $certPrintValidUntil;
+                        } else {
+                            $baseCertificateDate = aitfGetBaseCertificationDate($db, $customerId, isset($crrData['decision_date']) ? $crrData['decision_date'] : '');
+                            $dashboardExpireDate = caCertHeaderDateAfterMonthsMinusOneDay($baseCertificateDate, 36);
+                            if ($dashboardExpireDate !== '') {
+                                $certInfo['expire_date'] = $dashboardExpireDate;
+                            }
+                        }
                     }
                     
                     // Calculate expire date if not found (3 years from issue date)
@@ -973,6 +1222,21 @@
                     $allCertificates[] = $certInfo;
                 }
             }
+
+            if (empty($allCertificates) && !empty($dashboardCertificateRows)) {
+                foreach ($dashboardCertificateRows as $dashboardRow) {
+                    $allCertificates[] = array(
+                        'certification_no' => isset($dashboardRow['certificate_number']) ? $dashboardRow['certificate_number'] : '',
+                        'standard_name' => isset($dashboardRow['standard_name']) ? $dashboardRow['standard_name'] : '',
+                        'issue_date' => caCertHeaderDashboardDate($dashboardRow, array('issue_date')),
+                        'expire_date' => caCertHeaderDashboardDate($dashboardRow, array('expire_date', 'expiry_date')),
+                        'decision_date' => caCertHeaderDashboardDate($dashboardRow, array('certificate_issue_date')),
+                        'cdc_status' => isset($dashboardRow['certification_status']) ? $dashboardRow['certification_status'] : '',
+                        'iso_index' => isset($dashboardRow['iso_index']) ? $dashboardRow['iso_index'] : '',
+                        'dashboard_synced' => true,
+                    );
+                }
+            }
             
             // Remove duplicates based on standard_name
             $uniqueCertificates = array();
@@ -985,6 +1249,12 @@
                 }
             }
             $allCertificates = $uniqueCertificates;
+
+            if (!empty($dashboardCertificateRows)) {
+                $allCertificates = caCertHeaderCertificatesFromDashboardRows($dashboardCertificateRows);
+            } else {
+                $allCertificates = caCertHeaderApplyDashboardRows($allCertificates, $dashboardCertificateRows);
+            }
             
             // DEBUG: Log certificate data (remove after testing)
             error_log("=== CUSTOMER ACCOUNT DEBUG ===");
@@ -3533,7 +3803,7 @@
                         $issueDate = isset($cert['issue_date']) ? $cert['issue_date'] : '';
                         $expireDate = isset($cert['expire_date']) ? $cert['expire_date'] : '';
 
-                        $certStatus = isset($clientInfo['audit_status']) ? trim((string) $clientInfo['audit_status']) : '';
+                        $certStatus = isset($cert['cdc_status']) && trim((string) $cert['cdc_status']) !== '' ? trim((string) $cert['cdc_status']) : (isset($clientInfo['audit_status']) ? trim((string) $clientInfo['audit_status']) : '');
                         $decisionDate = !empty($cert['decision_date']) ? $cert['decision_date'] : ($i == 0 ? $clientInfo['certification_stage_date'] : '');
                         
                         // Add prominent section header for all certificates (single or multiple)
@@ -9134,130 +9404,9 @@
                 //            e.preventDefault();
             });
 
-            // Auto-populate certificate details based on certificate number
-            function loadCertificateDetails() {
-                var certNo = '<?php echo isset($clientInfo["certification_no"]) ? trim($clientInfo["certification_no"]) : ""; ?>';
-                
-                console.log('=== LOADING CERTIFICATE DETAILS ===');
-                console.log('Certificate Number:', certNo);
-                
-                if (certNo && certNo.trim() !== '') {
-                    console.log('Making AJAX call to getCertificateDetails.php...');
-                    
-                    $.ajax({
-                        url: 'getCertificateDetails.php',
-                        type: 'GET',
-                        data: { certificateNo: certNo },
-                        dataType: 'json',
-                        cache: false, // Force no cache
-                        success: function(response) {
-                            console.log('=== AJAX SUCCESS ===');
-                            console.log('Full Response:', response);
-                            console.log('Response.success:', response.success);
-                            console.log('Response.data:', response.data);
-                            
-                            if (response.success && response.data) {
-                                // Populate the fields with actual data
-                                if (response.data.standard_name) {
-                                    console.log('Setting Standard Name to:', response.data.standard_name);
-                                    $('#standardName').val(response.data.standard_name);
-                                    console.log('Standard Name field value after set:', $('#standardName').val());
-                                } else {
-                                    console.warn('WARNING: standard_name is empty in response');
-                                }
-                                
-                                if (response.data.issue_date) {
-                                    console.log('Setting Issue Date to:', response.data.issue_date);
-                                    $('#issueDate').val(response.data.issue_date);
-                                } else {
-                                    console.warn('WARNING: issue_date is empty in response');
-                                }
-                                
-                                if (response.data.expire_date) {
-                                    console.log('Setting Expire Date to:', response.data.expire_date);
-                                    $('#expireDate').val(response.data.expire_date);
-                                } else {
-                                    console.warn('WARNING: expire_date is empty in response');
-                                }
-                                console.log('=== CERTIFICATE DETAILS LOADED SUCCESSFULLY ===');
-                            } else {
-                                console.error('ERROR: Response success is false or no data');
-                                console.log('Setting fields to empty');
-                                $('#standardName').val('');
-                                $('#issueDate').val('');
-                                $('#expireDate').val('');
-                            }
-                        },
-                        error: function(xhr, status, error) {
-                            console.error('=== AJAX ERROR ===');
-                            console.error('Error:', error);
-                            console.error('Status:', status);
-                            console.error('HTTP Status:', xhr.status);
-                            console.error('Response Text:', xhr.responseText);
-                            
-                            // Try to parse response even on error
-                            try {
-                                var errorResponse = JSON.parse(xhr.responseText);
-                                console.log('Parsed error response:', errorResponse);
-                            } catch(e) {
-                                console.error('Could not parse error response as JSON');
-                            }
-                        }
-                    });
-                } else {
-                    console.warn('No certificate number found for this customer');
-                }
-            }
-            
-            // Expose function to window for manual testing
-            window.loadCertificateDetails = loadCertificateDetails;
-            
-            // Update customer_info table with certificate details
-            function updateCertificateFields(data) {
-                var customerId = '<?php echo $_GET['customerid']; ?>';
-                
-                // Update standard name
-                if (data.standard_name) {
-                    $.ajax({
-                        url: 'updateCustomer.php',
-                        type: 'GET',
-                        data: {
-                            id: customerId,
-                            columnName: 'standard_name',
-                            columnValue: data.standard_name
-                        }
-                    });
-                }
-                
-                // Update issue date (convert from dd.mm.yyyy to database format)
-                if (data.issue_date) {
-                    $.ajax({
-                        url: 'updateCustomer.php',
-                        type: 'GET',
-                        data: {
-                            id: customerId,
-                            columnName: 'issue_date',
-                            columnValue: data.issue_date
-                        }
-                    });
-                }
-                
-                // Update expire date
-                if (data.expire_date) {
-                    $.ajax({
-                        url: 'updateCustomer.php',
-                        type: 'GET',
-                        data: {
-                            id: customerId,
-                            columnName: 'expire_date',
-                            columnValue: data.expire_date
-                        }
-                    });
-                }
-            }
-            
-            // Load certificate details when page loads
-            loadCertificateDetails();
+            window.loadCertificateDetails = function () {
+                return false;
+            };
 
             $(".serviceAuditDate").datepicker({
                 minDate: '-100Y',
