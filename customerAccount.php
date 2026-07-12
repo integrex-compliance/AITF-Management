@@ -2267,15 +2267,25 @@
 
         /* AI Thinking Terminal Console Log */
         .aitf-ai-work-steps {
-            background: #05070c;
+            background: linear-gradient(145deg, rgba(5, 7, 12, 0.96), rgba(12, 18, 31, 0.94));
             border: 1px solid rgba(99, 102, 241, 0.25);
             border-radius: 12px;
             padding: 20px;
             margin: 16px 0;
             display: none;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 2px 4px rgba(0,0,0,0.8);
+            box-shadow: 0 18px 45px rgba(0, 0, 0, 0.48), inset 0 1px 0 rgba(255,255,255,0.04);
             position: relative;
             overflow: hidden;
+        }
+
+        .aitf-ai-work-steps::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at 12% 18%, rgba(99, 102, 241, 0.14), transparent 30%),
+                radial-gradient(circle at 84% 8%, rgba(168, 85, 247, 0.10), transparent 28%);
+            pointer-events: none;
         }
 
         .aitf-ai-work-title {
@@ -2286,22 +2296,51 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            position: relative;
+            z-index: 1;
         }
 
-        .aitf-ai-work-title i {
+        .aitf-ai-work-title-pulse {
+            align-items: center;
+            background: rgba(99, 102, 241, 0.14);
+            border: 1px solid rgba(165, 180, 252, 0.25);
+            border-radius: 50%;
+            box-shadow: 0 0 18px rgba(99, 102, 241, 0.22);
+            display: inline-flex;
+            height: 30px;
+            justify-content: center;
+            width: 30px;
+            animation: aitf-soft-pulse 2.2s ease-in-out infinite;
+        }
+
+        .aitf-ai-work-title-pulse i {
             color: #a5b4fc;
+        }
+
+        .aitf-ai-work-live {
+            background: rgba(16, 185, 129, 0.10);
+            border: 1px solid rgba(52, 211, 153, 0.26);
+            border-radius: 999px;
+            color: #86efac;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            margin-left: auto;
+            padding: 4px 8px;
         }
 
         .aitf-ai-work-content {
             display: flex;
             align-items: center;
             gap: 24px;
+            position: relative;
+            z-index: 1;
         }
 
         .aitf-ai-orb-container {
             flex-shrink: 0;
-            width: 80px;
-            height: 80px;
+            width: 104px;
+            height: 104px;
             position: relative;
             display: flex;
             align-items: center;
@@ -2309,33 +2348,82 @@
         }
 
         .aitf-ai-orb {
-            width: 50px;
-            height: 50px;
+            align-items: center;
+            width: 58px;
+            height: 58px;
             border-radius: 50%;
-            background: radial-gradient(circle at 30% 30%, #818cf8 0%, #6366f1 50%, #4338ca 100%);
-            box-shadow: 0 0 20px rgba(99, 102, 241, 0.6), 0 0 40px rgba(139, 92, 246, 0.4);
-            animation: pulse-orb 2s infinite ease-in-out;
+            background:
+                radial-gradient(circle at 32% 26%, rgba(248, 250, 252, 0.92) 0%, rgba(165, 180, 252, 0.92) 14%, transparent 28%),
+                radial-gradient(circle at 50% 58%, #818cf8 0%, #6366f1 46%, #4338ca 100%);
+            box-shadow: 0 0 22px rgba(99, 102, 241, 0.62), 0 0 42px rgba(139, 92, 246, 0.34);
+            animation: pulse-orb 2.8s infinite ease-in-out;
+            color: #eff6ff;
+            display: flex;
+            font-size: 14px;
+            font-weight: 900;
+            justify-content: center;
+            letter-spacing: 0.04em;
             position: relative;
             z-index: 2;
         }
 
         .aitf-ai-orb-ring {
             position: absolute;
-            width: 76px;
-            height: 76px;
-            border: 2px dashed rgba(165, 180, 252, 0.4);
+            border: 1px solid rgba(165, 180, 252, 0.34);
             border-radius: 50%;
-            animation: rotate-ring 8s linear infinite;
             z-index: 1;
+        }
+
+        .aitf-ai-orb-ring.ring-one {
+            width: 88px;
+            height: 88px;
+            border-style: dashed;
+            animation: rotate-ring 9s linear infinite;
+        }
+
+        .aitf-ai-orb-ring.ring-two {
+            width: 102px;
+            height: 72px;
+            border-color: rgba(168, 85, 247, 0.28);
+            transform: rotate(-24deg);
+            animation: rotate-ring-tilt 12s linear infinite;
+        }
+
+        .aitf-ai-particle {
+            background: #a5b4fc;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(165, 180, 252, 0.8);
+            height: 4px;
+            position: absolute;
+            width: 4px;
+            z-index: 3;
+        }
+
+        .particle-one {
+            animation: aitf-particle-one 4s ease-in-out infinite;
+            left: 16px;
+            top: 25px;
+        }
+
+        .particle-two {
+            animation: aitf-particle-two 5s ease-in-out infinite;
+            right: 18px;
+            top: 34px;
+        }
+
+        .particle-three {
+            animation: aitf-particle-three 4.6s ease-in-out infinite;
+            bottom: 24px;
+            right: 34px;
         }
 
         @keyframes pulse-orb {
             0%, 100% {
-                transform: scale(0.9);
+                transform: scale(0.95);
                 filter: brightness(1) drop-shadow(0 0 10px rgba(99, 102, 241, 0.5));
             }
             50% {
-                transform: scale(1.15);
+                transform: scale(1.08);
                 filter: brightness(1.25) drop-shadow(0 0 25px rgba(139, 92, 246, 0.8));
             }
         }
@@ -2346,78 +2434,257 @@
             }
         }
 
+        @keyframes rotate-ring-tilt {
+            100% {
+                transform: rotate(336deg);
+            }
+        }
+
+        @keyframes aitf-soft-pulse {
+            0%, 100% { box-shadow: 0 0 10px rgba(99, 102, 241, 0.18); }
+            50% { box-shadow: 0 0 22px rgba(99, 102, 241, 0.42); }
+        }
+
+        @keyframes aitf-particle-one {
+            0%, 100% { transform: translate(0, 0); opacity: 0.45; }
+            50% { transform: translate(14px, 20px); opacity: 1; }
+        }
+
+        @keyframes aitf-particle-two {
+            0%, 100% { transform: translate(0, 0); opacity: 0.35; }
+            50% { transform: translate(-18px, 18px); opacity: 0.95; }
+        }
+
+        @keyframes aitf-particle-three {
+            0%, 100% { transform: translate(0, 0); opacity: 0.4; }
+            50% { transform: translate(-10px, -18px); opacity: 0.9; }
+        }
+
         .aitf-ai-work-log {
             flex-grow: 1;
-            font-family: 'Courier New', Courier, monospace;
-            background: rgba(0, 0, 0, 0.4);
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            font-family: 'SFMono-Regular', Consolas, 'Courier New', monospace;
+            background: rgba(2, 6, 23, 0.68);
+            border: 1px solid rgba(148, 163, 184, 0.12);
             border-radius: 8px;
-            padding: 12px 16px;
-            font-size: 13px;
-            color: #38bdf8;
-            height: 80px;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+            color: #cbd5e1;
+            font-size: 12px;
+            height: 126px;
+            line-height: 1.55;
             overflow-y: auto;
-            line-height: 1.5;
+            padding: 12px 14px;
         }
 
         .aitf-ai-log-line {
+            align-items: baseline;
+            display: flex;
+            gap: 8px;
             margin: 2px 0;
-            opacity: 0.9;
+            min-height: 19px;
+            opacity: 0.94;
+            transform: translateY(2px);
+            transition: opacity 0.25s ease, transform 0.25s ease;
         }
 
-        .aitf-ai-log-line.system {
-            color: #94a3b8;
+        .aitf-ai-log-time {
+            color: #64748b;
+            flex: 0 0 58px;
         }
 
-        .aitf-ai-log-line.ai {
+        .aitf-ai-log-level {
+            border-radius: 4px;
+            flex: 0 0 54px;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            padding: 1px 5px;
+            text-align: center;
+        }
+
+        .aitf-ai-log-line.info .aitf-ai-log-level {
+            background: rgba(56, 189, 248, 0.10);
+            color: #7dd3fc;
+        }
+
+        .aitf-ai-log-line.warn .aitf-ai-log-level {
+            background: rgba(245, 158, 11, 0.12);
+            color: #fbbf24;
+        }
+
+        .aitf-ai-log-line.success .aitf-ai-log-level {
+            background: rgba(16, 185, 129, 0.12);
+            color: #86efac;
+        }
+
+        .aitf-ai-log-line.audit .aitf-ai-log-level {
+            background: rgba(168, 85, 247, 0.12);
+            color: #d8b4fe;
+        }
+
+        .aitf-ai-log-text {
+            color: #cbd5e1;
+            flex: 1;
+        }
+
+        .aitf-ai-log-cursor {
+            animation: aitf-cursor-blink 1s steps(1) infinite;
             color: #a5b4fc;
         }
 
-        .aitf-ai-log-line.highlight {
-            color: #f472b6;
+        @keyframes aitf-cursor-blink {
+            50% { opacity: 0; }
+        }
+
+        .aitf-ai-stats-panel {
+            display: grid;
+            gap: 10px;
+            grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+            margin-top: 18px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .aitf-ai-stat-card {
+            background: rgba(15, 23, 42, 0.58);
+            border: 1px solid rgba(148, 163, 184, 0.11);
+            border-radius: 10px;
+            min-height: 78px;
+            padding: 12px;
+            position: relative;
+            transition: border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        .aitf-ai-stat-card:hover {
+            border-color: rgba(165, 180, 252, 0.24);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+            transform: translateY(-1px);
+        }
+
+        .aitf-ai-stat-icon {
+            align-items: center;
+            background: rgba(99, 102, 241, 0.12);
+            border: 1px solid rgba(165, 180, 252, 0.14);
+            border-radius: 8px;
+            color: #a5b4fc;
+            display: inline-flex;
+            height: 28px;
+            justify-content: center;
+            margin-bottom: 8px;
+            width: 28px;
+        }
+
+        .aitf-ai-stat-label {
+            color: #94a3b8;
+            display: block;
+            font-size: 11px;
             font-weight: 700;
+            letter-spacing: 0.03em;
+            line-height: 1.25;
+            text-transform: uppercase;
+        }
+
+        .aitf-ai-stat-value {
+            color: #f8fafc;
+            display: block;
+            font-size: 20px;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-top: 5px;
         }
 
         .aitf-ai-steps-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(205px, 1fr));
             gap: 10px;
             margin-top: 18px;
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
             padding-top: 14px;
+            position: relative;
+            z-index: 1;
         }
 
         .aitf-ai-step {
             align-items: center;
-            color: #64748b;
+            background: rgba(15, 23, 42, 0.42);
+            border: 1px solid rgba(148, 163, 184, 0.10);
+            border-radius: 10px;
+            color: #8794a8;
             display: flex;
-            gap: 8px;
-            padding: 4px 0;
+            gap: 10px;
+            min-height: 46px;
+            padding: 9px 10px;
             font-size: 13px;
-            transition: color 0.3s;
+            font-weight: 650;
+            transition: color 0.3s ease, background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
         }
 
-        .aitf-ai-step i {
+        .aitf-ai-step-icon {
+            align-items: center;
+            background: rgba(148, 163, 184, 0.07);
+            border-radius: 8px;
+            display: inline-flex;
+            height: 28px;
+            justify-content: center;
+            width: 28px;
+        }
+
+        .aitf-ai-step-icon i {
             color: #475569;
-            width: 16px;
-            transition: color 0.3s;
+            transition: color 0.3s ease, transform 0.3s ease;
         }
 
         .aitf-ai-step.active {
-            color: #38bdf8;
-            font-weight: 700;
+            background: rgba(99, 102, 241, 0.14);
+            border-color: rgba(129, 140, 248, 0.52);
+            box-shadow: 0 0 22px rgba(99, 102, 241, 0.22);
+            color: #e0e7ff;
+            transform: translateY(-1px);
         }
 
-        .aitf-ai-step.active i {
-            color: #38bdf8;
+        .aitf-ai-step.active .aitf-ai-step-icon {
+            background: rgba(99, 102, 241, 0.22);
+            box-shadow: 0 0 18px rgba(99, 102, 241, 0.34);
+        }
+
+        .aitf-ai-step.active .aitf-ai-step-icon i {
+            color: #bfdbfe;
+            animation: aitf-step-pulse 1.3s ease-in-out infinite;
         }
 
         .aitf-ai-step.done {
+            background: rgba(16, 185, 129, 0.08);
+            border-color: rgba(52, 211, 153, 0.24);
             color: #34d399;
         }
 
-        .aitf-ai-step.done i {
-            color: #34d399;
+        .aitf-ai-step.done .aitf-ai-step-icon {
+            background: rgba(16, 185, 129, 0.13);
+        }
+
+        .aitf-ai-step.done .aitf-ai-step-icon i {
+            color: #86efac;
+        }
+
+        @keyframes aitf-step-pulse {
+            0%, 100% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.14); opacity: 1; }
+        }
+
+        @media (max-width: 640px) {
+            .aitf-ai-work-content {
+                align-items: stretch;
+                flex-direction: column;
+                gap: 14px;
+            }
+
+            .aitf-ai-orb-container {
+                align-self: center;
+            }
+
+            .aitf-ai-stats-panel,
+            .aitf-ai-steps-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         .aitf-ai-status {
@@ -3402,7 +3669,7 @@
                             <?php } ?>
                             <?php if (!$isSupplierAccount && !empty($customerAiScanSummary['both_completed'])) { ?>
                                 <span class="aitf-ai-done-badge" title="GO ai document scan and software-fill scan completed">
-                                    <i class="fa fa-check-circle"></i> AI Scanned Done
+                                  
                                 </span>
                             <?php } ?>
                             <div style="margin-left: auto; display: flex; align-items: center; gap: 10px;">
@@ -8602,23 +8869,76 @@
                     </div>
                     <div id="aitfAiStatus" class="aitf-ai-status manual_verification_required" style="display:none;"></div>
                     <div id="aitfAiWorkSteps" class="aitf-ai-work-steps">
-                        <div class="aitf-ai-work-title"><i class="fa fa-spinner fa-spin"></i> GO ai Reasoning Process</div>
+                        <div class="aitf-ai-work-title">
+                            <span class="aitf-ai-work-title-pulse"><i class="fa fa-cogs"></i></span>
+                            <span>GO ai Reasoning Process</span>
+                            <span class="aitf-ai-work-live">LIVE</span>
+                        </div>
                         <div class="aitf-ai-work-content">
                             <div class="aitf-ai-orb-container">
-                                <div class="aitf-ai-orb-ring"></div>
-                                <div class="aitf-ai-orb"></div>
+                                <div class="aitf-ai-orb-ring ring-one"></div>
+                                <div class="aitf-ai-orb-ring ring-two"></div>
+                                <div class="aitf-ai-orb">
+                                    <span>AI</span>
+                                </div>
+                                <span class="aitf-ai-particle particle-one"></span>
+                                <span class="aitf-ai-particle particle-two"></span>
+                                <span class="aitf-ai-particle particle-three"></span>
                             </div>
                             <div class="aitf-ai-work-log" id="aitfAiWorkLog">
-                                <div class="aitf-ai-log-line highlight">> Initializing deep reasoning model...</div>
+                                <div class="aitf-ai-log-line info">
+                                    <span class="aitf-ai-log-time">--:--:--</span>
+                                    <span class="aitf-ai-log-level">INFO</span>
+                                    <span class="aitf-ai-log-text">Standing by for audit reasoning run.</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="aitf-ai-stats-panel" id="aitfAiStatsPanel">
+                            <div class="aitf-ai-stat-card">
+                                <span class="aitf-ai-stat-icon"><i class="fa fa-file-text-o"></i></span>
+                                <span class="aitf-ai-stat-label">Documents Scanned</span>
+                                <strong class="aitf-ai-stat-value" data-stat="documents_scanned">-</strong>
+                            </div>
+                            <div class="aitf-ai-stat-card">
+                                <span class="aitf-ai-stat-icon"><i class="fa fa-list-alt"></i></span>
+                                <span class="aitf-ai-stat-label">Rules Applied</span>
+                                <strong class="aitf-ai-stat-value" data-stat="rules_applied">-</strong>
+                            </div>
+                            <div class="aitf-ai-stat-card">
+                                <span class="aitf-ai-stat-icon"><i class="fa fa-calendar-check-o"></i></span>
+                                <span class="aitf-ai-stat-label">Dates Verified</span>
+                                <strong class="aitf-ai-stat-value" data-stat="dates_verified">-</strong>
+                            </div>
+                            <div class="aitf-ai-stat-card">
+                                <span class="aitf-ai-stat-icon"><i class="fa fa-random"></i></span>
+                                <span class="aitf-ai-stat-label">Cross Checks</span>
+                                <strong class="aitf-ai-stat-value" data-stat="cross_checks">-</strong>
+                            </div>
+                            <div class="aitf-ai-stat-card">
+                                <span class="aitf-ai-stat-icon"><i class="fa fa-exclamation-triangle"></i></span>
+                                <span class="aitf-ai-stat-label">Potential Issues</span>
+                                <strong class="aitf-ai-stat-value" data-stat="potential_issues">-</strong>
+                            </div>
+                            <div class="aitf-ai-stat-card">
+                                <span class="aitf-ai-stat-icon"><i class="fa fa-bar-chart"></i></span>
+                                <span class="aitf-ai-stat-label">Report Accuracy</span>
+                                <strong class="aitf-ai-stat-value" data-stat="confidence_score">-</strong>
+                            </div>
+                            <div class="aitf-ai-stat-card">
+                                <span class="aitf-ai-stat-icon"><i class="fa fa-clock-o"></i></span>
+                                <span class="aitf-ai-stat-label">Reasoning Time</span>
+                                <strong class="aitf-ai-stat-value" data-stat="reasoning_time_ms">-</strong>
                             </div>
                         </div>
                         <div class="aitf-ai-steps-grid">
-                            <div class="aitf-ai-step" data-step="0"><i class="fa fa-circle-o"></i> Reading selected records and PDFs</div>
-                            <div class="aitf-ai-step" data-step="1"><i class="fa fa-circle-o"></i> Vetting form details & rules</div>
-                            <div class="aitf-ai-step" data-step="2"><i class="fa fa-circle-o"></i> Cross-checking client context</div>
-                            <div class="aitf-ai-step" data-step="3"><i class="fa fa-circle-o"></i> Analyzing name & dates</div>
-                            <div class="aitf-ai-step" data-step="4"><i class="fa fa-circle-o"></i> Loading mandatory risk checks</div>
-                            <div class="aitf-ai-step" data-step="5"><i class="fa fa-circle-o"></i> Finalizing pre-audit review</div>
+                            <div class="aitf-ai-step" data-step="0" data-icon="fa-file-text-o"><span class="aitf-ai-step-icon"><i class="fa fa-file-text-o"></i></span><span>Swimming Through Documents...</span></div>
+                            <div class="aitf-ai-step" data-step="1" data-icon="fa-folder-open-o"><span class="aitf-ai-step-icon"><i class="fa fa-folder-open-o"></i></span><span>Collecting Evidence...</span></div>
+                            <div class="aitf-ai-step" data-step="2" data-icon="fa-lightbulb-o"><span class="aitf-ai-step-icon"><i class="fa fa-lightbulb-o"></i></span><span>Understanding Context...</span></div>
+                            <div class="aitf-ai-step" data-step="3" data-icon="fa-shield"><span class="aitf-ai-step-icon"><i class="fa fa-shield"></i></span><span>Assessing Risks...</span></div>
+                            <div class="aitf-ai-step" data-step="4" data-icon="fa-search"><span class="aitf-ai-step-icon"><i class="fa fa-search"></i></span><span>Finding Hidden Issues...</span></div>
+                            <div class="aitf-ai-step" data-step="5" data-icon="fa-random"><span class="aitf-ai-step-icon"><i class="fa fa-random"></i></span><span>Cross-Checking Records...</span></div>
+                            <div class="aitf-ai-step" data-step="6" data-icon="fa-line-chart"><span class="aitf-ai-step-icon"><i class="fa fa-line-chart"></i></span><span>Building Insights...</span></div>
+                            <div class="aitf-ai-step" data-step="7" data-icon="fa-check-square-o"><span class="aitf-ai-step-icon"><i class="fa fa-check-square-o"></i></span><span>Preparing Final Response...</span></div>
                         </div>
                     </div>
                     <div class="aitf-ai-documents-section">
@@ -8694,6 +9014,8 @@
             var aitfAiStepTimer = null;
             var aitfAiLogInterval = null;
             var aitfAiStepIndex = 0;
+            var aitfAiTypingTimers = [];
+            var aitfAiOverviewMetrics = {};
             var aitfSelectedAiModel = 'fly-512b';
             var aitfLastAiDocumentKeys = [];
             var aitfLastAiPrompt = '';
@@ -8727,7 +9049,7 @@
             }
 
             function aitfDefaultPrompt() {
-                return 'Read the selected PDF documents carefully and behave like an AITF pre-audit reviewer. Find client name mismatch, address/GSTIN/contact mismatch, wrong or missing dates, scope mismatch, ISO standard mismatch, manday gaps, missing signatures, suspicious values, contradictions between documents, and any risk that can affect audit readiness. Give clear evidence, confidence, suggestion, and recommended action.';
+                return 'Read the selected PDF documents carefully and behave like an AITF pre-audit reviewer. Find client name mismatch, address/GSTIN/contact mismatch, wrong or missing dates, scope mismatch, ISO standard mismatch, manday gaps, missing signatures, suspicious values, contradictions between documents, and any risk that can affect audit readiness. Give clear evidence, fair report accuracy from 0-100%, suggestion, and recommended action. Rate strictly from evidence: below 40 bad report, 50-60 fine, 60-70 good, 70-90 very good, 90+ perfect, and 95+ outstanding. Do not give good ratings unnecessarily and do not be biased.';
             }
 
             function aitfSetReplyBoxVisible(visible) {
@@ -8761,72 +9083,172 @@
             }
 
             function aitfSoftwareFillPrompt() {
-                return 'Scan all software-filled form data for this client. Read Contract Review, CA, SA-I, SA-II, RC, Release/Notification for Stage-I audit, Stage-II notification, audit schedules, agreements, certificate and review forms from the application database. Check whether forms are completely filled, required fields are missing, dates are wrong or inconsistent, client details mismatch, service stage values conflict, and whether any obvious mistake exists. Give clear evidence, affected form/table, current value, expected value if known, and recommended action.';
+                return 'Scan all software-filled form data for this client. Read Contract Review, CA, SA-I, SA-II, RC, Release/Notification for Stage-I audit, Stage-II notification, audit schedules, agreements, certificate and review forms from the application database. Check whether forms are completely filled, required fields are missing, dates are wrong or inconsistent, client details mismatch, service stage values conflict, and whether any obvious mistake exists. Give clear evidence, affected form/table, current value, expected value if known, fair report accuracy from 0-100%, and recommended action. Rate strictly from evidence: below 40 bad report, 50-60 fine, 60-70 good, 70-90 very good, 90+ perfect, and 95+ outstanding. Do not give good ratings unnecessarily and do not be biased.';
             }
 
-            function aitfRenderWorkSteps() {
-                $('#aitfAiWorkSteps .aitf-ai-step').each(function () {
-                    var step = parseInt($(this).data('step'), 10);
-                    var icon = $(this).find('i');
-                    $(this).removeClass('active done');
-                    icon.removeClass('fa-circle-o fa-check-circle fa-spinner fa-spin');
-                    if (step < aitfAiStepIndex) {
-                        $(this).addClass('done');
-                        icon.addClass('fa-check-circle');
-                    } else if (step === aitfAiStepIndex) {
-                        $(this).addClass('active');
-                        icon.addClass('fa-spinner fa-spin');
-                    } else {
-                        icon.addClass('fa-circle-o');
+            function aitfFormatMetric(stat, value) {
+                if (value === null || value === undefined || value === '') {
+                    return '-';
+                }
+                var numeric = parseFloat(value);
+                if (isNaN(numeric)) {
+                    return aitfEscapeHtml(value);
+                }
+                if (stat === 'confidence_score') {
+                    return Math.round(numeric) + '%';
+                }
+                if (stat === 'reasoning_time_ms') {
+                    if (numeric >= 1000) {
+                        return (numeric / 1000).toFixed(numeric >= 10000 ? 0 : 1) + 's';
+                    }
+                    return Math.round(numeric) + 'ms';
+                }
+                return Math.round(numeric).toLocaleString();
+            }
+
+            function aitfAnimateMetricValue($value, stat, nextValue) {
+                if (!$value.length) {
+                    return;
+                }
+                if (nextValue === null || nextValue === undefined || nextValue === '') {
+                    $value.text('-').removeData('raw-value');
+                    return;
+                }
+                var nextNumber = parseFloat(nextValue);
+                if (isNaN(nextNumber)) {
+                    $value.text(nextValue).removeData('raw-value');
+                    return;
+                }
+                var currentNumber = parseFloat($value.data('raw-value'));
+                if (isNaN(currentNumber)) {
+                    currentNumber = 0;
+                }
+                $({ count: currentNumber }).animate({ count: nextNumber }, {
+                    duration: 650,
+                    easing: 'swing',
+                    step: function (now) {
+                        $value.text(aitfFormatMetric(stat, now));
+                    },
+                    complete: function () {
+                        $value.data('raw-value', nextNumber).text(aitfFormatMetric(stat, nextNumber));
                     }
                 });
             }
 
-            function aitfStartWorkSteps() {
+            function aitfRenderReasoningStats(metrics) {
+                metrics = metrics || {};
+                $('#aitfAiStatsPanel .aitf-ai-stat-value').each(function () {
+                    var $value = $(this);
+                    var stat = $value.data('stat');
+                    if (Object.prototype.hasOwnProperty.call(metrics, stat)) {
+                        aitfAnimateMetricValue($value, stat, metrics[stat]);
+                    }
+                });
+            }
+
+            function aitfResetReasoningStats() {
+                $('#aitfAiStatsPanel .aitf-ai-stat-value').each(function () {
+                    $(this).text('-').removeData('raw-value');
+                });
+            }
+
+            function aitfCurrentLogTime() {
+                var now = new Date();
+                function pad(part) {
+                    part = String(part);
+                    return part.length < 2 ? '0' + part : part;
+                }
+                return [pad(now.getHours()), pad(now.getMinutes()), pad(now.getSeconds())].join(':');
+            }
+
+            function aitfAppendTypedLog(log) {
+                var level = (log.level || 'INFO').toUpperCase();
+                var type = (log.type || level.toLowerCase()).toLowerCase();
+                var text = String(log.text || '');
+                var $line = $('<div class="aitf-ai-log-line ' + aitfEscapeHtml(type) + '">' +
+                    '<span class="aitf-ai-log-time">' + aitfCurrentLogTime() + '</span>' +
+                    '<span class="aitf-ai-log-level">' + aitfEscapeHtml(level) + '</span>' +
+                    '<span class="aitf-ai-log-text"></span><span class="aitf-ai-log-cursor">|</span>' +
+                    '</div>');
+                $line.data('full-text', text);
+                var $text = $line.find('.aitf-ai-log-text');
+                var $cursor = $line.find('.aitf-ai-log-cursor');
+                $('#aitfAiWorkLog').append($line);
+                var index = 0;
+                var timer = window.setInterval(function () {
+                    index += 1;
+                    $text.text(text.slice(0, index));
+                    var logContainer = document.getElementById('aitfAiWorkLog');
+                    if (logContainer) {
+                        logContainer.scrollTop = logContainer.scrollHeight;
+                    }
+                    if (index >= text.length) {
+                        window.clearInterval(timer);
+                        $cursor.remove();
+                    }
+                }, 14);
+                aitfAiTypingTimers.push(timer);
+            }
+
+            function aitfRenderWorkSteps() {
+                $('#aitfAiWorkSteps .aitf-ai-step').each(function () {
+                    var $step = $(this);
+                    var step = parseInt($(this).data('step'), 10);
+                    var icon = $step.find('.aitf-ai-step-icon i');
+                    var baseIcon = $step.data('icon') || 'fa-circle-o';
+                    $step.removeClass('active done');
+                    icon.removeClass().addClass('fa');
+                    if (step < aitfAiStepIndex) {
+                        $step.addClass('done');
+                        icon.addClass('fa-check-circle');
+                    } else if (step === aitfAiStepIndex) {
+                        $step.addClass('active');
+                        icon.addClass(baseIcon);
+                    } else {
+                        icon.addClass(baseIcon);
+                    }
+                });
+            }
+
+            function aitfStartWorkSteps(options) {
+                options = options || {};
                 aitfStopWorkSteps(false);
                 aitfAiStepIndex = 0;
                 $('#aitfAiWorkSteps').show();
+                aitfResetReasoningStats();
+                aitfRenderReasoningStats({
+                    documents_scanned: options.documentCount,
+                    rules_applied: aitfAiOverviewMetrics.rules_applied
+                });
                 aitfRenderWorkSteps();
 
-                // Reset console log
-                $('#aitfAiWorkLog').html('<div class="aitf-ai-log-line highlight">> Starting audit-readiness analyzer...</div>');
-
                 var reasoningLogs = [
-                    { type: 'system', text: 'Connecting to GO ai deep reasoning pipeline...' },
-                    { type: 'system', text: 'Secure record and PDF reading layer initialized.' },
-                    { type: 'ai', text: 'Scanning selected documents and software-filled forms...' },
-                    { type: 'ai', text: 'Reading form fields, page templates, and saved rows...' },
-                    { type: 'ai', text: 'Reading ST-01 Signed Notifications & CA attachments...' },
-                    { type: 'highlight', text: 'Extracted client name tokens. Verifying spelling consistency...' },
-                    { type: 'ai', text: 'Locating dates, sign-offs, and compliance stamps...' },
-                    { type: 'highlight', text: 'Analyzing dates. Vetting validity intervals...' },
-                    { type: 'ai', text: 'Mapping dates across documents (ST-01, CA, Annexure)...' },
-                    { type: 'ai', text: 'Cross-checking GSTIN characters and client addresses...' },
-                    { type: 'ai', text: 'Reading mandated ISO standard audit checklists...' },
-                    { type: 'highlight', text: 'Comparing manday allocations against rule tables...' },
-                    { type: 'system', text: 'Applying risk matrices. Compiling contradictions...' },
-                    { type: 'ai', text: 'Synthesizing recommendations and audit-readiness score...' }
+                    { level: 'INFO', type: 'info', text: 'Reasoning session opened for ' + (options.modelLabel || 'GO ai') + '.' },
+                    { level: 'INFO', type: 'info', text: 'Swimming through selected PDF streams and software-filled records.' },
+                    { level: 'INFO', type: 'audit', text: 'Collecting evidence anchors: names, dates, scope, standards, GSTIN, mandays, signatures.' },
+                    { level: 'INFO', type: 'audit', text: 'Understanding client context from active database rows and attached review history.' },
+                    { level: 'WARN', type: 'warn', text: 'Ambiguous or missing evidence will be isolated for manual verification instead of guessed.' },
+                    { level: 'INFO', type: 'audit', text: 'Assessing chronology, validity windows, service stage consistency, and rule coverage.' },
+                    { level: 'INFO', type: 'info', text: 'Finding hidden contradictions across repeated client identity and certification fields.' },
+                    { level: 'INFO', type: 'audit', text: 'Cross-checking document evidence against active AITF AI rules.' },
+                    { level: 'INFO', type: 'info', text: 'Building insight clusters and report accuracy signals from returned evidence.' },
+                    { level: 'SUCCESS', type: 'success', text: 'Preparing structured audit response with evidence, risk, accuracy, and actions.' }
                 ];
 
+                $('#aitfAiWorkLog').empty();
+                aitfAppendTypedLog({ level: 'INFO', type: 'info', text: 'Starting audit-readiness analyzer...' });
                 var logIndex = 0;
                 aitfAiLogInterval = window.setInterval(function() {
                     if (logIndex < reasoningLogs.length) {
-                        var log = reasoningLogs[logIndex++];
-                        var classStr = 'aitf-ai-log-line ' + log.type;
-                        var logElement = $('<div class="' + classStr + '">> ' + log.text + '</div>');
-                        $('#aitfAiWorkLog').append(logElement);
-                        
-                        var logContainer = document.getElementById('aitfAiWorkLog');
-                        if (logContainer) {
-                            logContainer.scrollTop = logContainer.scrollHeight;
-                        }
+                        aitfAppendTypedLog(reasoningLogs[logIndex++]);
                     }
-                }, 850);
+                }, 1150);
 
                 aitfAiStepTimer = window.setInterval(function () {
-                    aitfAiStepIndex = Math.min(5, aitfAiStepIndex + 1);
+                    var totalSteps = $('#aitfAiWorkSteps .aitf-ai-step').length;
+                    aitfAiStepIndex = Math.min(totalSteps - 1, aitfAiStepIndex + 1);
                     aitfRenderWorkSteps();
-                }, 1800);
+                }, 1650);
             }
 
             function aitfStopWorkSteps(markDone) {
@@ -8838,17 +9260,25 @@
                     window.clearInterval(aitfAiLogInterval);
                     aitfAiLogInterval = null;
                 }
+                aitfAiTypingTimers.forEach(function (timer) {
+                    window.clearInterval(timer);
+                });
+                aitfAiTypingTimers = [];
+                $('#aitfAiWorkLog .aitf-ai-log-line').each(function () {
+                    var fullText = $(this).data('full-text');
+                    if (fullText) {
+                        $(this).find('.aitf-ai-log-text').text(fullText);
+                    }
+                    $(this).find('.aitf-ai-log-cursor').remove();
+                });
                 if (markDone) {
-                    aitfAiStepIndex = 6;
+                    aitfAiStepIndex = $('#aitfAiWorkSteps .aitf-ai-step').length;
                     aitfRenderWorkSteps();
-                    $('#aitfAiWorkLog').append('<div class="aitf-ai-log-line highlight">> Review compiled successfully!</div>');
+                    aitfAppendTypedLog({ level: 'SUCCESS', type: 'success', text: 'Review compiled successfully. Final response is ready.' });
                     var logContainer = document.getElementById('aitfAiWorkLog');
                     if (logContainer) {
                         logContainer.scrollTop = logContainer.scrollHeight;
                     }
-                    window.setTimeout(function () {
-                        $('#aitfAiWorkSteps').hide();
-                    }, 1200);
                 } else {
                     $('#aitfAiWorkSteps').hide();
                 }
@@ -8949,6 +9379,54 @@
                 $conversation.append(aitfConversationMessage('assistant', 'GO ai', '<div class="docora-loading-msg"><i class="fa fa-spinner fa-spin"></i> Reply in progress...</div>', 'aitfAiReplyLoading'));
             }
 
+            function aitfNormalizeAccuracyScore(value) {
+                var score = parseFloat(value);
+                if (isNaN(score)) {
+                    return null;
+                }
+                if (score <= 1) {
+                    score = score * 100;
+                }
+                score = Math.max(0, Math.min(100, score));
+                return Math.round(score);
+            }
+
+            function aitfAccuracyReview(score) {
+                if (score === null || score === undefined) {
+                    return '';
+                }
+                if (score >= 95) {
+                    return 'Outstanding';
+                }
+                if (score >= 90) {
+                    return 'Perfect';
+                }
+                if (score >= 70) {
+                    return 'Very Good';
+                }
+                if (score >= 60) {
+                    return 'Good';
+                }
+                if (score >= 50) {
+                    return 'Fine';
+                }
+                if (score >= 40) {
+                    return 'Needs Improvement';
+                }
+                return 'Bad Report';
+            }
+
+            function aitfBuildReportAccuracyHtml(rawAccuracy) {
+                var score = aitfNormalizeAccuracyScore(rawAccuracy);
+                if (score === null) {
+                    return '';
+                }
+                var review = aitfAccuracyReview(score);
+                var scale = 'Scale: below 40 Bad Report, 50-59 Fine, 60-69 Good, 70-89 Very Good, 90-94 Perfect, 95-100 Outstanding.';
+                return '<p class="docora-response-para"><strong>Report Accuracy:</strong> ' + score + '% - <strong>' + aitfEscapeHtml(review) + '</strong><br>' +
+                    '<span style="font-size: 13px; color: #64748b;">' + aitfEscapeHtml(scale) + ' Rating is evidence-based and should not be biased or unnecessarily positive.</span></p>';
+            }
+
             function aitfBuildAiIssuesHtml(result) {
                 if (!result) {
                     return '<p class="docora-empty-msg">No structured AI result was returned.</p>';
@@ -9029,7 +9507,7 @@
                     html += '<p class="docora-response-para" style="margin-top: 20px;"><strong>Recommended Action:</strong><br>' + aitfEscapeHtml(recActions.join(' ')) + '</p>';
                 }
                 
-                // 5. Overall Confidence
+                // 5. Report Accuracy
                 var avgConfidence = 0;
                 var confCount = 0;
                 issues.forEach(function (issue) {
@@ -9046,7 +9524,7 @@
                     finalConfidence = result.confidence;
                 }
                 if (finalConfidence !== null) {
-                    html += '<p class="docora-response-para"><strong>Confidence:</strong> ' + finalConfidence + '</p>';
+                    html += aitfBuildReportAccuracyHtml(finalConfidence);
                 }
                 
                 // 6. Disclaimer/Note
@@ -9124,6 +9602,8 @@
                 
                 var rulesCount = response.rules_count || 0;
                 $('#docoraReviewRulesCount').text(rulesCount + ' rule(s)');
+
+                aitfRenderReasoningStats(response.reasoning_metrics || {});
                 
                 aitfRenderAiIssues(result, !!appendToConversation);
                 aitfSetReplyBoxVisible(aitfLastAiDocumentKeys.length > 0 || aitfLastAiScanScope === 'software_fill' || $.trim(aitfLastAiPrompt) !== '');
@@ -9156,6 +9636,7 @@
                             return;
                         }
                         aitfRenderAiDocuments(response.documents || []);
+                        aitfAiOverviewMetrics = response.reasoning_metrics || {};
                         $('#aitfAiMetrics').text((response.documents || []).length + ' PDF document(s) detected. ' + (response.active_rules_count || 0) + ' active AI rule(s).');
                         if (response.latest_history && response.latest_history.created_at) {
                             $('#aitfAiHistoryNote').text('Last review: ' + response.latest_history.created_at + ' (' + response.latest_history.status + ')');
@@ -9183,10 +9664,14 @@
                 aitfLastAiScanScope = normalizedScanScope;
                 aitfSetAnalyzeButtons(true);
                 $btn.data('original-html', $btn.html()).html('<i class="fa fa-spinner fa-spin"></i>');
-                aitfStartWorkSteps();
                 var targetLabel = normalizedScanScope === 'software_fill' && !documentKeys.length
                     ? 'client software-filled forms'
                     : documentKeys.length + ' selected PDF document(s)';
+                aitfStartWorkSteps({
+                    documentCount: documentKeys.length,
+                    modelLabel: selectedModelLabel,
+                    targetLabel: targetLabel
+                });
                 aitfSetAiStatus(selectedModelLabel + ' is analyzing ' + targetLabel + '.', 'manual_verification_required');
                 
                 if (preserveConversation) {
@@ -9200,10 +9685,11 @@
                     $('#docoraReviewModel').text('-');
                     $('#docoraReviewDocCount').text('-');
                     $('#docoraReviewRulesCount').text('-');
-                    $('#aitfAiResults').html('<div class="docora-loading-msg"><i class="fa fa-spinner fa-spin"></i> Review in progress...</div>');
+                    $('#aitfAiResults').html('<div class="docora-loading-msg"><i class="fa fa-cogs fa-spin"></i> Deep reasoning in progress...</div>');
                     aitfSetReplyBoxVisible(false);
                 }
                 
+                var analysisSucceeded = false;
                 $.ajax({
                     url: 'ai_document_review_api.php',
                     type: 'POST',
@@ -9224,6 +9710,7 @@
                         response.status = response.result ? (response.result.overall_status || 'manual_verification_required') : 'manual_verification_required';
                         response.analyzed_at = new Date().toLocaleString();
                         
+                        analysisSucceeded = true;
                         aitfShowReviewResponse(response, !!preserveConversation);
                         aitfLoadAiOverview();
                     },
@@ -9238,7 +9725,7 @@
                         }
                     },
                     complete: function () {
-                        aitfStopWorkSteps(true);
+                        aitfStopWorkSteps(analysisSucceeded);
                         if ($btn.length) {
                             $btn.html($btn.data('original-html') || $btn.html());
                         }

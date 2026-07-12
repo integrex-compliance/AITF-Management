@@ -8,7 +8,115 @@ include_once './include/ai_document_review_lib.php';
 
 date_default_timezone_set('Asia/Kolkata');
 
+if (!function_exists('aitfAiReasoningTextHasAny')) {
+    function aitfAiReasoningTextHasAny($text, $terms)
+    {
+        $text = strtolower((string) $text);
+        foreach ($terms as $term) {
+            if ($term !== '' && strpos($text, $term) !== false) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
+if (!function_exists('aitfAiBuildReasoningMetrics')) {
+    function aitfAiBuildReasoningMetrics($documents, $rules, $result = null, $reasoningTimeMs = null, $scannedOnly = false)
+    {
+        $documentCount = 0;
+        foreach ((array) $documents as $doc) {
+            if (!$scannedOnly || (isset($doc['scan_status']) && $doc['scan_status'] === 'Scanned')) {
+                $documentCount++;
+            }
+        }
+
+        $dateTerms = array('date', 'valid', 'expiry', 'registration', 'chronology', 'certificate issue', 'before date', 'audit before');
+        $crossTerms = array('cross', 'consistent', 'consistency', 'mismatch', 'contradiction', 'client name', 'gstin', 'address', 'contact', 'scope', 'standard');
+        $datesVerified = 0;
+        $crossChecks = 0;
+        foreach ((array) $rules as $rule) {
+            $ruleText = implode(' ', array(
+                isset($rule['rule_code']) ? $rule['rule_code'] : '',
+                isset($rule['title']) ? $rule['title'] : '',
+                isset($rule['category']) ? $rule['category'] : '',
+                isset($rule['rule_text']) ? $rule['rule_text'] : '',
+                isset($rule['expected_value']) ? $rule['expected_value'] : ''
+            ));
+            if (aitfAiReasoningTextHasAny($ruleText, $dateTerms)) {
+                $datesVerified++;
+            }
+            if (aitfAiReasoningTextHasAny($ruleText, $crossTerms)) {
+                $crossChecks++;
+            }
+        }
+
+        $issues = array();
+        $manual = array();
+        if (is_array($result)) {
+            if (!empty($result['findings']) && is_array($result['findings'])) {
+                $issues = array_merge($issues, $result['findings']);
+            }
+            if (!empty($result['issues']) && is_array($result['issues'])) {
+                $issues = array_merge($issues, $result['issues']);
+            }
+            if (!empty($result['manual_verifications']) && is_array($result['manual_verifications'])) {
+                $manual = $result['manual_verifications'];
+            }
+        }
+        $uniqueIssues = array();
+        $dedupedIssues = array();
+        foreach ($issues as $issue) {
+            $signature = is_array($issue)
+                ? md5(strtolower(implode('|', array(
+                    isset($issue['check_area']) ? $issue['check_area'] : '',
+                    isset($issue['finding']) ? $issue['finding'] : '',
+                    isset($issue['reason']) ? $issue['reason'] : '',
+                    isset($issue['evidence']) ? $issue['evidence'] : ''
+                ))))
+                : md5(strtolower((string) $issue));
+            if (!isset($uniqueIssues[$signature])) {
+                $uniqueIssues[$signature] = true;
+                $dedupedIssues[] = $issue;
+            }
+        }
+        $issues = $dedupedIssues;
+
+        $confidence = null;
+        if (is_array($result) && isset($result['confidence']) && is_numeric($result['confidence'])) {
+            $confidence = (float) $result['confidence'];
+        } else {
+            $confidenceTotal = 0;
+            $confidenceCount = 0;
+            foreach ($issues as $issue) {
+                if (isset($issue['confidence']) && is_numeric($issue['confidence'])) {
+                    $confidenceTotal += (float) $issue['confidence'];
+                    $confidenceCount++;
+                }
+            }
+            if ($confidenceCount > 0) {
+                $confidence = $confidenceTotal / $confidenceCount;
+            }
+        }
+        if ($confidence !== null && $confidence <= 1) {
+            $confidence = $confidence * 100;
+        }
+
+        return array(
+            'documents_scanned' => $documentCount,
+            'rules_applied' => count((array) $rules),
+            'dates_verified' => $datesVerified,
+            'cross_checks' => $crossChecks,
+            'potential_issues' => count($issues) + count($manual),
+            'confidence_score' => $confidence === null ? null : round($confidence),
+            'reasoning_time_ms' => $reasoningTimeMs === null ? null : (int) $reasoningTimeMs
+        );
+    }
+}
+
 try {
+    $requestStartedAt = microtime(true);
+
     if (!$db) {
         aitfAiJsonResponse(array('success' => false, 'message' => 'Database connection is unavailable.'), 500);
     }
@@ -70,6 +178,14 @@ try {
         }
 
         $latest = aitfAiFetchLatestHistory($db, $customerId);
+        $latestResult = null;
+        if ($latest && !empty($latest['result_json'])) {
+            $latestResult = json_decode($latest['result_json'], true);
+            if (!is_array($latestResult)) {
+                $latestResult = null;
+            }
+        }
+
         aitfAiJsonResponse(array(
             'success' => true,
             'client' => array(
@@ -78,7 +194,8 @@ try {
             ),
             'documents' => $publicDocs,
             'active_rules_count' => count($rules),
-            'latest_history' => $latest
+            'latest_history' => $latest,
+            'reasoning_metrics' => aitfAiBuildReasoningMetrics($publicDocs, $rules, $latestResult, null, true)
         ));
     }
 
@@ -109,6 +226,10 @@ try {
             );
         }
 
+        $reviewMetrics = aitfAiBuildReasoningMetrics($reviewDocs, $rules, $result, null, false);
+        $reviewMetrics['documents_scanned'] = (int) $review['document_count'];
+        $reviewMetrics['rules_applied'] = (int) $review['rules_count'];
+
         aitfAiJsonResponse(array(
             'success' => true,
             'history_id' => $review['history_id'],
@@ -121,7 +242,8 @@ try {
             'rules_count' => $review['rules_count'],
             'document_count' => $review['document_count'],
             'result' => $result,
-            'error_message' => $review['error_message']
+            'error_message' => $review['error_message'],
+            'reasoning_metrics' => $reviewMetrics
         ));
     }
 
@@ -141,16 +263,17 @@ try {
         return $key !== '' && preg_match('/^[a-f0-9]{40}$/', $key);
     }));
 
+    $scanScope = isset($_REQUEST['scan_scope']) ? trim((string) $_REQUEST['scan_scope']) : '';
+    if ($scanScope !== 'software_fill') {
+        $scanScope = '';
+    }
+
     if ($scanScope === 'software_fill' && empty($documentKeys)) {
         $documents = array();
     } elseif (!empty($documentKeys)) {
         $documents = aitfAiSelectDocumentsByKeys($documents, $documentKeys);
     }
     $userPrompt = isset($_REQUEST['user_prompt']) ? trim((string) $_REQUEST['user_prompt']) : '';
-    $scanScope = isset($_REQUEST['scan_scope']) ? trim((string) $_REQUEST['scan_scope']) : '';
-    if ($scanScope !== 'software_fill') {
-        $scanScope = '';
-    }
     if ($scanScope === 'software_fill' || empty($documents)) {
         $context['software_filled_forms'] = aitfAiFetchSoftwareFilledContext($db, $customerId);
     }
@@ -251,6 +374,8 @@ try {
             $summary
         );
 
+        $reasoningTimeMs = round((microtime(true) - $requestStartedAt) * 1000);
+
         aitfAiJsonResponse(array(
             'success' => true,
             'history_id' => $historyId,
@@ -259,7 +384,9 @@ try {
             'documents_count' => count($documents),
             'rules_count' => count($rules),
             'model' => $historyModelName,
-            'scan_scope' => $scanScope
+            'scan_scope' => $scanScope,
+            'reasoning_time_ms' => $reasoningTimeMs,
+            'reasoning_metrics' => aitfAiBuildReasoningMetrics($documents, $rules, $result, $reasoningTimeMs, false)
         ));
     } catch (AitfAiProviderException $ex) {
         aitfAiLogProviderError($ex->getMessage());
