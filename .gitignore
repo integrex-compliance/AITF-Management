@@ -2,6 +2,7 @@
 uploads/
 tinymce/
 PHPMailer/
+varkleyglobal project/
 
 # Files to ignore
 .project

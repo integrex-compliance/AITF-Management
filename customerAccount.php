@@ -8921,7 +8921,7 @@
                             </div>
                             <div class="aitf-ai-stat-card">
                                 <span class="aitf-ai-stat-icon"><i class="fa fa-bar-chart"></i></span>
-                                <span class="aitf-ai-stat-label">Report Accuracy</span>
+                                <span class="aitf-ai-stat-label">Confidence Score</span>
                                 <strong class="aitf-ai-stat-value" data-stat="confidence_score">-</strong>
                             </div>
                             <div class="aitf-ai-stat-card">
@@ -9231,8 +9231,8 @@
                     { level: 'INFO', type: 'audit', text: 'Assessing chronology, validity windows, service stage consistency, and rule coverage.' },
                     { level: 'INFO', type: 'info', text: 'Finding hidden contradictions across repeated client identity and certification fields.' },
                     { level: 'INFO', type: 'audit', text: 'Cross-checking document evidence against active AITF AI rules.' },
-                    { level: 'INFO', type: 'info', text: 'Building insight clusters and report accuracy signals from returned evidence.' },
-                    { level: 'SUCCESS', type: 'success', text: 'Preparing structured audit response with evidence, risk, accuracy, and actions.' }
+                    { level: 'INFO', type: 'info', text: 'Building insight clusters and confidence signals from returned evidence.' },
+                    { level: 'SUCCESS', type: 'success', text: 'Preparing structured audit response with evidence, risk, confidence, and actions.' }
                 ];
 
                 $('#aitfAiWorkLog').empty();
