@@ -49,6 +49,71 @@ function formatGoDaddyDate($d)
     return date('M j', $ts);
 }
 
+function goDaddyLetterServiceDesc($letterType)
+{
+    $map = array(
+        'Suspension Reminder' => 'Surveillance audit due',
+        'Suspend Letter' => 'Suspension of ISO 9001 Certificate',
+        'Withdrawal Reminder' => 'Reminder for Withdrawal of ISO 9001 Certificate',
+        'Withdraw Letter' => 'Withdrawn Of ISO 9001 Certificate',
+        'Withdrawal Letter' => 'Withdrawn Of ISO 9001 Certificate',
+        '1st Reminder' => '1st Reminder for Recertification audit due',
+        '2nd Reminder' => '2nd Reminder for Recertification audit due',
+        'Expire Letter' => 'Expiry of ISO certification',
+    );
+
+    return isset($map[$letterType]) ? $map[$letterType] : $letterType;
+}
+
+function goDaddyLetterStatusWord($letterType)
+{
+    $map = array(
+        'Suspension Reminder' => 'suspension',
+        'Suspend Letter' => 'suspension',
+        'Withdrawal Reminder' => 'withdrawal review',
+        'Withdraw Letter' => 'withdrawal',
+        'Withdrawal Letter' => 'withdrawal',
+        '1st Reminder' => 'recertification reminder',
+        '2nd Reminder' => 'recertification reminder',
+        'Expire Letter' => 'expired status',
+    );
+
+    return isset($map[$letterType]) ? $map[$letterType] : 'pending action';
+}
+
+function goDaddyNextServiceType($serviceType)
+{
+    $map = array(
+        'CA' => 'SA-I',
+        'SA-I' => 'SA-II',
+        'SA-II' => 'RC',
+        'RC' => 'SA-I',
+    );
+
+    return isset($map[$serviceType]) ? $map[$serviceType] : '';
+}
+
+function goDaddyLetterPreviewType($letterType)
+{
+    return $letterType === 'Withdrawal Letter' ? 'Withdraw Letter' : $letterType;
+}
+
+function goDaddySentLetterBody($customerName, $letterType, $fileName)
+{
+    $safeCustomer = htmlspecialchars($customerName, ENT_QUOTES, 'UTF-8');
+    $safeLetter = htmlspecialchars(goDaddyLetterPreviewType($letterType), ENT_QUOTES, 'UTF-8');
+    $safeFile = htmlspecialchars($fileName, ENT_QUOTES, 'UTF-8');
+
+    return '<p>Dear ' . $safeCustomer . ',</p>'
+        . '<p>We would like to inform you that your ISO certification is currently under <strong>' . $safeLetter . '</strong> due to pending certification requirements.</p>'
+        . '<p>Please find the attached <strong>' . $safeLetter . '</strong> for complete details, including the reason and the actions needed.</p>'
+        . '<p>Kindly review the letter and share your <strong>corrective action plan with supporting documents</strong> within the mentioned timeline. Once we receive and verify the required information, we will move ahead accordingly.</p>'
+        . '<p>If you have already completed the necessary actions, please ignore this email and send us the relevant documents for our review.</p>'
+        . '<p>We look forward to your support in resolving this at the earliest.</p>'
+        . '<p>Sincerely,<br>AITF Certification</p>'
+        . '<p>Attachment: ' . $safeFile . '</p>';
+}
+
 foreach ($rows as $r) {
     $customerName = isset($r['customer_name']) ? $r['customer_name'] : '';
     $emailId = isset($r['email_id']) ? $r['email_id'] : '';
@@ -105,6 +170,66 @@ foreach ($rows as $r) {
             'attachments' => $attachments
         );
     }
+}
+
+$letterSql = "SELECT
+            csd.action_id,
+            csd.service_id,
+            csd.action,
+            csd.due_date,
+            csd.sent_date,
+            s.customer_id,
+            s.service_type,
+            c.customer_name,
+            c.email_id
+        FROM ca_service_dates csd
+        INNER JOIN service s ON s.service_id = csd.service_id
+        INNER JOIN customer_info c ON c.id = s.customer_id
+        WHERE csd.is_deleted = 'N'
+        AND csd.sent_date IS NOT NULL
+        AND csd.sent_date <> ''
+        AND csd.sent_date <> '0000-00-00'
+        AND (c.is_deleted IS NULL OR c.is_deleted <> 'YES')";
+$letterStmt = $db->prepare($letterSql);
+$letterStmt->execute();
+$letterRows = $letterStmt->fetchAll(PDO::FETCH_ASSOC);
+
+foreach ($letterRows as $letterRow) {
+    $letterType = isset($letterRow['action']) ? $letterRow['action'] : '';
+    $previewLetterType = goDaddyLetterPreviewType($letterType);
+    $customerName = isset($letterRow['customer_name']) ? $letterRow['customer_name'] : '';
+    $emailId = isset($letterRow['email_id']) ? $letterRow['email_id'] : '';
+    $fileName = $previewLetterType . '.pdf';
+    $serviceDesc = goDaddyLetterServiceDesc($letterType);
+
+    $sent_entries[] = array(
+        'id' => 'letter_' . $letterRow['action_id'],
+        'customer_name' => $customerName,
+        'email_id' => $emailId,
+        'subject' => $serviceDesc . ' - ' . $customerName,
+        'date_raw' => $letterRow['sent_date'],
+        'date' => formatGoDaddyDate($letterRow['sent_date']),
+        'audit_date' => '',
+        'stage' => 'Letters & Actions',
+        'snippet' => 'Dear ' . $customerName . ', Please find the attached ' . $previewLetterType . ' for complete details...',
+        'body' => goDaddySentLetterBody($customerName, $letterType, $fileName),
+        'attachments' => array(
+            array(
+                'name' => $fileName,
+                'url' => 'IntimationDueLetters.php',
+                'type' => 'post',
+                'params' => array(
+                    'customer' => $letterRow['customer_id'],
+                    'service' => $letterRow['service_id'],
+                    'action' => $letterRow['action_id'],
+                    'servicetype' => goDaddyNextServiceType($letterRow['service_type']),
+                    'lettertype' => $previewLetterType,
+                    'SourcePage' => 'customerAccount.php?customerid=' . $letterRow['customer_id'],
+                    'pageAction' => 'PreviewPDF',
+                ),
+            ),
+        ),
+    );
 }
 
 usort($sent_entries, function ($a, $b) {
@@ -578,7 +703,7 @@ $inbox_json = json_encode($inbox_emails);
             border-bottom: 1px solid #eaedf3;
             cursor: pointer;
             position: relative;
-            transition: background 0.2s;
+            transition: background 0.2s, box-shadow 0.2s, border-color 0.2s;
         }
 
         .mail-item:hover {
@@ -587,6 +712,65 @@ $inbox_json = json_encode($inbox_emails);
 
         .mail-item.selected {
             background-color: #eff6ff;
+            box-shadow: inset 4px 0 0 #2b70f0;
+        }
+
+        .mail-item.selected.sent-open {
+            background-color: #ecfdf5;
+            box-shadow: inset 4px 0 0 #10b981;
+        }
+
+        .mail-item.selected.inbox-open {
+            background-color: #f5f3ff;
+            box-shadow: inset 4px 0 0 #8b5cf6;
+        }
+
+        .mail-folder-badge {
+            display: inline-flex;
+            align-items: center;
+            height: 20px;
+            padding: 0 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 700;
+            line-height: 20px;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
+        .mail-folder-badge.sent {
+            background-color: #dcfce7;
+            color: #047857;
+        }
+
+        .mail-folder-badge.inbox {
+            background-color: #ede9fe;
+            color: #6d28d9;
+        }
+
+        .email-card.is-opening {
+            animation: mailOpenPulse 0.22s ease-out;
+        }
+
+        .email-card.sent-card {
+            border-color: #bbf7d0;
+            box-shadow: 0 8px 24px rgba(16, 185, 129, 0.12);
+        }
+
+        .email-card.inbox-card {
+            border-color: #ddd6fe;
+            box-shadow: 0 8px 24px rgba(139, 92, 246, 0.10);
+        }
+
+        @keyframes mailOpenPulse {
+            from {
+                transform: translateY(6px);
+                opacity: 0.72;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
 
         .mail-checkbox {
@@ -1169,7 +1353,7 @@ $inbox_json = json_encode($inbox_emails);
                 </div>
 
                 <!-- Email Content Card -->
-                <div class="email-card">
+                <div class="email-card" id="preview-email-card">
                     <!-- Metadata Header -->
                     <div class="email-meta">
                         <div class="sender-info">
@@ -1257,6 +1441,7 @@ $inbox_json = json_encode($inbox_emails);
         const attachmentsSection = document.getElementById('attachments-section');
         const attachmentCountIndicator = document.getElementById('attachment-count-indicator');
         const searchInput = document.getElementById('search-input');
+        const previewEmailCard = document.getElementById('preview-email-card');
 
         function renderList(filterTerm = '') {
             mailListContainer.innerHTML = '';
@@ -1287,9 +1472,9 @@ $inbox_json = json_encode($inbox_emails);
                 const isSent = currentFolder === 'sent';
                 const senderName = isSent ? `me, ${mail.customer_name}` : (mail.sender === 'AITF Certification' ? 'me' : mail.sender);
                 const subjectText = mail.subject;
-                const snippetText = isSent ? `Dear Sir, Please find attached documents for...` : mail.snippet;
+                const snippetText = isSent ? (mail.snippet || `Dear Sir, Please find attached documents for...`) : mail.snippet;
                 const dateText = mail.date;
-                const hasAttachment = isSent || mail.id === 'inbox_1' || mail.id === 'inbox_2';
+                const hasAttachment = (mail.attachments && mail.attachments.length > 0) || (isSent && !mail.attachments) || mail.id === 'inbox_1' || mail.id === 'inbox_2';
 
                 const mailDiv = document.createElement('div');
                 mailDiv.className = 'mail-item';
@@ -1365,17 +1550,20 @@ $inbox_json = json_encode($inbox_emails);
 
         function selectMail(mail, element) {
             // Update selection visual
-            document.querySelectorAll('.mail-item').forEach(el => el.classList.remove('selected'));
-            element.classList.add('selected');
+            document.querySelectorAll('.mail-item').forEach(el => el.classList.remove('selected', 'sent-open', 'inbox-open'));
 
             // Switch views
             emptyPreview.style.display = 'none';
             previewContent.style.display = 'block';
 
             const isSent = currentFolder === 'sent';
+            element.classList.add('selected', isSent ? 'sent-open' : 'inbox-open');
+            previewEmailCard.classList.remove('sent-card', 'inbox-card', 'is-opening');
+            void previewEmailCard.offsetWidth;
+            previewEmailCard.classList.add(isSent ? 'sent-card' : 'inbox-card', 'is-opening');
 
             if (isSent) {
-                preSubject.textContent = mail.subject;
+                preSubject.innerHTML = `${mail.subject} <span class="mail-folder-badge sent">Sent mail</span>`;
                 preAvatar.textContent = "M"; // "Me"
                 preAvatar.style.backgroundColor = "#10b981"; // Green for sent
                 preSender.textContent = "me";
@@ -1391,21 +1579,25 @@ $inbox_json = json_encode($inbox_emails);
                     }
                 }
 
-                preBody.innerHTML = `
-                    Dear Sir / Ma'am,<br><br>
-                    Greetings from <strong>AITF Management Certification Ltd..!!!</strong><br><br>
-                    This is to inform you that the <strong>ISO Certification</strong> audit is scheduled on <strong>${formattedAuditDate}</strong>.<br><br>
-                    Details of the audit date and the auditor are mentioned in the attached notification, Please find the attached notification and audit Schedule for the same.<br><br>
-                    Kindly give the acknowledgement for the audit date within <strong>1 day</strong> or else we will consider it accepted.<br><br>
-                    The hard copy of the same notification with a declaration of impartiality and confidentiality will be handed over to you on the day of the audit and your acknowledgement.<br><br>
-                    <hr style="border:none; border-top:1px solid #eaedf3; margin: 16px 0;">
-                    Thanks &amp; Regards,<br>
-                    <strong>STO - AITF (Technical Operational Staff - AITF)</strong><br>
-                    <strong>AITF Management Certification Limited</strong><br>
-                    Contact No. 9422011836 / 9422011837<br>
-                    Website: <a href="http://aitf.co.in" target="_blank" style="color:#2b70f0;">http://aitf.co.in</a><br>
-                    <span style="color:#64748b; font-size:12px;">QCI-NABCB Accredited Certification Body</span>
-                `;
+                if (mail.body) {
+                    preBody.innerHTML = mail.body;
+                } else {
+                    preBody.innerHTML = `
+                        Dear Sir / Ma'am,<br><br>
+                        Greetings from <strong>AITF Management Certification Ltd..!!!</strong><br><br>
+                        This is to inform you that the <strong>ISO Certification</strong> audit is scheduled on <strong>${formattedAuditDate}</strong>.<br><br>
+                        Details of the audit date and the auditor are mentioned in the attached notification, Please find the attached notification and audit Schedule for the same.<br><br>
+                        Kindly give the acknowledgement for the audit date within <strong>1 day</strong> or else we will consider it accepted.<br><br>
+                        The hard copy of the same notification with a declaration of impartiality and confidentiality will be handed over to you on the day of the audit and your acknowledgement.<br><br>
+                        <hr style="border:none; border-top:1px solid #eaedf3; margin: 16px 0;">
+                        Thanks &amp; Regards,<br>
+                        <strong>STO - AITF (Technical Operational Staff - AITF)</strong><br>
+                        <strong>AITF Management Certification Limited</strong><br>
+                        Contact No. 9422011836 / 9422011837<br>
+                        Website: <a href="http://aitf.co.in" target="_blank" style="color:#2b70f0;">http://aitf.co.in</a><br>
+                        <span style="color:#64748b; font-size:12px;">QCI-NABCB Accredited Certification Body</span>
+                    `;
+                }
 
                 // Show attachments
                 if (mail.attachments && mail.attachments.length > 0) {
@@ -1440,7 +1632,7 @@ $inbox_json = json_encode($inbox_emails);
                     attachmentCountIndicator.textContent = '0';
                 }
             } else {
-                preSubject.textContent = mail.subject;
+                preSubject.innerHTML = `${mail.subject} <span class="mail-folder-badge inbox">Inbox mail</span>`;
                 preAvatar.textContent = mail.sender === 'AITF Certification' ? 'M' : mail.sender.charAt(0).toUpperCase();
                 preAvatar.style.backgroundColor = mail.sender === 'AITF Certification' ? '#8b5cf6' : '#3b82f6';
                 preSender.textContent = mail.sender === 'AITF Certification' ? 'me' : mail.sender;
