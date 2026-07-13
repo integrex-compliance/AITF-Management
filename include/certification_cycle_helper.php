@@ -505,6 +505,99 @@ function aitfBuildClientStatusDates($db, $serviceId, $customerId = null, $fallba
     return $dates;
 }
 
+function aitfNormalizeDateForComparison($dateValue)
+{
+    if (!aitfIsUsableDateValue($dateValue)) {
+        return '';
+    }
+
+    $timestamp = strtotime($dateValue);
+    if ($timestamp === false) {
+        return '';
+    }
+
+    return date('Y-m-d', $timestamp);
+}
+
+function aitfFindNextCertificationServiceAuditDate($db, $serviceId, $customerId = null)
+{
+    $service = aitfGetUniversalService($db, $serviceId);
+    if (!$service) {
+        return '';
+    }
+
+    if (empty($customerId)) {
+        $customerId = $service['customer_id'];
+    }
+
+    $nextServiceType = aitfNextCertificationServiceType($service['service_type']);
+    $map = aitfGetTypedServiceMap($nextServiceType);
+    if ($nextServiceType === '' || !$map) {
+        return '';
+    }
+
+    $sql = "SELECT s.audit_date AS service_audit_date, st.audit_date AS typed_audit_date
+            FROM service s
+            INNER JOIN " . $map['table'] . " st ON st." . $map['service_column'] . " = s.service_id
+            WHERE s.customer_id = :customer_id
+            AND s.service_type = :service_type
+            AND s.service_id > :service_id
+            ORDER BY s.service_id ASC
+            LIMIT 1";
+    $statement = $db->prepare($sql);
+    $statement->execute(array(
+        ':customer_id' => $customerId,
+        ':service_type' => $nextServiceType,
+        ':service_id' => $serviceId,
+    ));
+    $nextService = $statement->fetch(PDO::FETCH_ASSOC);
+    if (!$nextService) {
+        return '';
+    }
+
+    $auditDate = aitfNormalizeDateForComparison(isset($nextService['service_audit_date']) ? $nextService['service_audit_date'] : '');
+    if ($auditDate !== '') {
+        return $auditDate;
+    }
+
+    return aitfNormalizeDateForComparison(isset($nextService['typed_audit_date']) ? $nextService['typed_audit_date'] : '');
+}
+
+function aitfBackfillClientStatusSentDatesForNextAudit($db, $serviceId, $customerId = null)
+{
+    if (empty($db) || empty($serviceId)) {
+        return 0;
+    }
+
+    $auditDate = aitfFindNextCertificationServiceAuditDate($db, $serviceId, $customerId);
+    if ($auditDate === '') {
+        return 0;
+    }
+
+    $actions = aitfAllClientStatusActions();
+    $placeholders = implode(',', array_fill(0, count($actions), '?'));
+    $params = array_merge(
+        array($serviceId, $auditDate),
+        $actions
+    );
+
+    $statement = $db->prepare(
+        "UPDATE ca_service_dates
+         SET sent_date = due_date
+         WHERE service_id = ?
+         AND due_date < ?
+         AND due_date IS NOT NULL
+         AND due_date <> ''
+         AND due_date <> '0000-00-00'
+         AND (sent_date IS NULL OR sent_date = '' OR sent_date = '0000-00-00')
+         AND is_deleted = 'N'
+         AND action IN ($placeholders)"
+    );
+    $statement->execute($params);
+
+    return $statement->rowCount();
+}
+
 function aitfSyncClientStatusDates($db, $serviceId, $customerId = null, $fallbackBaseDate = '')
 {
     $expectedDates = aitfBuildClientStatusDates($db, $serviceId, $customerId, $fallbackBaseDate);
@@ -592,6 +685,8 @@ function aitfSyncClientStatusDates($db, $serviceId, $customerId = null, $fallbac
         $statement->execute($params);
     }
 
+    aitfBackfillClientStatusSentDatesForNextAudit($db, $serviceId, $customerId);
+
     return $expectedDates;
 }
 
@@ -635,6 +730,8 @@ function aitfFetchClientStatusDates($db, $serviceId, array $actions = array())
     if (empty($actions)) {
         return array();
     }
+
+    aitfBackfillClientStatusSentDatesForNextAudit($db, $serviceId);
 
     $placeholders = implode(',', array_fill(0, count($actions), '?'));
     $params = array_merge(array($serviceId), $actions);

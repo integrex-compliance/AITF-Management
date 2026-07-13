@@ -467,13 +467,16 @@ else if($PageAction == "SendMail"){
 		$officeMail->setFrom($mailConfig['from_email'], $mailConfig['from_name']);
 		$officeMail->addReplyTo($mailConfig['from_email'], $mailConfig['from_name']);
 		$officeMail->addCustomHeader('Return-Path', $mailConfig['from_email']);
-		$officeMail->addAddress($mailConfig['admin_email']);
+		$officeMail->addAddress('certification@aitf.co.in');
+		if (!empty($mailConfig['admin_email']) && strtolower($mailConfig['admin_email']) !== 'certification@aitf.co.in') {
+			$officeMail->addAddress($mailConfig['admin_email']);
+		}
 		$officeMail->isHTML(true);
-		$officeMail->Subject = 'Letter Sent Confirmation';
+		$officeMail->Subject = 'Following letter has been sent to client for ' . $letterDisplayName;
 		$officeRecipients = implode(', ', array_filter($contactEmail));
 		$officeMail->addAttachment($fullFilePath, $fileName);
 		$officeMail->Body = '<html><body>'
-			. '<p>Client letter sent successfully.</p>'
+			. '<p>Following letter has been sent to client for <strong>' . htmlspecialchars($letterDisplayName, ENT_QUOTES, 'UTF-8') . '</strong>.</p>'
 			. '<p><strong>Customer:</strong> ' . htmlspecialchars($customer['customer_name'], ENT_QUOTES, 'UTF-8') . '<br>'
 			. '<strong>Recipients:</strong> ' . htmlspecialchars($officeRecipients, ENT_QUOTES, 'UTF-8') . '<br>'
 			. '<strong>Subject:</strong> ' . htmlspecialchars($subject, ENT_QUOTES, 'UTF-8') . '</p>'

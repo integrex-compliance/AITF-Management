@@ -4624,6 +4624,8 @@
                     }
                 }
 
+                aitfBackfillClientStatusSentDatesForNextAudit($db, $caservice['service'], $_GET['customerid']);
+
                 $actiosDates = "SELECT MIN(action_id) as action_id, service_id, action, due_date, MAX(sent_date) as sent_date, MAX(is_deleted) as is_deleted FROM ca_service_dates WHERE service_id = :serviceID AND is_deleted = 'N' GROUP BY service_id, action, due_date ORDER BY due_date ASC";
                 $statement = $db->prepare($actiosDates);
                 $statement->bindParam(':serviceID', $caservice['service']);
