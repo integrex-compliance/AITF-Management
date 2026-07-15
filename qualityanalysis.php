@@ -17,6 +17,12 @@
     $statement->execute();
     $servicesTypes = $statement->fetchAll();
 
+    // Fetch auditor list for filter dropdown
+    $auditorSql = "SELECT auditor_name FROM auditors ORDER BY auditor_name ASC";
+    $statement = $db->prepare($auditorSql);
+    $statement->execute();
+    $auditorsList = $statement->fetchAll(PDO::FETCH_ASSOC);
+
     // Batch preload subtype, survey, and CDC data to avoid per-row queries
     $serviceIdsByType = [
         'CA' => [], 'SA-I' => [], 'SA-II' => [], 'RC' => [], 'SP' => []
@@ -64,15 +70,17 @@
     );
     $subtypeIds = array_filter($subtypeIds, function($v){ return $v !== null && $v !== ''; });
 
-    // customer_survey_id map: ca_serviceid => survey_id
+    // customer_survey_id map: ca_serviceid => row (survey_id + auditing_quality, mgmt_satisfaction, aggregate)
     $surveyIdMap = [];
+    $surveyDetailMap = []; // subtype_id => [auditing_quality, mgmt_satisfaction, aggregate]
     if (!empty($subtypeIds)) {
         $ph = implode(',', array_fill(0, count($subtypeIds), '?'));
-        $sqlSurveyIds = "SELECT ca_serviceid, survey_id FROM customer_survey_id WHERE ca_serviceid IN ($ph)";
+        $sqlSurveyIds = "SELECT ca_serviceid, survey_id, auditing_quality, mgmt_satisfaction, aggregate, ncval, ofival, oplusval FROM customer_survey_id WHERE ca_serviceid IN ($ph)";
         $stmt = $db->prepare($sqlSurveyIds);
         $stmt->execute($subtypeIds);
         foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
             $surveyIdMap[$r['ca_serviceid']] = $r['survey_id'];
+            $surveyDetailMap[$r['ca_serviceid']] = $r;
         }
     }
 
@@ -125,7 +133,7 @@
             <div class="container" >
                 <div class="row" style="padding-top:10px;">
                     <div class="col-sm-1"><a class="btn btn-info filterBtn"><i class="fa fa-filter "></i></a></div>                            
-                    <div class="col-sm-3 float-label-control custom-float-label-control">
+                    <div class="col-sm-2 float-label-control custom-float-label-control">
                         <select name="service-type" class="form-control service-type" id="service-type">
                             <option value="">Select Service Type</option>
                             <?php foreach ($servicesTypes as $service) { ?>
@@ -135,11 +143,26 @@
                             <?php } ?>
                         </select>
                     </div>
-                    <div class="col-sm-3 float-label-control custom-float-label-control">
+                    <div class="col-sm-2 float-label-control custom-float-label-control">
+                        <select name="auditor-filter" class="form-control auditor-filter" id="auditor-filter">
+                            <option value="">Select Auditor</option>
+                            <?php foreach ($auditorsList as $auditor) { ?>
+                                <option value="<?php echo htmlspecialchars($auditor['auditor_name']) ?>">
+                                    <?php echo htmlspecialchars($auditor['auditor_name']) ?>
+                                </option>
+                            <?php } ?>
+                        </select>
+                    </div>
+                    <div class="col-sm-2 float-label-control custom-float-label-control">
                         <input type="text" class="filterFromDate" id="filterFromDate" name="filterFromDate" placeholder="Audit Date From" value="">
                     </div>
-                    <div class="col-sm-3 form-group float-label-control custom-float-label-control">
+                    <div class="col-sm-2 form-group float-label-control custom-float-label-control">
                         <input type="text" class="filterToDate" id="filterToDate" name="filterToDate" placeholder="Audit Date To" value="">
+                    </div>
+                    <div class="col-sm-2 float-label-control custom-float-label-control">
+                        <button type="button" class="btn btn-success downloadQualityReport" style="width:100%;">
+                            <i class="fa fa-cloud-download" style="font-size: 15px;"></i> Download Report
+                        </button>
                     </div>
                 </div>
                 <div class="row clearfix" style="padding-top:10px;">
@@ -217,8 +240,9 @@
 
                                     $surveyId = isset($surveyIdMap[$subId]) ? $surveyIdMap[$subId] : null;
                                     $agg = isset($surveyAgg[$surveyId]) ? $surveyAgg[$surveyId] : ['auditors' => '', 'marks' => ''];
+                                    $surveyDetail = isset($surveyDetailMap[$subId]) ? $surveyDetailMap[$subId] : null;
                                     $cdc = isset($cdcMap[$subId]) ? $cdcMap[$subId] : null;
-                                    if (!$cdc) { continue; }
+                                    if (!$surveyDetail) { continue; }
 
                                     ?>
                                     <tr class="customerAccount" data-id="<?php echo $customer['id'] ?>"  >
@@ -232,28 +256,47 @@
                                             <span><?php echo simpleDateConversion($customer["audit_date"]); ?>~</span><small><a ><?php echo simpleDateConversion($customer["audit_date"]) ?></a></small>
                                         </td>
                                         <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                            <small><a ><?php echo $cdc['auditing_quality'] ?></a></small>
+                                            <small><a ><?php echo $surveyDetail ? $surveyDetail['auditing_quality'] : '' ?></a></small>
                                         </td>
                                         <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                            <small><a ><?php echo $cdc['mgmt_satisfaction'] ?></a></small>
+                                            <small><a ><?php echo $surveyDetail ? $surveyDetail['mgmt_satisfaction'] : '' ?></a></small>
                                         </td>
                                         <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                            <small><a ><?php echo $agg['auditors']; ?></a></small>
+                                            <small><a ><?php
+                                                // Auditor: use survey auditors, fallback to CDC lead_auditor
+                                                $auditorDisplay = $agg['auditors'];
+                                                if (empty($auditorDisplay) && $cdc && !empty($cdc['lead_auditor'])) {
+                                                    $auditorDisplay = $cdc['lead_auditor'];
+                                                }
+                                                echo $auditorDisplay;
+                                            ?></a></small>
                                         </td>
                                         <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
                                             <small><a ><?php echo $agg['marks']; ?></a></small>
                                         </td>
                                         <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                            <small><a ><?php echo $cdc['aggregate'] ?></a></small>
+                                            <small><a ><?php echo $surveyDetail ? $surveyDetail['aggregate'] : '' ?></a></small>
                                         </td>
                                         <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                            <small><a ><?php echo $cdc['ncval'] ?></a></small>
+                                            <small><a ><?php
+                                                $ncDisplay = $cdc ? $cdc['ncval'] : '';
+                                                if (empty($ncDisplay) && $surveyDetail && !empty($surveyDetail['ncval'])) $ncDisplay = $surveyDetail['ncval'];
+                                                echo $ncDisplay;
+                                            ?></a></small>
                                         </td>
                                         <td  data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                            <small><a ><?php echo $cdc['ofival'] ?></a></small>
+                                            <small><a ><?php
+                                                $ofiDisplay = $cdc ? $cdc['ofival'] : '';
+                                                if (empty($ofiDisplay) && $surveyDetail && !empty($surveyDetail['ofival'])) $ofiDisplay = $surveyDetail['ofival'];
+                                                echo $ofiDisplay;
+                                            ?></a></small>
                                         </td>
                                         <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                            <small><a ><?php echo $cdc['oplusval'] ?></a></small>
+                                            <small><a ><?php
+                                                $oplusDisplay = $cdc ? $cdc['oplusval'] : '';
+                                                if (empty($oplusDisplay) && $surveyDetail && !empty($surveyDetail['oplusval'])) $oplusDisplay = $surveyDetail['oplusval'];
+                                                echo $oplusDisplay;
+                                            ?></a></small>
                                         </td>                                               
                                     </tr>
                                     <?php
@@ -316,31 +359,36 @@
         $.fn.DataTable.ext.search.push(
                 function (settings, data, dataIndex) {
                     var serviceType = $(".service-type").val();
+                    var auditorFilter = $(".auditor-filter").val();
                     var fromDate = $(".filterFromDate").val();
                     var toDate = $(".filterToDate").val();
                     var isServiceType = false;
+                    var isAuditor = false;
                     var isfromDate = false;
                     var isToDate = false;
-                    //            alert(serviceType);
-                    if (serviceType == "" && fromDate == "" && toDate == "") {
+                    if (serviceType == "" && auditorFilter == "" && fromDate == "" && toDate == "") {
                         return true;
                     }
                     if (serviceType != "") {
-                        var servieTypeStr = data[1] || ""; // use data for the age column
-//                    alert(servieTypeStr);
+                        var servieTypeStr = data[1] || "";
                         if (servieTypeStr.toUpperCase().trim() == serviceType.toUpperCase().trim()) {
-                            //                alert("test");
                             isServiceType = true;
                         }
                     } else {
                         isServiceType = true;
                     }
+                    // Auditor filter: column 5 (0-indexed)
+                    if (auditorFilter != "") {
+                        var auditorStr = data[5] || "";
+                        if (auditorStr.toUpperCase().trim().indexOf(auditorFilter.toUpperCase().trim()) !== -1) {
+                            isAuditor = true;
+                        }
+                    } else {
+                        isAuditor = true;
+                    }
                     var dateValue = data[2] || "";
                     var dateSplit = dateValue.split("~");
-                    //            alert(dateSplit[1]);
-                    //            alert(fromDate);
                     if (fromDate != "") {
-//                      alert(dateValue);
                         isfromDate = compareMinDates(fromDate, dateSplit[1]);
                     } else {
                         isfromDate = true;
@@ -350,7 +398,7 @@
                     } else {
                         isToDate = true;
                     }
-                    finalResult = (isServiceType && isfromDate && isToDate);
+                    finalResult = (isServiceType && isAuditor && isfromDate && isToDate);
                     return finalResult;
                 }
         );
@@ -459,7 +507,7 @@
             });
             table.columns.adjust().draw();
 
-            $('.service-type, .filterFromDate, .filterToDate').change(function () {
+            $('.service-type, .auditor-filter, .filterFromDate, .filterToDate').change(function () {
                 var fromDate = $(".filterFromDate").val();
                 var toDate = $(".filterToDate").val();
                 if (fromDate != "" && toDate != "") {
@@ -468,8 +516,27 @@
                         $(".filterToDate").val("");
                     }
                 }
-                //            alert("t");
                 table.draw();
+            });
+
+            // Download Report - export visible data to Excel
+            $('.downloadQualityReport').click(function () {
+                var serviceType = $('.service-type').val();
+                var auditorFilter = $('.auditor-filter').val();
+                var fromDate = $('.filterFromDate').val();
+                var toDate = $('.filterToDate').val();
+                var url = 'exportQualityAnalysisExcel.php';
+                var $form = $('<form>', {
+                    method: 'post',
+                    action: url
+                }).css('display', 'none');
+                $('<input>', { type: 'hidden', name: 'serviceType', value: serviceType || '' }).appendTo($form);
+                $('<input>', { type: 'hidden', name: 'auditorFilter', value: auditorFilter || '' }).appendTo($form);
+                $('<input>', { type: 'hidden', name: 'fromDate', value: fromDate || '' }).appendTo($form);
+                $('<input>', { type: 'hidden', name: 'toDate', value: toDate || '' }).appendTo($form);
+                $('body').append($form);
+                $form[0].submit();
+                setTimeout(function () { $form.remove(); }, 1000);
             });
         });
     </script>

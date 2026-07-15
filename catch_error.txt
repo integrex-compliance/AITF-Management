@@ -1,0 +1,7 @@
+Array
+(
+    [type] => 8
+    [message] => Trying to access array offset on value of type null
+    [file] => C:\xampp\htdocs\public_html\customerAccount.php
+    [line] => 4166
+)

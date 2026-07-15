@@ -31,8 +31,8 @@ foreach ($auditors as $name) {
 }
 ?>
 
-<script
-src="js/form-fancy-control.js"></script>
+<script src="js/date-chronology-validation.js?v=2"></script>
+<script src="js/form-fancy-control.js"></script>
 <link rel="stylesheet" href="css/float-label.css">
 
 <style>
@@ -316,7 +316,21 @@ src="js/form-fancy-control.js"></script>
 </div>
 
 <script type="text/javascript">
-    $(function () {
+    $(document).ready(function () {
+        $('#auditNotificationii').on('shown.bs.modal', function () {
+            // Re-initialize chronology validator when modal opens
+            DateChronologyValidator.init({
+                customerId: $('.auditii-noti-customer').val() || $('.customerId').val(),
+                typedServiceId: $('.auditii-noti-service').val() || $('.serviceId').val(),
+                fields: {
+                    'stage2_intimation_date': { input: '.intimationDateii', errorDiv: '#intimationDateiiError', errorMsg: '#intimationDateiiErrorMsg' },
+                    'stage2_audit_date': { input: '.auditiiDates', errorDiv: '#auditiiDatesError', errorMsg: '#auditiiDatesErrorMsg' },
+                    'intimation_date': { input: '.intimationDateii', errorDiv: '#intimationDateiiError', errorMsg: '#intimationDateiiErrorMsg' },
+                    'audit_date': { input: '.auditiiDates', errorDiv: '#auditiiDatesError', errorMsg: '#auditiiDatesErrorMsg' }
+                },
+                submitBtn: '.addAuditiiNotiii' // Replace with actual submit button class if different
+            });
+        });
         $('#intimationDateii').datepicker({
             minDate: '-100Y',
             maxDate: '+100Y',
@@ -362,44 +376,15 @@ src="js/form-fancy-control.js"></script>
             $('#intimationDateiiError').show();
             $('#intimationDateii').addClass('inputHighlight');
             $isError = true;
-        } else if ($(".intimationDateii").val() != "") {
-            $.ajax({
-                type: "GET",
-                url: "checkCustomer.php",
-                data: {
-                    intimationDateii: $('.intimationDateii').val(),
-                    notisvcId: $('.auditii-noti-service').val(),
-                },
-                async: false,
-                success: function (data) {
-    	                //alert(data);	                    
-                    if (data == 1) {
-                        //alert("hi");
-                        $('#intimationDateiiErrorMsg').text("Intimation Date must be greater than Stage-I Audit Date");
-                        $('#intimationDateiiError').show();
-                        $('#intimationDateii').addClass('inputHighlight');
-                        $isError = true;
-                    } else {
-                        $('#intimationDateiiError').hide();
-                        $('#intimationDateii').removeClass('inputHighlight');
-                    }
-                }
-            });
         } else {
-            $('#intimationDateiiError').hide();
-            $('#intimationDateii').removeClass('inputHighlight');
+            // Let the Chronology validator handle it
+            if (DateChronologyValidator.validateAll()) {
+                $isError = true;
+            } else {
+                $('#intimationDateiiError').hide();
+                $('#intimationDateii').removeClass('inputHighlight');
+            }
         }
-        $('.auditiiDates').each(function() {
-if (($('.auditiiDates').val() != "") && 
-    moment($('#intimationDateii').val(), "DD.MM.YYYY") >= moment($('.auditiiDates').val(), "DD.MM.YYYY")) {
-    $('#auditiiDatesErrorMsg').text("Audit Date (Stage-II) must be greater than both Intimation Date and Stage-I Audit Date");
-    $('#auditiiDatesError').show();
-    $('#auditiiDates').addClass('inputHighlight');
-    $isError = true;
-} else {
-    $('#auditiiDatesError').hide();
-    $('#auditiiDates').removeClass('inputHighlight');
-}});
         if ($(".tllastedit1").val() == "") {
             $('#teamLeader2ErrorMsg').text("Please select atleast one checkbox");
             $('#teamLeader2Error').show();

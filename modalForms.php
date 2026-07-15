@@ -1149,6 +1149,18 @@ $csgttax = $taxationDetails["rate"];
                 certificationDetails();
             }
         });
+        
+        $('#certificatePrintModal').on('shown.bs.modal', function () {
+            DateChronologyValidator.init({
+                customerId: $('.csId').val() || '<?php echo isset($_GET["customerid"]) ? $_GET["customerid"] : "" ?>',
+                typedServiceId: $(".service").val() || '<?php echo isset($_GET["service"]) ? $_GET["service"] : "" ?>',
+                fields: {
+                    'aggrement_date': { input: '.newRegistrationDate', errorDiv: '#newRegistrationDateError', errorMsg: '#newRegistrationDateErrorMsg' }
+                },
+                submitBtn: '.addCertificationForm', // Assuming submit button class
+                formSelector: '#certificatePrintModal form'
+            });
+        });
     });
     
     function readURLSign(input) {
@@ -1488,49 +1500,19 @@ $csgttax = $taxationDetails["rate"];
 
     function certificationDetails() {
         $isError = false;
-//        alert($(".auditId").val());
         if ($(".newRegistrationDate").val() == "") {
-//			alert("in if");
             $('#newRegistrationDateErrorMsg').text("Agreement Date cannot be empty");
             $('#newRegistrationDateError').show();
             $('#newRegistrationDate').addClass('inputHighlight');
             $isError = true;
-        }else if ($(".newRegistrationDate").val() != "") {
-            // Prefer runtime value set when modal is opened; fallback to GET param
-            var customer = $('.csId').val() || '<?php echo isset($_GET['customerid']) ? $_GET['customerid'] : '' ?>';
-//            alert(" service id -> "+$('.newRegistrationDate').val()+ " service id -> "+$(".ServiceId").val()+ "customer id "+customer);
-            var idval = $(".newRegistrationDate").val();
-            $.ajax({
-                type: "GET",
-                url: "checkCustomer.php",
-                data: {
-                    nextDate: $('.newRegistrationDate').val(),
-                    serviceid: $(".service").val() || '<?php echo isset($_GET['service']) ? $_GET['service'] : '' ?>',
-                    custid: customer,
-                },
-                async: false,
-                success: function (data) {
-//                    alert(data);
-                    if (data == 1) {
-                        $('#newRegistrationDateErrorMsg').text("Agreement Date must be greater than or equal to the last Agreement Date");
-                        $('#newRegistrationDateError').show();
-                        $('#newRegistrationDate').addClass('inputHighlight');
-                        $isError = true;
-                    } else if (data == 2) {
-                        $('#newRegistrationDateErrorMsg').text("Agreement Date must be greater than or equal to the Review Date");
-                        $('#newRegistrationDateError').show();
-                        $('#newRegistrationDate').addClass('inputHighlight');
-                        $isError = true;
-                    } else {
-                        $('#newRegistrationDateError').hide();
-                        $('#newRegistrationDate').removeClass('inputHighlight');
-                    }
-                },
-                error: function (data, status, err)
-                {
-                    alert(status);
-                }
-            });
+        } else {
+            // Let the Chronology validator handle it
+            if (DateChronologyValidator.validateAll()) {
+                $isError = true;
+            } else {
+                $('#newRegistrationDateError').hide();
+                $('#newRegistrationDate').removeClass('inputHighlight');
+            }
         }
         return $isError;
     }

@@ -34,6 +34,7 @@ foreach ($auditors as $name) {
 }
 ?>
 
+<script src="js/date-chronology-validation.js?v=2"></script>
 <script src="js/form-fancy-control.js"></script>
 <link rel="stylesheet" href="css/float-label.css">
 <style>
@@ -327,6 +328,23 @@ foreach ($auditors as $name) {
 
 
 <script type="text/javascript">
+    $(document).ready(function () {
+        $('#auditNotification').on('shown.bs.modal', function () {
+            // Re-initialize chronology validator when modal opens
+            DateChronologyValidator.init({
+                customerId: $('.audit-noti-customer').val() || $('.customerId').val(),
+                typedServiceId: $('.audit-noti-service').val() || $('.serviceId').val(),
+                fields: {
+                    'stage1_intimation_date': { input: '.intimationDate', errorDiv: '#intimationDateError', errorMsg: '#intimationDateErrorMsg' },
+                    'stage1_audit_date': { input: '.auditDates', errorDiv: '#auditDatesError', errorMsg: '#auditDatesErrorMsg' },
+                    'intimation_date': { input: '.intimationDate', errorDiv: '#intimationDateError', errorMsg: '#intimationDateErrorMsg' },
+                    'audit_date': { input: '.auditDates', errorDiv: '#auditDatesError', errorMsg: '#auditDatesErrorMsg' }
+                },
+                submitBtn: '.addAuditNoti'
+            });
+        });
+    });
+
     function formatStage1DateValue(rawValue) {
         if (rawValue === null || rawValue === undefined) {
             return "";

@@ -33,6 +33,7 @@ $statement->execute();
 $auditorsList = $statement->fetchAll();
 ?>
 
+<script src="js/date-chronology-validation.js?v=2"></script>
 <script src="js/form-fancy-control.js"></script>
 <link rel="stylesheet" href="css/float-label.css">
 
@@ -579,6 +580,7 @@ $auditorsList = $statement->fetchAll();
                 // Remove all datepicker classes and attributes
                 $(this).removeClass('hasDatepicker')
                        .removeData('datepicker')
+                       .off('change.chronoValidation blur.chronoValidation') // Remove validation listeners to re-attach later
                        .off('focus')
                        .attr('autocomplete', 'off');
             });
@@ -2500,6 +2502,22 @@ function checkCDCStatus() {
   }
 }
 
+    $(document).ready(function () {
+        $('#cdcModel').on('shown.bs.modal', function () {
+            // Re-initialize chronology validator when modal opens
+            DateChronologyValidator.init({
+                customerId: $('.customer_Id').val() || $('.customerId').val(),
+                typedServiceId: $('.service_Id').val() || $('.serviceId').val(),
+                fields: {
+                    'nc_closing_date': { input: '.assDate', errorDiv: '#assDateError', errorMsg: '#assDateErrorMsg' },
+                    'cdc_date': { input: '.Date', errorDiv: '#DateError', errorMsg: '#DateErrorMsg' },
+                    'certificate_issue_date': { input: '.revDatecdc', errorDiv: '#revDatecdcError', errorMsg: '#revDatecdcErrorMsg' }
+                },
+                submitBtn: '.save_cdc'
+            });
+        });
+    });
+
     function validateCDC(showAuditPerformanceAlert) {
         showAuditPerformanceAlert = showAuditPerformanceAlert === true;
         console.log('=== validateCDC called ===');
@@ -2653,42 +2671,14 @@ function checkCDCStatus() {
                     $section.find('#periodicalauditError' + sectionSuffix).hide();
                     $periodicalaudit.removeClass('inputHighlight');
                 }
-                
-                // Validate Rev date must be greater than or equal to CDC Date
-                if ($revDatecdc.val() != "" && $(".Date").val() != "" && (moment($revDatecdc.val(), "DD.MM.YYYY") < moment($('.Date').val(), "DD.MM.YYYY"))) {
-                    console.log('  Section', index, 'rev date validation FAILED');
-                    $section.find('#revDatecdcError' + sectionSuffix).show();
-                    $section.find('#revDatecdcErrorMsg' + sectionSuffix).text("Rev date must be greater than or equal to CDC Date");
-                    $revDatecdc.addClass('inputHighlight');
-                    $isError = true;
-                } else {
-                    $section.find('#revDatecdcError' + sectionSuffix).hide();
-                    $revDatecdc.removeClass('inputHighlight');
-                }
             });
         }
         
-        // Validate Assessment / NC (M) Closing Date
-        if ($('.assDate').val() != "" && (moment($('.assDate').val(), "DD.MM.YYYY") < moment(lastDate, "DD.MM.YYYY"))) {
-            $('#assDateErrorMsg').text("Assessment / NC (M) Closing Date must be greater than or equal to Date of Audit");
-            $('#assDateError').show();
-            $('#assDate').addClass('inputHighlight');
+        // Let DateChronologyValidator handle the chronological checks
+        if (DateChronologyValidator.validateAll()) {
             $isError = true;
-        } else {
-            $('#assDateError').hide();
-            $('#assDate').removeClass('inputHighlight');
         }
-        
-        // Validate CDC Date
-        if ($(".Date").val() != "" && $(".assDate").val() != "" && (moment($('.Date').val(), "DD.MM.YYYY") < moment($('.assDate').val(), "DD.MM.YYYY"))) {
-            $('#DateErrorMsg').text("CDC Date must be greater than or equal to Assessment / NC (M) Closing Date");
-            $('#DateError').show();
-            $('#Date').addClass('inputHighlight');
-            $isError = true;
-        } else {
-            $('#DateError').hide();
-            $('#Date').removeClass('inputHighlight');
-        }
+
         
         console.log('Validation complete. Has errors:', $isError);
         return $isError;

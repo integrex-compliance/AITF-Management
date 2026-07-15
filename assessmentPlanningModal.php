@@ -27,6 +27,7 @@ foreach ($auditors as $name) {
 ?>
 
 <script src="js/form-fancy-control.js"></script>
+<script src="js/date-chronology-validation.js?v=2"></script>
 <link rel="stylesheet" href="css/float-label.css">
 
 <div class="modal fade" id="assessmentModal" tabindex="-1" role="dialog"
@@ -206,6 +207,9 @@ foreach ($auditors as $name) {
                             <div class="col-sm-6 form-group float-label-control">
                                 <label>Date of QMS Implementation</label> 
                                 <input type="text" class="assessmentImplementationDate" id="assessmentImplementationDate" name="assessmentImplementationDate" placeholder="Date of QMS Implementation">
+                                <div id="qmsImplementationDateError" style="display: none">
+                                    <small><span id="qmsImplementationDateErrorMsg" style="color: #c9513c; font-style: italic;"></span></small>
+                                </div>
                             </div>
                             <div class="col-xs-4 audit_aspect">
                                 <font size="2">Documented Information Sent by client?</font>
@@ -353,50 +357,18 @@ foreach ($auditors as $name) {
 
 <script type="text/javascript">
 
-    function validateAuditPlanDate() {
-        $isError = false;
-        if ($(".assessmentDate").val() == "") {
-            $('#assessmentDateErrorMsg').text("Date can not be empty");
-            $('#assessmentDateError').show();
-            $('#assessmentDate').addClass('inputHighlight');
-            $isError = true;
-        } else if ($(".assessmentDate").val() != "") {
-            $.ajax({
-                type: "GET",
-                url: "checkCustomer.php",
-                data: {
-                    assessmentDate: $('.assessmentDate').val(),
-                    svcid: $(".assessmentServiceId").val(),
-                },
-                async: false,
-                success: function (data) {
-//	                alert(data);	                    
-                    if (data == 1) {
-                        $('#assessmentDateErrorMsg').text("Date should be greater than or equal to contract review date");
-                        $('#assessmentDateError').show();
-                        $('#assessmentDate').addClass('inputHighlight');
-                        $isError = true;
-                    } else {
-                        $('#assessmentDateError').hide();
-                        $('#assessmentDate').removeClass('inputHighlight');
-                    }
-                }
-            });
-        } else {
-            $('#assessmentDateError').hide();
-            $('#assessmentDate').removeClass('inputHighlight');
-        }
-        return $isError;
-    }
-
     $(document).ready(function () {
-
-        $(".addAssessment").click(function (e) {
-//            alert($(".assessmentServiceId").val());
-            if (validateAuditPlanDate()) {
-                e.preventDefault();
-                return;
-            }
+        $('#assessmentModal').on('shown.bs.modal', function () {
+            // Re-initialize chronology validator when modal opens
+            DateChronologyValidator.init({
+                customerId: $('.assessmentUserId').val() || $('.customerId').val(),
+                typedServiceId: $('.assessmentServiceId').val() || $('.serviceId').val(),
+                fields: {
+                    'qms_implementation_date': { input: '.assessmentImplementationDate', errorDiv: '#qmsImplementationDateError', errorMsg: '#qmsImplementationDateErrorMsg' },
+                    'assessment_planning_date': { input: '.assessmentDate', errorDiv: '#assessmentDateError', errorMsg: '#assessmentDateErrorMsg' }
+                },
+                submitBtn: '.addAssessment'
+            });
         });
 
         $(".appifyes").change(function () {

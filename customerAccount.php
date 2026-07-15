@@ -12,206 +12,9 @@
     include_once './modalForms.php';
     date_default_timezone_set('Asia/Kolkata');
 
-    if (!function_exists('caDateGraphHasValue')) {
-        function caDateGraphHasValue($value)
-        {
-            $value = trim((string) $value);
-            return $value !== '' && strtolower($value) !== 'null' && $value !== '0000-00-00' && $value !== '0000-00-00 00:00:00';
-        }
+    include_once __DIR__ . '/include/date_graph_helpers.php';
 
-        function caDateGraphParseOneDate($value)
-        {
-            $value = trim((string) $value);
-            if (!caDateGraphHasValue($value)) {
-                return null;
-            }
-
-            $value = preg_replace('/\s+/', ' ', $value);
-            $formats = array('Y-m-d', 'Y/m/d', 'Y.m.d', 'd.m.Y', 'd-m-Y', 'd/m/Y', 'd M Y', 'd F Y', 'M d Y', 'F d Y');
-
-            foreach ($formats as $format) {
-                $date = DateTime::createFromFormat('!' . $format, $value);
-                if ($date instanceof DateTime) {
-                    $errors = DateTime::getLastErrors();
-                    if (($errors === false || ($errors['warning_count'] == 0 && $errors['error_count'] == 0)) && $date->format($format) === $value) {
-                        return array(
-                            'iso' => $date->format('Y-m-d'),
-                            'display' => $date->format('d.m.Y'),
-                            'timestamp' => $date->getTimestamp(),
-                        );
-                    }
-                }
-            }
-
-            $timestamp = strtotime($value);
-            if ($timestamp !== false) {
-                return array(
-                    'iso' => date('Y-m-d', $timestamp),
-                    'display' => date('d.m.Y', $timestamp),
-                    'timestamp' => $timestamp,
-                );
-            }
-
-            return null;
-        }
-
-        function caDateGraphParseDates($value)
-        {
-            if (!caDateGraphHasValue($value)) {
-                return array();
-            }
-
-            $value = trim((string) $value);
-            $candidates = array();
-            $patterns = array(
-                '/\b\d{4}[-\/.]\d{1,2}[-\/.]\d{1,2}\b/',
-                '/\b\d{1,2}[-\/.]\d{1,2}[-\/.]\d{4}\b/',
-                '/\b\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4}\b/',
-                '/\b[A-Za-z]{3,9}\s+\d{1,2}\s+\d{4}\b/',
-            );
-
-            foreach ($patterns as $pattern) {
-                if (preg_match_all($pattern, $value, $matches)) {
-                    foreach ($matches[0] as $match) {
-                        $candidates[] = trim($match);
-                    }
-                }
-            }
-
-            if (empty($candidates)) {
-                $candidates[] = $value;
-            }
-
-            $dates = array();
-            $seen = array();
-            foreach ($candidates as $candidate) {
-                $parsed = caDateGraphParseOneDate($candidate);
-                if ($parsed && !isset($seen[$parsed['iso']])) {
-                    $parsed['raw'] = $candidate;
-                    $dates[] = $parsed;
-                    $seen[$parsed['iso']] = true;
-                }
-            }
-
-            return $dates;
-        }
-
-        function caDateGraphFetchOne($db, $sql, array $params)
-        {
-            try {
-                $statement = $db->prepare($sql);
-                $statement->execute($params);
-                $row = $statement->fetch(PDO::FETCH_ASSOC);
-                return $row ? $row : array();
-            } catch (Exception $ex) {
-                error_log('Date graph fetch failed: ' . $ex->getMessage());
-                return array();
-            }
-        }
-
-        function caDateGraphFetchAll($db, $sql, array $params)
-        {
-            try {
-                $statement = $db->prepare($sql);
-                $statement->execute($params);
-                $rows = $statement->fetchAll(PDO::FETCH_ASSOC);
-                return $rows ? $rows : array();
-            } catch (Exception $ex) {
-                error_log('Date graph fetch failed: ' . $ex->getMessage());
-                return array();
-            }
-        }
-
-        function caDateGraphFirstValue(array $row, array $fields)
-        {
-            foreach ($fields as $field) {
-                if (isset($row[$field]) && caDateGraphHasValue($row[$field])) {
-                    return $row[$field];
-                }
-            }
-            return '';
-        }
-
-        function caDateGraphFetchAssessmentPlanning($db, $customerId, array $serviceIds)
-        {
-            $seen = array();
-            $fallback = array();
-            foreach ($serviceIds as $serviceId) {
-                $serviceId = trim((string) $serviceId);
-                if ($serviceId === '' || isset($seen[$serviceId])) {
-                    continue;
-                }
-                $seen[$serviceId] = true;
-
-                $row = caDateGraphFetchOne(
-                    $db,
-                    "SELECT assessment_id, service_id, qms_implementation_date, date
-                     FROM assessment_planning
-                     WHERE customer_id = :customer_id
-                     AND service_id = :service_id
-                     ORDER BY
-                        CASE
-                            WHEN qms_implementation_date IS NOT NULL AND qms_implementation_date <> '' AND qms_implementation_date <> '0000-00-00' THEN 0
-                            WHEN date IS NOT NULL AND date <> '' AND date <> '0000-00-00' THEN 1
-                            ELSE 2
-                        END,
-                        assessment_id DESC
-                     LIMIT 1",
-                    array(':customer_id' => $customerId, ':service_id' => $serviceId)
-                );
-
-                if (empty($row)) {
-                    continue;
-                }
-                if (empty($fallback)) {
-                    $fallback = $row;
-                }
-                if (caDateGraphFirstValue($row, array('qms_implementation_date', 'date')) !== '') {
-                    return $row;
-                }
-            }
-
-            return $fallback;
-        }
-
-        function caDateGraphFetchCdc($db, $customerId, $typedServiceId)
-        {
-            $latest = caDateGraphFetchOne(
-                $db,
-                "SELECT crr_id, assDate, Date, revDatecdc
-                 FROM cdc_report_review
-                 WHERE customer_id = :customer_id
-                 AND ca_service_id = :typed_id
-                 ORDER BY crr_id DESC
-                 LIMIT 1",
-                array(':customer_id' => $customerId, ':typed_id' => $typedServiceId)
-            );
-
-            if (empty($latest) || caDateGraphHasValue(isset($latest['assDate']) ? $latest['assDate'] : '')) {
-                return $latest;
-            }
-
-            $closingDateRow = caDateGraphFetchOne(
-                $db,
-                "SELECT assDate
-                 FROM cdc_report_review
-                 WHERE customer_id = :customer_id
-                 AND ca_service_id = :typed_id
-                 AND assDate IS NOT NULL
-                 AND assDate <> ''
-                 AND assDate <> '0000-00-00'
-                 ORDER BY crr_id DESC
-                 LIMIT 1",
-                array(':customer_id' => $customerId, ':typed_id' => $typedServiceId)
-            );
-
-            if (!empty($closingDateRow['assDate'])) {
-                $latest['assDate'] = $closingDateRow['assDate'];
-            }
-
-            return $latest;
-        }
-
+    if (!function_exists('caDateGraphTargetForEntry')) {
         function caDateGraphTargetForEntry($serviceType, $label, $source, $typedServiceId)
         {
             $rowSelector = '';
@@ -580,39 +383,7 @@
             return $certificates;
         }
 
-        function caDateGraphResolveCrServiceForCa($db, $customerId, $caUniversalServiceId)
-        {
-            $row = caDateGraphFetchOne(
-                $db,
-                "SELECT crs.cr_id AS typed_service_id, s.service_id AS universal_service_id
-                 FROM service_type_cr crs
-                 INNER JOIN service s ON crs.service = s.service_id
-                 WHERE s.customer_id = :customer_id
-                 AND s.service_type = 'CR'
-                 AND s.service_id <= :ca_service_id
-                 ORDER BY s.service_id DESC
-                 LIMIT 1",
-                array(':customer_id' => $customerId, ':ca_service_id' => $caUniversalServiceId)
-            );
 
-            if (!empty($row['typed_service_id'])) {
-                return $row;
-            }
-
-            $row = caDateGraphFetchOne(
-                $db,
-                "SELECT crs.cr_id AS typed_service_id, s.service_id AS universal_service_id
-                 FROM service_type_cr crs
-                 INNER JOIN service s ON crs.service = s.service_id
-                 WHERE s.customer_id = :customer_id
-                 AND s.service_type = 'CR'
-                 ORDER BY s.service_id DESC
-                 LIMIT 1",
-                array(':customer_id' => $customerId)
-            );
-
-            return !empty($row['typed_service_id']) ? $row : array();
-        }
 
         function caDateGraphAddProposedDates(array &$entries, $db, $serviceType, $section, $typedServiceId, $universalServiceId, array $actions)
         {
@@ -953,15 +724,15 @@
     // 1) If called via POST (from dashboard or other lists), store the id in session and redirect back to this page
     if (isset($_POST['customerid']) && !empty($_POST['customerid'])) {
         $_SESSION['current_customer_id'] = (int) $_POST['customerid'];
-        header("Location: customerAccount.php");
-        exit;
+        // header("Location: customerAccount.php");
+        // exit;
     }
 
     // 2) Legacy links: customerAccount.php?customerid=123 -> store in session and redirect to this page (clean URL)
     if (isset($_GET['customerid']) && !empty($_GET['customerid']) && strpos($_SERVER['REQUEST_URI'], 'customerAccount.php') !== false) {
         $_SESSION['current_customer_id'] = (int) $_GET['customerid'];
-        header("Location: customerAccount.php");
-        exit;
+        // header("Location: customerAccount.php");
+        // exit;
     }
 
     // 3) For normal /account requests, hydrate $_GET['customerid'] from session if available
@@ -974,7 +745,7 @@
 
     // 4) If we still don't have a customer id, send the user back to the main dashboard
     if (!isset($_GET['customerid']) || empty($_GET['customerid'])) {
-        header("Location: dashboard");
+        echo "<script>window.location.href='dashboard';</script>";
         exit;
     }
 

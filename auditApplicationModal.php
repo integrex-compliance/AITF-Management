@@ -38,6 +38,7 @@ $statement = $db->prepare($accreditation);
 $statement->execute();
 $accreditationList = $statement->fetchAll();
 ?>
+<script src="js/date-chronology-validation.js?v=2"></script>
 <script src="js/form-fancy-control.js"></script>
 <link rel="stylesheet" href="css/float-label.css">
 
@@ -91,6 +92,13 @@ $accreditationList = $statement->fetchAll();
                                     <div class="col-sm-12 form-group float-label-control">
                                         <label>Application Received Date</label>
                                         <input type="text" class="applicationRcvDate appDate" id="applicationRcvDate" name="applicationRcvDate" placeholder="Application Received Date" required>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-sm-12 form-group float-label-control">
+                                        <div id="rcvDateError" style="display: none">
+                                            <small><span id="rcvDateErrorMsg" style="color: #c9513c; font-style: italic;" ></span></small>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1034,21 +1042,7 @@ document.getElementById('SitesPublicPresent').addEventListener('focus', function
         });
     });
 
-    function validateReviewDate() {
-        $isError = false;
-        if ($('.review_date').val() != "" && moment($('#applicationDate').val(), "DD/MM/YYYY") > (moment($('.review_date').val(), "DD/MM/YYYY"))) {
-            $('#invDateErrorMsg').text("Audit application date should be less than review date");
-            $('#invDateError').show();
-            $('#review_date').addClass('inputHighlight');
-            $("#revDateErrorMsg").text("Review date should be greter than audit application date");
-            $("#revDateError").show();
-            $isError = true;
-        } else {
-            $('#invDateError').hide();
-            $('.review_date').removeClass('inputHighlight');
-        }
-        return $isError;
-    }
+
 
     $(document).ready(function () {
         function updateTextArea() {
@@ -1294,6 +1288,19 @@ $('.addApplication').click(function (e) {
                     $('.aif-code').val(data['aif_nace']);
                     $('input[type="text"]').trigger('change');
 //                    $('textarea').trigger('change');
+
+                    // Initialize Date Chronology Validation
+                    DateChronologyValidator.init({
+                        customerId: $('.customerId').val(),
+                        typedServiceId: $('.serviceId').val() || $('.unisvcId').val(),
+                        fields: {
+                            'application_date': { input: '.applicationDate', errorDiv: '#invDateError', errorMsg: '#invDateErrorMsg' },
+                            'application_rcv_date': { input: '.applicationRcvDate', errorDiv: '#rcvDateError', errorMsg: '#rcvDateErrorMsg' },
+                            'contract_review_date': { input: '.review_date', errorDiv: '#revDateError', errorMsg: '#revDateErrorMsg' }
+                        },
+                        submitBtn: '.addApplication'
+                    });
+
                     $('#auditApplication').modal('show');
                 },
                 error: function (data, status, err)
