@@ -124,15 +124,170 @@
     <!-- Sidebar -->
 
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif !important;
+        }
+
+        #page-content-wrapper {
+            background-color: #f0f4f8; /* Softer, cooler background */
+            min-height: 100vh;
+            padding-bottom: 30px;
+        }
+
         .custom-float-label-control {
             margin-bottom: 0em;
+        }
+
+        .filter-section {
+            background: #ffffff;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            border-top: 4px solid #6366f1; /* Vibrant accent line */
+        }
+
+        .filter-section .form-control {
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+            padding: 8px 12px;
+            font-size: 14px;
+            box-shadow: none;
+            transition: all 0.3s ease;
+            height: auto;
+            width: 100%;
+            background-color: #f8fafc;
+        }
+
+        .filter-section .form-control:focus {
+            border-color: #6366f1;
+            background-color: #ffffff;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        }
+
+        .btn {
+            border-radius: 6px;
+            padding: 9px 15px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-info {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            border: none;
+            color: #ffffff;
+            box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+        }
+        
+        .btn-info:hover {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            box-shadow: 0 6px 12px rgba(59, 130, 246, 0.4);
+            transform: translateY(-1px);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            border: none;
+            color: #ffffff;
+            box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);
+        }
+        
+        .btn-success:hover {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            box-shadow: 0 6px 12px rgba(16, 185, 129, 0.4);
+            transform: translateY(-1px);
+        }
+
+        .filterBtn {
+            padding: 9px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .downloadQualityReport {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+
+        /* Table styling */
+        .main_content {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            border-top: 4px solid #10b981; /* Another accent line */
+        }
+
+        .table {
+            margin-bottom: 0;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .table > thead > tr > th {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            color: #ffffff;
+            font-weight: 600;
+            border-bottom: none;
+            padding: 16px 14px;
+            text-align: left;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+        
+        /* Make first and last header corners rounded slightly */
+        .table > thead > tr > th:first-child {
+            border-top-left-radius: 6px;
+        }
+        .table > thead > tr > th:last-child {
+            border-top-right-radius: 6px;
+        }
+
+        .table > tbody > tr > td {
+            padding: 16px 14px;
+            vertical-align: middle;
+            border-top: 1px solid #f1f5f9 !important;
+            border-right: none !important;
+            font-size: 14px;
+            color: #334155;
+            transition: background-color 0.2s ease;
+        }
+
+        .table-hover > tbody > tr:hover {
+            background-color: #eef2ff !important;
+        }
+
+        .table > tbody > tr > td a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .table > tbody > tr > td small {
+            font-size: 14px;
+        }
+        
+        .dataTables_wrapper .dataTables_scrollBody {
+            border-bottom: none !important;
         }
     </style>
     <div id="page-content-wrapper">
         <div class="page-content inset">
             <div class="container" >
-                <div class="row" style="padding-top:10px;">
-                    <div class="col-sm-1"><a class="btn btn-info filterBtn"><i class="fa fa-filter "></i></a></div>                            
+                <div class="row filter-section" style="margin-top:15px;">
+                    <div class="col-sm-1" style="display: flex; justify-content: center;">
+                        <a class="btn btn-info filterBtn"><i class="fa fa-filter"></i></a>
+                    </div>                            
                     <div class="col-sm-2 float-label-control custom-float-label-control">
                         <select name="service-type" class="form-control service-type" id="service-type">
                             <option value="">Select Service Type</option>
@@ -154,55 +309,33 @@
                         </select>
                     </div>
                     <div class="col-sm-2 float-label-control custom-float-label-control">
-                        <input type="text" class="filterFromDate" id="filterFromDate" name="filterFromDate" placeholder="Audit Date From" value="">
-                    </div>
-                    <div class="col-sm-2 form-group float-label-control custom-float-label-control">
-                        <input type="text" class="filterToDate" id="filterToDate" name="filterToDate" placeholder="Audit Date To" value="">
+                        <input type="text" class="form-control filterFromDate" id="filterFromDate" name="filterFromDate" placeholder="Audit Date From" value="">
                     </div>
                     <div class="col-sm-2 float-label-control custom-float-label-control">
+                        <input type="text" class="form-control filterToDate" id="filterToDate" name="filterToDate" placeholder="Audit Date To" value="">
+                    </div>
+                    <div class="col-sm-3 float-label-control custom-float-label-control">
                         <button type="button" class="btn btn-success downloadQualityReport" style="width:100%;">
                             <i class="fa fa-cloud-download" style="font-size: 15px;"></i> Download Report
                         </button>
                     </div>
                 </div>
-                <div class="row clearfix" style="padding-top:10px;">
-                    <div class="col-sm-12 main_content table-responsive">
-                        <table class="table table-hover table-sortable table-striped" id="tab_customer_list" width="100%">
+                <div class="row clearfix">
+                    <div class="col-sm-12 main_content">
+                        <table class="table table-hover table-sortable" id="tab_customer_list" style="width:100%">
                             <thead>
                                 <tr>                                    
-                                    <th class="">
-                                        <small><a>Client</a></small>
-                                    </th>
-                                    <th class="">
-                                        <small><a>Service Type</a></small>
-                                    </th>
-                                    <th class="">
-                                        <small><a>Audit Date</a></small>
-                                    </th>
-                                    <th class="">
-                                        <small><a>Rating to auditing quality (A)(Out of 50 Mark)</a></small>
-                                    </th>
-                                    <th class="">
-                                        <small><a>AITF certification activities (B)(Out of 35 Mark)</a></small>
-                                    </th>
-                                    <th class="">
-                                        <small><a>Auditor</a></small>
-                                    </th>
-                                    <th class="">
-                                        <small><a>Individual marks</a></small>
-                                    </th>
-                                    <th class="">
-                                        <small><a>Rating for assessment Process (i.e.(u) of A & B</a></small>
-                                    </th>
-                                    <th class="">
-                                        <small><a>NC</a></small>
-                                    </th>
-                                    <th class="">
-                                        <small><a>OFI</a></small>
-                                    </th>
-                                    <th class="">
-                                        <small><a>O+</a></small>
-                                    </th>
+                                    <th>Client</th>
+                                    <th>Service Type</th>
+                                    <th>Audit Date</th>
+                                    <th>Rating (A) (Out of 50)</th>
+                                    <th>AITF Cert (B) (Out of 35)</th>
+                                    <th>Auditor</th>
+                                    <th>Individual marks</th>
+                                    <th>Rating (A & B)</th>
+                                    <th>NC</th>
+                                    <th>OFI</th>
+                                    <th>O+</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -455,6 +588,7 @@
 
             var table = $('#tab_customer_list').DataTable({
                 "scrollY": '70vh',
+                "scrollX": true,
                 "scrollCollapse": true,
                 "paging": true,
                 "pageLength": 50,
@@ -465,45 +599,8 @@
                     {
                         orderable: false,
                         targets: "no-sort"
-                    },
-                    {
-                        "width": "1%",
-                        "targets": 0
-                    },
-                    {
-                        "width": "15%",
-                        "targets": 1
-                    },
-                    {
-                        "width": "10%",
-                        "targets": 2
-                    },
-                    {
-                        "width": "12%",
-                        "targets": 3
-                    },
-                    {
-                        "width": "10%",
-                        "targets": 4
-                    },
-                    {
-                        "width": "10%",
-                        "targets": 5
-                    },
-                    {
-                        "width": "10%",
-                        "targets": 6
-                    },
-                    {
-                        "width": "5%",
-                        "targets": 8
-                    },
-                    {
-                        "width": "5%",
-                        "targets": 9
-                    },
+                    }
                 ]
-                        //        "paging":         false
             });
             table.columns.adjust().draw();
 
