@@ -40,16 +40,25 @@
         <?php } ?>
         <?php foreach ($dateRows as $rows) { ?>
             
-        <form action="updatedates.php" method = "POST">
+        <form action="updatedates.php" method="POST">
             <div class="form mb-3">
+                <label class="form-label fw-bold">Proposed Date</label>
                 <input type="date" class="form-control" name="due_date" placeholder="due_date" value="<?php echo htmlspecialchars($rows['due_date'], ENT_QUOTES, 'UTF-8'); ?>" >
             </div>
             
              <div class="form mb-3">
-                <input type="date" class="form-control" name="sent_date" placeholder="sent_date" value="<?php echo htmlspecialchars($rows['sent_date'], ENT_QUOTES, 'UTF-8'); ?>" >
+                <label class="form-label fw-bold">Sent Date</label>
+                <div class="d-flex align-items-center gap-3 mb-2">
+                    <input type="date" id="sent_date_input" class="form-control" name="sent_date" placeholder="sent_date" value="<?php echo ($rows['sent_date'] == '0000-00-00') ? '' : htmlspecialchars($rows['sent_date'], ENT_QUOTES, 'UTF-8'); ?>" >
+                    <div class="form-check text-nowrap m-0">
+                        <input class="form-check-input" type="checkbox" id="sent_date_na" name="sent_date_na" value="1" <?php echo ($rows['sent_date'] == '0000-00-00') ? 'checked' : ''; ?>>
+                        <label class="form-check-label" for="sent_date_na">Not applicable</label>
+                    </div>
+                </div>
             </div>
         
             <div class="form mb-3">
+                <label class="form-label fw-bold">Action Name</label>
                 <input type="text" class="form-control" placeholder="actions" value="<?php echo htmlspecialchars($rows['action'], ENT_QUOTES, 'UTF-8'); ?>" readonly>
             </div>
             
@@ -60,8 +69,26 @@
             <div class="form mb-3">
                 <button type="submit" class="btn btn-primary">Update</button>
             </div>
-        
         </form>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                var naCheckbox = document.getElementById('sent_date_na');
+                var sentDateInput = document.getElementById('sent_date_input');
+                
+                function toggleSentDate() {
+                    if (naCheckbox.checked) {
+                        sentDateInput.value = '';
+                        sentDateInput.readOnly = true;
+                    } else {
+                        sentDateInput.readOnly = false;
+                    }
+                }
+                
+                naCheckbox.addEventListener('change', toggleSentDate);
+                toggleSentDate();
+            });
+        </script>
         <?php 
         }
         ?>

@@ -15,7 +15,13 @@
     }
 
     $due_date = isset($_POST['due_date']) ? trim($_POST['due_date']) : '';
-    $sent_date = isset($_POST['sent_date']) ? trim($_POST['sent_date']) : '';
+    
+    // Check if 'not applicable' is checked
+    if (isset($_POST['sent_date_na']) && $_POST['sent_date_na'] == '1') {
+        $sent_date = '0000-00-00';
+    } else {
+        $sent_date = isset($_POST['sent_date']) ? trim($_POST['sent_date']) : '';
+    }
     $action_id = filter_input(INPUT_POST, 'action_id', FILTER_VALIDATE_INT);
 
     if (!$action_id || $due_date === '') {

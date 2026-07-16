@@ -13,6 +13,9 @@
     date_default_timezone_set('Asia/Kolkata');
 
     include_once __DIR__ . '/include/date_graph_helpers.php';
+    
+    $customerLettersEditIconVisible = aitfCustomerFeatureIsEnabled($db, 'customer_letters_edit_icon_visible');
+    $customerLettersDeleteIconVisible = aitfCustomerFeatureIsEnabled($db, 'customer_letters_delete_icon_visible');
 
     if (!function_exists('caDateGraphTargetForEntry')) {
         function caDateGraphTargetForEntry($serviceType, $label, $source, $typedServiceId)
@@ -5101,7 +5104,7 @@
                                                         <th class="" width="20%" style="padding: 2px">
                                                             <small>Sent on date</small>
                                                         </th>
-                                                        <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+                                                        <?php if ($customerLettersEditIconVisible) { ?>
                                                         <th class="" width="4%" style="padding: 2px">
                                                             <small>Actions</small>
                                                         </th>
@@ -5112,7 +5115,7 @@
                                                         <th class="" width="4%" style="padding: 2px">
                                                             <small>Generate</small>
                                                         </th>
-                                                        <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+                                                        <?php if ($customerLettersDeleteIconVisible) { ?>
                                                             <th class="" width="4%" style="padding: 2px">
                                                                 <small>Delete</small>
                                                             </th>
@@ -5138,7 +5141,7 @@
                                                                 </div>
                                                             </td>
                                                             
-                                                              <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+                                                              <?php if ($customerLettersEditIconVisible) { ?>
                                                             <td class="" style="padding: 0px;">
                                                                 <!--<a class="caServiceComment" data-row-id=" echo $caActions['action_id'] ?>" data-column="comment" data-comment="</?php echo $caActions['comment'] ?>">-->
                                                                 <!--    <i class="fa fa-comment-o" aria-hidden="true"></i>-->
@@ -5164,7 +5167,7 @@
                                                                     </a> 
                                                                 <?php } ?>
                                                             </td>
-                                                            <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+                                                            <?php if ($customerLettersDeleteIconVisible) { ?>
                                                                 <?php
                                                                 if ($caActions["is_deleted"] == 'Y') {
                                                                     $setDelete1 = "disabled='disabled'";
@@ -5792,12 +5795,12 @@
                                                         <th class="" width="20%" style="padding: 2px"><small>Sent on date</small></th>
                                                         
                                                         <!-- update-->
-                                                        <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+                                                        <?php if ($customerLettersEditIconVisible) { ?>
                                                         <th class="" width="4%" style="padding: 2px"><small>Actions</small></th>
                                                         <?php } ?>
                                                         <th class="" width="4%" style="padding: 2px"><small>Pdf</small></th>
                                                         <th class="" width="4%" style="padding: 2px"><small>Generate</small></th>
-                                                        <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+                                                        <?php if ($customerLettersDeleteIconVisible) { ?>
                                                             <th class="" width="4%" style="padding: 2px">
                                                                 <small>Delete</small>
                                                             </th>
@@ -5832,7 +5835,7 @@
                                                             </td>
                                                             <!-- edit / update actions-->
                                                             
-                                                            <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+                                                            <?php if ($customerLettersEditIconVisible) { ?>
                                                             <td class="" style="padding: 0px;">
                                                                 <a href="editcadates.php?id=<?php echo $saiiActions['action_id'] ?>">
                                                                     <i class="fa fa-pencil-square fa-sm " style="padding: 1px"></i>
@@ -5858,7 +5861,7 @@
                                                                     </a> 
                                                                 <?php } ?>
                                                             </td>
-                                                            <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+                                                            <?php if ($customerLettersDeleteIconVisible) { ?>
                                                                 <?php
                                                                 if ($saiiActions["is_deleted"] == 'Y') {
                                                                     $setDelete2 = "disabled='disabled'";
@@ -6526,13 +6529,13 @@
                                                         </th>
                                                         <th class="" width="20%" style="padding: 2px"><small>Sent on date</small>
                                                         </th>
-                                                         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+                                                         <?php if ($customerLettersEditIconVisible) { ?>
                                                         <th class="" width="4%" style="padding: 2px"><small>Actions</small></th>
                                                         <?php } ?>
                                                         <th class="" width="4%" style="padding: 2px"><small>Pdf</small></th>
                                                         <th class="" width="4%" style="padding: 2px"><small>Generate</small>                                                        
                                                         </th>
-                                                        <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+                                                        <?php if ($customerLettersDeleteIconVisible) { ?>
                                                             <th class="" width="4%" style="padding: 2px">
                                                                 <small>Delete</small>
                                                             </th>
@@ -6555,7 +6558,7 @@
                                                                 </div>
                                                             </td>
                                                             
-                                                             <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+                                                             <?php if ($customerLettersEditIconVisible) { ?>
                                                             <td class="" style="padding: 0px;">
                                                                 <!--<a class="saiiServiceComment" data-row-id="</?php echo $saiiActions['action_id'] ?>" data-column="comment" data-comment="</?php echo $saiiActions['comment'] ?>">-->
                                                                 <!--    <i class="fa fa-comment-o" aria-hidden="true"></i>-->
@@ -6583,7 +6586,7 @@
                                                                     </a> 
                                                                 <?php } ?>
                                                             </td>
-                                                            <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+                                                            <?php if ($customerLettersDeleteIconVisible) { ?>
                                                                 <?php
                                                                 if ($saiiActions["is_deleted"] == 'Y') {
                                                                     $setDelete3 = "disabled";
@@ -7203,7 +7206,7 @@
                                                             <small>Sent on date</small>
                                                         </th>
                                                         
-                                                        <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+                                                        <?php if ($customerLettersEditIconVisible) { ?>
                                                         <th class="" width="4%" style="padding: 2px">
                                                             <small>Actions</small>
                                                         </th>
@@ -7214,7 +7217,7 @@
                                                         <th class="" width="4%" style="padding: 2px">
                                                             <small>Generate</small>
                                                         </th>
-                                                        <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+                                                        <?php if ($customerLettersDeleteIconVisible) { ?>
                                                             <th class="" width="4%" style="padding: 2px">
                                                                 <small>Delete</small>
                                                             </th>
@@ -7240,7 +7243,7 @@
                                                                 </div>
                                                             </td>
                                                             
-                                                            <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+                                                            <?php if ($customerLettersEditIconVisible) { ?>
                                                             <td class="" style="padding: 0px;">
                                                                 <!--<a class="rcserviceComment" data-row-id=" echo $rcActions['action_id'] " data-column="comment" data-comment="<?php echo $rcActions['comment'] ?>">-->
                                                                 <!--    <i class="fa fa-comment-o" aria-hidden="true"></i>-->
@@ -7266,7 +7269,7 @@
                                                                     </a> 
                                                                 <?php } ?>
                                                             </td>
-                                                            <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+                                                            <?php if ($customerLettersDeleteIconVisible) { ?>
                                                                 <?php
                                                                 if ($rcActions["is_deleted"] == 'Y') {
                                                                     $setDelete4 = "disabled='disabled'";

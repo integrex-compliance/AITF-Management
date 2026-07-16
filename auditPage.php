@@ -10,6 +10,9 @@
     $pageIdentifier = "Audit Records";
     include 'header.php';
     include 'dbConnect.php';
+    include_once './include/customer_feature_flags.php';
+    $auditDateConflictVisible = aitfCustomerFeatureIsEnabled($db, 'audit_date_conflict_visible');
+    $auditMemberConflictVisible = aitfCustomerFeatureIsEnabled($db, 'audit_member_conflict_visible');
 
 //    $marketingInfo = "SELECT distinct ci.id, customer_name, unique_id, audit_status, address, contact, email_id, scope, aif_nace, comment, certification_stage_date, add_to, cas.ca_id, service_ca_status, cas.customer_id, saia.sai_id, saia.customer_id,saia.service_sai_status, saiis.saii_id, saiis.customer_id, saiis.service_saii_ststus, rcs.rc_id, rcs.rc_customer, rcs.service_rc_status, sps.sp_id, sps.sp_customer, sps.service_sp_status FROM customer_info ci left join service_type_ca cas on ci.id = cas.customer_id left join service_type_sai saia on ci.id = saia.customer_id left join service_type_saii saiis on ci.id = saiis.customer_id left join service_type_rc rcs on ci.id = rcs.rc_customer left join service_type_sp sps on ci.id = sps.sp_customer WHERE ((cas.service_ca_status = 'Marketing' and cas.ca_id = (select max(tmp.ca_id) from service_type_ca tmp where tmp.customer_id = ci.id)) or (saia.service_sai_status = 'Marketing' and saia.sai_id = (select max(tmp1.sai_id) from service_type_sai tmp1 where tmp1.customer_id = ci.id) ) or (saiis.service_saii_ststus = 'Marketing' and saiis.saii_id = (select max(tmp2.saii_id) from service_type_saii tmp2 where tmp2.customer_id = ci.id)) or (rcs.service_rc_status = 'Marketing' and rcs.rc_id = (select max(tmp3.rc_id) from service_type_rc tmp3 where tmp3.rc_customer = ci.id) ) or (sps.service_sp_status = 'Marketing' and sps.sp_id = (select max(tmp4.sp_id) from service_type_sp tmp4 where tmp4.sp_customer = ci.id)) )";
     $marketingInfo = "SELECT ci.id, customer_name, unique_id, audit_status, address, contact, email_id, scope, aif_nace, next_service, svc.service_id, service_type, service_status, audit_date FROM customer_info ci left join service svc on ci.id = svc.customer_id where svc.audit_date is not null ORDER BY audit_date DESC";
@@ -58,6 +61,26 @@
     $rcMap = $loadMap('service_type_rc', 'service', $serviceIdsByType['RC']);
     $spMap = $loadMap('service_type_sp', 'service', $serviceIdsByType['SP']);
     $taMap = $loadMap('service_type_ta', 'service_id', $serviceIdsByType['TA']);
+
+    $subtypeIds = array_merge(
+        array_column($caMap, 'ca_id'),
+        array_column($saiMap, 'sai_id'),
+        array_column($saiiMap, 'saii_id'),
+        array_column($rcMap, 'rc_id'),
+        array_column($spMap, 'sp_id')
+    );
+    $subtypeIds = array_filter($subtypeIds, function($v){ return $v !== null && $v !== ''; });
+
+    $cdcMap = [];
+    if (!empty($subtypeIds)) {
+        $ph = implode(',', array_fill(0, count($subtypeIds), '?'));
+        $sqlCdc = "SELECT * FROM cdc_report_review WHERE ca_service_id IN ($ph)";
+        $stmt = $db->prepare($sqlCdc);
+        $stmt->execute($subtypeIds);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $cdcMap[$r['ca_service_id']] = $r;
+        }
+    }
 
     function auditPageSplitAuditors($value)
     {
@@ -242,6 +265,62 @@
     usort($auditConflictGroups, function ($a, $b) {
         return strcmp($b['sort_date'], $a['sort_date']);
     });
+
+    $memberConflictGroups = [];
+    foreach ($allMarketingInfo as $marketingDetail) {
+        $serviceId = $marketingDetail['service_id'];
+        $subtypeId = null;
+        if ($marketingDetail["service_type"] == "CA" && isset($caMap[$serviceId])) $subtypeId = $caMap[$serviceId]['ca_id'];
+        if ($marketingDetail["service_type"] == "SA-I" && isset($saiMap[$serviceId])) $subtypeId = $saiMap[$serviceId]['sai_id'];
+        if ($marketingDetail["service_type"] == "SA-II" && isset($saiiMap[$serviceId])) $subtypeId = $saiiMap[$serviceId]['saii_id'];
+        if ($marketingDetail["service_type"] == "RC" && isset($rcMap[$serviceId])) $subtypeId = $rcMap[$serviceId]['rc_id'];
+        if ($marketingDetail["service_type"] == "SP" && isset($spMap[$serviceId])) $subtypeId = $spMap[$serviceId]['sp_id'];
+
+        if ($subtypeId && isset($cdcMap[$subtypeId])) {
+            $cdc = $cdcMap[$subtypeId];
+            
+            // Extract individuals
+            $leadAuditor = strtolower(trim((string)$cdc['lead_auditor']));
+            $auditorsStr = strtolower(trim((string)$cdc['auditors']));
+            $reviewer1 = strtolower(trim((string)$cdc['reviewer_1']));
+            $reviewer2 = strtolower(trim((string)$cdc['reviewer_2']));
+            $grantedBy = strtolower(trim((string)$cdc['granted_by']));
+
+            $allAuditors = [];
+            if ($leadAuditor !== '') $allAuditors[] = $leadAuditor;
+            foreach (auditPageSplitAuditors($auditorsStr) as $aud) {
+                if ($aud !== '') $allAuditors[] = $aud;
+            }
+
+            $cdcMembers = [];
+            if ($reviewer1 !== '') $cdcMembers[] = $reviewer1;
+            if ($reviewer2 !== '') $cdcMembers[] = $reviewer2;
+            if ($grantedBy !== '') $cdcMembers[] = $grantedBy;
+
+            $conflictReasons = [];
+            
+            // 1. Auditor vs Reviewer / CDC Member
+            foreach ($allAuditors as $aud) {
+                if (in_array($aud, $cdcMembers)) {
+                    $conflictReasons[] = "Auditor ($aud) is also a CDC Member/Reviewer";
+                }
+            }
+
+            // 3. CDC Member Duplicates
+            if (count($cdcMembers) > count(array_unique($cdcMembers))) {
+                $conflictReasons[] = "Duplicate CDC Members (Reviewer 1, Reviewer 2, Granted By)";
+            }
+
+            if (!empty($conflictReasons)) {
+                $memberConflictGroups[] = [
+                    'customer_name' => $marketingDetail['customer_name'],
+                    'unique_id' => $marketingDetail['unique_id'],
+                    'service_type' => $marketingDetail['service_type'],
+                    'reasons' => array_unique($conflictReasons)
+                ];
+            }
+        }
+    }
     ?>
 
     <style>
@@ -278,6 +357,24 @@
             box-shadow: 0 8px 22px rgba(15, 23, 42, 0.25);
         }
 
+        .member-conflict-tab {
+            position: fixed;
+            right: 0;
+            top: 360px;
+            z-index: 9998;
+            border: 0;
+            border-radius: 6px 0 0 6px;
+            background: #ea580c; /* Distinct orange for member conflict */
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0;
+            padding: 10px 12px;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            box-shadow: 0 8px 22px rgba(15, 23, 42, 0.25);
+        }
+
         .audit-conflict-count {
             display: inline-block;
             min-width: 18px;
@@ -299,13 +396,26 @@
             max-width: calc(100vw - 24px);
             height: 100vh;
             background: #ffffff;
-            border-left: 1px solid #fecaca;
-            box-shadow: -14px 0 34px rgba(15, 23, 42, 0.22);
-            transition: right 0.2s ease;
+            bottom: 0;
+            background: #fff;
+            box-shadow: -10px 0 30px rgba(15, 23, 42, 0.1);
+            transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
         }
 
-        .audit-conflict-panel.is-open {
-            right: 0;
+        .member-conflict-panel {
+            position: fixed;
+            top: 0;
+            right: -430px;
+            z-index: 9999;
+            width: 420px;
+            bottom: 0;
+            background: #fff;
+            box-shadow: -10px 0 30px rgba(15, 23, 42, 0.1);
+            transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
         }
 
         .audit-conflict-panel-header {
@@ -415,16 +525,6 @@
                                         
                                 </select>
                             </div>
-                            <!--                            <div class="col-sm-3 float-label-control custom-float-label-control">
-                                                            <select name="auditors" class="form-control auditors" id="service-type">
-                                                                <option value="">Select Auditor</option>
-                            <?php foreach ($auditorsList as $auditor) { ?>
-                                                                                <option value="<?php echo $auditor['auditor_name'] ?>">
-                                <?php echo $auditor['auditor_name'] ?>
-                                                                                </option>
-                            <?php } ?>
-                                                            </select>
-                                                        </div>-->
                             <div class="col-sm-3 float-label-control custom-float-label-control">
                                 <input type="text" class="filterFromDate" id="filterFromDate" name="filterFromDate" placeholder="Audit Date From" value="">
                             </div>
@@ -695,6 +795,7 @@
     </div>
 </div>
 
+<?php if ($auditDateConflictVisible) { ?>
 <button type="button" class="audit-conflict-tab" id="auditConflictTab" title="Check Date  conflict">
     Date  Conflict
     <span class="audit-conflict-count"><?php echo count($auditConflictGroups); ?></span>
@@ -741,6 +842,48 @@
         <?php } ?>
     </div>
 </div>
+<?php } ?>
+
+<?php if ($auditMemberConflictVisible) { ?>
+<button type="button" class="member-conflict-tab" id="memberConflictTab" title="Check Member conflict">
+    Member Conflict
+    <span class="audit-conflict-count"><?php echo count($memberConflictGroups); ?></span>
+</button>
+
+<div class="member-conflict-panel" id="memberConflictPanel" aria-hidden="true">
+    <div class="audit-conflict-panel-header" style="background: #ea580c;">
+        <h4 class="audit-conflict-panel-title">Check Member Conflict</h4>
+        <button type="button" class="audit-conflict-close" id="memberConflictClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="audit-conflict-panel-body">
+        <?php if (empty($memberConflictGroups)) { ?>
+            <div class="audit-conflict-empty">No member conflicts found.</div>
+        <?php } else { ?>
+            <?php foreach ($memberConflictGroups as $conflict) { ?>
+                <div class="audit-conflict-card">
+                    <div class="audit-conflict-card-head">
+                        <div class="audit-conflict-card-title">
+                            <?php echo htmlspecialchars($conflict['unique_id'], ENT_QUOTES, 'UTF-8'); ?> - <?php echo htmlspecialchars($conflict['service_type'], ENT_QUOTES, 'UTF-8'); ?>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="audit-conflict-item">
+                            <div class="audit-conflict-client">
+                                <?php echo htmlspecialchars($conflict['customer_name'], ENT_QUOTES, 'UTF-8'); ?>
+                            </div>
+                            <?php foreach ($conflict['reasons'] as $reason) { ?>
+                                <div class="audit-conflict-detail" style="color: #b91c1c; font-weight: 500;">
+                                    &bull; <?php echo htmlspecialchars($reason, ENT_QUOTES, 'UTF-8'); ?>
+                                </div>
+                            <?php } ?>
+                        </div>
+                    </div>
+                </div>
+            <?php } ?>
+        <?php } ?>
+    </div>
+</div>
+<?php } ?>
 
 <script type="text/javascript">
     $('#filterFromDate').datepicker({
@@ -867,11 +1010,33 @@
 
     $(document).ready(function () {
         $('#auditConflictTab').click(function () {
-            $('#auditConflictPanel').addClass('is-open').attr('aria-hidden', 'false');
+            $('#auditConflictPanel').css('right', '0').attr('aria-hidden', 'false');
         });
 
         $('#auditConflictClose').click(function () {
-            $('#auditConflictPanel').removeClass('is-open').attr('aria-hidden', 'true');
+            $('#auditConflictPanel').css('right', '-430px').attr('aria-hidden', 'true');
+        });
+        
+        $('#memberConflictTab').click(function() {
+            $('#memberConflictPanel').css('right', '0').attr('aria-hidden', 'false');
+        });
+
+        $('#memberConflictClose').click(function() {
+            $('#memberConflictPanel').css('right', '-430px').attr('aria-hidden', 'true');
+        });
+
+        $(document).mouseup(function(e) {
+            var container = $("#auditConflictPanel");
+            var tab = $("#auditConflictTab");
+            if (!container.is(e.target) && container.has(e.target).length === 0 && !tab.is(e.target) && tab.has(e.target).length === 0) {
+                container.css('right', '-430px').attr('aria-hidden', 'true');
+            }
+            
+            var mContainer = $("#memberConflictPanel");
+            var mTab = $("#memberConflictTab");
+            if (!mContainer.is(e.target) && mContainer.has(e.target).length === 0 && !mTab.is(e.target) && mTab.has(e.target).length === 0) {
+                mContainer.css('right', '-430px').attr('aria-hidden', 'true');
+            }
         });
 
         $('.customerAccount').click(function () {

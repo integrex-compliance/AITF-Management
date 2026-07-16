@@ -12,6 +12,10 @@
     if ($canManageCustomerFeatureToggles && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save_customer_feature_toggles') {
         aitfCustomerFeatureSet($db, 'customer_docora_ai_visible', isset($_POST['customer_docora_ai_visible']), isset($_SESSION['username']) ? $_SESSION['username'] : '');
         aitfCustomerFeatureSet($db, 'customer_date_graph_visible', isset($_POST['customer_date_graph_visible']), isset($_SESSION['username']) ? $_SESSION['username'] : '');
+        aitfCustomerFeatureSet($db, 'customer_letters_edit_icon_visible', isset($_POST['customer_letters_edit_icon_visible']), isset($_SESSION['username']) ? $_SESSION['username'] : '');
+        aitfCustomerFeatureSet($db, 'customer_letters_delete_icon_visible', isset($_POST['customer_letters_delete_icon_visible']), isset($_SESSION['username']) ? $_SESSION['username'] : '');
+        aitfCustomerFeatureSet($db, 'audit_date_conflict_visible', isset($_POST['audit_date_conflict_visible']), isset($_SESSION['username']) ? $_SESSION['username'] : '');
+        aitfCustomerFeatureSet($db, 'audit_member_conflict_visible', isset($_POST['audit_member_conflict_visible']), isset($_SESSION['username']) ? $_SESSION['username'] : '');
         $featureToggleMessage = 'Customer account feature visibility updated.';
     }
 
@@ -31,6 +35,10 @@
 
     $customerDocoraAiVisible = aitfCustomerFeatureIsEnabled($db, 'customer_docora_ai_visible');
     $customerDateGraphVisible = aitfCustomerFeatureIsEnabled($db, 'customer_date_graph_visible');
+    $customerLettersEditIconVisible = aitfCustomerFeatureIsEnabled($db, 'customer_letters_edit_icon_visible');
+    $customerLettersDeleteIconVisible = aitfCustomerFeatureIsEnabled($db, 'customer_letters_delete_icon_visible');
+    $auditDateConflictVisible = aitfCustomerFeatureIsEnabled($db, 'audit_date_conflict_visible');
+    $auditMemberConflictVisible = aitfCustomerFeatureIsEnabled($db, 'audit_member_conflict_visible');
 
 //    auditors
     $auditors = "SELECT * from auditors";
@@ -466,6 +474,46 @@
                                                 <label style="margin-right: 15px;">
                                                     <input type="checkbox" name="customer_date_graph_visible" value="1" <?php echo $customerDateGraphVisible ? 'checked' : ''; ?>>
                                                     Enable Date Graph
+                                                </label>
+                                            </div>
+                                        </li>
+                                        <li class="list-group-item">
+                                            <strong>Letters Edit Icon</strong>
+                                            <small style="display: block; color: #777;">Customer account letters edit icon visibility</small>
+                                            <div style="margin-top: 8px;">
+                                                <label style="margin-right: 15px;">
+                                                    <input type="checkbox" name="customer_letters_edit_icon_visible" value="1" <?php echo $customerLettersEditIconVisible ? 'checked' : ''; ?>>
+                                                    Enable Letters Edit Icon
+                                                </label>
+                                            </div>
+                                        </li>
+                                        <li class="list-group-item">
+                                            <strong>Letters Delete Icon</strong>
+                                            <small style="display: block; color: #777;">Customer account letters delete icon visibility</small>
+                                            <div style="margin-top: 8px;">
+                                                <label style="margin-right: 15px;">
+                                                    <input type="checkbox" name="customer_letters_delete_icon_visible" value="1" <?php echo $customerLettersDeleteIconVisible ? 'checked' : ''; ?>>
+                                                    Enable Letters Delete Icon
+                                                </label>
+                                            </div>
+                                        </li>
+                                        <li class="list-group-item">
+                                            <strong>Audit Date Conflict</strong>
+                                            <small style="display: block; color: #777;">Audit Page date conflict panel visibility</small>
+                                            <div style="margin-top: 8px;">
+                                                <label style="margin-right: 15px;">
+                                                    <input type="checkbox" name="audit_date_conflict_visible" value="1" <?php echo $auditDateConflictVisible ? 'checked' : ''; ?>>
+                                                    Enable Date Conflict Panel
+                                                </label>
+                                            </div>
+                                        </li>
+                                        <li class="list-group-item">
+                                            <strong>Audit Member Conflict</strong>
+                                            <small style="display: block; color: #777;">Audit Page member conflict panel visibility</small>
+                                            <div style="margin-top: 8px;">
+                                                <label style="margin-right: 15px;">
+                                                    <input type="checkbox" name="audit_member_conflict_visible" value="1" <?php echo $auditMemberConflictVisible ? 'checked' : ''; ?>>
+                                                    Enable Member Conflict Panel
                                                 </label>
                                             </div>
                                         </li>
