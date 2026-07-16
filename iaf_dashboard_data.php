@@ -35,6 +35,7 @@ try {
         'rows_html' => $rowsHtml,
         'next_offset' => $result['next_offset'],
         'has_more' => $result['has_more'],
+        'total_count' => $result['total_count'] ?? 0,
     ]);
 } catch (Exception $e) {
     error_log('IAF dashboard data load failed: ' . $e->getMessage());
@@ -44,5 +45,6 @@ try {
         'rows_html' => '',
         'next_offset' => $offset,
         'has_more' => false,
+        'total_count' => 0,
     ]);
 }

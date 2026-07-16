@@ -30,7 +30,7 @@ function iafDashboardNormalizeApplicationStatus($value)
     }
 
     $key = strtolower(str_replace(['-', '_', ' '], '', $status));
-    if ($key === 'active' || $key === 'valid' || $key === 'granted' || $key === 'completed' || $key === 'issued') {
+    if ($key === 'active' || $key === 'valid' || $key === 'granted') {
         return 'Active';
     }
     if ($key === 'suspended' || $key === 'suspend') {
@@ -87,7 +87,7 @@ function iafDashboardStatusSqlExpression()
         WHEN $statusKey IN ('applicationcanceled', 'applicationcancelled', 'cancelled', 'canceled') THEN 'Application canceled'
         WHEN latest_svc.service_id IS NULL THEN 'New Enquiry'
         WHEN UPPER(TRIM(latest_svc.service_type)) = 'CR' THEN 'Contract-Review'
-        WHEN $statusKey IN ('active', 'valid', 'granted', 'completed', 'issued') THEN 'Active'
+        WHEN $statusKey IN ('active', 'valid', 'granted') THEN 'Active'
         WHEN $statusKey IN ('suspended', 'suspend') THEN 'Suspended'
         WHEN $statusKey IN ('inprocess', 'pending') THEN 'In-process'
         WHEN $statusKey = 'contractinprocess' THEN 'Contract In-process'
@@ -138,7 +138,7 @@ function iafDashboardFetchStatusOptions(PDO $db)
     $statusExpr = iafDashboardStatusSqlExpression();
     $sql = "SELECT DISTINCT $statusExpr AS application_status
         FROM customer_info c
-        INNER JOIN (
+        LEFT JOIN (
             SELECT customer_id, MAX(service_id) AS latest_service_id
             FROM service
             WHERE customer_id IS NOT NULL
@@ -200,8 +200,7 @@ function iafDashboardDedupeRows(array $rows)
     $deduped = [];
     foreach ($rows as $client) {
         $client = iafDashboardNormalizeClient($client);
-        $standardKey = iafDashboardStandardKey($client['standard_name'] ?? '');
-        $dedupeKey = ($client['internal_client_id'] ?? '') . '|' . $standardKey;
+        $dedupeKey = ($client['internal_client_id'] ?? '');
 
         if (!isset($deduped[$dedupeKey]) || iafDashboardRowScore($client) > iafDashboardRowScore($deduped[$dedupeKey])) {
             $deduped[$dedupeKey] = $client;
@@ -248,6 +247,12 @@ function iafDashboardServiceRowsSql($whereSql = '')
             NULLIF(TRIM(stsaii.service_saii_ststus), ''),
             NULLIF(TRIM(strc.service_rc_status), ''),
             NULLIF(TRIM(svc.service_status), ''),
+            NULLIF(TRIM(cdc.cdc_status), ''),
+            NULLIF(TRIM(stca.service_ca_status), ''),
+            NULLIF(TRIM(stsai.service_sai_status), ''),
+            NULLIF(TRIM(stsaii.service_saii_ststus), ''),
+            NULLIF(TRIM(strc.service_rc_status), ''),
+            NULLIF(TRIM(svc.service_status), ''),
             c.audit_status
         ) as certification_status,
         cp.certificate_id as certificate_tracking_id,
@@ -261,13 +266,42 @@ function iafDashboardServiceRowsSql($whereSql = '')
         COALESCE(NULLIF(aa.proposed_scope, ''), cp.certificate_scope, c.scope) as certification_scope,
         COALESCE(
             NULLIF(TRIM(aa.accereditation_requirement), ''),
-            NULLIF(TRIM(aa.review_accredition), '')
+            NULLIF(TRIM(aa.review_accredition), ''),
+            (
+                SELECT NULLIF(TRIM(aa_acc.accereditation_requirement), '')
+                FROM audit_application aa_acc
+                INNER JOIN service s_acc ON s_acc.service_id = aa_acc.uni_svc_id
+                WHERE s_acc.customer_id = c.id
+                  AND TRIM(COALESCE(aa_acc.accereditation_requirement, '')) <> ''
+                ORDER BY aa_acc.audit_id DESC
+                LIMIT 1
+            )
         ) as accreditation_body_name,
         COALESCE(
             NULLIF(TRIM(aa.accereditation_requirement), ''),
-            NULLIF(TRIM(aa.review_accredition), '')
+            NULLIF(TRIM(aa.review_accredition), ''),
+            (
+                SELECT NULLIF(TRIM(aa_acc.accereditation_requirement), '')
+                FROM audit_application aa_acc
+                INNER JOIN service s_acc ON s_acc.service_id = aa_acc.uni_svc_id
+                WHERE s_acc.customer_id = c.id
+                  AND TRIM(COALESCE(aa_acc.accereditation_requirement, '')) <> ''
+                ORDER BY aa_acc.audit_id DESC
+                LIMIT 1
+            )
         ) as accreditation_body,
-        NULLIF(TRIM(aa.accereditation_requirement), '') as accreditation_requirement,
+        COALESCE(
+            NULLIF(TRIM(aa.accereditation_requirement), ''),
+            (
+                SELECT NULLIF(TRIM(aa_acc.accereditation_requirement), '')
+                FROM audit_application aa_acc
+                INNER JOIN service s_acc ON s_acc.service_id = aa_acc.uni_svc_id
+                WHERE s_acc.customer_id = c.id
+                  AND TRIM(COALESCE(aa_acc.accereditation_requirement, '')) <> ''
+                ORDER BY aa_acc.audit_id DESC
+                LIMIT 1
+            )
+        ) as accreditation_requirement,
         COALESCE(
             NULLIF(cou.iso_label, ''),
             NULLIF(aa.assessment_standard, ''),
@@ -278,7 +312,7 @@ function iafDashboardServiceRowsSql($whereSql = '')
         '' as scheme_name,
         aa.n_location as site
     FROM customer_info c
-    INNER JOIN service svc ON svc.customer_id = c.id
+    LEFT JOIN service svc ON svc.customer_id = c.id
     LEFT JOIN service latest_svc ON latest_svc.service_id = (
         SELECT MAX(s_latest.service_id)
         FROM service s_latest
@@ -313,7 +347,8 @@ function iafDashboardServiceRowsSql($whereSql = '')
         SELECT MAX(aa_s.audit_id) FROM audit_application aa_s
         WHERE aa_s.uni_svc_id = svc.service_id OR aa_s.service_id = svc.service_id OR aa_s.service_id = $currentServiceId
     )
-    WHERE NOT (UPPER(svc.service_type) = 'CR' AND cp.certificate_id IS NULL AND cdc.crr_id IS NULL)
+    WHERE c.is_deleted <> 'YES'
+      AND COALESCE(LOWER(REPLACE(REPLACE(TRIM(c.audit_status), '-', ''), ' ', '')), '') NOT IN ('inprocess', 'pending')
     $whereSql";
 }
 
@@ -332,9 +367,8 @@ function iafDashboardFetchRows(PDO $db, $offset = 0, $limit = 30, $search = '', 
     // services. A client can have multiple service rows for the same displayed
     // certificate/standard, so raw-service offsets can repeat rows and keep
     // "Next" enabled after the filtered client list is exhausted.
-    $idSql = "SELECT svc.service_id
+    $idSql = "SELECT DISTINCT c.id
         FROM customer_info c
-        INNER JOIN service svc ON svc.customer_id = c.id
         LEFT JOIN (
             SELECT customer_id, MAX(service_id) AS latest_service_id
             FROM service
@@ -342,7 +376,8 @@ function iafDashboardFetchRows(PDO $db, $offset = 0, $limit = 30, $search = '', 
             GROUP BY customer_id
         ) latest_idx ON latest_idx.customer_id = c.id
         LEFT JOIN service latest_svc ON latest_svc.service_id = latest_idx.latest_service_id
-        WHERE 1=1";
+        WHERE c.is_deleted <> 'YES'
+          AND COALESCE(LOWER(REPLACE(REPLACE(TRIM(c.audit_status), '-', ''), ' ', '')), '') NOT IN ('inprocess', 'pending')";
     $idParams = [];
     if ($search !== '') {
         $idSql .= " AND c.customer_name LIKE ?";
@@ -352,48 +387,53 @@ function iafDashboardFetchRows(PDO $db, $offset = 0, $limit = 30, $search = '', 
         $idSql .= " AND $statusExpr = ?";
         $idParams[] = $status;
     }
-    $idSql .= " ORDER BY c.id DESC, svc.service_id ASC";
+    $idSql .= " ORDER BY c.id DESC";
     if (!$useDedupedPagination) {
         $idSql .= " LIMIT $prefetchLimit OFFSET $offset";
     }
 
     $idStmt = $db->prepare($idSql);
     $idStmt->execute($idParams);
-    $serviceIds = array_map('intval', $idStmt->fetchAll(PDO::FETCH_COLUMN));
+    $clientIds = array_map('intval', $idStmt->fetchAll(PDO::FETCH_COLUMN));
 
-    if (empty($serviceIds)) {
+    if (empty($clientIds)) {
         return [
             'rows' => [],
             'next_offset' => $offset,
             'has_more' => false,
+            'total_count' => 0
         ];
     }
 
     if (!$useDedupedPagination) {
-        $whereSql = " AND svc.service_id IN (" . implode(',', array_fill(0, count($serviceIds), '?')) . ")";
+        $whereSql = " AND c.id IN (" . implode(',', array_fill(0, count($clientIds), '?')) . ")";
         $sql = iafDashboardServiceRowsSql($whereSql) . "
             ORDER BY c.id DESC, svc.service_id ASC, cou.iso_index ASC";
 
         $stmt = $db->prepare($sql);
-        $stmt->execute($serviceIds);
+        $stmt->execute($clientIds);
         $rawRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $rows = array_slice(iafDashboardDedupeRows($rawRows), 0, $rawLimit);
+
+        $countStmt = $db->query("SELECT COUNT(DISTINCT c.id) FROM customer_info c WHERE c.is_deleted <> 'YES' AND COALESCE(LOWER(REPLACE(REPLACE(TRIM(c.audit_status), '-', ''), ' ', '')), '') NOT IN ('inprocess', 'pending')");
+        $totalCount = (int) $countStmt->fetchColumn();
 
         return [
             'rows' => $rows,
             'next_offset' => $offset + $rawLimit,
-            'has_more' => count($serviceIds) > $rawLimit,
+            'has_more' => count($clientIds) > $rawLimit,
+            'total_count' => $totalCount
         ];
     }
 
     $rawRows = [];
-    foreach (array_chunk($serviceIds, 250) as $serviceIdChunk) {
-        $whereSql = " AND svc.service_id IN (" . implode(',', array_fill(0, count($serviceIdChunk), '?')) . ")";
+    foreach (array_chunk($clientIds, 250) as $clientIdChunk) {
+        $whereSql = " AND c.id IN (" . implode(',', array_fill(0, count($clientIdChunk), '?')) . ")";
         $sql = iafDashboardServiceRowsSql($whereSql) . "
             ORDER BY c.id DESC, svc.service_id ASC, cou.iso_index ASC";
 
         $stmt = $db->prepare($sql);
-        $stmt->execute($serviceIdChunk);
+        $stmt->execute($clientIdChunk);
         $chunkRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         if (!empty($chunkRows)) {
             $rawRows = array_merge($rawRows, $chunkRows);
@@ -408,6 +448,7 @@ function iafDashboardFetchRows(PDO $db, $offset = 0, $limit = 30, $search = '', 
         'rows' => $rows,
         'next_offset' => $nextOffset,
         'has_more' => count($dedupedRows) > $nextOffset,
+        'total_count' => count($dedupedRows)
     ];
 }
 

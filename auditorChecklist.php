@@ -799,13 +799,8 @@
 .ac-table-container {
     background: #fff;
     border-radius: 14px;
-    overflow-x: auto;
-    overflow-y: visible;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
     border: 1px solid #e2e8f0;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
-    scrollbar-color: #94a3b8 #f1f5f9;
 }
 
 .ac-scroll-hint {
@@ -853,10 +848,11 @@
 }
 
 .ac-table thead tr {
-    background: linear-gradient(90deg, #1e293b 0%, #334155 50%, #1e293b 100%);
+    /* Gradient on TR might not work with sticky TH, setting TH background instead */
 }
 
 .ac-table thead th {
+    background: #1e293b;
     color: #e2e8f0;
     font-weight: 700;
     font-size: 11px;
@@ -867,7 +863,7 @@
     border-bottom: none;
     white-space: nowrap;
     position: sticky;
-    top: 0;
+    top: 72px;
     z-index: 10;
 }
 

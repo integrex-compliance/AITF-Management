@@ -11,6 +11,7 @@
     $iafInitialLimit = 30;
     $iafInitialNextOffset = 0;
     $iafInitialHasMore = false;
+    $iafInitialTotalCount = 0;
 
     if (isset($db) && $db instanceof PDO) {
         try {
@@ -18,6 +19,7 @@
             $clients = $initialData['rows'];
             $iafInitialNextOffset = (int) ($initialData['next_offset'] ?? 0);
             $iafInitialHasMore = !empty($initialData['has_more']);
+            $iafInitialTotalCount = (int) ($initialData['total_count'] ?? 0);
             $iafStatusOptions = iafDashboardFetchStatusOptions($db);
         } catch (Exception $e) {
             error_log('IAF Dashboard initial preload failed: ' . $e->getMessage());
@@ -25,6 +27,7 @@
             $iafStatusOptions = [];
             $iafInitialNextOffset = 0;
             $iafInitialHasMore = false;
+            $iafInitialTotalCount = 0;
         }
     }
     if (false) {
@@ -291,15 +294,6 @@
             font-family: 'Inter', sans-serif;
         }
 
-        body .navbar-bootsnipp {
-            display: none !important;
-        }
-
-        /* Hide top admin/profile/logout bar only on IAF dashboard. */
-        body .modern-navbar {
-            display: none !important;
-        }
-
         body #sidebar-wrapper {
             position: fixed;
             top: 0;
@@ -312,28 +306,23 @@
 
         #wrapper {
             min-height: 100vh;
-            overflow-x: hidden;
+            overflow-x: auto;
         }
 
         #page-content-wrapper.iaf-dashboard-page {
-            height: 100vh;
-            margin-top: 0;
+            min-height: 100vh;
+            margin-top: 72px;
             padding-top: 0;
-            overflow: hidden;
             background: linear-gradient(180deg, #f8fafc 0%, #f4f7f6 42%, #eef4f7 100%);
         }
 
         .iaf-dashboard-page .page-content {
-            height: 100vh;
-            overflow: hidden;
+            min-height: 100vh;
         }
 
         .iaf-dashboard-page .container-fluid {
             width: 100%;
             max-width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
             padding: 8px 10px 10px !important;
         }
 
@@ -671,17 +660,14 @@
         .table-responsive {
             border: 1px solid #e2e8f0;
             border-radius: 12px;
-            overflow-x: auto !important;
-            overflow-y: auto !important;
+            overflow: visible !important;
             flex: 0 1 auto;
-            min-height: 0;
-            max-height: calc(100vh - var(--iaf-navbar-height) - 210px);
             background: #ffffff;
         }
 
         #iafTable thead th {
             position: sticky !important;
-            top: 0 !important;
+            top: 72px !important;
             z-index: 30;
             box-shadow: 0 2px 0 rgba(148, 163, 184, 0.28);
         }
@@ -1158,7 +1144,7 @@
                     var table = $('#iafTable').DataTable({
                         autoWidth: false,
                         paging: false,
-                        info: true,
+                        info: false,
                         ordering: true,
                         searching: false,
                         dom: 'rt<"row"<"col-sm-12"i>>',
@@ -1175,6 +1161,7 @@
                     var iafPageHistory = [0];
                     var iafPageHistoryIndex = 0;
                     var iafHasMore = <?php echo $iafInitialHasMore ? 'true' : 'false'; ?>;
+                    var iafTotalCount = <?php echo (int) $iafInitialTotalCount; ?>;
                     var iafLoading = false;
                     var iafSearchTimer = null;
                     var iafLoadToken = 0;   // bumped on every search/reset to discard stale in-flight responses
@@ -1204,7 +1191,7 @@
                         var fromRow = returnedRows > 0 ? (iafOffset + 1) : 0;
                         var toRow = iafOffset + returnedRows;
                         var baseInfo = returnedRows > 0
-                            ? ('Showing ' + fromRow + ' to ' + toRow + ' (Page ' + iafCurrentPage + ')')
+                            ? ('Showing ' + fromRow + ' to ' + toRow + ' of ' + iafTotalCount + ' total clients (Page ' + iafCurrentPage + ')')
                             : ('No clients found (Page ' + iafCurrentPage + ')');
 
                         $pageInfo.text(baseInfo);
@@ -1283,6 +1270,7 @@
 
                                 iafNextOffset = parseInt(response.next_offset, 10) || (iafOffset + nodes.length);
                                 iafHasMore = !!response.has_more;
+                                iafTotalCount = parseInt(response.total_count, 10) || 0;
                                 updatePaginationUi(nodes.length);
                             },
                             complete: function () {

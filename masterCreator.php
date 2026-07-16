@@ -1,6 +1,6 @@
 <div id="wrapper" class="active">
     <?php
-  
+
     $pageIdentifier = "Master Data";
     include_once './header.php';
     include_once './dbConnect.php';
@@ -16,7 +16,7 @@
         aitfCustomerFeatureSet($db, 'customer_letters_delete_icon_visible', isset($_POST['customer_letters_delete_icon_visible']), isset($_SESSION['username']) ? $_SESSION['username'] : '');
         aitfCustomerFeatureSet($db, 'audit_date_conflict_visible', isset($_POST['audit_date_conflict_visible']), isset($_SESSION['username']) ? $_SESSION['username'] : '');
         aitfCustomerFeatureSet($db, 'audit_member_conflict_visible', isset($_POST['audit_member_conflict_visible']), isset($_SESSION['username']) ? $_SESSION['username'] : '');
-        $featureToggleMessage = 'Customer account feature visibility updated.';
+        $featureToggleMessage = 'Client features control buttons.';
     }
 
     // AI Review Rules handling
@@ -40,31 +40,31 @@
     $auditDateConflictVisible = aitfCustomerFeatureIsEnabled($db, 'audit_date_conflict_visible');
     $auditMemberConflictVisible = aitfCustomerFeatureIsEnabled($db, 'audit_member_conflict_visible');
 
-//    auditors
+    //    auditors
     $auditors = "SELECT * from auditors";
     $statement = $db->prepare($auditors);
     $statement->execute();
     $auditorsList = $statement->fetchAll();
 
-//  Taxation
+    //  Taxation
     $taxations = "SELECT * from taxation";
     $statement = $db->prepare($taxations);
     $statement->execute();
     $taxationList = $statement->fetchAll();
 
-//  Consulting firm
+    //  Consulting firm
     $consultingFirm = "SELECT * FROM consulting_firm";
     $statement = $db->prepare($consultingFirm);
     $statement->execute();
     $firmDetails = $statement->fetch();
 
-//  Standards
+    //  Standards
     $standards = "SELECT * FROM standards";
     $statement = $db->prepare($standards);
     $statement->execute();
     $standardsList = $statement->fetchAll();
 
-//  accreditation
+    //  accreditation
     $accreditation = "SELECT * FROM accreditation";
     $statement = $db->prepare($accreditation);
     $statement->execute();
@@ -75,19 +75,19 @@
     $statement->execute();
     $categoriesList = $statement->fetchAll();
 
-//  legal ststus
+    //  legal ststus
     $legalStatus = "SELECT * FROM legal_ststus";
     $statement = $db->prepare($legalStatus);
     $statement->execute();
     $legalStatusList = $statement->fetchAll();
 
-//  nace code
+    //  nace code
     $naceCodes = "SELECT * FROM nace_codes";
     $statement = $db->prepare($naceCodes);
     $statement->execute();
     $naceCodeList = $statement->fetchAll();
 
-//  IAF code
+    //  IAF code
     $iafCodes = "SELECT * FROM iaf_codes";
     $statement = $db->prepare($iafCodes);
     $statement->execute();
@@ -102,7 +102,7 @@
     $statement = $db->prepare($addTos);
     $statement->execute();
     $addto = $statement->fetchAll();
-    
+
     $handlers = "SELECT * from handler";
     $statement = $db->prepare($handlers);
     $statement->execute();
@@ -123,8 +123,11 @@
                                 <ul class="list-group checked-list-box operateTaxation">
                                     <?php //foreach ($firmDetails as $firm) { ?>
                                     <li class="list-group-item">
-                                        <a class="editFirm" data-id="<?php echo $firmDetails['firm_id'] ?>" style="float: left" title="Edit AITF MCL"><i class="fa fa-pencil-square"></i></a>&emsp;<?php echo $firmDetails['firm_name'] ?>
-                                        <a class="deleteFirm" data-id="<?php echo $firmDetails['firm_id'] ?>" style="float: right" title="Delete AITF MCL"><i class="fa fa-trash"></i></a>
+                                        <a class="editFirm" data-id="<?php echo $firmDetails['firm_id'] ?>"
+                                            style="float: left" title="Edit AITF MCL"><i
+                                                class="fa fa-pencil-square"></i></a>&emsp;<?php echo $firmDetails['firm_name'] ?>
+                                        <a class="deleteFirm" data-id="<?php echo $firmDetails['firm_id'] ?>"
+                                            style="float: right" title="Delete AITF MCL"><i class="fa fa-trash"></i></a>
                                     </li>
                                     <?php // } ?>
                                 </ul>
@@ -146,11 +149,18 @@
                                 <ul class="list-group checked-list-box operateTaxation">
                                     <?php foreach ($taxationList as $taxation) { ?>
                                         <li class="list-group-item">
-                                            <a class="editTaxation" edit-Taxation-id="<?php echo $taxation['taxation_id'] ?>" style="float: left"><i class="fa fa-pencil-square"></i></a>&emsp; <span><b>Type of tax: </b> <?php echo $taxation['type_of_tax']; ?> </span> &emsp;<span><b>Rate: </b> <?php
-                                                echo $taxation['rate'];
-                                                echo '%';
-                                                ?> 
-                                            </span><a class="deleteTaxation" taxation-id="<?php echo $taxation['taxation_id'] ?>" title="Delete taxcation" style="float: right"><i class="fa fa-trash"></i></a>
+                                            <a class="editTaxation"
+                                                edit-Taxation-id="<?php echo $taxation['taxation_id'] ?>"
+                                                style="float: left"><i class="fa fa-pencil-square"></i></a>&emsp;
+                                            <span><b>Type of tax: </b> <?php echo $taxation['type_of_tax']; ?> </span>
+                                            &emsp;<span><b>Rate: </b> <?php
+                                            echo $taxation['rate'];
+                                            echo '%';
+                                            ?>
+                                            </span><a class="deleteTaxation"
+                                                taxation-id="<?php echo $taxation['taxation_id'] ?>"
+                                                title="Delete taxcation" style="float: right"><i
+                                                    class="fa fa-trash"></i></a>
                                         </li>
                                     <?php } ?>
                                 </ul>
@@ -175,8 +185,11 @@
                                 <ul class="list-group checked-list-box operateAuditors">
                                     <?php foreach ($auditorsList as $auditor) { ?>
                                         <li class="list-group-item">
-                                            <a class="editAuditor" data-id="<?php echo $auditor['auditors_id'] ?>" style="float: left"><i class="fa fa-pencil-square"></i></a>&emsp;<?php echo $auditor['auditor_name'] ?>
-                                            <a class="deleteAuditor" data-id="<?php echo $auditor['auditors_id'] ?>" style="float: right"><i class="fa fa-trash"></i></a>
+                                            <a class="editAuditor" data-id="<?php echo $auditor['auditors_id'] ?>"
+                                                style="float: left"><i
+                                                    class="fa fa-pencil-square"></i></a>&emsp;<?php echo $auditor['auditor_name'] ?>
+                                            <a class="deleteAuditor" data-id="<?php echo $auditor['auditors_id'] ?>"
+                                                style="float: right"><i class="fa fa-trash"></i></a>
                                         </li>
                                     <?php } ?>
                                 </ul>
@@ -198,8 +211,11 @@
                                 <ul class="list-group checked-list-box operateStandards">
                                     <?php foreach ($standardsList as $standards) { ?>
                                         <li class="list-group-item">
-                                            <a class="editStandards" data-id="<?php echo $standards['id'] ?>" style="float: left"><i class="fa fa-pencil-square"></i></a>&emsp;<?php echo $standards['standards_name'] ?>
-                                            <a class="deleteStandards" data-id="<?php echo $standards['id'] ?>" style="float: right"><i class="fa fa-trash"></i></a>
+                                            <a class="editStandards" data-id="<?php echo $standards['id'] ?>"
+                                                style="float: left"><i
+                                                    class="fa fa-pencil-square"></i></a>&emsp;<?php echo $standards['standards_name'] ?>
+                                            <a class="deleteStandards" data-id="<?php echo $standards['id'] ?>"
+                                                style="float: right"><i class="fa fa-trash"></i></a>
                                         </li>
                                     <?php } ?>
                                 </ul>
@@ -224,8 +240,13 @@
                                 <ul class="list-group checked-list-box operateAccreditation">
                                     <?php foreach ($accreditationList as $accreditation) { ?>
                                         <li class="list-group-item">
-                                            <a class="editAccreditation" data-id="<?php echo $accreditation['accreditation_id'] ?>" style="float: left"><i class="fa fa-pencil-square"></i></a>&emsp;<?php echo $accreditation['accreditation_name'] ?>
-                                            <a class="deleteAccreditation" data-id="<?php echo $accreditation['accreditation_id'] ?>" style="float: right"><i class="fa fa-trash"></i></a>
+                                            <a class="editAccreditation"
+                                                data-id="<?php echo $accreditation['accreditation_id'] ?>"
+                                                style="float: left"><i
+                                                    class="fa fa-pencil-square"></i></a>&emsp;<?php echo $accreditation['accreditation_name'] ?>
+                                            <a class="deleteAccreditation"
+                                                data-id="<?php echo $accreditation['accreditation_id'] ?>"
+                                                style="float: right"><i class="fa fa-trash"></i></a>
                                         </li>
                                     <?php } ?>
                                 </ul>
@@ -247,8 +268,11 @@
                                 <ul class="list-group checked-list-box operateLegalStatus">
                                     <?php foreach ($legalStatusList as $legalStatus) { ?>
                                         <li class="list-group-item">
-                                            <a class="editLegalStatus" data-id="<?php echo $legalStatus['status_id'] ?>" style="float: left"><i class="fa fa-pencil-square"></i></a>&emsp;<?php echo $legalStatus['status'] ?>
-                                            <a class="deleteLegalStatus" data-id="<?php echo $legalStatus['status_id'] ?>" style="float: right"><i class="fa fa-trash"></i></a>
+                                            <a class="editLegalStatus" data-id="<?php echo $legalStatus['status_id'] ?>"
+                                                style="float: left"><i
+                                                    class="fa fa-pencil-square"></i></a>&emsp;<?php echo $legalStatus['status'] ?>
+                                            <a class="deleteLegalStatus" data-id="<?php echo $legalStatus['status_id'] ?>"
+                                                style="float: right"><i class="fa fa-trash"></i></a>
                                         </li>
                                     <?php } ?>
                                 </ul>
@@ -297,8 +321,11 @@
                                 <ul class="list-group checked-list-box operateIaf">
                                     <?php foreach ($iafList as $iafCode) { ?>
                                         <li class="list-group-item">
-                                            <a class="editIaf" data-id="<?php echo $iafCode['iaf_id'] ?>" style="float: left"><i class="fa fa-pencil-square"></i></a>&emsp;<?php echo $iafCode['iaf_code'] ?>
-                                            <a class="deleteIaf" data-id="<?php echo $iafCode['iaf_id'] ?>" style="float: right"><i class="fa fa-trash"></i></a>
+                                            <a class="editIaf" data-id="<?php echo $iafCode['iaf_id'] ?>"
+                                                style="float: left"><i
+                                                    class="fa fa-pencil-square"></i></a>&emsp;<?php echo $iafCode['iaf_code'] ?>
+                                            <a class="deleteIaf" data-id="<?php echo $iafCode['iaf_id'] ?>"
+                                                style="float: right"><i class="fa fa-trash"></i></a>
                                         </li>
                                     <?php } ?>
                                 </ul>
@@ -307,24 +334,27 @@
                         <div class="row newIaf"></div>
                     </div>
                     <div class="col-sm-6">
-                    <div class="row" style="">
-                    <div class="col-xs-12  text-center btn  qms_complete_btn ">
+                        <div class="row" style="">
+                            <div class="col-xs-12  text-center btn  qms_complete_btn ">
                                 <span><i class="fa ">Nace Classes</i></span>
                             </div>
-                    </div>
-                    <div class="row" style="">
-                        <div class="well" style="max-height: 200px; overflow: auto;">
+                        </div>
+                        <div class="row" style="">
+                            <div class="well" style="max-height: 200px; overflow: auto;">
 
-                        <ul class="list-group checked-list-box operateNace">
+                                <ul class="list-group checked-list-box operateNace">
                                     <?php foreach ($naceCodeList as $naceCode) { ?>
                                         <li class="list-group-item">
-                                            <a class="editNaceClass" data-id="<?php echo $naceCode['iaf_id'] ?>" data-id1="<?php echo $naceCode['nace_id'] ?>" data-id2="<?php echo $naceCode['nace_code'] ?>" style="float: left"><i class="fa fa-pencil-square"></i></a>&emsp;<?php echo $naceCode['nace_code'] ?>
+                                            <a class="editNaceClass" data-id="<?php echo $naceCode['iaf_id'] ?>"
+                                                data-id1="<?php echo $naceCode['nace_id'] ?>"
+                                                data-id2="<?php echo $naceCode['nace_code'] ?>" style="float: left"><i
+                                                    class="fa fa-pencil-square"></i></a>&emsp;<?php echo $naceCode['nace_code'] ?>
                                         </li>
                                     <?php } ?>
                                 </ul>
+                            </div>
                         </div>
-                    </div>
-                    <div class="row newNace"></div>
+                        <div class="row newNace"></div>
                     </div>
                     <div class="col-sm-6">
                         <div class="row" style="">
@@ -340,8 +370,10 @@
                                 <ul class="list-group checked-list-box operateStatus">
                                     <?php foreach ($status as $stat) { ?>
                                         <li class="list-group-item">
-                                            <a class="editStatus" data-id="<?php echo $stat['id'] ?>" style="float: left"><i class="fa fa-pencil-square"></i></a>&emsp;<?php echo $stat['status'] ?>
-                                            <a class="deleteStatus" data-id="<?php echo $stat['id'] ?>" style="float: right"><i class="fa fa-trash"></i></a>
+                                            <a class="editStatus" data-id="<?php echo $stat['id'] ?>" style="float: left"><i
+                                                    class="fa fa-pencil-square"></i></a>&emsp;<?php echo $stat['status'] ?>
+                                            <a class="deleteStatus" data-id="<?php echo $stat['id'] ?>"
+                                                style="float: right"><i class="fa fa-trash"></i></a>
                                         </li>
                                     <?php } ?>
                                 </ul>
@@ -363,8 +395,11 @@
                                 <ul class="list-group checked-list-box operatecategories">
                                     <?php foreach ($categoriesList as $categories) { ?>
                                         <li class="list-group-item">
-                                            <a class="editcategories" data-id="<?php echo $categories['categories_id'] ?>" style="float: left"><i class="fa fa-pencil-square"></i></a>&emsp;<?php echo $categories['categories_name'] ?>
-                                            <a class="deletecategories" data-id="<?php echo $categories['categories_id'] ?>" style="float: right"><i class="fa fa-trash"></i></a>
+                                            <a class="editcategories" data-id="<?php echo $categories['categories_id'] ?>"
+                                                style="float: left"><i
+                                                    class="fa fa-pencil-square"></i></a>&emsp;<?php echo $categories['categories_name'] ?>
+                                            <a class="deletecategories" data-id="<?php echo $categories['categories_id'] ?>"
+                                                style="float: right"><i class="fa fa-trash"></i></a>
                                         </li>
                                     <?php } ?>
                                 </ul>
@@ -388,15 +423,19 @@
                                 <ul class="list-group checked-list-box operateAddto">
                                     <?php foreach ($addto as $tos) { ?>
                                         <li class="list-group-item">
-                                            <a class="editAddtos" data-id="<?php echo $tos['add_to_id'] ?>" style="float: left"><i class="fa fa-pencil-square"></i></a>&emsp;<?php echo $tos['add_to_type'] ?>
-                                            <a class="deleteAddto" data-id="<?php echo $tos['add_to_id'] ?>" style="float: right"><i class="fa fa-trash"></i></a>
+                                            <a class="editAddtos" data-id="<?php echo $tos['add_to_id'] ?>"
+                                                style="float: left"><i
+                                                    class="fa fa-pencil-square"></i></a>&emsp;<?php echo $tos['add_to_type'] ?>
+                                            <a class="deleteAddto" data-id="<?php echo $tos['add_to_id'] ?>"
+                                                style="float: right"><i class="fa fa-trash"></i></a>
                                         </li>
                                     <?php } ?>
                                 </ul>
                             </div>
                         </div>
                         <div class="row newAddto"></div>
-                    </div><div class="col-sm-6">
+                    </div>
+                    <div class="col-sm-6">
                         <div class="row" style="">
                             <div class="col-xs-8  text-center btn  qms_complete_btn ">
                                 <span><i class="fa ">Handler</i></span>
@@ -410,8 +449,11 @@
                                 <ul class="list-group checked-list-box operateHandlers">
                                     <?php foreach ($handlersList as $hndl) { ?>
                                         <li class="list-group-item">
-                                            <a class="editHandlers" data-id="<?php echo $hndl['id'] ?>" style="float: left"><i class="fa fa-pencil-square"></i></a>&emsp;<?php echo $hndl['handler_name'] ?>
-                                            <a class="deleteHandlers" data-id="<?php echo $hndl['id'] ?>" style="float: right"><i class="fa fa-trash"></i></a>
+                                            <a class="editHandlers" data-id="<?php echo $hndl['id'] ?>"
+                                                style="float: left"><i
+                                                    class="fa fa-pencil-square"></i></a>&emsp;<?php echo $hndl['handler_name'] ?>
+                                            <a class="deleteHandlers" data-id="<?php echo $hndl['id'] ?>"
+                                                style="float: right"><i class="fa fa-trash"></i></a>
                                         </li>
                                     <?php } ?>
                                 </ul>
@@ -419,21 +461,24 @@
                         </div>
                         <div class="row newHandler"></div>
                     </div>
-                    
+
                 </div>
                 <div class="row">
                     <div class="col-sm-6">
                         <div class="row" style="">
                             <div class="col-xs-12  text-center btn  qms_complete_btn ">
                                 <span><i class="fa ">Certificate No.</i></span>
-                            </div>                            
+                            </div>
                         </div>
                         <div class="row" style="">
                             <div class="well" style="max-height: 200px; overflow: auto;">
-                                <ul class="list-group checked-list-box operateCertNo">                                   
+                                <ul class="list-group checked-list-box operateCertNo">
                                     <li class="list-group-item">
-                                        <a class="editCertificationNo" data-id="<?php echo $firmDetails['firm_id'] ?>" data-val="<?php echo $firmDetails['certification_no'] ?>" style="float: left"><i class="fa fa-pencil-square"></i></a>&emsp;<?php echo $firmDetails['certification_no'] ?>
-                                    </li>                                    
+                                        <a class="editCertificationNo" data-id="<?php echo $firmDetails['firm_id'] ?>"
+                                            data-val="<?php echo $firmDetails['certification_no'] ?>"
+                                            style="float: left"><i
+                                                class="fa fa-pencil-square"></i></a>&emsp;<?php echo $firmDetails['certification_no'] ?>
+                                    </li>
                                 </ul>
                             </div>
                         </div>
@@ -442,90 +487,105 @@
                 </div>
                 <!-- Customer Feature Toggles Section -->
                 <?php if ($canManageCustomerFeatureToggles) { ?>
-                <div class="row" style="margin-top: 30px;">
-                    <div class="col-sm-6">
-                        <div class="row">
-                            <div class="col-xs-12 text-center btn qms_complete_btn">
-                                <span><i class="fa fa-toggle-on"> Customer Feature Toggles</i></span>
+                    <div class="row" style="margin-top: 30px;">
+                        <div class="col-sm-6">
+                            <div class="row">
+                                <div class="col-xs-12 text-center btn qms_complete_btn">
+                                    <span><i class="fa fa-toggle-on"> Customer Feature Toggles</i></span>
+                                </div>
                             </div>
-                        </div>
-                        <div class="row" style="">
-                            <div class="well" style="max-height: 300px; overflow: auto;">
-                                <form method="post" action="masterCreator.php">
-                                    <input type="hidden" name="action" value="save_customer_feature_toggles">
-                                    <?php if ($featureToggleMessage !== '') { ?>
-                                        <div class="alert alert-success" style="margin: 0 0 15px;"><?php echo htmlspecialchars($featureToggleMessage, ENT_QUOTES, 'UTF-8'); ?></div>
-                                    <?php } ?>
-                                    <ul class="list-group">
-                                        <li class="list-group-item">
-                                            <strong>GO ai</strong>
-                                            <small style="display: block; color: #777;">Customer account GO ai review button visibility</small>
-                                            <div style="margin-top: 8px;">
-                                                <label style="margin-right: 15px;">
-                                                    <input type="checkbox" name="customer_docora_ai_visible" value="1" <?php echo $customerDocoraAiVisible ? 'checked' : ''; ?>>
-                                                    Enable GO ai Button
-                                                </label>
+                            <div class="row" style="">
+                                <div class="well" style="max-height: 300px; overflow: auto;">
+                                    <form method="post" action="masterCreator.php">
+                                        <input type="hidden" name="action" value="save_customer_feature_toggles">
+                                        <?php if ($featureToggleMessage !== '') { ?>
+                                            <div class="alert alert-success" style="margin: 0 0 15px;">
+                                                <?php echo htmlspecialchars($featureToggleMessage, ENT_QUOTES, 'UTF-8'); ?>
                                             </div>
-                                        </li>
-                                        <li class="list-group-item">
-                                            <strong>Date Graph</strong>
-                                            <small style="display: block; color: #777;">Customer chronological dates graph visibility</small>
-                                            <div style="margin-top: 8px;">
-                                                <label style="margin-right: 15px;">
-                                                    <input type="checkbox" name="customer_date_graph_visible" value="1" <?php echo $customerDateGraphVisible ? 'checked' : ''; ?>>
-                                                    Enable Date Graph
-                                                </label>
-                                            </div>
-                                        </li>
-                                        <li class="list-group-item">
-                                            <strong>Letters Edit Icon</strong>
-                                            <small style="display: block; color: #777;">Customer account letters edit icon visibility</small>
-                                            <div style="margin-top: 8px;">
-                                                <label style="margin-right: 15px;">
-                                                    <input type="checkbox" name="customer_letters_edit_icon_visible" value="1" <?php echo $customerLettersEditIconVisible ? 'checked' : ''; ?>>
-                                                    Enable Letters Edit Icon
-                                                </label>
-                                            </div>
-                                        </li>
-                                        <li class="list-group-item">
-                                            <strong>Letters Delete Icon</strong>
-                                            <small style="display: block; color: #777;">Customer account letters delete icon visibility</small>
-                                            <div style="margin-top: 8px;">
-                                                <label style="margin-right: 15px;">
-                                                    <input type="checkbox" name="customer_letters_delete_icon_visible" value="1" <?php echo $customerLettersDeleteIconVisible ? 'checked' : ''; ?>>
-                                                    Enable Letters Delete Icon
-                                                </label>
-                                            </div>
-                                        </li>
-                                        <li class="list-group-item">
-                                            <strong>Audit Date Conflict</strong>
-                                            <small style="display: block; color: #777;">Audit Page date conflict panel visibility</small>
-                                            <div style="margin-top: 8px;">
-                                                <label style="margin-right: 15px;">
-                                                    <input type="checkbox" name="audit_date_conflict_visible" value="1" <?php echo $auditDateConflictVisible ? 'checked' : ''; ?>>
-                                                    Enable Date Conflict Panel
-                                                </label>
-                                            </div>
-                                        </li>
-                                        <li class="list-group-item">
-                                            <strong>Audit Member Conflict</strong>
-                                            <small style="display: block; color: #777;">Audit Page member conflict panel visibility</small>
-                                            <div style="margin-top: 8px;">
-                                                <label style="margin-right: 15px;">
-                                                    <input type="checkbox" name="audit_member_conflict_visible" value="1" <?php echo $auditMemberConflictVisible ? 'checked' : ''; ?>>
-                                                    Enable Member Conflict Panel
-                                                </label>
-                                            </div>
-                                        </li>
-                                    </ul>
-                                    <div style="text-align: right; margin-top: 10px;">
-                                        <button type="submit" class="btn btn-info btn-sm"><i class="fa fa-save"></i> Save Toggles</button>
-                                    </div>
-                                </form>
+                                        <?php } ?>
+                                        <ul class="list-group">
+                                            <li class="list-group-item">
+                                                <strong>GO ai</strong>
+                                                <small style="display: block; color: #777;">Customer account GO ai review
+                                                    button visibility</small>
+                                                <div style="margin-top: 8px;">
+                                                    <label style="margin-right: 15px;">
+                                                        <input type="checkbox" name="customer_docora_ai_visible" value="1"
+                                                            <?php echo $customerDocoraAiVisible ? 'checked' : ''; ?>>
+                                                        Enable GO ai Button
+                                                    </label>
+                                                </div>
+                                            </li>
+                                            <li class="list-group-item">
+                                                <strong>Date Graph</strong>
+                                                <small style="display: block; color: #777;">Customer chronological dates
+                                                    graph visibility</small>
+                                                <div style="margin-top: 8px;">
+                                                    <label style="margin-right: 15px;">
+                                                        <input type="checkbox" name="customer_date_graph_visible" value="1"
+                                                            <?php echo $customerDateGraphVisible ? 'checked' : ''; ?>>
+                                                        Enable Date Graph
+                                                    </label>
+                                                </div>
+                                            </li>
+                                            <li class="list-group-item">
+                                                <strong>Letters Edit Icon</strong>
+                                                <small style="display: block; color: #777;">Customer account letters edit
+                                                    icon visibility</small>
+                                                <div style="margin-top: 8px;">
+                                                    <label style="margin-right: 15px;">
+                                                        <input type="checkbox" name="customer_letters_edit_icon_visible"
+                                                            value="1" <?php echo $customerLettersEditIconVisible ? 'checked' : ''; ?>>
+                                                        Enable Letters Edit Icon
+                                                    </label>
+                                                </div>
+                                            </li>
+                                            <li class="list-group-item">
+                                                <strong>Letters Delete Icon</strong>
+                                                <small style="display: block; color: #777;">Customer account letters delete
+                                                    icon visibility</small>
+                                                <div style="margin-top: 8px;">
+                                                    <label style="margin-right: 15px;">
+                                                        <input type="checkbox" name="customer_letters_delete_icon_visible"
+                                                            value="1" <?php echo $customerLettersDeleteIconVisible ? 'checked' : ''; ?>>
+                                                        Enable Letters Delete Icon
+                                                    </label>
+                                                </div>
+                                            </li>
+                                            <li class="list-group-item">
+                                                <strong>Audit Date Conflict</strong>
+                                                <small style="display: block; color: #777;">Audit Page date conflict panel
+                                                    visibility</small>
+                                                <div style="margin-top: 8px;">
+                                                    <label style="margin-right: 15px;">
+                                                        <input type="checkbox" name="audit_date_conflict_visible" value="1"
+                                                            <?php echo $auditDateConflictVisible ? 'checked' : ''; ?>>
+                                                        Enable Date Conflict Panel
+                                                    </label>
+                                                </div>
+                                            </li>
+                                            <li class="list-group-item">
+                                                <strong>Audit Member Conflict</strong>
+                                                <small style="display: block; color: #777;">Audit Page member conflict panel
+                                                    visibility</small>
+                                                <div style="margin-top: 8px;">
+                                                    <label style="margin-right: 15px;">
+                                                        <input type="checkbox" name="audit_member_conflict_visible"
+                                                            value="1" <?php echo $auditMemberConflictVisible ? 'checked' : ''; ?>>
+                                                        Enable Member Conflict Panel
+                                                    </label>
+                                                </div>
+                                            </li>
+                                        </ul>
+                                        <div style="text-align: right; margin-top: 10px;">
+                                            <button type="submit" class="btn btn-info btn-sm"><i class="fa fa-save"></i>
+                                                Save Toggles</button>
+                                        </div>
+                                    </form>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
                 <?php } ?>
 
                 <!-- AI Rules Section -->
@@ -549,19 +609,27 @@
                                     $aiRulesStmt = $db->prepare("SELECT * FROM ai_review_rules ORDER BY is_active DESC, category ASC, rule_code ASC");
                                     $aiRulesStmt->execute();
                                     $aiRulesList = $aiRulesStmt->fetchAll();
-                                    foreach ($aiRulesList as $aiRule) { 
+                                    foreach ($aiRulesList as $aiRule) {
                                         $statusBadge = $aiRule['is_active'] == 1 ? '<span class="label label-success">Active</span>' : '<span class="label label-default">Inactive</span>';
-                                    ?>
+                                        ?>
                                         <li class="list-group-item">
-                                            <a class="editAiRule" data-id="<?php echo $aiRule['id'] ?>" style="float: left" title="Edit AI Rule"><i class="fa fa-pencil-square"></i></a>&emsp;
-                                            <strong><?php echo htmlspecialchars($aiRule['rule_code']) ?></strong> - <?php echo htmlspecialchars($aiRule['title']) ?>
+                                            <a class="editAiRule" data-id="<?php echo $aiRule['id'] ?>" style="float: left"
+                                                title="Edit AI Rule"><i class="fa fa-pencil-square"></i></a>&emsp;
+                                            <strong><?php echo htmlspecialchars($aiRule['rule_code']) ?></strong> -
+                                            <?php echo htmlspecialchars($aiRule['title']) ?>
                                             <?php echo $statusBadge; ?>
-                                            <a class="deleteAiRule" data-id="<?php echo $aiRule['id'] ?>" style="float: right" title="Delete AI Rule"><i class="fa fa-trash"></i></a>
-                                            <form method="post" action="masterCreator.php" style="display: inline; float: right; margin-right: 10px;" class="toggleAiRuleForm">
+                                            <a class="deleteAiRule" data-id="<?php echo $aiRule['id'] ?>"
+                                                style="float: right" title="Delete AI Rule"><i class="fa fa-trash"></i></a>
+                                            <form method="post" action="masterCreator.php"
+                                                style="display: inline; float: right; margin-right: 10px;"
+                                                class="toggleAiRuleForm">
                                                 <input type="hidden" name="action" value="toggle_ai_rule">
                                                 <input type="hidden" name="ai_rule_id" value="<?php echo $aiRule['id']; ?>">
-                                                <input type="hidden" name="ai_active" value="<?php echo $aiRule['is_active'] == 1 ? 0 : 1; ?>">
-                                                <button type="submit" class="btn btn-xs <?php echo $aiRule['is_active'] == 1 ? 'btn-warning' : 'btn-success'; ?>" style="padding: 2px 6px;">
+                                                <input type="hidden" name="ai_active"
+                                                    value="<?php echo $aiRule['is_active'] == 1 ? 0 : 1; ?>">
+                                                <button type="submit"
+                                                    class="btn btn-xs <?php echo $aiRule['is_active'] == 1 ? 'btn-warning' : 'btn-success'; ?>"
+                                                    style="padding: 2px 6px;">
                                                     <?php echo $aiRule['is_active'] == 1 ? 'Deactivate' : 'Activate'; ?>
                                                 </button>
                                             </form>
@@ -576,13 +644,18 @@
 
                 <div id="delete-details" style="display: none">
                     <div id="loading-div" class="ui-corner-all">
-                        <span style="font-size: 30pt;"><i style="padding: 5px;" class="fa fa-warning text-warning"></i></span>
+                        <span style="font-size: 30pt;"><i style="padding: 5px;"
+                                class="fa fa-warning text-warning"></i></span>
                         <div>
-                            <span style="font-size: 11pt; padding: 10px" class="text-primary meeting-cancel-confirm-message">Are you sure that you want to delete details?</span>
+                            <span style="font-size: 11pt; padding: 10px"
+                                class="text-primary meeting-cancel-confirm-message">Are you sure that you want to delete
+                                details?</span>
                         </div>
                         <div style="padding: 3px;">
-                            <button title="Click here to delete" class="btn btn-primary btn-round btn-round-sm btn-sm delete-confirm-ok">Ok</button>
-                            <button title="Click here to cancel" class="btn btn-danger  btn-round btn-round-sm btn-sm delete-cancel">Cancel</button>
+                            <button title="Click here to delete"
+                                class="btn btn-primary btn-round btn-round-sm btn-sm delete-confirm-ok">Ok</button>
+                            <button title="Click here to cancel"
+                                class="btn btn-danger  btn-round btn-round-sm btn-sm delete-cancel">Cancel</button>
                         </div>
                     </div>
                 </div>
@@ -609,7 +682,7 @@
                 $.ajax({
                     type: "POST",
                     url: "checkCustomer.php",
-                    data: {auditor: $('.newAuditorsInput').val()},
+                    data: { auditor: $('.newAuditorsInput').val() },
                     async: false,
                     success: function (data) {
                         // alert(data);
@@ -635,16 +708,16 @@
         }
 
         $(document).ready(function () {
-            
+
             $("#menu-toggle").click(function (e) {
-            e.preventDefault();
-            $("#wrapper").toggleClass("active");
-            $(".container").toggleClass("active");
-            table.draw();
-        });
-            
+                e.preventDefault();
+                $("#wrapper").toggleClass("active");
+                $(".container").toggleClass("active");
+                table.draw();
+            });
+
             $("body").on("click", ".createHandler", function () {
-//            alert($('.addtoId').val());
+                //            alert($('.addtoId').val());
                 $.ajax({
                     url: "addNewServices.php",
                     type: "GET",
@@ -653,23 +726,21 @@
                         newHandler: $('.newHandlerInput ').val(),
                         idHandler: $('.handlerId').val(),
                     },
-                    success: function (data)
-                    {
-//                        alert(data);
+                    success: function (data) {
+                        //                        alert(data);
                         $('.newHandler').empty();
                         $('.operateHandlers').empty();
                         for (var i in data) {
                             $('.operateHandlers').append('<li class="list-group-item"><a class="editHandlers" data-id="' + data[i]['id'] + '" style="float: left"><i class="fa fa-pencil-square"></i></a>&emsp;' + data[i]['handler_name'] + '<a class="deleteHandlers" data-id="' + data[i]['id'] + '" style="float: right"><i class="fa fa-trash"></i></a></li>');
                         }
                     },
-                    error: function (data, status, err)
-                    {
+                    error: function (data, status, err) {
                         alert(status);
                         $('.newHandler').empty();
                     }
                 });
             });
-            
+
             $("body").on("click", ".editHandlers", function () {
                 $.ajax({
                     url: "addNewServices.php",
@@ -678,8 +749,7 @@
                     data: {
                         handler_Id: $(this).attr('data-id'),
                     },
-                    success: function (data)
-                    {
+                    success: function (data) {
                         //    	                    alert(data);                    
 
                         $('.newHandler').empty();
@@ -694,8 +764,7 @@
                                             </div>\n\
                                             </div>');
                     },
-                    error: function (data, status, err)
-                    {
+                    error: function (data, status, err) {
                         alert(status);
                     }
                 });
@@ -710,8 +779,7 @@
                         group_Id1: $(this).attr('data-id1'),
                         group_Id2: $(this).attr('data-id2'),
                     },
-                    success: function (data)
-                    {
+                    success: function (data) {
                         //console.log(data[2]);
                         $(".newIafInput1").val(data[0]["iaf_code"]);
                         $(".newIafDesc1").val(data[3]);
@@ -737,8 +805,7 @@
                         $("input").trigger("change");
                         $(".iafnaceClassmodel").modal("show");
                     },
-                    error: function (data, status, err)
-                    {
+                    error: function (data, status, err) {
                         alert(err);
                     }
                 });
@@ -754,8 +821,7 @@
                         data: {
                             handleId: $id,
                         },
-                        success: function (data)
-                        {
+                        success: function (data) {
                             //    	                            alert(data);
                             $('#delete-details').hide();
                             $('.newHandler').empty();
@@ -764,8 +830,7 @@
                                 $('.operateHandlers').append('<li class="list-group-item"><a class="editHandlers" data-id="' + data[i]['id'] + '" style="float: left"><i class="fa fa-pencil-square"></i></a>&emsp;' + data[i]['handler_name'] + '<a class="deleteHandlers" data-id="' + data[i]['id'] + '" style="float: right"><i class="fa fa-trash"></i></a></li>');
                             }
                         },
-                        error: function (data, status, err)
-                        {
+                        error: function (data, status, err) {
                             alert(status);
                         }
                     });
@@ -790,8 +855,7 @@
 
                             statusId: $id,
                         },
-                        success: function (data)
-                        {
+                        success: function (data) {
                             //    	                            alert(data);
                             $('#delete-details').hide();
                             $('.newStatus').empty();
@@ -800,8 +864,7 @@
                                 $('.operateStatus').append('<li class="list-group-item"><a class="editStatus" data-id="' + data[i]['id'] + '" style="float: left"><i class="fa fa-pencil-square"></i></a>&emsp;' + data[i]['status'] + '<a class="deleteStatus" data-id="' + data[i]['id'] + '" style="float: right"><i class="fa fa-trash"></i></a></li>');
                             }
                         },
-                        error: function (data, status, err)
-                        {
+                        error: function (data, status, err) {
                             alert(status);
                         }
                     });
@@ -823,8 +886,7 @@
                         data: {
                             addtosId: $id,
                         },
-                        success: function (data)
-                        {
+                        success: function (data) {
                             //    	                            alert(data);
                             $('#delete-details').hide();
                             $('.newAddto').empty();
@@ -833,8 +895,7 @@
                                 $('.operateAddto').append('<li class="list-group-item"><a class="editAddtos" data-id="' + data[i]['add_to_id'] + '" style="float: left"><i class="fa fa-pencil-square"></i></a>&emsp;' + data[i]['add_to_type'] + '<a class="deleteAddto" data-id="' + data[i]['add_to_id'] + '" style="float: right"><i class="fa fa-trash"></i></a></li>');
                             }
                         },
-                        error: function (data, status, err)
-                        {
+                        error: function (data, status, err) {
                             alert(status);
                         }
                     });
@@ -853,8 +914,7 @@
                         newStatus: $('#newStatusInput').val(),
                         idStatus: $('.statusId').val(),
                     },
-                    success: function (data)
-                    {
+                    success: function (data) {
                         // alert(data);
                         $('.newStatus').empty();
                         $('.operateStatus').empty();
@@ -862,8 +922,7 @@
                             $('.operateStatus').append('<li class="list-group-item"><a class="editStatus" data-id="' + data[i]['id'] + '" style="float: left"><i class="fa fa-pencil-square"></i></a>&emsp;' + data[i]['status'] + '<a class="deleteStatus" data-id="' + data[i]['id'] + '" style="float: right"><i class="fa fa-trash"></i></a></li>');
                         }
                     },
-                    error: function (data, status, err)
-                    {
+                    error: function (data, status, err) {
                         //alert(status);
                         $('.newNace').empty();
                     }
@@ -879,16 +938,14 @@
                         updateCertNo: $(".updateCertNo").val(),
                         firm_id: $('.firm_id').val(),
                     },
-                    success: function (data)
-                    {
-//                        alert(data);
+                    success: function (data) {
+                        //                        alert(data);
                         $('.operateCertNo').empty();
                         $('.changeCertification').empty();
                         $('.operateCertNo').append('<li class="list-group-item"><a class="editCertificationNo" data-id="' + data['firm_id'] + '" data-val="' + data['certification_no'] + '" style="float: left"><i class="fa fa-pencil-square"></i></a>&emsp;' + data['certification_no'] + '</li>');
 
                     },
-                    error: function (data, status, err)
-                    {
+                    error: function (data, status, err) {
                         alert(status);
                         $('.changeCertification').empty();
                     }
@@ -904,17 +961,15 @@
                         editAddto: $(".newAddtoInpute").val(),
                         eidAddto: $('.addtoIde').val(),
                     },
-                    success: function (data)
-                    {
-//                        alert(data);
+                    success: function (data) {
+                        //                        alert(data);
                         $('.newAddto').empty();
                         $('.operateAddto').empty();
                         for (var i in data) {
                             $('.operateAddto').append('<li class="list-group-item"><a class="editAddtos" data-id="' + data[i]['add_to_id'] + '" style="float: left"><i class="fa fa-pencil-square"></i></a>&emsp;' + data[i]['add_to_type'] + '<a class="deleteAddto" data-id="' + data[i]['add_to_id'] + '" style="float: right"><i class="fa fa-trash"></i></a></li>');
                         }
                     },
-                    error: function (data, status, err)
-                    {
+                    error: function (data, status, err) {
                         alert(status);
                         $('.newNace').empty();
                     }
@@ -922,7 +977,7 @@
             });
 
             $("body").on("click", ".createAddTo", function () {
-//            alert($('.addtoId').val());
+                //            alert($('.addtoId').val());
                 $.ajax({
                     url: "addNewServices.php",
                     type: "GET",
@@ -932,17 +987,15 @@
                         editAddto: $(".newAddtoInpute").val(),
                         idAddto: $('.addtoId').val(),
                     },
-                    success: function (data)
-                    {
-//                        alert(data);
+                    success: function (data) {
+                        //                        alert(data);
                         $('.newAddto').empty();
                         $('.operateAddto').empty();
                         for (var i in data) {
                             $('.operateAddto').append('<li class="list-group-item"><a class="editAddtos" data-id="' + data[i]['add_to_id'] + '" style="float: left"><i class="fa fa-pencil-square"></i></a>&emsp;' + data[i]['add_to_type'] + '<a class="deleteAddto" data-id="' + data[i]['add_to_id'] + '" style="float: right"><i class="fa fa-trash"></i></a></li>');
                         }
                     },
-                    error: function (data, status, err)
-                    {
+                    error: function (data, status, err) {
                         alert(status);
                         $('.newNace').empty();
                     }
@@ -952,7 +1005,7 @@
             $("body").on("click", ".editCertificationNo", function () {
                 $id = $(this).attr("data-id");
                 $val = $(this).attr("data-val");
-//                alert($id + " val " + $val);
+                //                alert($id + " val " + $val);
                 $('.changeCertification').empty();
                 $('.changeCertification').append('<div class="col-sm-12"><div class="well" style="height: 100px;">\n\
                                                         <div class="col-sm-12 form-group float-label-control">\n\
@@ -967,7 +1020,7 @@
             });
 
             $("body").on("click", ".editAddtos", function () {
-//            alert($(this).attr('data-id'));
+                //            alert($(this).attr('data-id'));
                 $.ajax({
                     url: "addNewServices.php",
                     type: "GET",
@@ -975,8 +1028,7 @@
                     data: {
                         addto_Id: $(this).attr('data-id'),
                     },
-                    success: function (data)
-                    {
+                    success: function (data) {
                         $('.newAddto').empty();
                         $('.newAddto').append('<div class="col-sm-12"><div class="well" style="height: 100px;">\n\
                                                         <div class="col-sm-12 form-group float-label-control">\n\
@@ -989,8 +1041,7 @@
                                                         </div>\n\
                                                         </div>');
                     },
-                    error: function (data, status, err)
-                    {
+                    error: function (data, status, err) {
                         alert(status);
                     }
                 });
@@ -1004,8 +1055,7 @@
                     data: {
                         status_Id: $(this).attr('data-id'),
                     },
-                    success: function (data)
-                    {
+                    success: function (data) {
                         //    	                    alert(data);                    
 
                         $('.newStatus').empty();
@@ -1020,8 +1070,7 @@
                                                         </div>\n\
                                                         </div>');
                     },
-                    error: function (data, status, err)
-                    {
+                    error: function (data, status, err) {
                         alert(status);
                     }
                 });
@@ -1036,12 +1085,7 @@
                     data: {
                         auditor_Id: $(this).attr('data-id'),
                     },
-                    success: function (data)
-
-
-
-                    
-                    {
+                    success: function (data) {
                         $(".auditorName").val(data['auditor_name']);
                         $(".auditorNumber").val(data['auditor_number']);
                         $(".auditorEmail").val(data['auditor_email']);
@@ -1050,18 +1094,17 @@
                         $("input").trigger("change");
                         $(".auditoradd").modal("show");
                         //                    alert(data);
-//                        $('.newAuditors').empty();
-//                        $('.newAuditors').append('<div class="col-sm-12"><div class="well" style="height: 100px;">\n\
-//                                            <div class="col-sm-12 form-group float-label-control">\n\
-//                                            <input type="text" name="newAuditorsInput" class="form-control newAuditorsInput" id="newAuditorsInput" placeholder="New Auditors" value="' + data['auditor_name'] + '"></div>\n\
-//                                            <a class="btn btn-info btn-xs createAuditors" style="float: right;"><i class="fa fa-check"></i></a>\n\
-//                                            <input type="hidden" class="auditorId" name="auditorId" value="' + data['auditors_id'] + '">\n\
-//                                            <div id="newAuditorsError" style="display: none">\n\
-//                                            <small><span id="newAuditorsErrorMsg" style="color: #c9513c; font-style: italic;" ></span></small>\n\
-//                                            </div></div></div>');
+                        //                        $('.newAuditors').empty();
+                        //                        $('.newAuditors').append('<div class="col-sm-12"><div class="well" style="height: 100px;">\n\
+                        //                                            <div class="col-sm-12 form-group float-label-control">\n\
+                        //                                            <input type="text" name="newAuditorsInput" class="form-control newAuditorsInput" id="newAuditorsInput" placeholder="New Auditors" value="' + data['auditor_name'] + '"></div>\n\
+                        //                                            <a class="btn btn-info btn-xs createAuditors" style="float: right;"><i class="fa fa-check"></i></a>\n\
+                        //                                            <input type="hidden" class="auditorId" name="auditorId" value="' + data['auditors_id'] + '">\n\
+                        //                                            <div id="newAuditorsError" style="display: none">\n\
+                        //                                            <small><span id="newAuditorsErrorMsg" style="color: #c9513c; font-style: italic;" ></span></small>\n\
+                        //                                            </div></div></div>');
                     },
-                    error: function (data, status, err)
-                    {
+                    error: function (data, status, err) {
                         alert(status);
                     }
                 });
@@ -1075,8 +1118,7 @@
                     data: {
                         standatd_Id: $(this).attr('data-id'),
                     },
-                    success: function (data)
-                    {
+                    success: function (data) {
                         //                    alert(data);
                         $('.newStandards').empty();
                         $('.newStandards').append('<div class="col-sm-12"><div class="well" style="height: 100px;">\n\
@@ -1088,8 +1130,7 @@
                                             <small><span id="newStandardsErrorMsg" style="color: #c9513c; font-style: italic;" ></span></small>\n\
                                             </div></div></div>');
                     },
-                    error: function (data, status, err)
-                    {
+                    error: function (data, status, err) {
                         alert(status);
                     }
                 });
@@ -1104,8 +1145,7 @@
                     data: {
                         accreditation_Id: $(this).attr('data-id'),
                     },
-                    success: function (data)
-                    {
+                    success: function (data) {
                         //                    alert(data);
                         $('.newAccreditation').empty();
                         $('.newAccreditation').append('<div class="col-sm-12"><div class="well" style="height: 100px;">\n\
@@ -1117,8 +1157,7 @@
                                             <small><span id="newAccreditationErrorMsg" style="color: #c9513c; font-style: italic;" ></span></small>\n\
                                             </div></div></div>');
                     },
-                    error: function (data, status, err)
-                    {
+                    error: function (data, status, err) {
                         alert(status);
                     }
                 });
@@ -1132,8 +1171,7 @@
                     data: {
                         categories_Id: $(this).attr('data-id'),
                     },
-                    success: function (data)
-                    {
+                    success: function (data) {
                         //                    alert(data);
                         $('.newcategories').empty();
                         $('.newcategories').append('<div class="col-sm-12"><div class="well" style="height: 100px;">\n\
@@ -1145,8 +1183,7 @@
                                             <small><span id="newcategoriesErrorMsg" style="color: #c9513c; font-style: italic;" ></span></small>\n\
                                             </div></div></div>');
                     },
-                    error: function (data, status, err)
-                    {
+                    error: function (data, status, err) {
                         alert(status);
                     }
                 });
@@ -1160,8 +1197,7 @@
                     data: {
                         legalStatus_Id: $(this).attr('data-id'),
                     },
-                    success: function (data)
-                    {
+                    success: function (data) {
                         //                    alert(data);
                         $('.newLegalStatus').empty();
                         $('.newLegalStatus').append('<div class="col-sm-12"><div class="well" style="height: 100px;">\n\
@@ -1175,8 +1211,7 @@
                                             </div>\n\
                                             </div>');
                     },
-                    error: function (data, status, err)
-                    {
+                    error: function (data, status, err) {
                         alert(status);
                     }
                 });
@@ -1190,22 +1225,20 @@
                     data: {
                         nace_Id: $(this).attr('data-id'),
                     },
-                    success: function (data)
-                    {
-//                        $('.newNace').empty();
-//                        $('.newNace').append('<div class="col-sm-12"><div class="well" style="height: 100px;">\n\
-//                                            <div class="col-sm-12 form-group float-label-control">\n\
-//                                            <input type="text" name="newNaceInput" class="form-control newNaceInput" id="newNaceInput" placeholder="New NACE Code" value="' + data['nace_code'] + '"></div>\n\
-//                                            <input type="hidden" class="naceId" name="naceId" value="' + data['nace_id'] + '">\n\
-//                                            <a class="btn btn-info btn-xs createNace" style="float: right;"><i class="fa fa-check"></i></a>\n\
-//                                            <div id="newLegalStatusError" style="display: none">\n\
-//                                            <small><span id="newLegalStatusErrorMsg" style="color: #c9513c; font-style: italic;" ></span></small>\n\
-//                                            </div>\n\
-//                                            </div>\n\
-//                                            </div>');
+                    success: function (data) {
+                        //                        $('.newNace').empty();
+                        //                        $('.newNace').append('<div class="col-sm-12"><div class="well" style="height: 100px;">\n\
+                        //                                            <div class="col-sm-12 form-group float-label-control">\n\
+                        //                                            <input type="text" name="newNaceInput" class="form-control newNaceInput" id="newNaceInput" placeholder="New NACE Code" value="' + data['nace_code'] + '"></div>\n\
+                        //                                            <input type="hidden" class="naceId" name="naceId" value="' + data['nace_id'] + '">\n\
+                        //                                            <a class="btn btn-info btn-xs createNace" style="float: right;"><i class="fa fa-check"></i></a>\n\
+                        //                                            <div id="newLegalStatusError" style="display: none">\n\
+                        //                                            <small><span id="newLegalStatusErrorMsg" style="color: #c9513c; font-style: italic;" ></span></small>\n\
+                        //                                            </div>\n\
+                        //                                            </div>\n\
+                        //                                            </div>');
                     },
-                    error: function (data, status, err)
-                    {
+                    error: function (data, status, err) {
                         alert(status);
                     }
                 });
@@ -1219,16 +1252,15 @@
                     data: {
                         iaf_Id: $(this).attr('data-id'),
                     },
-                    success: function (data)
-                    {
-//                        alert(data[1]);
+                    success: function (data) {
+                        //                        alert(data[1]);
                         $(".newIafInput").val(data[0]["iaf_code"]);
                         $(".newIafDesc").val(data[0]["iaf_desc"]);
                         $(".iaf_code_id").val(data[0]["iaf_id"]);
-//                        alert($(".iaf_code_id").val());
+                        //                        alert($(".iaf_code_id").val());
                         $(".newnaceaddrow").empty();
                         for (var key in data[1]) {
-//                           alert("nace codes "+data[1][key]["nace_code"]);                            
+                            //                           alert("nace codes "+data[1][key]["nace_code"]);                            
                             $(".newnaceaddrow").append('<div class="row parentrow">\n\
                                                             <div class="col-sm-4 form-group float-label-control">\n\
                                                             <label>Nace Code</label>\n\
@@ -1244,21 +1276,20 @@
                         }
                         $("input").trigger("change");
                         $(".iafnacemodel").modal("show");
-//                        alert(data);
-//                        $('.newIaf').empty();
-//                        $('.newIaf').append('<div class="col-sm-12"><div class="well" style="height: 100px;">\n\
-//                                            <div class="col-sm-12 form-group float-label-control">\n\
-//                                            <input type="text" name="newIafInput" class="form-control newIafInput" id="newIafInput" placeholder="New IAF Code" value="' + data['iaf_code'] + '"></div>\n\
-//                                            <input type="hidden" class="iafId" name="iafId" value="' + data['iaf_id'] + '">\n\
-//                                            <a class="btn btn-info btn-xs createIaf" style="float: right;"><i class="fa fa-check"></i></a>\n\
-//                                            <div id="newLegalStatusError" style="display: none">\n\
-//                                            <small><span id="newLegalStatusErrorMsg" style="color: #c9513c; font-style: italic;" ></span></small>\n\
-//                                            </div>\n\
-//                                            </div>\n\
-//                                            </div>');
+                        //                        alert(data);
+                        //                        $('.newIaf').empty();
+                        //                        $('.newIaf').append('<div class="col-sm-12"><div class="well" style="height: 100px;">\n\
+                        //                                            <div class="col-sm-12 form-group float-label-control">\n\
+                        //                                            <input type="text" name="newIafInput" class="form-control newIafInput" id="newIafInput" placeholder="New IAF Code" value="' + data['iaf_code'] + '"></div>\n\
+                        //                                            <input type="hidden" class="iafId" name="iafId" value="' + data['iaf_id'] + '">\n\
+                        //                                            <a class="btn btn-info btn-xs createIaf" style="float: right;"><i class="fa fa-check"></i></a>\n\
+                        //                                            <div id="newLegalStatusError" style="display: none">\n\
+                        //                                            <small><span id="newLegalStatusErrorMsg" style="color: #c9513c; font-style: italic;" ></span></small>\n\
+                        //                                            </div>\n\
+                        //                                            </div>\n\
+                        //                                            </div>');
                     },
-                    error: function (data, status, err)
-                    {
+                    error: function (data, status, err) {
                         alert(status);
                     }
                 });
@@ -1270,8 +1301,8 @@
                 $('.delete-confirm-ok').click(function () {
                     var url = 'firmDelete.php'
                     var form = $('<form action="' + url + '" method="post">' +
-                            '<input type="hidden" name="firmId" value="' + firmId + '" />' +
-                            '</form>');
+                        '<input type="hidden" name="firmId" value="' + firmId + '" />' +
+                        '</form>');
                     $('body').append(form);
                     form.submit();
                 });
@@ -1289,8 +1320,7 @@
                     data: {
                         firm_Id: $(this).attr('data-id'),
                     },
-                    success: function (data)
-                    {
+                    success: function (data) {
                         $('.new-bank').empty();
                         $('.serviceDescTd').empty();
                         //                    var name = (filename(data[0]['firm_logo']));
@@ -1347,8 +1377,7 @@
                         //                    $('body').trigger("change", '.bankAbbreviation', function () {});
                         $('#consultingFirmAdd').modal('show');
                     },
-                    error: function (data, status, err)
-                    {
+                    error: function (data, status, err) {
                         alert(status);
                     }
                 });
@@ -1361,15 +1390,15 @@
                 $(".auditor_id").val("");
                 $(".auditorabbr").val("");
                 $(".auditoradd").modal("show");
-//                $('.newAuditors').empty();
-//                $('.newAuditors').append('<div class="col-sm-12"><div class="well" style="height: 100px;">\n\
-//                                            <div class="col-sm-12 form-group float-label-control">\n\
-//                                            <input type="text" name="newAuditorsInput" class="form-control newAuditorsInput" id="newAuditorsInput" placeholder="New Auditors" value=""></div>\n\
-//                                                    <input type="hidden" class="auditorId" name="auditorId" value="">\n\
-//                                            <a class="btn btn-info btn-xs createAuditors" style="float: right;"><i class="fa fa-check"></i></a>\n\
-//                                            <div id="newAuditorsError" style="display: none">\n\
-//                                            <small><span id="newAuditorsErrorMsg" style="color: #c9513c; font-style: italic;" ></span></small>\n\
-//                                            </div></div></div>');
+                //                $('.newAuditors').empty();
+                //                $('.newAuditors').append('<div class="col-sm-12"><div class="well" style="height: 100px;">\n\
+                //                                            <div class="col-sm-12 form-group float-label-control">\n\
+                //                                            <input type="text" name="newAuditorsInput" class="form-control newAuditorsInput" id="newAuditorsInput" placeholder="New Auditors" value=""></div>\n\
+                //                                                    <input type="hidden" class="auditorId" name="auditorId" value="">\n\
+                //                                            <a class="btn btn-info btn-xs createAuditors" style="float: right;"><i class="fa fa-check"></i></a>\n\
+                //                                            <div id="newAuditorsError" style="display: none">\n\
+                //                                            <small><span id="newAuditorsErrorMsg" style="color: #c9513c; font-style: italic;" ></span></small>\n\
+                //                                            </div></div></div>');
             });
 
             $('.addNewStandards').click(function () {
@@ -1439,7 +1468,7 @@
             $(".addNewIaf").click(function () {
 
                 $(".iafnacemodel").modal("show");
-//               
+                //               
             });
 
             $(".addNewStatus").click(function () {
@@ -1470,8 +1499,8 @@
                                             </div>\n\
                                             </div>');
             });
-            
-            $(".addNewHandler").click(function (){
+
+            $(".addNewHandler").click(function () {
                 $('.newHandler').empty();
                 $('.newHandler').append('<div class="col-sm-12"><div class="well" style="height: 100px;">\n\
                                             <div class="col-sm-12 form-group float-label-control">\n\
@@ -1507,16 +1536,14 @@
                     data: {
                         taxation_Id: $id,
                     },
-                    success: function (data)
-                    {
+                    success: function (data) {
                         //alert(data);
                         $('.newTaxation').val(data['type_of_tax']);
                         $('.newRate').val(data['rate']);
                         $('.taxation_id_update').val(data['taxation_id']);
                         $('#taxationAdd').modal('show');
                     },
-                    error: function (data, status, err)
-                    {
+                    error: function (data, status, err) {
                         alert(status);
                     }
                 });
@@ -1536,8 +1563,7 @@
                         newAuditors: $('#newAuditorsInput').val(),
                         auditors_Id: $('.auditorId').val(),
                     },
-                    success: function (data)
-                    {
+                    success: function (data) {
                         //                    alert(data);
                         $('.newAuditors').empty();
                         $('.operateAuditors').empty();
@@ -1545,8 +1571,7 @@
                             $('.operateAuditors').append('<li class="list-group-item"><a class="editAuditor" data-id="' + data[i]['auditors_id'] + '" style="float: left"><i class="fa fa-pencil-square"></i></a>&emsp;' + data[i]['auditor_name'] + '<a class="deleteAuditor" data-id="' + data[i]['auditors_id'] + '" style="float: right"><i class="fa fa-trash"></i></a></li>');
                         }
                     },
-                    error: function (data, status, err)
-                    {
+                    error: function (data, status, err) {
                         $('.newAuditors').empty();
                         //                    alert(status);
                     }
@@ -1566,16 +1591,14 @@
                         newStandards: $('#newStandardsInput').val(),
                         standards_Id: $('.standardId').val(),
                     },
-                    success: function (data)
-                    {
+                    success: function (data) {
                         $('.newStandards').empty();
                         $('.operateStandards').empty();
                         for (var i in data) {
                             $('.operateStandards').append('<li class="list-group-item"><a class="editStandards" data-id="' + data[i]['id'] + '" style="float: left"><i class="fa fa-pencil-square"></i></a>&emsp;' + data[i]['standards_name'] + '<a class="deleteStandards" data-id="' + data[i]['id'] + '" style="float: right"><i class="fa fa-trash"></i></a></li>');
                         }
                     },
-                    error: function (data, status, err)
-                    {
+                    error: function (data, status, err) {
                         $('.newStandards').empty();
                         //                    
                     }
@@ -1591,8 +1614,7 @@
                         newAccreditation: $('#newAccreditationInput').val(),
                         accreditation_Id: $('.accreditationId').val(),
                     },
-                    success: function (data)
-                    {
+                    success: function (data) {
                         //                    alert(data);
                         $('.newAccreditation').empty();
                         $('.operateAccreditation').empty();
@@ -1600,8 +1622,7 @@
                             $('.operateAccreditation').append('<li class="list-group-item"><a class="editAccreditation" data-id="' + data[i]['accreditation_id'] + '" style="float: left"><i class="fa fa-pencil-square"></i></a>&emsp;' + data[i]['accreditation_name'] + '<a class="deleteAccreditation" data-id="' + data[i]['accreditation_id'] + '" style="float: right"><i class="fa fa-trash"></i></a></li>');
                         }
                     },
-                    error: function (data, status, err)
-                    {
+                    error: function (data, status, err) {
                         //                    alert(status);
                         $('.newAccreditation').empty();
                     }
@@ -1616,8 +1637,7 @@
                         newcategories: $('#newcategoriesInput').val(),
                         categories_Id: $('.categoriesId').val(),
                     },
-                    success: function (data)
-                    {
+                    success: function (data) {
                         //                    alert(data);
                         $('.newcategories').empty();
                         $('.operatecategories').empty();
@@ -1625,8 +1645,7 @@
                             $('.operatecategories').append('<li class="list-group-item"><a class="editcategories" data-id="' + data[i]['categories_id'] + '" style="float: left"><i class="fa fa-pencil-square"></i></a>&emsp;' + data[i]['categories_name'] + '<a class="deletecategories" data-id="' + data[i]['categories_id'] + '" style="float: right"><i class="fa fa-trash"></i></a></li>');
                         }
                     },
-                    error: function (data, status, err)
-                    {
+                    error: function (data, status, err) {
                         //                    alert(status);
                         $('.newcategories').empty();
                     }
@@ -1642,8 +1661,7 @@
                         newLegalStatus: $('#newLegalStatusInput').val(),
                         legalStatus_Id: $('.legalStatusId').val(),
                     },
-                    success: function (data)
-                    {
+                    success: function (data) {
                         //                    alert(data);
                         $('.newLegalStatus').empty();
                         $('.operateLegalStatus').empty();
@@ -1651,8 +1669,7 @@
                             $('.operateLegalStatus').append('<li class="list-group-item"><a class="editLegalStatus" data-id="' + data[i]['status_id'] + '" style="float: left"><i class="fa fa-pencil-square"></i></a>&emsp;' + data[i]['status'] + '<a class="deleteLegalStatus" data-id="' + data[i]['status_id'] + '" style="float: right"><i class="fa fa-trash"></i></a></li>');
                         }
                     },
-                    error: function (data, status, err)
-                    {
+                    error: function (data, status, err) {
                         //                    alert(status);
                         $('.newLegalStatus').empty();
                     }
@@ -1668,8 +1685,7 @@
                         newNace: $('#newNaceInput').val(),
                         nace_Id: $('.naceId').val(),
                     },
-                    success: function (data)
-                    {
+                    success: function (data) {
                         //                    alert(data);
                         $('.newNace').empty();
                         $('.operateNace').empty();
@@ -1677,8 +1693,7 @@
                             $('.operateNace').append('<li class="list-group-item"><a class="editNace" data-id="' + data[i]['nace_id'] + '" style="float: left"><i class="fa fa-pencil-square"></i></a>&emsp;' + data[i]['nace_code'] + '<a class="deleteNace" data-id="' + data[i]['nace_id'] + '" style="float: right"><i class="fa fa-trash"></i></a></li>');
                         }
                     },
-                    error: function (data, status, err)
-                    {
+                    error: function (data, status, err) {
                         //                    alert(status);
                         $('.newNace').empty();
                     }
@@ -1694,8 +1709,7 @@
                         newIaf: $('#newIafInput').val(),
                         iaf_Id: $('.iafId').val(),
                     },
-                    success: function (data)
-                    {
+                    success: function (data) {
                         //                    alert(data);
                         $('.newIaf').empty();
                         $('.operateIaf').empty();
@@ -1703,8 +1717,7 @@
                             $('.operateIaf').append('<li class="list-group-item"><a class="editIaf" data-id="' + data[i]['iaf_id'] + '" style="float: left"><i class="fa fa-pencil-square"></i></a>&emsp;' + data[i]['iaf_code'] + '<a class="deleteIaf" data-id="' + data[i]['iaf_id'] + '" style="float: right"><i class="fa fa-trash"></i></a></li>');
                         }
                     },
-                    error: function (data, status, err)
-                    {
+                    error: function (data, status, err) {
                         //                    alert(status);
                         $('.newNace').empty();
                     }
@@ -1722,8 +1735,7 @@
                         data: {
                             auditorId: $id,
                         },
-                        success: function (data)
-                        {
+                        success: function (data) {
                             //                    alert(data);
                             $('#delete-details').hide();
                             $('.operateAuditors').empty();
@@ -1731,8 +1743,7 @@
                                 $('.operateAuditors').append('<li class="list-group-item"><a class="editAuditor" data-id="' + data[i]['auditors_id'] + '" style="float: left"><i class="fa fa-pencil-square"></i></a>&emsp;' + data[i]['auditor_name'] + '<a class="deleteAuditor" data-id="' + data[i]['auditors_id'] + '" style="float: right"><i class="fa fa-trash"></i></a></li>');
                             }
                         },
-                        error: function (data, status, err)
-                        {
+                        error: function (data, status, err) {
                             alert(status);
                         }
                     });
@@ -1754,8 +1765,7 @@
                         data: {
                             standardId: id,
                         },
-                        success: function (data)
-                        {
+                        success: function (data) {
                             //                        alert(data);
                             $('#delete-details').hide();
                             $('.newStandards').empty();
@@ -1764,8 +1774,7 @@
                                 $('.operateStandards').append('<li class="list-group-item"><a class="editStandards" data-id="' + data[i]['id'] + '" style="float: left"><i class="fa fa-pencil-square"></i></a>&emsp;' + data[i]['standards_name'] + '<a class="deleteStandards" data-id="' + data[i]['id'] + '" style="float: right"><i class="fa fa-trash"></i></a></li>');
                             }
                         },
-                        error: function (data, status, err)
-                        {
+                        error: function (data, status, err) {
                             alert(status);
                         }
                     });
@@ -1786,8 +1795,7 @@
                         data: {
                             accreditationId: id,
                         },
-                        success: function (data)
-                        {
+                        success: function (data) {
                             //                        alert(data);
                             $('#delete-details').hide();
                             $('.newAccreditation').empty();
@@ -1796,8 +1804,7 @@
                                 $('.operateAccreditation').append('<li class="list-group-item"><a class="editAccreditation" data-id="' + data[i]['accreditation_id'] + '" style="float: left"><i class="fa fa-pencil-square"></i></a>&emsp;' + data[i]['accreditation_name'] + '<a class="deleteAccreditation" data-id="' + data[i]['accreditation_id'] + '" style="float: right"><i class="fa fa-trash"></i></a></li>');
                             }
                         },
-                        error: function (data, status, err)
-                        {
+                        error: function (data, status, err) {
                             alert(status);
                         }
                     });
@@ -1817,8 +1824,7 @@
                         data: {
                             categoriesId: id,
                         },
-                        success: function (data)
-                        {
+                        success: function (data) {
                             //                        alert(data);
                             $('#delete-details').hide();
                             $('.newcategories').empty();
@@ -1827,8 +1833,7 @@
                                 $('.operatecategories').append('<li class="list-group-item"><a class="editcategories" data-id="' + data[i]['categories_id'] + '" style="float: left"><i class="fa fa-pencil-square"></i></a>&emsp;' + data[i]['categories_name'] + '<a class="deletecategories" data-id="' + data[i]['categories_id'] + '" style="float: right"><i class="fa fa-trash"></i></a></li>');
                             }
                         },
-                        error: function (data, status, err)
-                        {
+                        error: function (data, status, err) {
                             alert(status);
                         }
                     });
@@ -1849,8 +1854,7 @@
                         data: {
                             legalStatusId: id,
                         },
-                        success: function (data)
-                        {
+                        success: function (data) {
                             //                        alert(data);
                             $('#delete-details').hide();
                             $('.newLegalStatus').empty();
@@ -1859,8 +1863,7 @@
                                 $('.operateLegalStatus').append('<li class="list-group-item"><a class="editLegalStatus" data-id="' + data[i]['status_id'] + '" style="float: left"><i class="fa fa-pencil-square"></i></a>&emsp;' + data[i]['status'] + '<a class="deleteLegalStatus" data-id="' + data[i]['status_id'] + '" style="float: right"><i class="fa fa-trash"></i></a></li>');
                             }
                         },
-                        error: function (data, status, err)
-                        {
+                        error: function (data, status, err) {
                             alert(status);
                         }
                     });
@@ -1881,8 +1884,7 @@
                         data: {
                             naceId: id,
                         },
-                        success: function (data)
-                        {
+                        success: function (data) {
                             //                        alert(data);
                             $('#delete-details').hide();
                             $('.newNace').empty();
@@ -1891,8 +1893,7 @@
                                 $('.operateNace').append('<li class="list-group-item"><a class="editNace" data-id="' + data[i]['nace_id'] + '" style="float: left"><i class="fa fa-pencil-square"></i></a>&emsp;' + data[i]['nace_code'] + '<a class="deleteNace" data-id="' + data[i]['nace_id'] + '" style="float: right"><i class="fa fa-trash"></i></a></li>');
                             }
                         },
-                        error: function (data, status, err)
-                        {
+                        error: function (data, status, err) {
                             alert(status);
                         }
                     });
@@ -1913,8 +1914,7 @@
                         data: {
                             iafId: id,
                         },
-                        success: function (data)
-                        {
+                        success: function (data) {
                             //                        alert(data);
                             $('#delete-details').hide();
                             $('.newIaf').empty();
@@ -1924,8 +1924,7 @@
                             }
                             window.location.reload();
                         },
-                        error: function (data, status, err)
-                        {
+                        error: function (data, status, err) {
                             alert(status);
                         }
                     });
@@ -2067,7 +2066,7 @@
                         $('.operateAiRules').empty();
                         for (var i in data) {
                             var statusBadge = data[i]['is_active'] == 1 ? '<span class="label label-success">Active</span>' : '<span class="label label-default">Inactive</span>';
-                            var toggleBtn = data[i]['is_active'] == 1 ? 
+                            var toggleBtn = data[i]['is_active'] == 1 ?
                                 '<button type="submit" class="btn btn-xs btn-warning" style="padding: 2px 6px;">Deactivate</button>' :
                                 '<button type="submit" class="btn btn-xs btn-success" style="padding: 2px 6px;">Activate</button>';
                             $('.operateAiRules').append('<li class="list-group-item">\n\
@@ -2107,7 +2106,7 @@
                             $('.operateAiRules').empty();
                             for (var i in data) {
                                 var statusBadge = data[i]['is_active'] == 1 ? '<span class="label label-success">Active</span>' : '<span class="label label-default">Inactive</span>';
-                                var toggleBtn = data[i]['is_active'] == 1 ? 
+                                var toggleBtn = data[i]['is_active'] == 1 ?
                                     '<button type="submit" class="btn btn-xs btn-warning" style="padding: 2px 6px;">Deactivate</button>' :
                                     '<button type="submit" class="btn btn-xs btn-success" style="padding: 2px 6px;">Activate</button>';
                                 $('.operateAiRules').append('<li class="list-group-item">\n\
@@ -2144,8 +2143,7 @@
                         data: {
                             taxationId: $id,
                         },
-                        success: function (data)
-                        {
+                        success: function (data) {
                             //                    alert(data);
                             $('#delete-details').hide();
                             $('.operateTaxation').empty();
@@ -2153,8 +2151,7 @@
                                 $('.operateTaxation').append('<li class="list-group-item"><a class="editTaxation" edit-Taxation-id="' + data[i]['taxation_id'] + '" style="float: left"><i class="fa fa-pencil-square"></i></a>&emsp;<span><b>Type of tax: </b>' + data[i]['type_of_tax'] + '</span>&emsp;<span><b>Rate: </b>' + data[i]['rate'] + '%</span><a class="deleteTaxation" taxation-id="' + data[i]['taxation_id'] + '" style="float: right"><i class="fa fa-trash"></i></a></li>');
                             }
                         },
-                        error: function (data, status, err)
-                        {
+                        error: function (data, status, err) {
                             alert(status);
                         }
                     });
@@ -2204,7 +2201,8 @@
             -moz-border-radius: 5px;
             border-radius: 5px;
             opacity: 1.0;
-            behavior: url("/css/pie/PIE.htc"); /* HANDLES IE */
+            behavior: url("/css/pie/PIE.htc");
+            /* HANDLES IE */
         }
 
         #loading-div-user-info {
@@ -2222,7 +2220,8 @@
             -moz-border-radius: 5px;
             border-radius: 5px;
             opacity: 1.0;
-            behavior: url("/css/pie/PIE.htc"); /* HANDLES IE */
+            behavior: url("/css/pie/PIE.htc");
+            /* HANDLES IE */
         }
 
         #loading-div-background-resend {
@@ -2251,22 +2250,25 @@
            jewel-toned accents. Toggle handled globally (head.php + js/app.js).
            ===================================================================== */
         html.theme-dark {
-            --hpd-bg:        #0a0e14;
-            --hpd-surface:   #111722;
+            --hpd-bg: #0a0e14;
+            --hpd-surface: #111722;
             --hpd-surface-2: #161d2b;
-            --hpd-border:    #232c3d;
-            --hpd-border-2:  #2e3a4f;
-            --hpd-text:      #dbe3f0;
-            --hpd-text-dim:  #93a1b8;
-            --hpd-text-faint:#6b7890;
-            --hpd-accent:    #4a9eff;
+            --hpd-border: #232c3d;
+            --hpd-border-2: #2e3a4f;
+            --hpd-text: #dbe3f0;
+            --hpd-text-dim: #93a1b8;
+            --hpd-text-faint: #6b7890;
+            --hpd-accent: #4a9eff;
         }
 
         html.theme-dark #page-content-wrapper {
             background: var(--hpd-bg);
             color: var(--hpd-text);
         }
-        html.theme-dark .page-content.inset { background: var(--hpd-bg); }
+
+        html.theme-dark .page-content.inset {
+            background: var(--hpd-bg);
+        }
 
         /* Well containers (list panels) */
         html.theme-dark .well {
@@ -2281,41 +2283,72 @@
             border-color: var(--hpd-border);
             color: var(--hpd-text);
         }
-        html.theme-dark .list-group-item:hover { background: var(--hpd-surface-2); }
-        html.theme-dark .list-group-item a { color: var(--hpd-text-dim); }
-        html.theme-dark .list-group-item a:hover { color: #7fb6ef; }
-        html.theme-dark .list-group-item b { color: #eaf1fb; }
+
+        html.theme-dark .list-group-item:hover {
+            background: var(--hpd-surface-2);
+        }
+
+        html.theme-dark .list-group-item a {
+            color: var(--hpd-text-dim);
+        }
+
+        html.theme-dark .list-group-item a:hover {
+            color: #7fb6ef;
+        }
+
+        html.theme-dark .list-group-item b {
+            color: #eaf1fb;
+        }
 
         /* Section heading buttons stay orange — reads well on dark; just deepen border */
-        html.theme-dark .qms_complete_btn { border-color: var(--hpd-border-2); }
+        html.theme-dark .qms_complete_btn {
+            border-color: var(--hpd-border-2);
+        }
 
         /* Panels */
         html.theme-dark .panel {
             background: var(--hpd-surface);
             border-color: var(--hpd-border);
         }
+
         html.theme-dark .panel-heading {
             background: linear-gradient(180deg, #161d2b 0%, #121926 100%);
             border-color: var(--hpd-border-2);
             color: var(--hpd-text);
         }
-        html.theme-dark .panel-title { color: #eaf1fb; }
-        html.theme-dark .panel-body { color: var(--hpd-text); }
+
+        html.theme-dark .panel-title {
+            color: #eaf1fb;
+        }
+
+        html.theme-dark .panel-body {
+            color: var(--hpd-text);
+        }
 
         /* Tables */
-        html.theme-dark .table { color: var(--hpd-text); }
+        html.theme-dark .table {
+            color: var(--hpd-text);
+        }
+
         html.theme-dark .table thead th {
             background: linear-gradient(180deg, #161d2b 0%, #121926 100%);
             border-bottom: 1px solid var(--hpd-border-2) !important;
             color: #aeb9cc;
         }
+
         html.theme-dark .table tbody td,
         html.theme-dark .table tbody th {
             border-top: 1px solid var(--hpd-border) !important;
             color: var(--hpd-text);
         }
-        html.theme-dark .table-striped tbody tr:nth-of-type(odd) { background-color: rgba(255, 255, 255, 0.018); }
-        html.theme-dark .table-hover tbody tr:hover td { background-color: var(--hpd-surface-2); }
+
+        html.theme-dark .table-striped tbody tr:nth-of-type(odd) {
+            background-color: rgba(255, 255, 255, 0.018);
+        }
+
+        html.theme-dark .table-hover tbody tr:hover td {
+            background-color: var(--hpd-surface-2);
+        }
 
         /* Form controls */
         html.theme-dark .form-control {
@@ -2323,18 +2356,34 @@
             border-color: var(--hpd-border-2);
             color: var(--hpd-text);
         }
+
         html.theme-dark .form-control:focus {
             border-color: var(--hpd-accent);
             box-shadow: 0 0 0 4px rgba(74, 158, 255, 0.18);
             background: var(--hpd-surface-2);
         }
-        html.theme-dark .form-control::placeholder { color: var(--hpd-text-faint); }
+
+        html.theme-dark .form-control::placeholder {
+            color: var(--hpd-text-faint);
+        }
+
         html.theme-dark .form-control[disabled],
-        html.theme-dark .form-control[readonly] { background: #0e131c; color: var(--hpd-text-dim); }
-        html.theme-dark select.form-control option { background: var(--hpd-surface-2); color: var(--hpd-text); }
+        html.theme-dark .form-control[readonly] {
+            background: #0e131c;
+            color: var(--hpd-text-dim);
+        }
+
+        html.theme-dark select.form-control option {
+            background: var(--hpd-surface-2);
+            color: var(--hpd-text);
+        }
+
         html.theme-dark .form-group label,
         html.theme-dark .control-label,
-        html.theme-dark .float-label-control label { color: var(--hpd-text-dim); }
+        html.theme-dark .float-label-control label {
+            color: var(--hpd-text-dim);
+        }
+
         html.theme-dark .input-group-addon {
             background: #1c2534;
             border-color: var(--hpd-border-2);
@@ -2347,12 +2396,29 @@
             border: 1px solid var(--hpd-border-2);
             color: var(--hpd-text);
         }
+
         html.theme-dark .modal-header,
-        html.theme-dark .modal-footer { border-color: var(--hpd-border); }
-        html.theme-dark .modal-title { color: var(--hpd-text); }
-        html.theme-dark .modal-body { color: var(--hpd-text); }
-        html.theme-dark .close { color: var(--hpd-text); text-shadow: none; opacity: 0.7; }
-        html.theme-dark .parentrow { border-color: var(--hpd-border); }
+        html.theme-dark .modal-footer {
+            border-color: var(--hpd-border);
+        }
+
+        html.theme-dark .modal-title {
+            color: var(--hpd-text);
+        }
+
+        html.theme-dark .modal-body {
+            color: var(--hpd-text);
+        }
+
+        html.theme-dark .close {
+            color: var(--hpd-text);
+            text-shadow: none;
+            opacity: 0.7;
+        }
+
+        html.theme-dark .parentrow {
+            border-color: var(--hpd-border);
+        }
 
         /* Buttons */
         html.theme-dark .btn-info {
@@ -2360,19 +2426,31 @@
             border-color: #2f81d6;
             color: #eaf1fb;
         }
+
         html.theme-dark .btn-info:hover,
-        html.theme-dark .btn-info:focus { background: linear-gradient(135deg, #2470c4 0%, #3a8ee0 100%); color: #fff; }
+        html.theme-dark .btn-info:focus {
+            background: linear-gradient(135deg, #2470c4 0%, #3a8ee0 100%);
+            color: #fff;
+        }
+
         html.theme-dark .btn-default {
             background: var(--hpd-surface-2);
             border-color: var(--hpd-border-2);
             color: var(--hpd-text);
         }
-        html.theme-dark .btn-default:hover { background: #1f2a3d; color: #fff; }
+
+        html.theme-dark .btn-default:hover {
+            background: #1f2a3d;
+            color: #fff;
+        }
 
         /* Loading overlays */
         html.theme-dark #loading-div-background,
         html.theme-dark #loading-div-background-resend,
-        html.theme-dark #loading-div-background-meetedit { background: rgba(4, 8, 14, 0.6); }
+        html.theme-dark #loading-div-background-meetedit {
+            background: rgba(4, 8, 14, 0.6);
+        }
+
         html.theme-dark #loading-div,
         html.theme-dark #loading-div-user-info {
             background-color: var(--hpd-surface);
@@ -2385,9 +2463,13 @@
             background-color: #22c55e;
             color: #fff;
         }
+
         html.theme-dark .label-default {
             background-color: var(--hpd-border-2);
             color: var(--hpd-text-dim);
         }
-        html.theme-dark .newAiRule h4 { color: var(--hpd-text); }
+
+        html.theme-dark .newAiRule h4 {
+            color: var(--hpd-text);
+        }
     </style>

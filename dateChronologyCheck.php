@@ -50,34 +50,45 @@ if (empty($serviceType)) {
     }
 }
 
-// For CR type (contract review), find the parent CA/RC service to get the full chain
+// A CR starts a fresh contract-review cycle. Keep its own IDs so dates from the
+// previous CA cycle are not reused while the new Application form is being filled.
 $actualTypedServiceId = $typedServiceId;
 $actualServiceType = $serviceType;
+$isRecertificationContractReview = false;
 if ($serviceType === 'CR') {
-    // CR service dates are part of CA or RC chain. Find the parent CA or RC.
-    $parentRow = caDateGraphFetchOne($db,
-        "SELECT s.service_id, s.service_type, 
-                COALESCE(ca.ca_id, sai.sai_id, saii.saii_id, rc.rc_id) AS typed_id
-         FROM service s
-         LEFT JOIN service_type_ca ca ON ca.service = s.service_id
-         LEFT JOIN service_type_sai sai ON sai.service = s.service_id
-         LEFT JOIN service_type_saii saii ON saii.service = s.service_id
-         LEFT JOIN service_type_rc rc ON rc.service = s.service_id
-         WHERE s.customer_id = :customer_id
-         AND s.service_type IN ('CA', 'RC')
-         AND s.service_id <= :uni_svc_id
-         ORDER BY s.service_id DESC
+    $nextCycleRow = caDateGraphFetchOne(
+        $db,
+        "SELECT service_type
+         FROM service
+         WHERE customer_id = :customer_id
+         AND service_id > :uni_svc_id
+         AND service_type IN ('CA', 'RC')
+         ORDER BY service_id ASC
          LIMIT 1",
         array(':customer_id' => $customerId, ':uni_svc_id' => $universalServiceId)
     );
-    if (!empty($parentRow['typed_id'])) {
-        $actualTypedServiceId = $parentRow['typed_id'];
-        $actualServiceType = $parentRow['service_type'];
-        $universalServiceId = $parentRow['service_id'];
+
+    if (!empty($nextCycleRow['service_type'])) {
+        $actualServiceType = $nextCycleRow['service_type'];
     } else {
-        // Fallback: return dates for the CR service itself
-        $actualServiceType = 'CA';
+        $previousCycleRow = caDateGraphFetchOne(
+            $db,
+            "SELECT service_type
+             FROM service
+             WHERE customer_id = :customer_id
+             AND service_id < :uni_svc_id
+             AND service_type IN ('CA', 'SA-I', 'SA-II', 'RC')
+             ORDER BY service_id DESC
+             LIMIT 1",
+            array(':customer_id' => $customerId, ':uni_svc_id' => $universalServiceId)
+        );
+
+        $actualServiceType = (!empty($previousCycleRow['service_type']) && $previousCycleRow['service_type'] === 'SA-II')
+            ? 'RC'
+            : 'CA';
     }
+
+    $isRecertificationContractReview = ($actualServiceType === 'RC');
 }
 
 if (empty($actualServiceType) || !in_array($actualServiceType, array('CA', 'SA-I', 'SA-II', 'RC'))) {
@@ -126,7 +137,6 @@ if ($actualServiceType === 'CA') {
     );
 } elseif ($actualServiceType === 'RC') {
     $rules = array(
-        array('field' => 'application_date',        'must_be_after' => 'qms_implementation_date',  'label' => 'Application Date',                  'after_label' => 'QMS Implementation Date', 'strict' => true),
         array('field' => 'application_rcv_date',     'must_be_after' => 'application_date',         'label' => 'Application Received Date',         'after_label' => 'Application Date'),
         array('field' => 'contract_review_date',     'must_be_after' => 'application_rcv_date',     'label' => 'Review Date',                       'after_label' => 'Application Received Date'),
         array('field' => 'aggrement_date',           'must_be_after' => 'contract_review_date',     'label' => 'Agreement Date',                    'after_label' => 'Review Date'),
@@ -139,6 +149,13 @@ if ($actualServiceType === 'CA') {
         array('field' => 'certificate_issue_date',   'must_be_after' => 'cdc_date',                 'label' => 'Rev Date / Issue Date',              'after_label' => 'CDC Date'),
         array('field' => 'survey_date',              'must_be_after' => 'certificate_issue_date',   'label' => 'Feedback Survey Date',               'after_label' => 'Rev Date / Issue Date'),
     );
+
+    if (!$isRecertificationContractReview) {
+        array_unshift(
+            $rules,
+            array('field' => 'application_date', 'must_be_after' => 'qms_implementation_date', 'label' => 'Application Date', 'after_label' => 'QMS Implementation Date', 'strict' => true)
+        );
+    }
 }
 
 echo json_encode(array(
