@@ -2603,8 +2603,10 @@ if (isset($_POST['crr_id'])) {
 
     // Generate office use section - use new table data or legacy fields
     $officeUseHtml = '';
+    $is_cdc_only = isset($crrInfo['is_cdc_only']) ? (int)$crrInfo['is_cdc_only'] : 0;
     
-    if (!empty($officeUseEntries)) {
+    if ($is_cdc_only === 0) {
+        if (!empty($officeUseEntries)) {
         // Use data from cdc_report_review_office_use table (multi-ISO support)
         foreach ($officeUseEntries as $index => $entry) {
             $isoLabel = !empty($entry['iso_label']) ? htmlspecialchars($entry['iso_label']) : '';
@@ -2685,12 +2687,19 @@ if (isset($_POST['crr_id'])) {
             </td>
         </tr>';
     }
+    } // closes if ($is_cdc_only === 0)
+    
+    $officeUseSection = '';
+    if ($is_cdc_only === 0) {
+        $officeUseSection = '
+        <tr bgcolor="#DCDCDC">
+            <th align="center" style="width:100%;">~ FOR OFFICE USE ~</th>
+        </tr>
+        ' . $officeUseHtml;
+    }
 
     $html = '<p style="text-align: justify;text-justify: inter-word;"><font size="9"><table border="1"  cellpadding="5" cellspacing="0">
-    <tr bgcolor="#DCDCDC">
-        <th align="center" style="width:100%;">~ FOR OFFICE USE ~</th>
-    </tr>
-    ' . $officeUseHtml . '
+    ' . $officeUseSection . '
      <tr>
         <td style="width:100%;"><br>
             <br>

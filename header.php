@@ -215,6 +215,12 @@ if (!Utitlity::checkIfLoggedIn()) {
         header("Location: login");
         exit;
     }
+} else if (isset($pageIdentifier) && $pageIdentifier == "Auditor Checklist") {
+    $addAuditorChecklistClass = "active";
+    if (Utitlity::checkExternalUser() || Utitlity::checkClient()) {
+        header("Location: login");
+        exit;
+    }
 }
 
 function simpleDateConversion($inputStr)
@@ -269,8 +275,8 @@ function getFlatDate($inputStr)
     <ul class="sidebar-nav" id="sidebar">
         <?php /* Admin Dashboard hidden from left sidebar menu. if (Utitlity::checkForUserMainAdmin()) { ?>
 <li><a href="adminDashboard.php"
-     class="animate <?php echo isset($addAdminDashboardClass) ? $addAdminDashboardClass : ''; ?>">ADMIN
-     DASHBOARD<i class="sub_icon fa fa-line-chart fa-2x" style="vertical-align:middle"></i></a></li>
+class="animate <?php echo isset($addAdminDashboardClass) ? $addAdminDashboardClass : ''; ?>">ADMIN
+DASHBOARD<i class="sub_icon fa fa-line-chart fa-2x" style="vertical-align:middle"></i></a></li>
 <?php } */ ?>
         <li><a href="iaf_dashboard.php" class="animate <?php echo isset($iafClass) ? $iafClass : ''; ?>">IAF DASHBOARD<i
                     class="sub_icon fa fa-dashboard fa-2x" style="vertical-align:middle"></i></a></li>
@@ -368,6 +374,9 @@ function getFlatDate($inputStr)
         <li><a href="uploadingStatus.php" class="animate <?php echo $docobj ?>">DOC.UPLOAD STATUS<i
                     class="sub_icon fa fa-eye fa-2x" style="vertical-align:middle"></i></a></li>
         <?php if (!(Utitlity::checkClient() || Utitlity::checkExternalUser())) { ?>
+            <li><a href="auditorChecklist.php"
+                    class="animate <?php echo isset($addAuditorChecklistClass) ? $addAuditorChecklistClass : ''; ?>">AUDIT-DATA<i
+                        class="sub_icon fa fa-clipboard fa-2x" style="vertical-align:middle"></i></a></li>
             <li><a href="goAi.php" class="animate <?php echo isset($addGoAiClass) ? $addGoAiClass : ''; ?>">GoAI<i
                         class="sub_icon fa fa-magic fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
@@ -479,6 +488,7 @@ function getFlatDate($inputStr)
                 <li><a href="quotationPage.php">QUOTATION</a></li>
                 <li><a href="addUsers.php">ADD USER</a></li>
                 <li><a href="clientRecycle.php">RECYCLE BIN</a></li>
+                <li><a href="auditorChecklist.php">AUDIT-DATA</a></li>
                 <li><a href="goAi.php">GoAI</a></li>
             </ul>
         </div>

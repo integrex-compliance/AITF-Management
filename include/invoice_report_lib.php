@@ -202,11 +202,21 @@ class SimpleXlsx {
     private $rowHeights = [];    // rowIndex(1-based) => height
     private $freezeYSplit = 0;   // number of top rows to freeze
     private $freezeCell = '';    // top-left cell of the scrolling area, e.g. "A6"
+    private $autoFilterRef = '';
+    private $pageOrientation = '';
+    private $fitToWidth = 1;
+    private $fitToHeight = 0;
 
     public function setColWidth($col, $w) { $this->colWidths[$col] = $w; }
     public function setRowHeight($row, $h) { $this->rowHeights[$row] = $h; }
     public function merge($ref) { $this->merges[] = $ref; }
     public function addRow(array $cells) { $this->rows[] = $cells; }
+    public function setAutoFilter($ref) { $this->autoFilterRef = trim((string)$ref); }
+    public function setPageLayout($orientation = 'landscape', $fitToWidth = 1, $fitToHeight = 0) {
+        $this->pageOrientation = strtolower((string)$orientation) === 'portrait' ? 'portrait' : 'landscape';
+        $this->fitToWidth = max(0, (int)$fitToWidth);
+        $this->fitToHeight = max(0, (int)$fitToHeight);
+    }
 
     /** Freeze every row above $rowNumber so it stays visible while scrolling. */
     public function freezePanesAbove($rowNumber) {
@@ -231,6 +241,10 @@ class SimpleXlsx {
     private function sheetXml() {
         $xml  = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
         $xml .= '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">';
+
+        if ($this->pageOrientation !== '') {
+            $xml .= '<sheetPr><pageSetUpPr fitToPage="1" autoPageBreaks="0"/></sheetPr>';
+        }
 
         // Freeze panes (must appear before <cols>/<sheetData> per the schema).
         if ($this->freezeYSplit > 0) {
@@ -278,12 +292,24 @@ class SimpleXlsx {
         }
         $xml .= '</sheetData>';
 
+        if ($this->autoFilterRef !== '') {
+            $xml .= '<autoFilter ref="' . self::esc($this->autoFilterRef) . '"/>';
+        }
+
         if (!empty($this->merges)) {
             $xml .= '<mergeCells count="' . count($this->merges) . '">';
             foreach ($this->merges as $m) {
                 $xml .= '<mergeCell ref="' . $m . '"/>';
             }
             $xml .= '</mergeCells>';
+        }
+
+        if ($this->pageOrientation !== '') {
+            $xml .= '<pageMargins left="0.25" right="0.25" top="0.5" bottom="0.5" header="0.2" footer="0.2"/>';
+            $xml .= '<pageSetup orientation="' . $this->pageOrientation
+                  . '" fitToWidth="' . $this->fitToWidth
+                  . '" fitToHeight="' . $this->fitToHeight
+                  . '" paperSize="9"/>';
         }
 
         $xml .= '</worksheet>';

@@ -337,8 +337,10 @@ $auditorsList = $statement->fetchAll();
                         </div>
                     </div>
                     <div class="row" style="">
-                        <div class="col-xs-12  text-center btn  qms_complete_btn ">
+                        <div class="col-xs-12  text-center btn  qms_complete_btn " style="position: relative;">
                             <span><i class="fa ">Audit Performance.</i></span>
+                            <button type="button" class="btn btn-xs btn-info save_cdc_only" style="position: absolute; right: 10px; top: 5px;">Save CDC Only</button>
+                            <input type="hidden" class="is_cdc_only" name="is_cdc_only" value="0">
                         </div>
                     </div>
                     <br>
@@ -470,7 +472,52 @@ $auditorsList = $statement->fetchAll();
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script type="text/javascript">
+    $(document).ready(function() {
+        function validateCdcMembers(selectElement) {
+            var $form = $(selectElement).closest('form');
+            if ($form.length === 0) {
+                // Fallback if not in form
+                $form = $(selectElement).closest('.modal-content');
+            }
+            if ($form.length === 0) {
+                $form = $('body');
+            }
+            
+            var m1 = $form.find('.reviewer-1').val();
+            var m2 = $form.find('.reviewer-2').val();
+            var m3 = $form.find('.granted-by').val();
+            
+            var hasError = false;
+            if (m1 && (m1 === m2 || m1 === m3)) hasError = true;
+            if (m2 && (m2 === m1 || m2 === m3)) hasError = true;
+            if (m3 && (m3 === m1 || m3 === m2)) hasError = true;
+
+            $form.find('#cdcMemberError').remove();
+            
+            if (hasError) {
+                // Reset the selection immediately
+                $(selectElement).val('');
+                
+                // Show a styled alert popup
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Duplicate Member',
+                        text: 'CDC members cannot be the same person. Please select distinct members.',
+                        confirmButtonColor: '#ea580c'
+                    });
+                } else {
+                    alert('CDC members cannot be the same person. Please select distinct members.');
+                }
+            }
+        }
+
+        $(document).on('change', '.reviewer-1, .reviewer-2, .granted-by', function() {
+            validateCdcMembers(this);
+        });
+    });
 
     function getIsoEntries(standardText) {
         if (!standardText) {
@@ -2535,9 +2582,10 @@ function checkCDCStatus() {
         const applicationDate = parseCdcDate(applicationDateStr);
         var $isError = false;
 
-        // Check if FOR OFFICE USE section is visible
-        const isOfficeUseVisible = $('#cdcOfficeContainer').is(':visible');
-        console.log('Office section visible:', isOfficeUseVisible);
+        // Check if FOR OFFICE USE section is visible and we're not doing a 'Save CDC Only'
+        const isCdcOnly = $('.is_cdc_only').val() === '1';
+        const isOfficeUseVisible = !isCdcOnly && $('#cdcOfficeContainer').is(':visible');
+        console.log('Office section visible for validation:', isOfficeUseVisible);
 
         // Removed validation rules for Application Received Date and Review Date
 
@@ -2707,6 +2755,11 @@ $('#cdcOfficeContainer').on('change blur', '.revDatecdc', function() {
 });
 
         $(".save_cdc").click(function (e) {
+            // We only set is_cdc_only to 0 if this click was direct, not triggered programmatically
+            if (e.originalEvent !== undefined) {
+                $('.is_cdc_only').val('0');
+            }
+            
             var hasError = validateCDC(true);
             console.log('=== CDC FORM SUBMISSION ===');
             console.log('Validation result:', hasError);
@@ -2719,7 +2772,30 @@ $('#cdcOfficeContainer').on('change blur', '.revDatecdc', function() {
                 e.preventDefault();
                 return;
             }
-            console.log('✓ Form will be submitted');
+            console.log('✔ Form will be submitted');
+        });
+
+        $(".save_cdc_only").click(function (e) {
+            e.preventDefault();
+            $('.is_cdc_only').val('1');
+            
+            // Hide any office-use specific errors that might have been shown previously
+            var $officeContainer = $('#cdcOfficeContainer');
+            $officeContainer.find('.inputHighlight').removeClass('inputHighlight');
+            $officeContainer.find('[id*="Error"]').hide();
+            
+            var hasError = validateCDC(true);
+            
+            if (!hasError) {
+                console.log('✔ Form will be submitted (CDC Only)');
+                // Bypass native HTML5 validation for required office fields
+                $(this).closest('form').attr('novalidate', 'novalidate');
+                // Trigger the real save button, but mark it as triggered so it doesn't reset is_cdc_only
+                $(this).closest('form').find('.save_cdc').trigger('click');
+            } else {
+                console.log('Form submission prevented due to validation errors (CDC Only)');
+                $('.is_cdc_only').val('0'); // Reset
+            }
         });
 
         $('.checkm1').change(function () {
