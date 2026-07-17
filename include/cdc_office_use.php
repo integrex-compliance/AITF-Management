@@ -157,6 +157,37 @@ if (!function_exists('ensureCdcIsoDecisionsTable')) {
     }
 }
 
+if (!function_exists('ensureCdcOnlyColumn')) {
+    function ensureCdcOnlyColumn(PDO $db): void
+    {
+        $statement = $db->prepare(
+            "SELECT COUNT(*)
+             FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE()
+               AND TABLE_NAME = 'cdc_report_review'
+               AND COLUMN_NAME = 'is_cdc_only'"
+        );
+        $statement->execute();
+
+        if ((int) $statement->fetchColumn() > 0) {
+            return;
+        }
+
+        try {
+            $db->exec(
+                "ALTER TABLE `cdc_report_review`
+                 ADD COLUMN `is_cdc_only` TINYINT(1) DEFAULT 0 AFTER `cdc_status`"
+            );
+        } catch (PDOException $exception) {
+            // Another request may have added the column after the schema check.
+            $mysqlErrorCode = isset($exception->errorInfo[1]) ? (int) $exception->errorInfo[1] : 0;
+            if ($mysqlErrorCode !== 1060) {
+                throw $exception;
+            }
+        }
+    }
+}
+
 if (!function_exists('normaliseCdcIsoDecisions')) {
     function normaliseCdcIsoDecisions(array $decisions): array
     {

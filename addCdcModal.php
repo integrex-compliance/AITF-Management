@@ -164,6 +164,8 @@ if (strtoupper($_SERVER['REQUEST_METHOD']) == 'POST') {
         if (isset($_POST['crr_Id']) && !empty($_POST['crr_Id'])) {
             error_log("=== ENTERING UPDATE BLOCK (crr_Id exists) === crr_Id: " . $_POST['crr_Id']);
             try {
+                ensureCdcOnlyColumn($db);
+
                 if (isset($_POST['iso_decisions'])) {
                     ensureCdcIsoDecisionsTable($db);
                 }
@@ -631,6 +633,8 @@ if (strtoupper($_SERVER['REQUEST_METHOD']) == 'POST') {
             if (isset($_POST['service_Id']) && !empty($_POST['service_Id'])) {
                 error_log("=== service_Id is SET, proceeding with INSERT ===");
                 try {
+                    ensureCdcOnlyColumn($db);
+
                     if (isset($_POST['iso_decisions'])) {
                         ensureCdcIsoDecisionsTable($db);
                     }
