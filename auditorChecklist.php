@@ -1498,33 +1498,41 @@
             }
         });
 
-        // Filter function
+        var filterTimer = null;
+
+        // Filter function with Vanilla JS for high performance
         function applyFilters() {
-            var serviceTypeVal = $('#filterServiceType').val().toLowerCase().trim();
-            var certVal = $('#filterCertNo').val().toLowerCase().trim();
-            var iafVal = $('#filterIafNace').val().toLowerCase().trim();
-            var auditorVal = $('#filterAuditor').val().toLowerCase().trim();
-            var accredVal = $('#filterAccreditation').val().toLowerCase().trim();
-            var statusVal = $('#filterStatus').val().toLowerCase().trim();
-            var dateFrom = $('#filterDateFrom').val();
-            var dateTo = $('#filterDateTo').val();
+            var serviceTypeVal = document.getElementById('filterServiceType').value.toLowerCase().trim();
+            var certVal = document.getElementById('filterCertNo').value.toLowerCase().trim();
+            var iafVal = document.getElementById('filterIafNace').value.toLowerCase().trim();
+            var auditorVal = document.getElementById('filterAuditor').value.toLowerCase().trim();
+            var accredVal = document.getElementById('filterAccreditation').value.toLowerCase().trim();
+            var statusVal = document.getElementById('filterStatus').value.toLowerCase().trim();
+            var dateFrom = document.getElementById('filterDateFrom').value;
+            var dateTo = document.getElementById('filterDateTo').value;
 
             var visibleCount = 0;
             var sno = 0;
 
-            $rows.each(function () {
-                var $row = $(this);
+            var rows = document.querySelectorAll('#auditorChecklistBody tr.ac-data-row');
+            var container = document.getElementById('auditorChecklistBody');
+            
+            // Detach table body to prevent layout thrashing
+            container.style.display = 'none';
+
+            for (var i = 0; i < rows.length; i++) {
+                var row = rows[i];
                 var show = true;
 
-                if (serviceTypeVal && $row.attr('data-service-type') !== serviceTypeVal) show = false;
-                if (show && certVal && $row.attr('data-cert').indexOf(certVal) === -1) show = false;
-                if (show && iafVal && $row.attr('data-iaf').indexOf(iafVal) === -1) show = false;
-                if (show && auditorVal && $row.attr('data-auditor').indexOf(auditorVal) === -1) show = false;
-                if (show && accredVal && $row.attr('data-accreditation') !== accredVal) show = false;
-                if (show && statusVal && $row.attr('data-status') !== statusVal) show = false;
+                if (serviceTypeVal && row.getAttribute('data-service-type') !== serviceTypeVal) show = false;
+                if (show && certVal && row.getAttribute('data-cert').indexOf(certVal) === -1) show = false;
+                if (show && iafVal && row.getAttribute('data-iaf').indexOf(iafVal) === -1) show = false;
+                if (show && auditorVal && row.getAttribute('data-auditor').indexOf(auditorVal) === -1) show = false;
+                if (show && accredVal && row.getAttribute('data-accreditation') !== accredVal) show = false;
+                if (show && statusVal && row.getAttribute('data-status') !== statusVal) show = false;
 
                 if (show && (dateFrom || dateTo)) {
-                    var rowDate = $row.attr('data-date');
+                    var rowDate = row.getAttribute('data-date');
                     if (rowDate && rowDate !== '' && rowDate !== '0000-00-00') {
                         if (dateFrom && rowDate < dateFrom) show = false;
                         if (dateTo && rowDate > dateTo) show = false;
@@ -1536,27 +1544,38 @@
                 if (show) {
                     visibleCount++;
                     sno++;
-                    $row.show();
-                    $row.find('.ac-td-sno').text(sno);
+                    row.style.display = '';
+                    row.querySelector('.ac-td-sno').textContent = sno;
                 } else {
-                    $row.hide();
+                    row.style.display = 'none';
                 }
-            });
+            }
+
+            // Reattach table body
+            container.style.display = '';
 
             $resultCount.html('Showing <strong>' + visibleCount + '</strong> of <strong>' + totalRows + '</strong> records');
         }
 
+        function debounceApplyFilters() {
+            $resultCount.html('<i class="fa fa-spinner fa-spin"></i> Filtering records...');
+            clearTimeout(filterTimer);
+            filterTimer = setTimeout(function() {
+                applyFilters();
+            }, 250);
+        }
+
         // Bind filter events
         $('#filterCertNo, #filterIafNace').on('keyup input', function () {
-            applyFilters();
+            debounceApplyFilters();
         });
 
         $('#filterServiceType, #filterAuditor, #filterAccreditation, #filterStatus').on('change', function () {
-            applyFilters();
+            debounceApplyFilters();
         });
 
         $('#filterDateFrom, #filterDateTo').on('change', function () {
-            applyFilters();
+            debounceApplyFilters();
         });
 
         // Reset filters
@@ -1569,7 +1588,7 @@
             $('#filterStatus').val('');
             $('#filterDateFrom').val('');
             $('#filterDateTo').val('');
-            applyFilters();
+            debounceApplyFilters();
             $scrollHint.fadeIn(200);
         });
 
