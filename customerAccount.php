@@ -3860,22 +3860,22 @@
                         echo '<div class="iso-details" style="display: none;">';
                     ?>
                     
-                    <div class="row" style="<?php if ($i > 0) echo 'margin-top: 10px;'; ?>">
-                        <div class="col-sm-2 " style="color: black; font-weight: small; text-align: right">
+                    <div class="row" style="padding: 15px; display: flex; align-items: center; gap: 15px; flex-wrap: nowrap; overflow-x: auto; <?php if ($i > 0) echo 'margin-top: 10px;'; ?>">
+                        <div style="color: black; font-weight: small; text-align: right; white-space: nowrap;">
                             <span>Certificate No:</span>
                         </div>
-                        <div class="col-sm-1" style="color: black; font-weight: small;">
+                        <div style="color: black; font-weight: small; white-space: nowrap;">
                             <?php if ($hasCertNumber) { ?>
                                 <span style="font-weight: bold; color: #006400;"><?php echo htmlspecialchars($certNo); ?></span>
                             <?php } else { ?>
                                 <span style="color: #999; font-style: italic; font-size: 11px;">Not Assigned Yet</span>
                             <?php } ?>
                         </div> 
-                        <div class="col-sm-2 " style="color: black; font-weight: small; text-align: right">
+                        <div style="color: black; font-weight: small; text-align: right; white-space: nowrap; margin-left: 10px;">
                             <span>Certification Status:</span>
                         </div>
-                        <div class="col-sm-2 form-group float-label-control" > 
-                            <select class="manual-application-status" name="customer_status" data-customer="<?php echo (int) $_GET["customerid"]; ?>" data-previous="<?php echo htmlspecialchars($certStatus, ENT_QUOTES, 'UTF-8'); ?>" data-iso-index="<?php echo $i; ?>" style="color: black">
+                        <div class="form-group float-label-control" style="margin-bottom: 0; min-width: 150px; flex-grow: 1;"> 
+                            <select class="manual-application-status" name="customer_status" data-customer="<?php echo (int) $_GET["customerid"]; ?>" data-previous="<?php echo htmlspecialchars($certStatus, ENT_QUOTES, 'UTF-8'); ?>" data-iso-index="<?php echo $i; ?>" style="color: black; width: 100%;">
                                 <option value="<?php echo htmlspecialchars($certStatus, ENT_QUOTES, 'UTF-8'); ?>"><?php echo !empty($certStatus) ? htmlspecialchars($certStatus) : 'Select Status'; ?></option>
                                 <?php foreach ($applicationStatusOptions as $stat) {
                                     $statusValue = trim((string) $stat["status"]);
@@ -3887,33 +3887,14 @@
                                 <?php } ?>
                             </select>
                         </div>
-                        <div class="col-sm-3 " style="color: black; font-weight: small; text-align: right">
-                            <span>Certification Decision Date:</span>
+                        <div style="color: black; font-weight: small; text-align: right; white-space: nowrap; margin-left: 10px;">
+                            <span>ORIGINAL REGISTRATION DATE (CDC):</span>
                         </div>
-                        <div class="col-sm-2" >
-                            <input class="lookslike-label<?php if ($i == 0) echo ' saveChanges'; ?>" style="color: <?php echo (!empty($decisionDate) ? 'black' : 'gray'); ?>" placeholder="<?php echo ($i > 0 && empty($decisionDate)) ? 'No date for this ISO' : 'Click to enter'; ?>" data-column="certification_stage_date" data-iso-index="<?php echo $i; ?>" value="<?php if (!empty($decisionDate)) echo simpleDateConversion($decisionDate); ?>" <?php if ($i == 0) echo 'id="certificationDate"'; ?> <?php if ($i > 0) echo 'readonly'; ?> />
+                        <div style="min-width: 120px;">
+                            <input class="lookslike-label<?php if ($i == 0) echo ' saveChanges'; ?>" style="color: <?php echo (!empty($decisionDate) ? 'black' : 'gray'); ?>; width: 100%;" placeholder="<?php echo ($i > 0 && empty($decisionDate)) ? 'No date for this ISO' : 'Click to enter'; ?>" data-column="certification_stage_date" data-iso-index="<?php echo $i; ?>" value="<?php if (!empty($decisionDate)) echo simpleDateConversion($decisionDate); ?>" <?php if ($i == 0) echo 'id="certificationDate"'; ?> <?php if ($i > 0) echo 'readonly'; ?> />
                         </div>                                                               
                     </div>
-                    <div class="row" >
-                        <div class="col-sm-2 " style="color: black; font-weight: small; text-align: right">
-                            <span>Standard Name:</span>
-                        </div>
-                        <div class="col-sm-1" >
-                            <input class="lookslike-label cert-auto-field" style="color: black; background-color: #f0f0f0; font-weight: bold;" placeholder="" data-column="standard_name" value="<?php echo htmlspecialchars($standardName); ?>" readonly <?php if ($i == 0) echo 'id="standardName"'; ?> />
-                        </div> 
-                        <div class="col-sm-2 " style="color: black; font-weight: small; text-align: right">
-                            <span>Issue Date:</span>
-                        </div>
-                        <div class="col-sm-2" > 
-                            <input class="lookslike-label cert-auto-field" style="color: black; background-color: #f0f0f0;" placeholder="" data-column="issue_date" value="<?php if (!empty($issueDate)) echo simpleDateConversion($issueDate); ?>" readonly <?php if ($i == 0) echo 'id="issueDate"'; ?> />
-                        </div>
-                        <div class="col-sm-3 " style="color: black; font-weight: small; text-align: right">
-                            <span>Expire Date:</span>
-                        </div>
-                        <div class="col-sm-2" >
-                            <input class="lookslike-label cert-auto-field" style="color: black; background-color: #f0f0f0;" placeholder="" data-column="expire_date" value="<?php if (!empty($expireDate)) echo simpleDateConversion($expireDate); ?>" readonly <?php if ($i == 0) echo 'id="expireDate"'; ?> />
-                        </div>                                                               
-                    </div>
+
                     
                     <?php 
                         // Close the iso-details div and add visual separator between certificates

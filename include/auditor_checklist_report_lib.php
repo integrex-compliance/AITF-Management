@@ -37,7 +37,7 @@ function auditorChecklistExcelFilterText(array $filters)
 {
     $parts = array();
     $labels = array(
-        'clientName' => 'Client',
+        'serviceType' => 'Service Type',
         'certificateNo' => 'Certificate',
         'iafNace' => 'IAF/NACE',
         'auditor' => 'Auditor',
@@ -88,18 +88,18 @@ function auditorChecklistExcelRowHeight(array $row)
 function buildAuditorChecklistXlsxBytes(array $rows, array $filters = array())
 {
     $xlsx = new SimpleXlsx();
-    $columnCount = 11;
+    $columnCount = 12;
 
     $xlsx->freezePanesAbove(5);
     $xlsx->setPageLayout('landscape', 1, 0);
 
-    $widths = array(6, 32, 23, 24, 16, 48, 18, 30, 13, 14, 17);
+    $widths = array(6, 32, 23, 24, 21, 16, 48, 18, 30, 14, 14, 17);
     foreach ($widths as $index => $width) {
         $xlsx->setColWidth($index + 1, $width);
     }
 
     $xlsx->addRow(array(array('v' => 'AITF MANAGEMENT CERTIFICATION LIMITED', 's' => 1, 't' => 's')));
-    $xlsx->merge('A1:K1');
+    $xlsx->merge('A1:L1');
     $xlsx->setRowHeight(1, 28);
 
     $xlsx->addRow(array(array(
@@ -107,7 +107,7 @@ function buildAuditorChecklistXlsxBytes(array $rows, array $filters = array())
         's' => 2,
         't' => 's',
     )));
-    $xlsx->merge('A2:K2');
+    $xlsx->merge('A2:L2');
     $xlsx->setRowHeight(2, 24);
 
     $accentRow = array();
@@ -122,11 +122,12 @@ function buildAuditorChecklistXlsxBytes(array $rows, array $filters = array())
         'Client Name',
         'Certificate No.',
         'Contact Person',
+        'Original Registration',
         'Accreditation',
         'Scope',
         'IAF/NACE',
         'Auditor Name',
-        'Audit Type',
+        'Service Type',
         'Audit Date',
         'Status',
     );
@@ -144,7 +145,7 @@ function buildAuditorChecklistXlsxBytes(array $rows, array $filters = array())
     if (empty($rows)) {
         $currentRow++;
         $xlsx->addRow(array(array('v' => 'No records found', 's' => 7, 't' => 's')));
-        $xlsx->merge('A' . $currentRow . ':K' . $currentRow);
+        $xlsx->merge('A' . $currentRow . ':L' . $currentRow);
         $xlsx->setRowHeight($currentRow, 26);
     } else {
         $serial = 1;
@@ -157,6 +158,7 @@ function buildAuditorChecklistXlsxBytes(array $rows, array $filters = array())
                 'client' => auditorChecklistExcelText($sourceRow['client'] ?? '', 1000),
                 'certificate_no' => auditorChecklistExcelText($sourceRow['certificate_no'] ?? '', 1000),
                 'contact_person' => auditorChecklistExcelText($sourceRow['contact_person'] ?? '', 500),
+                'original_registration' => auditorChecklistExcelText($sourceRow['original_registration'] ?? '', 100),
                 'accreditation' => auditorChecklistExcelText($sourceRow['accreditation'] ?? '', 100),
                 'scope' => auditorChecklistExcelText($sourceRow['scope'] ?? '', 6000),
                 'iaf_nace' => auditorChecklistExcelText($sourceRow['iaf_nace'] ?? '', 1000),
@@ -199,6 +201,7 @@ function buildAuditorChecklistXlsxBytes(array $rows, array $filters = array())
                 array('v' => $row['client'] !== '' ? $row['client'] : '-', 's' => $clientStyle, 't' => 's'),
                 array('v' => $row['certificate_no'] !== '' ? $row['certificate_no'] : '-', 's' => $textStyle, 't' => 's'),
                 array('v' => $row['contact_person'] !== '' ? $row['contact_person'] : '-', 's' => $textStyle, 't' => 's'),
+                array('v' => $row['original_registration'] !== '' ? $row['original_registration'] : '-', 's' => $centerStyle, 't' => 's'),
                 array('v' => $row['accreditation'] !== '' ? $row['accreditation'] : '-', 's' => $centerStyle, 't' => 's'),
                 array('v' => $row['scope'] !== '' ? $row['scope'] : '-', 's' => $textStyle, 't' => 's'),
                 array('v' => $row['iaf_nace'] !== '' ? $row['iaf_nace'] : '-', 's' => $textStyle, 't' => 's'),
@@ -214,14 +217,14 @@ function buildAuditorChecklistXlsxBytes(array $rows, array $filters = array())
     }
 
     $lastDataRow = max(4, $currentRow);
-    $xlsx->setAutoFilter('A4:K' . $lastDataRow);
+    $xlsx->setAutoFilter('A4:L' . $lastDataRow);
 
     $currentRow++;
     $xlsx->addRow(array(array('v' => '', 's' => 0, 't' => 's')));
 
     $currentRow++;
     $xlsx->addRow(array(array('v' => 'AUDITOR CHECKLIST SUMMARY', 's' => 16, 't' => 's')));
-    $xlsx->merge('A' . $currentRow . ':K' . $currentRow);
+    $xlsx->merge('A' . $currentRow . ':L' . $currentRow);
     $xlsx->setRowHeight($currentRow, 24);
 
     $summaryLines = array(array('TOTAL RECORDS', count($rows)));
