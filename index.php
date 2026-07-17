@@ -609,6 +609,7 @@ session_start();
             0% {
                 transform: scale(1) translate(0, 0);
             }
+
             100% {
                 transform: scale(1.04) translate(-0.5%, -0.5%);
             }
@@ -632,11 +633,13 @@ session_start();
                 transform: scale(1.05) translateY(10px);
                 filter: blur(4px);
             }
+
             50% {
                 opacity: 0.6;
                 transform: scale(1.02) translateY(3px);
                 filter: blur(1px);
             }
+
             100% {
                 opacity: 0.92;
                 transform: scale(1) translateY(0);
@@ -685,6 +688,7 @@ session_start();
             0% {
                 opacity: 1;
             }
+
             100% {
                 opacity: 0;
                 visibility: hidden;
@@ -1048,9 +1052,12 @@ session_start();
         }
 
         @keyframes isoGlowPulse {
-            0%, 100% {
+
+            0%,
+            100% {
                 filter: drop-shadow(0 18px 28px rgba(0, 0, 0, 0.34)) brightness(1);
             }
+
             50% {
                 filter: drop-shadow(0 18px 28px rgba(0, 0, 0, 0.34)) brightness(1.15);
             }
@@ -1682,10 +1689,14 @@ session_start();
                             <div class="milestone-dot"></div>
                         </div>
                         <div class="milestone-connector"></div>
-                        <div class="milestone-card nabcb-highlight-card" style="border-top: 5px solid #b8860b; transform: translateY(-40px) scale(1.08); box-shadow: 0 25px 70px rgba(184, 134, 11, 0.3);">
-                            <img src="images/nabcb.png" alt="NABCB Logo" style="height: 60px; width: auto; margin-bottom: 15px;">
+                        <div class="milestone-card nabcb-highlight-card"
+                            style="border-top: 5px solid #b8860b; transform: translateY(-40px) scale(1.08); box-shadow: 0 25px 70px rgba(184, 134, 11, 0.3);">
+                            <img src="images/nabcb.png" alt="NABCB Logo"
+                                style="height: 60px; width: auto; margin-bottom: 15px;">
                             <!-- <span class="milestone-year" style="color: #b8860b;">2016</span> -->
-                            <h4 style="background: linear-gradient(135deg, #b8860b, #ffd700); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 19px; font-weight: 900;">NABCB ACCREDITATION</h4>
+                            <h4
+                                style="background: linear-gradient(135deg, #b8860b, #ffd700); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 19px; font-weight: 900;">
+                                NABCB ACCREDITATION</h4>
                             <p>Accredited by NABCB for QMS, EMS and OHSMS certification services.</p>
                         </div>
                     </div>
@@ -1699,7 +1710,8 @@ session_start();
                         <div class="milestone-card" style="border-top: 5px solid #10b981;">
                             <span class="milestone-year" style="color: #10b981;">Present</span>
                             <h4>Evaluation & Assessment</h4>
-                            <p>Currently conducting evaluation and assessment services for management system certifications.</p>
+                            <p>Currently conducting evaluation and assessment services for management system
+                                certifications.</p>
                         </div>
                     </div>
                 </div>
@@ -1730,14 +1742,16 @@ session_start();
                             <span class="step-dot"></span>
                             <div>
                                 <h4>Client Confidence</h4>
-                                <p>Strengthened relationships through transparent assessment and professional communication.</p>
+                                <p>Strengthened relationships through transparent assessment and professional
+                                    communication.</p>
                             </div>
                         </div>
                         <div class="summary-step">
                             <span class="step-dot"></span>
                             <div>
                                 <h4>Continual Trust</h4>
-                                <p>Evaluating organizations with consistent, ethical and value-added accredited  certification services.</p>
+                                <p>Evaluating organizations with consistent, ethical and value-added accredited
+                                    certification services.</p>
                             </div>
                         </div>
                     </div>
@@ -2167,7 +2181,9 @@ session_start();
                     <p class="principle-text"
                         style="font-size: 18px; line-height: 1.8; color: #475569; margin-bottom: 35px; text-align: justify;">
                         We maintain the highest standards of <strong>competence, independence, and impartiality</strong>
-                        in our assessment processes. Our team of certified auditors are  committed to provide assessment services that will justify the organisation achievement and  demonstrate its compliance as per international standards with 
+                        in our assessment processes. Our team of certified auditors are committed to provide assessment
+                        services that will justify the organisation achievement and demonstrate its compliance as per
+                        international standards with
                         continuous improvement and operational excellence across all business functions.
                     </p>
                 </div>
@@ -2201,7 +2217,7 @@ session_start();
                 <span class="cert-services-kicker"> Our Certification Services</span>
                 <h2>Currently Providing Certification Services</h2>
                 <p>
-                    AITF currently provides  certification services for Quality Management,
+                    AITF currently provides certification services for Quality Management,
                     Environmental Management and Occupational Health &amp; Safety Management systems.
                 </p>
             </div>
@@ -2276,7 +2292,8 @@ session_start();
 
             <div class="cert-services-cta">
                 <p>Need system certification for your organization?</p>
-                <a href="application.php#online-application-form">Apply for Certification <i class="fa fa-arrow-right"></i></a>
+                <a href="application.php#online-application-form">Apply for Certification <i
+                        class="fa fa-arrow-right"></i></a>
             </div>
         </div>
 
@@ -2300,7 +2317,7 @@ session_start();
                     linear-gradient(rgba(37, 99, 235, 0.045) 1px, transparent 1px),
                     linear-gradient(90deg, rgba(37, 99, 235, 0.045) 1px, transparent 1px);
                 background-size: 42px 42px;
-                mask-image: linear-gradient(180deg, rgba(0,0,0,0.75), transparent 92%);
+                mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.75), transparent 92%);
                 pointer-events: none;
             }
 
@@ -2750,7 +2767,7 @@ session_start();
 
                             <div class="certificate-item">
                                 <div class="certificate-img-container">
-                                    <img src="images/certificate_2.png" alt="ISO 14001:2015 Certification"
+                                    <img src="images/ally_cert 3.png" alt="ISO 14001:2015 Certification"
                                         class="certificate-thumb">
                                     <div class="certificate-hover">
                                         <a href="images/certificate_2.png" class="view-cert-btn"
