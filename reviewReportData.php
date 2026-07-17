@@ -190,11 +190,7 @@ if(isset ($_GET['crr_Id']) && !empty ($_GET['crr_Id']) && isset ($_GET['service'
         $isoDecisions = [];
         if (!empty($_GET['crr_Id'])) {
             try {
-                $isoSql = "SELECT cdc_member, iso_standard, decision FROM cdc_iso_decisions WHERE crr_id = :crr_id ORDER BY cdc_member, iso_standard";
-                $isoStmt = $db->prepare($isoSql);
-                $isoStmt->bindParam(':crr_id', $_GET['crr_Id']);
-                $isoStmt->execute();
-                $isoDecisions = $isoStmt->fetchAll(PDO::FETCH_ASSOC);
+                $isoDecisions = getCdcIsoDecisions($db, (int) $_GET['crr_Id']);
                 error_log("reviewReportData.php - Loaded " . count($isoDecisions) . " ISO decisions for crr_id=" . $_GET['crr_Id']);
             } catch (Exception $isoEx) {
                 error_log("reviewReportData.php - ISO decisions fetch error: " . $isoEx->getMessage());

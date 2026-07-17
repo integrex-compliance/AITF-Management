@@ -136,3 +136,108 @@ if (!function_exists('normaliseCdcOfficePayload')) {
         return $normalised;
     }
 }
+
+if (!function_exists('ensureCdcIsoDecisionsTable')) {
+    function ensureCdcIsoDecisionsTable(PDO $db): void
+    {
+        $db->exec(
+            "CREATE TABLE IF NOT EXISTS `cdc_iso_decisions` (
+                `id` INT(11) NOT NULL AUTO_INCREMENT,
+                `crr_id` INT(11) NOT NULL,
+                `cdc_member` TINYINT(3) UNSIGNED NOT NULL,
+                `iso_standard` VARCHAR(255) NOT NULL,
+                `decision` VARCHAR(20) NOT NULL,
+                `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`),
+                KEY `idx_cdc_iso_decisions_crr` (`crr_id`),
+                KEY `idx_cdc_iso_decisions_member` (`cdc_member`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci"
+        );
+    }
+}
+
+if (!function_exists('normaliseCdcIsoDecisions')) {
+    function normaliseCdcIsoDecisions(array $decisions): array
+    {
+        $normalised = [];
+
+        foreach ($decisions as $decision) {
+            if (!is_array($decision)) {
+                continue;
+            }
+
+            $member = isset($decision['cdc_member']) ? (int) $decision['cdc_member'] : 0;
+            $isoStandard = isset($decision['iso_standard']) ? trim((string) $decision['iso_standard']) : '';
+            $decisionValue = isset($decision['decision']) ? trim((string) $decision['decision']) : '';
+
+            if ($member < 1 || $member > 3 || $isoStandard === '' || !in_array($decisionValue, ['Yes', 'No'], true)) {
+                continue;
+            }
+
+            $key = $member . '|' . $isoStandard;
+            $normalised[$key] = [
+                'cdc_member' => $member,
+                'iso_standard' => $isoStandard,
+                'decision' => $decisionValue,
+            ];
+        }
+
+        return array_values($normalised);
+    }
+}
+
+if (!function_exists('replaceCdcIsoDecisions')) {
+    function replaceCdcIsoDecisions(PDO $db, int $crrId, array $decisions): void
+    {
+        ensureCdcIsoDecisionsTable($db);
+        $decisions = normaliseCdcIsoDecisions($decisions);
+
+        $db->beginTransaction();
+        try {
+            $delete = $db->prepare("DELETE FROM cdc_iso_decisions WHERE crr_id = :crr_id");
+            $delete->bindValue(':crr_id', $crrId, PDO::PARAM_INT);
+            $delete->execute();
+
+            if (!empty($decisions)) {
+                $insert = $db->prepare(
+                    "INSERT INTO cdc_iso_decisions (crr_id, cdc_member, iso_standard, decision)
+                     VALUES (:crr_id, :cdc_member, :iso_standard, :decision)"
+                );
+
+                foreach ($decisions as $decision) {
+                    $insert->bindValue(':crr_id', $crrId, PDO::PARAM_INT);
+                    $insert->bindValue(':cdc_member', $decision['cdc_member'], PDO::PARAM_INT);
+                    $insert->bindValue(':iso_standard', $decision['iso_standard']);
+                    $insert->bindValue(':decision', $decision['decision']);
+                    $insert->execute();
+                }
+            }
+
+            $db->commit();
+        } catch (Throwable $exception) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            throw $exception;
+        }
+    }
+}
+
+if (!function_exists('getCdcIsoDecisions')) {
+    function getCdcIsoDecisions(PDO $db, int $crrId): array
+    {
+        ensureCdcIsoDecisionsTable($db);
+
+        $statement = $db->prepare(
+            "SELECT cdc_member, iso_standard, decision
+             FROM cdc_iso_decisions
+             WHERE crr_id = :crr_id
+             ORDER BY cdc_member ASC, iso_standard ASC"
+        );
+        $statement->bindValue(':crr_id', $crrId, PDO::PARAM_INT);
+        $statement->execute();
+
+        return $statement->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+}

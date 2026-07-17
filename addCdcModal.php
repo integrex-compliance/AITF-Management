@@ -164,6 +164,10 @@ if (strtoupper($_SERVER['REQUEST_METHOD']) == 'POST') {
         if (isset($_POST['crr_Id']) && !empty($_POST['crr_Id'])) {
             error_log("=== ENTERING UPDATE BLOCK (crr_Id exists) === crr_Id: " . $_POST['crr_Id']);
             try {
+                if (isset($_POST['iso_decisions'])) {
+                    ensureCdcIsoDecisionsTable($db);
+                }
+
                 $applicationDateObj = null;
                 $receivedDateObj = null;
                 $reviewDateObj = null;
@@ -238,8 +242,11 @@ if (strtoupper($_SERVER['REQUEST_METHOD']) == 'POST') {
 
                 $is_cdc_only = isset($_POST['is_cdc_only']) ? (int)$_POST['is_cdc_only'] : 0;
                 $service = $_POST['service_Id'];
+                $officeUseUpdateSql = $is_cdc_only === 1
+                    ? ''
+                    : ',`certificateNo`=:certificateNo,`revCdc`=:revCdc,`revDatecdc`=:revDatecdc,`expiredate`=:expiredate,`periodicalaudit`=:periodicalaudit';
                 // echo $service;
-                $sql = "UPDATE `cdc_report_review` SET `is_cdc_only`=:is_cdc_only,`file_no`=:file_no,`audit_organization`=:audit_organization,`address`=:address,`product_service`=:product_service,`iaf_nacf`=:iaf_nacf,`exclusion`=:exclusion,`audit_date`=:audit_date,`audit_type`=:audit_type,`covered_for`=:covered_for,`accreditation`=:accreditation,`lead_auditor`=:lead_auditor,`technical_expert`=:technical_expert,`assDate`=:assDate,`auditors`=:auditors,`reviewer_1`=:reviewer_1,`reviewer_2`=:reviewer_2,`granted_by`=:granted_by,`system_during`=:system_during,`system_complainte`=:system_complainte,`comments_if_any`=:comments_if_any,`review_1_granting`=:review_1_granting,`review_2_granting`=:review_2_granting,`cdc_status`=:cdc_status,`comments`=:comments,`Date`=:Date,`certificateNo`=:certificateNo,`revCdc`=:revCdc,`revDatecdc`=:revDatecdc,`expiredate`=:expiredate,`periodicalaudit`=:periodicalaudit,`ncval`=:ncval,`ofival`=:ofival,`oplusval`=:oplusval,`rev1_yes`=:rev1_yes,`rev2_yes`=:rev2_yes,`yes1`=:yes1,`yes2`=:yes2,`yes3`=:yes3,`rev3_yes`=:rev3_yes WHERE crr_id=:crr_Id and ca_service_id=:ca_service_id ";
+                $sql = "UPDATE `cdc_report_review` SET `is_cdc_only`=:is_cdc_only,`file_no`=:file_no,`audit_organization`=:audit_organization,`address`=:address,`product_service`=:product_service,`iaf_nacf`=:iaf_nacf,`exclusion`=:exclusion,`audit_date`=:audit_date,`audit_type`=:audit_type,`covered_for`=:covered_for,`accreditation`=:accreditation,`lead_auditor`=:lead_auditor,`technical_expert`=:technical_expert,`assDate`=:assDate,`auditors`=:auditors,`reviewer_1`=:reviewer_1,`reviewer_2`=:reviewer_2,`granted_by`=:granted_by,`system_during`=:system_during,`system_complainte`=:system_complainte,`comments_if_any`=:comments_if_any,`review_1_granting`=:review_1_granting,`review_2_granting`=:review_2_granting,`cdc_status`=:cdc_status,`comments`=:comments,`Date`=:Date" . $officeUseUpdateSql . ",`ncval`=:ncval,`ofival`=:ofival,`oplusval`=:oplusval,`rev1_yes`=:rev1_yes,`rev2_yes`=:rev2_yes,`yes1`=:yes1,`yes2`=:yes2,`yes3`=:yes3,`rev3_yes`=:rev3_yes WHERE crr_id=:crr_Id and ca_service_id=:ca_service_id ";
                 $statement = $db->prepare($sql);
                 $statement->bindParam(':is_cdc_only', $is_cdc_only);
                 $statement->bindParam(':ca_service_id', $service);
@@ -273,12 +280,13 @@ if (strtoupper($_SERVER['REQUEST_METHOD']) == 'POST') {
                 $statement->bindParam(':Date', $Date);
 
 
-                $statement->bindParam(':certificateNo', $_POST['certificateNo']);
-                $statement->bindParam(':revCdc', $_POST['revCdc']);
-
-                $statement->bindParam(':revDatecdc', $revDate);
-                $statement->bindParam(':expiredate', $expiredate);
-                $statement->bindParam(':periodicalaudit', $periodicaldate);
+                if ($is_cdc_only !== 1) {
+                    $statement->bindParam(':certificateNo', $_POST['certificateNo']);
+                    $statement->bindParam(':revCdc', $_POST['revCdc']);
+                    $statement->bindParam(':revDatecdc', $revDate);
+                    $statement->bindParam(':expiredate', $expiredate);
+                    $statement->bindParam(':periodicalaudit', $periodicaldate);
+                }
                 $statement->bindParam(':ncval', $_POST['ncval']);
                 $statement->bindParam(':ofival', $_POST['ofival']);
                 $statement->bindParam(':oplusval', $_POST['oplus']);
@@ -586,33 +594,21 @@ if (strtoupper($_SERVER['REQUEST_METHOD']) == 'POST') {
                     }
                 }
 
-                $officeUsePayload = isset($_POST['office_use']) && is_array($_POST['office_use']) ? $_POST['office_use'] : [];
-                $officeUseEntries = normaliseCdcOfficePayload($officeUsePayload);
-                replaceCdcOfficeUse($db, (int) $_POST['crr_Id'], $officeUseEntries);
+                if ($is_cdc_only !== 1) {
+                    $officeUsePayload = isset($_POST['office_use']) && is_array($_POST['office_use']) ? $_POST['office_use'] : [];
+                    $officeUseEntries = normaliseCdcOfficePayload($officeUsePayload);
+                    replaceCdcOfficeUse($db, (int) $_POST['crr_Id'], $officeUseEntries);
+                }
                 activateCustomerAfterGrantedCaCdc($db, $_POST['customer_Id'], $service, $cdc_status, $_POST['certificateNo']);
-                
-                // Save ISO decisions for RC services
-                if (isset($_POST['iso_decisions']) && !empty($_POST['iso_decisions'])) {
+
+                // Save or clear ISO decisions for RC services.
+                if (isset($_POST['iso_decisions'])) {
                     $isoDecisions = json_decode($_POST['iso_decisions'], true);
-                    if (is_array($isoDecisions) && count($isoDecisions) > 0) {
-                        // Delete existing ISO decisions for this CDC report
-                        $deleteSql = "DELETE FROM cdc_iso_decisions WHERE crr_id = :crr_id";
-                        $deleteStmt = $db->prepare($deleteSql);
-                        $deleteStmt->bindParam(':crr_id', $_POST['crr_Id']);
-                        $deleteStmt->execute();
-                        
-                        // Insert new ISO decisions
-                        $insertSql = "INSERT INTO cdc_iso_decisions (crr_id, cdc_member, iso_standard, decision) VALUES (:crr_id, :cdc_member, :iso_standard, :decision)";
-                        $insertStmt = $db->prepare($insertSql);
-                        
-                        foreach ($isoDecisions as $decision) {
-                            $insertStmt->bindParam(':crr_id', $_POST['crr_Id']);
-                            $insertStmt->bindParam(':cdc_member', $decision['cdc_member']);
-                            $insertStmt->bindParam(':iso_standard', $decision['iso_standard']);
-                            $insertStmt->bindParam(':decision', $decision['decision']);
-                            $insertStmt->execute();
-                        }
-                        error_log("CDC UPDATE: Saved " . count($isoDecisions) . " ISO decisions for crr_id=" . $_POST['crr_Id']);
+                    if (is_array($isoDecisions)) {
+                        replaceCdcIsoDecisions($db, (int) $_POST['crr_Id'], $isoDecisions);
+                        error_log("CDC UPDATE: Saved " . count(normaliseCdcIsoDecisions($isoDecisions)) . " ISO decisions for crr_id=" . $_POST['crr_Id']);
+                    } else {
+                        error_log("CDC UPDATE: Ignored invalid ISO decisions JSON for crr_id=" . $_POST['crr_Id']);
                     }
                 }
 
@@ -635,6 +631,10 @@ if (strtoupper($_SERVER['REQUEST_METHOD']) == 'POST') {
             if (isset($_POST['service_Id']) && !empty($_POST['service_Id'])) {
                 error_log("=== service_Id is SET, proceeding with INSERT ===");
                 try {
+                    if (isset($_POST['iso_decisions'])) {
+                        ensureCdcIsoDecisionsTable($db);
+                    }
+
                     $applicationDateObj = null;
                     $receivedDateObj = null;
                     $reviewDateObj = null;
@@ -795,29 +795,23 @@ if (strtoupper($_SERVER['REQUEST_METHOD']) == 'POST') {
                     $joinResult = $joinStmt->fetch();
                     error_log("CDC JOIN TEST: ca_id=" . $joinResult['ca_id'] . ", crr_id from JOIN=" . $joinResult['crr_id']);
 
-                    $officeUsePayload = isset($_POST['office_use']) && is_array($_POST['office_use']) ? $_POST['office_use'] : [];
-                    $officeUseEntries = normaliseCdcOfficePayload($officeUsePayload);
-                    if ($newCrrId > 0) {
-                        replaceCdcOfficeUse($db, $newCrrId, $officeUseEntries);
+                    if ($is_cdc_only !== 1) {
+                        $officeUsePayload = isset($_POST['office_use']) && is_array($_POST['office_use']) ? $_POST['office_use'] : [];
+                        $officeUseEntries = normaliseCdcOfficePayload($officeUsePayload);
+                        if ($newCrrId > 0) {
+                            replaceCdcOfficeUse($db, $newCrrId, $officeUseEntries);
+                        }
                     }
                     activateCustomerAfterGrantedCaCdc($db, $_POST['customer_Id'], $service, $cdc_status, $_POST['certificateNo']);
                     
-                    // Save ISO decisions for RC services
-                    if ($newCrrId > 0 && isset($_POST['iso_decisions']) && !empty($_POST['iso_decisions'])) {
+                    // Save ISO decisions for RC services.
+                    if ($newCrrId > 0 && isset($_POST['iso_decisions'])) {
                         $isoDecisions = json_decode($_POST['iso_decisions'], true);
-                        if (is_array($isoDecisions) && count($isoDecisions) > 0) {
-                            // Insert new ISO decisions
-                            $insertSql = "INSERT INTO cdc_iso_decisions (crr_id, cdc_member, iso_standard, decision) VALUES (:crr_id, :cdc_member, :iso_standard, :decision)";
-                            $insertStmt = $db->prepare($insertSql);
-                            
-                            foreach ($isoDecisions as $decision) {
-                                $insertStmt->bindParam(':crr_id', $newCrrId);
-                                $insertStmt->bindParam(':cdc_member', $decision['cdc_member']);
-                                $insertStmt->bindParam(':iso_standard', $decision['iso_standard']);
-                                $insertStmt->bindParam(':decision', $decision['decision']);
-                                $insertStmt->execute();
-                            }
-                            error_log("CDC INSERT: Saved " . count($isoDecisions) . " ISO decisions for crr_id=" . $newCrrId);
+                        if (is_array($isoDecisions)) {
+                            replaceCdcIsoDecisions($db, $newCrrId, $isoDecisions);
+                            error_log("CDC INSERT: Saved " . count(normaliseCdcIsoDecisions($isoDecisions)) . " ISO decisions for crr_id=" . $newCrrId);
+                        } else {
+                            error_log("CDC INSERT: Ignored invalid ISO decisions JSON for crr_id=" . $newCrrId);
                         }
                     }
 
