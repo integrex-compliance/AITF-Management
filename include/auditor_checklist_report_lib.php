@@ -88,18 +88,18 @@ function auditorChecklistExcelRowHeight(array $row)
 function buildAuditorChecklistXlsxBytes(array $rows, array $filters = array())
 {
     $xlsx = new SimpleXlsx();
-    $columnCount = 12;
+    $columnCount = 14;
 
     $xlsx->freezePanesAbove(5);
     $xlsx->setPageLayout('landscape', 1, 0);
 
-    $widths = array(6, 32, 23, 24, 21, 16, 48, 18, 30, 14, 14, 17);
+    $widths = array(6, 32, 23, 24, 21, 16, 48, 18, 30, 14, 14, 16, 18, 17);
     foreach ($widths as $index => $width) {
         $xlsx->setColWidth($index + 1, $width);
     }
 
     $xlsx->addRow(array(array('v' => 'AITF MANAGEMENT CERTIFICATION LIMITED', 's' => 1, 't' => 's')));
-    $xlsx->merge('A1:L1');
+    $xlsx->merge('A1:N1');
     $xlsx->setRowHeight(1, 28);
 
     $xlsx->addRow(array(array(
@@ -107,7 +107,7 @@ function buildAuditorChecklistXlsxBytes(array $rows, array $filters = array())
         's' => 2,
         't' => 's',
     )));
-    $xlsx->merge('A2:L2');
+    $xlsx->merge('A2:N2');
     $xlsx->setRowHeight(2, 24);
 
     $accentRow = array();
@@ -129,6 +129,8 @@ function buildAuditorChecklistXlsxBytes(array $rows, array $filters = array())
         'Auditor Name',
         'Service Type',
         'Audit Date',
+        'Next Due Date',
+        'Next Service Type',
         'Status',
     );
     $headerRow = array();
@@ -145,7 +147,7 @@ function buildAuditorChecklistXlsxBytes(array $rows, array $filters = array())
     if (empty($rows)) {
         $currentRow++;
         $xlsx->addRow(array(array('v' => 'No records found', 's' => 7, 't' => 's')));
-        $xlsx->merge('A' . $currentRow . ':L' . $currentRow);
+        $xlsx->merge('A' . $currentRow . ':N' . $currentRow);
         $xlsx->setRowHeight($currentRow, 26);
     } else {
         $serial = 1;
@@ -165,6 +167,8 @@ function buildAuditorChecklistXlsxBytes(array $rows, array $filters = array())
                 'auditor' => auditorChecklistExcelText($sourceRow['auditor'] ?? '', 1500),
                 'audit_type' => auditorChecklistExcelText($sourceRow['audit_type'] ?? '', 100),
                 'audit_date' => auditorChecklistExcelDate($sourceRow['audit_date'] ?? ''),
+                'next_due_date' => auditorChecklistExcelDate($sourceRow['next_due_date'] ?? ''),
+                'next_service_type' => auditorChecklistExcelText($sourceRow['next_service_type'] ?? '', 100),
                 'status' => auditorChecklistExcelText($sourceRow['status'] ?? '', 100),
             );
 
@@ -208,6 +212,8 @@ function buildAuditorChecklistXlsxBytes(array $rows, array $filters = array())
                 array('v' => $row['auditor'] !== '' ? $row['auditor'] : '-', 's' => $textStyle, 't' => 's'),
                 array('v' => $row['audit_type'] !== '' ? $row['audit_type'] : '-', 's' => $centerStyle, 't' => 's'),
                 array('v' => $row['audit_date'] !== '' ? $row['audit_date'] : '-', 's' => $centerStyle, 't' => 's'),
+                array('v' => $row['next_due_date'] !== '' ? $row['next_due_date'] : '-', 's' => $centerStyle, 't' => 's'),
+                array('v' => $row['next_service_type'] !== '' ? $row['next_service_type'] : '-', 's' => $centerStyle, 't' => 's'),
                 array('v' => $row['status'] !== '' ? $row['status'] : '-', 's' => $statusStyle, 't' => 's'),
             ));
 
@@ -217,14 +223,14 @@ function buildAuditorChecklistXlsxBytes(array $rows, array $filters = array())
     }
 
     $lastDataRow = max(4, $currentRow);
-    $xlsx->setAutoFilter('A4:L' . $lastDataRow);
+    $xlsx->setAutoFilter('A4:N' . $lastDataRow);
 
     $currentRow++;
     $xlsx->addRow(array(array('v' => '', 's' => 0, 't' => 's')));
 
     $currentRow++;
     $xlsx->addRow(array(array('v' => 'AUDITOR CHECKLIST SUMMARY', 's' => 16, 't' => 's')));
-    $xlsx->merge('A' . $currentRow . ':L' . $currentRow);
+    $xlsx->merge('A' . $currentRow . ':N' . $currentRow);
     $xlsx->setRowHeight($currentRow, 24);
 
     $summaryLines = array(array('TOTAL RECORDS', count($rows)));
@@ -251,4 +257,3 @@ function buildAuditorChecklistXlsxBytes(array $rows, array $filters = array())
 
     return $xlsx->toString('Auditor Checklist');
 }
-

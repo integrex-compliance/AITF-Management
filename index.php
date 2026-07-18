@@ -1709,8 +1709,8 @@ session_start();
                         <div class="milestone-connector"></div>
                         <div class="milestone-card" style="border-top: 5px solid #10b981;">
                             <span class="milestone-year" style="color: #10b981;">Present</span>
-                            <h4>Evaluation & Assessment</h4>
-                            <p>Currently conducting evaluation and assessment services for management system
+                            <h4>Assessment Services</h4>
+                            <p>Currently conducting assessment services for management system
                                 certifications.</p>
                         </div>
                     </div>

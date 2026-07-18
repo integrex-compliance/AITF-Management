@@ -27,6 +27,28 @@
         }
     }
 
+    // Keep checklist statuses aligned with the canonical home-page labels.
+    function acNormalizeStatus($value)
+    {
+        $status = trim((string) $value);
+        if ($status === '') {
+            return 'No Status';
+        }
+
+        $key = strtolower(str_replace(array('-', '_', ' '), '', $status));
+        if ($key === 'active' || $key === 'valid' || $key === 'granted') return 'Active';
+        if ($key === 'suspended' || $key === 'suspend') return 'Suspended';
+        if ($key === 'inprocess') return 'In-process';
+        if ($key === 'contractinprocess') return 'Contract In-process';
+        if ($key === 'withdrawn' || $key === 'withdraw') return 'Withdrawn';
+        if ($key === 'applicationcanceled' || $key === 'applicationcancelled' || $key === 'cancelled' || $key === 'canceled') {
+            return 'Application canceled';
+        }
+        if ($key === 'expired' || $key === 'expire') return 'Expired';
+
+        return $status;
+    }
+
     // ─── Fetch all auditors for filter dropdown ───
     $auditorSql = "SELECT auditors_id, auditor_name FROM auditors ORDER BY auditor_name ASC";
     $stmt = $db->prepare($auditorSql);
@@ -51,7 +73,20 @@
     ";
     $stmt = $db->prepare($statusSql);
     $stmt->execute();
-    $statusList = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $statusList = array();
+    $statusKeys = array();
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $statusRow) {
+        $normalizedStatus = acNormalizeStatus($statusRow['audit_status'] ?? '');
+        $statusKey = strtolower($normalizedStatus);
+        if ($normalizedStatus === '' || isset($statusKeys[$statusKey])) {
+            continue;
+        }
+        $statusKeys[$statusKey] = true;
+        $statusList[] = array('audit_status' => $normalizedStatus);
+    }
+    usort($statusList, function ($left, $right) {
+        return strcasecmp($left['audit_status'], $right['audit_status']);
+    });
 
     // ─── Fetch distinct service types for filter dropdown ───
     $serviceTypeSql = "
@@ -249,6 +284,7 @@
             ci.contact_person,
             ci.scope,
             ci.aif_nace,
+            ci.next_service,
             ci.audit_status AS client_status,
             s.service_id,
             s.service_type,
@@ -290,6 +326,77 @@
     $stmt = $db->prepare($mainSql);
     $stmt->execute();
     $allRecords = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Match the home-page due-date logic: use the latest non-SP service,
+    // prefer Suspension/Suspend Letter, then fall back to Expire Letter.
+    $nextDueDateByCustomer = array();
+    $checklistCustomerIds = array_values(array_unique(array_filter(array_map(function ($record) {
+        return isset($record['client_id']) ? trim((string) $record['client_id']) : '';
+    }, $allRecords))));
+
+    if (!empty($checklistCustomerIds)) {
+        $customerPlaceholders = implode(',', array_fill(0, count($checklistCustomerIds), '?'));
+        $latestNonSpSql = "
+            SELECT s.customer_id, s.service_id
+            FROM service s
+            INNER JOIN (
+                SELECT customer_id, MAX(service_id) AS max_sid
+                FROM service
+                WHERE service_type <> 'SP'
+                  AND customer_id IN ($customerPlaceholders)
+                GROUP BY customer_id
+            ) latest
+                ON latest.customer_id = s.customer_id
+               AND latest.max_sid = s.service_id
+        ";
+        $stmt = $db->prepare($latestNonSpSql);
+        $stmt->execute($checklistCustomerIds);
+
+        $customerByLatestService = array();
+        $latestNonSpServiceIds = array();
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $latestServiceId = trim((string) ($row['service_id'] ?? ''));
+            if ($latestServiceId === '') {
+                continue;
+            }
+            $customerByLatestService[$latestServiceId] = trim((string) ($row['customer_id'] ?? ''));
+            $latestNonSpServiceIds[] = $latestServiceId;
+        }
+
+        if (!empty($latestNonSpServiceIds)) {
+            $servicePlaceholders = implode(',', array_fill(0, count($latestNonSpServiceIds), '?'));
+            $nextDueSql = "
+                SELECT service_id, action, due_date
+                FROM ca_service_dates
+                WHERE service_id IN ($servicePlaceholders)
+                  AND TRIM(action) IN (
+                      'Suspension Letter',
+                      'Suspend Letter',
+                      'Expire Letter'
+                  )
+            ";
+            $stmt = $db->prepare($nextDueSql);
+            $stmt->execute($latestNonSpServiceIds);
+
+            $dueDatesByAction = array();
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $serviceId = trim((string) ($row['service_id'] ?? ''));
+                if (!isset($customerByLatestService[$serviceId])) {
+                    continue;
+                }
+                $customerId = $customerByLatestService[$serviceId];
+                $dueDatesByAction[$customerId][trim((string) ($row['action'] ?? ''))] = $row['due_date'] ?? '';
+            }
+
+            foreach ($dueDatesByAction as $customerId => $dueDates) {
+                $nextDueDateByCustomer[$customerId] = !empty($dueDates['Suspension Letter'])
+                    ? $dueDates['Suspension Letter']
+                    : (!empty($dueDates['Suspend Letter'])
+                        ? $dueDates['Suspend Letter']
+                        : ($dueDates['Expire Letter'] ?? ''));
+            }
+        }
+    }
     ?>
 
     <div id="page-content-wrapper">
@@ -301,8 +408,8 @@
                         <i class="fa fa-clipboard"></i>
                     </div>
                     <div class="ac-header-text">
-                        <h1>Auditor Checklist</h1>
-                        <p>Comprehensive audit records across all clients and auditors</p>
+                        <h1>Audit Data</h1>
+                        <p>Audt records across all clients and auditors</p>
                     </div>
                 </div>
                 <div class="ac-header-stats">
@@ -332,10 +439,11 @@
                         <label for="filterServiceType"><i class="fa fa-cogs"></i> Service Type</label>
                         <select id="filterServiceType" class="ac-filter-select">
                             <option value="">All Service Types</option>
-                            <?php foreach ($serviceTypeList as $stype) { 
+                            <?php foreach ($serviceTypeList as $stype) {
                                 $sTypeName = htmlspecialchars($stype['service_type'] ?? '');
-                                if ($sTypeName === '') continue;
-                            ?>
+                                if ($sTypeName === '')
+                                    continue;
+                                ?>
                                 <option value="<?php echo strtolower($sTypeName); ?>">
                                     <?php echo $sTypeName; ?>
                                 </option>
@@ -352,7 +460,7 @@
 
                     <!-- Filter by IAF/NACE -->
                     <div class="ac-filter-item">
-                        <label for="filterIafNace"><i class="fa fa-tags"></i> IAF/NACE</label>
+                        <label for="filterIafNace"><i class="fa fa-tags"></i> NACE</label>
                         <input type="text" id="filterIafNace" class="ac-filter-input"
                             placeholder="Type IAF/NACE code..." autocomplete="off">
                     </div>
@@ -429,10 +537,12 @@
                                 <th class="ac-th-orig-reg">Original Registration Date</th>
                                 <th class="ac-th-accred">Accreditation</th>
                                 <th class="ac-th-scope">Scope</th>
-                                <th class="ac-th-iaf">IAF/NACE</th>
+                                <th class="ac-th-iaf">NACE</th>
                                 <th class="ac-th-auditor">Auditor Name</th>
                                 <th class="ac-th-type">Service Type</th>
                                 <th class="ac-th-date">Audit Date</th>
+                                <th class="ac-th-next-due">Next Due Date</th>
+                                <th class="ac-th-next-type">Next Service Type</th>
                                 <th class="ac-th-status">Status</th>
                             </tr>
                         </thead>
@@ -472,13 +582,23 @@
                                 $rawDate = $record['audit_date'] ?? '';
                                 $auditDate = ($rawDate && $rawDate !== '0000-00-00') ? date('d.m.Y', strtotime($rawDate)) : '-';
 
+                                $rawNextDueDate = $nextDueDateByCustomer[$clientId] ?? '';
+                                $nextDueDate = ($rawNextDueDate && $rawNextDueDate !== '0000-00-00')
+                                    ? simpleDateConversion($rawNextDueDate)
+                                    : '-';
+                                $nextServiceType = htmlspecialchars(trim((string) ($record['next_service'] ?? '')), ENT_QUOTES, 'UTF-8');
+
                                 $rawOrigRegDate = $record['original_registration_date'] ?? '';
                                 $origRegDate = ($rawOrigRegDate && $rawOrigRegDate !== '0000-00-00') ? date('d.m.Y', strtotime($rawOrigRegDate)) : '-';
 
                                 // Accreditation from preloaded map (per customer)
                                 $accreditation = isset($accredMap[$clientId]) ? htmlspecialchars($accredMap[$clientId]) : '-';
 
-                                $clientStatus = htmlspecialchars($record['client_status'] ?? '');
+                                $clientStatus = htmlspecialchars(
+                                    acNormalizeStatus($record['client_status'] ?? ''),
+                                    ENT_QUOTES,
+                                    'UTF-8'
+                                );
 
                                 // Status badge class
                                 $statusClass = 'ac-status-default';
@@ -556,6 +676,10 @@
                                             class="ac-type-badge <?php echo $typeClass; ?>"><?php echo $auditType; ?></span>
                                     </td>
                                     <td class="ac-td-date"><?php echo $auditDate; ?></td>
+                                    <td class="ac-td-next-due"><?php echo $nextDueDate; ?></td>
+                                    <td class="ac-td-next-type">
+                                        <?php echo $nextServiceType !== '' ? $nextServiceType : '-'; ?>
+                                    </td>
                                     <td class="ac-td-status"><span
                                             class="ac-status-badge <?php echo $statusClass; ?>"><?php echo $clientStatus ?: '-'; ?></span>
                                     </td>
@@ -917,7 +1041,7 @@
     /* ── Data Table ── */
     .ac-table {
         width: 100%;
-        min-width: 1400px;
+        min-width: 1650px;
         border-collapse: separate;
         border-spacing: 0;
         font-size: 13px;
@@ -989,6 +1113,12 @@
 
     .ac-th-date {
         min-width: 110px;
+    }
+
+    .ac-th-next-due,
+    .ac-th-next-type {
+        min-width: 130px;
+        text-align: center;
     }
 
     .ac-th-status {
@@ -1064,6 +1194,12 @@
 
     .ac-td-type {
         text-align: center;
+    }
+
+    .ac-td-next-due,
+    .ac-td-next-type {
+        text-align: center;
+        font-size: 12px;
     }
 
     .ac-td-status {
@@ -1516,7 +1652,7 @@
 
             var rows = document.querySelectorAll('#auditorChecklistBody tr.ac-data-row');
             var container = document.getElementById('auditorChecklistBody');
-            
+
             // Detach table body to prevent layout thrashing
             container.style.display = 'none';
 
@@ -1560,7 +1696,7 @@
         function debounceApplyFilters() {
             $resultCount.html('<i class="fa fa-spinner fa-spin"></i> Filtering records...');
             clearTimeout(filterTimer);
-            filterTimer = setTimeout(function() {
+            filterTimer = setTimeout(function () {
                 applyFilters();
             }, 250);
         }
@@ -1617,6 +1753,8 @@
                 auditor: cleanExportText($row.find('.ac-td-auditor').text()),
                 audit_type: cleanExportText($row.find('.ac-td-type').text()),
                 audit_date: cleanExportText($row.find('.ac-td-date').text()),
+                next_due_date: cleanExportText($row.find('.ac-td-next-due').text()),
+                next_service_type: cleanExportText($row.find('.ac-td-next-type').text()),
                 status: cleanExportText($row.find('.ac-td-status').text())
             };
         }
