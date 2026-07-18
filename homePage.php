@@ -147,7 +147,7 @@
         'Suspended'            => 'orange',
         'Expired'              => 'red',
         'Withdrawn'            => 'grey',
-        'Application canceled' => 'slate',
+        'Application canceled' => 'red',
         'No Status'            => 'slate',
     );
     $statusPriority = array('New Enquiry', 'Contract-Review', 'In-process', 'Active', 'Withdrawn', 'Suspended', 'Expired', 'Application canceled');
@@ -748,7 +748,7 @@
                                     $normStatus = hpDerivedStatus($customer, $serviceMap);
                                     $statusColor = isset($statusColorMap[$normStatus]) ? $statusColorMap[$normStatus] : 'slate';
                                     ?>
-                                    <tr id='addr<?php echo $customer['id'] ?>' data-status="<?php echo htmlspecialchars($normStatus, ENT_QUOTES) ?>" class="<?php echo ($customer['audit_status'] === 'Application canceled') ? 'canceled-row' : ''; ?>">
+                                    <tr id='addr<?php echo $customer['id'] ?>' data-status="<?php echo htmlspecialchars($normStatus, ENT_QUOTES) ?>">
                                         <td data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
                                             <small><?php echo $count ?></small>
                                         </td>
@@ -758,13 +758,13 @@
                                         <td class="customerAccount" data-id="<?php echo $customer['id'] ?>" data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
                                             <small><a ><?php echo $customer['certification_date'] ?></a></small>
                                         </td>
-                                        <td class="customerAccount<?php echo ($customer['audit_status'] === 'Application canceled') ? ' canceled-status-cell' : ''; ?>" data-id="<?php echo $customer['id'] ?>" data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                        <td class="customerAccount" data-id="<?php echo $customer['id'] ?>" data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
                                             <small><a ><?php echo $customer['customer_name'] ?></a></small>
                                         </td>
                                         <td class="customerAccount" data-id="<?php echo $customer['id'] ?>" data-name="desc" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
                                             <small><?php echo $customer['contact_person'] ?></small>
                                         </td>
-                                        <td class="customerAccount<?php echo ($customer['audit_status'] === 'Application canceled') ? ' canceled-status-cell' : ''; ?>" data-id="<?php echo $customer['id'] ?>" data-name="desc" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                        <td class="customerAccount" data-id="<?php echo $customer['id'] ?>" data-name="desc" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
                                             <small><span class="hp-badge hp-c-<?php echo $statusColor ?>"><?php echo htmlspecialchars($normStatus); ?><?php if($normStatus === "In-process" && !empty($serviceInfo["service_type"])) echo ' ('. htmlspecialchars($serviceInfo["service_type"]).')'; ?></span></small>
                                         </td>
                                         <td class="customerAccount" data-id="<?php echo $customer['id'] ?>" data-name="sel" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">

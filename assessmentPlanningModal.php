@@ -297,7 +297,8 @@ foreach ($auditors as $name) {
                                     <option value="">Choose Lead Auditors</option>
                                     <?php foreach ($auditors as $name) { ?>
                                         <option value="<?php echo $name['auditor_name'] ?>">
-                                            <?php echo $name['auditor_name'] ?></option>
+                                            <?php echo $name['auditor_name'] ?>
+                                        </option>
                                     <?php } ?>
                                 </select>
                             </div>
@@ -321,7 +322,8 @@ foreach ($auditors as $name) {
                                     <option value="">Choose Auditors</option>
                                     <?php foreach ($auditors as $name) { ?>
                                         <option value="<?php echo $name['auditor_name'] ?>">
-                                            <?php echo $name['auditor_name'] ?></option>
+                                            <?php echo $name['auditor_name'] ?>
+                                        </option>
                                     <?php } ?>
                                 </select>
                             </div>
