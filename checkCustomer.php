@@ -11,10 +11,11 @@ include_once './dbConnect.php';
 include_once './include/certification_cycle_helper.php';
 date_default_timezone_set('Asia/Kolkata');
 
-function getNextAllotmentSequence($db, $customerId, $year, $month) {
-    $month = str_pad((int)$month, 2, '0', STR_PAD_LEFT);
-    $year = (string)(int)$year;
-    $monthName = date('M', mktime(0, 0, 0, (int)$month, 1));
+function getNextAllotmentSequence($db, $customerId, $year, $month)
+{
+    $month = str_pad((int) $month, 2, '0', STR_PAD_LEFT);
+    $year = (string) (int) $year;
+    $monthName = date('M', mktime(0, 0, 0, (int) $month, 1));
     $yy = substr($year, -2);
     $monthPrefix = 'AITF/' . $monthName . '-' . $yy . '/%';
 
@@ -23,19 +24,19 @@ function getNextAllotmentSequence($db, $customerId, $year, $month) {
     $sql1 = "SELECT MAX(CAST(client_count AS UNSIGNED)) as max_count FROM allotment_count WHERE year = :year AND CAST(month AS UNSIGNED) = :month";
     $stmt1 = $db->prepare($sql1);
     $stmt1->bindParam(':year', $year);
-    $monthIntForCount = (int)$month;
+    $monthIntForCount = (int) $month;
     $stmt1->bindParam(':month', $monthIntForCount, PDO::PARAM_INT);
     $stmt1->execute();
     $row1 = $stmt1->fetch(PDO::FETCH_ASSOC);
     if ($row1 && $row1['max_count'] !== null) {
-        $maxCountFromAllotment = (int)$row1['max_count'];
+        $maxCountFromAllotment = (int) $row1['max_count'];
     }
 
     // 2. Get max sequence from certification_aggrement for the same Agreement month/year.
     $maxCountFromAgreement = 0;
     $sql2 = "SELECT aggrement_no FROM certification_aggrement WHERE YEAR(aggrement_date) = :year AND MONTH(aggrement_date) = :month AND aggrement_no LIKE :prefix";
     $stmt2 = $db->prepare($sql2);
-    $monthInt = (int)$month;
+    $monthInt = (int) $month;
     $stmt2->bindParam(':year', $year);
     $stmt2->bindParam(':month', $monthInt, PDO::PARAM_INT);
     $stmt2->bindParam(':prefix', $monthPrefix);
@@ -44,7 +45,7 @@ function getNextAllotmentSequence($db, $customerId, $year, $month) {
     foreach ($rows2 as $row2) {
         $agNo = $row2['aggrement_no'];
         if ($agNo && preg_match('/^AITF\/' . preg_quote($monthName, '/') . '-' . preg_quote($yy, '/') . '\/(\d+)(?:\s+Rc-\d+)?$/i', $agNo, $matches)) {
-            $seq = (int)$matches[1];
+            $seq = (int) $matches[1];
             if ($seq > $maxCountFromAgreement) {
                 $maxCountFromAgreement = $seq;
             }
@@ -56,14 +57,14 @@ function getNextAllotmentSequence($db, $customerId, $year, $month) {
     // Loop to ensure candidate number doesn't match any existing allotment number
     while (true) {
         $candidateNo = 'AITF/' . $monthName . '-' . $yy . '/' . $candidate;
-        
+
         $sqlCheck = "SELECT COUNT(*) as count FROM certification_aggrement WHERE aggrement_no = :no";
         $stmtCheck = $db->prepare($sqlCheck);
         $stmtCheck->bindParam(':no', $candidateNo);
         $stmtCheck->execute();
         $resCheck = $stmtCheck->fetch();
-        
-        if (!$resCheck || (int)$resCheck['count'] === 0) {
+
+        if (!$resCheck || (int) $resCheck['count'] === 0) {
             break; // Unique!
         }
         $candidate++;
@@ -84,7 +85,7 @@ if (isset($_POST['customerEmail']) && !empty($_POST['customerEmail'])) {
             echo 0;
         }
     } catch (Exception $ex) {
-        
+
     }
 } else if (isset($_GET['customerName']) && !empty($_GET['customerName']) && isset($_GET["customerphone"]) && !empty($_GET["customerphone"])) {
     try {
@@ -98,7 +99,7 @@ if (isset($_POST['customerEmail']) && !empty($_POST['customerEmail'])) {
             echo 0;
         }
     } catch (Exception $ex) {
-        
+
     }
 } else if (isset($_GET["contactNo"]) && !empty($_GET["contactNo"]) && isset($_GET["customername"]) && !empty($_GET["customername"])) {
     try {
@@ -112,7 +113,7 @@ if (isset($_POST['customerEmail']) && !empty($_POST['customerEmail'])) {
             echo 0;
         }
     } catch (Exception $ex) {
-        
+
     }
 } else if (isset($_POST['taxcation']) && !empty($_POST['taxcation'])) {
     try {
@@ -126,7 +127,7 @@ if (isset($_POST['customerEmail']) && !empty($_POST['customerEmail'])) {
             echo 0;
         }
     } catch (Exception $ex) {
-        
+
     }
 } else if (isset($_POST['auditor']) && !empty($_POST['auditor'])) {
     try {
@@ -140,7 +141,7 @@ if (isset($_POST['customerEmail']) && !empty($_POST['customerEmail'])) {
             echo 0;
         }
     } catch (Exception $ex) {
-        
+
     }
 } else if (isset($_GET["nextDate"]) && !empty($_GET["nextDate"])) {
     try {
@@ -153,7 +154,7 @@ if (isset($_POST['customerEmail']) && !empty($_POST['customerEmail'])) {
         $clientCount = "SELECT client_count, certification_date FROM allotment_count WHERE year= :year and CAST(month AS UNSIGNED) = :month ORDER BY CAST(client_count AS UNSIGNED) DESC LIMIT 1";
         $statement = $db->prepare($clientCount);
         $statement->bindParam(":year", $year);
-        $monthInt = (int)$month;
+        $monthInt = (int) $month;
         $statement->bindParam(":month", $monthInt, PDO::PARAM_INT);
         $statement->execute();
         $count = $statement->fetch();
@@ -162,7 +163,7 @@ if (isset($_POST['customerEmail']) && !empty($_POST['customerEmail'])) {
             echo "1";
         } else {
             $date = date("Y-m-d", strtotime($_GET["nextDate"]));
-//         $custid="select customer_id from service where service_id = :id";
+            //         $custid="select customer_id from service where service_id = :id";
 //         $statement = $db->prepare($custid);
 //            $statement->bindParam(":id", $_GET["serviceid"]);
 //            $statement->execute();
@@ -182,7 +183,7 @@ if (isset($_POST['customerEmail']) && !empty($_POST['customerEmail'])) {
                 }
             }
 
-         
+
             $auditReviewDate = "SELECT review_date FROM audit_application where uni_svc_id = :id";
             $statement = $db->prepare($auditReviewDate);
             $statement->bindParam(":id", $max);
@@ -195,17 +196,17 @@ if (isset($_POST['customerEmail']) && !empty($_POST['customerEmail'])) {
             }
         }
     } catch (Exception $e) {
-        
+
     }
 } else if (isset($_GET["checkServiceType"]) && $_GET["checkServiceType"] == "true" && isset($_GET["serviceid"])) {
     // Check if a service is an RC/CR/CA type
     // Note: serviceid could be cr_id, ca_id, rc_id, etc.
     try {
         error_log("🔍 checkServiceType called for service_id: " . $_GET["serviceid"]);
-        
+
         // Try to find the service type by checking all service type tables
         $serviceType = null;
-        
+
         // Check service_type_cr table
         $crSql = "SELECT s.service_type FROM service_type_cr cr 
                   INNER JOIN service s ON cr.service = s.service_id 
@@ -214,10 +215,10 @@ if (isset($_POST['customerEmail']) && !empty($_POST['customerEmail'])) {
         $statement->bindParam(':sid', $_GET["serviceid"]);
         $statement->execute();
         $result = $statement->fetch();
-        
+
         if ($result && isset($result['service_type'])) {
             $serviceType = $result['service_type'];
-            error_log("✅ Found in CR table, service_type: " . $serviceType);
+            error_log(" Found in CR table, service_type: " . $serviceType);
         } else {
             // Check service_type_ca table
             $caSql = "SELECT s.service_type FROM service_type_ca ca 
@@ -227,7 +228,7 @@ if (isset($_POST['customerEmail']) && !empty($_POST['customerEmail'])) {
             $statement->bindParam(':sid', $_GET["serviceid"]);
             $statement->execute();
             $result = $statement->fetch();
-            
+
             if ($result && isset($result['service_type'])) {
                 $serviceType = $result['service_type'];
                 error_log("✅ Found in CA table, service_type: " . $serviceType);
@@ -240,40 +241,40 @@ if (isset($_POST['customerEmail']) && !empty($_POST['customerEmail'])) {
                 $statement->bindParam(':sid', $_GET["serviceid"]);
                 $statement->execute();
                 $result = $statement->fetch();
-                
+
                 if ($result && isset($result['service_type'])) {
                     $serviceType = $result['service_type'];
-                    error_log("✅ Found in RC table, service_type: " . $serviceType);
+                    error_log(" Found in RC table, service_type: " . $serviceType);
                 }
             }
         }
-        
+
         if ($serviceType) {
             echo json_encode(array('service_type' => $serviceType));
         } else {
-            error_log("❌ Service not found in any service_type table with ID: " . $_GET["serviceid"]);
+            error_log(" Service not found in any service_type table with ID: " . $_GET["serviceid"]);
             echo json_encode(array('service_type' => null, 'error' => 'Service not found', 'service_id_checked' => $_GET["serviceid"]));
         }
     } catch (Exception $ex) {
-        error_log("❌ Exception in checkServiceType: " . $ex->getMessage());
+        error_log(" Exception in checkServiceType: " . $ex->getMessage());
         echo json_encode(array('service_type' => null, 'error' => $ex->getMessage()));
     }
 } else if (isset($_GET["checkPreviousServices"]) && $_GET["checkPreviousServices"] == "true" && isset($_GET["customerId"]) && isset($_GET["serviceid"])) {
     // Check if customer has previous CA/SA services
     // Note: serviceid could be cr_id, ca_id, rc_id, etc., need to get actual service_id
     try {
-        error_log("🔍 checkPreviousServices called for customer: " . $_GET["customerId"] . ", serviceid: " . $_GET["serviceid"]);
-        
+        error_log(" checkPreviousServices called for customer: " . $_GET["customerId"] . ", serviceid: " . $_GET["serviceid"]);
+
         // First, get the actual service_id from the service_type table
         $actualServiceId = null;
-        
+
         // Check CR table
         $crSql = "SELECT service FROM service_type_cr WHERE cr_id = :sid";
         $statement = $db->prepare($crSql);
         $statement->bindParam(':sid', $_GET["serviceid"]);
         $statement->execute();
         $result = $statement->fetch();
-        
+
         if ($result && isset($result['service'])) {
             $actualServiceId = $result['service'];
         } else {
@@ -283,7 +284,7 @@ if (isset($_POST['customerEmail']) && !empty($_POST['customerEmail'])) {
             $statement->bindParam(':sid', $_GET["serviceid"]);
             $statement->execute();
             $result = $statement->fetch();
-            
+
             if ($result && isset($result['service'])) {
                 $actualServiceId = $result['service'];
             } else {
@@ -293,15 +294,15 @@ if (isset($_POST['customerEmail']) && !empty($_POST['customerEmail'])) {
                 $statement->bindParam(':sid', $_GET["serviceid"]);
                 $statement->execute();
                 $result = $statement->fetch();
-                
+
                 if ($result && isset($result['service'])) {
                     $actualServiceId = $result['service'];
                 }
             }
         }
-        
-        error_log("🔍 Actual service_id found: " . ($actualServiceId ? $actualServiceId : 'NONE'));
-        
+
+        error_log(" Actual service_id found: " . ($actualServiceId ? $actualServiceId : 'NONE'));
+
         if ($actualServiceId) {
             // Now check for previous CA/SA services
             $previousServiceSql = "SELECT COUNT(*) as service_count FROM service WHERE customer_id = :cid AND service_type IN ('CA', 'SA-I', 'SA-II') AND service_id < :current_sid";
@@ -310,17 +311,17 @@ if (isset($_POST['customerEmail']) && !empty($_POST['customerEmail'])) {
             $statement->bindParam(':current_sid', $actualServiceId);
             $statement->execute();
             $result = $statement->fetch();
-            
+
             $hasPrevious = ($result && $result['service_count'] > 0);
-            error_log("✅ Has previous CA/SA services: " . ($hasPrevious ? 'YES' : 'NO') . " (count: " . ($result['service_count'] ?? 0) . ")");
-            
+            error_log(" Has previous CA/SA services: " . ($hasPrevious ? 'YES' : 'NO') . " (count: " . ($result['service_count'] ?? 0) . ")");
+
             echo json_encode(array('has_previous' => $hasPrevious));
         } else {
-            error_log("❌ Could not find actual service_id for id: " . $_GET["serviceid"]);
+            error_log(" Could not find actual service_id for id: " . $_GET["serviceid"]);
             echo json_encode(array('has_previous' => false, 'error' => 'Service not found'));
         }
     } catch (Exception $ex) {
-        error_log("❌ Exception in checkPreviousServices: " . $ex->getMessage());
+        error_log(" Exception in checkPreviousServices: " . $ex->getMessage());
         echo json_encode(array('has_previous' => false, 'error' => $ex->getMessage()));
     }
 } else if (isset($_GET["getBaseAllotment"]) && $_GET["getBaseAllotment"] == "true" && isset($_GET["customerId"]) && isset($_GET["serviceid"])) {
@@ -332,10 +333,10 @@ if (isset($_POST['customerEmail']) && !empty($_POST['customerEmail'])) {
         $statement->bindParam(':cid', $_GET["customerId"]);
         $statement->execute();
         $baseResult = $statement->fetch();
-        
+
         if ($baseResult && !empty($baseResult['aggrement_no'])) {
             $baseAllotment = $baseResult['aggrement_no'];
-            
+
             // ROBUST RC COUNT: Find the highest existing RC suffix in saved certification agreements
             $existingRcSql = "SELECT aggrement_no FROM certification_aggrement 
                              WHERE customer_id = :cid 
@@ -347,7 +348,7 @@ if (isset($_POST['customerEmail']) && !empty($_POST['customerEmail'])) {
             $statement->bindParam(':pattern', $pattern);
             $statement->execute();
             $existingRcAgreements = $statement->fetchAll();
-            
+
             // Extract the highest RC number from existing agreements
             $maxRcNumber = 0;
             foreach ($existingRcAgreements as $agreement) {
@@ -358,10 +359,10 @@ if (isset($_POST['customerEmail']) && !empty($_POST['customerEmail'])) {
                     }
                 }
             }
-            
+
             // Next RC will be highest existing + 1, or 1 if no RC agreements exist yet
             $rcCount = $maxRcNumber + 1;
-            
+
             echo json_encode(array(
                 'base_allotment' => $baseAllotment,
                 'rc_count' => $rcCount
@@ -404,7 +405,7 @@ if (isset($_POST['customerEmail']) && !empty($_POST['customerEmail'])) {
             echo json_encode(array("no deta"));
         }
     } catch (Exception $e) {
-        
+
     }
 } else if (isset($_GET["certId"]) && !empty($_GET["certId"]) && isset($_GET["svceid"]) && !empty($_GET["svceid"])) {
     try {
@@ -429,7 +430,7 @@ if (isset($_POST['customerEmail']) && !empty($_POST['customerEmail'])) {
             echo "1";
         }
     } catch (Exception $e) {
-        
+
     }
 } else if (isset($_GET["assessmentDate"]) && !empty($_GET["assessmentDate"]) && isset($_GET["svcid"]) && !empty($_GET["svcid"])) {
     try {
@@ -443,20 +444,20 @@ if (isset($_POST['customerEmail']) && !empty($_POST['customerEmail'])) {
             echo "1";
         }
     } catch (Exception $e) {
-        
+
     }
 } else if (isset($_GET["intimationDate"]) && !empty($_GET["intimationDate"]) && isset($_GET["svc_id"]) && !empty($_GET["svc_id"])) {
     try {
         //		echo $_GET["svc_id"].$_GET["intimationDate"];
         $date = date("Y-m-d", strtotime($_GET["intimationDate"]));
-        
+
         // Check service type
         $serviceTypeQuery = "SELECT service_type FROM service WHERE service_id = :svc";
         $stmt = $db->prepare($serviceTypeQuery);
         $stmt->bindParam(":svc", $_GET["svc_id"]);
         $stmt->execute();
         $serviceData = $stmt->fetch();
-        
+
         // For SA-I (SA-01) and SA-II (SA-02), check against information updation review date
         if (isset($serviceData["service_type"]) && ($serviceData["service_type"] == 'SA-I' || $serviceData["service_type"] == 'SA-II')) {
             // For SA-I (SA-01) and SA-II (SA-02) types, check information updation review date
@@ -465,7 +466,7 @@ if (isset($_POST['customerEmail']) && !empty($_POST['customerEmail'])) {
             $statement->bindParam(":svc", $_GET["svc_id"]);
             $statement->execute();
             $reviewDate = $statement->fetch();
-            
+
             if ($reviewDate && $reviewDate["review_date"] > $date) {
                 echo "1";
             }
@@ -482,7 +483,7 @@ if (isset($_POST['customerEmail']) && !empty($_POST['customerEmail'])) {
             }
         }
     } catch (Exception $e) {
-        
+
     }
 } else if (isset($_GET["reviewDate"]) && !empty($_GET["reviewDate"]) && isset($_GET["svcId"]) && !empty($_GET["svcId"])) {
     try {
@@ -496,12 +497,12 @@ if (isset($_POST['customerEmail']) && !empty($_POST['customerEmail'])) {
         foreach ($aspectDate as $dates) {
             $dateval = date("Y-m-d", strtotime($dates));
         }
-//        echo $dateval;
+        //        echo $dateval;
         if ($dateval > $date) {
             echo "1";
         }
     } catch (Exception $e) {
-        
+
     }
 } else if (isset($_GET["intimationDateii"]) && !empty($_GET["intimationDateii"]) && isset($_GET["notisvcId"]) && !empty($_GET["notisvcId"])) {
     try {
@@ -515,17 +516,17 @@ if (isset($_POST['customerEmail']) && !empty($_POST['customerEmail'])) {
         $lastDate = $dates[count($dates) - 1];
         $lastDate = DateTime::createFromFormat('d.m.Y', $lastDate);
 
-// Format the date as YYYY-MM-DD
-$lastDate = $lastDate->format('Y-m-d');
+        // Format the date as YYYY-MM-DD
+        $lastDate = $lastDate->format('Y-m-d');
         if ($lastDate > $date) {
             echo "1";
         }
     } catch (Exception $e) {
-        
+
     }
 } else if (isset($_GET["reviewDateAnnex"]) && !empty($_GET["reviewDateAnnex"]) && isset($_GET["service_Id"]) && !empty($_GET["service_Id"])) {
     try {
-//		echo $_GET["service_Id"];
+        //		echo $_GET["service_Id"];
         $date = date("Y-m-d", strtotime($_GET["reviewDateAnnex"]));
         $revDate = "SELECT scheduleii_date FROM audit_scheduleii_id WHERE ca_service = :svc";
         $statement = $db->prepare($revDate);
@@ -556,7 +557,7 @@ $lastDate = $lastDate->format('Y-m-d');
             }
         }
     } catch (Exception $e) {
-        
+
     }
 } else if (isset($_GET["periodicalaudit"]) && !empty($_GET["periodicalaudit"]) && isset($_GET["clientId"]) && !empty($_GET["clientId"])) {
     try {
@@ -623,7 +624,7 @@ $lastDate = $lastDate->format('Y-m-d');
             echo "1";
         }
     } catch (Exception $ex) {
-        
+
     }
 } else if (isset($_GET["certifyRegistrationDate"]) && !empty($_GET["certifyRegistrationDate"]) && isset($_GET["certifyServiceId"]) && !empty($_GET["certifyServiceId"])) {
     try {
@@ -646,7 +647,7 @@ $lastDate = $lastDate->format('Y-m-d');
             echo "1";
         }
     } catch (Exception $ex) {
-        
+
     }
 } else if (isset($_GET["certifyValidTill"]) && !empty($_GET["certifyValidTill"]) && isset($_GET["certifyService_Id"]) && !empty($_GET["certifyService_Id"])) {
     try {
@@ -669,7 +670,7 @@ $lastDate = $lastDate->format('Y-m-d');
             echo "1";
         }
     } catch (Exception $ex) {
-        
+
     }
 } else if (isset($_GET["certifyBeforeDate"]) && !empty($_GET["certifyBeforeDate"]) && isset($_GET["certifyService_ID"]) && !empty($_GET["certifyService_ID"])) {
     try {
@@ -692,7 +693,7 @@ $lastDate = $lastDate->format('Y-m-d');
             echo "1";
         }
     } catch (Exception $ex) {
-        
+
     }
 } else if (isset($_GET["survayAuditDates"]) && !empty($_GET["survayAuditDates"]) && isset($_GET["survayService_ID"]) && !empty($_GET["survayService_ID"])) {
     try {
@@ -706,7 +707,7 @@ $lastDate = $lastDate->format('Y-m-d');
             echo "1";
         }
     } catch (Exception $ex) {
-        
+
     }
 } else if (isset($_GET["controlFormat1CertDate"]) && !empty($_GET["controlFormat1CertDate"]) && isset($_GET["cf1Service_ID"]) && !empty($_GET["cf1Service_ID"])) {
     try {
@@ -720,7 +721,7 @@ $lastDate = $lastDate->format('Y-m-d');
             echo "1";
         }
     } catch (Exception $ex) {
-        
+
     }
 } else if (isset($_GET["controlFormat2CertDate"]) && !empty($_GET["controlFormat2CertDate"]) && isset($_GET["cf2Service_ID"]) && !empty($_GET["cf2Service_ID"])) {
     try {
@@ -734,7 +735,7 @@ $lastDate = $lastDate->format('Y-m-d');
             echo "1";
         }
     } catch (Exception $ex) {
-        
+
     }
 } else if (isset($_GET["rev_Datecdc"]) && !empty($_GET["rev_Datecdc"]) && isset($_GET["servic_ID"]) && !empty($_GET["servic_ID"]) && isset($_GET["uni_svc"]) && !empty($_GET["uni_svc"]) && isset($_GET["customer"]) && !empty($_GET["customer"])) {
     $secondMaxSvc = "SELECT MAX(service_id) as id FROM `service` WHERE service_type = 'SA-II' AND customer_id = :cust";
@@ -742,15 +743,15 @@ $lastDate = $lastDate->format('Y-m-d');
     $statement->bindParam(":cust", $_GET['customer']);
     $statement->execute();
     $maxid = $statement->fetch();
-    
+
     $expdate = "SELECT due_date FROM `ca_service_dates` WHERE `service_id` = :id AND action = 'Expire Letter'";
     $statement = $db->prepare($expdate);
     $statement->bindParam(":id", $maxid['id']);
     $statement->execute();
     $expdate = $statement->fetch();
-    
+
     date("Y-m-d", strtotime($_GET["rev_Datecdc"]));
-    if(date("Y-m-d", strtotime($_GET["rev_Datecdc"])) > $expdate["due_date"]){
+    if (date("Y-m-d", strtotime($_GET["rev_Datecdc"])) > $expdate["due_date"]) {
         echo "1";
     } else {
         echo "0";
@@ -761,16 +762,16 @@ $lastDate = $lastDate->format('Y-m-d');
         $currentDate = date('Y-m-d');
         $currentMonth = date('m');
         $currentYear = date('Y');
-        
+
         // Get the highest counter for current month/year using helper
         $newCounter = getNextAllotmentSequence($db, null, $currentYear, $currentMonth);
-        
+
         // Format the allotment number: AITF/Mon-YY/Counter
         $monthName = date('M', mktime(0, 0, 0, intval($currentMonth), 1));
         $year = date('y'); // 2-digit year
-        
+
         $allotmentNumber = 'AITF/' . $monthName . '-' . $year . '/' . $newCounter;
-        
+
         echo json_encode(array(
             'success' => true,
             'allotmentNumber' => $allotmentNumber,
