@@ -14,7 +14,7 @@
     $auditDateConflictVisible = aitfCustomerFeatureIsEnabled($db, 'audit_date_conflict_visible');
     $auditMemberConflictVisible = aitfCustomerFeatureIsEnabled($db, 'audit_member_conflict_visible');
 
-//    $marketingInfo = "SELECT distinct ci.id, customer_name, unique_id, audit_status, address, contact, email_id, scope, aif_nace, comment, certification_stage_date, add_to, cas.ca_id, service_ca_status, cas.customer_id, saia.sai_id, saia.customer_id,saia.service_sai_status, saiis.saii_id, saiis.customer_id, saiis.service_saii_ststus, rcs.rc_id, rcs.rc_customer, rcs.service_rc_status, sps.sp_id, sps.sp_customer, sps.service_sp_status FROM customer_info ci left join service_type_ca cas on ci.id = cas.customer_id left join service_type_sai saia on ci.id = saia.customer_id left join service_type_saii saiis on ci.id = saiis.customer_id left join service_type_rc rcs on ci.id = rcs.rc_customer left join service_type_sp sps on ci.id = sps.sp_customer WHERE ((cas.service_ca_status = 'Marketing' and cas.ca_id = (select max(tmp.ca_id) from service_type_ca tmp where tmp.customer_id = ci.id)) or (saia.service_sai_status = 'Marketing' and saia.sai_id = (select max(tmp1.sai_id) from service_type_sai tmp1 where tmp1.customer_id = ci.id) ) or (saiis.service_saii_ststus = 'Marketing' and saiis.saii_id = (select max(tmp2.saii_id) from service_type_saii tmp2 where tmp2.customer_id = ci.id)) or (rcs.service_rc_status = 'Marketing' and rcs.rc_id = (select max(tmp3.rc_id) from service_type_rc tmp3 where tmp3.rc_customer = ci.id) ) or (sps.service_sp_status = 'Marketing' and sps.sp_id = (select max(tmp4.sp_id) from service_type_sp tmp4 where tmp4.sp_customer = ci.id)) )";
+    //    $marketingInfo = "SELECT distinct ci.id, customer_name, unique_id, audit_status, address, contact, email_id, scope, aif_nace, comment, certification_stage_date, add_to, cas.ca_id, service_ca_status, cas.customer_id, saia.sai_id, saia.customer_id,saia.service_sai_status, saiis.saii_id, saiis.customer_id, saiis.service_saii_ststus, rcs.rc_id, rcs.rc_customer, rcs.service_rc_status, sps.sp_id, sps.sp_customer, sps.service_sp_status FROM customer_info ci left join service_type_ca cas on ci.id = cas.customer_id left join service_type_sai saia on ci.id = saia.customer_id left join service_type_saii saiis on ci.id = saiis.customer_id left join service_type_rc rcs on ci.id = rcs.rc_customer left join service_type_sp sps on ci.id = sps.sp_customer WHERE ((cas.service_ca_status = 'Marketing' and cas.ca_id = (select max(tmp.ca_id) from service_type_ca tmp where tmp.customer_id = ci.id)) or (saia.service_sai_status = 'Marketing' and saia.sai_id = (select max(tmp1.sai_id) from service_type_sai tmp1 where tmp1.customer_id = ci.id) ) or (saiis.service_saii_ststus = 'Marketing' and saiis.saii_id = (select max(tmp2.saii_id) from service_type_saii tmp2 where tmp2.customer_id = ci.id)) or (rcs.service_rc_status = 'Marketing' and rcs.rc_id = (select max(tmp3.rc_id) from service_type_rc tmp3 where tmp3.rc_customer = ci.id) ) or (sps.service_sp_status = 'Marketing' and sps.sp_id = (select max(tmp4.sp_id) from service_type_sp tmp4 where tmp4.sp_customer = ci.id)) )";
     $marketingInfo = "SELECT ci.id, customer_name, unique_id, audit_status, address, contact, email_id, scope, aif_nace, next_service, svc.service_id, service_type, service_status, audit_date FROM customer_info ci left join service svc on ci.id = svc.customer_id where svc.audit_date is not null ORDER BY audit_date DESC";
     $statement = $db->prepare($marketingInfo);
     $statement->execute();
@@ -32,7 +32,12 @@
 
     // Batch preload service subtype data to avoid per-row queries
     $serviceIdsByType = [
-        'CA' => [], 'SA-I' => [], 'SA-II' => [], 'RC' => [], 'SP' => [], 'TA' => []
+        'CA' => [],
+        'SA-I' => [],
+        'SA-II' => [],
+        'RC' => [],
+        'SP' => [],
+        'TA' => []
     ];
     foreach ($allMarketingInfo as $row) {
         if (isset($serviceIdsByType[$row['service_type']])) {
@@ -42,8 +47,9 @@
 
     $caMap = $saiMap = $saiiMap = $rcMap = $spMap = $taMap = [];
 
-    $loadMap = function($table, $serviceCol, $filterIds) use (&$db) {
-        if (empty($filterIds)) return [];
+    $loadMap = function ($table, $serviceCol, $filterIds) use (&$db) {
+        if (empty($filterIds))
+            return [];
         $ph = implode(',', array_fill(0, count($filterIds), '?'));
         $sql = "SELECT * FROM {$table} WHERE {$serviceCol} IN ($ph)";
         $stmt = $db->prepare($sql);
@@ -69,7 +75,8 @@
         array_column($rcMap, 'rc_id'),
         array_column($spMap, 'sp_id')
     );
-    $subtypeIds = array_filter($subtypeIds, function($v){ return $v !== null && $v !== ''; });
+    $subtypeIds = array_filter($subtypeIds, function ($v) {
+        return $v !== null && $v !== ''; });
 
     $cdcMap = [];
     if (!empty($subtypeIds)) {
@@ -216,26 +223,38 @@
     foreach ($allMarketingInfo as $marketingDetail) {
         if ($marketingDetail["service_type"] == "CA") {
             $auditDetails = isset($caMap[$marketingDetail['service_id']]) ? $caMap[$marketingDetail['service_id']] : null;
-            if (!$auditDetails) { continue; }
+            if (!$auditDetails) {
+                continue;
+            }
             auditPageAddAuditRow($auditorDateRows, $auditorDateMeta, $auditRowDetails, $marketingDetail, 'ST-1', isset($auditDetails["stage1_auditor"]) ? $auditDetails["stage1_auditor"] : '', isset($auditDetails["audit_date"]) ? $auditDetails["audit_date"] : '');
             if (!empty($auditDetails["stage2_audit"])) {
                 auditPageAddAuditRow($auditorDateRows, $auditorDateMeta, $auditRowDetails, $marketingDetail, 'ST-2', isset($auditDetails["stage2_auditor"]) ? $auditDetails["stage2_auditor"] : '', $auditDetails["stage2_audit"]);
             }
         } else if ($marketingDetail["service_type"] == "SA-I") {
             $auditDetails = isset($saiMap[$marketingDetail['service_id']]) ? $saiMap[$marketingDetail['service_id']] : null;
-            if ($auditDetails) { auditPageAddAuditRow($auditorDateRows, $auditorDateMeta, $auditRowDetails, $marketingDetail, 'SA-I', isset($auditDetails["auditors"]) ? $auditDetails["auditors"] : '', isset($auditDetails["audit_date"]) ? $auditDetails["audit_date"] : ''); }
+            if ($auditDetails) {
+                auditPageAddAuditRow($auditorDateRows, $auditorDateMeta, $auditRowDetails, $marketingDetail, 'SA-I', isset($auditDetails["auditors"]) ? $auditDetails["auditors"] : '', isset($auditDetails["audit_date"]) ? $auditDetails["audit_date"] : '');
+            }
         } else if ($marketingDetail["service_type"] == "SA-II") {
             $auditDetails = isset($saiiMap[$marketingDetail['service_id']]) ? $saiiMap[$marketingDetail['service_id']] : null;
-            if ($auditDetails) { auditPageAddAuditRow($auditorDateRows, $auditorDateMeta, $auditRowDetails, $marketingDetail, 'SA-II', isset($auditDetails["auditors"]) ? $auditDetails["auditors"] : '', isset($auditDetails["audit_date"]) ? $auditDetails["audit_date"] : ''); }
+            if ($auditDetails) {
+                auditPageAddAuditRow($auditorDateRows, $auditorDateMeta, $auditRowDetails, $marketingDetail, 'SA-II', isset($auditDetails["auditors"]) ? $auditDetails["auditors"] : '', isset($auditDetails["audit_date"]) ? $auditDetails["audit_date"] : '');
+            }
         } else if ($marketingDetail["service_type"] == "RC") {
             $auditDetails = isset($rcMap[$marketingDetail['service_id']]) ? $rcMap[$marketingDetail['service_id']] : null;
-            if ($auditDetails) { auditPageAddAuditRow($auditorDateRows, $auditorDateMeta, $auditRowDetails, $marketingDetail, 'RC', isset($auditDetails["auditors"]) ? $auditDetails["auditors"] : '', isset($auditDetails["audit_date"]) ? $auditDetails["audit_date"] : ''); }
+            if ($auditDetails) {
+                auditPageAddAuditRow($auditorDateRows, $auditorDateMeta, $auditRowDetails, $marketingDetail, 'RC', isset($auditDetails["auditors"]) ? $auditDetails["auditors"] : '', isset($auditDetails["audit_date"]) ? $auditDetails["audit_date"] : '');
+            }
         } else if ($marketingDetail["service_type"] == "SP") {
             $auditDetails = isset($spMap[$marketingDetail['service_id']]) ? $spMap[$marketingDetail['service_id']] : null;
-            if ($auditDetails) { auditPageAddAuditRow($auditorDateRows, $auditorDateMeta, $auditRowDetails, $marketingDetail, 'SP', isset($auditDetails["auditors"]) ? $auditDetails["auditors"] : '', isset($auditDetails["audit_date"]) ? $auditDetails["audit_date"] : ''); }
+            if ($auditDetails) {
+                auditPageAddAuditRow($auditorDateRows, $auditorDateMeta, $auditRowDetails, $marketingDetail, 'SP', isset($auditDetails["auditors"]) ? $auditDetails["auditors"] : '', isset($auditDetails["audit_date"]) ? $auditDetails["audit_date"] : '');
+            }
         } else if ($marketingDetail["service_type"] == "TA") {
             $auditDetails = isset($taMap[$marketingDetail['service_id']]) ? $taMap[$marketingDetail['service_id']] : null;
-            if ($auditDetails) { auditPageAddAuditRow($auditorDateRows, $auditorDateMeta, $auditRowDetails, $marketingDetail, 'TA', isset($auditDetails["auditors"]) ? $auditDetails["auditors"] : '', isset($auditDetails["audit_date"]) ? $auditDetails["audit_date"] : ''); }
+            if ($auditDetails) {
+                auditPageAddAuditRow($auditorDateRows, $auditorDateMeta, $auditRowDetails, $marketingDetail, 'TA', isset($auditDetails["auditors"]) ? $auditDetails["auditors"] : '', isset($auditDetails["audit_date"]) ? $auditDetails["audit_date"] : '');
+            }
         }
     }
 
@@ -270,35 +289,45 @@
     foreach ($allMarketingInfo as $marketingDetail) {
         $serviceId = $marketingDetail['service_id'];
         $subtypeId = null;
-        if ($marketingDetail["service_type"] == "CA" && isset($caMap[$serviceId])) $subtypeId = $caMap[$serviceId]['ca_id'];
-        if ($marketingDetail["service_type"] == "SA-I" && isset($saiMap[$serviceId])) $subtypeId = $saiMap[$serviceId]['sai_id'];
-        if ($marketingDetail["service_type"] == "SA-II" && isset($saiiMap[$serviceId])) $subtypeId = $saiiMap[$serviceId]['saii_id'];
-        if ($marketingDetail["service_type"] == "RC" && isset($rcMap[$serviceId])) $subtypeId = $rcMap[$serviceId]['rc_id'];
-        if ($marketingDetail["service_type"] == "SP" && isset($spMap[$serviceId])) $subtypeId = $spMap[$serviceId]['sp_id'];
+        if ($marketingDetail["service_type"] == "CA" && isset($caMap[$serviceId]))
+            $subtypeId = $caMap[$serviceId]['ca_id'];
+        if ($marketingDetail["service_type"] == "SA-I" && isset($saiMap[$serviceId]))
+            $subtypeId = $saiMap[$serviceId]['sai_id'];
+        if ($marketingDetail["service_type"] == "SA-II" && isset($saiiMap[$serviceId]))
+            $subtypeId = $saiiMap[$serviceId]['saii_id'];
+        if ($marketingDetail["service_type"] == "RC" && isset($rcMap[$serviceId]))
+            $subtypeId = $rcMap[$serviceId]['rc_id'];
+        if ($marketingDetail["service_type"] == "SP" && isset($spMap[$serviceId]))
+            $subtypeId = $spMap[$serviceId]['sp_id'];
 
         if ($subtypeId && isset($cdcMap[$subtypeId])) {
             $cdc = $cdcMap[$subtypeId];
-            
+
             // Extract individuals
-            $leadAuditor = strtolower(trim((string)$cdc['lead_auditor']));
-            $auditorsStr = strtolower(trim((string)$cdc['auditors']));
-            $reviewer1 = strtolower(trim((string)$cdc['reviewer_1']));
-            $reviewer2 = strtolower(trim((string)$cdc['reviewer_2']));
-            $grantedBy = strtolower(trim((string)$cdc['granted_by']));
+            $leadAuditor = strtolower(trim((string) $cdc['lead_auditor']));
+            $auditorsStr = strtolower(trim((string) $cdc['auditors']));
+            $reviewer1 = strtolower(trim((string) $cdc['reviewer_1']));
+            $reviewer2 = strtolower(trim((string) $cdc['reviewer_2']));
+            $grantedBy = strtolower(trim((string) $cdc['granted_by']));
 
             $allAuditors = [];
-            if ($leadAuditor !== '') $allAuditors[] = $leadAuditor;
+            if ($leadAuditor !== '')
+                $allAuditors[] = $leadAuditor;
             foreach (auditPageSplitAuditors($auditorsStr) as $aud) {
-                if ($aud !== '') $allAuditors[] = $aud;
+                if ($aud !== '')
+                    $allAuditors[] = $aud;
             }
 
             $cdcMembers = [];
-            if ($reviewer1 !== '') $cdcMembers[] = $reviewer1;
-            if ($reviewer2 !== '') $cdcMembers[] = $reviewer2;
-            if ($grantedBy !== '') $cdcMembers[] = $grantedBy;
+            if ($reviewer1 !== '')
+                $cdcMembers[] = $reviewer1;
+            if ($reviewer2 !== '')
+                $cdcMembers[] = $reviewer2;
+            if ($grantedBy !== '')
+                $cdcMembers[] = $grantedBy;
 
             $conflictReasons = [];
-            
+
             // 1. Auditor vs Reviewer / CDC Member
             foreach ($allAuditors as $aud) {
                 if (in_array($aud, $cdcMembers)) {
@@ -364,7 +393,8 @@
             z-index: 9998;
             border: 0;
             border-radius: 6px 0 0 6px;
-            background: #ea580c; /* Distinct orange for member conflict */
+            background: #ea580c;
+            /* Distinct orange for member conflict */
             color: #fff;
             font-size: 12px;
             font-weight: 700;
@@ -515,27 +545,32 @@
                                 <select name="service-type" class="form-control service-type" id="service-type">
                                     <option value="">Select Service Type</option>
                                     <option value="ST-1">ST-1</option>
-                                        <option value="ST-2">ST-2</option>
+                                    <option value="ST-2">ST-2</option>
                                     <?php foreach ($servicesTypes as $service) { ?>
-                                        <?php if ($service['service_type'] === 'CA') { continue; } ?>
+                                        <?php if ($service['service_type'] === 'CA') {
+                                            continue;
+                                        } ?>
                                         <option value="<?php echo $service['service_type'] ?>">
                                             <?php echo $service['service_type'] ?>
                                         </option>
                                     <?php } ?>
-                                        
+
                                 </select>
                             </div>
                             <div class="col-sm-3 float-label-control custom-float-label-control">
-                                <input type="text" class="filterFromDate" id="filterFromDate" name="filterFromDate" placeholder="Audit Date From" value="">
+                                <input type="text" class="filterFromDate" id="filterFromDate" name="filterFromDate"
+                                    placeholder="Audit Date From" value="">
                             </div>
                             <div class="col-sm-3 form-group float-label-control custom-float-label-control">
-                                <input type="text" class="filterToDate" id="filterToDate" name="filterToDate" placeholder="Audit Date To" value="">
+                                <input type="text" class="filterToDate" id="filterToDate" name="filterToDate"
+                                    placeholder="Audit Date To" value="">
                             </div>
                             <div class="col-sm-3 float-label-control custom-float-label-control">
                                 <select name="auditors" class="form-control auditor-filter" id="auditor-filter">
                                     <option value="">Select Auditor</option>
                                     <?php foreach ($auditorsList as $auditor) { ?>
-                                        <option value="<?php echo htmlspecialchars($auditor['auditor_name'], ENT_QUOTES, 'UTF-8') ?>">
+                                        <option
+                                            value="<?php echo htmlspecialchars($auditor['auditor_name'], ENT_QUOTES, 'UTF-8') ?>">
                                             <?php echo htmlspecialchars($auditor['auditor_name'], ENT_QUOTES, 'UTF-8') ?>
                                         </option>
                                     <?php } ?>
@@ -547,7 +582,8 @@
 
                 <div class="row clearfix">
                     <div class="col-sm-12 main_content table-responsive">
-                        <table class="table table-hover table-sortable table-striped" id="tab_customer_list" width="100%">
+                        <table class="table table-hover table-sortable table-striped" id="tab_customer_list"
+                            width="100%">
                             <thead>
                                 <tr>
                                     <th class="">
@@ -580,209 +616,340 @@
                                     $auditDateDetails = "";
                                     if ($marketingDetail["service_type"] == "CA") {
                                         $auditDetails = isset($caMap[$marketingDetail['service_id']]) ? $caMap[$marketingDetail['service_id']] : null;
-                                        if (!$auditDetails) { continue; }
+                                        if (!$auditDetails) {
+                                            continue;
+                                        }
                                         $auditdates1 = explode(',', $auditDetails["audit_date"]);
                                         $auditConflictClass = auditPageConflictClass($auditConflictRows, $marketingDetail, 'ST-1');
                                         ?>
-                                        <tr id='addr<?php echo $marketingDetail['id'] ?>' class="<?php echo $auditConflictClass; ?>" title="<?php echo $auditConflictClass ? 'Same auditor has another audit on this date' : ''; ?>">
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                        <tr id='addr<?php echo $marketingDetail['id'] ?>'
+                                            class="<?php echo $auditConflictClass; ?>"
+                                            title="<?php echo $auditConflictClass ? 'Same auditor has another audit on this date' : ''; ?>">
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                data-name="name"
+                                                style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
                                                 <small><?php echo $marketingDetail['unique_id'] ?></small>
                                             </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                data-name="name"
+                                                style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
                                                 <small><?php echo $marketingDetail['customer_name'] ?></small>
                                             </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                data-name="name"
+                                                style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
                                                 <small>ST-1</small>
                                             </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                data-name="name"
+                                                style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
                                                 <small><?php echo $marketingDetail['service_status'] ?></small>
                                             </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                data-name="name"
+                                                style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
                                                 <small><?php echo $auditDetails["stage1_auditor"]; ?></small>
                                             </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                data-name="name"
+                                                style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
                                                 <span><?php echo $auditdates1[0] ?>~</span><small><?php echo $auditDetails["audit_date"] ?></small>
                                             </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <small><?php echo $marketingDetail['audit_status'] ?> (<?php echo $marketingDetail["next_service"] ?>)</small>
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                data-name="name"
+                                                style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                <small><?php echo $marketingDetail['audit_status'] ?>
+                                                    (<?php echo $marketingDetail["next_service"] ?>)</small>
                                             </td>
                                         </tr>
-                                        <?php if ($auditDetails["stage2_audit"] != "") { 
+                                        <?php if ($auditDetails["stage2_audit"] != "") {
                                             $auditdatest2 = explode(',', $auditDetails["stage2_audit"]);
                                             $auditConflictClass = auditPageConflictClass($auditConflictRows, $marketingDetail, 'ST-2');
                                             ?>
-                                            <tr id='addr<?php echo $marketingDetail['id'] ?>' class="<?php echo $auditConflictClass; ?>" title="<?php echo $auditConflictClass ? 'Same auditor has another audit on this date' : ''; ?>">
-                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                            <tr id='addr<?php echo $marketingDetail['id'] ?>'
+                                                class="<?php echo $auditConflictClass; ?>"
+                                                title="<?php echo $auditConflictClass ? 'Same auditor has another audit on this date' : ''; ?>">
+                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                    data-name="name"
+                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
                                                     <small><?php echo $marketingDetail['unique_id'] ?></small>
                                                 </td>
-                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                    data-name="name"
+                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
                                                     <small><?php echo $marketingDetail['customer_name'] ?></small>
                                                 </td>
-                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                    data-name="name"
+                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
                                                     <small>ST-2</small>
                                                 </td>
-                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                    data-name="name"
+                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
                                                     <small><?php echo $marketingDetail['service_status'] ?></small>
                                                 </td>
-                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                    data-name="name"
+                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
                                                     <small><?php echo $auditDetails["stage2_auditor"]; ?></small>
                                                 </td>
-                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                    data-name="name"
+                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
                                                     <span><?php echo $auditdatest2[0] ?>~</span><small><?php echo $auditDetails["stage2_audit"] ?></small>
                                                 </td>
-                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                    <small><?php echo $marketingDetail['audit_status'] ?> (<?php echo $marketingDetail["next_service"] ?>)</small>
+                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                    data-name="name"
+                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                    <small><?php echo $marketingDetail['audit_status'] ?>
+                                                        (<?php echo $marketingDetail["next_service"] ?>)</small>
                                                 </td>
                                             </tr>
                                             <?php
                                         }
                                     } else if ($marketingDetail["service_type"] == "SA-I") {
                                         $auditDetails = isset($saiMap[$marketingDetail['service_id']]) ? $saiMap[$marketingDetail['service_id']] : null;
-                                        if (!$auditDetails) { continue; }
+                                        if (!$auditDetails) {
+                                            continue;
+                                        }
                                         $auditConflictClass = auditPageConflictClass($auditConflictRows, $marketingDetail, 'SA-I');
                                         ?>
-                                        <tr id='addr<?php echo $marketingDetail['id'] ?>' class="<?php echo $auditConflictClass; ?>" title="<?php echo $auditConflictClass ? 'Same auditor has another audit on this date' : ''; ?>">
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <small><?php echo $marketingDetail['unique_id'] ?></small>
-                                            </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <small><?php echo $marketingDetail['customer_name'] ?></small>
-                                            </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <small><?php echo $marketingDetail['service_type'] ?></small>
-                                            </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <small><?php echo $marketingDetail['service_status'] ?></small>
-                                            </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <small><?php echo $auditDetails["auditors"]; ?></small>
-                                            </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <span><?php echo simpleDateConversion($marketingDetail["audit_date"]) ?>~</span><small><?php echo $auditDetails["audit_date"] ?></small>
-                                            </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <small><?php echo $marketingDetail['audit_status'] ?> (<?php echo $marketingDetail["next_service"] ?>)</small>
-                                            </td>
-                                        </tr>
+                                            <tr id='addr<?php echo $marketingDetail['id'] ?>'
+                                                class="<?php echo $auditConflictClass; ?>"
+                                                title="<?php echo $auditConflictClass ? 'Same auditor has another audit on this date' : ''; ?>">
+                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                    data-name="name"
+                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                    <small><?php echo $marketingDetail['unique_id'] ?></small>
+                                                </td>
+                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                    data-name="name"
+                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                    <small><?php echo $marketingDetail['customer_name'] ?></small>
+                                                </td>
+                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                    data-name="name"
+                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                    <small><?php echo $marketingDetail['service_type'] ?></small>
+                                                </td>
+                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                    data-name="name"
+                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                    <small><?php echo $marketingDetail['service_status'] ?></small>
+                                                </td>
+                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                    data-name="name"
+                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                    <small><?php echo $auditDetails["auditors"]; ?></small>
+                                                </td>
+                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                    data-name="name"
+                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                    <span><?php echo simpleDateConversion($marketingDetail["audit_date"]) ?>~</span><small><?php echo $auditDetails["audit_date"] ?></small>
+                                                </td>
+                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                    data-name="name"
+                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                    <small><?php echo $marketingDetail['audit_status'] ?>
+                                                        (<?php echo $marketingDetail["next_service"] ?>)</small>
+                                                </td>
+                                            </tr>
                                         <?php
-                                    }  else if ($marketingDetail["service_type"] == "SA-II") {
+                                    } else if ($marketingDetail["service_type"] == "SA-II") {
                                         $auditDetails = isset($saiiMap[$marketingDetail['service_id']]) ? $saiiMap[$marketingDetail['service_id']] : null;
-                                        if (!$auditDetails) { continue; }
+                                        if (!$auditDetails) {
+                                            continue;
+                                        }
                                         $auditConflictClass = auditPageConflictClass($auditConflictRows, $marketingDetail, 'SA-II');
                                         ?>
-                                        <tr id='addr<?php echo $marketingDetail['id'] ?>' class="<?php echo $auditConflictClass; ?>" title="<?php echo $auditConflictClass ? 'Same auditor has another audit on this date' : ''; ?>">
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <small><?php echo $marketingDetail['unique_id'] ?></small>
-                                            </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <small><?php echo $marketingDetail['customer_name'] ?></small>
-                                            </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <small><?php echo $marketingDetail['service_type'] ?></small>
-                                            </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <small><?php echo $marketingDetail['service_status'] ?></small>
-                                            </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <small><?php echo $auditDetails["auditors"]; ?></small>
-                                            </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <span><?php echo simpleDateConversion($marketingDetail["audit_date"]) ?>~</span><small><?php echo $auditDetails["audit_date"] ?></small>
-                                            </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <small><?php echo $marketingDetail['audit_status'] ?> (<?php echo $marketingDetail["next_service"] ?>)</small>
-                                            </td>
-                                        </tr>
+                                                <tr id='addr<?php echo $marketingDetail['id'] ?>'
+                                                    class="<?php echo $auditConflictClass; ?>"
+                                                    title="<?php echo $auditConflictClass ? 'Same auditor has another audit on this date' : ''; ?>">
+                                                    <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                        data-name="name"
+                                                        style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                        <small><?php echo $marketingDetail['unique_id'] ?></small>
+                                                    </td>
+                                                    <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                        data-name="name"
+                                                        style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                        <small><?php echo $marketingDetail['customer_name'] ?></small>
+                                                    </td>
+                                                    <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                        data-name="name"
+                                                        style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                        <small><?php echo $marketingDetail['service_type'] ?></small>
+                                                    </td>
+                                                    <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                        data-name="name"
+                                                        style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                        <small><?php echo $marketingDetail['service_status'] ?></small>
+                                                    </td>
+                                                    <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                        data-name="name"
+                                                        style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                        <small><?php echo $auditDetails["auditors"]; ?></small>
+                                                    </td>
+                                                    <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                        data-name="name"
+                                                        style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                        <span><?php echo simpleDateConversion($marketingDetail["audit_date"]) ?>~</span><small><?php echo $auditDetails["audit_date"] ?></small>
+                                                    </td>
+                                                    <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                        data-name="name"
+                                                        style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                        <small><?php echo $marketingDetail['audit_status'] ?>
+                                                            (<?php echo $marketingDetail["next_service"] ?>)</small>
+                                                    </td>
+                                                </tr>
                                         <?php
                                     } else if ($marketingDetail["service_type"] == "RC") {
                                         $auditDetails = isset($rcMap[$marketingDetail['service_id']]) ? $rcMap[$marketingDetail['service_id']] : null;
-                                        if (!$auditDetails) { continue; }
+                                        if (!$auditDetails) {
+                                            continue;
+                                        }
                                         $auditConflictClass = auditPageConflictClass($auditConflictRows, $marketingDetail, 'RC');
                                         ?>
-                                        <tr id='addr<?php echo $marketingDetail['id'] ?>' class="<?php echo $auditConflictClass; ?>" title="<?php echo $auditConflictClass ? 'Same auditor has another audit on this date' : ''; ?>">
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <small><?php echo $marketingDetail['unique_id'] ?></small>
-                                            </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <small><?php echo $marketingDetail['customer_name'] ?></small>
-                                            </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <small><?php echo $marketingDetail['service_type'] ?></small>
-                                            </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <small><?php echo $marketingDetail['service_status'] ?></small>
-                                            </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <small><?php echo $auditDetails["auditors"]; ?></small>
-                                            </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <span><?php echo simpleDateConversion($marketingDetail["audit_date"]) ?>~</span><small><?php echo $auditDetails["audit_date"] ?></small>
-                                            </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <small><?php echo $marketingDetail['audit_status'] ?> (<?php echo $marketingDetail["next_service"] ?>)</small>
-                                            </td>
-                                        </tr>
+                                                    <tr id='addr<?php echo $marketingDetail['id'] ?>'
+                                                        class="<?php echo $auditConflictClass; ?>"
+                                                        title="<?php echo $auditConflictClass ? 'Same auditor has another audit on this date' : ''; ?>">
+                                                        <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                            data-name="name"
+                                                            style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                            <small><?php echo $marketingDetail['unique_id'] ?></small>
+                                                        </td>
+                                                        <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                            data-name="name"
+                                                            style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                            <small><?php echo $marketingDetail['customer_name'] ?></small>
+                                                        </td>
+                                                        <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                            data-name="name"
+                                                            style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                            <small><?php echo $marketingDetail['service_type'] ?></small>
+                                                        </td>
+                                                        <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                            data-name="name"
+                                                            style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                            <small><?php echo $marketingDetail['service_status'] ?></small>
+                                                        </td>
+                                                        <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                            data-name="name"
+                                                            style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                            <small><?php echo $auditDetails["auditors"]; ?></small>
+                                                        </td>
+                                                        <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                            data-name="name"
+                                                            style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                            <span><?php echo simpleDateConversion($marketingDetail["audit_date"]) ?>~</span><small><?php echo $auditDetails["audit_date"] ?></small>
+                                                        </td>
+                                                        <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                            data-name="name"
+                                                            style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                            <small><?php echo $marketingDetail['audit_status'] ?>
+                                                                (<?php echo $marketingDetail["next_service"] ?>)</small>
+                                                        </td>
+                                                    </tr>
                                         <?php
                                     } else if ($marketingDetail["service_type"] == "SP") {
                                         $auditDetails = isset($spMap[$marketingDetail['service_id']]) ? $spMap[$marketingDetail['service_id']] : null;
-                                        if (!$auditDetails) { continue; }
+                                        if (!$auditDetails) {
+                                            continue;
+                                        }
                                         $auditConflictClass = auditPageConflictClass($auditConflictRows, $marketingDetail, 'SP');
                                         ?>
-                                        <tr id='addr<?php echo $marketingDetail['id'] ?>' class="<?php echo $auditConflictClass; ?>" title="<?php echo $auditConflictClass ? 'Same auditor has another audit on this date' : ''; ?>">
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <small><?php echo $marketingDetail['unique_id'] ?></small>
-                                            </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <small><?php echo $marketingDetail['customer_name'] ?></small>
-                                            </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <small><?php echo $marketingDetail['service_type'] ?></small>
-                                            </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <small><?php echo $marketingDetail['service_status'] ?></small>
-                                            </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <small><?php echo $auditDetails["auditors"]; ?></small>
-                                            </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <span><?php echo simpleDateConversion($marketingDetail["audit_date"]) ?>~</span><small><?php echo $auditDetails["audit_date"] ?></small>
-                                            </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <small><?php echo $marketingDetail['audit_status'] ?> (<?php echo $marketingDetail["next_service"] ?>)</small>
-                                            </td>
-                                        </tr>
+                                                        <tr id='addr<?php echo $marketingDetail['id'] ?>'
+                                                            class="<?php echo $auditConflictClass; ?>"
+                                                            title="<?php echo $auditConflictClass ? 'Same auditor has another audit on this date' : ''; ?>">
+                                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                                data-name="name"
+                                                                style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                                <small><?php echo $marketingDetail['unique_id'] ?></small>
+                                                            </td>
+                                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                                data-name="name"
+                                                                style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                                <small><?php echo $marketingDetail['customer_name'] ?></small>
+                                                            </td>
+                                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                                data-name="name"
+                                                                style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                                <small><?php echo $marketingDetail['service_type'] ?></small>
+                                                            </td>
+                                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                                data-name="name"
+                                                                style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                                <small><?php echo $marketingDetail['service_status'] ?></small>
+                                                            </td>
+                                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                                data-name="name"
+                                                                style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                                <small><?php echo $auditDetails["auditors"]; ?></small>
+                                                            </td>
+                                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                                data-name="name"
+                                                                style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                                <span><?php echo simpleDateConversion($marketingDetail["audit_date"]) ?>~</span><small><?php echo $auditDetails["audit_date"] ?></small>
+                                                            </td>
+                                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                                data-name="name"
+                                                                style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                                <small><?php echo $marketingDetail['audit_status'] ?>
+                                                                    (<?php echo $marketingDetail["next_service"] ?>)</small>
+                                                            </td>
+                                                        </tr>
                                         <?php
                                     } else if ($marketingDetail["service_type"] == "TA") {
                                         $auditDetails = isset($taMap[$marketingDetail['service_id']]) ? $taMap[$marketingDetail['service_id']] : null;
-                                        if (!$auditDetails) { continue; }
+                                        if (!$auditDetails) {
+                                            continue;
+                                        }
 
                                         $auditrDetails = $auditDetails["auditors"];
                                         $auditDateDetails = $auditDetails["audit_date"];
                                         $auditConflictClass = auditPageConflictClass($auditConflictRows, $marketingDetail, 'TA');
                                         ?>
-                                        <tr id='addr<?php echo $marketingDetail['id'] ?>' class="<?php echo $auditConflictClass; ?>" title="<?php echo $auditConflictClass ? 'Same auditor has another audit on this date' : ''; ?>">
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <small><?php echo $marketingDetail['unique_id'] ?></small>
-                                            </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <small><?php echo $marketingDetail['customer_name'] ?></small>
-                                            </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <small><?php echo $marketingDetail['service_type'] ?></small>
-                                            </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <small><?php echo $marketingDetail['service_status'] ?></small>
-                                            </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <small><?php echo $auditrDetails; ?></small>
-                                            </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <span><?php echo simpleDateConversion($marketingDetail["audit_date"]) ?>~</span><small><?php echo $auditDateDetails ?></small>
-                                            </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <small><?php echo $marketingDetail['audit_status'] ?> (<?php echo $marketingDetail["next_service"] ?>)</small>
-                                            </td>
-                                        </tr>
+                                                            <tr id='addr<?php echo $marketingDetail['id'] ?>'
+                                                                class="<?php echo $auditConflictClass; ?>"
+                                                                title="<?php echo $auditConflictClass ? 'Same auditor has another audit on this date' : ''; ?>">
+                                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                                    data-name="name"
+                                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                                    <small><?php echo $marketingDetail['unique_id'] ?></small>
+                                                                </td>
+                                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                                    data-name="name"
+                                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                                    <small><?php echo $marketingDetail['customer_name'] ?></small>
+                                                                </td>
+                                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                                    data-name="name"
+                                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                                    <small><?php echo $marketingDetail['service_type'] ?></small>
+                                                                </td>
+                                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                                    data-name="name"
+                                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                                    <small><?php echo $marketingDetail['service_status'] ?></small>
+                                                                </td>
+                                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                                    data-name="name"
+                                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                                    <small><?php echo $auditrDetails; ?></small>
+                                                                </td>
+                                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                                    data-name="name"
+                                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                                    <span><?php echo simpleDateConversion($marketingDetail["audit_date"]) ?>~</span><small><?php echo $auditDateDetails ?></small>
+                                                                </td>
+                                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
+                                                                    data-name="name"
+                                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                                                    <small><?php echo $marketingDetail['audit_status'] ?>
+                                                                        (<?php echo $marketingDetail["next_service"] ?>)</small>
+                                                                </td>
+                                                            </tr>
                                     <?php }
                                 }
                                 ?>
@@ -796,93 +963,96 @@
 </div>
 
 <?php if ($auditDateConflictVisible) { ?>
-<button type="button" class="audit-conflict-tab" id="auditConflictTab" title="Check Date  conflict">
-    Date  Conflict
-    <span class="audit-conflict-count"><?php echo count($auditConflictGroups); ?></span>
-</button>
+    <button type="button" class="audit-conflict-tab" id="auditConflictTab" title="Check Date  conflict">
+        Date Conflict
+        <span class="audit-conflict-count"><?php echo count($auditConflictGroups); ?></span>
+    </button>
 
-<div class="audit-conflict-panel" id="auditConflictPanel" aria-hidden="true">
-    <div class="audit-conflict-panel-header">
-        <h4 class="audit-conflict-panel-title">Check Date Conflict</h4>
-        <button type="button" class="audit-conflict-close" id="auditConflictClose" aria-label="Close">&times;</button>
-    </div>
-    <div class="audit-conflict-panel-body">
-        <?php if (empty($auditConflictGroups)) { ?>
-            <div class="audit-conflict-empty">No same-day auditor conflicts found.</div>
-        <?php } else { ?>
-            <?php foreach ($auditConflictGroups as $conflictGroup) { ?>
-                <div class="audit-conflict-card">
-                    <div class="audit-conflict-card-head">
-                        <div class="audit-conflict-card-title">
-                            <?php echo htmlspecialchars($conflictGroup['date'], ENT_QUOTES, 'UTF-8'); ?> - <?php echo htmlspecialchars($conflictGroup['auditor'], ENT_QUOTES, 'UTF-8'); ?>
-                        </div>
-                        <div class="audit-conflict-card-meta">
-                            <?php echo count($conflictGroup['rows']); ?> audits on same day
-                        </div>
-                    </div>
-                    <div>
-                        <?php foreach ($conflictGroup['rows'] as $conflictRow) { ?>
-                            <div class="audit-conflict-item">
-                                <div class="audit-conflict-client">
-                                    <?php echo htmlspecialchars($conflictRow['customer_name'], ENT_QUOTES, 'UTF-8'); ?>
-                                </div>
-                                <div class="audit-conflict-detail">
-                                    <?php echo htmlspecialchars($conflictRow['unique_id'], ENT_QUOTES, 'UTF-8'); ?> |
-                                    <?php echo htmlspecialchars($conflictRow['service_type'], ENT_QUOTES, 'UTF-8'); ?> |
-                                    <?php echo htmlspecialchars($conflictRow['dates'], ENT_QUOTES, 'UTF-8'); ?>
-                                </div>
-                                <div class="audit-conflict-detail">
-                                    Status: <?php echo htmlspecialchars($conflictRow['audit_status'], ENT_QUOTES, 'UTF-8'); ?> (<?php echo htmlspecialchars($conflictRow['next_service'], ENT_QUOTES, 'UTF-8'); ?>)
-                                </div>
+    <div class="audit-conflict-panel" id="auditConflictPanel" aria-hidden="true">
+        <div class="audit-conflict-panel-header">
+            <h4 class="audit-conflict-panel-title">Check Date Conflict</h4>
+            <button type="button" class="audit-conflict-close" id="auditConflictClose" aria-label="Close">&times;</button>
+        </div>
+        <div class="audit-conflict-panel-body">
+            <?php if (empty($auditConflictGroups)) { ?>
+                <div class="audit-conflict-empty">No same-day auditor conflicts found.</div>
+            <?php } else { ?>
+                <?php foreach ($auditConflictGroups as $conflictGroup) { ?>
+                    <div class="audit-conflict-card">
+                        <div class="audit-conflict-card-head">
+                            <div class="audit-conflict-card-title">
+                                <?php echo htmlspecialchars($conflictGroup['date'], ENT_QUOTES, 'UTF-8'); ?> -
+                                <?php echo htmlspecialchars($conflictGroup['auditor'], ENT_QUOTES, 'UTF-8'); ?>
                             </div>
-                        <?php } ?>
-                    </div>
-                </div>
-            <?php } ?>
-        <?php } ?>
-    </div>
-</div>
-<?php } ?>
-
-<?php if ($auditMemberConflictVisible) { ?>
-<button type="button" class="member-conflict-tab" id="memberConflictTab" title="Check Member conflict">
-    Member Conflict
-    <span class="audit-conflict-count"><?php echo count($memberConflictGroups); ?></span>
-</button>
-
-<div class="member-conflict-panel" id="memberConflictPanel" aria-hidden="true">
-    <div class="audit-conflict-panel-header" style="background: #ea580c;">
-        <h4 class="audit-conflict-panel-title">Check Member Conflict</h4>
-        <button type="button" class="audit-conflict-close" id="memberConflictClose" aria-label="Close">&times;</button>
-    </div>
-    <div class="audit-conflict-panel-body">
-        <?php if (empty($memberConflictGroups)) { ?>
-            <div class="audit-conflict-empty">No member conflicts found.</div>
-        <?php } else { ?>
-            <?php foreach ($memberConflictGroups as $conflict) { ?>
-                <div class="audit-conflict-card">
-                    <div class="audit-conflict-card-head">
-                        <div class="audit-conflict-card-title">
-                            <?php echo htmlspecialchars($conflict['unique_id'], ENT_QUOTES, 'UTF-8'); ?> - <?php echo htmlspecialchars($conflict['service_type'], ENT_QUOTES, 'UTF-8'); ?>
-                        </div>
-                    </div>
-                    <div>
-                        <div class="audit-conflict-item">
-                            <div class="audit-conflict-client">
-                                <?php echo htmlspecialchars($conflict['customer_name'], ENT_QUOTES, 'UTF-8'); ?>
+                            <div class="audit-conflict-card-meta">
+                                <?php echo count($conflictGroup['rows']); ?> audits on same day
                             </div>
-                            <?php foreach ($conflict['reasons'] as $reason) { ?>
-                                <div class="audit-conflict-detail" style="color: #b91c1c; font-weight: 500;">
-                                    &bull; <?php echo htmlspecialchars($reason, ENT_QUOTES, 'UTF-8'); ?>
+                        </div>
+                        <div>
+                            <?php foreach ($conflictGroup['rows'] as $conflictRow) { ?>
+                                <div class="audit-conflict-item">
+                                    <div class="audit-conflict-client">
+                                        <?php echo htmlspecialchars($conflictRow['customer_name'], ENT_QUOTES, 'UTF-8'); ?>
+                                    </div>
+                                    <div class="audit-conflict-detail">
+                                        <?php echo htmlspecialchars($conflictRow['unique_id'], ENT_QUOTES, 'UTF-8'); ?> |
+                                        <?php echo htmlspecialchars($conflictRow['service_type'], ENT_QUOTES, 'UTF-8'); ?> |
+                                        <?php echo htmlspecialchars($conflictRow['dates'], ENT_QUOTES, 'UTF-8'); ?>
+                                    </div>
+                                    <div class="audit-conflict-detail">
+                                        Status: <?php echo htmlspecialchars($conflictRow['audit_status'], ENT_QUOTES, 'UTF-8'); ?>
+                                        (<?php echo htmlspecialchars($conflictRow['next_service'], ENT_QUOTES, 'UTF-8'); ?>)
+                                    </div>
                                 </div>
                             <?php } ?>
                         </div>
                     </div>
-                </div>
+                <?php } ?>
             <?php } ?>
-        <?php } ?>
+        </div>
     </div>
-</div>
+<?php } ?>
+
+<?php if ($auditMemberConflictVisible) { ?>
+    <button type="button" class="member-conflict-tab" id="memberConflictTab" title="Check Member conflict">
+        Member Conflict
+        <span class="audit-conflict-count"><?php echo count($memberConflictGroups); ?></span>
+    </button>
+
+    <div class="member-conflict-panel" id="memberConflictPanel" aria-hidden="true">
+        <div class="audit-conflict-panel-header" style="background: #ea580c;">
+            <h4 class="audit-conflict-panel-title">Check Member Conflict</h4>
+            <button type="button" class="audit-conflict-close" id="memberConflictClose" aria-label="Close">&times;</button>
+        </div>
+        <div class="audit-conflict-panel-body">
+            <?php if (empty($memberConflictGroups)) { ?>
+                <div class="audit-conflict-empty">No member conflicts found.</div>
+            <?php } else { ?>
+                <?php foreach ($memberConflictGroups as $conflict) { ?>
+                    <div class="audit-conflict-card">
+                        <div class="audit-conflict-card-head">
+                            <div class="audit-conflict-card-title">
+                                <?php echo htmlspecialchars($conflict['unique_id'], ENT_QUOTES, 'UTF-8'); ?> -
+                                <?php echo htmlspecialchars($conflict['service_type'], ENT_QUOTES, 'UTF-8'); ?>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="audit-conflict-item">
+                                <div class="audit-conflict-client">
+                                    <?php echo htmlspecialchars($conflict['customer_name'], ENT_QUOTES, 'UTF-8'); ?>
+                                </div>
+                                <?php foreach ($conflict['reasons'] as $reason) { ?>
+                                    <div class="audit-conflict-detail" style="color: #b91c1c; font-weight: 500;">
+                                        &bull; <?php echo htmlspecialchars($reason, ENT_QUOTES, 'UTF-8'); ?>
+                                    </div>
+                                <?php } ?>
+                            </div>
+                        </div>
+                    </div>
+                <?php } ?>
+            <?php } ?>
+        </div>
+    </div>
 <?php } ?>
 
 <script type="text/javascript">
@@ -958,54 +1128,54 @@
     //for filtering
 
     $.fn.DataTable.ext.search.push(
-            function (settings, data, dataIndex) {
-                var serviceType = $(".service-type").val();
-                var auditor = $(".auditor-filter").val();
-                var fromDate = $(".filterFromDate").val();
-                var toDate = $(".filterToDate").val();
-                var isServiceType = false;
-                var isAuditor = false;
-                var isfromDate = false;
-                var isToDate = false;
-                //            alert(serviceType);
-                if (serviceType == "" && auditor == "" && fromDate == "" && toDate == "") {
-                    return true;
-                }
-                if (serviceType != "") {
-                    var servieTypeStr = data[2] || ""; // use data for the age column
-//                    alert(servieTypeStr);
-                    if (servieTypeStr.toUpperCase().trim() == serviceType.toUpperCase().trim()) {
-                        //                alert("test");
-                        isServiceType = true;
-                    }
-                } else {
+        function (settings, data, dataIndex) {
+            var serviceType = $(".service-type").val();
+            var auditor = $(".auditor-filter").val();
+            var fromDate = $(".filterFromDate").val();
+            var toDate = $(".filterToDate").val();
+            var isServiceType = false;
+            var isAuditor = false;
+            var isfromDate = false;
+            var isToDate = false;
+            //            alert(serviceType);
+            if (serviceType == "" && auditor == "" && fromDate == "" && toDate == "") {
+                return true;
+            }
+            if (serviceType != "") {
+                var servieTypeStr = data[2] || ""; // use data for the age column
+                //                    alert(servieTypeStr);
+                if (servieTypeStr.toUpperCase().trim() == serviceType.toUpperCase().trim()) {
+                    //                alert("test");
                     isServiceType = true;
                 }
-                if (auditor != "") {
-                    var auditorStr = data[4] || "";
-                    isAuditor = auditorStr.toUpperCase().indexOf(auditor.toUpperCase()) !== -1;
-                } else {
-                    isAuditor = true;
-                }
-                var dateValue = data[5] || "";
-                var dateSplit = dateValue.split("~");
-                var rowDate = dateSplit.length > 1 ? dateSplit[1] : dateValue;
-                //            alert(dateSplit[1]);
-                //            alert(fromDate);
-                if (fromDate != "") {
-//                      alert(dateValue);
-                    isfromDate = compareMinDates(fromDate, rowDate);
-                } else {
-                    isfromDate = true;
-                }
-                if (toDate != "") {
-                    isToDate = compareMaxDates(toDate, rowDate);
-                } else {
-                    isToDate = true;
-                }
-                finalResult = (isServiceType && isAuditor && isfromDate && isToDate);
-                return finalResult;
+            } else {
+                isServiceType = true;
             }
+            if (auditor != "") {
+                var auditorStr = data[4] || "";
+                isAuditor = auditorStr.toUpperCase().indexOf(auditor.toUpperCase()) !== -1;
+            } else {
+                isAuditor = true;
+            }
+            var dateValue = data[5] || "";
+            var dateSplit = dateValue.split("~");
+            var rowDate = dateSplit.length > 1 ? dateSplit[1] : dateValue;
+            //            alert(dateSplit[1]);
+            //            alert(fromDate);
+            if (fromDate != "") {
+                //                      alert(dateValue);
+                isfromDate = compareMinDates(fromDate, rowDate);
+            } else {
+                isfromDate = true;
+            }
+            if (toDate != "") {
+                isToDate = compareMaxDates(toDate, rowDate);
+            } else {
+                isToDate = true;
+            }
+            finalResult = (isServiceType && isAuditor && isfromDate && isToDate);
+            return finalResult;
+        }
     );
 
     $(document).ready(function () {
@@ -1016,22 +1186,22 @@
         $('#auditConflictClose').click(function () {
             $('#auditConflictPanel').css('right', '-430px').attr('aria-hidden', 'true');
         });
-        
-        $('#memberConflictTab').click(function() {
+
+        $('#memberConflictTab').click(function () {
             $('#memberConflictPanel').css('right', '0').attr('aria-hidden', 'false');
         });
 
-        $('#memberConflictClose').click(function() {
+        $('#memberConflictClose').click(function () {
             $('#memberConflictPanel').css('right', '-430px').attr('aria-hidden', 'true');
         });
 
-        $(document).mouseup(function(e) {
+        $(document).mouseup(function (e) {
             var container = $("#auditConflictPanel");
             var tab = $("#auditConflictTab");
             if (!container.is(e.target) && container.has(e.target).length === 0 && !tab.is(e.target) && tab.has(e.target).length === 0) {
                 container.css('right', '-430px').attr('aria-hidden', 'true');
             }
-            
+
             var mContainer = $("#memberConflictPanel");
             var mTab = $("#memberConflictTab");
             if (!mContainer.is(e.target) && mContainer.has(e.target).length === 0 && !mTab.is(e.target) && mTab.has(e.target).length === 0) {
@@ -1041,13 +1211,13 @@
 
         $('.customerAccount').click(function () {
             var customerID = $(this).attr('data-id');
-//            alert(customerID);
+            //            alert(customerID);
             // open popup
             localStorage['visited'] = customerID;
             var url = 'customerAccount.php'
             var form = $('<form action="' + url + '" method="get">' +
-                    '<input type="hidden" name="customerid" value="' + customerID + '" />' +
-                    '</form>');
+                '<input type="hidden" name="customerid" value="' + customerID + '" />' +
+                '</form>');
             $('body').append(form);
             form.submit();
         });
@@ -1057,9 +1227,9 @@
             var customer = $(this).attr('data-customer');
             var url = 'addToAudit.php'
             var form = $('<form action="' + url + '" method="post">' +
-                    '<input type="hidden" name="service" value="' + service + '" />' +
-                    '<input type="hidden" name="customer" value="' + customer + '" />' +
-                    '</form>');
+                '<input type="hidden" name="service" value="' + service + '" />' +
+                '<input type="hidden" name="customer" value="' + customer + '" />' +
+                '</form>');
             $('body').append(form);
             form.submit();
         });
@@ -1073,14 +1243,14 @@
     });
 
     var table = $('#tab_customer_list').DataTable({
-//            "scrollY": "450px",
+        //            "scrollY": "450px",
         "sScrollX": "100%",
         "scrollY": '70vh',
         "scrollCollapse": true,
         "paging": false,
         "ordering": false,
         "lengthChange": false,
-//            "pageLength": 10,
+        //            "pageLength": 10,
         "paging": false,
         "columnDefs": [
             {
@@ -1108,7 +1278,7 @@
                 "targets": 5
             },
         ]
-                //        "paging":         false
+        //        "paging":         false
     });
     table.columns.adjust().draw();
 

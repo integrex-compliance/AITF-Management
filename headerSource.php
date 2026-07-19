@@ -131,7 +131,7 @@
         transition: background 0.4s ease, box-shadow 0.4s ease, border-color 0.4s ease;
     }
 
-    .top-header + * {
+    .top-header+* {
         margin-top: calc(var(--announcement-height) + var(--nav-height)) !important;
     }
 
@@ -906,9 +906,12 @@
     }
 
     @keyframes pulse-glow {
-        0%, 100% {
+
+        0%,
+        100% {
             box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
         }
+
         50% {
             box-shadow: 0 6px 20px rgba(22, 163, 74, 0.6);
         }
@@ -1101,14 +1104,19 @@
 <div class="aitf-public-announcement-banner" aria-label="AITF announcements">
     <div class="aitf-public-announcement-track">
         <?php for ($announcementSet = 0; $announcementSet < 2; $announcementSet++) { ?>
-            <div class="aitf-public-announcement-group" aria-hidden="<?php echo $announcementSet === 0 ? 'false' : 'true'; ?>">
-                <span class="aitf-public-announcement-item"><i class="fa fa-certificate" aria-hidden="true"></i>NABCB Accredited Certification Body</span>
+            <div class="aitf-public-announcement-group"
+                aria-hidden="<?php echo $announcementSet === 0 ? 'false' : 'true'; ?>">
+                <span class="aitf-public-announcement-item"><i class="fa fa-certificate" aria-hidden="true"></i>NABCB
+                    Accredited Certification Body</span>
                 <span class="aitf-public-announcement-divider" aria-hidden="true"></span>
-                <span class="aitf-public-announcement-item"><i class="fa fa-balance-scale" aria-hidden="true"></i> IMPARTIAL ASSESSMENT</span>
+                <span class="aitf-public-announcement-item"><i class="fa fa-balance-scale" aria-hidden="true"></i> IMPARTIAL
+                    ASSESSMENT</span>
                 <span class="aitf-public-announcement-divider" aria-hidden="true"></span>
-                <span class="aitf-public-announcement-item"><i class="fa fa-shield" aria-hidden="true"></i>Trusted. Accredited. Independent.</span>
+                <span class="aitf-public-announcement-item"><i class="fa fa-shield" aria-hidden="true"></i>Trusted.
+                    Accredited. Independent.</span>
                 <span class="aitf-public-announcement-divider" aria-hidden="true"></span>
-                <span class="aitf-public-announcement-item"><i class="fa fa-handshake-o" aria-hidden="true"></i>AUTHENTICATE CERTIFICATE</span>
+                <span class="aitf-public-announcement-item"><i class="fa fa-handshake-o" aria-hidden="true"></i>AUTHENTICATE
+                    CERTIFICATE</span>
                 <span class="aitf-public-announcement-divider" aria-hidden="true"></span>
             </div>
         <?php } ?>
@@ -1146,7 +1154,7 @@
                                         </svg>
                                     </div>
                                     <div class="dropdown-section-content">
-                                        <h3 class="dropdown-section-title">Policy</h3>
+                                        <h3 class="dropdown-section-title">Policies</h3>
                                     </div>
                                     <div class="dropdown-links-list" style="display:none;">
                                         <a href="policy.php#organisation-policy"
@@ -1255,7 +1263,8 @@
                             <!-- First Row -->
                             <div class="dropdown-grid-row">
                                 <!-- EXEMPLAR GLOBAL CERTIFIED -->
-                                <div class="dropdown-grid-col training-section disabled-training-section" data-section="exemplar">
+                                <div class="dropdown-grid-col training-section disabled-training-section"
+                                    data-section="exemplar">
                                     <div class="dropdown-section-icon">
                                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
                                             xmlns="http://www.w3.org/2000/svg">
@@ -1277,7 +1286,8 @@
                                 <div class="dropdown-divider-vertical"></div>
 
                                 <!-- AWARENESS TRAINING -->
-                                <div class="dropdown-grid-col training-section disabled-training-section" data-section="awareness">
+                                <div class="dropdown-grid-col training-section disabled-training-section"
+                                    data-section="awareness">
                                     <div class="dropdown-section-icon">
                                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
                                             xmlns="http://www.w3.org/2000/svg">
@@ -1341,7 +1351,8 @@
                                 <div class="dropdown-divider-vertical"></div>
 
                                 <!-- LEAD AUDITOR TRAINING -->
-                                <div class="dropdown-grid-col training-section disabled-training-section" data-section="lead">
+                                <div class="dropdown-grid-col training-section disabled-training-section"
+                                    data-section="lead">
                                     <div class="dropdown-section-icon">
                                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
                                             xmlns="http://www.w3.org/2000/svg">
@@ -1389,7 +1400,8 @@
                                         </h3>
                                     </div>
                                     <div class="dropdown-links-list" style="display:none;">
-                                        <a href="text/Audit application form QMS, EMS & OHSMS.pdf" download="Audit_Application_Form.pdf"
+                                        <a href="text/Audit application form QMS, EMS & OHSMS.pdf"
+                                            download="Audit_Application_Form.pdf"
                                             style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
                                                 class="link-line"></span>Audit Application Form</a>
                                         <a href="application.php#online-application-form"
@@ -1418,7 +1430,9 @@
                                         <a href="certificationGuideline.php"
                                             style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
                                                 class="link-line"></span>Certification Guideline</a>
-                                        <span class="coming-soon-item"><span class="coming-soon-title">Auditor Guideline</span><span class="coming-soon-note">Comming soon</span></span>
+                                        <a href="auditorGuideline.php"
+                                            style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
+                                                class="link-line"></span>Auditor Guideline</a>
                                     </div>
                                 </div>
                             </div>
@@ -1594,7 +1608,9 @@
                     </div>
                     <ul class="mobile-nav-list">
                         <li class="mobile-nav-section-label">Exemplar Global Certified</li>
-                        <li><span class="mobile-nav-item" style="display:block; opacity:0.7; cursor:not-allowed; pointer-events:none;">Comming soon</span></li>
+                        <li><span class="mobile-nav-item"
+                                style="display:block; opacity:0.7; cursor:not-allowed; pointer-events:none;">Comming
+                                soon</span></li>
                         <li class="mobile-nav-section-label">Awareness Training</li>
                         <li><a class="mobile-nav-item" href="qms_iso_9001_03.php">QMS ISO 9001:2015</a></li>
                         <li><a class="mobile-nav-item" href="ems_iso_9001_03.php">EMS ISO 14001:2015</a></li>
@@ -1633,7 +1649,7 @@
                         </li>
                         <li><a class="mobile-nav-item" href="certificationGuideline.php">Certification Guideline</a>
                         </li>
-                        <li><span class="mobile-nav-item" style="display:block; opacity:0.7; cursor:not-allowed; pointer-events:none;">Auditor Guideline - Comming soon</span></li>
+                        <li><a class="mobile-nav-item" href="auditorGuideline.php">Auditor Guideline</a></li>
                         <li class="mobile-nav-section-label">Guidelines</li>
                         <li><a class="mobile-nav-item" href="useOfLogo.php">Logo Usage Guidelines</a></li>
                         <li><a class="mobile-nav-item" href="transitionGuideline.php">Transition Guidelines</a></li>
@@ -1646,8 +1662,10 @@
                             </div>
                         </li>
                         <li><a class="mobile-nav-item" href="ncClosure.php">NC Report &amp; Closure</a></li>
-                        <li><a class="mobile-nav-item" href="infoUpdationForm.php">Information Update Form (PDF)</a></li>
-                        <li><a class="mobile-nav-item" href="info_updation_form.php">Information Update Form (Fill Online)</a></li>
+                        <li><a class="mobile-nav-item" href="infoUpdationForm.php">Information Update Form (PDF)</a>
+                        </li>
+                        <li><a class="mobile-nav-item" href="info_updation_form.php">Information Update Form (Fill
+                                Online)</a></li>
                         <li><a class="mobile-nav-item" href="circuler.php">Circulars</a></li>
                     </ul>
                 </section>
@@ -1701,7 +1719,7 @@
             ticking = false;
         }
 
-        window.addEventListener('scroll', function() {
+        window.addEventListener('scroll', function () {
             if (!ticking) {
                 window.requestAnimationFrame(updateNavBg);
                 ticking = true;

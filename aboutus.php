@@ -273,13 +273,14 @@ include './headSource.php';
                     <i class="fas fa-users-viewfinder"></i>
                     <h3>Who We Are</h3>
                     <p>AITF (Assessment & Institute for Technical Forum) is dedicated to providing high-quality
-                        assessments through qualified auditors to drive Management System.</p>
+                        assessments through qualified auditors for Management System certifications.</p>
                 </div>
 
                 <div class="service-card">
                     <i class="fas fa-award"></i>
                     <h3>NABCB Accredited</h3>
-                    <p>Accredited by NABCB, we maintain the highest standards of competence and impartiality, ensuring
+                    <p>Accredited by NABCB, for QMS,EMS and OHSMS certifications we maintain the highest standards of
+                        competence and impartiality, ensuring
                         globally recognized certification services.</p>
                 </div>
             </div>
@@ -291,8 +292,9 @@ include './headSource.php';
         <div class="container">
             <div class="about-card">
                 <h3>Our Methodology</h3>
-                <p>We at AITF Management Certification Ltd. are committed to providing assessments through qualified
-                    auditors to improve the business performance of our customers with value-added audits of clients
+                <p>We at AITF Management Certification Ltd are committed to providing value added assessment services
+                    through qualified
+                    auditors for management systems certifications
                     processes and management systems.</p>
                 <p>The National Accreditation Board for Certification Bodies (NABCB) serves as a constituent board of
                     the Quality Council of India (QCI), ensuring that our operations align with international
@@ -300,10 +302,9 @@ include './headSource.php';
             </div>
 
             <div class="about-card" style="border-left-color: #10b981;">
-                <h3>Management System Benefits</h3>
-                <p>Implementing a robust management system brings transparency, consistency, and a culture of continuous
-                    improvement to your organization. Benefits include reduced operational failure costs and enhanced
-                    market credibility.</p>
+                <h3>Management Certification Benefits</h3>
+                <p>Achieving accredited certification for your management system provides third-party independent
+                    validation to your organization.</p>
             </div>
         </div>
     </section>
