@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <?php include './headSource.php'; ?>
     <title>Frequently Asked Questions - AITF</title>
@@ -50,7 +51,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: 
+            background:
                 radial-gradient(circle at 20% 50%, rgba(66, 153, 225, 0.15) 0%, transparent 50%),
                 radial-gradient(circle at 80% 50%, rgba(49, 130, 206, 0.15) 0%, transparent 50%),
                 radial-gradient(circle at 50% 100%, rgba(118, 75, 162, 0.08) 0%, transparent 50%);
@@ -351,6 +352,7 @@
                 opacity: 0;
                 transform: translateY(-30px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -362,6 +364,7 @@
                 opacity: 0;
                 transform: translateY(30px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -373,36 +376,36 @@
             .faq-container {
                 padding: 80px 15px 60px;
             }
-            
+
             .page-title {
                 font-size: 2.5rem;
             }
-            
+
             .page-subtitle {
                 font-size: 1.1rem;
             }
-            
+
             .section-title {
                 font-size: 1.5rem;
                 flex-direction: column;
                 text-align: center;
                 gap: 15px;
             }
-            
+
             .section-title::after {
                 display: none;
             }
-            
+
             .section-title i {
                 width: 45px;
                 height: 45px;
             }
-            
+
             .faq-question {
                 padding: 20px 25px;
                 font-size: 1rem;
             }
-            
+
             .search-input {
                 padding: 15px 50px 15px 20px;
                 font-size: 15px;
@@ -555,6 +558,7 @@
         }
     </style>
 </head>
+
 <body>
     <?php include './headerSource.php'; ?>
     <div class="faq-container">
@@ -587,26 +591,20 @@
                 <i class="fas fa-certificate"></i>
                 Certification Process
             </h2>
-            
+
             <div class="faq-item" data-category="certification">
                 <div class="faq-question">
                     <span>What is the first step to get certification from AITF?</span>
                     <i class="fas fa-chevron-down faq-icon"></i>
                 </div>
                 <div class="faq-answer">
-                    The first step is to fill out the application form available on our website. Once submitted, our team will review your application and contact you for the next steps, including document verification and audit planning.
+                    The first step is to fill out the application form available on our website. Once submitted, our
+                    team will review your application and contact you for the next steps, including document
+                    verification and audit planning.
                 </div>
             </div>
 
-            <div class="faq-item" data-category="certification">
-                <div class="faq-question">
-                    <span>How long does the certification process take?</span>
-                    <i class="fas fa-chevron-down faq-icon"></i>
-                </div>
-                <div class="faq-answer">
-                    The certification process typically takes 60-90 days, depending on the type of certification and your organization's readiness. This includes application review, documentation audit, on-site audit, and certificate issuance.
-                </div>
-            </div>
+
 
             <div class="faq-item" data-category="certification">
                 <div class="faq-question">
@@ -614,7 +612,9 @@
                     <i class="fas fa-chevron-down faq-icon"></i>
                 </div>
                 <div class="faq-answer">
-                    Required documents include: company registration proof, quality manual, process documentation, internal audit reports, management review, and other relevant compliance documents based on the certification type.
+                    Required documents include: company registration proof, quality manual, process documentation,
+                    internal audit reports, management review, and other relevant compliance documents based on the
+                    certification type.
                 </div>
             </div>
         </div>
@@ -625,14 +625,16 @@
                 <i class="fas fa-globe"></i>
                 ISO Certification
             </h2>
-            
+
             <div class="faq-item" data-category="iso">
                 <div class="faq-question">
                     <span>What is ISO 9001:2015 certification?</span>
                     <i class="fas fa-chevron-down faq-icon"></i>
                 </div>
                 <div class="faq-answer">
-                    ISO 9001:2015 is the international standard for Quality Management Systems (QMS). It helps organizations demonstrate their ability to consistently provide products and services that meet customer and regulatory requirements.
+                    ISO 9001:2015 is the international standard for Quality Management Systems (QMS). It helps
+                    organizations demonstrate their ability to consistently provide products and services that meet
+                    customer and regulatory requirements.
                 </div>
             </div>
 
@@ -642,7 +644,9 @@
                     <i class="fas fa-chevron-down faq-icon"></i>
                 </div>
                 <div class="faq-answer">
-                    Benefits include: enhanced credibility, improved operational efficiency, better customer satisfaction, increased market access, competitive advantage, and compliance with international standards.
+                    Benefits include: enhanced credibility, improved operational efficiency, better customer
+                    satisfaction, increased market access, competitive advantage, and compliance with international
+                    standards.
                 </div>
             </div>
 
@@ -652,7 +656,8 @@
                     <i class="fas fa-chevron-down faq-icon"></i>
                 </div>
                 <div class="faq-answer">
-                    AITF provides certification for ISO 9001 (Quality Management), ISO 14001 (Environmental Management), ISO 45001 (Occupational Health & Safety), , and other relevant standards.
+                    AITF provides certification for ISO 9001 (Quality Management), ISO 14001 (Environmental Management),
+                    ISO 45001 (Occupational Health & Safety), , and other relevant standards.
                 </div>
             </div>
 
@@ -662,19 +667,22 @@
                     <i class="fas fa-chevron-down faq-icon"></i>
                 </div>
                 <div class="faq-answer">
-                    ISO 9001:2015 introduces risk-based thinking, greater emphasis on leadership commitment, and a more flexible structure. It focuses on organizational context and stakeholder needs compared to the 2008 version.
+                    ISO 9001:2015 introduces risk-based thinking, greater emphasis on leadership commitment, and a more
+                    flexible structure. It focuses on organizational context and stakeholder needs compared to the 2008
+                    version.
                 </div>
             </div>
-
+            <!-- 
             <div class="faq-item" data-category="iso">
                 <div class="faq-question">
-                    <span>How long does ISO certification take?</span>
+                    <span>How long does ISO certification take change?</span>
                     <i class="fas fa-chevron-down faq-icon"></i>
                 </div>
                 <div class="faq-answer">
-                    ISO certification typically takes 60-90 days, including gap analysis, documentation, implementation, internal audits, management review, and final certification audit by AITF auditors.
+                    ISO certification typically takes 60-90 days, including gap analysis, documentation, implementation,
+                    internal audits, management review, and final certification audit by AITF auditors.
                 </div>
-            </div>
+            </div> -->
 
             <div class="faq-item" data-category="iso">
                 <div class="faq-question">
@@ -682,7 +690,8 @@
                     <i class="fas fa-chevron-down faq-icon"></i>
                 </div>
                 <div class="faq-answer">
-                    Certification costs vary based on organization size, complexity, scope, and chosen ISO standard. Contact AITF for a customized quote based on your specific requirements and organizational needs.
+                    Certification costs vary based on organization size, complexity, scope, and chosen ISO standard.
+                    Contact AITF for a customized quote based on your specific requirements and organizational needs.
                 </div>
             </div>
         </div>
@@ -693,14 +702,17 @@
                 <i class="fas fa-clipboard-check"></i>
                 Audit & Assessment
             </h2>
-            
+
             <div class="faq-item" data-category="audit">
                 <div class="faq-question">
                     <span>How should I prepare for an audit?</span>
                     <i class="fas fa-chevron-down faq-icon"></i>
                 </div>
                 <div class="faq-answer">
-                    Prepare by: reviewing all documentation, conducting internal audits, ensuring records are up-to-date, training staff on quality procedures, and arranging necessary facilities for the audit team and arrange ISO awareness session and Internal Auditor's training to Process Owners for better preparation.
+                    Prepare by: reviewing all documentation, conducting internal audits, ensuring records are
+                    up-to-date, training staff on quality procedures, and arranging necessary facilities for the audit
+                    team and arrange ISO awareness session and Internal Auditor's training to Process Owners for better
+                    preparation.
                 </div>
             </div>
 
@@ -710,7 +722,9 @@
                     <i class="fas fa-chevron-down faq-icon"></i>
                 </div>
                 <div class="faq-answer">
-                    Non-Conformity (NC) Report identifies deviations from standards. The closure process involves: root cause analysis, corrective action implementation, effectiveness verification, and documentation of the resolution.
+                    Non-Conformity (NC) Report identifies deviations from standards. The closure process involves: root
+                    cause analysis, corrective action implementation, effectiveness verification, and documentation of
+                    the resolution.
                 </div>
             </div>
 
@@ -720,7 +734,8 @@
                     <i class="fas fa-chevron-down faq-icon"></i>
                 </div>
                 <div class="faq-answer">
-                    Surveillance audits are typically conducted annually after initial certification. They ensure continued compliance and effectiveness of the management system.
+                    Surveillance audits are typically conducted annually after initial certification. They ensure
+                    continued compliance and effectiveness of the management system.
                 </div>
             </div>
         </div>
@@ -731,25 +746,29 @@
                 <i class="fas fa-info-circle"></i>
                 General Information
             </h2>
-            
+
             <div class="faq-item" data-category="general">
                 <div class="faq-question">
                     <span>How can I use the AITF logo after certification?</span>
                     <i class="fas fa-chevron-down faq-icon"></i>
                 </div>
                 <div class="faq-answer">
-                    After successful certification, you can use the AITF logo on marketing materials, products, and website as per the Logo Usage Guidelines. Download the official logo package from our resources section.
+                    After successful certification, you can use the AITF logo on marketing materials, products, and
+                    website as per the Logo Usage Guidelines. Download the official logo package from our resources
+                    section.
                 </div>
             </div>
 
-              
+
             <div class="faq-item" data-category="general">
                 <div class="faq-question">
                     <span>How can I use the AITF logo after certification?</span>
                     <i class="fas fa-chevron-down faq-icon"></i>
                 </div>
                 <div class="faq-answer">
-                    After successful certification, you can use the AITF logo on marketing materials, products, and website as per the Logo Usage Guidelines. Download the official logo package from our resources section.
+                    After successful certification, you can use the AITF logo on marketing materials, products, and
+                    website as per the Logo Usage Guidelines. Download the official logo package from our resources
+                    section.
                 </div>
             </div>
 
@@ -759,7 +778,8 @@
                     <i class="fas fa-chevron-down faq-icon"></i>
                 </div>
                 <div class="faq-answer">
-                    AITF certifications are typically valid for 3 years, subject to annual surveillance audits and compliance. Renewal requires a recertification audit before expiry.
+                    AITF certifications are typically valid for 3 years, subject to annual surveillance audits and
+                    compliance. Renewal requires a recertification audit before expiry.
                 </div>
             </div>
 
@@ -769,7 +789,9 @@
                     <i class="fas fa-chevron-down faq-icon"></i>
                 </div>
                 <div class="faq-answer">
-                    Use the Information Update Form available in our download section. Information that needs to be modified should be duly filled in Update Form given on web site and submitted online. Post submission, AITF will carry out required changes in client profile.
+                    Use the Information Update Form available in our download section. Information that needs to be
+                    modified should be duly filled in Update Form given on web site and submitted online. Post
+                    submission, AITF will carry out required changes in client profile.
                 </div>
             </div>
 
@@ -779,7 +801,8 @@
                     <i class="fas fa-chevron-down faq-icon"></i>
                 </div>
                 <div class="faq-answer">
-                    AITF certifications are typically valid for 3 years, subject to annual surveillance audits and compliance. Renewal requires a recertification audit before expiry.
+                    AITF certifications are typically valid for 3 years, subject to annual surveillance audits and
+                    compliance. Renewal requires a recertification audit before expiry.
                 </div>
             </div>
 
@@ -789,19 +812,20 @@
                     <i class="fas fa-chevron-down faq-icon"></i>
                 </div>
                 <div class="faq-answer">
-                    Use the Information Update Form available in our download section. Submit changes in company details, contact information, or scope modifications for record updates.
+                    Use the Information Update Form available in our download section. Submit changes in company
+                    details, contact information, or scope modifications for record updates.
                 </div>
             </div>
         </div>
 
-        
+
         <!-- General FAQs -->
         <div class="faq-section">
             <h2 class="section-title">
                 <i class="fas fa-info-circle"></i>
                 General Information
             </h2>
-          
+
         </div>
 
         <div class="back-to-home">
@@ -815,17 +839,17 @@
     <?php include './footerSource.php'; ?>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const faqItems = document.querySelectorAll('.faq-item');
             const searchInput = document.getElementById('searchInput');
             const searchResults = document.getElementById('searchResults');
             const categoryPills = document.querySelectorAll('.category-pill');
             const faqSections = document.querySelectorAll('.faq-section');
-            
+
             // FAQ Accordion functionality
             faqItems.forEach(item => {
                 const question = item.querySelector('.faq-question');
-                
+
                 question.addEventListener('click', () => {
                     // Close other items
                     faqItems.forEach(otherItem => {
@@ -833,40 +857,40 @@
                             otherItem.classList.remove('active');
                         }
                     });
-                    
+
                     // Toggle current item
                     item.classList.toggle('active');
                 });
             });
-            
+
             // Category filtering
             categoryPills.forEach(pill => {
                 pill.addEventListener('click', () => {
                     // Update active pill
                     categoryPills.forEach(p => p.classList.remove('active'));
                     pill.classList.add('active');
-                    
+
                     const category = pill.dataset.category;
                     filterByCategory(category);
                 });
             });
-            
+
             // Remove the complex category assignment and use direct filtering
             function filterByCategory(category) {
                 console.log('Filtering by category:', category);
                 let visibleCount = 0;
-                
+
                 // Direct filtering by data-category attribute
                 const allItems = document.querySelectorAll('.faq-item');
                 const allSections = document.querySelectorAll('.faq-section');
-                
+
                 console.log('Total items found:', allItems.length);
                 console.log('Total sections found:', allSections.length);
-                
+
                 allItems.forEach(item => {
                     const itemCategory = item.dataset.category;
                     console.log('Item category:', itemCategory, 'Looking for:', category);
-                    
+
                     if (category === 'all' || itemCategory === category) {
                         item.style.display = 'block';
                         visibleCount++;
@@ -876,7 +900,7 @@
                         console.log('Hiding item');
                     }
                 });
-                
+
                 // Show/hide sections based on visible items
                 allSections.forEach(section => {
                     const visibleItemsInSection = section.querySelectorAll('.faq-item[style*="block"], .faq-item:not([style*="none"])');
@@ -886,7 +910,7 @@
                         section.style.display = 'none';
                     }
                 });
-                
+
                 // Update search results
                 if (category === 'all') {
                     searchResults.textContent = '';
@@ -896,18 +920,18 @@
                 }
                 console.log('Visible count:', visibleCount);
             }
-            
+
             // Search functionality
             let searchTimeout;
             searchInput.addEventListener('input', (e) => {
                 clearTimeout(searchTimeout);
                 const searchTerm = e.target.value.toLowerCase().trim();
-                
+
                 searchTimeout = setTimeout(() => {
                     performSearch(searchTerm);
                 }, 300);
             });
-            
+
             // Clear search when clicking on category pills
             categoryPills.forEach(pill => {
                 pill.addEventListener('click', () => {
@@ -915,14 +939,14 @@
                     searchResults.textContent = '';
                 });
             });
-            
+
             function filterByCategory(category) {
                 let visibleCount = 0;
-                
+
                 faqSections.forEach(section => {
                     const sectionItems = section.querySelectorAll('.faq-item');
                     let sectionHasVisibleItems = false;
-                    
+
                     sectionItems.forEach(item => {
                         if (category === 'all' || item.dataset.category === category) {
                             item.style.display = 'block';
@@ -932,11 +956,11 @@
                             item.style.display = 'none';
                         }
                     });
-                    
+
                     // Show/hide section based on whether it has visible items
                     section.style.display = sectionHasVisibleItems ? 'block' : 'none';
                 });
-                
+
                 // Update search results
                 if (category === 'all') {
                     searchResults.textContent = '';
@@ -945,7 +969,7 @@
                     searchResults.classList.remove('no-results');
                 }
             }
-            
+
             function performSearch(searchTerm) {
                 if (!searchTerm) {
                     // Reset to show all items
@@ -959,14 +983,14 @@
                     searchResults.textContent = '';
                     return;
                 }
-                
+
                 let matchCount = 0;
                 const sectionsToShow = new Set();
-                
+
                 faqItems.forEach(item => {
                     const question = item.querySelector('.faq-question span').textContent.toLowerCase();
                     const answer = item.querySelector('.faq-answer').textContent.toLowerCase();
-                    
+
                     if (question.includes(searchTerm) || answer.includes(searchTerm)) {
                         item.style.display = 'block';
                         highlightText(item, searchTerm);
@@ -977,7 +1001,7 @@
                         removeHighlight(item);
                     }
                 });
-                
+
                 // Show only sections with matching items
                 faqSections.forEach(section => {
                     if (sectionsToShow.has(section)) {
@@ -986,7 +1010,7 @@
                         section.style.display = 'none';
                     }
                 });
-                
+
                 // Update search results
                 if (matchCount > 0) {
                     searchResults.textContent = `Found ${matchCount} question${matchCount !== 1 ? 's' : ''} matching "${searchTerm}"`;
@@ -996,37 +1020,37 @@
                     searchResults.classList.add('no-results');
                 }
             }
-            
+
             function highlightText(item, searchTerm) {
                 const questionSpan = item.querySelector('.faq-question span');
                 const answerDiv = item.querySelector('.faq-answer');
                 const originalQuestion = questionSpan.textContent;
                 const originalAnswer = answerDiv.textContent;
-                
+
                 // Highlight in question
                 if (originalQuestion.toLowerCase().includes(searchTerm)) {
                     const regex = new RegExp(`(${searchTerm})`, 'gi');
                     questionSpan.innerHTML = originalQuestion.replace(regex, '<span class="highlight">$1</span>');
                 }
-                
+
                 // Highlight in answer
                 if (originalAnswer.toLowerCase().includes(searchTerm)) {
                     const regex = new RegExp(`(${searchTerm})`, 'gi');
                     answerDiv.innerHTML = originalAnswer.replace(regex, '<span class="highlight">$1</span>');
                 }
             }
-            
+
             function removeHighlight(item) {
                 const questionSpan = item.querySelector('.faq-question span');
                 const answerDiv = item.querySelector('.faq-answer');
-                
+
                 // Remove highlights from question
                 questionSpan.innerHTML = questionSpan.textContent;
-                
+
                 // Remove highlights from answer
                 answerDiv.innerHTML = answerDiv.textContent;
             }
-            
+
             function getCategoryName(category) {
                 const names = {
                     'certification': 'Certification Process',
@@ -1036,10 +1060,11 @@
                 };
                 return names[category] || category;
             }
-            
+
             // Initialize with "All Categories" selected
             filterByCategory('all');
         });
     </script>
 </body>
+
 </html>
