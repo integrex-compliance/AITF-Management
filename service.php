@@ -64,7 +64,7 @@ include './headerSource.php';
                             display: inline-block;
                             position: relative;
                         ">
-                            Accrediatied Certification Services
+                            Accredited Certification Services
                             <span style="
                                 position: absolute;
                                 bottom: -5px;
@@ -222,16 +222,12 @@ include './headerSource.php';
 <section class="py-5" style="background: #f8fafc;">
     <div class="container">
         <div class="row align-items-center">
-            <div class="col-lg-8">
-                <h3 style="color: #0f172a; margin-bottom: 15px;">Need Help with Certification?</h3>
-                <p class="mb-0" style="color: #64748b;">Our team of experts is ready to assist you with all your
-                    certification needs. Contact us today to get started.</p>
-            </div>
-            <div class="col-lg-4 text-lg-end mt-4 mt-lg-0">
+
+            <!-- <div class="col-lg-4 text-lg-end mt-4 mt-lg-0">
                 <a href="contactUS.php" class="btn btn-primary btn-lg">Contact Us</a>
             </div>
+        </div> -->
         </div>
-    </div>
 </section>
 
 <?php include_once 'footerSource.php'; ?>

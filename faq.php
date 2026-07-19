@@ -672,17 +672,19 @@
                     version.
                 </div>
             </div>
-            <!-- 
+
             <div class="faq-item" data-category="iso">
                 <div class="faq-question">
                     <span>How long does ISO certification take change?</span>
                     <i class="fas fa-chevron-down faq-icon"></i>
                 </div>
                 <div class="faq-answer">
-                    ISO certification typically takes 60-90 days, including gap analysis, documentation, implementation,
-                    internal audits, management review, and final certification audit by AITF auditors.
+                    Once the application form is submitted and the certification agreement is signed, the organization
+                    can schedule the Stage 1 audit (readiness review). This is followed by the Stage 2 audit. After
+                    successfully closing any identified discrepancies (non-conformities), the organization can achieve
+                    certification within 15 days.
                 </div>
-            </div> -->
+            </div>
 
             <div class="faq-item" data-category="iso">
                 <div class="faq-question">
