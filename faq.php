@@ -592,7 +592,7 @@
                 Certification Process
             </h2>
 
-            <div class="faq-item" data-category="certification">
+            <!-- <div class="faq-item" data-category="certification">
                 <div class="faq-question">
                     <span>What is the first step to get certification from AITF?</span>
                     <i class="fas fa-chevron-down faq-icon"></i>
@@ -602,7 +602,7 @@
                     team will review your application and contact you for the next steps, including document
                     verification and audit planning.
                 </div>
-            </div>
+            </div> -->
 
 
 
