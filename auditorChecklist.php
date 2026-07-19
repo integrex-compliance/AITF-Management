@@ -36,15 +36,21 @@
         }
 
         $key = strtolower(str_replace(array('-', '_', ' '), '', $status));
-        if ($key === 'active' || $key === 'valid' || $key === 'granted') return 'Active';
-        if ($key === 'suspended' || $key === 'suspend') return 'Suspended';
-        if ($key === 'inprocess') return 'In-process';
-        if ($key === 'contractinprocess') return 'Contract In-process';
-        if ($key === 'withdrawn' || $key === 'withdraw') return 'Withdrawn';
+        if ($key === 'active' || $key === 'valid' || $key === 'granted')
+            return 'Active';
+        if ($key === 'suspended' || $key === 'suspend')
+            return 'Suspended';
+        if ($key === 'inprocess')
+            return 'In-process';
+        if ($key === 'contractinprocess')
+            return 'Contract In-process';
+        if ($key === 'withdrawn' || $key === 'withdraw')
+            return 'Withdrawn';
         if ($key === 'applicationcanceled' || $key === 'applicationcancelled' || $key === 'cancelled' || $key === 'canceled') {
             return 'Application canceled';
         }
-        if ($key === 'expired' || $key === 'expire') return 'Expired';
+        if ($key === 'expired' || $key === 'expire')
+            return 'Expired';
 
         return $status;
     }

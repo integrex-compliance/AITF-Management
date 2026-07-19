@@ -231,7 +231,7 @@ if (isset($_POST['customerEmail']) && !empty($_POST['customerEmail'])) {
 
             if ($result && isset($result['service_type'])) {
                 $serviceType = $result['service_type'];
-                error_log("✅ Found in CA table, service_type: " . $serviceType);
+                error_log(" Found in CA table, service_type: " . $serviceType);
             } else {
                 // Check service_type_rc table
                 $rcSql = "SELECT s.service_type FROM service_type_rc rc 

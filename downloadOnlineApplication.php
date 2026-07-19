@@ -41,7 +41,7 @@ class ApplicationFormPDF extends TCPDF
         // Sub-title for this form
         $this->SetXY(60, 18);
         $this->SetFont('helvetica', 'B', 12);
-        $this->Cell(0, 25, 'AUDIT APPLICATION FORM', 0, false, 'C', 0, '', 0, false, 'M', 'M');
+        $this->Cell(0, 25, '', 0, false, 'C', 0, '', 0, false, 'M', 'M');
 
         $this->SetLineStyle(array('width' => 0.65, 'color' => array(0, 0, 0)));
         // Single underline below header
