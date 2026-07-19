@@ -675,7 +675,7 @@
 
             <div class="faq-item" data-category="iso">
                 <div class="faq-question">
-                    <span>How long does ISO certification take change?</span>
+                    <span>How long does ISO certification take?</span>
                     <i class="fas fa-chevron-down faq-icon"></i>
                 </div>
                 <div class="faq-answer">
