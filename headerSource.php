@@ -1146,15 +1146,18 @@
                                         </svg>
                                     </div>
                                     <div class="dropdown-section-content">
-                                        <h3 class="dropdown-section-title">About ISO</h3>
+                                        <h3 class="dropdown-section-title">Policy</h3>
                                     </div>
                                     <div class="dropdown-links-list" style="display:none;">
-                                        <a href="aboutISO.php"
+                                        <a href="policy.php#organisation-policy"
                                             style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
-                                                class="link-line"></span>What is ISO</a>
-                                        <a href="policy.php"
+                                                class="link-line"></span>ORGANISATION POLICY</a>
+                                        <a href="policy.php#impartiality"
                                             style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
-                                                class="link-line"></span>Policy</a>
+                                                class="link-line"></span>IMPARTIALITY</a>
+                                        <a href="policy.php#independence"
+                                            style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
+                                                class="link-line"></span>INDEPENDENCE</a>
                                     </div>
                                 </div>
 
@@ -1274,7 +1277,7 @@
                                 <div class="dropdown-divider-vertical"></div>
 
                                 <!-- AWARENESS TRAINING -->
-                                <div class="dropdown-grid-col training-section" data-section="awareness">
+                                <div class="dropdown-grid-col training-section disabled-training-section" data-section="awareness">
                                     <div class="dropdown-section-icon">
                                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
                                             xmlns="http://www.w3.org/2000/svg">
@@ -1284,24 +1287,11 @@
                                         </svg>
                                     </div>
                                     <div class="dropdown-section-content">
-                                        <h3 class="dropdown-section-title">Awareness Training</h3>
+                                        <h3 class="dropdown-section-title">Generic Awareness Training</h3>
+                                        <span class="dropdown-coming-soon-inline">Comming soon</span>
                                     </div>
                                     <div class="dropdown-links-list" style="display:none;">
-                                        <a href="qms_iso_9001_03.php"
-                                            style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
-                                                class="link-line"></span>QMS ISO 9001:2015</a>
-                                        <a href="ems_iso_9001_03.php"
-                                            style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
-                                                class="link-line"></span>EMS ISO 14001:2015</a>
-                                        <a href="ohsms_iso_45001_03.php"
-                                            style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
-                                                class="link-line"></span>OHSMS ISO 45001:2018</a>
-                                        <a href="bcms_iso_22301_03.php"
-                                            style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
-                                                class="link-line"></span>BCMS ISO 22301:2012</a>
-                                        <a href="isms_iso_27001_03.php"
-                                            style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
-                                                class="link-line"></span>ISMS ISO 27001:2013</a>
+                                        <span class="coming-soon-item">Comming soon</span>
                                     </div>
                                 </div>
                             </div>
@@ -1351,7 +1341,7 @@
                                 <div class="dropdown-divider-vertical"></div>
 
                                 <!-- LEAD AUDITOR TRAINING -->
-                                <div class="dropdown-grid-col training-section" data-section="lead">
+                                <div class="dropdown-grid-col training-section disabled-training-section" data-section="lead">
                                     <div class="dropdown-section-icon">
                                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
                                             xmlns="http://www.w3.org/2000/svg">
@@ -1362,23 +1352,10 @@
                                     </div>
                                     <div class="dropdown-section-content">
                                         <h3 class="dropdown-section-title">Lead Auditor Training</h3>
+                                        <span class="dropdown-coming-soon-inline">Comming soon</span>
                                     </div>
                                     <div class="dropdown-links-list" style="display:none;">
-                                        <a href="qms_iso_9001_04.php"
-                                            style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
-                                                class="link-line"></span>QMS ISO 9001:2015 Lead</a>
-                                        <a href="ems_iso_9001_04.php"
-                                            style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
-                                                class="link-line"></span>EMS ISO 14001:2015 Lead</a>
-                                        <a href="ohsms_iso_45001_04.php"
-                                            style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
-                                                class="link-line"></span>OHSMS ISO 45001:2018 Lead</a>
-                                        <a href="isms_iso_27001_04.php"
-                                            style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
-                                                class="link-line"></span>ISMS ISO 27001:2022 Lead</a>
-                                        <a href="integrated_mgmgt_system.php"
-                                            style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
-                                                class="link-line"></span>Integrated Systems Lead</a>
+                                        <span class="coming-soon-item">Comming soon</span>
                                     </div>
                                 </div>
                             </div>

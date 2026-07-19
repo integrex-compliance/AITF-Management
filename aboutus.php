@@ -3,11 +3,14 @@ include './headSource.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>About Us - AITF Management Certification Limited</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -48,7 +51,7 @@ include './headSource.php';
             margin-bottom: 20px;
             text-transform: uppercase;
             letter-spacing: 2px;
-            text-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            text-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
         }
 
         .header-grey-section p {
@@ -85,13 +88,13 @@ include './headSource.php';
             border-radius: 20px;
             text-align: center;
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.05);
-            border: 1px solid rgba(0,0,0,0.02);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.02);
         }
 
         .service-card:hover {
             transform: translateY(-15px);
-            box-shadow: 0 30px 60px rgba(0,0,0,0.1);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.1);
         }
 
         .service-card i {
@@ -128,7 +131,7 @@ include './headSource.php';
             border-radius: 30px;
             margin-bottom: 40px;
             border-left: 8px solid #3b82f6;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);
         }
 
         .about-card h3 {
@@ -163,7 +166,7 @@ include './headSource.php';
             border-radius: 24px;
             text-align: center;
             transition: transform 0.3s ease;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
         }
 
         .value-box:hover {
@@ -200,12 +203,14 @@ include './headSource.php';
             font-size: 3rem;
             margin-bottom: 20px;
             font-weight: 800;
+            color: #ffffff !important;
         }
 
         .cta-footer p {
             font-size: 1.3rem;
             margin-bottom: 40px;
             opacity: 0.9;
+            color: #ffffff !important;
         }
 
         .btn-modern {
@@ -232,12 +237,15 @@ include './headSource.php';
             .header-grey-section {
                 padding: 140px 0 70px;
             }
+
             .header-grey-section h1 {
                 font-size: 2.8rem;
             }
+
             .service-card {
                 padding: 30px 20px;
             }
+
             .about-card {
                 padding: 30px;
             }
@@ -264,13 +272,15 @@ include './headSource.php';
                 <div class="service-card">
                     <i class="fas fa-users-viewfinder"></i>
                     <h3>Who We Are</h3>
-                    <p>AITF (Assessment & Institute for Technical Forum) is dedicated to providing high-quality assessments through qualified auditors to drive Management System.</p>
+                    <p>AITF (Assessment & Institute for Technical Forum) is dedicated to providing high-quality
+                        assessments through qualified auditors to drive Management System.</p>
                 </div>
-                
+
                 <div class="service-card">
                     <i class="fas fa-award"></i>
                     <h3>NABCB Accredited</h3>
-                    <p>Accredited by NABCB, we maintain the highest standards of competence and impartiality, ensuring globally recognized certification services.</p>
+                    <p>Accredited by NABCB, we maintain the highest standards of competence and impartiality, ensuring
+                        globally recognized certification services.</p>
                 </div>
             </div>
         </div>
@@ -281,13 +291,19 @@ include './headSource.php';
         <div class="container">
             <div class="about-card">
                 <h3>Our Methodology</h3>
-                <p>We at AITF Management Certification Ltd. are committed to providing assessments through qualified auditors to improve the business performance of our customers with value-added audits of clients processes and management systems.</p>
-                <p>The National Accreditation Board for Certification Bodies (NABCB) serves as a constituent board of the Quality Council of India (QCI), ensuring that our operations align with international benchmarks.</p>
+                <p>We at AITF Management Certification Ltd. are committed to providing assessments through qualified
+                    auditors to improve the business performance of our customers with value-added audits of clients
+                    processes and management systems.</p>
+                <p>The National Accreditation Board for Certification Bodies (NABCB) serves as a constituent board of
+                    the Quality Council of India (QCI), ensuring that our operations align with international
+                    benchmarks.</p>
             </div>
-            
+
             <div class="about-card" style="border-left-color: #10b981;">
                 <h3>Management System Benefits</h3>
-                <p>Implementing a robust management system brings transparency, consistency, and a culture of continuous improvement to your organization. Benefits include reduced operational failure costs, structured documentation, and enhanced market credibility.</p>
+                <p>Implementing a robust management system brings transparency, consistency, and a culture of continuous
+                    improvement to your organization. Benefits include reduced operational failure costs and enhanced
+                    market credibility.</p>
             </div>
         </div>
     </section>
@@ -302,19 +318,22 @@ include './headSource.php';
                 <div class="value-box">
                     <i class="fas fa-scale-balanced"></i>
                     <h4>Impartiality</h4>
-                    <p>Impartiality is the cornerstone of our assessment process, ensuring fair and unbiased outcomes for every client.</p>
+                    <p>Impartiality is the cornerstone of our assessment process, ensuring fair and unbiased outcomes
+                        for every client.</p>
                 </div>
-                
+
                 <div class="value-box">
                     <i class="fas fa-fingerprint"></i>
                     <h4>Independence</h4>
-                    <p>AITF operates with full autonomy, taking complete responsibility for all certification decisions without external influence.</p>
+                    <p>AITF operates with full autonomy, taking complete responsibility for all certification decisions
+                        without external influence.</p>
                 </div>
-                
+
                 <div class="value-box">
                     <i class="fas fa-user-shield"></i>
                     <h4>Confidentiality</h4>
-                    <p>Your data is safe with us. We maintain strict confidentiality protocols to protect all sensitive client information.</p>
+                    <p>Your data is safe with us. We maintain strict confidentiality protocols to protect all sensitive
+                        client information.</p>
                 </div>
             </div>
         </div>
@@ -334,9 +353,10 @@ include './headSource.php';
 
     <script>
         // Reveal animation on scroll
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             // Smooth reveal effect can be added here
         });
     </script>
 </body>
+
 </html>

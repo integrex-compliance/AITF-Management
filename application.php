@@ -2296,8 +2296,7 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                     <div class="form-card" style="background: #f8f9fa; border: 1px solid #e5e7eb; border-radius: 15px; padding: 40px; width: 100%;">
                         <h3 class="text-center mb-4" style="color: #1a1a2e; font-size: 2rem; font-weight: 700;">ISO Certification Application</h3>
                         <p class="text-center" style="color: #4a5568; font-size: 1.1rem; line-height: 1.8; max-width: 800px; margin: 0 auto 30px;">
-                           Our dedicated team is available to support you at every stage of the ISO certification process.
-If you are completing the application offline, please download our Audit Application Form. After filling it out, submit the form through our portal or email it to our support team for further assistance.
+                           If you are completing the application offline, please download our Audit Application Form. After filling it out, submit the form through our portal or email it to our team for further assistance.
                         </p>
                         
                         
@@ -2309,7 +2308,7 @@ If you are completing the application offline, please download our Audit Applica
                                             <i class="fa fa-phone" style="font-size: 1.5rem; color: white;"></i>
                                         </div>
                                         <h5 style="color: #1a1a2e; font-weight: 600; margin-bottom: 10px;">Need Help?</h5>
-                                        <p style="color: #4a5568; font-size: 0.95rem; margin-bottom: 0;">Contact our support team for any questions about the application process.</p>
+                                        <p style="color: #4a5568; font-size: 0.95rem; margin-bottom: 0;">Contact our team for any questions about the application process.</p>
                                     </div>
                                 </a>
                             </div>

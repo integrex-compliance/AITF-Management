@@ -518,14 +518,14 @@
     <?php include './headerSource.php'; ?>
 
     <!-- Hero Section -->
-    <div class="section" style="background: linear-gradient(135deg, var(--primary-color) 0%, #003366 100%); padding: 100px 0 80px; color: white;">
+    <div class="section" style="background: linear-gradient(135deg, var(--primary-color) 0%, #003366 100%); padding: 180px 0 80px; color: white;">
         <div class="container">
             <div class="row">
                 <div class="col-lg-10 mx-auto text-center">
                     <h1 class="mb-4" style="font-size: 42px; font-weight: 700; text-shadow: 0 2px 5px rgba(0,0,0,0.1);">
                         <span style="color: #ffcc00;">AUDITOR GUIDELINES</span> 
                     </h1>
-                    <p class="lead mb-0" style="font-size: 20px; opacity: 0.9; max-width: 800px; margin: 0 auto; ">
+                    <p class="lead mb-0" style="font-size: 20px; opacity: 1; max-width: 800px; margin: 0 auto; color: #ffffff; text-shadow: 0 1px 3px rgba(0,0,0,0.3);">
                         Essential resources and documentation for AITF auditors to ensure compliance and excellence in auditing practices.
                     </p>
                 </div>
@@ -541,17 +541,10 @@
                     <div class="document-container">
                         <div class="document-info">
                             <h3>Auditor Guidelines Document</h3>
-                            <p>Access the complete guidelines document for auditors below. This comprehensive resource contains essential information, procedures, and best practices for conducting audits according to AITF standards and requirements.</p>
+                            <p>Contact AITF OFFICE for auditor guideline document.</p>
                         </div>
                         
-                        <div class="document-actions">
-                            <a href="text/guidline_g_1_11.pdf" target="_blank" class="btn-document btn-view">
-                                <i class="fas fa-eye"></i> View Document
-                            </a>
-                            <a href="text/guidline_g_1_11.pdf" download class="btn-document btn-download">
-                                <i class="fas fa-file-download"></i> Download PDF
-                            </a>
-                        </div>
+
                         
                         <div class="document-features">
                             <div class="feature-item">
@@ -579,84 +572,7 @@
                         
                       
                         
-                        <div class="guidelines-content">
-                          
-                            
-                            <div class="guideline-section">
-                                <h3>1. Introduction</h3>
-                                <p>This policy document describes the process of Granting, Refusing, Maintaining, Renewing, Suspending, Restoring, Withdrawing, Expanding and Reducing of scope of certification.</p>
-                            </div>
-                            
-                            <div class="guideline-section">
-                                <h3>2. Granting</h3>
-                                <p>Certification is granted to organizations that have demonstrated conformity to the criteria for certification.</p>
-                            </div>
-                            
-                            <div class="guideline-section">
-                                <h3>3. Refusing</h3>
-                                <p>AITF conducts a review of every application received to determine capability to undertake the conformity assessment activity applied for. Where it is determined that the AITF can does not have either the competence or the resources to undertake the activity or analysis shows any risk associated, in such event AITF may decline and informs to applicant with justification accordingly.</p>
-                            </div>
-                            
-                            <div class="guideline-section">
-                                <h3>4. Maintaining</h3>
-                                <p><strong>4.1</strong> AITF certification is maintained through surveillance audits, recertification audits and special audits.</p>
-                                <p><strong>4.2</strong> Surveillance audits are carried out at intervals specified in the certification contract. The surveillance assessment shall be carried out before 12 month from the date of initial certification decision.</p>
-                                <p><strong>4.3</strong> Recertification audits activities shall be carried out before the expiry of the certificate to enable renewal of certification on time. When recertification activities are successfully completed prior to the expiry date of the existing certification, the expiry date of the new certification shall be based on the expiry date of the existing certification. The issue date on a new certificate shall be the date of recertification decision.</p>
-                                <p><strong>4.3.2</strong> If recertification audit could not completed or is unable to verify the implementation of corrections and corrective actions for any major nonconformity prior to the expiry date of the certification, then recertification shall not be recommended and the validity of the certification shall not be extended. The client shall be informed and the consequences shall be explained.</p>
-                                <p><strong>4.3.3</strong> Following expiration of certification, the certification may restore within 6 months provided that the outstanding recertification activities are completed, otherwise at least a stage 2 shall be conducted. The effective date on the certificate shall be on or after the recertification decision and the expiry date shall be based on prior certification cycle.</p>
-                                <p><strong>4.4</strong> Special audits are carried out to respond to changes to the certified system or to investigate complaints against a certified management system. Special audits may also be undertaken in response to an application for modification of scope of a certification already granted (though this may be conducted in conjunction with a planned surveillance audit).</p>
-                            </div>
-                            
-                            <div class="guideline-section">
-                                <h3>5. Renewing</h3>
-                                <p>Renewing of certification is done after the recertification decision the process of which is described in clause 4.3 above. This is done after the three year certification contract period.</p>
-                            </div>
-                            
-                            <div class="guideline-section">
-                                <h3>6. Suspending</h3>
-                                <p><strong>6.1</strong> AITF may suspend a certificate for a specified period in the circumstances as follows:</p>
-                                <ol type="a">
-                                    <li>If the client violates contractual obligations or fail to settle the outstanding dues.</li>
-                                    <li>The Client's management system's persistent or serious failure to meet certification requirements, including requirements of the effectiveness of the management system.</li>
-                                    <li>Corrective actions to the management system not having been carried out or effectively implemented within the agreed time period</li>
-                                    <li>The Client does not allow surveillance or re-certification audits to be carried out as per defined frequencies.</li>
-                                    <li>The client has misused the certificate or the certification logo. Conditions for use of Marks are publicly accessed on www.aitf.co.in</li>
-                                    <li>The certified client has voluntarily requested a suspension.</li>
-                                </ol>
-                                <p><strong>6.3</strong> The suspension period shall not be more than 6 months</p>
-                                <p><strong>6.4</strong> Failure to resolve the issues that resulted in the suspension in the time determined by AITF shall lead to notice of withdrawal of the certification or reduction in the scope of certification.</p>
-                                <p><strong>6.5</strong> Under suspension, the client's management system certification is temporarily invalid.</p>
-                            </div>
-                            
-                            <div class="guideline-section">
-                                <h3>7. Restoring</h3>
-                                <p>If the required measures for a suspended certification has been implemented and demonstrated effectively by the established deadline, the AITF shall lift the suspension of the certificate and the certification shall be considered restored.</p>
-                            </div>
-                            
-                            <div class="guideline-section">
-                                <h3>8. Withdrawing</h3>
-                                <p>AITF is entitled to terminate or withdraw the certification after giving written notice of intent if:</p>
-                                <ul>
-                                    <li>If periodical audits reveal nonconformities of serious nature.</li>
-                                    <li>If the certificate holder fails to comply with the due settlement of his financial obligation despite several reminders.</li>
-                                    <li>If inadequate measures are taken by the certificate holder in case of suspension and Failure to resolve the issues that have resulted in the suspension in a time established by AITF shall result in withdrawal or reduction of the scope of certification.</li>
-                                    <li>The client terminates the contractual relationship with the AITF</li>
-                                </ul>
-                            </div>
-                            
-                            <div class="guideline-section">
-                                <h3>9. Expanding</h3>
-                                <p>In response to an application for expanding the scope of a certification already granted, undertake a review of the application and determine any audit activities necessary to decide whether or not the extension may be granted. This may be conducted in conjunction with a surveillance audit or by a special audit.</p>
-                            </div>
-                            
-                            <div class="guideline-section">
-                                <h3>10. Reducing</h3>
-                                <p>If client requested to do so or during periodical assessment if it is found that the client doesn't having imparted same (scope) activity in existence in such an event scope will be reduced.</p>
-                                <p>AITF shall reduce the client's scope of certification to exclude the parts not meeting the requirements, when the certified client has persistently or seriously failed to meet the certification requirements of those parts of the scope of certification. Any such reduction shall be in line with the requirements of the standard used for certification. AITF's decision on reducing the scope of certification shall be communicated to the client, in writing, through letter F 7.38</p>
-                                <p>The certificate will be withdrawn in its entirety if client or in multisite case the central office or any of the sites does not fulfil the necessary provision for the maintenance of the certification.</p>
-                            </div>
-                          
-                        </div>
+
                     </div>
                 </div>
             </div>

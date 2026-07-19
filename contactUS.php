@@ -1017,7 +1017,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <section class="contact-hero" style="margin-top: 0; padding-top: 140px;">
         <div class="hero-content">
             <h1>Lets Start Conversation</h1>
-            <p>We're here to help and answer any questions you might have. Reach out and we'll respond as soon as
+            <p>We're here to answer any questions you might have. Reach out and we'll respond as soon as
                 possible.</p>
         </div>
     </section>
@@ -1099,7 +1099,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     <div class="contact-item-content">
                         <h4>Email Address</h4>
-                        <a href="mailto:<?php echo $mailFromEmailHtml; ?>" target="_blank"><?php echo $mailFromEmailHtml; ?></a>
+                        <a href="mailto:<?php echo $mailFromEmailHtml; ?>"
+                            target="_blank"><?php echo $mailFromEmailHtml; ?></a>
                     </div>
                 </div>
 

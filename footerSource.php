@@ -285,7 +285,7 @@
                         <h3>COMPANY</h3>
                         <ul class="footer-links">
                             <li><a href="career.php">Careers</a></li>
-                            <li><a href="policy.php">Privacy Policy</a></li>
+                            <li><a href="policy.php">Policy</a></li>
 
                             <li><a href="faq.php">FAQs</a></li>
                             <li><a href="contactUS.php">Contact Us</a></li>

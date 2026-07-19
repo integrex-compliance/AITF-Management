@@ -651,117 +651,66 @@
     <!-- Hero Section -->
     <section class="policy-hero">
         <div class="container">
-            <h1>ORGANIZATION POLICY</h1>
-            <p class="lead" style="max-width: 800px; margin: 0 auto; font-size: 1.2rem; opacity: 0.9;">
-                Our commitment to excellence, integrity, and continuous improvement in quality management systems
-            </p>
+            <h1>POLICY</h1>
         </div>
     </section>
 
     <!-- Main Content -->
     <section class="policy-section">
         <div class="container">
-            <div class="row align-items-center">
-                <div class="col-lg-6 mb-4 mb-lg-0">
+            <div class="row">
+                <div class="col-12 mb-5" id="organisation-policy">
                     <div class="policy-card">
-                        <h3>Our Commitment to Excellence</h3>
-                        <p>AITF-MCL is dedicated to providing exceptional assessment services for QMS certification in
-                            strict compliance with ISO/IEC 17021 standards and accreditation board guidelines. We uphold
-                            the highest levels of professionalism and ethical conduct in all our operations.</p>
-
-                        <div class="policy-feature">
-                            <div class="feature-icon">
-                                <i class="fas fa-shield-alt"></i>
-                            </div>
-                            <div class="feature-content">
-                                <h4>Integrity & Impartiality</h4>
-                                <p>We maintain strict independence and impartiality in all our assessment activities,
-                                    ensuring unbiased and objective evaluations for all clients.</p>
-                            </div>
-                        </div>
-
-                        <div class="policy-feature">
-                            <div class="feature-icon">
-                                <i class="fas fa-balance-scale"></i>
-                            </div>
-                            <div class="feature-content">
-                                <h4>Regulatory Compliance</h4>
-                                <p>We adhere to all applicable legal requirements and industry regulations, ensuring our
-                                    services meet the highest standards of compliance.</p>
-                            </div>
-                        </div>
+                        <h3>ORGANISATION POLICY</h3>
+                        <p>The AITF is committed to providing assessment services as per the requirements specified</p>
+                        <p>ISO/IEC 17021-1 and scheme-specific 17021-2, 3,10 and IAF MD 22 requirements and
+                            accreditation board guidelines for management system certification.</p>
+                        <p>We are also committed to complying with all applicable legal and other pertinent
+                            requirements, and protecting the interests of the other parties while providing our services
+                            independently and impartially with strictly adhering to the code of ethics.</p>
+                        <p>We are committed to managing conflicts of interest and shall ensure integrity, objectivity
+                            and confidentiality while providing proactive, independent assessment services for the
+                            benefit of humankind.</p>
+                        <p>We are committed to maintaining effective management systems through continual improvement of
+                            our certification service processes.</p>
+                        <p>We are committed to providing periodic training as per the needs of our personnel involved in
+                            the certification process, and to providing all the necessary resources for the realization
+                            of certification services.</p>
+                        <p>We are committed to maintaining, measuring and analyzing the objectives periodically to
+                            achieve our policies. Vaibhav V. Ajabe managing directioor</p>
                     </div>
                 </div>
 
-                <div class="col-lg-6">
-                    <div class="policy-image">
-                        <img src="aitfImages/policy-iso-01.jpg" alt="Quality Management System" class="img-fluid">
-                    </div>
-                </div>
-            </div>
-
-            <div class="row mt-5">
-                <div class="col-lg-4 mb-4">
+                <div class="col-12" id="impartiality">
                     <div class="policy-card">
-                        <h3>Conflict of Interest</h3>
-                        <p>We are committed to identifying, analyzing, and managing any potential conflicts of interest
-                            to ensure the integrity of our certification process and maintain stakeholder confidence.
+                        <h3>IMPARTIALITY AND INDEPENDENCE</h3>
+                        <p>As a certification body, AITF top management is committed to impartiality in its management
+                            system certification activities. In order to provide evidence to this, AITF has developed
+                            &amp; established a policy on safeguarding impartiality “IMPARTIALITY AND INDEPENDENCE” as
+                            given below:</p>
+                        <br>
+                        <p style="font-weight: bold; color: var(--primary); font-size: 1.1rem; margin-bottom: 15px;">
+                            IMPARTIALITY AND INDEPENDENCE</p>
+                        <p><strong>IMPARTIALITY</strong> - AITF is committed to maintaining impartiality while providing
+                            management system certification services.</p>
+                        <p>AITF understands the importance of impartiality while providing its management system
+                            certification activities, in order to ensure the objectivity of its management system
+                            certification activities.</p>
+                        <p>AITF is committed to protecting the interests of the other parties while providing our
+                            services in an independent and impartial manner by strictly adhering to the code of ethics.
                         </p>
-                    </div>
-                </div>
 
-                <div class="col-lg-4 mb-4">
-                    <div class="policy-card">
-                        <h3>Continuous Improvement</h3>
-                        <p>We continuously enhance our management systems and processes to deliver superior
-                            certification services and exceed customer expectations.</p>
-                    </div>
-                </div>
-
-                <div class="col-lg-4 mb-4">
-                    <div class="policy-card">
-                        <h3>Professional Development</h3>
-                        <p>We invest in regular training and development for our auditors, technical experts, and
-                            management staff to ensure they remain at the forefront of industry standards and best
-                            practices.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Commitment Section -->
-    <section class="commitment-section">
-        <div class="container">
-            <div class="row text-center">
-                <div class="col-md-4 mb-4 mb-md-0">
-                    <div class="commitment-item">
-                        <!-- <div class="commitment-icon">
-                            <i class="fas fa-handshake"></i>
-                        </div> -->
-
-                    </div>
-                </div>
-
-                <div class="col-md-4 mb-4 mb-md-0">
-                    <div class="commitment-item">
-                        <div class="commitment-icon">
-                            <i class="fas fa-chart-line"></i>
-                        </div>
-                        <h4>Operational Excellence</h4>
-                        <p>Continuously improving our processes and systems to deliver efficient, effective, and
-                            value-adding certification services.</p>
-                    </div>
-                </div>
-
-                <div class="col-md-4">
-                    <div class="commitment-item">
-                        <div class="commitment-icon">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <h4>Stakeholder Trust</h4>
-                        <p>Building and maintaining trust through transparency, integrity, and consistent delivery of
-                            high-quality services.</p>
+                        <p><strong>INDEPENDENCY</strong> – AITF is fully responsible and does not outsource its process
+                            of decisions related to granting, refusing, maintaining, renewing, extending, reducing,
+                            suspending, restoring, withdrawing certification, or expanding or reducing the scope of
+                            certification.</p>
+                        <p>AITF activities are not marketed or offered or linked with the activities of an organization
+                            that provides management system consultancy.</p>
+                        <p>AITF is committed to taking actions to correct inappropriate claims by any consultancy
+                            organisation stating or implying that certification would be simpler, easier, faster or less
+                            expensive if taken from AITF. Also, AITF has not recognized any consultancy organisation or
+                            consultant that claims that certification would be simpler, easier, and faster or less
+                            expensive if a specified consultancy organisation is used.</p>
                     </div>
                 </div>
             </div>

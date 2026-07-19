@@ -34,7 +34,7 @@ include './headerSource.php';
             animation: float 18s infinite alternate-reverse ease-in-out;
         "></div>
     </div>
-    
+
     <div class="container position-relative" style="z-index: 2;">
         <div class="row justify-content-center">
             <div class="col-lg-10 text-center">
@@ -106,18 +106,24 @@ include './headerSource.php';
             </div>
         </div>
     </div>
-    
+
     <style>
         @keyframes float {
-            0% { transform: translateY(0) rotate(0deg); }
-            100% { transform: translateY(-20px) rotate(2deg); }
+            0% {
+                transform: translateY(0) rotate(0deg);
+            }
+
+            100% {
+                transform: translateY(-20px) rotate(2deg);
+            }
         }
+
         .page-header:hover .floating-shape {
             transform: translateY(-10px);
         }
     </style>
-            </div>
-        </div>
+    </div>
+    </div>
     </div>
 </section>
 
@@ -127,72 +133,84 @@ include './headerSource.php';
         <div class="row">
             <!-- Certification Services -->
             <div class="col-lg-4 col-md-6 mb-4">
-                <div class="service-card" style="background: #fff; border-radius: 10px; padding: 30px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); height: 100%; transition: all 0.3s ease; border-left: 4px solid #3b82f6;">
+                <div class="service-card"
+                    style="background: #fff; border-radius: 10px; padding: 30px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); height: 100%; transition: all 0.3s ease; border-left: 4px solid #3b82f6;">
                     <div class="service-icon mb-4" style="font-size: 40px; color: #3b82f6;">
                         <i class="fas fa-certificate"></i>
                     </div>
                     <h4 style="color: #0f172a; margin-bottom: 15px;">Certification Process</h4>
-                    <p style="color: #64748b; margin-bottom: 20px;">Comprehensive certification services to ensure your products and services meet the highest industry standards and regulatory requirements.</p>
+                    <p style="color: #64748b; margin-bottom: 20px;">Comprehensive certification services to ensure your
+                        products and services meet the highest industry standards and regulatory requirements.</p>
                     <a href="certificationGuideline.php" class="btn btn-outline-primary">Learn More</a>
                 </div>
             </div>
 
             <!-- Auditor Services -->
             <div class="col-lg-4 col-md-6 mb-4">
-                <div class="service-card" style="background: #fff; border-radius: 10px; padding: 30px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); height: 100%; transition: all 0.3s ease; border-left: 4px solid #10b981;">
+                <div class="service-card"
+                    style="background: #fff; border-radius: 10px; padding: 30px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); height: 100%; transition: all 0.3s ease; border-left: 4px solid #10b981;">
                     <div class="service-icon mb-4" style="font-size: 40px; color: #10b981;">
                         <i class="fas fa-clipboard-check"></i>
                     </div>
                     <h4 style="color: #0f172a; margin-bottom: 15px;">Audit Services</h4>
-                    <p style="color: #64748b; margin-bottom: 20px;">Professional audit services conducted by certified auditors to evaluate and improve your quality management systems.</p>
+                    <p style="color: #64748b; margin-bottom: 20px;">Professional audit services conducted by certified
+                        auditors to evaluate and improve your quality management systems.</p>
                     <a href="auditorGuideline.php" class="btn btn-outline-success">View Guidelines</a>
                 </div>
             </div>
 
             <!-- Transition Services -->
             <div class="col-lg-4 col-md-6 mb-4">
-                <div class="service-card" style="background: #fff; border-radius: 10px; padding: 30px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); height: 100%; transition: all 0.3s ease; border-left: 4px solid #8b5cf6;">
+                <div class="service-card"
+                    style="background: #fff; border-radius: 10px; padding: 30px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); height: 100%; transition: all 0.3s ease; border-left: 4px solid #8b5cf6;">
                     <div class="service-icon mb-4" style="font-size: 40px; color: #8b5cf6;">
                         <i class="fas fa-exchange-alt"></i>
                     </div>
-                    <h4 style="color: #0f172a; margin-bottom: 15px;">Transition Support</h4>
-                    <p style="color: #64748b; margin-bottom: 20px;">Expert guidance and support for transitioning to new standards and certification requirements.</p>
+                    <h4 style="color: #0f172a; margin-bottom: 15px;"> Expert guidance</h4>
+                    <p style="color: #64748b; margin-bottom: 20px;">Expert guidance for transitioning to new
+                        standards and certification requirements.</p>
                     <a href="transitionGuideline.php" class="btn btn-outline-primary">Transition Guide</a>
                 </div>
             </div>
 
             <!-- Application Process -->
             <div class="col-lg-4 col-md-6 mb-4">
-                <div class="service-card" style="background: #fff; border-radius: 10px; padding: 30px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); height: 100%; transition: all 0.3s ease; border-left: 4px solid #f59e0b;">
+                <div class="service-card"
+                    style="background: #fff; border-radius: 10px; padding: 30px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); height: 100%; transition: all 0.3s ease; border-left: 4px solid #f59e0b;">
                     <div class="service-icon mb-4" style="font-size: 40px; color: #f59e0b;">
                         <i class="fas fa-file-alt"></i>
                     </div>
                     <h4 style="color: #0f172a; margin-bottom: 15px;">Application Processing</h4>
-                    <p style="color: #64748b; margin-bottom: 20px;">Streamlined application process for certification with dedicated support at every step.</p>
+                    <p style="color: #64748b; margin-bottom: 20px;">Streamlined application process for certification
+                        with dedicated support at every step.</p>
                     <a href="application.php" class="btn btn-outline-warning">Apply Now</a>
                 </div>
             </div>
 
             <!-- Logo Usage -->
             <div class="col-lg-4 col-md-6 mb-4">
-                <div class="service-card" style="background: #fff; border-radius: 10px; padding: 30px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); height: 100%; transition: all 0.3s ease; border-left: 4px solid #ec4899;">
+                <div class="service-card"
+                    style="background: #fff; border-radius: 10px; padding: 30px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); height: 100%; transition: all 0.3s ease; border-left: 4px solid #ec4899;">
                     <div class="service-icon mb-4" style="font-size: 40px; color: #ec4899;">
                         <i class="fas fa-trademark"></i>
                     </div>
                     <h4 style="color: #0f172a; margin-bottom: 15px;">Logo Usage</h4>
-                    <p style="color: #64748b; margin-bottom: 20px;">Guidelines and support for proper usage of certification marks and logos on your products and marketing materials.</p>
+                    <p style="color: #64748b; margin-bottom: 20px;">Guidelines and support for proper usage of
+                        certification marks and logos on your products and marketing materials.</p>
                     <a href="useOfLogo.php" class="btn btn-outline-primary">View Guidelines</a>
                 </div>
             </div>
 
             <!-- Circulars -->
             <div class="col-lg-4 col-md-6 mb-4">
-                <div class="service-card" style="background: #fff; border-radius: 10px; padding: 30px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); height: 100%; transition: all 0.3s ease; border-left: 4px solid #14b8a6;">
+                <div class="service-card"
+                    style="background: #fff; border-radius: 10px; padding: 30px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); height: 100%; transition: all 0.3s ease; border-left: 4px solid #14b8a6;">
                     <div class="service-icon mb-4" style="font-size: 40px; color: #14b8a6;">
                         <i class="fas fa-bullhorn"></i>
                     </div>
                     <h4 style="color: #0f172a; margin-bottom: 15px;">Latest Updates</h4>
-                    <p style="color: #64748b; margin-bottom: 20px;">Stay updated with the latest circulars, announcements, and industry news from AITF.</p>
+                    <p style="color: #64748b; margin-bottom: 20px;">Stay updated with the latest circulars,
+                        announcements, and industry news from AITF.</p>
                     <a href="circuler.php" class="btn btn-outline-info">View Circulars</a>
                 </div>
             </div>
@@ -206,7 +224,8 @@ include './headerSource.php';
         <div class="row align-items-center">
             <div class="col-lg-8">
                 <h3 style="color: #0f172a; margin-bottom: 15px;">Need Help with Certification?</h3>
-                <p class="mb-0" style="color: #64748b;">Our team of experts is ready to assist you with all your certification needs. Contact us today to get started.</p>
+                <p class="mb-0" style="color: #64748b;">Our team of experts is ready to assist you with all your
+                    certification needs. Contact us today to get started.</p>
             </div>
             <div class="col-lg-4 text-lg-end mt-4 mt-lg-0">
                 <a href="contactUS.php" class="btn btn-primary btn-lg">Contact Us</a>
@@ -220,50 +239,62 @@ include './headerSource.php';
 <style>
     .service-card:hover {
         transform: translateY(-5px);
-        box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1) !important;
     }
+
     .service-icon i {
         transition: all 0.3s ease;
     }
+
     .service-card:hover .service-icon i {
         transform: scale(1.1);
     }
+
     .btn-outline-primary {
         border-color: #3b82f6;
         color: #3b82f6;
     }
+
     .btn-outline-primary:hover {
         background: #3b82f6;
         color: #fff;
     }
+
     .btn-outline-success {
         border-color: #10b981;
         color: #10b981;
     }
+
     .btn-outline-success:hover {
         background: #10b981;
         color: #fff;
     }
+
     .btn-outline-warning {
         border-color: #f59e0b;
         color: #f59e0b;
     }
+
     .btn-outline-warning:hover {
         background: #f59e0b;
         color: #fff;
     }
+
     .btn-outline-info {
         border-color: #14b8a6;
         color: #14b8a6;
     }
+
     .btn-outline-info:hover {
         background: #14b8a6;
         color: #fff;
     }
+
     .btn-primary {
         background: #3b82f6;
         border-color: #3b82f6;
     }
+
     .btn-primary:hover {
         background: #2563eb;
         border-color: #2563eb;
