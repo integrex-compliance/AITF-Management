@@ -64,7 +64,7 @@ include './headerSource.php';
                             display: inline-block;
                             position: relative;
                         ">
-                            Our Certification Services
+                            Accrediatied Certification Services
                             <span style="
                                 position: absolute;
                                 bottom: -5px;
@@ -84,7 +84,7 @@ include './headerSource.php';
                         line-height: 1.6;
                         text-shadow: 0 1px 3px rgba(0,0,0,0.2);
                     ">
-                        Comprehensive Certification Solutions Tailored for Your Business Success
+                        for Your Business Success
                     </p>
                     <div class="mt-4">
                         <a href="#services" class="btn btn-primary btn-lg px-4 py-2" style="
@@ -166,8 +166,8 @@ include './headerSource.php';
                     <div class="service-icon mb-4" style="font-size: 40px; color: #8b5cf6;">
                         <i class="fas fa-exchange-alt"></i>
                     </div>
-                    <h4 style="color: #0f172a; margin-bottom: 15px;"> Expert guidance</h4>
-                    <p style="color: #64748b; margin-bottom: 20px;">Expert guidance for transitioning to new
+                    <h4 style="color: #0f172a; margin-bottom: 15px;"> Transition Guidelines</h4>
+                    <p style="color: #64748b; margin-bottom: 20px;">Transition guidelines for transitioning to new
                         standards and certification requirements.</p>
                     <a href="transitionGuideline.php" class="btn btn-outline-primary">Transition Guide</a>
                 </div>

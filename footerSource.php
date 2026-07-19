@@ -311,7 +311,7 @@
                 <!-- SOLUTIONS -->
                 <div class="col-xs-12 col-sm-6 col-md-3">
                     <div class="footer_blog">
-                        <h3>SOLUTIONS</h3>
+                        <h3>Guidelines</h3>
                         <ul class="footer-links">
                             <li><a href="certificationGuideline.php">Certification Guidelines</a></li>
                             <li><a href="auditorGuideline.php">Auditor Guidelines</a></li>
