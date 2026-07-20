@@ -110,9 +110,14 @@ $auditorsList = $statement->fetchAll();
                                     id="covered_for" placeholder="Assessment Standard" required></textarea>
                             </div>
                             <div class="col-sm-6 form-group float-label-control">
-                                <label>Accreditation Ref.:</label>
-                                <textarea readonly class="accreditation" id="accreditation" name="accreditation"
-                                    placeholder="Accreditation Ref.:" required></textarea>
+                                <label for="accreditation">Accreditation Ref.:</label>
+                                <select class="form-control accreditation" id="accreditation" name="accreditation"
+                                    required>
+                                    <option value="">Select Accreditation</option>
+                                    <option value="NABCB">NABCB</option>
+                                    <option value="SELF">SELF</option>
+                                </select>
+                                <small class="cdc-accreditation-feedback text-muted" aria-live="polite"></small>
                             </div>
                         </div>
                         <div class="row ">
@@ -555,6 +560,21 @@ $auditorsList = $statement->fetchAll();
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script type="text/javascript">
+    function normalizeCdcAccreditation(value) {
+        var normalized = $.trim(value || '').toUpperCase();
+        if (normalized.indexOf('NABCB') !== -1) {
+            return 'NABCB';
+        }
+        if (normalized.indexOf('SELF') !== -1) {
+            return 'SELF';
+        }
+        return '';
+    }
+
+    function setCdcAccreditation(value) {
+        $('#cdcModel .accreditation').val(normalizeCdcAccreditation(value));
+    }
+
     $(document).ready(function () {
         function validateCdcMembers(selectElement) {
             var $form = $(selectElement).closest('form');
@@ -2879,6 +2899,105 @@ $auditorsList = $statement->fetchAll();
             }
         });
 
+        $(document).off('change.cdcAccreditation', '#cdcModel .accreditation');
+        $(document).on('change.cdcAccreditation', '#cdcModel .accreditation', function () {
+            var $select = $(this);
+            var accreditation = normalizeCdcAccreditation($select.val());
+            var crrId = $.trim($('#cdcModel .crr_Id').val());
+            var customerId = $.trim($('#cdcModel .customer_Id').val());
+            var $feedback = $('#cdcModel .cdc-accreditation-feedback');
+            var previousAccreditation = $select.data('previous-accreditation') || '';
+
+            if (accreditation !== 'NABCB' && accreditation !== 'SELF') {
+                $feedback.removeClass('text-success text-muted').addClass('text-danger')
+                    .text('Please select NABCB or SELF.');
+                return;
+            }
+
+            var confirmChange = function () {
+                setCdcAccreditation(accreditation);
+
+                // New CDC records are persisted by the main form.
+                if (!crrId) {
+                    $select.data('previous-accreditation', accreditation);
+                    $feedback.removeClass('text-danger text-success').addClass('text-muted')
+                        .text('Selected accreditation will be saved with the CDC report.');
+                    return;
+                }
+
+                if (!customerId) {
+                    $feedback.removeClass('text-success text-muted').addClass('text-danger')
+                        .text('Customer information is missing.');
+                    return;
+                }
+
+                $select.prop('disabled', true);
+                $feedback.removeClass('text-danger text-success').addClass('text-muted')
+                    .text('Updating accreditation...');
+
+                $.ajax({
+                    url: 'changeCdcAccreditation.php',
+                    type: 'POST',
+                    dataType: 'json',
+                    data: {
+                        crr_id: crrId,
+                        customer_id: customerId,
+                        accreditation: accreditation
+                    }
+                }).done(function (response) {
+                    if (response && response.success) {
+                        setCdcAccreditation(response.accreditation);
+                        $select.data('previous-accreditation', response.accreditation);
+                        $feedback.removeClass('text-danger text-muted').addClass('text-success')
+                            .text(response.message);
+                    } else {
+                        $select.val(previousAccreditation);
+                        $feedback.removeClass('text-success text-muted').addClass('text-danger')
+                            .text((response && response.message) || 'Unable to update accreditation.');
+                    }
+                }).fail(function (xhr) {
+                    var response = xhr.responseJSON || {};
+                    $select.val(previousAccreditation);
+                    $feedback.removeClass('text-success text-muted').addClass('text-danger')
+                        .text(response.message || 'Unable to update accreditation.');
+                }).always(function () {
+                    $select.prop('disabled', false);
+                });
+            };
+
+            var cancelChange = function () {
+                $select.val(previousAccreditation);
+                $feedback.removeClass('text-danger text-success').addClass('text-muted').text('');
+            };
+
+            if (typeof Swal !== 'undefined' && Swal.fire) {
+                Swal.fire({
+                    title: 'Are you sure you want to change accreditation?',
+                    text: 'The selected accreditation will be used in this CDC report and the next workflow.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Yes, Change',
+                    cancelButtonText: 'Keep Current'
+                }).then(function (result) {
+                    if (result.isConfirmed) {
+                        confirmChange();
+                    } else {
+                        cancelChange();
+                    }
+                });
+            } else if (window.confirm('Are you sure you want to change accreditation?')) {
+                confirmChange();
+            } else {
+                cancelChange();
+            }
+        });
+
+        $('#cdcModel').on('shown.bs.modal', function () {
+            var currentAccreditation = normalizeCdcAccreditation($('#cdcModel .accreditation').val());
+            $('#cdcModel .accreditation').data('previous-accreditation', currentAccreditation);
+            $('#cdcModel .cdc-accreditation-feedback').text('').removeClass('text-danger text-success').addClass('text-muted');
+        });
+
         $('.checkm1').change(function () {
             if ((this).checked) {
                 $('.checkm1').prop('checked', false);
@@ -3079,7 +3198,7 @@ $auditorsList = $statement->fetchAll();
                         // Use certification field if it contains multiple ISOs, otherwise use assessment_standard
                         var isoStandards = data[1]['certification'] || data[1]['assessment_standard'] || '';
                         $(".covered_for").val(isoStandards);
-                        $(".accreditation").val(data[1]['review_accredition']);
+                        setCdcAccreditation(data[1]['review_accredition']);
 
                         // Store merged ISO list for decision blocks (includes CA+SA+RC ISOs)
                         window.rcMergedIsoList = data[1]['merged_iso_list'] || isoStandards;
@@ -3104,7 +3223,7 @@ $auditorsList = $statement->fetchAll();
                         // Use certification field if it contains multiple ISOs, otherwise use assessment_standard
                         var isoStandards = data[1]['certification'] || data[1]['assessment_standard'] || '';
                         $(".covered_for").val(isoStandards);
-                        $(".accreditation").val(data[1]['review_accredition']);
+                        setCdcAccreditation(data[1]['review_accredition']);
 
                     } else if ($cdcbyservice == "SA2") {
 
@@ -3119,7 +3238,7 @@ $auditorsList = $statement->fetchAll();
                         // Use certification field if it contains multiple ISOs, otherwise use assessment_standard
                         var isoStandards = data[1]['certification'] || data[1]['assessment_standard'] || '';
                         $(".covered_for").val(isoStandards);
-                        $(".accreditation").val(data[1]['review_accredition']);
+                        setCdcAccreditation(data[1]['review_accredition']);
 
                     } else if ($cdcbyservice == "SP") {
                         //alert(data[19]);
@@ -3131,7 +3250,7 @@ $auditorsList = $statement->fetchAll();
                         // Use certification field if it contains multiple ISOs, otherwise use assessment_standard
                         var isoStandards = data[1]['certification'] || data[1]['assessment_standard'] || '';
                         $('.covered_for').val(isoStandards);
-                        $('.accreditation').val(data[1]['review_accredition']);
+                        setCdcAccreditation(data[1]['review_accredition']);
 
                         $('.expiredate').val(moment(nxtExp).format('DD.MM.YYYY'));
                         $(".periodicalaudit").val(moment(nxtPeriodical).format('DD.MM.YYYY'));
@@ -3141,7 +3260,7 @@ $auditorsList = $statement->fetchAll();
                         // Use certification field if it contains multiple ISOs, otherwise use assessment_standard
                         var isoStandards = data[1]['certification'] || data[1]['assessment_standard'] || '';
                         $('.covered_for').val(isoStandards);
-                        $('.accreditation').val(data[1]['review_accredition']);
+                        setCdcAccreditation(data[1]['review_accredition']);
                     }
 
                     console.log('=== CDC ADD MODE - AUDIT DATE POPULATION ===');
@@ -3662,7 +3781,7 @@ $auditorsList = $statement->fetchAll();
                         }, 150);
                     }
 
-                    $('.accreditation').val(data[0]['accreditation']);
+                    setCdcAccreditation(data[0]['accreditation']);
                     $('.system_during').val(data[0]['system_during']);
                     $(".system_complaint").val(data[0]['system_complainte']);
 

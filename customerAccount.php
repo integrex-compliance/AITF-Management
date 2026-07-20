@@ -879,18 +879,23 @@
                     $certInfo['certification_no'] = '';
                     $certInfo['cdc_status'] = ''; // ISO-specific certification status
                     $certInfo['decision_date'] = ''; // ISO-specific decision date
+                    $certInfo['crr_id'] = '';
+                    $certInfo['accreditation'] = '';
                     
                     // FIRST: Try to get certificate number and ISO-specific data from CDC tables
                     // This is for multi-ISO clients where each ISO has its own certificate number and status
                     if (!empty($standard['serviceca_id'])) {
                         // Get the crr_id and ISO-specific status/dates for this service
-                        $crrQuery = "SELECT crr_id, cdc_status, Date as decision_date, revDatecdc as issue_date, expiredate as expire_date, certificateNo, audit_type FROM cdc_report_review WHERE ca_service_id = :svcId ORDER BY Date DESC LIMIT 1";
+                        $crrQuery = "SELECT crr_id, accreditation, cdc_status, Date as decision_date, revDatecdc as issue_date, expiredate as expire_date, certificateNo, audit_type FROM cdc_report_review WHERE ca_service_id = :svcId ORDER BY Date DESC LIMIT 1";
                         $crrStmt = $db->prepare($crrQuery);
                         $crrStmt->bindParam(':svcId', $standard['serviceca_id']);
                         $crrStmt->execute();
                         $crrData = $crrStmt->fetch(PDO::FETCH_ASSOC);
                         
                         if ($crrData && !empty($crrData['crr_id'])) {
+                            $certInfo['crr_id'] = $crrData['crr_id'];
+                            $certInfo['accreditation'] = strtoupper(trim((string) ($crrData['accreditation'] ?? '')));
+
                             // Store ISO-specific status and decision date
                             if (!empty($crrData['cdc_status'])) {
                                 $certInfo['cdc_status'] = $crrData['cdc_status'];
@@ -1021,6 +1026,9 @@
                         'expire_date' => caCertHeaderDashboardDate($dashboardRow, array('expire_date', 'expiry_date')),
                         'decision_date' => caCertHeaderDashboardDate($dashboardRow, array('certificate_issue_date')),
                         'cdc_status' => isset($dashboardRow['certification_status']) ? $dashboardRow['certification_status'] : '',
+                        'serviceca_id' => isset($dashboardRow['svc_id']) ? $dashboardRow['svc_id'] : '',
+                        'crr_id' => '',
+                        'accreditation' => '',
                         'iso_index' => isset($dashboardRow['iso_index']) ? $dashboardRow['iso_index'] : '',
                         'dashboard_synced' => true,
                     );
@@ -1043,6 +1051,36 @@
                 $allCertificates = caCertHeaderCertificatesFromDashboardRows($dashboardCertificateRows);
             } elseif (!empty($dashboardCertificateRows)) {
                 $allCertificates = caCertHeaderApplyDashboardRows($allCertificates, $dashboardCertificateRows);
+            }
+
+            // Ensure every ISO header uses the accreditation saved on its latest
+            // CDC record, including dashboard fallback certificates.
+            $certificateCdcStmt = $db->prepare(
+                "SELECT crr_id, accreditation
+                 FROM cdc_report_review
+                 WHERE ca_service_id = :service_id
+                   AND customer_id = :customer_id
+                 ORDER BY crr_id DESC
+                 LIMIT 1"
+            );
+            foreach ($allCertificates as $certificateIndex => $certificateRow) {
+                $serviceCaId = isset($certificateRow['serviceca_id']) ? (int) $certificateRow['serviceca_id'] : 0;
+                if ($serviceCaId <= 0) {
+                    continue;
+                }
+
+                $certificateCdcStmt->bindValue(':service_id', $serviceCaId, PDO::PARAM_INT);
+                $certificateCdcStmt->bindValue(':customer_id', $customerId, PDO::PARAM_INT);
+                $certificateCdcStmt->execute();
+                $certificateCdcRow = $certificateCdcStmt->fetch(PDO::FETCH_ASSOC);
+                if (!$certificateCdcRow) {
+                    continue;
+                }
+
+                $allCertificates[$certificateIndex]['crr_id'] = (int) $certificateCdcRow['crr_id'];
+                $allCertificates[$certificateIndex]['accreditation'] = strtoupper(
+                    trim((string) ($certificateCdcRow['accreditation'] ?? ''))
+                );
             }
             
             // DEBUG: Log certificate data (remove after testing)
@@ -3861,6 +3899,15 @@
 
                         $certStatus = isset($cert['cdc_status']) && trim((string) $cert['cdc_status']) !== '' ? trim((string) $cert['cdc_status']) : (isset($clientInfo['audit_status']) ? trim((string) $clientInfo['audit_status']) : '');
                         $decisionDate = !empty($cert['decision_date']) ? $cert['decision_date'] : ($i == 0 ? $clientInfo['certification_stage_date'] : '');
+                        $certCrrId = isset($cert['crr_id']) ? (int) $cert['crr_id'] : 0;
+                        $certAccreditation = isset($cert['accreditation']) ? strtoupper(trim((string) $cert['accreditation'])) : '';
+                        if (strpos($certAccreditation, 'NABCB') !== false) {
+                            $certAccreditation = 'NABCB';
+                        } elseif (strpos($certAccreditation, 'SELF') !== false) {
+                            $certAccreditation = 'SELF';
+                        } else {
+                            $certAccreditation = '';
+                        }
                         
                         // Add prominent section header for all certificates (single or multiple)
                         echo '<div class="iso-cert-section" style="margin-top: ' . ($i == 0 ? '0' : '5') . 'px;">';
@@ -3900,6 +3947,22 @@
                                     ?>
                                     <option value="<?php echo htmlspecialchars($statusValue, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($statusValue); ?></option>
                                 <?php } ?>
+                            </select>
+                        </div>
+                        <div style="color: black; font-weight: small; text-align: right; white-space: nowrap; margin-left: 10px;">
+                            <span>Accreditation:</span>
+                        </div>
+                        <div class="form-group float-label-control" style="margin-bottom: 0; min-width: 120px;">
+                            <select class="manual-cdc-accreditation"
+                                data-customer="<?php echo (int) $_GET["customerid"]; ?>"
+                                data-crr-id="<?php echo $certCrrId; ?>"
+                                data-previous="<?php echo htmlspecialchars($certAccreditation, ENT_QUOTES, 'UTF-8'); ?>"
+                                data-iso-index="<?php echo $i; ?>"
+                                style="color: black; width: 100%;"
+                                <?php if ($certCrrId <= 0) echo 'disabled title="CDC record not available"'; ?>>
+                                <option value="">Select Accreditation</option>
+                                <option value="NABCB" <?php if ($certAccreditation === 'NABCB') echo 'selected'; ?>>NABCB</option>
+                                <option value="SELF" <?php if ($certAccreditation === 'SELF') echo 'selected'; ?>>SELF</option>
                             </select>
                         </div>
                         <div style="color: black; font-weight: small; text-align: right; white-space: nowrap; margin-left: 10px;">
@@ -10581,6 +10644,84 @@
                             complete: function () {
                                 $('.manual-application-status').prop('disabled', false);
                             }
+                        });
+                    }
+                });
+            });
+
+            $(document).on('change', '.manual-cdc-accreditation', function () {
+                var $select = $(this);
+                var newAccreditation = String($select.val() || '').trim().toUpperCase();
+                var previousAccreditation = String($select.attr('data-previous') || '').trim().toUpperCase();
+                var customerId = $select.attr('data-customer');
+                var crrId = $select.attr('data-crr-id');
+
+                if (
+                    (newAccreditation !== 'NABCB' && newAccreditation !== 'SELF') ||
+                    newAccreditation === previousAccreditation
+                ) {
+                    $select.val(previousAccreditation);
+                    return;
+                }
+
+                showApplicationStatusDialog({
+                    title: 'Are you sure you want to change accreditation?',
+                    message: 'Accreditation will change from "' + (previousAccreditation || 'Not Set') + '" to "' + newAccreditation + '".',
+                    confirmText: 'Yes, Change',
+                    cancelText: 'Keep Current',
+                    onCancel: function () {
+                        $select.val(previousAccreditation);
+                    },
+                    onConfirm: function () {
+                        $select.prop('disabled', true);
+
+                        $.ajax({
+                            url: 'changeCdcAccreditation.php',
+                            type: 'POST',
+                            dataType: 'json',
+                            data: {
+                                crr_id: crrId,
+                                customer_id: customerId,
+                                accreditation: newAccreditation
+                            }
+                        }).done(function (response) {
+                            if (!response || !response.success) {
+                                $select.val(previousAccreditation);
+                                showApplicationStatusDialog({
+                                    title: 'Accreditation Not Saved',
+                                    message: (response && response.message) || 'Unable to update accreditation. Please try again.',
+                                    confirmText: 'OK',
+                                    infoOnly: true
+                                });
+                                return;
+                            }
+
+                            $('.manual-cdc-accreditation').each(function () {
+                                var $accreditationSelect = $(this);
+                                if (String($accreditationSelect.attr('data-crr-id')) === String(crrId)) {
+                                    $accreditationSelect
+                                        .val(response.accreditation)
+                                        .attr('data-previous', response.accreditation);
+                                }
+                            });
+
+                            showApplicationStatusDialog({
+                                title: 'Accreditation Saved',
+                                message: 'Accreditation has been updated to "' + response.accreditation + '".',
+                                confirmText: 'OK',
+                                infoOnly: true
+                            });
+                        }).fail(function (xhr) {
+                            var response = xhr.responseJSON || {};
+                            $select.val(previousAccreditation);
+                            showApplicationStatusDialog({
+                                title: 'Accreditation Not Saved',
+                                message: response.message || 'Unable to update accreditation. Please try again.',
+                                confirmText: 'OK',
+                                infoOnly: true
+                            });
+                        }).always(function () {
+                            $select.prop('disabled', false);
                         });
                     }
                 });

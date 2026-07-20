@@ -108,8 +108,26 @@
     $stmt->execute();
     $serviceTypeList = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // ─── Build accreditation map per customer (latest from audit_application via uni_svc_id) ───
+    // ─── Build accreditation map per customer ───
+    // A CDC change is the current operational value. The audit application is
+    // retained as a fallback for customers without a CDC record.
     $accredMap = array();
+    $cdcAccredSql = "
+        SELECT crr.customer_id, UPPER(TRIM(crr.accreditation)) AS accreditation
+        FROM cdc_report_review crr
+        INNER JOIN (
+            SELECT customer_id, MAX(crr_id) AS latest_crr_id
+            FROM cdc_report_review
+            WHERE UPPER(TRIM(COALESCE(accreditation, ''))) IN ('NABCB', 'SELF')
+            GROUP BY customer_id
+        ) latest ON latest.latest_crr_id = crr.crr_id
+    ";
+    $stmt = $db->prepare($cdcAccredSql);
+    $stmt->execute();
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $accredMap[$row['customer_id']] = $row['accreditation'];
+    }
+
     $accredSql = "
         SELECT s.customer_id, aa.accereditation_requirement
         FROM audit_application aa
@@ -120,7 +138,7 @@
     $stmt = $db->prepare($accredSql);
     $stmt->execute();
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-        if (!isset($accredMap[$row['customer_id']])) {
+        if (!isset($accredMap[$row['customer_id']]) && in_array(strtoupper(trim($row['accereditation_requirement'])), array('NABCB', 'SELF'), true)) {
             $accredMap[$row['customer_id']] = $row['accereditation_requirement'];
         }
     }

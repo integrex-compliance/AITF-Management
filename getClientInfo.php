@@ -1064,6 +1064,28 @@ if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
         $statement->bindParam(':id', $serviceIdToUse);
         $statement->execute();
         $auditInfo = $statement->fetch();
+
+        // A CDC accreditation change is the current operational value for the
+        // next CDC flow. Keep the original application value as a fallback.
+        $latestCdcAccreditationSql = "
+            SELECT crr.accreditation
+            FROM cdc_report_review crr
+            WHERE crr.customer_id = :customer_id
+              AND UPPER(TRIM(COALESCE(crr.accreditation, ''))) IN ('NABCB', 'SELF')
+            ORDER BY crr.crr_id DESC
+            LIMIT 1
+        ";
+        $latestCdcAccreditationStmt = $db->prepare($latestCdcAccreditationSql);
+        $latestCdcAccreditationStmt->bindValue(':customer_id', $_GET['cdccustomer_ID']);
+        $latestCdcAccreditationStmt->execute();
+        $latestCdcAccreditation = $latestCdcAccreditationStmt->fetchColumn();
+        if ($latestCdcAccreditation) {
+            if (!is_array($auditInfo)) {
+                $auditInfo = array();
+            }
+            $auditInfo['review_accredition'] = strtoupper(trim($latestCdcAccreditation));
+            $auditInfo['accereditation_requirement'] = strtoupper(trim($latestCdcAccreditation));
+        }
         
         // For RC services: Fetch ISO standards from ALL services for this customer/agreement
         // First, detect if this is an RC service by checking service_type_rc table
