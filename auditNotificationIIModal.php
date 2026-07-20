@@ -23,11 +23,22 @@ $statement = $db->prepare($sql);
 $statement->execute();
 $category = $statement->fetchAll();
 
+$auditorOptionsHtml = '<option value="">Choose Auditors</option>';
+$categoryOptionsHtml = '<option value="">Choose Category</option>';
+
 foreach ($auditors as $name) {
     $allAuditorsid .= $name['auditors_id'] . ",";
     $allAuditors .= $name['auditor_name'] . ",";
     $allAuditorsContact .= $name['auditor_name'] . " - " . $name['auditor_number'] . ",";
     $allContact .= $name['auditor_number'] . ",";
+    $auditorOptionsHtml .= '<option value="' . htmlspecialchars($name['auditors_id'], ENT_QUOTES, 'UTF-8') . '">'
+        . htmlspecialchars($name['auditor_name'], ENT_QUOTES, 'UTF-8') . '</option>';
+}
+
+foreach ($category as $name) {
+    $categoryName = $name['categories_name'];
+    $categoryOptionsHtml .= '<option value="' . htmlspecialchars($categoryName, ENT_QUOTES, 'UTF-8') . '">'
+        . htmlspecialchars($categoryName, ENT_QUOTES, 'UTF-8') . '</option>';
 }
 ?>
 
@@ -365,8 +376,58 @@ foreach ($auditors as $name) {
 </div>
 
 <script type="text/javascript">
+    var auditIIAuditorOptionsHtml = <?php echo json_encode($auditorOptionsHtml, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
+    var auditIICategoryOptionsHtml = <?php echo json_encode($categoryOptionsHtml, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
+
+    function buildAuditIIAuditorRow(auditor) {
+        auditor = auditor || {};
+
+        var $row = $('<tr class="audit_subsectionii previousCBData"></tr>');
+        var $auditorSelect = $('<select class="contractAuditorNameii form-control" name="contractAuditorNameii" required></select>')
+            .html(auditIIAuditorOptionsHtml);
+        var $categorySelect = $('<select class="auditorCategoryii form-control" name="auditorCategoryii" required></select>')
+            .html(auditIICategoryOptionsHtml);
+        var $workDays = $('<input type="text" min="1" class="auditorWorkii form-control" name="auditorWorkii" required>');
+        var $acceptance = $('<select class="auditorAcceptanceii form-control" name="auditorAcceptanceii" required>'
+            + '<option value="">Select</option><option value="Yes">Yes</option><option value="No">No</option></select>');
+
+        if (auditor.auditor_id && !$auditorSelect.find('option').filter(function () {
+            return $(this).val() == auditor.auditor_id;
+        }).length) {
+            $auditorSelect.append($('<option></option>')
+                .val(auditor.auditor_id)
+                .text(auditor.auditor_name || auditor.auditor_id));
+        }
+
+        $auditorSelect.val(auditor.auditor_id || '');
+        $categorySelect.val(auditor.auditor_category || '');
+        $workDays.val(auditor.audit_wokrdays || '');
+        $acceptance.val(auditor.auditor_acceptance || '');
+
+        $row.append($('<td width="20%" style="padding:2px;"><div class="table-edit-control"></div></td>')
+            .find('.table-edit-control').append($auditorSelect).end());
+        $row.append($('<td width="20%" style="padding:2px;"><div class="table-edit-control"></div></td>')
+            .find('.table-edit-control').append($categorySelect).end());
+        $row.append($('<td width="20%" style="padding:2px;"><div class="table-edit-control"></div></td>')
+            .find('.table-edit-control').append($workDays).end());
+        $row.append($('<td width="20%" style="padding:2px;"><div class="table-edit-control"></div></td>')
+            .find('.table-edit-control').append($acceptance).end());
+
+        if (auditor.removable) {
+            $row.append('<td width="10%" style="padding:2px;"><button type="button" class="btn btn-sm btn-danger removeRowButton">Remove</button></td>');
+        }
+
+        return $row;
+    }
+
+    function resetAuditIIAuditorRows() {
+        $('.editTableDiv').empty().append(buildAuditIIAuditorRow());
+        $rowCounter = 1;
+        $rowCB = 1;
+    }
+
     $(document).ready(function () {
-        $('#auditNotificationii').on('shown.bs.modal', function () {
+        $('#auditNotificationII').on('shown.bs.modal', function () {
             // Re-initialize chronology validator when modal opens
             DateChronologyValidator.init({
                 customerId: $('.auditii-noti-customer').val() || $('.customerId').val(),
@@ -494,7 +555,7 @@ foreach ($auditors as $name) {
             }
         });
 
-        $('.createAuditNotificationii').click(function () {
+        $(document).on('click', '.createAuditNotificationii', function () {
             //            alert('ho');
             $('.auditii-noti-customer').val($(this).attr('data-customer'));
             $('.auditii-noti-service').val($(this).attr('data-service'));
@@ -518,6 +579,7 @@ foreach ($auditors as $name) {
                     $('.auditiiDesignation').val(data[1]['audit_designation']);
                     //                    $('.auditiiDates').val(moment(data[3]['schedule_audit_date']).format('DD.MM.YYYY'));
                     $('.auditiiStandard').val(data[3]['schedule_app_standard']);
+                    resetAuditIIAuditorRows();
                     $('input[type="text"]').trigger('change');
                     $('.auditiiLocation').trigger('change');
                     $('#auditNotificationII').modal('show');
@@ -528,7 +590,7 @@ foreach ($auditors as $name) {
             });
         });
 
-        $('.editAuditNotificationii').click(function () {
+        $(document).on('click', '.editAuditNotificationii', function () {
             $.ajax({
                 url: "contractDetails.php",
                 type: "GET",
@@ -588,48 +650,8 @@ foreach ($auditors as $name) {
                         }
                     }
 
-                    var allAuditorsid = ("<?php echo $allAuditorsid ?>");
-                    //            alert(allAuditorsid);
-                    var auditorid = allAuditorsid.split(',');
-                    var allAuditoridLen = auditorid.length;
-
-                    var allAuditors = ("<?php echo $allAuditors; ?>");
-                    var auditors = allAuditors.split(',');
-                    var allAuditorsLen = auditors.length;
-
-                    var max = (Math.max(allAuditoridLen, allAuditorsLen));
-                    var option = "";
-                    option += '<option value="">Choose Auditor</option>';
-                    for (var key = 0; key < max; key++) {
-                        var audid = key <= allAuditoridLen && auditorid[key] != null && auditorid[key] != "" ? auditorid[key] : "";
-                        var audname = key <= allAuditorsLen && auditors[key] != null && auditors[key] != "" ? auditors[key] : "";
-                        option += '<option value="' + audid + '">' + audname + '</option>';
-                    }
-
-                    //                    var allAuditors = ("<?php echo $allAuditors; ?>");
-                    //                    var auditors = allAuditors.split(',');
-                    //                    var option = "";
-                    //                    for (var key in auditors) {
-                    //                        if (auditors[key] != null && auditors[key] != "") {
-                    //                            option += '<option value="' + auditors[key] + '">' + auditors[key] + '</option>';
-                    //                        }
-                    //                    }
-
-                    var option1 = "";
-                    var contactname = '<?php echo $allAuditorsContact ?>';
-                    var contact = '<?php echo $allContact ?>';
-
-                    var ac_name = contactname.split(',');
-                    var a_contact = contact.split(',');
-                    var auditorNameLen = ac_name.length;
-                    var auditorcontactLen = a_contact.length;
-                    var max = (Math.max(auditorNameLen, auditorcontactLen));
-                    for (var key = 0; key < max; key++) {
-                        var audname = key <= auditorNameLen && ac_name[key] != null && ac_name[key] != "" ? ac_name[key] : "";
-                        var audcontact = key <= auditorcontactLen && a_contact[key] != null && a_contact[key] != "" ? a_contact[key] : "";
-                        option1 += '<option value="' + audcontact + '">' + audname + '</option>';
-                    }
-
+                    var option = auditIIAuditorOptionsHtml;
+                    $rowCounter = 0;
                     for (var key in data[1]) {
                         $rowCounter++;
                         var option2 = '<option value="' + data[1][key]['auditor_id'] + '"selected>' + data[1][key]['auditor_name'] + '</option>';
@@ -646,12 +668,9 @@ foreach ($auditors as $name) {
                                                         </td>\n\
                                                         <td class="" width="20%" style="padding:2px;">\n\
         <div class="table-edit-control">\n\
-            <select class="auditorCategoryii form-control" id="auditorCategoryii" name="auditorCategoryii" required>\n\
-                <option value="">Choose Category</option>\n\
-                <?php foreach ($category as $name) { ?>
-                                < option value = "<?php echo $name['categories_name'] ?>" > <?php echo $name['categories_name'] ?></option >\n\
-                            <?php } ?>\n\
-            </select >\n\
+            <select class="auditorCategoryii form-control" name="auditorCategoryii" required>\n\
+                ' + auditIICategoryOptionsHtml + '\n\
+            </select>\n\
         </div >\n\
     </td >\n\
                             <td class="" width="20%" style="padding:2px;">\n\
@@ -665,7 +684,7 @@ foreach ($auditors as $name) {
                                         <option value="' + data[1][key]['auditor_acceptance'] + '">' + data[1][key]['auditor_acceptance'] + '</option><option value="">Select</option><option value="Yes">Yes</option><option value="No">No</option></select></div>\n\
                             </td>\n\
                             <td class="" width="10%" style="padding:2px;">\
-                                <button class="btn btn-danger removeRowButton">Remove</button>\
+                                <button type="button" class="btn btn-danger removeRowButton">Remove</button>\
                             </td>\
                                                         </tr > ');
                                                         const newAuditorCategorySelect = $('.editTableDiv').find('.auditorCategoryii').last();
@@ -673,6 +692,10 @@ foreach ($auditors as $name) {
                         // Set the selected value based on `data[1][key]['auditor_category']`
                         newAuditorCategorySelect.val(data[1][key]['auditor_category']);
                     }
+                    if (!data[1] || !data[1].length) {
+                        $('.editTableDiv').append(buildAuditIIAuditorRow());
+                    }
+                    $rowCounter = $('.editTableDiv tr').length;
                     $rowCB = $rowCounter;
                     //                    alert(data[0]["auditor_check_last_two"]);
                     if (data[0]["auditor_check_last_two"] == "YES") {
@@ -752,95 +775,19 @@ foreach ($auditors as $name) {
         //            alert($(this).val());
         //        });
 
-        $(document.body).on('click', '.addAuditLinkii', function () {
+        $(document.body).on('click', '.addAuditLinkii', function (e) {
+            e.preventDefault();
+            $('.editTableDiv').append(buildAuditIIAuditorRow({ removable: true }));
+            $rowCounter = $('.editTableDiv tr').length;
+            $rowCB = $rowCounter;
 
-            var allAuditorsid = ("<?php echo $allAuditorsid ?>");
-            //            alert(allAuditorsid);
-            var auditorid = allAuditorsid.split(',');
-            var allAuditoridLen = auditorid.length;
-
-            var allAuditors = ("<?php echo $allAuditors; ?>");
-            var auditors = allAuditors.split(',');
-            var allAuditorsLen = auditors.length;
-
-            var max = (Math.max(allAuditoridLen, allAuditorsLen));
-            var option = "";
-            for (var key = 0; key < max; key++) {
-                var audid = key <= allAuditoridLen && auditorid[key] != null && auditorid[key] != "" ? auditorid[key] : "";
-                var audname = key <= allAuditorsLen && auditors[key] != null && auditors[key] != "" ? auditors[key] : "";
-                option += '<option value="' + audid + '">' + audname + '</option>';
-            }
-
-            //            var allAuditors = ("<?php echo $allAuditors; ?>");
-            //            var auditors = allAuditors.split(',');
-            //            var option = "";
-            //            for (var key in auditors) {
-            //                if (auditors[key] != null && auditors[key] != "") {
-            //                    option += '<option value="' + auditors[key] + '">' + auditors[key] + '</option>';
-            //                }
-            //
-            //            }
-            var autitorsSelect = '<select data-row-id="" class="contractAuditorNameii form-control" id="contractAuditorNameii" name="contractAuditorNameii">\n\
-                                                                <option value="">Choose Auditors</option>\n\
-                                                                    ' + option + '\n\
-                                                            </select>';
-
-
-            var option1 = "";
-            var contactname = '<?php echo $allAuditorsContact ?>';
-            var contact = '<?php echo $allContact ?>';
-
-            var ac_name = contactname.split(',');
-            var a_contact = contact.split(',');
-            var auditorNameLen = ac_name.length;
-            var auditorcontactLen = a_contact.length;
-            var max = (Math.max(auditorNameLen, auditorcontactLen));
-            for (var key = 0; key < max; key++) {
-                var audname = key <= auditorNameLen && ac_name[key] != null && ac_name[key] != "" ? ac_name[key] : "";
-                var audcontact = key <= auditorcontactLen && a_contact[key] != null && a_contact[key] != "" ? a_contact[key] : "";
-                option1 += '<option value="' + audcontact + '">' + audname + '</option>';
-            }
-
-            var autitorsContact = '<select data-row-id="" class="auditorContactii form-control" id="auditorContactii" name="auditorContactii" required >\n\
-                                    <option value="">Choose contact</option>\n\
-                                    ' + option1 + '\n\
-                                </select>';
-
-            //            alert($rowCB);
-            $count = $rowCB + 1;
-            var table = document.getElementById("notification_detailsii");
-            var row = table.insertRow($count);
-
-            var cell1 = row.insertCell(0);
-            var cell2 = row.insertCell(1);
-            var cell3 = row.insertCell(2);
-            var cell4 = row.insertCell(3);
-
-            cell1.style.padding = "0px";
-            cell2.style.padding = "0px";
-            cell3.style.padding = "0px";
-            cell4.style.padding = "0px";
-
-            cell1.innerHTML = '<div class="table-edit-control"><label></label>' + autitorsSelect + '</div>';
-            cell2.innerHTML = '<div class="table-edit-control"><label></label><select class="auditorCategoryii form-control" id="auditorCategoryii" name="auditorCategoryii"><?php foreach ($category as $name) { ?><option value="<?php echo $name['categories_name'] ?>" <?php if ($name['categories_name'] == $selectedCategoryId) {
-                        echo 'selected';
-                    } ?>><?php echo $name['categories_name'] ?></option><?php } ?></select></div>';
-            cell3.innerHTML = '<div class="table-edit-control"><label></label><input type="text" min="1" data-row-id="" class="auditorWorkii" id="auditorWorkii"  name="auditorWorkii" placeholder="" /></div>';
-            cell4.innerHTML = '<div class="table-edit-control"><select class="auditorAcceptanceii form-control" id="auditorAcceptanceii" name="auditorAcceptanceii" required><option value="">Select</option><option value="Yes">Yes</option><option value="No">No</option></select></div>';
-
-            row.className = "audit_subsectionii";
-            let removeButton = document.createElement('button');
-            removeButton.textContent = 'Remove';
-            removeButton.classList.add('btn', 'btn-sm', 'btn-danger', 'removeRowButton');
-
-            // Insert the button into the last cell of the new row
-            row.insertCell(-1).appendChild(removeButton);
-            $rowCB = $count;
         });
-        $(document).on('click', '.removeRowButton', function () {
-            $count = $rowCB - 1;
+
+        $(document).on('click', '.removeRowButton', function (e) {
+            e.preventDefault();
             $(this).closest('tr').remove();
-            $rowCB = $count;
+            $rowCounter = $('.editTableDiv tr').length;
+            $rowCB = $rowCounter;
         });
 
     });
