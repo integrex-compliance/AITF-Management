@@ -298,7 +298,7 @@
             return '';
         }
 
-        function caCertHeaderFindDashboardRow(array $dashboardRows, array $cert, $certIndex)
+        function caCertHeaderFindDashboardRow(array $dashboardRows, array $cert, $certIndex, $certificateCount = 0)
         {
             if (empty($dashboardRows)) {
                 return array();
@@ -325,13 +325,18 @@
 
             if (isset($cert['iso_index'])) {
                 foreach ($dashboardRows as $row) {
-                    if (isset($row['iso_index']) && (int) $row['iso_index'] === (int) $cert['iso_index']) {
+                    $rowStandard = isset($row['standard_name']) ? trim((string) $row['standard_name']) : '';
+                    if ($rowStandard === '' && isset($row['iso_index']) && (int) $row['iso_index'] === (int) $cert['iso_index']) {
                         return $row;
                     }
                 }
             }
 
-            return isset($dashboardRows[$certIndex]) ? $dashboardRows[$certIndex] : (count($dashboardRows) === 1 ? $dashboardRows[0] : array());
+            if ((int) $certificateCount === count($dashboardRows) && isset($dashboardRows[$certIndex])) {
+                return $dashboardRows[$certIndex];
+            }
+
+            return (int) $certificateCount === 1 && count($dashboardRows) === 1 ? $dashboardRows[0] : array();
         }
 
         function caCertHeaderApplyDashboardRows(array $certificates, array $dashboardRows)
@@ -340,13 +345,14 @@
                 return $certificates;
             }
 
+            $certificateCount = count($certificates);
             foreach ($certificates as $index => $cert) {
-                $dashboardRow = caCertHeaderFindDashboardRow($dashboardRows, $cert, $index);
+                $dashboardRow = caCertHeaderFindDashboardRow($dashboardRows, $cert, $index, $certificateCount);
                 if (empty($dashboardRow)) {
                     continue;
                 }
 
-                if (!empty($dashboardRow['standard_name'])) {
+                if (empty($certificates[$index]['standard_name']) && !empty($dashboardRow['standard_name'])) {
                     $certificates[$index]['standard_name'] = $dashboardRow['standard_name'];
                 }
                 if (!empty($dashboardRow['certificate_number'])) {
@@ -356,9 +362,18 @@
                     $certificates[$index]['cdc_status'] = trim((string) $dashboardRow['certification_status']);
                 }
 
-                $certificates[$index]['decision_date'] = caCertHeaderDashboardDate($dashboardRow, array('certificate_issue_date'));
-                $certificates[$index]['issue_date'] = caCertHeaderDashboardDate($dashboardRow, array('issue_date'));
-                $certificates[$index]['expire_date'] = caCertHeaderDashboardDate($dashboardRow, array('expire_date', 'expiry_date'));
+                $dashboardDecisionDate = caCertHeaderDashboardDate($dashboardRow, array('certificate_issue_date'));
+                $dashboardIssueDate = caCertHeaderDashboardDate($dashboardRow, array('issue_date'));
+                $dashboardExpireDate = caCertHeaderDashboardDate($dashboardRow, array('expire_date', 'expiry_date'));
+                if ($dashboardDecisionDate !== '') {
+                    $certificates[$index]['decision_date'] = $dashboardDecisionDate;
+                }
+                if ($dashboardIssueDate !== '') {
+                    $certificates[$index]['issue_date'] = $dashboardIssueDate;
+                }
+                if ($dashboardExpireDate !== '') {
+                    $certificates[$index]['expire_date'] = $dashboardExpireDate;
+                }
                 $certificates[$index]['dashboard_synced'] = true;
             }
 
@@ -1024,9 +1039,9 @@
             }
             $allCertificates = $uniqueCertificates;
 
-            if (!empty($dashboardCertificateRows)) {
+            if (empty($allCertificates) && !empty($dashboardCertificateRows)) {
                 $allCertificates = caCertHeaderCertificatesFromDashboardRows($dashboardCertificateRows);
-            } else {
+            } elseif (!empty($dashboardCertificateRows)) {
                 $allCertificates = caCertHeaderApplyDashboardRows($allCertificates, $dashboardCertificateRows);
             }
             
