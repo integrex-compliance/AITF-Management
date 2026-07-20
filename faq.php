@@ -712,8 +712,9 @@
                 </div>
                 <div class="faq-answer">
                     Prepare by: reviewing all documentation, conducting internal audits, ensuring records are
-                    up-to-date, training staff on quality procedures, and arranging necessary facilities for the audit
-                    team and arrange ISO awareness session and Internal Auditor's training to Process Owners for better
+                    up-to-date, training staff on quality procedures, and preparing to fulfill requirements of audit in
+                    place of
+                    arrange ISO awareness session and Internal Auditor's training to Process Owners for better
                     preparation.
                 </div>
             </div>
