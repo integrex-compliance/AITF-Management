@@ -278,8 +278,10 @@ function getFlatDate($inputStr)
 class="animate <?php echo isset($addAdminDashboardClass) ? $addAdminDashboardClass : ''; ?>">ADMIN
 DASHBOARD<i class="sub_icon fa fa-line-chart fa-2x" style="vertical-align:middle"></i></a></li>
 <?php } */ ?>
+        <?php if (!isset($_SESSION["role"]) || $_SESSION["role"] != 'client') { ?>
         <li><a href="iaf_dashboard.php" class="animate <?php echo isset($iafClass) ? $iafClass : ''; ?>">IAF DASHBOARD<i
                     class="sub_icon fa fa-dashboard fa-2x" style="vertical-align:middle"></i></a></li>
+        <?php } ?>
         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff()) { ?>
             <?php $unreadBadge = isset($GLOBALS['unread_app_count']) ? (int) $GLOBALS['unread_app_count'] : 0; ?>
             <li>
@@ -472,7 +474,9 @@ DASHBOARD<i class="sub_icon fa fa-line-chart fa-2x" style="vertical-align:middle
                 <?php if (Utitlity::checkForUserMainAdmin()) { ?>
                     <li><a href="adminDashboard.php">ADMIN DASHBOARD</a></li>
                 <?php } ?>
+                <?php if (!isset($_SESSION["role"]) || $_SESSION["role"] != 'client') { ?>
                 <li><a href="iaf_dashboard.php">IAF DASHBOARD</a></li>
+                <?php } ?>
                 <li><a href="homePage.php">CLIENTS</a></li>
                 <li><a href="marketingPage.php">MARKETING</a></li>
                 <li><a href="paymentPage.php">PAYMENT</a></li>
