@@ -372,10 +372,8 @@ DASHBOARD<i class="sub_icon fa fa-line-chart fa-2x" style="vertical-align:middle
             <!--<li><a href="cdcobjective.php" class="animate <?php echo $cdcobj ?>">CDC OBJECTIVE<i class="sub_icon fa fa-eye fa-2x" style="vertical-align:middle"></i></a></li>-->
             <li><a href="apprevobjective.php" class="animate <?php echo $apprevobj ?>">APP REV OBJECTIVE<i
                         class="sub_icon fa fa-eye fa-2x" style="vertical-align:middle"></i></a></li>
-        <?php } ?>
         <li><a href="uploadingStatus.php" class="animate <?php echo $docobj ?>">DOC.UPLOAD STATUS<i
                     class="sub_icon fa fa-eye fa-2x" style="vertical-align:middle"></i></a></li>
-        <?php if (!(Utitlity::checkClient() || Utitlity::checkExternalUser())) { ?>
             <li><a href="auditorChecklist.php"
                     class="animate <?php echo isset($addAuditorChecklistClass) ? $addAuditorChecklistClass : ''; ?>">AUDIT-DATA<i
                         class="sub_icon fa fa-clipboard fa-2x" style="vertical-align:middle"></i></a></li>
