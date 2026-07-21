@@ -104,6 +104,19 @@ try {
         $legacyUpdate->execute();
     }
 
+    // Keep the global customer audit_status aligned with the selected ISO status.
+    // Home page tabs and legacy logic rely on this for customer-level state.
+    if ($field === 'certification_status') {
+        $legacyStatusUpdate = $db->prepare(
+            'UPDATE customer_info
+             SET audit_status = :status
+             WHERE id = :customer_id'
+        );
+        $legacyStatusUpdate->bindValue(':status', $value);
+        $legacyStatusUpdate->bindValue(':customer_id', $customerId, PDO::PARAM_INT);
+        $legacyStatusUpdate->execute();
+    }
+
     $db->commit();
 
     cdcIsoDetailsResponse(array(
