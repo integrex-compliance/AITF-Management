@@ -104,12 +104,11 @@ $auditorsList = $statement->fetchAll();
                             </div>
                         </div>
                         <div class="row">
-                            <div class="col-sm-6 form-group float-label-control">
+                            <input type="hidden" name="covered_for" class="covered_for" id="covered_for" value="">
+                            <div class="col-sm-6 form-group float-label-control" id="cdcGlobalAccreditationGroup">
                                 <label>Standard/s covered for certification:</label>
-                                <textarea name="covered_for" readonly class="form-control form-group covered_for"
-                                    id="covered_for" placeholder="Assessment Standard" required></textarea>
-                            </div>
-                            <div class="col-sm-6 form-group float-label-control">
+                                <input type="text" readonly class="form-control cdc-single-standard"
+                                    placeholder="Assessment Standard">
                                 <label for="accreditation">Accreditation Ref.:</label>
                                 <select class="form-control accreditation" id="accreditation" name="accreditation"
                                     required>
@@ -119,6 +118,7 @@ $auditorsList = $statement->fetchAll();
                                 </select>
                                 <small class="cdc-accreditation-feedback text-muted" aria-live="polite"></small>
                             </div>
+                            <div class="col-sm-12 form-group" id="cdcIsoAccreditationList" style="display: none;"></div>
                         </div>
                         <div class="row ">
                             <div class="col-sm-6 form-group float-label-control">
@@ -549,6 +549,7 @@ $auditorsList = $statement->fetchAll();
                     <input type="hidden" name="uni_serviceid" class="uni_serviceid" value="">
                     <input type="hidden" name="servicetype" class="servicetype" value="">
                     <input type="hidden" name="iso_decisions" id="iso_decisions" value="">
+                    <input type="hidden" name="iso_metadata" id="iso_metadata" value="">
                     <div class="modal-footer">
                         <button type="submit" name="save_cdc" class="btn btn-xs btn-info save_cdc">Save</button>
                     </div>
@@ -684,6 +685,151 @@ $auditorsList = $statement->fetchAll();
 
         console.log('Parsed ISO entries:', result);
         return result;
+    }
+
+    function formatCdcStandardsForDisplay(value) {
+        var entries = getIsoEntries(value || '');
+        return entries.length ? entries.join('\n') : (value || '');
+    }
+
+    function findCdcIsoMetadata(metadata, isoIndex, isoLabel) {
+        var exactIndexMatch = null;
+        var normalizedLabel = $.trim(isoLabel || '').toUpperCase();
+
+        (Array.isArray(metadata) ? metadata : []).some(function (entry) {
+            if (!entry || typeof entry !== 'object') {
+                return false;
+            }
+
+            if (parseInt(entry.iso_index, 10) === isoIndex) {
+                exactIndexMatch = entry;
+                return true;
+            }
+
+            return false;
+        });
+
+        if (exactIndexMatch) {
+            return exactIndexMatch;
+        }
+
+        var labelMatch = null;
+        (Array.isArray(metadata) ? metadata : []).some(function (entry) {
+            if ($.trim((entry && entry.iso_label) || '').toUpperCase() === normalizedLabel) {
+                labelMatch = entry;
+                return true;
+            }
+            return false;
+        });
+
+        return labelMatch;
+    }
+
+    function collectCdcIsoMetadata() {
+        var metadata = [];
+        $('#cdcIsoAccreditationList .cdc-iso-accreditation').each(function () {
+            var $select = $(this);
+            metadata.push({
+                iso_index: parseInt($select.attr('data-iso-index'), 10),
+                iso_label: $select.attr('data-iso-label') || '',
+                accreditation: normalizeCdcAccreditation($select.val())
+            });
+        });
+
+        $('#iso_metadata').val(metadata.length ? JSON.stringify(metadata) : '');
+        window.cdcIsoMetadata = metadata;
+
+        if (metadata.length && metadata[0].accreditation) {
+            $('#cdcModel .accreditation').val(metadata[0].accreditation);
+        }
+
+        return metadata;
+    }
+
+    function renderCdcIsoAccreditationControls(standardText, metadata) {
+        var isoEntries = getIsoEntries(standardText || '');
+        var savedMetadata = Array.isArray(metadata) ? metadata : [];
+        var $container = $('#cdcIsoAccreditationList');
+        var $globalGroup = $('#cdcGlobalAccreditationGroup');
+        var globalAccreditation = normalizeCdcAccreditation($('#cdcModel .accreditation').val());
+
+        window.cdcIsoMetadata = savedMetadata;
+        $container.empty();
+
+        if (isoEntries.length === 0) {
+            $container.hide();
+            $globalGroup.show();
+            $('#cdcModel .accreditation').attr('required', 'required');
+            $globalGroup.find('.cdc-single-standard').val('');
+            $('#iso_metadata').val('');
+            return;
+        }
+
+        $globalGroup.hide();
+        $('#cdcModel .accreditation').removeAttr('required');
+
+        var $header = $('<div>', {
+            'class': 'row',
+            css: {
+                marginBottom: '6px',
+                fontWeight: '600'
+            }
+        });
+        $header.append(
+            $('<div>', { 'class': 'col-sm-6', text: 'Assessment Standard' }),
+            $('<div>', { 'class': 'col-sm-6', text: 'Accreditation Ref.' })
+        );
+        $container.append($header);
+
+        isoEntries.forEach(function (isoLabel, isoIndex) {
+            var savedEntry = findCdcIsoMetadata(savedMetadata, isoIndex, isoLabel);
+            var accreditation = normalizeCdcAccreditation(
+                savedEntry && savedEntry.accreditation ? savedEntry.accreditation : globalAccreditation
+            );
+            var $row = $('<div>', {
+                'class': 'row cdc-iso-accreditation-row',
+                css: {
+                    marginBottom: '10px'
+                }
+            });
+            var $standardColumn = $('<div>', { 'class': 'col-sm-6' });
+            var $standardField = $('<input>', {
+                type: 'text',
+                readonly: 'readonly',
+                'class': 'form-control cdc-iso-standard',
+                value: isoLabel
+            });
+            var $accreditationColumn = $('<div>', { 'class': 'col-sm-6' });
+            var $select = $('<select>', {
+                'class': 'form-control cdc-iso-accreditation',
+                required: 'required'
+            })
+                .attr('data-iso-index', isoIndex)
+                .attr('data-iso-label', isoLabel)
+                .append($('<option>', { value: '', text: 'Select Accreditation' }))
+                .append($('<option>', { value: 'NABCB', text: 'NABCB' }))
+                .append($('<option>', { value: 'SELF', text: 'SELF' }))
+                .val(accreditation)
+                .data('previous-accreditation', accreditation);
+            var $feedback = $('<small>', {
+                'class': 'cdc-iso-accreditation-feedback text-muted',
+                'aria-live': 'polite'
+            });
+
+            $standardColumn.append($standardField);
+            $accreditationColumn.append($select, $feedback);
+            $row.append($standardColumn, $accreditationColumn);
+            $container.append($row);
+        });
+
+        $container.show();
+        collectCdcIsoMetadata();
+    }
+
+    function setCdcCoveredStandards(value, metadata) {
+        var formattedValue = formatCdcStandardsForDisplay(value || '');
+        $('.covered_for').val(formattedValue);
+        renderCdcIsoAccreditationControls(formattedValue, Array.isArray(metadata) ? metadata : []);
     }
 
     function ensureCdcOfficeSections(isoEntries) {
@@ -1598,7 +1744,7 @@ $auditorsList = $statement->fetchAll();
                 standardText = window.customerIsoStandards;
                 console.log('Using window.customerIsoStandards:', standardText);
                 // Also update the field for consistency
-                $('.covered_for').val(standardText);
+                setCdcCoveredStandards(standardText, window.cdcIsoMetadata || []);
             }
         }
 
@@ -2861,6 +3007,7 @@ $auditorsList = $statement->fetchAll();
                 $('.is_cdc_only').val('0');
             }
 
+            collectCdcIsoMetadata();
             var hasError = validateCDC(true);
             console.log('=== CDC FORM SUBMISSION ===');
             console.log('Validation result:', hasError);
@@ -2896,6 +3043,123 @@ $auditorsList = $statement->fetchAll();
             } else {
                 console.log('Form submission prevented due to validation errors (CDC Only)');
                 $('.is_cdc_only').val('0'); // Reset
+            }
+        });
+
+        $('#cdcModel form').off('submit.cdcIsoMetadata').on('submit.cdcIsoMetadata', function () {
+            collectCdcIsoMetadata();
+        });
+
+        $(document).off('change.cdcIsoAccreditation', '#cdcIsoAccreditationList .cdc-iso-accreditation');
+        $(document).on('change.cdcIsoAccreditation', '#cdcIsoAccreditationList .cdc-iso-accreditation', function () {
+            var $select = $(this);
+            var accreditation = normalizeCdcAccreditation($select.val());
+            var previousAccreditation = $select.data('previous-accreditation') || '';
+            var isoIndex = parseInt($select.attr('data-iso-index'), 10);
+            var isoLabel = $select.attr('data-iso-label') || '';
+            var crrId = $.trim($('#cdcModel .crr_Id').val());
+            var customerId = $.trim($('#cdcModel .customer_Id').val());
+            var $feedback = $select.siblings('.cdc-iso-accreditation-feedback');
+
+            if (accreditation !== 'NABCB' && accreditation !== 'SELF') {
+                $select.val(previousAccreditation);
+                collectCdcIsoMetadata();
+                $feedback.removeClass('text-success text-muted').addClass('text-danger')
+                    .text('Please select NABCB or SELF.');
+                return;
+            }
+
+            var confirmChange = function () {
+                $select.val(accreditation).data('previous-accreditation', accreditation);
+                collectCdcIsoMetadata();
+
+                // New CDC records are saved with the main form submission.
+                if (!crrId) {
+                    $feedback.removeClass('text-danger text-success').addClass('text-muted')
+                        .text('Selected accreditation will be saved with this ISO standard.');
+                    return;
+                }
+
+                if (!customerId) {
+                    $select.val(previousAccreditation).data('previous-accreditation', previousAccreditation);
+                    collectCdcIsoMetadata();
+                    $feedback.removeClass('text-success text-muted').addClass('text-danger')
+                        .text('Customer information is missing.');
+                    return;
+                }
+
+                $select.prop('disabled', true);
+                $feedback.removeClass('text-danger text-success').addClass('text-muted')
+                    .text('Updating accreditation...');
+
+                $.ajax({
+                    url: 'updateCdcIsoDetails.php',
+                    type: 'POST',
+                    dataType: 'json',
+                    data: {
+                        crr_id: crrId,
+                        customer_id: customerId,
+                        iso_index: isoIndex,
+                        iso_label: isoLabel,
+                        field: 'accreditation',
+                        value: accreditation
+                    }
+                }).done(function (response) {
+                    if (response && response.success) {
+                        $select.val(response.value).data('previous-accreditation', response.value);
+                        collectCdcIsoMetadata();
+                        $('.manual-cdc-accreditation').each(function () {
+                            var $headerSelect = $(this);
+                            if (
+                                String($headerSelect.attr('data-crr-id')) === String(crrId) &&
+                                String($headerSelect.attr('data-iso-index')) === String(isoIndex)
+                            ) {
+                                $headerSelect.val(response.value).attr('data-previous', response.value);
+                            }
+                        });
+                        $feedback.removeClass('text-danger text-muted').addClass('text-success')
+                            .text(response.message);
+                    } else {
+                        $select.val(previousAccreditation).data('previous-accreditation', previousAccreditation);
+                        collectCdcIsoMetadata();
+                        $feedback.removeClass('text-success text-muted').addClass('text-danger')
+                            .text((response && response.message) || 'Unable to update accreditation.');
+                    }
+                }).fail(function (xhr) {
+                    var response = xhr.responseJSON || {};
+                    $select.val(previousAccreditation).data('previous-accreditation', previousAccreditation);
+                    collectCdcIsoMetadata();
+                    $feedback.removeClass('text-success text-muted').addClass('text-danger')
+                        .text(response.message || 'Unable to update accreditation.');
+                }).always(function () {
+                    $select.prop('disabled', false);
+                });
+            };
+
+            var cancelChange = function () {
+                $select.val(previousAccreditation);
+                collectCdcIsoMetadata();
+            };
+
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Are you sure you want to change accreditation?',
+                    text: 'Accreditation for ' + isoLabel + ' will be changed.',
+                    showCancelButton: true,
+                    confirmButtonText: 'Yes, change it',
+                    cancelButtonText: 'Cancel'
+                }).then(function (result) {
+                    if (result.isConfirmed) {
+                        confirmChange();
+                    } else {
+                        cancelChange();
+                    }
+                });
+            } else if (window.confirm('Are you sure you want to change accreditation?')) {
+                confirmChange();
+            } else {
+                cancelChange();
             }
         });
 
@@ -2942,12 +3206,24 @@ $auditorsList = $statement->fetchAll();
                     data: {
                         crr_id: crrId,
                         customer_id: customerId,
+                        iso_label: (getIsoEntries($('.covered_for').val() || '')[0] || ''),
                         accreditation: accreditation
                     }
                 }).done(function (response) {
                     if (response && response.success) {
                         setCdcAccreditation(response.accreditation);
                         $select.data('previous-accreditation', response.accreditation);
+                        $('.manual-cdc-accreditation').each(function () {
+                            var $headerSelect = $(this);
+                            if (
+                                String($headerSelect.attr('data-crr-id')) === String(crrId) &&
+                                String($headerSelect.attr('data-iso-index')) === '0'
+                            ) {
+                                $headerSelect
+                                    .val(response.accreditation)
+                                    .attr('data-previous', response.accreditation);
+                            }
+                        });
                         $feedback.removeClass('text-danger text-muted').addClass('text-success')
                             .text(response.message);
                     } else {
@@ -3072,6 +3348,10 @@ $auditorsList = $statement->fetchAll();
         $(document).on('click.cdcModal', '.cdcReport', function () {
             // Clear the saved data flag when opening new CDC
             $('#cdcOfficeContainer').removeData('hasSavedOfficeData');
+            $('.crr_Id').val('');
+            $('#cdcModel .accreditation').val('');
+            $('#iso_metadata').val('');
+            window.cdcIsoMetadata = [];
 
             var customerAttr = $(this).attr('data-customer');
             updateBaseCustomerId(customerAttr);
@@ -3197,8 +3477,8 @@ $auditorsList = $statement->fetchAll();
                     if ($cdcbyservice == "RC") {
                         // Use certification field if it contains multiple ISOs, otherwise use assessment_standard
                         var isoStandards = data[1]['certification'] || data[1]['assessment_standard'] || '';
-                        $(".covered_for").val(isoStandards);
                         setCdcAccreditation(data[1]['review_accredition']);
+                        setCdcCoveredStandards(isoStandards, []);
 
                         // Store merged ISO list for decision blocks (includes CA+SA+RC ISOs)
                         window.rcMergedIsoList = data[1]['merged_iso_list'] || isoStandards;
@@ -3222,8 +3502,8 @@ $auditorsList = $statement->fetchAll();
                         $(".periodicalaudit").val(moment(nxtPeriodical).format('DD.MM.YYYY'));
                         // Use certification field if it contains multiple ISOs, otherwise use assessment_standard
                         var isoStandards = data[1]['certification'] || data[1]['assessment_standard'] || '';
-                        $(".covered_for").val(isoStandards);
                         setCdcAccreditation(data[1]['review_accredition']);
+                        setCdcCoveredStandards(isoStandards, []);
 
                     } else if ($cdcbyservice == "SA2") {
 
@@ -3237,8 +3517,8 @@ $auditorsList = $statement->fetchAll();
 
                         // Use certification field if it contains multiple ISOs, otherwise use assessment_standard
                         var isoStandards = data[1]['certification'] || data[1]['assessment_standard'] || '';
-                        $(".covered_for").val(isoStandards);
                         setCdcAccreditation(data[1]['review_accredition']);
+                        setCdcCoveredStandards(isoStandards, []);
 
                     } else if ($cdcbyservice == "SP") {
                         //alert(data[19]);
@@ -3249,8 +3529,8 @@ $auditorsList = $statement->fetchAll();
                         nxtExp = moment(nd).add($expAddYear, 'year');
                         // Use certification field if it contains multiple ISOs, otherwise use assessment_standard
                         var isoStandards = data[1]['certification'] || data[1]['assessment_standard'] || '';
-                        $('.covered_for').val(isoStandards);
                         setCdcAccreditation(data[1]['review_accredition']);
+                        setCdcCoveredStandards(isoStandards, []);
 
                         $('.expiredate').val(moment(nxtExp).format('DD.MM.YYYY'));
                         $(".periodicalaudit").val(moment(nxtPeriodical).format('DD.MM.YYYY'));
@@ -3259,8 +3539,8 @@ $auditorsList = $statement->fetchAll();
                         //                        $('.expiredate').val("");
                         // Use certification field if it contains multiple ISOs, otherwise use assessment_standard
                         var isoStandards = data[1]['certification'] || data[1]['assessment_standard'] || '';
-                        $('.covered_for').val(isoStandards);
                         setCdcAccreditation(data[1]['review_accredition']);
+                        setCdcCoveredStandards(isoStandards, []);
                     }
 
                     console.log('=== CDC ADD MODE - AUDIT DATE POPULATION ===');
@@ -3632,6 +3912,8 @@ $auditorsList = $statement->fetchAll();
         $(document).on('click.cdcModal', '.editcdcReport', function () {
             // Clear the saved data flag when opening edit CDC - will be set if has saved office data
             $('#cdcOfficeContainer').removeData('hasSavedOfficeData');
+            $('#iso_metadata').val('');
+            window.cdcIsoMetadata = [];
 
             var customerAttr = $(this).attr('data-customer');
             updateBaseCustomerId(customerAttr);
@@ -3770,7 +4052,8 @@ $auditorsList = $statement->fetchAll();
                     window.customerIsoStandards = coveredForValue;
                     console.log('EDIT CDC - Stored in window.customerIsoStandards:', window.customerIsoStandards);
 
-                    $('.covered_for').val(coveredForValue);
+                    setCdcAccreditation(data[0]['accreditation']);
+                    setCdcCoveredStandards(coveredForValue, data[9] || []);
 
                     // CRITICAL: For old clients without saved office data, immediately initialize sections
                     // This must happen BEFORE the trigger('change') call
@@ -3781,7 +4064,6 @@ $auditorsList = $statement->fetchAll();
                         }, 150);
                     }
 
-                    setCdcAccreditation(data[0]['accreditation']);
                     $('.system_during').val(data[0]['system_during']);
                     $(".system_complaint").val(data[0]['system_complainte']);
 

@@ -6,6 +6,7 @@ ob_start(); // Start output buffering to prevent header errors
 session_start();
 include_once './dbConnect.php';
 include_once './include/cdc_office_use.php';
+include_once './include/cdc_iso_metadata.php';
 include_once './include/certification_cycle_helper.php';
 date_default_timezone_set('Asia/Kolkata');
 
@@ -71,6 +72,17 @@ function validateCdcAuditPerformance($customerId) {
             header("Location: customerAccount.php?customerid=" . $customerId);
             exit;
         }
+    }
+}
+
+function savePostedCdcIsoMetadata(PDO $db, $crrId) {
+    if (empty($crrId) || !isset($_POST['iso_metadata'])) {
+        return;
+    }
+
+    $metadata = json_decode((string) $_POST['iso_metadata'], true);
+    if (is_array($metadata)) {
+        upsertCdcIsoMetadata($db, (int) $crrId, $metadata);
     }
 }
 
@@ -601,6 +613,7 @@ if (strtoupper($_SERVER['REQUEST_METHOD']) == 'POST') {
                     $officeUseEntries = normaliseCdcOfficePayload($officeUsePayload);
                     replaceCdcOfficeUse($db, (int) $_POST['crr_Id'], $officeUseEntries);
                 }
+                savePostedCdcIsoMetadata($db, (int) $_POST['crr_Id']);
                 activateCustomerAfterGrantedCaCdc($db, $_POST['customer_Id'], $service, $cdc_status, $_POST['certificateNo']);
 
                 // Save or clear ISO decisions for RC services.
@@ -806,6 +819,7 @@ if (strtoupper($_SERVER['REQUEST_METHOD']) == 'POST') {
                             replaceCdcOfficeUse($db, $newCrrId, $officeUseEntries);
                         }
                     }
+                    savePostedCdcIsoMetadata($db, $newCrrId);
                     activateCustomerAfterGrantedCaCdc($db, $_POST['customer_Id'], $service, $cdc_status, $_POST['certificateNo']);
                     
                     // Save ISO decisions for RC services.
@@ -1356,6 +1370,7 @@ if (strtoupper($_SERVER['REQUEST_METHOD']) == 'POST') {
                 $officeUsePayload = isset($_POST['office_use']) && is_array($_POST['office_use']) ? $_POST['office_use'] : [];
                 $officeUseEntries = normaliseCdcOfficePayload($officeUsePayload);
                 replaceCdcOfficeUse($db, (int) $_POST['crr_Id'], $officeUseEntries);
+                savePostedCdcIsoMetadata($db, (int) $_POST['crr_Id']);
                 activateCustomerAfterGrantedCaCdc($db, $_POST['customer_Id'], $service, $cdc_status, $_POST['certificateNo']);
 
                 $resolvedServiceId = aitfResolveUniversalServiceId($db, isset($_POST['uni_serviceid']) ? $_POST['uni_serviceid'] : '', $service, isset($_POST['audit_type']) ? $_POST['audit_type'] : '');
@@ -1496,6 +1511,7 @@ if (strtoupper($_SERVER['REQUEST_METHOD']) == 'POST') {
                     if ($newCrrId > 0) {
                         replaceCdcOfficeUse($db, $newCrrId, $officeUseEntries);
                     }
+                    savePostedCdcIsoMetadata($db, $newCrrId);
                     activateCustomerAfterGrantedCaCdc($db, $_POST['customer_Id'], $service, $cdc_status, $_POST['certificateNo']);
 
                     if ($cdc_status === 'Granted') {

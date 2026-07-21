@@ -6,6 +6,7 @@ session_start();
 include_once './dbConnect.php';
 include_once './include/cdc_office_use.php';
 include_once './include/cdc_audit_date_sync.php';
+include_once './include/cdc_iso_metadata.php';
 date_default_timezone_set('Asia/Kolkata');
 
 if(isset ($_GET['report_Id']) && !empty ($_GET['report_Id']) && isset ($_GET['service_id']) && !empty ($_GET['service_id'])) {
@@ -198,8 +199,19 @@ if(isset ($_GET['crr_Id']) && !empty ($_GET['crr_Id']) && isset ($_GET['service'
             }
         }
 
+        $isoMetadata = [];
+        if (!empty($_GET['crr_Id'])) {
+            try {
+                $isoMetadata = getCdcIsoMetadata($db, (int) $_GET['crr_Id']);
+                error_log("reviewReportData.php - Loaded " . count($isoMetadata) . " ISO metadata rows for crr_id=" . $_GET['crr_Id']);
+            } catch (Exception $metadataEx) {
+                error_log("reviewReportData.php - ISO metadata fetch error: " . $metadataEx->getMessage());
+                $isoMetadata = [];
+            }
+        }
+
         error_log("reviewReportData.php - Returning CDC data successfully");
-        echo json_encode(array($crrData, $rev1date, $rev2date, $customerDetailsx, $customerDetailsy, $customerDetailsz,$customerDetailsz1, $officeUseEntries, $isoDecisions));
+        echo json_encode(array($crrData, $rev1date, $rev2date, $customerDetailsx, $customerDetailsy, $customerDetailsz,$customerDetailsz1, $officeUseEntries, $isoDecisions, $isoMetadata));
         
     } catch (Exception $ex) {
         error_log("reviewReportData.php - Exception: " . $ex->getMessage());

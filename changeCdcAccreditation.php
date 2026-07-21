@@ -2,6 +2,7 @@
 
 session_start();
 include_once './dbConnect.php';
+include_once './include/cdc_iso_metadata.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -28,6 +29,7 @@ if (strtoupper($_SERVER['REQUEST_METHOD']) !== 'POST') {
 $crrId = filter_input(INPUT_POST, 'crr_id', FILTER_VALIDATE_INT);
 $customerId = filter_input(INPUT_POST, 'customer_id', FILTER_VALIDATE_INT);
 $accreditation = strtoupper(trim((string) ($_POST['accreditation'] ?? '')));
+$isoLabel = trim((string) ($_POST['iso_label'] ?? ''));
 
 if (!$crrId || !$customerId || !in_array($accreditation, array('NABCB', 'SELF'), true)) {
     cdcAccreditationResponse(array(
@@ -37,6 +39,8 @@ if (!$crrId || !$customerId || !in_array($accreditation, array('NABCB', 'SELF'),
 }
 
 try {
+    ensureCdcIsoMetadataTable($db);
+
     $lookup = $db->prepare(
         'SELECT crr_id FROM cdc_report_review WHERE crr_id = :crr_id AND customer_id = :customer_id LIMIT 1'
     );
@@ -48,6 +52,8 @@ try {
         cdcAccreditationResponse(array('success' => false, 'message' => 'CDC record not found.'), 404);
     }
 
+    $db->beginTransaction();
+
     $update = $db->prepare(
         'UPDATE cdc_report_review
          SET accreditation = :accreditation
@@ -58,12 +64,27 @@ try {
     $update->bindValue(':customer_id', $customerId, PDO::PARAM_INT);
     $update->execute();
 
+    if ($isoLabel !== '') {
+        upsertCdcIsoMetadata($db, $crrId, array(
+            array(
+                'iso_index' => 0,
+                'iso_label' => $isoLabel,
+                'accreditation' => $accreditation,
+            ),
+        ));
+    }
+
+    $db->commit();
+
     cdcAccreditationResponse(array(
         'success' => true,
         'accreditation' => $accreditation,
         'message' => 'Accreditation updated successfully.'
     ));
 } catch (PDOException $exception) {
+    if ($db->inTransaction()) {
+        $db->rollBack();
+    }
     error_log('CDC accreditation update error: ' . $exception->getMessage());
     cdcAccreditationResponse(array('success' => false, 'message' => 'Unable to update accreditation.'), 500);
 }
