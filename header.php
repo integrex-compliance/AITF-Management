@@ -377,8 +377,8 @@ DASHBOARD<i class="sub_icon fa fa-line-chart fa-2x" style="vertical-align:middle
             <li><a href="auditorChecklist.php"
                     class="animate <?php echo isset($addAuditorChecklistClass) ? $addAuditorChecklistClass : ''; ?>">AUDIT-DATA<i
                         class="sub_icon fa fa-clipboard fa-2x" style="vertical-align:middle"></i></a></li>
-            <li><a href="goAi.php" class="animate <?php echo isset($addGoAiClass) ? $addGoAiClass : ''; ?>">GoAI<i
-                        class="sub_icon fa fa-magic fa-2x" style="vertical-align:middle"></i></a></li>
+            <!-- <li><a href="goAi.php" class="animate <?php echo isset($addGoAiClass) ? $addGoAiClass : ''; ?>">GoAI<i
+                        class="sub_icon fa fa-magic fa-2x" style="vertical-align:middle"></i></a></li> -->
         <?php } ?>
     </ul>
 </div>
