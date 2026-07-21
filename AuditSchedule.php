@@ -226,6 +226,42 @@ $pdf->AddPage();
 $lp=0;
 
 $space = '/';
+
+$audit_date_raw = $stageIInfo['schedule_audit_date'];
+
+$stmtAuditDate = $db->prepare("SELECT audit_date FROM service_type_ca WHERE ca_id = :service");
+$stmtAuditDate->bindParam(':service', $_POST['serviceid']);
+$stmtAuditDate->execute();
+$serviceTypeRow = $stmtAuditDate->fetch();
+
+if ($serviceTypeRow && !empty($serviceTypeRow['audit_date']) && strpos($serviceTypeRow['audit_date'], '1970') === false && strpos($serviceTypeRow['audit_date'], '0000') === false) {
+    $audit_date_raw = $serviceTypeRow['audit_date'];
+} else {
+    $extracted_dates = [];
+    foreach ($stageIDetails as $detail) {
+        if (!empty($detail['schedule_dates']) && strpos($detail['schedule_dates'], '1970') === false && strpos($detail['schedule_dates'], '0000') === false) {
+            $extracted_dates[] = trim($detail['schedule_dates']);
+        }
+    }
+    if (!empty($extracted_dates)) {
+        $audit_date_raw = implode(', ', array_unique($extracted_dates));
+    }
+}
+
+$audit_dates_arr = explode(',', $audit_date_raw);
+$formatted_dates_arr = [];
+foreach($audit_dates_arr as $ad) {
+    $ad = trim($ad);
+    if (strpos($ad, '1970') !== false || strpos($ad, '0000') !== false) continue;
+    $time = strtotime($ad);
+    if ($time !== false && $time > 0 && date("Y", $time) != "1970") {
+        $formatted_dates_arr[] = date("d.m.Y", $time);
+    } else {
+        $formatted_dates_arr[] = $ad;
+    }
+}
+$final_audit_date_str = implode(', ', $formatted_dates_arr);
+
 //html content Start Here
 $html = '<table border="1"  cellpadding="3" cellspacing="0">
 <tr>
@@ -269,7 +305,7 @@ $html = '<table border="1"  cellpadding="3" cellspacing="0">
     </tr>
     <tr>
 <td colspan="4">
-        <font size="10">Audit Date: <font color="black">' . date("d.m.Y", strtotime($stageIInfo['schedule_audit_date'])) . '</font></font>
+        <font size="10">Audit Date: <font color="black">' . $final_audit_date_str . '</font></font>
     </td>
     <td colspan="4" >
         <font size="10">Auditor/s: <font color="black">' . $commaSeparatedAuditorNames . '</font></font>
