@@ -206,6 +206,84 @@
             return count($officeRows) === 1 ? $officeRows[0] : array();
         }
 
+        function caCertHeaderCertificatesFromLatestCdc(PDO $db, $customerId)
+        {
+            $statement = $db->prepare(
+                "SELECT
+                    crr.crr_id,
+                    crr.ca_service_id AS serviceca_id,
+                    crr.covered_for,
+                    crr.cdc_status,
+                    crr.Date AS decision_date,
+                    crr.revDatecdc AS legacy_issue_date,
+                    crr.expiredate AS legacy_expire_date,
+                    crr.accreditation AS legacy_accreditation,
+                    cou.iso_index,
+                    cou.iso_label,
+                    cou.certificate_no,
+                    cou.rev_date AS issue_date,
+                    cou.expire_date,
+                    COALESCE(NULLIF(TRIM(cim.accreditation), ''), crr.accreditation) AS accreditation,
+                    COALESCE(NULLIF(TRIM(cim.certification_status), ''), crr.cdc_status) AS certification_status
+                 FROM cdc_report_review crr
+                 INNER JOIN (
+                    SELECT MAX(source.crr_id) AS latest_crr_id
+                    FROM cdc_report_review source
+                    WHERE source.customer_id = :customer_id
+                      AND EXISTS (
+                        SELECT 1
+                        FROM cdc_report_review_office_use source_office
+                        WHERE source_office.crr_id = source.crr_id
+                      )
+                 ) latest ON latest.latest_crr_id = crr.crr_id
+                 INNER JOIN cdc_report_review_office_use cou
+                    ON cou.crr_id = crr.crr_id
+                 LEFT JOIN cdc_iso_metadata cim
+                    ON cim.crr_id = crr.crr_id
+                   AND cim.iso_index = cou.iso_index
+                 ORDER BY cou.iso_index ASC, cou.id ASC"
+            );
+            $statement->bindValue(':customer_id', (int) $customerId, PDO::PARAM_INT);
+            $statement->execute();
+            $rows = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+            if (empty($rows)) {
+                return array();
+            }
+
+            $certificates = array();
+            foreach ($rows as $rowIndex => $row) {
+                $isoIndex = isset($row['iso_index']) ? (int) $row['iso_index'] : $rowIndex;
+                $coveredStandards = array_values(array_filter(array_map(
+                    'trim',
+                    explode(',', isset($row['covered_for']) ? (string) $row['covered_for'] : '')
+                )));
+                $standardName = trim((string) ($row['iso_label'] ?? ''));
+                if ($standardName === '' && isset($coveredStandards[$isoIndex])) {
+                    $standardName = $coveredStandards[$isoIndex];
+                }
+
+                $certificates[] = array(
+                    'certification_no' => trim((string) ($row['certificate_no'] ?? '')),
+                    'standard_name' => $standardName,
+                    'issue_date' => caCertHeaderHasRealDate($row['issue_date'] ?? '')
+                        ? $row['issue_date']
+                        : ($row['legacy_issue_date'] ?? ''),
+                    'expire_date' => caCertHeaderHasRealDate($row['expire_date'] ?? '')
+                        ? $row['expire_date']
+                        : ($row['legacy_expire_date'] ?? ''),
+                    'decision_date' => $row['decision_date'] ?? '',
+                    'cdc_status' => trim((string) ($row['certification_status'] ?? ($row['cdc_status'] ?? ''))),
+                    'serviceca_id' => $row['serviceca_id'] ?? '',
+                    'crr_id' => isset($row['crr_id']) ? (int) $row['crr_id'] : 0,
+                    'accreditation' => strtoupper(trim((string) ($row['accreditation'] ?? ($row['legacy_accreditation'] ?? '')))),
+                    'iso_index' => $isoIndex,
+                );
+            }
+
+            return $certificates;
+        }
+
         function caCertHeaderHasRealDate($value)
         {
             $value = trim((string) $value);
@@ -1022,6 +1100,13 @@
 
                         $allCertificates[] = $certInfo;
                     }
+                }
+
+                // The latest CDC office-use rows are the authoritative per-ISO
+                // certificate set. Schedule rows remain a fallback for legacy data.
+                $latestCdcCertificates = caCertHeaderCertificatesFromLatestCdc($db, $customerId);
+                if (!empty($latestCdcCertificates)) {
+                    $allCertificates = $latestCdcCertificates;
                 }
 
                 if (empty($allCertificates) && !empty($dashboardCertificateRows)) {
@@ -4252,6 +4337,7 @@
                             $certStatus = isset($cert['cdc_status']) && trim((string) $cert['cdc_status']) !== '' ? trim((string) $cert['cdc_status']) : (isset($clientInfo['audit_status']) ? trim((string) $clientInfo['audit_status']) : '');
                             $decisionDate = !empty($cert['decision_date']) ? $cert['decision_date'] : ($i == 0 ? $clientInfo['certification_stage_date'] : '');
                             $certCrrId = isset($cert['crr_id']) ? (int) $cert['crr_id'] : 0;
+                            $certIsoIndex = isset($cert['iso_index']) ? (int) $cert['iso_index'] : $i;
                             $certAccreditation = isset($cert['accreditation']) ? strtoupper(trim((string) $cert['accreditation'])) : '';
                             if (strpos($certAccreditation, 'NABCB') !== false) {
                                 $certAccreditation = 'NABCB';
@@ -4298,7 +4384,7 @@
                                         data-customer="<?php echo (int) $_GET["customerid"]; ?>"
                                         data-crr-id="<?php echo $certCrrId; ?>"
                                         data-previous="<?php echo htmlspecialchars($certStatus, ENT_QUOTES, 'UTF-8'); ?>"
-                                        data-iso-index="<?php echo $i; ?>"
+                                        data-iso-index="<?php echo $certIsoIndex; ?>"
                                         data-iso-label="<?php echo htmlspecialchars($standardName, ENT_QUOTES, 'UTF-8'); ?>"
                                         style="color: black; width: 100%;">
                                         <option value="<?php echo htmlspecialchars($certStatus, ENT_QUOTES, 'UTF-8'); ?>">
@@ -4325,7 +4411,7 @@
                                         data-customer="<?php echo (int) $_GET["customerid"]; ?>"
                                         data-crr-id="<?php echo $certCrrId; ?>"
                                         data-previous="<?php echo htmlspecialchars($certAccreditation, ENT_QUOTES, 'UTF-8'); ?>"
-                                        data-iso-index="<?php echo $i; ?>"
+                                        data-iso-index="<?php echo $certIsoIndex; ?>"
                                         data-iso-label="<?php echo htmlspecialchars($standardName, ENT_QUOTES, 'UTF-8'); ?>"
                                         style="color: black; width: 100%;" <?php if ($certCrrId <= 0)
                                             echo 'disabled title="CDC record not available"'; ?>>
@@ -4347,7 +4433,7 @@
                                         echo ' saveChanges'; ?>"
                                         style="color: <?php echo (!empty($decisionDate) ? 'black' : 'gray'); ?>; width: 100%;"
                                         placeholder="<?php echo ($i > 0 && empty($decisionDate)) ? 'No date for this ISO' : 'Click to enter'; ?>"
-                                        data-column="certification_stage_date" data-iso-index="<?php echo $i; ?>" value="<?php if (!empty($decisionDate))
+                                        data-column="certification_stage_date" data-iso-index="<?php echo $certIsoIndex; ?>" value="<?php if (!empty($decisionDate))
                                                echo simpleDateConversion($decisionDate); ?>" <?php if ($i == 0)
                                                      echo 'id="certificationDate"'; ?>         <?php if ($i > 0)
                                                                     echo 'readonly'; ?> />

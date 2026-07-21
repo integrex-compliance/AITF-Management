@@ -1,6 +1,7 @@
 .float-label-control {
     position: relative;
     margin-bottom: 1.5em;
+    margin-top: 1.5em; /* Add top margin for multiline labels to expand into */
 }
 
 .float-label-control::-webkit-input-placeholder {
@@ -74,11 +75,14 @@
 .float-label-control label {
     position: absolute;
     font-weight: normal;
-    top: -1.0em;
-    left: 1.10em;
+    bottom: 100%;
+    left: 0em;
     color: black;
     z-index: -1;
     font-size: 0.85em;
+    line-height: 1.2;
+    width: 100%;
+    white-space: normal;
     -moz-animation: float-labels 300ms none ease-out;
     -webkit-animation: float-labels 300ms none ease-out;
     -o-animation: float-labels 300ms none ease-out;
@@ -93,8 +97,11 @@
 .float-label-control select.empty + label,
 .float-label-control input.empty + label,
 .float-label-control textarea.empty + label {
-    top: 0.1em;
-    font-size: 1.5em;
+    bottom: 0em;
+    font-size: 1.0em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     animation: none;
     -webkit-animation: none;
 }
@@ -130,22 +137,22 @@
     0% {
         opacity: 1;
         color: black;
-        top: 0.1em;
-        font-size: 1.5em;
+        bottom: 0em;
+        font-size: 1.0em;
     }
     20% {
-        font-size: 1.5em;
+        font-size: 1.0em;
         opacity: 0;
     }
     30% {
-        top: 0.1em;
+        bottom: 0em;
     }
     50% {
         opacity: 0;
         font-size: 0.85em;
     }
     100% {
-        top: -1em;
+        bottom: 100%;
         opacity: 1;
     }
 }
@@ -154,22 +161,22 @@
     0% {
         opacity: 1;
         color: black;
-        top: 0.1em;
-        font-size: 1.5em;
+        bottom: 0em;
+        font-size: 1.0em;
     }
     20% {
-        font-size: 1.5em;
+        font-size: 1.0em;
         opacity: 0;
     }
     30% {
-        top: 0.1em;
+        bottom: 0em;
     }
     50% {
         opacity: 0;
         font-size: 0.85em;
     }
     100% {
-        top: -1em;
+        bottom: 100%;
         opacity: 1;
     }
 }

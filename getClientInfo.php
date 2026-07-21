@@ -1979,9 +1979,46 @@ if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
         include_once __DIR__ . '/include/cdc_office_use.php';
 
         $crrId = (int) $_GET['crr_id'];
+        $contextStatement = $db->prepare(
+            "SELECT customer_id, ca_service_id
+             FROM cdc_report_review
+             WHERE crr_id = :crr_id
+             LIMIT 1"
+        );
+        $contextStatement->bindValue(':crr_id', $crrId, PDO::PARAM_INT);
+        $contextStatement->execute();
+        $cdcContext = $contextStatement->fetch(PDO::FETCH_ASSOC);
+
+        if ($cdcContext) {
+            $latestStatement = $db->prepare(
+                "SELECT source.crr_id
+                 FROM cdc_report_review source
+                 WHERE source.customer_id = :customer_id
+                   AND source.ca_service_id = :service_id
+                   AND EXISTS (
+                       SELECT 1
+                       FROM cdc_report_review_office_use office_use
+                       WHERE office_use.crr_id = source.crr_id
+                   )
+                 ORDER BY source.crr_id DESC
+                 LIMIT 1"
+            );
+            $latestStatement->bindValue(':customer_id', (int) $cdcContext['customer_id'], PDO::PARAM_INT);
+            $latestStatement->bindValue(':service_id', (int) $cdcContext['ca_service_id'], PDO::PARAM_INT);
+            $latestStatement->execute();
+            $latestCrrId = (int) $latestStatement->fetchColumn();
+            if ($latestCrrId > 0) {
+                $crrId = $latestCrrId;
+            }
+        }
+
         $officeEntries = getCdcOfficeUse($db, $crrId);
 
         if (!empty($officeEntries)) {
+            foreach ($officeEntries as &$officeEntry) {
+                $officeEntry['crr_id'] = $crrId;
+            }
+            unset($officeEntry);
             echo json_encode($officeEntries);
             return;
         }

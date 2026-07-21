@@ -386,7 +386,7 @@
                     'data-certify-id': context.certify_id,
                     'data-service': context.service,
                     'data-customer': context.customer,
-                    'data-crr': context.crr_id || '',
+                    'data-crr': entry.crr_id || context.crr_id || '',
                     'data-iso-index': entry.iso_index,
                     'data-iso-label': entry.iso_label || '',
                     text: displayLabel
@@ -400,12 +400,16 @@
 
         function submitCertificateForm(payload) {
             var url = 'CertificatePrintPdf.php';
+            var isoIndex = payload.iso_index;
+            if (isoIndex === undefined || isoIndex === null) {
+                isoIndex = '';
+            }
             var form = $('<form action="' + url + '" method="post" target="_blank" >' +
                     '<input type="hidden" name="certify_id" value="' + payload.certify_id + '" />' +
                     '<input type="hidden" name="service" value="' + payload.service + '" />' +
                     '<input type="hidden" name="customer" value="' + payload.customer + '" />' +
                     '<input type="hidden" name="crr_id" value="' + (payload.crr_id || '') + '" />' +
-                    '<input type="hidden" name="iso_index" value="' + (payload.iso_index || '') + '" />' +
+                    '<input type="hidden" name="iso_index" value="' + isoIndex + '" />' +
                     '<input type="hidden" name="iso_label" value="' + (payload.iso_label || '') + '" />' +
                     '</form>');
             $('body').append(form);
@@ -454,7 +458,8 @@
 
                     if (response.length === 1) {
                         submitCertificateForm($.extend({}, context, {
-                            iso_index: response[0].iso_index || '',
+                            crr_id: response[0].crr_id || context.crr_id,
+                            iso_index: response[0].iso_index,
                             iso_label: response[0].iso_label || ''
                         }));
                         return;

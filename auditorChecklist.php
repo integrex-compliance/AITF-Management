@@ -3,7 +3,46 @@
     $pageIdentifier = "Auditor Checklist";
     include 'header.php';
     include 'dbConnect.php';
+    include_once './include/cdc_iso_metadata.php';
     date_default_timezone_set('Asia/Kolkata');
+
+    function acNormalizeAccreditations($value)
+    {
+        $parts = preg_split('/\s*(?:\|\||,|;)\s*/', strtoupper(trim((string) $value)));
+        $accreditations = array();
+
+        foreach ($parts as $part) {
+            $part = trim($part);
+            if (in_array($part, array('NABCB', 'SELF'), true)) {
+                $accreditations[] = $part;
+            }
+        }
+
+        return $accreditations;
+    }
+
+    function acRegisterAccreditation(&$serviceMap, &$customerMap, $customerId, $typedServiceId, $accreditation)
+    {
+        $customerId = trim((string) $customerId);
+        $typedServiceId = trim((string) $typedServiceId);
+        $accreditations = acNormalizeAccreditations($accreditation);
+
+        if ($customerId === '' || empty($accreditations)) {
+            return;
+        }
+
+        $value = implode('||', $accreditations);
+        if ($typedServiceId !== '') {
+            $serviceKey = $customerId . ':' . $typedServiceId;
+            if (!isset($serviceMap[$serviceKey])) {
+                $serviceMap[$serviceKey] = $value;
+            }
+        }
+
+        if (!isset($customerMap[$customerId])) {
+            $customerMap[$customerId] = $value;
+        }
+    }
 
     function acRegisterCertificate(&$serviceMap, &$customerMap, $customerId, $typedServiceId, $certificateNo)
     {
@@ -108,28 +147,86 @@
     $stmt->execute();
     $serviceTypeList = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // ─── Build accreditation map per customer ───
-    // A CDC change is the current operational value. The audit application is
-    // retained as a fallback for customers without a CDC record.
-    $accredMap = array();
+    // ─── Build accreditation maps per CA service and customer ───
+    // Pair each certificate with the accreditation saved for the same ISO index.
+    ensureCdcIsoMetadataTable($db);
+    $accreditationByService = array();
+    $accreditationByCustomer = array();
     $cdcAccredSql = "
-        SELECT crr.customer_id, UPPER(TRIM(crr.accreditation)) AS accreditation
+        SELECT
+            crr.customer_id,
+            crr.ca_service_id AS typed_service_id,
+            GROUP_CONCAT(
+                CASE
+                    WHEN UPPER(TRIM(COALESCE(NULLIF(cim.accreditation, ''), crr.accreditation))) IN ('NABCB', 'SELF')
+                        THEN UPPER(TRIM(COALESCE(NULLIF(cim.accreditation, ''), crr.accreditation)))
+                    ELSE NULL
+                END
+                ORDER BY cou.iso_index ASC
+                SEPARATOR '||'
+            ) AS accreditation
         FROM cdc_report_review crr
         INNER JOIN (
-            SELECT customer_id, MAX(crr_id) AS latest_crr_id
-            FROM cdc_report_review
-            WHERE UPPER(TRIM(COALESCE(accreditation, ''))) IN ('NABCB', 'SELF')
-            GROUP BY customer_id
+            SELECT c.customer_id, c.ca_service_id, MAX(c.crr_id) AS latest_crr_id
+            FROM cdc_report_review c
+            WHERE EXISTS (
+                SELECT 1
+                FROM cdc_report_review_office_use office_use
+                WHERE office_use.crr_id = c.crr_id
+                  AND TRIM(COALESCE(office_use.certificate_no, '')) <> ''
+            )
+            GROUP BY c.customer_id, c.ca_service_id
         ) latest ON latest.latest_crr_id = crr.crr_id
+        INNER JOIN cdc_report_review_office_use cou
+            ON cou.crr_id = crr.crr_id
+           AND TRIM(COALESCE(cou.certificate_no, '')) <> ''
+        LEFT JOIN cdc_iso_metadata cim
+            ON cim.crr_id = crr.crr_id
+           AND cim.iso_index = cou.iso_index
+        GROUP BY crr.customer_id, crr.ca_service_id, crr.crr_id
+        ORDER BY crr.crr_id DESC
     ";
     $stmt = $db->prepare($cdcAccredSql);
     $stmt->execute();
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-        $accredMap[$row['customer_id']] = $row['accreditation'];
+        acRegisterAccreditation(
+            $accreditationByService,
+            $accreditationByCustomer,
+            $row['customer_id'],
+            $row['typed_service_id'],
+            $row['accreditation']
+        );
+    }
+
+    // Legacy CDC rows may not have repeated office-use or ISO metadata entries.
+    $legacyCdcAccredSql = "
+        SELECT
+            crr.customer_id,
+            crr.ca_service_id AS typed_service_id,
+            UPPER(TRIM(crr.accreditation)) AS accreditation
+        FROM cdc_report_review crr
+        INNER JOIN (
+            SELECT customer_id, ca_service_id, MAX(crr_id) AS latest_crr_id
+            FROM cdc_report_review
+            WHERE UPPER(TRIM(COALESCE(accreditation, ''))) IN ('NABCB', 'SELF')
+            GROUP BY customer_id, ca_service_id
+        ) latest ON latest.latest_crr_id = crr.crr_id
+        ORDER BY crr.crr_id DESC
+    ";
+    $stmt = $db->prepare($legacyCdcAccredSql);
+    $stmt->execute();
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        acRegisterAccreditation(
+            $accreditationByService,
+            $accreditationByCustomer,
+            $row['customer_id'],
+            $row['typed_service_id'],
+            $row['accreditation']
+        );
     }
 
     $accredSql = "
-        SELECT s.customer_id, aa.accereditation_requirement
+        SELECT s.customer_id, aa.service_id AS typed_service_id, aa.accereditation_requirement
         FROM audit_application aa
         JOIN service s ON s.service_id = aa.uni_svc_id
         WHERE aa.accereditation_requirement IS NOT NULL AND aa.accereditation_requirement != ''
@@ -138,9 +235,13 @@
     $stmt = $db->prepare($accredSql);
     $stmt->execute();
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-        if (!isset($accredMap[$row['customer_id']]) && in_array(strtoupper(trim($row['accereditation_requirement'])), array('NABCB', 'SELF'), true)) {
-            $accredMap[$row['customer_id']] = $row['accereditation_requirement'];
-        }
+        acRegisterAccreditation(
+            $accreditationByService,
+            $accreditationByCustomer,
+            $row['customer_id'],
+            $row['typed_service_id'],
+            $row['accereditation_requirement']
+        );
     }
 
     // ─── Build auditor map per service from all subtype tables ───
@@ -615,8 +716,20 @@
                                 $rawOrigRegDate = $record['original_registration_date'] ?? '';
                                 $origRegDate = ($rawOrigRegDate && $rawOrigRegDate !== '0000-00-00') ? date('d.m.Y', strtotime($rawOrigRegDate)) : '-';
 
-                                // Accreditation from preloaded map (per customer)
-                                $accreditation = isset($accredMap[$clientId]) ? htmlspecialchars($accredMap[$clientId]) : '-';
+                                // CA accreditation is stored per certificate/ISO; other audit types
+                                // retain the latest customer-level value for backward compatibility.
+                                $accreditationRaw = '';
+                                if (strtoupper($auditTypeRaw) === 'CA') {
+                                    $serviceAccreditationKey = $clientId . ':' . $typedServiceId;
+                                    if ($typedServiceId !== '' && isset($accreditationByService[$serviceAccreditationKey])) {
+                                        $accreditationRaw = $accreditationByService[$serviceAccreditationKey];
+                                    }
+                                }
+                                if ($accreditationRaw === '' && isset($accreditationByCustomer[$clientId])) {
+                                    $accreditationRaw = $accreditationByCustomer[$clientId];
+                                }
+                                $accreditations = acNormalizeAccreditations($accreditationRaw);
+                                $accreditationSearchValue = strtolower(implode('|', array_unique($accreditations)));
 
                                 $clientStatus = htmlspecialchars(
                                     acNormalizeStatus($record['client_status'] ?? ''),
@@ -655,7 +768,7 @@
                                     data-cert="<?php echo htmlspecialchars($certSearchValue, ENT_QUOTES, 'UTF-8'); ?>"
                                     data-iaf="<?php echo strtolower($iafNace); ?>"
                                     data-auditor="<?php echo strtolower($auditorName); ?>"
-                                    data-accreditation="<?php echo strtolower($accreditation); ?>"
+                                    data-accreditation="<?php echo htmlspecialchars($accreditationSearchValue, ENT_QUOTES, 'UTF-8'); ?>"
                                     data-status="<?php echo strtolower($clientStatus); ?>"
                                     data-date="<?php echo $rawDate; ?>"
                                     data-service-type="<?php echo strtolower($auditType); ?>">
@@ -677,11 +790,15 @@
                                     <td class="ac-td-contact"><?php echo $contactPerson ?: '-'; ?></td>
                                     <td class="ac-td-orig-reg"><?php echo $origRegDate; ?></td>
                                     <td class="ac-td-accred">
-                                        <?php if ($accreditation !== '-') { ?>
-                                            <span
-                                                class="ac-accred-badge <?php echo ($accreditation === 'NABCB') ? 'ac-accred-nabcb' : 'ac-accred-self'; ?>">
-                                                <?php echo $accreditation; ?>
-                                            </span>
+                                        <?php if (!empty($accreditations)) { ?>
+                                            <div class="ac-accred-list">
+                                                <?php foreach ($accreditations as $accreditation) { ?>
+                                                    <span
+                                                        class="ac-accred-badge <?php echo ($accreditation === 'NABCB') ? 'ac-accred-nabcb' : 'ac-accred-self'; ?>">
+                                                        <?php echo htmlspecialchars($accreditation, ENT_QUOTES, 'UTF-8'); ?>
+                                                    </span>
+                                                <?php } ?>
+                                            </div>
                                         <?php } else {
                                             echo '-';
                                         } ?>
@@ -1254,6 +1371,13 @@
     }
 
     /* ── Accreditation Badges ── */
+    .ac-accred-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        justify-content: center;
+    }
+
     .ac-accred-badge {
         padding: 4px 12px;
         border-radius: 20px;
@@ -1688,7 +1812,10 @@
                 if (show && certVal && row.getAttribute('data-cert').indexOf(certVal) === -1) show = false;
                 if (show && iafVal && row.getAttribute('data-iaf').indexOf(iafVal) === -1) show = false;
                 if (show && auditorVal && row.getAttribute('data-auditor').indexOf(auditorVal) === -1) show = false;
-                if (show && accredVal && row.getAttribute('data-accreditation') !== accredVal) show = false;
+                if (show && accredVal) {
+                    var rowAccreditations = (row.getAttribute('data-accreditation') || '').split('|');
+                    if (rowAccreditations.indexOf(accredVal) === -1) show = false;
+                }
                 if (show && statusVal && row.getAttribute('data-status') !== statusVal) show = false;
 
                 if (show && (dateFrom || dateTo)) {
@@ -1765,13 +1892,20 @@
                     certificates.push(certificate);
                 }
             });
+            var accreditations = [];
+            $row.find('.ac-accred-badge').each(function () {
+                var accreditation = cleanExportText($(this).text());
+                if (accreditation) {
+                    accreditations.push(accreditation);
+                }
+            });
 
             return {
                 client: cleanExportText($row.find('.ac-td-client').text()),
                 certificate_no: certificates.join(', '),
                 contact_person: cleanExportText($row.find('.ac-td-contact').text()),
                 original_registration: cleanExportText($row.find('.ac-td-orig-reg').text()),
-                accreditation: cleanExportText($row.find('.ac-td-accred').text()),
+                accreditation: accreditations.join(', '),
                 scope: cleanExportText($row.find('.ac-td-scope').text()),
                 iaf_nace: cleanExportText($row.find('.ac-td-iaf').text()),
                 auditor: cleanExportText($row.find('.ac-td-auditor').text()),

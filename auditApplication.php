@@ -586,6 +586,7 @@ if (isset($_POST['auditid'])) {
     $auditInfo = $statement->fetch();
 
     $appDate = date("d-m-Y", strtotime($auditInfo['application_date']));
+    $appRcvDate = date("d-m-Y", strtotime($auditInfo['application_rcv_date']));
     $review_date = date("d-m-Y", strtotime($auditInfo['review_date']));
     $orgName = $auditInfo['org_name'];
     $legalStatus = $auditInfo['legal_status'];
@@ -844,6 +845,11 @@ $html = '<p style="text-align: justify;text-justify: inter-word;"><font size="9"
   <tr>
         <td colspan="15">
         <br><span>Application Date:- </span>  <span>' . date("d.m.Y", strtotime($appDate)) . '</span>      
+        </td>
+</tr>        
+<tr>
+        <td colspan="15">
+        <br><span>Application Received Date:- </span>  <span>' . date("d.m.Y", strtotime($appRcvDate)) . '</span>      
         </td>
 </tr>        
 <tr>
