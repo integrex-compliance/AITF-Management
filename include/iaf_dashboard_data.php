@@ -593,17 +593,14 @@ function iafDashboardRenderRow(array $c)
     <tr data-row-key="<?php echo $rowKey; ?>">
         <td>
             <div class="action-btns-container">
-                <button class="action-btn btn-insert"
-                    id="<?php echo htmlspecialchars($insertId, ENT_QUOTES, 'UTF-8'); ?>"
+                <button class="action-btn btn-insert" id="<?php echo htmlspecialchars($insertId, ENT_QUOTES, 'UTF-8'); ?>"
                     onclick='handleAction("insert", <?php echo $clientJson; ?>, this)'>
                     <i class="fa fa-cloud-upload"></i> Insert
                 </button>
-                <button class="action-btn btn-update"
-                    onclick='handleAction("update", <?php echo $clientJson; ?>, this)'>
+                <button class="action-btn btn-update" onclick='handleAction("update", <?php echo $clientJson; ?>, this)'>
                     <i class="fa fa-refresh"></i> Update
                 </button>
-                <button class="action-btn btn-delete"
-                    onclick='handleAction("delete", "<?php echo $clientId; ?>", this)'>
+                <button class="action-btn btn-delete" onclick='handleAction("delete", "<?php echo $clientId; ?>", this)'>
                     <i class="fa fa-trash"></i> Delete
                 </button>
             </div>
@@ -619,9 +616,11 @@ function iafDashboardRenderRow(array $c)
                 <?php echo htmlspecialchars($c['address'] ?? ''); ?>
             </div>
         </td>
-        <td><?php echo htmlspecialchars(($c['accreditation_body'] ?? '') ?: 'National Accreditation Board for Certification Bodies'); ?></td>
+        <td><?php echo htmlspecialchars(($c['accreditation_body'] ?? '') ?: 'National Accreditation Board for Certification Bodies'); ?>
+        </td>
         <td><?php echo htmlspecialchars(($c['standard_name'] ?? '') ?: 'N/A'); ?></td>
-        <td><span style="font-weight: 600; color: #475569;"><?php echo htmlspecialchars($c['scheme_name'] ?? ''); ?></span></td>
+        <td><span style="font-weight: 600; color: #475569;"><?php echo htmlspecialchars($c['scheme_name'] ?? ''); ?></span>
+        </td>
         <td>
             <div class="cell-ellipsis" title="<?php echo htmlspecialchars($c['certification_scope'] ?? ''); ?>">
                 <?php echo htmlspecialchars(($c['certification_scope'] ?? '') ?: 'N/A'); ?>
@@ -634,7 +633,8 @@ function iafDashboardRenderRow(array $c)
                 <span style="color: #94a3b8;">Pending</span>
             <?php endif; ?>
         </td>
-        <td><span class="status-badge <?php echo $badgeClass; ?>"><?php echo htmlspecialchars($displayStatus); ?></span></td>
+        <td><span class="status-badge <?php echo $badgeClass; ?>"><?php echo htmlspecialchars($displayStatus); ?></span>
+        </td>
         <td><?php echo htmlspecialchars($c['certification_type'] ?? 'Management System'); ?></td>
         <td><?php echo iafDashboardFormatDate($c['certificate_issue_date'] ?? ''); ?></td>
         <td><?php echo iafDashboardFormatDate($c['issue_date'] ?? ''); ?></td>

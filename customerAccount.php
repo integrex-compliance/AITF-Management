@@ -7,6 +7,7 @@
     include_once './include/certification_cycle_helper.php';
     include_once './include/customer_feature_flags.php';
     include_once './include/cdc_iso_metadata.php';
+    include_once './include/cdc_legacy_iso_fallback.php';
     require_once __DIR__ . '/include/iaf_dashboard_data.php';
     include_once './informationUpdationReviewModal.php';
     include_once './assessmentPlanningModal.php';
@@ -248,7 +249,35 @@
             $rows = $statement->fetchAll(PDO::FETCH_ASSOC);
 
             if (empty($rows)) {
-                return array();
+                $latestStatement = $db->prepare(
+                    "SELECT crr_id
+                     FROM cdc_report_review
+                     WHERE customer_id = :customer_id
+                     ORDER BY crr_id DESC
+                     LIMIT 1"
+                );
+                $latestStatement->bindValue(':customer_id', (int) $customerId, PDO::PARAM_INT);
+                $latestStatement->execute();
+                $latestCrrId = (int) $latestStatement->fetchColumn();
+                $legacyEntries = aitfBuildLegacyCdcIsoEntries($db, $latestCrrId);
+                $legacyCertificates = array();
+
+                foreach ($legacyEntries as $entry) {
+                    $legacyCertificates[] = array(
+                        'certification_no' => trim((string) ($entry['certificate_no'] ?? '')),
+                        'standard_name' => trim((string) ($entry['iso_label'] ?? '')),
+                        'issue_date' => $entry['rev_date'] ?? '',
+                        'expire_date' => $entry['expire_date'] ?? '',
+                        'decision_date' => $entry['decision_date'] ?? '',
+                        'cdc_status' => trim((string) ($entry['certification_status'] ?? '')),
+                        'serviceca_id' => $entry['serviceca_id'] ?? '',
+                        'crr_id' => isset($entry['crr_id']) ? (int) $entry['crr_id'] : 0,
+                        'accreditation' => strtoupper(trim((string) ($entry['accreditation'] ?? ''))),
+                        'iso_index' => isset($entry['iso_index']) ? (int) $entry['iso_index'] : 0,
+                    );
+                }
+
+                return $legacyCertificates;
             }
 
             $certificates = array();
@@ -1150,8 +1179,10 @@
                 $certificateCdcStmt = $db->prepare(
                     "SELECT
                     crr.crr_id,
-                    COALESCE(NULLIF(TRIM(cim.accreditation), ''), crr.accreditation) AS accreditation,
-                    COALESCE(NULLIF(TRIM(cim.certification_status), ''), crr.cdc_status) AS certification_status
+                    cim.accreditation AS iso_accreditation,
+                    cim.certification_status AS iso_certification_status,
+                    crr.accreditation AS legacy_accreditation,
+                    crr.cdc_status AS legacy_certification_status
                  FROM cdc_report_review crr
                  LEFT JOIN cdc_iso_metadata cim
                    ON cim.crr_id = crr.crr_id
@@ -1181,12 +1212,23 @@
                     }
 
                     $allCertificates[$certificateIndex]['crr_id'] = (int) $certificateCdcRow['crr_id'];
-                    $allCertificates[$certificateIndex]['accreditation'] = strtoupper(
-                        trim((string) ($certificateCdcRow['accreditation'] ?? ''))
-                    );
-                    if (!empty($certificateCdcRow['certification_status'])) {
+                    $isoAccreditation = strtoupper(trim((string) ($certificateCdcRow['iso_accreditation'] ?? '')));
+                    if (!in_array($isoAccreditation, array('NABCB', 'SELF'), true)) {
+                        $legacyAccreditations = aitfCdcLegacySplitAccreditations(
+                            $certificateCdcRow['legacy_accreditation'] ?? ''
+                        );
+                        $isoIndex = isset($certificateRow['iso_index'])
+                            ? (int) $certificateRow['iso_index']
+                            : $certificateIndex;
+                        $isoAccreditation = $legacyAccreditations[$isoIndex] ?? ($legacyAccreditations[0] ?? '');
+                    }
+                    if ($isoAccreditation !== '') {
+                        $allCertificates[$certificateIndex]['accreditation'] = $isoAccreditation;
+                    }
+
+                    if (!empty($certificateCdcRow['iso_certification_status'])) {
                         $allCertificates[$certificateIndex]['cdc_status'] = trim(
-                            (string) $certificateCdcRow['certification_status']
+                            (string) $certificateCdcRow['iso_certification_status']
                         );
                     }
                 }

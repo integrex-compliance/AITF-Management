@@ -11,7 +11,7 @@ date_default_timezone_set('Asia/Kolkata');
 
 if (isset($_GET['id']) && !empty($_GET['id']) && isset($_GET['columnName']) && !empty($_GET['columnName']) && isset($_GET['columnValue']) && !empty($_GET['columnValue']) && isset($_GET['serviceid']) && !empty($_GET['serviceid'])) {
     try {
-//        echo $_GET['columnValue'];
+        //        echo $_GET['columnValue'];
         if ($_GET['columnName'] == "service_ca_status") {
             $caServiceStatusUpdate = "UPDATE service_type_ca SET service_ca_status = :status WHERE ca_id = :service and customer_id = :customer";
             $statement = $db->prepare($caServiceStatusUpdate);

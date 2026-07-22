@@ -34,6 +34,7 @@ session_start();
 require_once('tcpdf_include.php');
 include_once './dbConnect.php';
 include_once './include/certification_cycle_helper.php';
+include_once './include/cdc_legacy_iso_fallback.php';
 date_default_timezone_set('Asia/Kolkata');
 
 /**
@@ -502,6 +503,9 @@ if ($selectedCrrId > 0) {
     $isoStatement->bindParam(':crr', $selectedCrrId, PDO::PARAM_INT);
     $isoStatement->execute();
     $isoEntries = $isoStatement->fetchAll(PDO::FETCH_ASSOC);
+    if (empty($isoEntries)) {
+        $isoEntries = aitfBuildLegacyCdcIsoEntries($db, $selectedCrrId);
+    }
 
     // Try to match specific ISO if index or label provided
     if ($selectedIsoIndex !== null || $selectedIsoLabel !== '') {

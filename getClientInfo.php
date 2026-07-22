@@ -8,6 +8,7 @@
 session_start();
 include_once './dbConnect.php';
 include_once './include/certification_cycle_helper.php';
+include_once './include/cdc_legacy_iso_fallback.php';
 date_default_timezone_set('Asia/Kolkata');
 
 // Set proper JSON headers
@@ -2020,6 +2021,12 @@ if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
             }
             unset($officeEntry);
             echo json_encode($officeEntries);
+            return;
+        }
+
+        $legacyEntries = aitfBuildLegacyCdcIsoEntries($db, $crrId);
+        if (!empty($legacyEntries)) {
+            echo json_encode($legacyEntries);
             return;
         }
 
