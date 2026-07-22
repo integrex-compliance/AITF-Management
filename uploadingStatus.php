@@ -182,6 +182,19 @@
     $statement->execute();
     $rcCustomerReviewPending = $statement->fetchAll();
 
+    $totalPendingDocuments = count($crAuditApplicationPending) + count($crCertificationAgreementPending) +
+        count($caSignedNotification1Pending) + count($caStage1SchedulePending) + count($caStage1AuditReportPending) +
+        count($caStage2SgnedCopyPending) + count($caAuditReport2Pending) + count($caAuditorNotesPending) +
+        count($caAuditNCPending) + count($caCertificatePending) + count($caCustomerFeedbackPending) +
+        count($saiInformationUpdatoinPending) + count($saiSignedNotificationPending) + count($saiSignedCopyPending) +
+        count($saiAuditReportPending) + count($saiAuditorNotesPending) + count($saiAuditEvidencePending) +
+        count($saiCertificatePending) + count($saiCustomerReviewPending) + count($saiiInformationUpdatoinPending) +
+        count($saiiSignedNotificationPending) + count($saiiSignedCopyPending) + count($saiiAuditReportPending) +
+        count($saiiAuditorNotesPending) + count($saiiAuditorEvidencePending) + count($saiiCertificatePending) +
+        count($saiiFeedbackPending) + count($rcNotificationPending) + count($rcSignedSchedulePending) +
+        count($rcAuditReportPending) + count($rcAuditorNotesPending) + count($rcAudiEvidencePending) +
+        count($rcCertificatePending) + count($rcCustomerReviewPending);
+
     if (!function_exists('uploadingSectionTitle')) {
         function uploadingSectionTitle($label, $items)
         {
@@ -222,6 +235,7 @@
                     <div class="col-md-12">
                         <div class="panel panel-primary">
                             <h4 style="color: #053c6d; text-align: center">Uploading Status</h4>
+                            <p style="text-align: center; color: red; font-weight: bold; margin-bottom: 10px;">Total pending document = <?php echo $totalPendingDocuments; ?></p>
                         </div>
                     </div>
                 </div>
