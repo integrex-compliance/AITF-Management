@@ -132,10 +132,6 @@ foreach ($rows as $r) {
             $attachments[] = array('name' => 'Release - Notification for Stage - I audit.pdf', 'url' => 'AuditNotificationandAssignment.php', 'type' => 'post', 'params' => array('auditid' => $r['stage1_noti_id'], 'serviceid' => $r['ca_id'], 'customerid' => $r['customer_id']));
         }
 
-        if ($r['stage1_plan_id']) {
-            $attachments[] = array('name' => 'Release - Stage - I Audit Plan.pdf', 'url' => 'AuditSchedule.php', 'type' => 'post', 'params' => array('auditscheduleid' => $r['stage1_plan_id'], 'serviceid' => $r['ca_id'], 'customerid' => $r['customer_id']));
-        }
-
         $sent_entries[] = array(
             'id' => 'sent_1_' . $r['customer_id'] . '_' . $r['ca_id'],
             'customer_name' => $customerName,
@@ -153,9 +149,6 @@ foreach ($rows as $r) {
         $attachments = array();
         if ($r['stage2_noti_id']) {
             $attachments[] = array('name' => 'Release - Notification for Stage - II audit.pdf', 'url' => 'AuditNotificationStage2.php', 'type' => 'post', 'params' => array('notificationid' => $r['stage2_noti_id']));
-        }
-        if ($r['stage2_plan_id']) {
-            $attachments[] = array('name' => 'Release - Stage - II Audit Plan.pdf', 'url' => 'SurveillanceAudit2.php', 'type' => 'post', 'params' => array('auditnotiid' => $r['stage2_plan_id'], 'serviceid' => $r['ca_id'], 'customerid' => $r['customer_id']));
         }
 
         $sent_entries[] = array(
@@ -1596,7 +1589,7 @@ $inbox_json = json_encode($inbox_emails);
                         Dear Sir / Ma'am,<br><br>
                         Greetings from <strong>AITF Management Certification Ltd..!!!</strong><br><br>
                         This is to inform you that the <strong>ISO Certification</strong> audit is scheduled on <strong>${formattedAuditDate}</strong>.<br><br>
-                        Details of the audit date and the auditor are mentioned in the attached notification, Please find the attached notification and audit Schedule for the same.<br><br>
+                        Details of the audit date and the auditor are mentioned in the attached notification, Please find the attached notification for the same.<br><br>
                         Kindly give the acknowledgement for the audit date within <strong>1 day</strong> or else we will consider it accepted.<br><br>
                         The hard copy of the same notification with a declaration of impartiality and confidentiality will be handed over to you on the day of the audit and your acknowledgement.<br><br>
                         <hr style="border:none; border-top:1px solid #eaedf3; margin: 16px 0;">
