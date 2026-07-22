@@ -605,14 +605,14 @@ if (!empty($application['sign_image_path'])) {
     if (@file_exists($imgPath)) {
         // Use normal file path in HTML img src so TCPDF can read the image size correctly
         // Specify width and height explicitly to prevent TCPDF from pushing large images to a new page
-        $signatureCellHtml .= '<img src="' . $imgPath . '" width="150" height="70" style="display:block; margin:8px auto 4px auto;" />';
+        $signatureCellHtml .= '<img src="' . $imgPath . '" width="260" height="100" style="display:block; margin: 0 auto;" />';
     } else {
         $signatureCellHtml .= 'Signature image not available on server.<br />';
     }
 } else {
     $signatureCellHtml .= 'No signature uploaded.<br />';
 }
-$signatureCellHtml .= '<span style="font-size:9px;"><strong>Sign with duly stamped</strong><br />(We herewith confirm the completeness and accuracy of the information given above.)</span>';
+$signatureCellHtml .= '<div style="font-size:9px; margin-top: 5px; text-align: center; line-height: 12px;"><strong>Sign with duly stamped</strong><br />(We herewith confirm the completeness and accuracy of the information given above.)</div>';
 
 $html .= '<table border="1" cellpadding="3" cellspacing="0" class="form-table" nobr="true">'
     . '<tr>'
