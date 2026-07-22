@@ -122,6 +122,7 @@
                             <tbody> 
                                 <?php
                                 foreach ($noticeDue as $notiInfo) {
+                                    $url = "";
                                     if ($notiInfo['action'] == "1st Reminder" && $notiInfo["service_type"] == "SA-II") {
                                         $url = "firstReminder.php";
                                     } else if ($notiInfo['action'] == "1st Reminder"){
@@ -130,9 +131,13 @@
                                         $url = "secondReminder.php";
                                     } else if ($notiInfo['action'] == "2nd Reminder") {
                                         $url = "reminder.php";
-                                    } else if ($notiInfo['action'] == "Suspension Letter") {
+                                    } else if ($notiInfo['action'] == "Suspension Reminder") {
                                         $url = "suspension.php";
-                                    } else if ($notiInfo['action'] == "Withdrawal Letter") {
+                                    } else if ($notiInfo['action'] == "Suspend Letter" || $notiInfo['action'] == "Suspension Letter") {
+                                        $url = "suspension.php";
+                                    } else if ($notiInfo['action'] == "Withdrawal Reminder") {
+                                        $url = "withdrawRemind.php";
+                                    } else if ($notiInfo['action'] == "Withdrawal Letter" || $notiInfo['action'] == "Withdraw Letter") {
                                         $url = "withdrawn.php";
                                     } else if ($notiInfo['action'] == "Expire Letter") {
                                         $url = "saiiWithdrawn.php";
