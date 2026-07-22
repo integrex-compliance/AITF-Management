@@ -110,7 +110,6 @@ function goDaddySentLetterBody($customerName, $letterType, $fileName)
         . '<p>Please find the attached <strong>' . $safeLetter . '</strong> for complete details, including the reason and the actions needed.</p>'
         . '<p>Kindly review the letter and share your <strong>corrective action plan with supporting documents</strong> within the mentioned timeline. Once we receive and verify the required information, we will move ahead accordingly.</p>'
         . '<p>If you have already completed the necessary actions, please ignore this email and send us the relevant documents for our review.</p>'
-        . '<p>We look forward to your support in resolving this at the earliest.</p>'
         . '<p>Sincerely,<br>AITF Certification</p>'
         . '<p>Attachment: ' . $safeFile . '</p>';
 }
@@ -267,7 +266,6 @@ $inbox_emails = [
         Please find the attached Withdrawal Reminder for complete details, including the reason and the actions needed.<br><br>
         Kindly review the letter and share your corrective action plan with supporting documents within the mentioned timeline. Once we receive and verify the required information, we will move ahead accordingly.<br><br>
         If you have already completed the necessary actions, please ignore this email and send us the relevant documents for our review.<br><br>
-        We look forward to your support in resolving this at the earliest.<br><br>
         Sincerely,<br>
         AITF Certification<br><br>
         <strong>Attachment:</strong> Withdrawal Reminder.pdf'
