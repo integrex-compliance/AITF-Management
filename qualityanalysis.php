@@ -376,6 +376,9 @@
                                     $surveyDetail = isset($surveyDetailMap[$subId]) ? $surveyDetailMap[$subId] : null;
                                     $cdc = isset($cdcMap[$subId]) ? $cdcMap[$subId] : null;
                                     if (!$surveyDetail) { continue; }
+                                    
+                                    $displayAuditDate = (!empty($sub['audit_date'])) ? $sub['audit_date'] : $customer["audit_date"];
+                                    $displayAuditDateConverted = simpleDateConversion($displayAuditDate);
 
                                     ?>
                                     <tr class="customerAccount" data-id="<?php echo $customer['id'] ?>"  >
@@ -386,7 +389,7 @@
                                             <small><a ><?php echo $svcType ?></a></small>
                                         </td>
                                         <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                            <span><?php echo simpleDateConversion($customer["audit_date"]); ?>~</span><small><a ><?php echo simpleDateConversion($customer["audit_date"]) ?></a></small>
+                                            <span style="display:none;"><?php echo $displayAuditDateConverted; ?>~</span><small><a ><?php echo $displayAuditDateConverted; ?></a></small>
                                         </td>
                                         <td data-name="mail" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
                                             <small><a ><?php echo $surveyDetail ? $surveyDetail['auditing_quality'] : '' ?></a></small>

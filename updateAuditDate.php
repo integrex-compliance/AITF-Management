@@ -24,6 +24,9 @@ function normalizeAuditDate($rawDate)
     if ($rawDate === '') {
         return null;
     }
+    
+    $dates = explode(',', $rawDate);
+    $firstDate = trim($dates[0]);
 
     // Try a set of explicit, strict formats first
     $formats = array(
@@ -37,14 +40,14 @@ function normalizeAuditDate($rawDate)
     );
 
     foreach ($formats as $format) {
-        $dt = DateTime::createFromFormat($format, $rawDate);
-        if ($dt instanceof DateTime && $dt->format($format) === $rawDate) {
+        $dt = DateTime::createFromFormat($format, $firstDate);
+        if ($dt instanceof DateTime && $dt->format($format) === $firstDate) {
             return $dt->format('Y-m-d');
         }
     }
 
     // Fallback to strtotime for any other acceptable formats
-    $ts = strtotime($rawDate);
+    $ts = strtotime($firstDate);
     if ($ts !== false) {
         return date('Y-m-d', $ts);
     }
@@ -54,77 +57,75 @@ function normalizeAuditDate($rawDate)
 
 if (isset($_GET['ID']) && !empty($_GET['ID']) && isset($_GET['column_name']) && !empty($_GET['column_name']) && isset($_GET['tabel_type']) && !empty($_GET['tabel_type']) && isset($_GET['column_value']) && !empty($_GET['column_value']) && isset($_GET['service_id']) && !empty($_GET['service_id'])) {
     try {
+        $rawDate = trim($_GET['column_value']);
+        $auditDateSvc = normalizeAuditDate($rawDate);
+        
         if($_GET["tabel_type"] == "caService"){
-            $auditDate = normalizeAuditDate($_GET['column_value']);
-            $update = "UPDATE service_type_ca SET audit_date = :date WHERE  service = :service";
+            $update = "UPDATE service_type_ca SET audit_date = :rawDate WHERE  service = :service";
             $statement = $db->prepare($update);
-            $statement->bindParam(":date", $auditDate);
+            $statement->bindParam(":rawDate", $rawDate);
             $statement->bindParam(":service", $_GET['service_id']);
             $statement->execute();
             
             $updateSvc = "UPDATE service SET audit_date = :date WHERE service_id = :service";
             $statement = $db->prepare($updateSvc);
-            $statement->bindParam(":date", $auditDate);
+            $statement->bindParam(":date", $auditDateSvc);
             $statement->bindParam(":service", $_GET['service_id']);
             $statement->execute();
             echo json_encode("success") ;
         } 
         if($_GET["tabel_type"] == "saiService"){
-            $auditDate = normalizeAuditDate($_GET['column_value']);
-            $update = "UPDATE service_type_sai SET audit_date = :date WHERE  service = :service";
+            $update = "UPDATE service_type_sai SET audit_date = :rawDate WHERE  service = :service";
             $statement = $db->prepare($update);
-            $statement->bindParam(":date", $auditDate);
+            $statement->bindParam(":rawDate", $rawDate);
             $statement->bindParam(":service", $_GET['service_id']);
             $statement->execute();
             
             $updateSvc = "UPDATE service SET audit_date = :date WHERE service_id = :service";
             $statement = $db->prepare($updateSvc);
-            $statement->bindParam(":date", $auditDate);
+            $statement->bindParam(":date", $auditDateSvc);
             $statement->bindParam(":service", $_GET['service_id']);
             $statement->execute();
             echo json_encode("success") ;
         }
         if($_GET["tabel_type"] == "saiiService"){
-            $auditDate = normalizeAuditDate($_GET['column_value']);
-            $update = "UPDATE service_type_saii SET audit_date = :date WHERE  service = :service";
+            $update = "UPDATE service_type_saii SET audit_date = :rawDate WHERE  service = :service";
             $statement = $db->prepare($update);
-            $statement->bindParam(":date", $auditDate);
+            $statement->bindParam(":rawDate", $rawDate);
             $statement->bindParam(":service", $_GET['service_id']);
             $statement->execute();
             
             $updateSvc = "UPDATE service SET audit_date = :date WHERE service_id = :service";
             $statement = $db->prepare($updateSvc);
-            $statement->bindParam(":date", $auditDate);
+            $statement->bindParam(":date", $auditDateSvc);
             $statement->bindParam(":service", $_GET['service_id']);
             $statement->execute();
             echo json_encode("success") ;
         }
         if($_GET["tabel_type"] == "rcService"){
-            $auditDate = normalizeAuditDate($_GET['column_value']);
-            $update = "UPDATE service_type_rc SET audit_date = :date WHERE  service = :service";
+            $update = "UPDATE service_type_rc SET audit_date = :rawDate WHERE  service = :service";
             $statement = $db->prepare($update);
-            $statement->bindParam(":date", $auditDate);
+            $statement->bindParam(":rawDate", $rawDate);
             $statement->bindParam(":service", $_GET['service_id']);
             $statement->execute();
             
             $updateSvc = "UPDATE service SET audit_date = :date WHERE service_id = :service";
             $statement = $db->prepare($updateSvc);
-            $statement->bindParam(":date", $auditDate);
+            $statement->bindParam(":date", $auditDateSvc);
             $statement->bindParam(":service", $_GET['service_id']);
             $statement->execute();
             echo json_encode("success") ;
         }
         if($_GET["tabel_type"] == "spaService"){
-            $auditDate = normalizeAuditDate($_GET['column_value']);
-            $update = "UPDATE service_type_sp SET audit_date = :date WHERE  service = :service";
+            $update = "UPDATE service_type_sp SET audit_date = :rawDate WHERE  service = :service";
             $statement = $db->prepare($update);
-            $statement->bindParam(":date", $auditDate);
+            $statement->bindParam(":rawDate", $rawDate);
             $statement->bindParam(":service", $_GET['service_id']);
             $statement->execute();
             
             $updateSvc = "UPDATE service SET audit_date = :date WHERE service_id = :service";
             $statement = $db->prepare($updateSvc);
-            $statement->bindParam(":date", $auditDate);
+            $statement->bindParam(":date", $auditDateSvc);
             $statement->bindParam(":service", $_GET['service_id']);
             $statement->execute();
             echo json_encode("success") ;

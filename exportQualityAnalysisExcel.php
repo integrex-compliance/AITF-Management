@@ -125,11 +125,18 @@ if (!empty($subtypeIds)) {
 // ---- Date filter helper ----
 function compareDates($d1, $d2) {
     // d1, d2 in dd.mm.yyyy format, returns d1 - d2 comparison
+    
+    // extract first date in case of multiple dates
+    $d1_parts = explode(',', $d1);
+    $d1 = trim($d1_parts[0]);
+    $d2_parts = explode(',', $d2);
+    $d2 = trim($d2_parts[0]);
+
     $p1 = explode('.', $d1);
     $p2 = explode('.', $d2);
     if (count($p1) < 3 || count($p2) < 3) return 0;
-    $t1 = mktime(0, 0, 0, $p1[1], $p1[0], $p1[2]);
-    $t2 = mktime(0, 0, 0, $p2[1], $p2[0], $p2[2]);
+    $t1 = mktime(0, 0, 0, (int)$p1[1], (int)$p1[0], (int)$p1[2]);
+    $t2 = mktime(0, 0, 0, (int)$p2[1], (int)$p2[0], (int)$p2[2]);
     return $t1 - $t2;
 }
 
@@ -170,7 +177,8 @@ foreach ($listOfCustomer as $customer) {
     $cdc = isset($cdcMap[$subId]) ? $cdcMap[$subId] : null;
     if (!$surveyDetail) continue;
 
-    $auditDateFormatted = simpleDateConversion($customer['audit_date']);
+    $displayAuditDate = (!empty($sub['audit_date'])) ? $sub['audit_date'] : $customer['audit_date'];
+    $auditDateFormatted = simpleDateConversion($displayAuditDate);
 
     // Auditor display
     $auditorDisplay = $agg['auditors'];
@@ -307,6 +315,26 @@ if (empty($reportRows)) {
     }
 }
 
+// ---- Calculate Month-wise Average ----
+$monthData = [];
+foreach ($reportRows as $row) {
+    // Use the first date if there are multiple dates
+    $firstDate = explode(',', $row['audit_date'])[0];
+    $dateParts = explode('.', trim($firstDate)); // DD.MM.YYYY
+    if (count($dateParts) == 3) {
+        $monthYear = trim($dateParts[2]) . '-' . trim($dateParts[1]); // YYYY-MM
+        $val = trim($row['aggregate']);
+        if (is_numeric($val)) {
+            if (!isset($monthData[$monthYear])) {
+                $monthData[$monthYear] = ['sum' => 0, 'count' => 0];
+            }
+            $monthData[$monthYear]['sum'] += (float)$val;
+            $monthData[$monthYear]['count']++;
+        }
+    }
+}
+ksort($monthData);
+
 // Summary row
 $xlsx->addRow([['v' => '', 's' => 0, 't' => 's']]);
 $summaryRowNum = count($reportRows) + 6;
@@ -315,6 +343,39 @@ $xlsx->addRow([
     ['v' => 'Total Records: ' . count($reportRows), 's' => 1, 't' => 's']
 ]);
 $xlsx->merge('B' . $summaryRowNum . ':D' . $summaryRowNum);
+
+$currentRowNum = $summaryRowNum;
+
+if (!empty($monthData)) {
+    $xlsx->addRow([['v' => '', 's' => 0, 't' => 's']]);
+    $currentRowNum++;
+    
+    $xlsx->addRow([
+        ['v' => '', 's' => 0, 't' => 's'],
+        ['v' => 'Month-Wise Average for Assessment Process (u) of A & B', 's' => 1, 't' => 's']
+    ]);
+    $currentRowNum++;
+    $xlsx->merge('B' . $currentRowNum . ':F' . $currentRowNum);
+    
+    $xlsx->addRow([
+        ['v' => '', 's' => 0, 't' => 's'],
+        ['v' => 'Month', 's' => 4, 't' => 's'],
+        ['v' => 'Average', 's' => 4, 't' => 's']
+    ]);
+    $currentRowNum++;
+
+    foreach ($monthData as $ym => $data) {
+        $avg = round($data['sum'] / $data['count'], 2);
+        $p = explode('-', $ym);
+        $monthName = date('F Y', mktime(0, 0, 0, (int)$p[1], 1, (int)$p[0]));
+        $xlsx->addRow([
+            ['v' => '', 's' => 0, 't' => 's'],
+            ['v' => $monthName, 's' => 5, 't' => 's'],
+            ['v' => $avg, 's' => 5, 't' => 'n']
+        ]);
+        $currentRowNum++;
+    }
+}
 
 $fileName = 'Quality_Analysis_Report_' . date('Ymd_His') . '.xlsx';
 
