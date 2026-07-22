@@ -157,7 +157,7 @@ if (isset($db)) {
                 $originalName = basename((string) ($_FILES[$fieldName]['name'] ?? ''));
                 $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
                 if (!in_array($extension, $allowedExt, true)) {
-                    $error_message = $label . ' must be a PDF, PNG, JPG or JPEG file.';
+                    $error_message = $label . ' must be a PNG, JPG or JPEG file.';
                     return false;
                 }
 
@@ -173,7 +173,7 @@ if (isset($db)) {
                     $mime = (string) $_FILES[$fieldName]['type'];
                 }
                 if ($mime !== '' && !in_array($mime, $allowedMime, true)) {
-                    $error_message = $label . ' must be a valid PDF, PNG, JPG or JPEG file.';
+                    $error_message = $label . ' must be a valid PNG, JPG or JPEG file.';
                     return false;
                 }
 
@@ -345,8 +345,8 @@ if (isset($db)) {
                 }
 
                 if ($error_message === '') {
-                    $supportAllowedExt = ['pdf', 'png', 'jpg', 'jpeg'];
-                    $supportAllowedMime = ['application/pdf', 'image/png', 'image/jpeg'];
+                    $supportAllowedExt = ['png', 'jpg', 'jpeg'];
+                    $supportAllowedMime = ['image/png', 'image/jpeg'];
                     $supportUploadDir = 'uploads/audit_application_attachments';
                     $processFlowUpload = saveOnlineAuditUploadedFile('process_flow_attachment', 'Process flow attachment', $supportUploadDir, $supportAllowedExt, $supportAllowedMime, $error_message);
                     if ($processFlowUpload !== false) {
@@ -2383,28 +2383,28 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                                                             class="fa fa-paperclip"></i> Optional supporting attachments
                                                     </div>
                                                     <p class="optional-attachments-hint">Upload only if available.
-                                                        Allowed formats: PDF, PNG, JPG, JPEG. Each file can be up to 5
+                                                        Allowed formats: PNG, JPG, JPEG. Each file can be up to 5
                                                         MB.</p>
                                                     <div class="attachment-upload-item">
                                                         <label for="process-flow-attachment">Process flow
                                                             diagram</label>
                                                         <input type="file" name="process_flow_attachment"
                                                             id="process-flow-attachment"
-                                                            accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg">
+                                                            accept=".png,.jpg,.jpeg,image/png,image/jpeg">
                                                     </div>
                                                     <div class="attachment-upload-item">
                                                         <label for="organisation-brochure-attachment">Organisation
                                                             brochure</label>
                                                         <input type="file" name="organisation_brochure_attachment"
                                                             id="organisation-brochure-attachment"
-                                                            accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg">
+                                                            accept=".png,.jpg,.jpeg,image/png,image/jpeg">
                                                     </div>
                                                     <div class="attachment-upload-item">
                                                         <label for="customer-requirements-attachment">Customer specific
                                                             requirements</label>
                                                         <input type="file" name="customer_requirements_attachment"
                                                             id="customer-requirements-attachment"
-                                                            accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg">
+                                                            accept=".png,.jpg,.jpeg,image/png,image/jpeg">
                                                     </div>
                                                 </div>
                                             </div>
@@ -2685,8 +2685,8 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
             var captchaBox = form.querySelector('.g-recaptcha');
             var requiresVisibleCaptcha = Boolean(recaptchaEnabled && recaptchaVersion !== 'v3' && captchaBox);
             var recaptchaSubmitting = false;
-            var allowedSupportExtensions = ['pdf', 'png', 'jpg', 'jpeg'];
-            var allowedSupportMimes = ['application/pdf', 'image/png', 'image/jpeg', ''];
+            var allowedSupportExtensions = ['png', 'jpg', 'jpeg'];
+            var allowedSupportMimes = ['image/png', 'image/jpeg', ''];
             var maxSupportFileSize = 5 * 1024 * 1024;
 
             function getFileExtension(fileName) {
@@ -2702,7 +2702,7 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                 var extension = getFileExtension(file.name);
                 if (allowedSupportExtensions.indexOf(extension) === -1 || allowedSupportMimes.indexOf(file.type || '') === -1) {
                     if (showAlert) {
-                        alert('Please upload only PDF, PNG, JPG or JPEG files for optional attachments.');
+                        alert('Please upload only PNG, JPG or JPEG files for optional attachments.');
                     }
                     input.value = '';
                     return false;
