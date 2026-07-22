@@ -70,7 +70,7 @@ function goDaddyLetterStatusWord($letterType)
     $map = array(
         'Suspension Reminder' => 'suspension',
         'Suspend Letter' => 'suspension',
-        'Withdrawal Reminder' => 'withdrawal review',
+        'Withdrawal Reminder' => 'withdrawal reminder',
         'Withdraw Letter' => 'withdrawal',
         'Withdrawal Letter' => 'withdrawal',
         '1st Reminder' => 'recertification reminder',
@@ -102,10 +102,11 @@ function goDaddySentLetterBody($customerName, $letterType, $fileName)
 {
     $safeCustomer = htmlspecialchars($customerName, ENT_QUOTES, 'UTF-8');
     $safeLetter = htmlspecialchars(goDaddyLetterPreviewType($letterType), ENT_QUOTES, 'UTF-8');
+    $safeStatus = htmlspecialchars(goDaddyLetterStatusWord($letterType), ENT_QUOTES, 'UTF-8');
     $safeFile = htmlspecialchars($fileName, ENT_QUOTES, 'UTF-8');
 
     return '<p>Dear ' . $safeCustomer . ',</p>'
-        . '<p>We would like to inform you that your ISO certification is currently under <strong>' . $safeLetter . '</strong> due to pending certification requirements.</p>'
+        . '<p>We would like to inform you that your ISO certification is currently under <strong>' . $safeStatus . '</strong> due to pending certification requirements.</p>'
         . '<p>Please find the attached <strong>' . $safeLetter . '</strong> for complete details, including the reason and the actions needed.</p>'
         . '<p>Kindly review the letter and share your <strong>corrective action plan with supporting documents</strong> within the mentioned timeline. Once we receive and verify the required information, we will move ahead accordingly.</p>'
         . '<p>If you have already completed the necessary actions, please ignore this email and send us the relevant documents for our review.</p>'
@@ -262,7 +263,7 @@ $inbox_emails = [
         <strong>Subject:</strong> Reminder for Withdrawal of ISO 9001 Certificate - JAL AUTOMATION AND SYSTEMS<br><br>
         <strong>Message sent to client:</strong><br><br>
         Dear JAL AUTOMATION AND SYSTEMS,<br><br>
-        We would like to inform you that your ISO certification is currently under withdrawal review due to pending certification requirements.<br><br>
+        We would like to inform you that your ISO certification is currently under withdrawal reminder due to pending certification requirements.<br><br>
         Please find the attached Withdrawal Reminder for complete details, including the reason and the actions needed.<br><br>
         Kindly review the letter and share your corrective action plan with supporting documents within the mentioned timeline. Once we receive and verify the required information, we will move ahead accordingly.<br><br>
         If you have already completed the necessary actions, please ignore this email and send us the relevant documents for our review.<br><br>
@@ -301,7 +302,7 @@ $inbox_emails = [
         <strong>Subject:</strong> Reminder for Withdrawal of ISO 9001 Certificate - JADHAV ENGINEERING WORKS<br><br>
         <strong>Message sent to client:</strong><br><br>
         Dear JADHAV ENGINEERING WORKS,<br><br>
-        We would like to inform you that your ISO certification is currently under withdrawal review due to pending certification requirements.<br><br>
+        We would like to inform you that your ISO certification is currently under withdrawal reminder due to pending certification requirements.<br><br>
         Please find the attached Withdrawal Reminder for complete details, including the reason and the actions needed.<br><br>
         Sincerely,<br>
         AITF Certification'
@@ -599,9 +600,8 @@ $inbox_json = json_encode($inbox_emails);
         }
 
         .nav-item.active {
-            background-color: #272e48;
+            background-color: #323956;
             color: white;
-            border-left: 3px solid #3b82f6;
         }
 
         .nav-item i {
@@ -1220,9 +1220,9 @@ $inbox_json = json_encode($inbox_emails);
                 <li class="nav-item active" data-folder="inbox"
                     style="display: flex; align-items: center; justify-content: space-between;">
                     <span style="display: flex; align-items: center; gap: 15px;">
-                        <i class="fa fa-inbox"></i> Inbox
+                        <i class="fa fa-envelope"></i> Inbox
                     </span>
-                    <span style="font-size: 12px; color: #3b82f6; font-weight: 600; margin-right: 5px;">28</span>
+                    <span style="font-size: 13px; color: #3b82f6; font-weight: 600; margin-right: 5px;">8</span>
                 </li>
                 <li class="nav-item" data-folder="starred">
                     <i class="fa fa-star"></i> Starred
@@ -1231,10 +1231,22 @@ $inbox_json = json_encode($inbox_emails);
                     <i class="fa fa-paper-plane"></i> Sent
                 </li>
                 <li class="nav-item" data-folder="less">
-                    <i class="fa fa-angle-up"></i> Less
+                    <i class="fa fa-angle-up" style="color: #8b99af;"></i> <span style="color: #8b99af;">Less</span>
                 </li>
                 <li class="nav-item" data-folder="spam">
                     <i class="fa fa-exclamation-circle"></i> Spam
+                </li>
+                <li class="nav-item" data-folder="archive">
+                    <i class="fa fa-arrow-circle-down"></i> Archive
+                </li>
+                <li class="nav-item" data-folder="trash">
+                    <i class="fa fa-trash"></i> Trash
+                </li>
+                <li class="nav-item" data-folder="scheduled">
+                    <i class="fa fa-clock-o"></i> Scheduled
+                </li>
+                <li class="nav-item" data-folder="drafts">
+                    <i class="fa fa-file"></i> Drafts
                 </li>
             </ul>
 

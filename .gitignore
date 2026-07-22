@@ -3,7 +3,7 @@ uploads/
 tinymce/
 PHPMailer/
 varkleyglobal project/
-
+notification/
 # Files to ignore
 .project
 .buildpath
