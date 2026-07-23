@@ -56,6 +56,7 @@ class ApplicationFormPDF extends TCPDF
     }
 }
 
+
 $pdf = new ApplicationFormPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
 $pdf->SetCreator(PDF_CREATOR);
 $pdf->SetAuthor('AITF');
@@ -104,7 +105,7 @@ $supportAttachments = [
 ];
 
 $supportAttachments = array_values(array_filter(array_map(function ($attachment) use ($application) {
-    $relativePath = trim((string)($application[$attachment['path_key']] ?? ''));
+    $relativePath = trim((string) ($application[$attachment['path_key']] ?? ''));
     if ($relativePath === '') {
         return null;
     }
@@ -116,7 +117,7 @@ $supportAttachments = array_values(array_filter(array_map(function ($attachment)
     $type = in_array($extension, ['png', 'jpg', 'jpeg'], true) ? 'image' : ($extension === 'pdf' ? 'pdf' : 'other');
     return [
         'label' => $attachment['label'],
-        'name' => trim((string)($application[$attachment['name_key']] ?? '')) ?: basename($fullPath),
+        'name' => trim((string) ($application[$attachment['name_key']] ?? '')) ?: basename($fullPath),
         'path' => $fullPath,
         'extension' => $extension,
         'type' => $type,
@@ -181,9 +182,9 @@ $html .= '<table class="table" style="font-size:11px;">'
     . '</table>';
 
 // Section 4 (match reference template; dynamic rows = number filled, fallback 3)
-$multisiteValue = trim((string)$application['multisite']);
+$multisiteValue = trim((string) $application['multisite']);
 $yesBox = ($multisiteValue === 'Yes') ? '&#9745; Yes' : '&#9744; Yes';
-$noBox  = ($multisiteValue === 'No') ? '&#9745; No' : '&#9744; No';
+$noBox = ($multisiteValue === 'No') ? '&#9745; No' : '&#9744; No';
 $html .= '<div class="section-title" style="margin-top:10px;">4. IS YOUR ORGANISATION HAVING MULTISITE? '
     . '<span style="font-weight:normal; font-size:11px; margin-left:10px;">' . $yesBox . '&nbsp;&nbsp;&nbsp;' . $noBox . '</span>'
     . '</div>';
@@ -191,7 +192,8 @@ $html .= '<div style="margin-left:4px; margin-bottom:4px;"><strong>If yes please
 
 // Multisite rows based on filled lines; if none, show 3 blank rows
 $multisiteRows = [];
-$sitesText = trim((string)$application['multisite_sites']);
+
+$sitesText = trim((string) $application['multisite_sites']);
 if ($sitesText !== '') {
     $lines = preg_split("/\r\n|\r|\n/", $sitesText);
     foreach ($lines as $ln) {
@@ -244,7 +246,7 @@ $html .= '<div class="section-title" style="margin-top:6px;">5. FOR THE EMPLOYEE
 $html .= '<div style="margin-bottom:4px;">Site: 1 (For additional Sites please attach annexure in the same format.)</div>';
 
 $empRaw = isset($application['employee_structure']) ? $application['employee_structure'] : '';
-$empLines = preg_split("/\r\n|\r|\n/", (string)$empRaw);
+$empLines = preg_split("/\r\n|\r|\n/", (string) $empRaw);
 $deptKeys = [
     'Top management / Administrative staff',
     'Management / Supervisory staff',
@@ -257,10 +259,14 @@ $deptKeys = [
 $empMatrix = [];
 foreach ($deptKeys as $k) {
     $empMatrix[$k] = [
-        'gs_perm' => '', 'gs_cont' => '',
-        's1_perm' => '', 's1_cont' => '',
-        's2_perm' => '', 's2_cont' => '',
-        's3_perm' => '', 's3_cont' => ''
+        'gs_perm' => '',
+        'gs_cont' => '',
+        's1_perm' => '',
+        's1_cont' => '',
+        's2_perm' => '',
+        's2_cont' => '',
+        's3_perm' => '',
+        's3_cont' => ''
     ];
 }
 
@@ -278,10 +284,14 @@ if (!empty($empLines)) {
         $rest = trim($parts[1]);
         if (!isset($empMatrix[$dept])) {
             $empMatrix[$dept] = [
-                'gs_perm' => '', 'gs_cont' => '',
-                's1_perm' => '', 's1_cont' => '',
-                's2_perm' => '', 's2_cont' => '',
-                's3_perm' => '', 's3_cont' => ''
+                'gs_perm' => '',
+                'gs_cont' => '',
+                's1_perm' => '',
+                's1_cont' => '',
+                's2_perm' => '',
+                's2_cont' => '',
+                's3_perm' => '',
+                's3_cont' => ''
             ];
         }
         $items = explode(';', $rest);
@@ -333,7 +343,7 @@ $totalEmployees = 0;
 foreach ($empMatrix as $deptVals) {
     foreach ($deptVals as $val) {
         if ($val !== '') {
-            $totalEmployees += (int)$val;
+            $totalEmployees += (int) $val;
         }
     }
 }
@@ -427,7 +437,7 @@ $html .= '<table class="emp-table" style="font-size:10px;" nobr="true">'
     . '<tr>'
     . '<td style="height:28px; padding:6px;">&nbsp;</td>'
     . '<td style="height:28px; padding:6px;"><em>*Total Nº Employee</em></td>'
-    . '<td colspan="8" align="left">' . ($totalEmployees > 0 ? (int)$totalEmployees : '') . '</td>'
+    . '<td colspan="8" align="left">' . ($totalEmployees > 0 ? (int) $totalEmployees : '') . '</td>'
     . '</tr>'
     . '</table>'
     . '<div class="emp-note" style="margin-top:2px;">Note: Personnel involved in the management system is meant partners + employees + collaborators + subcontractors, etc. (The total staff in head office + personnel of any sites to be certified + yard personnel if any)</div>'
@@ -444,29 +454,37 @@ $html .= '<table class="emp-table" style="font-size:10px;" nobr="true">'
 // next page and leaving it almost blank). The more text, the smaller the font
 // and the tighter the row heights.
 $s6Fields = [
-    (string)($application['major_customers'] ?? ''),
-    (string)($application['main_products'] ?? ''),
-    (string)($application['raw_materials'] ?? ''),
-    (string)($application['operations'] ?? ''),
-    (string)($application['external_processes'] ?? ''),
-    (string)($application['design_responsibility'] ?? ''),
+    (string) ($application['major_customers'] ?? ''),
+    (string) ($application['main_products'] ?? ''),
+    (string) ($application['raw_materials'] ?? ''),
+    (string) ($application['operations'] ?? ''),
+    (string) ($application['external_processes'] ?? ''),
+    (string) ($application['design_responsibility'] ?? ''),
 ];
 $s6Len = 0;
 foreach ($s6Fields as $s6f) {
     $s6Len += function_exists('mb_strlen') ? mb_strlen($s6f) : strlen($s6f);
 }
 if ($s6Len > 1200) {
-    $s6Font = 7.5; $s6RowH = 16; $s6Pad = '3px 6px';
+    $s6Font = 7.5;
+    $s6RowH = 16;
+    $s6Pad = '3px 6px';
 } elseif ($s6Len > 700) {
-    $s6Font = 8.5; $s6RowH = 20; $s6Pad = '4px 7px';
+    $s6Font = 8.5;
+    $s6RowH = 20;
+    $s6Pad = '4px 7px';
 } elseif ($s6Len > 350) {
-    $s6Font = 9.5; $s6RowH = 26; $s6Pad = '5px 8px';
+    $s6Font = 9.5;
+    $s6RowH = 26;
+    $s6Pad = '5px 8px';
 } else {
-    $s6Font = 11; $s6RowH = 34; $s6Pad = '6px 8px';
+    $s6Font = 11;
+    $s6RowH = 34;
+    $s6Pad = '6px 8px';
 }
 $html .= '<div style="height:14px;"></div>';
 $html .= '<div class="section-title" style="margin-top:12px;">6. Describe your organization.</div>';
-$orgTypeRaw = strtolower(trim((string)$application['org_type']));
+$orgTypeRaw = strtolower(trim((string) $application['org_type']));
 $manuChecked = strpos($orgTypeRaw, 'manufact') !== false;
 $serviceChecked = strpos($orgTypeRaw, 'service') !== false;
 $manuBox = ($manuChecked ? '&#9745;' : '&#9744;') . ' Manufacturer';
@@ -492,9 +510,9 @@ $pdf->SetY(34);
 
 // Section 7
 $flagValue = isset($application['other_certificates_flag']) ? $application['other_certificates_flag'] : '';
-$flagRaw = strtolower(trim((string)$flagValue));
+$flagRaw = strtolower(trim((string) $flagValue));
 $yesBox = (strpos($flagRaw, 'yes') !== false ? '&#9745;' : '&#9744;') . ' Yes';
-$noBox  = (strpos($flagRaw, 'no') !== false ? '&#9745;' : '&#9744;') . ' No';
+$noBox = (strpos($flagRaw, 'no') !== false ? '&#9745;' : '&#9744;') . ' No';
 $html .= '<div class="section-title" style="margin-top:10px; font-size:12px; font-weight:bold;">7. Does the company have any other valid certificate/s?: '
     . '<span style="margin-left:8px;">' . $yesBox . '</span>'
     . '<span style="margin-left:14px;">' . $noBox . '</span>'
@@ -502,7 +520,7 @@ $html .= '<div class="section-title" style="margin-top:10px; font-size:12px; fon
     . '</div>';
 
 $otherRaw = isset($application['other_certificates']) ? $application['other_certificates'] : '';
-$otherLines = preg_split("/\r\n|\r|\n/", (string)$otherRaw);
+$otherLines = preg_split("/\r\n|\r|\n/", (string) $otherRaw);
 $hasFlag = '';
 $certRows = [];
 if (!empty($otherLines)) {
@@ -663,8 +681,8 @@ if (!empty($supportAttachments)) {
                 $y = $pdf->GetY() + 2;
                 $maxWidth = $pdf->getPageWidth() - $margins['left'] - $margins['right'];
                 $maxHeight = $pdf->getPageHeight() - $y - $pdf->getBreakMargin() - 4;
-                $imgWidth = (float)$imageInfo[0];
-                $imgHeight = (float)$imageInfo[1];
+                $imgWidth = (float) $imageInfo[0];
+                $imgHeight = (float) $imageInfo[1];
                 $scale = min($maxWidth / $imgWidth, $maxHeight / $imgHeight);
                 $drawWidth = $imgWidth * $scale;
                 $drawHeight = $imgHeight * $scale;
@@ -675,7 +693,8 @@ if (!empty($supportAttachments)) {
                 $pdf->writeHTML('<div style="font-size:10px;">The attached image could not be previewed in the generated PDF.</div>', true, false, true, false, '');
             }
         } elseif ($attachment['type'] === 'pdf') {
-            $pdf->writeHTML($headingHtml
+            $pdf->writeHTML(
+                $headingHtml
                 . '<div style="font-family:dejavusans; font-size:10px; line-height:1.6;">The applicant uploaded this supporting PDF separately. Open the embedded file attachment or check the email attachment to view the original document.</div>',
                 true,
                 false,
@@ -690,7 +709,8 @@ if (!empty($supportAttachments)) {
                 'Contents' => $attachment['label'] . ': ' . $attachment['name']
             ]);
         } else {
-            $pdf->writeHTML($headingHtml
+            $pdf->writeHTML(
+                $headingHtml
                 . '<div style="font-family:dejavusans; font-size:10px;">This supporting file is attached separately.</div>',
                 true,
                 false,
@@ -703,10 +723,10 @@ if (!empty($supportAttachments)) {
 }
 
 // Name the file after the client (organization) instead of the numeric id.
-$clientNameForFile = preg_replace('/[^A-Za-z0-9]+/', '_', (string)($application['org_name'] ?? ''));
+$clientNameForFile = preg_replace('/[^A-Za-z0-9]+/', '_', (string) ($application['org_name'] ?? ''));
 $clientNameForFile = trim($clientNameForFile, '_');
 if ($clientNameForFile === '') {
-    $clientNameForFile = (string)$application['id'];
+    $clientNameForFile = (string) $application['id'];
 }
 $filename = 'Application_form_' . $clientNameForFile . '.pdf';
 

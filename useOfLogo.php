@@ -32,11 +32,11 @@
                                 style="font-weight: 600; color: #1e3a8a; background-color: #ffffff; border-radius: 30px; padding: 12px 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                                 <i class="fa fa-download me-2"></i> Download Full Guidelines (PDF)
                             </a>
-                            <a href="text/Guideline_Client_to_Use_of_Logo.pdf" target="_blank"
+                            <!-- <a href="text/Logo_usage_Guideline.pdf" target="_blank"
                                 class="btn btn-outline-light btn-lg mx-2 my-1"
                                 style="font-weight: 600; color: #ffffff; border: 2px solid #ffffff; border-radius: 30px; padding: 12px 30px; background-color: rgba(255,255,255,0.15); box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                                 <i class="fa fa-eye me-2"></i> View PDF
-                            </a>
+                            </a> -->
                         </div>
                     </div>
                 </div>

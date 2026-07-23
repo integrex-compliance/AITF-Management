@@ -1513,7 +1513,7 @@
                                             </div>\n\
                                             </div>');
             });
-
+git branch --contains c46ef29  
             $('.addNewTaxation').click(function () {
                 $('.newTaxation').val("");
                 $('.newRate').val("");

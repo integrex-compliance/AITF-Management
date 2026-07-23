@@ -116,7 +116,7 @@ function CheckForClientRole(
 
             if ($clientInfo["upload-status"] == 'CA'){
                 $nextService = "CustomeraAccount#clientPortal.php";}
-                
+
            
 )
 

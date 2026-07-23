@@ -58,7 +58,7 @@ foreach ($auditors as $name) {
                                 <label> Agreement No.:</label>
                                 <input type="text" class="refNo" id="refNo" name="refNo" placeholder="Agreement No.:"
                                     required>
-                            </div>
+                            </div>`
                         </div>
                         <div class="row ">
                             <div class="col-sm-6 form-group float-label-control">

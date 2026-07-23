@@ -12,7 +12,8 @@
 require_once('tcpdf_include.php');
 
 // Extend the TCPDF class to create custom Header and Footer
-class MYPDF extends TCPDF {
+class MYPDF extends TCPDF
+{
 
     protected $processId = 0;
     protected $header = '';
@@ -20,7 +21,8 @@ class MYPDF extends TCPDF {
     static $errorMsg = '';
 
     //Page header
-    public function Header() {
+    public function Header()
+    {
         // Logo
         $image_file = K_PATH_IMAGES . 'aitf.jpg';
         $this->Image($image_file, 17, 5, 40, '', 'JPEG', '', 'T', false, 300, '', false, false, 0, false, false, false);
@@ -33,7 +35,7 @@ class MYPDF extends TCPDF {
         $this->writeHTMLCell($w = '', $h = '', $x = '', $y = '', $this->header, $border = 0, $ln = 0, $fill = 0, $reseth = true, $align = 'L', $autopadding = true);
         $this->SetLineStyle(array('width' => 0.40, 'color' => array(0, 0, 0)));
 
-//        $this->Line(5, 5, $this->getPageWidth() - 5, 5);
+        //        $this->Line(5, 5, $this->getPageWidth() - 5, 5);
 //
 //        $this->Line($this->getPageWidth() - 5, 5, $this->getPageWidth() - 5, $this->getPageHeight() - 5);
 //        $this->Line(5, $this->getPageHeight() - 5, $this->getPageWidth() - 5, $this->getPageHeight() - 5);
@@ -41,7 +43,8 @@ class MYPDF extends TCPDF {
     }
 
     // Page footer
-    public function Footer() {
+    public function Footer()
+    {
         // Position at 15 mm from bottom
         $this->SetY(-15);
         // Set font
@@ -66,8 +69,8 @@ $pdf->SetKeywords('AITF, PDF, example, test, guide');
 $pdf->SetHeaderData(PDF_HEADER_LOGO, PDF_HEADER_LOGO_WIDTH, PDF_HEADER_TITLE, PDF_HEADER_STRING);
 
 // set header and footer fonts
-$pdf->setHeaderFont(Array(PDF_FONT_NAME_MAIN, '', PDF_FONT_SIZE_MAIN));
-$pdf->setFooterFont(Array(PDF_FONT_NAME_DATA, '', PDF_FONT_SIZE_DATA));
+$pdf->setHeaderFont(array(PDF_FONT_NAME_MAIN, '', PDF_FONT_SIZE_MAIN));
+$pdf->setFooterFont(array(PDF_FONT_NAME_DATA, '', PDF_FONT_SIZE_DATA));
 
 // set default monospaced font
 $pdf->SetDefaultMonospacedFont(PDF_FONT_MONOSPACED);
@@ -149,7 +152,7 @@ $pdf->AddPage();
 
 //html content Start Here
 $html = '<span style="text-align:justify;">'
-        . '<pre>Ref: ' . $customer['unique_id'] . '                                         Date: ' . date("d.m.Y", strtotime($withdrawndate)) . '</pre>
+    . '<pre>Ref: ' . $customer['unique_id'] . '                                         Date: ' . date("d.m.Y", strtotime($withdrawndate)) . '</pre>
     
     <span>TO: </span>
     <br><br>
