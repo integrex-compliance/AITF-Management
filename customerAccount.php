@@ -5123,10 +5123,19 @@
                 $statement->execute();
                 $nextServiceDates = $statement->fetchAll();
 
+                $isStage1Sent = false;
+                $isStage2Sent = false;
+                if (!empty($caservice['service'])) {
+                    $stmtS1Check = $db->prepare("SELECT 1 FROM ca_service_dates WHERE service_id = :svc_id AND action = 'Stage 1 Notification' AND status = 'sent' AND is_deleted = 'N' LIMIT 1");
+                    $stmtS1Check->bindParam(':svc_id', $caservice['service']);
+                    $stmtS1Check->execute();
+                    $isStage1Sent = (bool)$stmtS1Check->fetch();
 
-
-
-
+                    $stmtS2Check = $db->prepare("SELECT 1 FROM ca_service_dates WHERE service_id = :svc_id AND action = 'Stage 2 Notification' AND status = 'sent' AND is_deleted = 'N' LIMIT 1");
+                    $stmtS2Check->bindParam(':svc_id', $caservice['service']);
+                    $stmtS2Check->execute();
+                    $isStage2Sent = (bool)$stmtS2Check->fetch();
+                }
 
                 if ($letestService["c_service"] == $caservice['service']) {
                     $disp = "";
@@ -5173,14 +5182,21 @@
                                         style="position: relative; padding-right: 26px;">
                                         <label>Stage 1 Date</label>
                                         <?php if (!empty($caservice['audit_stage_id'])) { ?>
-                                            <a class="sendStageNotificationMail" data-stage="stage1"
-                                                data-customer="<?php echo $_GET['customerid'] ?>"
-                                                data-service="<?php echo $caservice['ca_id'] ?>"
-                                                data-audit="<?php echo $caservice['audit_stage_id'] ?>"
-                                                title="Send Stage I audit notification by email"
-                                                style="position: absolute; top: -1.2em; left: 92px; z-index: 10; pointer-events: auto; padding: 1px 5px;">
-                                                <i class="fa fa-envelope fa-lg" style="padding: 3px"></i>
-                                            </a>
+                                            <?php if ($isStage1Sent) { ?>
+                                                <span class="stageMailSentIcon" title="Stage I notification email sent"
+                                                    style="position: absolute; top: -1.2em; left: 92px; z-index: 10; pointer-events: auto; padding: 1px 5px; color: #28a745;">
+                                                    <i class="fa fa-check-circle fa-lg" style="padding: 3px"></i>
+                                                </span>
+                                            <?php } else { ?>
+                                                <a class="sendStageNotificationMail" data-stage="stage1"
+                                                    data-customer="<?php echo $_GET['customerid'] ?>"
+                                                    data-service="<?php echo $caservice['ca_id'] ?>"
+                                                    data-audit="<?php echo $caservice['audit_stage_id'] ?>"
+                                                    title="Send Stage I audit notification by email"
+                                                    style="position: absolute; top: -1.2em; left: 92px; z-index: 10; pointer-events: auto; padding: 1px 5px;">
+                                                    <i class="fa fa-envelope fa-lg" style="padding: 3px"></i>
+                                                </a>
+                                            <?php } ?>
                                         <?php } ?>
                                         <input class="serviceAuditDate" placeholder="Stage 1 Date"
                                             data-id="<?php echo $caservice['service'] ?>" data-service="caService"
@@ -5197,14 +5213,21 @@
                                         style="position: relative; padding-right: 26px;">
                                         <label>Stage 2 Date</label>
                                         <?php if (!empty($caservice['audit_stageii_id'])) { ?>
-                                            <a class="sendStageNotificationMail" data-stage="stage2"
-                                                data-customer="<?php echo $_GET['customerid'] ?>"
-                                                data-service="<?php echo $caservice['ca_id'] ?>"
-                                                data-audit="<?php echo $caservice['audit_stageii_id'] ?>"
-                                                title="Send Stage II audit notification by email"
-                                                style="position: absolute; top: -1.2em; left: 92px; z-index: 10; pointer-events: auto; padding: 1px 5px;">
-                                                <i class="fa fa-envelope fa-lg" style="padding: 3px"></i>
-                                            </a>
+                                            <?php if ($isStage2Sent) { ?>
+                                                <span class="stageMailSentIcon" title="Stage II notification email sent"
+                                                    style="position: absolute; top: -1.2em; left: 92px; z-index: 10; pointer-events: auto; padding: 1px 5px; color: #28a745;">
+                                                    <i class="fa fa-check-circle fa-lg" style="padding: 3px"></i>
+                                                </span>
+                                            <?php } else { ?>
+                                                <a class="sendStageNotificationMail" data-stage="stage2"
+                                                    data-customer="<?php echo $_GET['customerid'] ?>"
+                                                    data-service="<?php echo $caservice['ca_id'] ?>"
+                                                    data-audit="<?php echo $caservice['audit_stageii_id'] ?>"
+                                                    title="Send Stage II audit notification by email"
+                                                    style="position: absolute; top: -1.2em; left: 92px; z-index: 10; pointer-events: auto; padding: 1px 5px;">
+                                                    <i class="fa fa-envelope fa-lg" style="padding: 3px"></i>
+                                                </a>
+                                            <?php } ?>
                                         <?php } ?>
                                         <input class="stage2date" placeholder="Stage 2 Date"
                                             data-id="<?php echo $caservice['service'] ?>" data-service="caService"
@@ -14682,6 +14705,7 @@
                             console.log('AJAX success:', res);
                             if (res && res.success) {
                                 showStyledAlert('Success', res.message || (stageLabel + ' audit documents sent successfully.'), 'success');
+                                $btn.replaceWith('<span class="stageMailSentIcon" title="' + stageLabel + ' notification email sent" style="position: absolute; top: -1.2em; left: 92px; z-index: 10; pointer-events: auto; padding: 1px 5px; color: #28a745;"><i class="fa fa-check-circle fa-lg" style="padding: 3px"></i></span>');
                             } else {
                                 showStyledAlert('Error', (res && res.message) ? res.message : 'Unable to send email right now.', 'error');
                             }

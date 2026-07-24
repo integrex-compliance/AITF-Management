@@ -33,7 +33,8 @@ register_shutdown_function(function () {
 
 try {
     if (!function_exists('aitfGeneratePdfBinary')) {
-        function aitfGeneratePdfBinary($scriptPath, $postData) {
+        function aitfGeneratePdfBinary($scriptPath, $postData)
+        {
             $originalPost = $_POST;
             $_POST = is_array($postData) ? $postData : [];
             $db = isset($GLOBALS['db']) ? $GLOBALS['db'] : null;
@@ -99,43 +100,22 @@ try {
         }
 
         $auditDates = isset($notification['audit_dates']) ? trim($notification['audit_dates']) : '';
-        
-        // Generate notification PDF
+
+        // Generate ONLY Stage 1 notification PDF
         $pdfBinary1 = aitfGeneratePdfBinary(__DIR__ . '/AuditNotificationandAssignment.php', array(
             'auditid' => $auditId,
             'customerid' => $customerId,
             'serviceid' => $serviceId,
             'output_mode' => 'S'
         ));
-        
+
         if (is_string($pdfBinary1) && strlen($pdfBinary1) > 100) {
             $tempFile1 = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'stage1_notif_' . uniqid() . '.pdf';
             if (file_put_contents($tempFile1, $pdfBinary1) !== false) {
                 $attachments[] = $tempFile1;
             }
         }
-        
-        // Get audit schedule
-        $scheduleStmt = $db->prepare("SELECT audit_schedule_id FROM audit_schedule_id WHERE customer_ca_id = ? AND serviceca_id = ? LIMIT 1");
-        $scheduleStmt->execute(array($customerId, $serviceId));
-        $scheduleData = $scheduleStmt->fetch(PDO::FETCH_ASSOC);
-        
-        if ($scheduleData && !empty($scheduleData['audit_schedule_id'])) {
-            $pdfBinary2 = aitfGeneratePdfBinary(__DIR__ . '/AuditSchedule.php', array(
-                'auditscheduleid' => $scheduleData['audit_schedule_id'],
-                'serviceid' => $serviceId,
-                'customerid' => $customerId,
-                'output_mode' => 'S'
-            ));
-            
-            if (is_string($pdfBinary2) && strlen($pdfBinary2) > 100) {
-                $tempFile2 = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'stage1_plan_' . uniqid() . '.pdf';
-                if (file_put_contents($tempFile2, $pdfBinary2) !== false) {
-                    $attachments[] = $tempFile2;
-                }
-            }
-        }
-        
+
     } else {
         // Stage 2
         $notificationStmt = $db->prepare("SELECT audit_dates FROM stage_twoaudit_id WHERE audit_stageii_id = ? AND customer_id = ? AND service_id = ? LIMIT 1");
@@ -147,90 +127,105 @@ try {
         }
 
         $auditDates = isset($notification['audit_dates']) ? trim($notification['audit_dates']) : '';
-        
-        // Generate Stage 2 notification PDF
+
+        // Generate ONLY Stage 2 notification PDF
         $pdfBinary1 = aitfGeneratePdfBinary(__DIR__ . '/AuditNotificationStage2.php', array(
             'notificationid' => $auditId,
             'output_mode' => 'S'
         ));
-        
+
         if (is_string($pdfBinary1) && strlen($pdfBinary1) > 100) {
             $tempFile1 = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'stage2_notif_' . uniqid() . '.pdf';
             if (file_put_contents($tempFile1, $pdfBinary1) !== false) {
                 $attachments[] = $tempFile1;
             }
         }
-        
-        // Get Stage 2 audit schedule
-        $scheduleStmt = $db->prepare("SELECT audit_scheduleii_id FROM audit_scheduleii_id WHERE ca_customer = ? AND ca_service = ? LIMIT 1");
-        $scheduleStmt->execute(array($customerId, $serviceId));
-        $scheduleData = $scheduleStmt->fetch(PDO::FETCH_ASSOC);
-        
-        if ($scheduleData && !empty($scheduleData['audit_scheduleii_id'])) {
-            $pdfBinary2 = aitfGeneratePdfBinary(__DIR__ . '/SurveillanceAudit2.php', array(
-                'auditnotiid' => $scheduleData['audit_scheduleii_id'],
-                'serviceid' => $serviceId,
-                'customerid' => $customerId,
-                'output_mode' => 'S'
-            ));
-            
-            if (is_string($pdfBinary2) && strlen($pdfBinary2) > 100) {
-                $tempFile2 = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'stage2_plan_' . uniqid() . '.pdf';
-                if (file_put_contents($tempFile2, $pdfBinary2) !== false) {
-                    $attachments[] = $tempFile2;
-                }
-            }
-        }
     }
 
     if (count($attachments) === 0) {
-        throw new Exception('No PDF documents could be generated.');
+        throw new Exception('No notification PDF document could be generated.');
     }
 
     // Create email body
-    $subject = $stageLabel . ' Audit Documents - ' . $customer['customer_name'];
-    
-    $body = '<html><body style="font-family: Arial, sans-serif; margin: 0; padding: 0;">';
-    $body .= '<div style="max-width: 600px; margin: 0 auto; background: #f5f5f5; padding: 20px;">';
-    $body .= '<div style="background: #fff; border-radius: 8px; overflow: hidden;">';
-    $body .= '<div style="background: linear-gradient(135deg, #2196F3, #1976D2); padding: 30px; text-align: center;">';
-    $body .= '<h1 style="color: #fff; margin: 0; font-size: 24px;">AITF Certification Services</h1>';
-    $body .= '<p style="color: #e3f2fd; margin: 8px 0 0 0;">' . htmlspecialchars($stageLabel) . ' Audit Documents</p>';
-    $body .= '</div>';
-    $body .= '<div style="padding: 30px;">';
-    $body .= '<p style="font-size: 16px; color: #333; margin: 0 0 20px 0;">Dear <strong>' . htmlspecialchars($customer['customer_name']) . '</strong>,</p>';
-    $body .= '<p style="color: #555; line-height: 1.6;">We are pleased to share the ' . htmlspecialchars($stageLabel) . ' audit documents with you. Please find the attached PDF files.</p>';
-    
+    $attachmentName = $stageLabel . ' Audit Notification';
+    $subject = $attachmentName . ' - ' . $customer['customer_name'];
+
+    $body = '<html><body style="font-family: Arial, sans-serif; font-size: 14px; color: #333333; line-height: 1.6; padding: 15px;">';
+    $body .= 'Dear <strong>' . htmlspecialchars($customer['customer_name']) . '</strong>,<br><br>';
+    $body .= 'We would like to inform you that your <strong>ISO certification is currently under pending action</strong> due to pending certification requirements.<br><br>';
+    $body .= 'Please find the attached <strong>' . htmlspecialchars($attachmentName) . '</strong> for complete details, including the reason and the actions needed.<br><br>';
+
     if (!empty($auditDates)) {
-        $body .= '<div style="background: #f0f0f0; padding: 15px; border-left: 4px solid #2196F3; margin: 20px 0;">';
-        $body .= '<strong>Audit Date(s):</strong> ' . htmlspecialchars($auditDates);
-        $body .= '</div>';
+        $body .= '<strong>Audit Date(s):</strong> ' . htmlspecialchars($auditDates) . '<br><br>';
     }
-    
-    $body .= '<p style="color: #555; line-height: 1.6; margin: 20px 0;">Please review the attached documents carefully. Should you have any questions, feel free to contact us.</p>';
-    $body .= '<p style="color: #555;">Best regards,<br><strong>AITF Certification Team</strong></p>';
-    $body .= '</div>';
-    $body .= '<div style="background: #f5f5f5; padding: 20px; text-align: center; border-top: 1px solid #e0e0e0;">';
-    $body .= '<p style="margin: 0; font-size: 12px; color: #999;">Email: <a href="mailto:certification@aitf.co.in" style="color: #2196F3; text-decoration: none;">certification@aitf.co.in</a> | Phone: +91-9422011836</p>';
-    $body .= '</div></div></div></body></html>';
+
+    $body .= 'Kindly review the letter and share your <strong>corrective action plan with supporting documents</strong> within the mentioned timeline. Once we receive and verify the required information, we will move ahead accordingly.<br><br>';
+    $body .= 'If you have already completed the necessary actions, please ignore this email and send us the relevant documents for our review.<br><br>';
+    $body .= 'Sincerely,<br><strong>AITF Certification</strong><br><br>';
+    $body .= '<strong>Attachment:</strong> ' . htmlspecialchars($attachmentName);
+    $body .= '</body></html>';
 
     // Send email
     $mailSender = new AITFServiceEmailSender();
-    
+
     try {
         $mailSender->sendMultipleAttachmentsEmail(
-            $customer['email_id'], 
-            $customer['customer_name'], 
-            $body, 
-            $subject, 
+            $customer['email_id'],
+            $customer['customer_name'],
+            $body,
+            $subject,
             $attachments
         );
-        
+
         $count = count($attachments);
-        $message = $stageLabel . ' audit documents (' . $count . ' PDF' . ($count > 1 ? 's' : '') . ') sent successfully to ' . $customer['email_id'];
-        
+        $message = $stageLabel . ' audit notification sent successfully to ' . $customer['email_id'];
+
+        // Record entry in ca_service_dates for sentintimation.php
+        try {
+            $actionName = ($stage === 'stage2') ? 'Stage 2 Notification' : 'Stage 1 Notification';
+
+            $mainServiceId = 0;
+            $stmtCa = $db->prepare("SELECT service FROM service_type_ca WHERE ca_id = ? LIMIT 1");
+            $stmtCa->execute(array($serviceId));
+            $caRow = $stmtCa->fetch(PDO::FETCH_ASSOC);
+            if ($caRow && !empty($caRow['service'])) {
+                $mainServiceId = intval($caRow['service']);
+            } else {
+                $stmtSvc = $db->prepare("SELECT service_id FROM service WHERE service_id = ? LIMIT 1");
+                $stmtSvc->execute(array($serviceId));
+                $svcRow = $stmtSvc->fetch(PDO::FETCH_ASSOC);
+                if ($svcRow && !empty($svcRow['service_id'])) {
+                    $mainServiceId = intval($svcRow['service_id']);
+                } else {
+                    $stmtSvcMax = $db->prepare("SELECT max(service_id) as max_svc FROM service WHERE customer_id = ?");
+                    $stmtSvcMax->execute(array($customerId));
+                    $maxRow = $stmtSvcMax->fetch(PDO::FETCH_ASSOC);
+                    if ($maxRow && !empty($maxRow['max_svc'])) {
+                        $mainServiceId = intval($maxRow['max_svc']);
+                    }
+                }
+            }
+
+            if ($mainServiceId > 0) {
+                $nowDate = date('Y-m-d H:i:s');
+                $checkDateStmt = $db->prepare("SELECT action_id FROM ca_service_dates WHERE service_id = ? AND action = ? AND is_deleted = 'N' LIMIT 1");
+                $checkDateStmt->execute(array($mainServiceId, $actionName));
+                $existingDate = $checkDateStmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($existingDate) {
+                    $updateDateStmt = $db->prepare("UPDATE ca_service_dates SET sent_date = ?, status = 'sent', due_date = COALESCE(due_date, ?) WHERE action_id = ?");
+                    $updateDateStmt->execute(array($nowDate, $nowDate, $existingDate['action_id']));
+                } else {
+                    $insertDateStmt = $db->prepare("INSERT INTO ca_service_dates (service_id, action, due_date, sent_date, status, is_deleted) VALUES (?, ?, ?, ?, 'sent', 'N')");
+                    $insertDateStmt->execute(array($mainServiceId, $actionName, $nowDate, $nowDate));
+                }
+            }
+        } catch (Exception $dbEx) {
+            error_log("sendStageNotificationMail: Failed to record ca_service_dates entry: " . $dbEx->getMessage());
+        }
+
         echo json_encode(array('success' => true, 'message' => $message));
-        
+
     } catch (Exception $mailEx) {
         throw new Exception('Email sending failed: ' . $mailEx->getMessage());
     } finally {
@@ -241,7 +236,7 @@ try {
             }
         }
     }
-    
+
 } catch (Exception $ex) {
     echo json_encode(array('success' => false, 'message' => $ex->getMessage()));
 }

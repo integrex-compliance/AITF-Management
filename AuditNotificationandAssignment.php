@@ -37,13 +37,32 @@ include_once __DIR__ . '/dbConnect.php';
 date_default_timezone_set('Asia/Kolkata');
 $auditDate = "";
 $lastDate = "";
-$auditid = "SELECT * FROM stage_oneaudit_id WHERE audit_stage_id = :audit and ca_customer_id = :customer and ca_service_id = :service ";
-$statement = $db->prepare($auditid);
-$statement->bindParam(':audit', $_POST['auditid']);
-$statement->bindParam(':customer', $_POST['customerid']);
-$statement->bindParam(':service', $_POST['serviceid']);
-$statement->execute();
-$auditInfo = $statement->fetch();
+$reqAuditId = isset($_POST['auditid']) ? $_POST['auditid'] : '';
+$reqCustomerId = isset($_POST['customerid']) ? $_POST['customerid'] : (isset($_POST['customer']) ? $_POST['customer'] : '');
+$reqServiceId = isset($_POST['serviceid']) ? $_POST['serviceid'] : (isset($_POST['service']) ? $_POST['service'] : '');
+
+$auditInfo = false;
+if (!empty($reqAuditId) && !empty($reqCustomerId) && !empty($reqServiceId)) {
+    $auditidQuery = "SELECT * FROM stage_oneaudit_id WHERE audit_stage_id = :audit and ca_customer_id = :customer and ca_service_id = :service ";
+    $statement = $db->prepare($auditidQuery);
+    $statement->bindParam(':audit', $reqAuditId);
+    $statement->bindParam(':customer', $reqCustomerId);
+    $statement->bindParam(':service', $reqServiceId);
+    $statement->execute();
+    $auditInfo = $statement->fetch();
+}
+
+if (!$auditInfo && !empty($reqCustomerId)) {
+    $fallbackQuery = "SELECT * FROM stage_oneaudit_id WHERE ca_customer_id = :customer ORDER BY audit_stage_id DESC LIMIT 1";
+    $statement = $db->prepare($fallbackQuery);
+    $statement->bindParam(':customer', $reqCustomerId);
+    $statement->execute();
+    $auditInfo = $statement->fetch();
+    if ($auditInfo) {
+        $reqAuditId = $auditInfo['audit_stage_id'];
+        $reqServiceId = $auditInfo['ca_service_id'];
+    }
+}
 
 $auditDates = explode(',',$auditInfo['audit_dates']);
 foreach($auditDates as $dates){
@@ -52,8 +71,8 @@ foreach($auditDates as $dates){
 
 $auditDetails = "SELECT * FROM stage_audit_one WHERE audit_stage_id = :auditid and ca_service_id = :service ";
 $statement = $db->prepare($auditDetails);
-$statement->bindParam(':auditid', $_POST['auditid']);
-$statement->bindParam(':service', $_POST['serviceid']);
+$statement->bindParam(':auditid', $reqAuditId);
+$statement->bindParam(':service', $reqServiceId);
 $statement->execute();
 $auditInformation = $statement->fetchAll();
 

@@ -35,11 +35,25 @@ require_once(__DIR__ . '/tcpdf_include.php');
 // code by Pallavi to display pdf
 include_once __DIR__ . '/dbConnect.php';
 date_default_timezone_set('Asia/Kolkata');
-$auditid = "SELECT * FROM stage_twoaudit_id WHERE audit_stageii_id = :audit";
-$statement = $db->prepare($auditid);
-$statement->bindParam(':audit', $_POST['notificationid']);
-$statement->execute();
-$auditInfo = $statement->fetch();
+$reqNotiId = isset($_POST['notificationid']) ? $_POST['notificationid'] : (isset($_POST['action']) ? $_POST['action'] : '');
+$reqCustomerId = isset($_POST['customerid']) ? $_POST['customerid'] : (isset($_POST['customer']) ? $_POST['customer'] : '');
+
+$auditInfo = false;
+if (!empty($reqNotiId) && is_numeric($reqNotiId)) {
+    $auditidQuery = "SELECT * FROM stage_twoaudit_id WHERE audit_stageii_id = :audit";
+    $statement = $db->prepare($auditidQuery);
+    $statement->bindParam(':audit', $reqNotiId);
+    $statement->execute();
+    $auditInfo = $statement->fetch();
+}
+
+if (!$auditInfo && !empty($reqCustomerId)) {
+    $fallbackQuery = "SELECT * FROM stage_twoaudit_id WHERE customer_id = :customer ORDER BY audit_stageii_id DESC LIMIT 1";
+    $statement = $db->prepare($fallbackQuery);
+    $statement->bindParam(':customer', $reqCustomerId);
+    $statement->execute();
+    $auditInfo = $statement->fetch();
+}
 
 $stage1 = "";
 $stage2 = "";

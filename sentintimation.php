@@ -7,8 +7,7 @@
     include 'header.php';
     include 'dbConnect.php';
 
-//    $notice = "SELECT ci.id, customer_name, email_id, unique_id, svc.service_id, service_type, svcdt.due_date, svcdt.sent_date, action, action_id FROM customer_info ci left join service svc on ci.id = svc.customer_id left join ca_service_dates svcdt on svc.service_id = svcdt.service_id where action = '1st Reminder' and due_date <= now() and status = 'sent' and svcdt.is_deleted = 'N'";
-    $notice = "SELECT ci.id, customer_name, email_id, unique_id, svc.service_id, service_type, svcdt.due_date, svcdt.sent_date, action, action_id FROM customer_info ci left join service svc on ci.id = svc.customer_id left join ca_service_dates svcdt on svc.service_id = svcdt.service_id where due_date <= now() and status = 'sent' and svcdt.is_deleted = 'N' order by sent_date desc";
+    $notice = "SELECT ci.id, ci.customer_name, ci.email_id, ci.unique_id, svc.service_id, svc.service_type, svcdt.due_date, svcdt.sent_date, svcdt.action, svcdt.action_id FROM ca_service_dates svcdt INNER JOIN service svc ON svcdt.service_id = svc.service_id INNER JOIN customer_info ci ON svc.customer_id = ci.id WHERE svcdt.status = 'sent' AND svcdt.is_deleted = 'N' AND svcdt.due_date <= NOW() ORDER BY svcdt.sent_date DESC";
     $statement = $db->prepare($notice);
     $statement->execute();
     $noticeDue = $statement->fetchAll();
@@ -68,6 +67,8 @@
                             <div class="col-sm-3 float-label-control custom-float-label-control">
                                 <select name="service-type" class="form-control service-type" id="service-type">
                                     <option value="">Select Letter Type</option>
+                                    <option value="Stage 1 Notification">Stage 1 Notification</option>
+                                    <option value="Stage 2 Notification">Stage 2 Notification</option>
                                     <option value="1st Reminder">1st Reminder</option>
                                     <option value="2nd Reminder">2nd Reminder</option>
                                     <option value="Suspension Reminder">Suspension Reminder</option>
@@ -123,7 +124,13 @@
                                 <?php
                                 foreach ($noticeDue as $notiInfo) {
                                     $url = "";
-                                    if ($notiInfo['action'] == "1st Reminder" && $notiInfo["service_type"] == "SA-II") {
+                                    $isStageNotification = ($notiInfo['action'] == "Stage 1 Notification" || $notiInfo['action'] == "Stage 2 Notification");
+                                    
+                                    if ($notiInfo['action'] == "Stage 1 Notification") {
+                                        $url = "AuditNotificationandAssignment.php";
+                                    } else if ($notiInfo['action'] == "Stage 2 Notification") {
+                                        $url = "AuditNotificationStage2.php";
+                                    } else if ($notiInfo['action'] == "1st Reminder" && $notiInfo["service_type"] == "SA-II") {
                                         $url = "firstReminder.php";
                                     } else if ($notiInfo['action'] == "1st Reminder"){
                                         $url = "firstDue.php";
@@ -142,8 +149,10 @@
                                     } else if ($notiInfo['action'] == "Expire Letter") {
                                         $url = "saiiWithdrawn.php";
                                     }
+                                    
+                                    $trStyle = $isStageNotification ? 'background-color: #e8f4fc; color: #0c5460;' : '';
                                     ?>
-                                    <tr id='addr' >
+                                    <tr id='addr' style="<?php echo $trStyle; ?>" >
                                         <td class="customerAccount" data-id="<?php echo $notiInfo['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
                                             <small><?php echo $notiInfo['customer_name'] ?></small>
                                         </td>
@@ -158,7 +167,7 @@
                                             <small><?php echo $nextSVC ?></small>
                                         </td>
                                         <td class="customerAccount" data-id="<?php echo $notiInfo['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                            <small><?php echo $notiInfo['action'] ?></small>
+                                            <small style="<?php echo $isStageNotification ? 'color: #0056b3; font-weight: bold;' : ''; ?>"><?php echo $notiInfo['action'] ?></small>
                                         </td>
                                         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff()) { ?>
                                             <td class="customerAccount" data-id="<?php echo $notiInfo['id'] ?>" data-name="name" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
@@ -351,8 +360,12 @@
             var url = $(this).attr("data-url");
             var form = $('<form action="' + url + '" method="post" target="_blank">' +
                     '<input type="hidden" name="customer" value="' + customer + '" />' +
+                    '<input type="hidden" name="customerid" value="' + customer + '" />' +
                     '<input type="hidden" name="service" value="' + service + '" />' +
+                    '<input type="hidden" name="serviceid" value="' + service + '" />' +
                     '<input type="hidden" name="action" value="' + action + '" />' +
+                    '<input type="hidden" name="auditid" value="' + action + '" />' +
+                    '<input type="hidden" name="notificationid" value="' + action + '" />' +
                     '<input type="hidden" name="servicetype" value="' + servicetype + '" />' +
                     '</form>');
             $('body').append(form);
@@ -364,15 +377,12 @@
             "sScrollX": "100%",
             "scrollY": '70vh',
             "scrollCollapse": true,
-            "paging": false,
+            "paging": true,
+            "pageLength": 50,
+            "lengthMenu": [[25, 50, 100, 250, -1], [25, 50, 100, 250, "All"]],
             "ordering": false,
-            "lengthChange": false,
-//            "pageLength": 10,
-            "paging": false,
-            "columnDefs": [
-
-            ]
-                    //        "paging":         false
+            "lengthChange": true,
+            "columnDefs": []
         });
         table.columns.adjust().draw();
 

@@ -1204,7 +1204,7 @@ $auditorsList = $statement->fetchAll();
             console.log('Sections after creation:', sectionsAfter.length);
 
             if (sectionsAfter.length < entries.length) {
-                console.error('❌ ERROR: Only', sectionsAfter.length, 'sections created, need', entries.length);
+                console.error(' ERROR: Only', sectionsAfter.length, 'sections created, need', entries.length);
                 // Force create missing sections
                 var base = container.find('.CdcOffice').first();
                 if (base.length) {
@@ -1299,7 +1299,7 @@ $auditorsList = $statement->fetchAll();
             }
 
             if (!$section || !$section.length) {
-                console.error('❌ Section not found for entry', entryIndex, '- ISO:', isoLabel, '- iso_index:', isoIndex);
+                console.error(' Section not found for entry', entryIndex, '- ISO:', isoLabel, '- iso_index:', isoIndex);
                 console.error('Available sections:', container.find('.CdcOffice').length);
                 return;
             }
@@ -1366,7 +1366,7 @@ $auditorsList = $statement->fetchAll();
             console.log('=== VERIFICATION: Actually visible sections:', actuallyVisible);
 
             if (actuallyVisible < entries.length) {
-                console.error('❌ WARNING: Only', actuallyVisible, 'sections visible, expected', entries.length);
+                console.error(' WARNING: Only', actuallyVisible, 'sections visible, expected', entries.length);
                 // Force show all sections again
                 container.find('.CdcOffice').slice(0, entries.length).show();
             }
