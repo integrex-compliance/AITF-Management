@@ -9,7 +9,9 @@ if (!function_exists('aitf_get_turnstile_config')) {
         if ($config === null) {
             $config = [
                 'site_key' => trim((string)aitf_env('CLOUDFLARE_SITE_KEY', '')),
-                'secret_key' => trim((string)aitf_env('CLOUDFLARE_SECRET_KEY', ''))
+                'secret_key' => trim((string)aitf_env('CLOUDFLARE_SECRET_KEY', '')),
+                'enabled' => aitf_env_bool('CLOUDFLARE_TURNSTILE_ENABLED', true),
+                'bypass_on_localhost' => aitf_env_bool('CLOUDFLARE_TURNSTILE_BYPASS_ON_LOCALHOST', false)
             ];
         }
 
@@ -17,11 +19,41 @@ if (!function_exists('aitf_get_turnstile_config')) {
     }
 }
 
+if (!function_exists('aitf_is_turnstile_localhost')) {
+    function aitf_is_turnstile_localhost()
+    {
+        $requestHost = trim((string)($_SERVER['HTTP_HOST'] ?? ($_SERVER['SERVER_NAME'] ?? '')));
+        if ($requestHost === '') {
+            return false;
+        }
+
+        $host = parse_url('http://' . $requestHost, PHP_URL_HOST);
+        $host = strtolower(trim((string)$host, '[]'));
+
+        return $host === 'localhost'
+            || $host === '127.0.0.1'
+            || $host === '::1'
+            || substr($host, -10) === '.localhost';
+    }
+}
+
+if (!function_exists('aitf_should_bypass_turnstile')) {
+    function aitf_should_bypass_turnstile()
+    {
+        $config = aitf_get_turnstile_config();
+
+        return !$config['enabled']
+            || ($config['bypass_on_localhost'] && aitf_is_turnstile_localhost());
+    }
+}
+
 if (!function_exists('aitf_is_turnstile_ready')) {
     function aitf_is_turnstile_ready()
     {
         $config = aitf_get_turnstile_config();
-        return $config['site_key'] !== '' && $config['secret_key'] !== '';
+        return !aitf_should_bypass_turnstile()
+            && $config['site_key'] !== ''
+            && $config['secret_key'] !== '';
     }
 }
 
@@ -29,6 +61,10 @@ if (!function_exists('aitf_verify_turnstile')) {
     function aitf_verify_turnstile($token, &$errorMessage = '')
     {
         $config = aitf_get_turnstile_config();
+
+        if (aitf_should_bypass_turnstile()) {
+            return true;
+        }
 
         if ($config['site_key'] === '' || $config['secret_key'] === '') {
             $errorMessage = 'Captcha keys are not configured yet. Please add the Cloudflare Turnstile site key and secret key in the .env file.';
