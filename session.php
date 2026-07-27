@@ -5,7 +5,8 @@ $username='aitf-mcl';
 $password='aitfmcl';
 $dbh = new PDO("mysql:host=$hostname;dbname=aitfweb",$username,$password);
 $dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-session_start();// Starting Session
+require_once __DIR__ . '/include/session_helper.php';
+aitf_start_session();
 // Storing Session
 $user_check=$_SESSION['login_user'];
 // SQL Query To Fetch Complete Information Of User
@@ -14,6 +15,7 @@ $result = $sth->fetchAll(PDO::FETCH_ASSOC);
 foreach($result as $r)
 $login_session =$r['username'];
 if(!isset($login_session)){
-header('Location: index.html'); // Redirecting To Home Page
+header('Location: loginSelection.php');
+exit;
 }
 ?>

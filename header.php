@@ -1,7 +1,8 @@
 <?php
 error_reporting(E_WARNING | E_PARSE);
 ob_start();
-session_start();
+require_once __DIR__ . '/include/session_helper.php';
+aitf_start_session();
 
 include 'head.php';
 include 'modalForms.php';
@@ -51,174 +52,174 @@ include 'utility.php';
 <!--<div id="wrapper" class="active">-->
 <?php
 if (!Utitlity::checkIfLoggedIn()) {
-    header("Location: login");
+    header("Location: loginSelection.php?reason=login_required");
     exit;
 } else if (isset($pageIdentifier) && $pageIdentifier == "Home Page") {
     $addClass = "active";
     if (!(Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin())) {
-        header("Location: login");
+        header("Location: loginSelection.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Admin Dashboard") {
     $addAdminDashboardClass = "active";
-    if (!Utitlity::checkForUserMainAdmin()) {
-        header("Location: login");
+    if (!(Utitlity::checkForUserMainAdmin() || Utitlity::checkForMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff())) {
+        header("Location: loginSelection.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Add User") {
     $addUserClass = "active";
     if (!(Utitlity::checkForUserAdmin() || Utitlity::checkForMainAdmin())) {
-        header("Location: login");
+        header("Location: loginSelection.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Master Data") {
     $addMasterClass = "active";
     if (!(Utitlity::checkForUserAdmin() || Utitlity::checkForMainAdmin())) {
-        header("Location: login");
+        header("Location: loginSelection.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Mktg") {
     $addMarketingClass = "active";
     if (!(Utitlity::checkForUserMarketing() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin())) {
-        header("Location: login");
+        header("Location: loginSelection.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Audit Planning") {
     $addWorkingClass = "active";
     if (!(Utitlity::checkForUserAdmin() || Utitlity::checkForUserConsultant() || Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin())) {
-        header("Location: login");
+        header("Location: loginSelection.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Finance Page") {
     $addFinanceClass = "active";
     if (!(Utitlity::checkForUserAdmin() || Utitlity::checkForUserFinance() || Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin())) {
-        header("Location: login");
+        header("Location: loginSelection.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "TDS list") {
     $addtds = "active";
     if (!(Utitlity::checkForMainAdmin() || Utitlity::checkForUserAdmin())) {
-        header("Location: login");
+        header("Location: loginSelection.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Due letter") {
     $adddueClass = "active";
     if (!(Utitlity::checkForUserAdmin() || Utitlity::checkForMainAdmin() || Utitlity::checkForOfficeStaff())) {
-        header("Location: login");
+        header("Location: loginSelection.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "sent letter") {
     $addsentClass = "active";
     if (!(Utitlity::checkForUserAdmin() || Utitlity::checkForMainAdmin() || Utitlity::checkForOfficeStaff())) {
-        header("Location: login");
+        header("Location: loginSelection.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Invoices") {
     $addInvoiceClass = "active";
     if (!(Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin())) {
-        header("Location: login");
+        header("Location: loginSelection.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Bills") {
     $addBillsClass = "active";
     if (!(Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin())) {
-        header("Location: login");
+        header("Location: loginSelection.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Suppliers") {
     $addSuppliersClass = "active";
     if (!(Utitlity::checkForUserAdmin() || Utitlity::checkForUserFinance() || Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin())) {
-        header("Location: login");
+        header("Location: loginSelection.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Quot") {
     $addquotClass = "active";
     if (!(Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin())) {
-        header("Location: login");
+        header("Location: loginSelection.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "agreement") {
     $addagreementClass = "active";
     if (!(Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin())) {
-        header("Location: login");
+        header("Location: loginSelection.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Recycle") {
     $addRecycleClass = "active";
     if (!(Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin())) {
-        header("Location: login");
+        header("Location: loginSelection.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Audit Records") {
     $addAuditClass = "active";
     if (!(Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin())) {
-        header("Location: login");
+        header("Location: loginSelection.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "cert issue list") {
     $addcertissueClass = "active";
     if (!(Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin())) {
-        header("Location: login");
+        header("Location: loginSelection.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "audit perf") {
     $addauditperClass = "active";
     if (Utitlity::checkExternalUser()) {
-        header("Location: login");
+        header("Location: loginSelection.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Client Analysis") {
     $clientanalysis = "active";
     if (Utitlity::checkExternalUser()) {
-        header("Location: login");
+        header("Location: loginSelection.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "cdc objrctive") {
     $cdcobj = "active";
     if (Utitlity::checkExternalUser()) {
-        header("Location: login");
+        header("Location: loginSelection.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "app review objrctive") {
     $apprevobj = "active";
     if (Utitlity::checkExternalUser()) {
-        header("Location: login");
+        header("Location: loginSelection.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Application Received") {
     $addAppReceivedClass = "active";
     if (!(Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff())) {
-        header("Location: login");
+        header("Location: loginSelection.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Document Upload") {
     $docobj = "active";
     if (Utitlity::checkExternalUser()) {
-        header("Location: login");
+        header("Location: loginSelection.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "GoAI") {
     $addGoAiClass = "active";
     if (Utitlity::checkExternalUser()) {
-        header("Location: login");
+        header("Location: loginSelection.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "IAF Dashboard") {
     $iafClass = "active";
     if (Utitlity::checkExternalUser()) {
-        header("Location: login");
+        header("Location: loginSelection.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Job Applications") {
     $addJobAppClass = "active";
     if (!(Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff())) {
-        header("Location: login");
+        header("Location: loginSelection.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Auditor Checklist") {
     $addAuditorChecklistClass = "active";
     if (Utitlity::checkExternalUser() || Utitlity::checkClient()) {
-        header("Location: login");
+        header("Location: loginSelection.php?reason=login_required");
         exit;
     }
 }
@@ -273,7 +274,7 @@ function getFlatDate($inputStr)
             </a></li>
     </ul>
     <ul class="sidebar-nav" id="sidebar">
-        <?php if (Utitlity::checkForUserMainAdmin()) { ?>
+        <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff()) { ?>
         <li><a href="adminDashboard.php" class="animate <?php echo isset($addAdminDashboardClass) ? $addAdminDashboardClass : ''; ?>">ADMIN DASHBOARD<i class="sub_icon fa fa-line-chart fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
         <?php if (!isset($_SESSION["role"]) || $_SESSION["role"] != 'client') { ?>
@@ -467,7 +468,7 @@ function getFlatDate($inputStr)
 
         <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
             <ul class="nav navbar-nav visible-xs">
-                <?php if (Utitlity::checkForUserMainAdmin()) { ?>
+                <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff()) { ?>
                     <li><a href="adminDashboard.php">ADMIN DASHBOARD</a></li>
                 <?php } ?>
                 <?php if (!isset($_SESSION["role"]) || $_SESSION["role"] != 'client') { ?>

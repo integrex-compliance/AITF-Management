@@ -1,6 +1,7 @@
 <?php
 
-session_start();
+require_once __DIR__ . '/include/session_helper.php';
+aitf_start_session();
 include_once 'dbConnect.php';
 date_default_timezone_set('Asia/Kolkata');
 include 'utility.php';
@@ -25,6 +26,7 @@ if (isset($_POST['useremail']) && !empty($_POST['useremail']) && isset($_POST['p
     $captchaError = '';
     if (function_exists('aitf_verify_turnstile') && !aitf_verify_turnstile($turnstileToken, $captchaError)) {
         $_SESSION['login_error'] = true;
+        $_SESSION['login_notice'] = $captchaError !== '' ? $captchaError : 'Captcha verification failed. Please try again.';
         aitf_redirect_and_exit("loginSelection.php");
     }
     try {
@@ -40,6 +42,7 @@ if (isset($_POST['useremail']) && !empty($_POST['useremail']) && isset($_POST['p
             $_SESSION['id'] = $row['user_id'];
             $_SESSION['role'] = $row['role'];
             $_SESSION['abbrevation'] = $row['abbreviation'];
+            aitf_mark_session_authenticated();
             if (Utitlity::checkForUserAdmin()) {
                 aitf_redirect_and_exit("homePage.php");
             } elseif (Utitlity::checkForOfficeStaff()) {
@@ -57,23 +60,28 @@ if (isset($_POST['useremail']) && !empty($_POST['useremail']) && isset($_POST['p
             }
 
             $_SESSION['login_error'] = true;
+            unset($_SESSION['username'], $_SESSION['id'], $_SESSION['role'], $_SESSION['abbrevation']);
+            $_SESSION['login_notice'] = 'This account does not have access to a portal. Please contact the administrator.';
             aitf_redirect_and_exit("loginSelection.php");
         } else {
             // Invalid credentials: mark login error in session and redirect to clean login URL
             $_SESSION['login_error'] = true;
-            aitf_redirect_and_exit("index.php");
+            $_SESSION['login_notice'] = 'Invalid username or password. Please try again.';
+            aitf_redirect_and_exit("loginSelection.php");
         }
     } catch (Exception $exc) {
         // Log error instead of echoing to prevent AJAX parse errors
         error_log('Login Exception: ' . $exc->getTraceAsString());
         $_SESSION['login_error'] = true;
-        aitf_redirect_and_exit("index.php");
+        $_SESSION['login_notice'] = 'Login could not be completed. Please try again.';
+        aitf_redirect_and_exit("loginSelection.php");
     }
 } else if (isset($_POST["clientemail"]) && !empty($_POST["clientemail"]) && isset($_POST["clientcid"]) && !empty($_POST["clientcid"])) {
     $turnstileToken = trim($_POST['cf-turnstile-response'] ?? '');
     $captchaError = '';
     if (function_exists('aitf_verify_turnstile') && !aitf_verify_turnstile($turnstileToken, $captchaError)) {
         $_SESSION['login_error'] = true;
+        $_SESSION['login_notice'] = $captchaError !== '' ? $captchaError : 'Captcha verification failed. Please try again.';
         aitf_redirect_and_exit("loginSelection.php");
     }
     try {
@@ -95,21 +103,25 @@ if (isset($_POST['useremail']) && !empty($_POST['useremail']) && isset($_POST['p
                 $_SESSION['id'] = $customerinfo['id'];
                 $_SESSION['role'] = "client";
                 $_SESSION['uniqueid'] = $customerinfo['unique_id'];
+                aitf_mark_session_authenticated();
                 aitf_redirect_and_exit("clientportal.php");
             } else {
                 // Invalid client login: show generic error banner without query params
                 $_SESSION['login_error'] = true;
-                aitf_redirect_and_exit("index.php");
+                $_SESSION['login_notice'] = 'Invalid client name or password. Please try again.';
+                aitf_redirect_and_exit("loginSelection.php");
             }
         } else {
             $_SESSION['login_error'] = true;
-            aitf_redirect_and_exit("index.php");
+            $_SESSION['login_notice'] = 'Invalid client name or password. Please try again.';
+            aitf_redirect_and_exit("loginSelection.php");
         }
     } catch (Exception $ex) {
         // Log error instead of echoing to prevent AJAX parse errors
         error_log('Client Login Exception: ' . $ex->getMessage());
         $_SESSION['login_error'] = true;
-        aitf_redirect_and_exit("index.php");
+        $_SESSION['login_notice'] = 'Login could not be completed. Please try again.';
+        aitf_redirect_and_exit("loginSelection.php");
     }
 } else if (isset($_POST["name"]) && !empty($_POST["name"]) && isset($_POST["cno"]) && !empty($_POST["cno"])) {
     try {
@@ -177,6 +189,7 @@ if (isset($_POST['useremail']) && !empty($_POST['useremail']) && isset($_POST['p
             $_SESSION['username'] = "External User";
             $_SESSION['id'] = $customerinfo['id'];
             $_SESSION['role'] = "External";
+            aitf_mark_session_authenticated();
             aitf_redirect_and_exit("certifiedClient.php");
         } else {
             // No client found for this certificate number at all
@@ -187,4 +200,7 @@ if (isset($_POST['useremail']) && !empty($_POST['useremail']) && isset($_POST['p
         $_SESSION['validation_error'] = "invalid_client_warning";
         aitf_redirect_and_exit("validation.php");
     }
+} else {
+    $_SESSION['login_notice'] = 'Please use the login form to continue.';
+    aitf_redirect_and_exit("loginSelection.php");
 }

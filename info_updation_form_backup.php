@@ -1,5 +1,6 @@
 <?php
-session_start();
+require_once __DIR__ . '/include/session_helper.php';
+aitf_start_session();
 include_once './dbConnect.php';
 date_default_timezone_set('Asia/Kolkata');
 

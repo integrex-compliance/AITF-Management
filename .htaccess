@@ -4,9 +4,22 @@ RewriteEngine On
     Require all denied
 </Files>
 
+<IfModule mod_php7.c>
+    php_value session.gc_maxlifetime 3600
+    php_value session.cookie_lifetime 3600
+    php_flag session.cookie_httponly On
+</IfModule>
+
 RewriteCond %{HTTP_HOST} aitf\.co\.in [NC]
 RewriteCond %{SERVER_PORT} 80
 RewriteRule ^(.*)$ https://aitf.co.in/$1 [R,L]
+
+# Keep legacy/protected login redirects and invalid browser URLs on the login selection page.
+RewriteRule ^login/?$ loginRedirect.php?reason=login_required [L,NC,QSA]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{HTTP_ACCEPT} text/html [NC]
+RewriteRule ^ loginRedirect.php?reason=not_found [L,QSA]
 
 # Enable compression for text assets
 <IfModule mod_deflate.c>

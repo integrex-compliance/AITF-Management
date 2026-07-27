@@ -480,11 +480,16 @@
 
     // Fetch current pending letters matching intimationLetter.php logic (latest certification service only)
     $pendingLettersDetail = dashFetchAll($db, "SELECT ci.id as customer_id, ci.customer_name, svcdt.action, svcdt.due_date
-        FROM customer_info ci
-        JOIN service svc ON ci.id = svc.customer_id
-        JOIN ca_service_dates svcdt ON svc.service_id = svcdt.service_id
-        WHERE svc.service_id = $latestCertificationService
-        AND svcdt.status <> 'sent'
+        FROM ca_service_dates svcdt
+        JOIN service svc ON svcdt.service_id = svc.service_id
+        JOIN customer_info ci ON svc.customer_id = ci.id
+        JOIN (
+            SELECT customer_id, MAX(service_id) AS max_sid
+            FROM service
+            WHERE service_type IN ('CA', 'SA-I', 'SA-II', 'RC')
+            GROUP BY customer_id
+        ) latest ON svc.service_id = latest.max_sid
+        WHERE svcdt.status <> 'sent'
         AND svcdt.due_date <= CURDATE()
         AND svcdt.is_deleted = 'N'
         AND ci.is_deleted <> 'YES'
@@ -520,7 +525,9 @@
                 NULLIF(TRIM(oa2.org_name), '')
             ) as customer_name,
             ps.service_type, ps.amount_decided, ps.payment_received, ps.balance, ps.payment_date, ps.cheque_details
-        FROM payment_system ps
+        FROM (
+            SELECT * FROM payment_system WHERE service_type <> 'TDS' ORDER BY payment_date DESC, payment_id DESC LIMIT 10
+        ) ps
         LEFT JOIN payment_system_id psi ON ps.payment_sy_id = psi.payment_sy_id
         LEFT JOIN (SELECT payment_sy_id, MAX(NULLIF(TRIM(customer_id), '')) as group_customer_id FROM payment_system GROUP BY payment_sy_id) psg ON ps.payment_sy_id = psg.payment_sy_id
         LEFT JOIN customer_info ci1 ON TRIM(ps.customer_id) = CAST(ci1.id AS CHAR)
@@ -533,7 +540,6 @@
         LEFT JOIN customer_info ci8 ON TRIM(psg.group_customer_id) = TRIM(ci8.unique_id)
         LEFT JOIN online_audit_applications oa1 ON TRIM(ps.customer_id) = CAST(oa1.id AS CHAR)
         LEFT JOIN online_audit_applications oa2 ON TRIM(psi.customer_id) = CAST(oa2.id AS CHAR)
-        WHERE ps.service_type <> 'TDS'
         ORDER BY ps.payment_date DESC, ps.payment_id DESC LIMIT 10");
 
     $clientTotals = array(
@@ -569,7 +575,7 @@
     $clientServiceRows = dashFetchAll($db, "SELECT service_type label, COUNT(*) total FROM service GROUP BY service_type ORDER BY total DESC LIMIT 8");
     $applicationTotals = dashFetchOne($db, "SELECT COUNT(*) online_total, SUM(CASE WHEN read_flag = 0 THEN 1 ELSE 0 END) unread_total FROM online_audit_applications");
     $auditApplicationTotals = dashFetchOne($db, "SELECT COUNT(*) audit_total, SUM(CASE WHEN review_date IS NOT NULL THEN 1 ELSE 0 END) reviewed_total FROM audit_application");
-    $recentClients = dashFetchAll($db, "SELECT ci.id, ci.customer_name, ci.unique_id, ci.audit_status, ci.next_service, ci.contact_person, ci.contact, ci.email_id, COUNT(svc.service_id) service_count, COALESCE(SUM(CASE WHEN " . dashAmountExpr('ps.balance') . " > 0 THEN " . dashAmountExpr('ps.balance') . " ELSE 0 END),0) pending_amount FROM customer_info ci LEFT JOIN service svc ON ci.id = svc.customer_id LEFT JOIN payment_system ps ON ci.id = ps.customer_id AND ps.service_type <> 'TDS' WHERE ci.is_deleted <> 'YES' GROUP BY ci.id ORDER BY ci.id DESC LIMIT 10");
+    $recentClients = dashFetchAll($db, "SELECT ci.*, (SELECT COUNT(*) FROM service svc WHERE svc.customer_id = ci.id) as service_count, (SELECT COALESCE(SUM(CASE WHEN " . dashAmountExpr('ps.balance') . " > 0 THEN " . dashAmountExpr('ps.balance') . " ELSE 0 END),0) FROM payment_system ps WHERE ps.customer_id = ci.id AND ps.service_type <> 'TDS') as pending_amount FROM (SELECT id, customer_name, unique_id, audit_status, next_service, contact_person, contact, email_id FROM customer_info WHERE is_deleted <> 'YES' ORDER BY id DESC LIMIT 10) ci ORDER BY ci.id DESC");
     foreach ($recentClients as $idx => $row) {
         $recentClients[$idx]['derived_status'] = dashDerivedClientStatus($row, $latestServiceMap);
     }
@@ -580,13 +586,13 @@
     // and compute pending from decided - received (NOT from stored balance), because
     // older rows may have inconsistent balance formats.
     $pendingPaymentsDetail = dashFetchAll($db, "SELECT
-            ps.payment_sy_id as payment_group_id,
-            MAX(COALESCE(ci1.id, ci2.id, ci3.id, ci4.id, ci5.id, ci6.id, ci7.id, ci8.id)) as resolved_customer_id,
-            MAX(NULLIF(TRIM(ps.customer_id), '')) as ps_customer_id,
-            MAX(NULLIF(TRIM(psi.customer_id), '')) as psi_customer_id,
-            MAX(NULLIF(TRIM(psg.group_customer_id), '')) as ps_group_customer_id,
-            MAX(COALESCE(NULLIF(TRIM(ps.customer_id), ''), NULLIF(TRIM(psi.customer_id), ''), NULLIF(TRIM(psg.group_customer_id), ''))) as customer_id,
-            MAX(COALESCE(
+            sub.payment_sy_id as payment_group_id,
+            COALESCE(ci1.id, ci2.id, ci3.id, ci4.id, ci5.id, ci6.id, ci7.id, ci8.id) as resolved_customer_id,
+            sub.ps_customer_id,
+            NULLIF(TRIM(psi.customer_id), '') as psi_customer_id,
+            sub.ps_customer_id as ps_group_customer_id,
+            COALESCE(sub.ps_customer_id, NULLIF(TRIM(psi.customer_id), '')) as customer_id,
+            COALESCE(
                 NULLIF(TRIM(ci1.customer_name), ''),
                 NULLIF(TRIM(ci2.customer_name), ''),
                 NULLIF(TRIM(ci3.customer_name), ''),
@@ -597,26 +603,31 @@
                 NULLIF(TRIM(ci8.customer_name), ''),
                 NULLIF(TRIM(oa1.org_name), ''),
                 NULLIF(TRIM(oa2.org_name), '')
-            )) as customer_name,
-            COUNT(*) as entry_count,
-            GREATEST(SUM(" . dashAmountExpr('ps.amount_decided') . ") - SUM(" . dashAmountExpr('ps.payment_received') . "), 0) as pending_amount
-        FROM payment_system ps
-        LEFT JOIN payment_system_id psi ON ps.payment_sy_id = psi.payment_sy_id
-        LEFT JOIN (SELECT payment_sy_id, MAX(NULLIF(TRIM(customer_id), '')) as group_customer_id FROM payment_system GROUP BY payment_sy_id) psg ON ps.payment_sy_id = psg.payment_sy_id
-        LEFT JOIN customer_info ci1 ON TRIM(ps.customer_id) = CAST(ci1.id AS CHAR)
-        LEFT JOIN customer_info ci2 ON TRIM(ps.customer_id) = TRIM(ci2.unique_id)
+            ) as customer_name,
+            sub.entry_count,
+            sub.pending_amount
+        FROM (
+            SELECT payment_sy_id,
+                   MAX(NULLIF(TRIM(customer_id), '')) as ps_customer_id,
+                   COUNT(*) as entry_count,
+                   GREATEST(SUM(" . dashAmountExpr('amount_decided') . ") - SUM(" . dashAmountExpr('payment_received') . "), 0) as pending_amount
+            FROM payment_system
+            WHERE service_type <> 'TDS'
+            GROUP BY payment_sy_id
+            HAVING pending_amount > 0
+        ) sub
+        LEFT JOIN payment_system_id psi ON sub.payment_sy_id = psi.payment_sy_id
+        LEFT JOIN customer_info ci1 ON sub.ps_customer_id = CAST(ci1.id AS CHAR)
+        LEFT JOIN customer_info ci2 ON sub.ps_customer_id = TRIM(ci2.unique_id)
         LEFT JOIN customer_info ci3 ON TRIM(psi.customer_id) = CAST(ci3.id AS CHAR)
         LEFT JOIN customer_info ci4 ON TRIM(psi.customer_id) = TRIM(ci4.unique_id)
-        LEFT JOIN customer_info ci5 ON REPLACE(UPPER(TRIM(ps.customer_id)), 'ID:', '') = CAST(ci5.id AS CHAR)
+        LEFT JOIN customer_info ci5 ON REPLACE(UPPER(sub.ps_customer_id), 'ID:', '') = CAST(ci5.id AS CHAR)
         LEFT JOIN customer_info ci6 ON REPLACE(UPPER(TRIM(psi.customer_id)), 'ID:', '') = CAST(ci6.id AS CHAR)
-        LEFT JOIN customer_info ci7 ON TRIM(psg.group_customer_id) = CAST(ci7.id AS CHAR)
-        LEFT JOIN customer_info ci8 ON TRIM(psg.group_customer_id) = TRIM(ci8.unique_id)
-        LEFT JOIN online_audit_applications oa1 ON TRIM(ps.customer_id) = CAST(oa1.id AS CHAR)
+        LEFT JOIN customer_info ci7 ON sub.ps_customer_id = CAST(ci7.id AS CHAR)
+        LEFT JOIN customer_info ci8 ON sub.ps_customer_id = TRIM(ci8.unique_id)
+        LEFT JOIN online_audit_applications oa1 ON sub.ps_customer_id = CAST(oa1.id AS CHAR)
         LEFT JOIN online_audit_applications oa2 ON TRIM(psi.customer_id) = CAST(oa2.id AS CHAR)
-        WHERE ps.service_type <> 'TDS'
-        GROUP BY ps.payment_sy_id
-        HAVING pending_amount > 0
-        ORDER BY pending_amount DESC");
+        ORDER BY sub.pending_amount DESC");
 
     $customerLookupRows = dashFetchAll($db, "SELECT id, unique_id, customer_name FROM customer_info");
     $serviceLookupRows = dashFetchAll($db, "SELECT svc.service_id, ci.id as customer_id, ci.customer_name FROM service svc LEFT JOIN customer_info ci ON svc.customer_id = ci.id");

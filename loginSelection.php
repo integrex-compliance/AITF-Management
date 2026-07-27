@@ -1,5 +1,18 @@
 <?php
-session_start();
+require_once __DIR__ . '/include/session_helper.php';
+aitf_start_session();
+
+$loginNotice = trim((string)($_SESSION['login_notice'] ?? ''));
+if ($loginNotice === '' && !empty($_SESSION['login_error'])) {
+    $loginNotice = 'Invalid login details. Please try again.';
+}
+if ($loginNotice === '' && ($_GET['reason'] ?? '') === 'not_found') {
+    $loginNotice = 'The requested page was not found. Please log in to continue.';
+}
+if ($loginNotice === '' && ($_GET['reason'] ?? '') === 'login_required') {
+    $loginNotice = 'Please log in again to continue.';
+}
+unset($_SESSION['login_notice'], $_SESSION['login_error'], $_SESSION['session_expired']);
 
 $turnstileHelperPath = __DIR__ . '/include/turnstile_helper.php';
 if (file_exists($turnstileHelperPath)) {
@@ -179,6 +192,19 @@ $turnstileReady = function_exists('aitf_is_turnstile_ready') ? aitf_is_turnstile
             max-width: 360px;
             margin-left: auto;
             margin-right: auto;
+        }
+
+        .login-notice {
+            margin: -12px 0 24px;
+            padding: 12px 14px;
+            border: 1px solid #fecaca;
+            border-radius: 8px;
+            background: #fef2f2;
+            color: #991b1b;
+            font-size: 14px;
+            font-weight: 600;
+            line-height: 1.45;
+            text-align: center;
         }
 
         .login-tabs {
@@ -551,6 +577,11 @@ $turnstileReady = function_exists('aitf_is_turnstile_ready') ? aitf_is_turnstile
         <div class="login-selection-card">
             <h1 class="login-selection-title"><i class="fas fa-sign-in-alt"></i>Login</h1>
             <p class="login-selection-subtitle">Please select your login type to access your account</p>
+            <?php if ($loginNotice !== ''): ?>
+                <div class="login-notice" role="alert">
+                    <?php echo htmlspecialchars($loginNotice, ENT_QUOTES, 'UTF-8'); ?>
+                </div>
+            <?php endif; ?>
 
             <div class="login-tabs">
                 <button type="button" class="login-tab-btn active" data-target="#user-login-panel">
