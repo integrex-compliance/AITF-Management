@@ -87,6 +87,61 @@ $turnstileReady = function_exists('aitf_is_turnstile_ready') ? aitf_is_turnstile
             overflow: hidden;
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
+    <title>AITF - Login</title>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .login-selection-wrapper {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 80px 16px 60px;
+            background:
+                radial-gradient(circle at 20% 30%, rgba(37, 99, 235, 0.15), transparent 40%),
+                radial-gradient(circle at 80% 70%, rgba(59, 130, 246, 0.12), transparent 45%),
+                linear-gradient(135deg, #0f172a, #1e293b);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .login-selection-wrapper::before {
+            content: '';
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(37, 99, 235, 0.1) 0%, transparent 70%);
+            top: -300px;
+            left: -300px;
+            z-index: 0;
+        }
+
+        .login-selection-wrapper::after {
+            content: '';
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, transparent 70%);
+            bottom: -300px;
+            right: -300px;
+            z-index: 0;
+        }
+
+        .login-selection-card {
+            max-width: 480px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 20px;
+            box-shadow: 0 10px 35px rgba(0, 0, 0, 0.4);
+            padding: 40px 32px;
+            margin: 20px auto 30px;
+            border: 1px solid rgba(51, 65, 85, 0.3);
+            backdrop-filter: blur(12px);
+            position: relative;
+            z-index: 1;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
 
         .login-selection-card:hover {
             transform: translateY(-5px);
@@ -104,30 +159,31 @@ $turnstileReady = function_exists('aitf_is_turnstile_ready') ? aitf_is_turnstile
         }
 
         .login-captcha-wrap {
-            margin: 18px 0 10px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
-            padding: 12px 14px;
-            border: 1px solid #e2e8f0;
-            border-radius: 14px;
-            background: #f1f5f9;
-            min-height: 92px;
+            display: contents;
         }
 
         .login-captcha-note {
-            margin-top: 0;
+            display: block;
+            margin: 12px auto 22px;
             font-size: 0.85rem;
-            color: #6b7280;
+            color: #64748b;
             text-align: center;
+            padding: 0;
+            background: transparent;
+            border: 0;
+            width: fit-content;
+            max-width: 100%;
+            box-sizing: border-box;
+            line-height: 1.5;
         }
 
         #admin-login-turnstile,
         #client-login-turnstile {
-            width: 100%;
             display: flex;
             justify-content: center;
+            width: fit-content;
+            margin: 14px auto 18px;
+            filter: drop-shadow(0 14px 30px rgba(15, 23, 42, 0.16));
         }
 
         #admin-login-turnstile>div,
@@ -611,6 +667,7 @@ $turnstileReady = function_exists('aitf_is_turnstile_ready') ? aitf_is_turnstile
                             <?php if ($turnstileReady): ?>
                                 <div id="admin-login-turnstile" class="cf-turnstile"
                                     data-sitekey="<?php echo htmlspecialchars($turnstileConfig['site_key'], ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-theme="light"
                                     data-callback="adminLoginCaptchaSolved"
                                     data-expired-callback="adminLoginCaptchaExpired"
                                     data-error-callback="adminLoginCaptchaExpired"></div>
@@ -644,6 +701,7 @@ $turnstileReady = function_exists('aitf_is_turnstile_ready') ? aitf_is_turnstile
                             <?php if ($turnstileReady): ?>
                                 <div id="client-login-turnstile" class="cf-turnstile"
                                     data-sitekey="<?php echo htmlspecialchars($turnstileConfig['site_key'], ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-theme="light"
                                     data-callback="clientLoginCaptchaSolved"
                                     data-expired-callback="clientLoginCaptchaExpired"
                                     data-error-callback="clientLoginCaptchaExpired"></div>
