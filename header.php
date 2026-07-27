@@ -273,11 +273,9 @@ function getFlatDate($inputStr)
             </a></li>
     </ul>
     <ul class="sidebar-nav" id="sidebar">
-        <?php /* Admin Dashboard hidden from left sidebar menu. if (Utitlity::checkForUserMainAdmin()) { ?>
-<li><a href="adminDashboard.php"
-class="animate <?php echo isset($addAdminDashboardClass) ? $addAdminDashboardClass : ''; ?>">ADMIN
-DASHBOARD<i class="sub_icon fa fa-line-chart fa-2x" style="vertical-align:middle"></i></a></li>
-<?php } */ ?>
+        <?php if (Utitlity::checkForUserMainAdmin()) { ?>
+        <li><a href="adminDashboard.php" class="animate <?php echo isset($addAdminDashboardClass) ? $addAdminDashboardClass : ''; ?>">ADMIN DASHBOARD<i class="sub_icon fa fa-line-chart fa-2x" style="vertical-align:middle"></i></a></li>
+        <?php } ?>
         <?php if (!isset($_SESSION["role"]) || $_SESSION["role"] != 'client') { ?>
         <li><a href="iaf_dashboard.php" class="animate <?php echo isset($iafClass) ? $iafClass : ''; ?>">IAF DASHBOARD<i
                     class="sub_icon fa fa-dashboard fa-2x" style="vertical-align:middle"></i></a></li>

@@ -1,19 +1,14 @@
 <?php
-$recaptchaHelperPath = __DIR__ . '/include/recaptcha_helper.php';
-if (file_exists($recaptchaHelperPath)) {
-    require_once $recaptchaHelperPath;
+$turnstileHelperPath = __DIR__ . '/include/turnstile_helper.php';
+if (file_exists($turnstileHelperPath)) {
+    require_once $turnstileHelperPath;
 }
 
-$recaptchaConfig = function_exists('aitf_get_recaptcha_config') ? aitf_get_recaptcha_config() : [
+$turnstileConfig = function_exists('aitf_get_turnstile_config') ? aitf_get_turnstile_config() : [
     'site_key' => '',
-    'version' => 'v2_checkbox',
-    'action' => 'submit',
-    'theme' => 'light',
-    'enabled' => false
+    'secret_key' => ''
 ];
-$recaptchaReady = function_exists('aitf_is_recaptcha_ready') ? aitf_is_recaptcha_ready() : false;
-$recaptchaBypass = function_exists('aitf_should_bypass_recaptcha') ? aitf_should_bypass_recaptcha() : false;
-$recaptchaFrontendEnabled = $recaptchaReady && !$recaptchaBypass;
+$turnstileReady = function_exists('aitf_is_turnstile_ready') ? aitf_is_turnstile_ready() : false;
 
 $errorMessage = isset($_GET['error']) ? trim($_GET['error']) : '';
 $successApplicant = isset($_GET['success']) && $_GET['success'] == '1' ? trim($_GET['applicant'] ?? '') : '';
@@ -23,13 +18,8 @@ $successApplicant = isset($_GET['success']) && $_GET['success'] == '1' ? trim($_
 
 <head>
     <?php include './headSource.php'; ?>
-    <?php if ($recaptchaFrontendEnabled): ?>
-        <?php if (($recaptchaConfig['version'] ?? 'v2_checkbox') === 'v3'): ?>
-            <script
-                src="https://www.google.com/recaptcha/api.js?render=<?php echo urlencode($recaptchaConfig['site_key']); ?>"></script>
-        <?php else: ?>
-            <script src="https://www.google.com/recaptcha/api.js" async defer></script>
-        <?php endif; ?>
+    <?php if ($turnstileReady): ?>
+        <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <?php endif; ?>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
         rel="stylesheet">
@@ -1364,21 +1354,18 @@ $successApplicant = isset($_GET['success']) && $_GET['success'] == '1' ? trim($_
                                 style="font-size: 15px;"></textarea>
                         </div>
 
-                        <?php if ($recaptchaFrontendEnabled): ?>
+                        <?php if ($turnstileReady): ?>
                             <div class="captcha-box">
-                                <?php if (($recaptchaConfig['version'] ?? 'v2_checkbox') === 'v3'): ?>
-                                    <input type="hidden" name="g-recaptcha-response" id="g-recaptcha-response">
-                                <?php else: ?>
-                                    <div class="g-recaptcha"
-                                        data-sitekey="<?php echo htmlspecialchars($recaptchaConfig['site_key'], ENT_QUOTES, 'UTF-8'); ?>"
-                                        data-theme="<?php echo htmlspecialchars($recaptchaConfig['theme'] ?? 'light', ENT_QUOTES, 'UTF-8'); ?>"
-                                        data-callback="enableSubmitBtn"></div>
-                                <?php endif; ?>
+                                <div class="cf-turnstile"
+                                    data-sitekey="<?php echo htmlspecialchars($turnstileConfig['site_key'], ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-callback="enableSubmitBtn"
+                                    data-expired-callback="disableSubmitBtn"
+                                    data-error-callback="disableSubmitBtn"></div>
                             </div>
                         <?php endif; ?>
 
-                        <button class="submit-btn" id="submitBtn" type="submit" <?php if ($recaptchaFrontendEnabled && ($recaptchaConfig['version'] ?? 'v2_checkbox') !== 'v3'): ?>disabled<?php endif; ?>
-                            style="<?php if ($recaptchaFrontendEnabled && ($recaptchaConfig['version'] ?? 'v2_checkbox') !== 'v3'): ?>opacity: 0.5; cursor: not-allowed;<?php endif; ?>"><i
+                        <button class="submit-btn" id="submitBtn" type="submit" <?php if ($turnstileReady): ?>disabled<?php endif; ?>
+                            style="<?php if ($turnstileReady): ?>opacity: 0.5; cursor: not-allowed;<?php endif; ?>"><i
                                 class="fa-solid fa-paper-plane"></i> Submit Application</button>
                     </form>
                 </div>
@@ -1431,30 +1418,6 @@ $successApplicant = isset($_GET['success']) && $_GET['success'] == '1' ? trim($_
         </script>
     <?php endif; ?>
 
-    <?php if ($recaptchaFrontendEnabled && (($recaptchaConfig['version'] ?? 'v2_checkbox') === 'v3')): ?>
-        <script>
-            document.addEventListener('DOMContentLoaded', function () {
-                var form = document.getElementById('careerApplicationForm');
-                var tokenInput = document.getElementById('g-recaptcha-response');
-                if (!form || !tokenInput || typeof grecaptcha === 'undefined') {
-                    return;
-                }
-                form.addEventListener('submit', function (event) {
-                    if (tokenInput.value) {
-                        return;
-                    }
-                    event.preventDefault();
-                    grecaptcha.ready(function () {
-                        grecaptcha.execute('<?php echo addslashes($recaptchaConfig['site_key']); ?>', { action: '<?php echo addslashes($recaptchaConfig['action'] ?? 'submit'); ?>' }).then(function (token) {
-                            tokenInput.value = token;
-                            form.submit();
-                        });
-                    });
-                });
-            });
-        </script>
-    <?php endif; ?>
-
     <script>
         // Enable submit button after captcha verification
         function enableSubmitBtn() {
@@ -1463,6 +1426,15 @@ $successApplicant = isset($_GET['success']) && $_GET['success'] == '1' ? trim($_
                 submitBtn.disabled = false;
                 submitBtn.style.opacity = '1';
                 submitBtn.style.cursor = 'pointer';
+            }
+        }
+
+        function disableSubmitBtn() {
+            var submitBtn = document.getElementById('submitBtn');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.style.opacity = '0.5';
+                submitBtn.style.cursor = 'not-allowed';
             }
         }
     </script>

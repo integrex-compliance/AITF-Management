@@ -325,6 +325,61 @@
     </div>
 </div>
 
+<!-- Report chooser: Step 1 pick format (PDF/Excel), Step 2 pick action (download / email) -->
+<div id="report-format-chooser" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.45); z-index:99999;">
+    <div style="max-width:440px; margin:10% auto; background:#fff; border-radius:10px; box-shadow:0 10px 40px rgba(0,0,0,0.3); overflow:hidden;">
+        <div style="background:#0d4d8b; color:#fff; padding:14px 18px; font-size:15px; font-weight:600;">
+            <i class="fa fa-cloud-download" style="margin-right:8px;"></i> Download Report
+        </div>
+
+        <!-- STEP 1: format -->
+        <div class="report-step report-step-format" style="padding:22px 18px; text-align:center;">
+            <p style="font-size:13px; color:#333; margin:0 0 18px;">Which format would you like?</p>
+            <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+                <button type="button" class="btn btn-danger report-format-pdf" style="min-width:130px;">
+                    <i class="fa fa-file-pdf-o"></i> PDF
+                </button>
+                <button type="button" class="btn btn-success report-format-excel" style="min-width:130px;">
+                    <i class="fa fa-file-excel-o"></i> Excel
+                </button>
+            </div>
+            <div style="margin-top:18px;">
+                <button type="button" class="btn btn-default btn-sm report-format-cancel">Cancel</button>
+            </div>
+        </div>
+
+        <!-- STEP 2: action (download or email) -->
+        <div class="report-step report-step-action" style="display:none; padding:22px 18px; text-align:center;">
+            <p style="font-size:13px; color:#333; margin:0 0 4px;">Selected format: <strong class="report-format-label">Excel</strong></p>
+            <p style="font-size:12px; color:#777; margin:0 0 18px;">How would you like to receive it?</p>
+            <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+                <button type="button" class="btn btn-primary report-action-download" style="min-width:150px;">
+                    <i class="fa fa-download"></i> Download Report
+                </button>
+                <button type="button" class="btn btn-warning report-action-email" style="min-width:150px;">
+                    <i class="fa fa-envelope"></i> Get Report on Email
+                </button>
+            </div>
+
+            <!-- Email sub-form -->
+            <div class="report-email-box" style="display:none; margin-top:18px; text-align:left;">
+                <label style="font-size:12px; font-weight:600; color:#333;">Enter email address</label>
+                <input type="email" class="report-email-input form-control" placeholder="name@example.com"
+                       style="margin-top:6px;" autocomplete="off">
+                <div class="report-email-msg" style="font-size:12px; margin-top:8px; min-height:16px;"></div>
+                <button type="button" class="btn btn-success report-email-send" style="width:100%; margin-top:6px;">
+                    <i class="fa fa-paper-plane"></i> Get Report
+                </button>
+            </div>
+
+            <div style="margin-top:18px;">
+                <button type="button" class="btn btn-default btn-sm report-step-back">Back</button>
+                <button type="button" class="btn btn-default btn-sm report-format-cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script type="text/javascript">
     function debounce(callback, delay) {
         var debounceTimer;
@@ -366,19 +421,158 @@
             table.draw();
         });
 
+        // Holds the report parameters chosen when a Download Report button is clicked.
+        var pendingReport = null;
+        // Format selected in step 1 ('pdf' | 'excel').
+        var pendingFormat = null;
+
+        function submitReportDownload() {
+            if (!pendingReport || !pendingFormat) {
+                return;
+            }
+            var url = (pendingFormat === 'excel') ? 'exportPaymentReportExcel.php' : 'exportPaymentReport.php';
+            var fields = {
+                minAmount: pendingReport.minAmount,
+                maxAmount: pendingReport.maxAmount,
+                clientName: pendingReport.clientName
+            };
+            var $form = $('<form>', {
+                method: 'post',
+                action: url
+            }).css('display', 'none');
+
+            $.each(fields, function (name, value) {
+                $('<input>', {
+                    type: 'hidden',
+                    name: name,
+                    value: value || ''
+                }).appendTo($form);
+            });
+
+            $('body').append($form);
+            $form[0].submit();
+            setTimeout(function () { $form.remove(); }, 1000);
+            closeFormatChooser();
+        }
+
+        function showReportStep(step) {
+            $('.report-step').hide();
+            if (step === 'action') {
+                $('.report-step-action').show();
+            } else {
+                $('.report-step-format').show();
+            }
+        }
+
+        function resetChooser() {
+            pendingFormat = null;
+            $('.report-email-box').hide();
+            $('.report-email-input').val('');
+            $('.report-email-msg').text('');
+            $('.report-email-send').prop('disabled', false).html('<i class="fa fa-paper-plane"></i> Get Report');
+            showReportStep('format');
+        }
+
+        function openFormatChooser(params) {
+            pendingReport = params;
+            resetChooser();
+            $('#report-format-chooser').css('display', 'block');
+        }
+
+        function closeFormatChooser() {
+            $('#report-format-chooser').hide();
+            pendingReport = null;
+            pendingFormat = null;
+        }
+
+        // --- Step 1: choose format ---
+        $('.report-format-pdf').click(function () {
+            pendingFormat = 'pdf';
+            $('.report-format-label').text('PDF');
+            $('.report-email-box').hide();
+            showReportStep('action');
+        });
+
+        $('.report-format-excel').click(function () {
+            pendingFormat = 'excel';
+            $('.report-format-label').text('Excel');
+            $('.report-email-box').hide();
+            showReportStep('action');
+        });
+
+        // --- Step 2: download (async; closes the chooser itself once the file is ready) ---
+        $('.report-action-download').click(function () {
+            submitReportDownload();
+        });
+
+        // --- Step 2: reveal the email sub-form ---
+        $('.report-action-email').click(function () {
+            $('.report-email-msg').text('');
+            $('.report-email-box').show();
+            $('.report-email-input').focus();
+        });
+
+        // --- Step 2 (email): send the report ---
+        $('.report-email-send').click(function () {
+            if (!pendingReport || !pendingFormat) {
+                return;
+            }
+            var email = $.trim($('.report-email-input').val());
+            var $msg = $('.report-email-msg');
+            var emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailPattern.test(email)) {
+                $msg.css('color', '#cc0000').text('Please enter a valid email address.');
+                return;
+            }
+
+            var $btn = $(this);
+            $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Sending...');
+            $msg.css('color', '#0d4d8b').text('Sending report, please wait...');
+
+            $.post('emailPaymentReport.php', {
+                minAmount: pendingReport.minAmount,
+                maxAmount: pendingReport.maxAmount,
+                clientName: pendingReport.clientName,
+                format: pendingFormat,
+                email: email
+            }, null, 'json').done(function (res) {
+                if (res && res.success) {
+                    $msg.css('color', '#1a7f37').text(res.message || 'Report sent successfully.');
+                    setTimeout(closeFormatChooser, 2000);
+                } else {
+                    $msg.css('color', '#cc0000').text((res && res.message) ? res.message : 'Could not send the email.');
+                    $btn.prop('disabled', false).html('<i class="fa fa-paper-plane"></i> Get Report');
+                }
+            }).fail(function () {
+                $msg.css('color', '#cc0000').text('Server error. Please try again.');
+                $btn.prop('disabled', false).html('<i class="fa fa-paper-plane"></i> Get Report');
+            });
+        });
+
+        $('.report-step-back').click(function () {
+            resetChooser();
+        });
+
+        $('.report-format-cancel').click(function () {
+            closeFormatChooser();
+        });
+
+        $('#report-format-chooser').click(function (e) {
+            if (e.target === this) {
+                closeFormatChooser();
+            }
+        });
+
         $('.downloadPaymentReport').click(function () {
             var minAmount = $('#minAmount').val();
             var maxAmount = $('#maxAmount').val();
             var clientName = $('#paymentClientSearch').val();
-            var url = 'exportPaymentReport.php';
-            var form = $('<form action="' + url + '" method="post" target="_blank">' +
-                '<input type="hidden" name="minAmount" value="' + minAmount + '" />' +
-                '<input type="hidden" name="maxAmount" value="' + maxAmount + '" />' +
-                '<input type="hidden" name="clientName" value="' + clientName + '" />' +
-                '</form>');
-            $('body').append(form);
-            form.submit();
-            form.remove();
+            
+            openFormatChooser({
+                minAmount: minAmount,
+                maxAmount: maxAmount,
+                clientName: clientName
+            });
         });
 
         $('.saveChanges').change(function (e) {

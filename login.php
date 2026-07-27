@@ -5,9 +5,9 @@ include_once 'dbConnect.php';
 date_default_timezone_set('Asia/Kolkata');
 include 'utility.php';
 
-$recaptchaHelperPath = __DIR__ . '/include/recaptcha_helper.php';
-if (file_exists($recaptchaHelperPath)) {
-    require_once $recaptchaHelperPath;
+$turnstileHelperPath = __DIR__ . '/include/turnstile_helper.php';
+if (file_exists($turnstileHelperPath)) {
+    require_once $turnstileHelperPath;
 }
 
 function aitf_redirect_and_exit($location)
@@ -21,9 +21,9 @@ function aitf_redirect_and_exit($location)
 
 
 if (isset($_POST['useremail']) && !empty($_POST['useremail']) && isset($_POST['password']) && !empty($_POST['password'])) {
-    $recaptchaToken = trim($_POST['g-recaptcha-response'] ?? '');
+    $turnstileToken = trim($_POST['cf-turnstile-response'] ?? '');
     $captchaError = '';
-    if (function_exists('aitf_verify_recaptcha') && !aitf_verify_recaptcha($recaptchaToken, $captchaError)) {
+    if (function_exists('aitf_verify_turnstile') && !aitf_verify_turnstile($turnstileToken, $captchaError)) {
         $_SESSION['login_error'] = true;
         aitf_redirect_and_exit("loginSelection.php");
     }
@@ -70,9 +70,9 @@ if (isset($_POST['useremail']) && !empty($_POST['useremail']) && isset($_POST['p
         aitf_redirect_and_exit("index.php");
     }
 } else if (isset($_POST["clientemail"]) && !empty($_POST["clientemail"]) && isset($_POST["clientcid"]) && !empty($_POST["clientcid"])) {
-    $recaptchaToken = trim($_POST['g-recaptcha-response'] ?? '');
+    $turnstileToken = trim($_POST['cf-turnstile-response'] ?? '');
     $captchaError = '';
-    if (function_exists('aitf_verify_recaptcha') && !aitf_verify_recaptcha($recaptchaToken, $captchaError)) {
+    if (function_exists('aitf_verify_turnstile') && !aitf_verify_turnstile($turnstileToken, $captchaError)) {
         $_SESSION['login_error'] = true;
         aitf_redirect_and_exit("loginSelection.php");
     }

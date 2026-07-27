@@ -13,6 +13,7 @@ $fromDate = $_POST['fromDate'] ?? '';
 $toDate = $_POST['toDate'] ?? '';
 $serviceType = $_POST['serviceType'] ?? '';
 $clientName = $_POST['clientName'] ?? '';
+$statusFilter = $_POST['statusFilter'] ?? '';
 
 // Helper to format Indian currency if needed, though mostly dates and text here
 function formatIndian($num) {
@@ -28,6 +29,51 @@ function formatIndian($num) {
         $whole = $restUnits . "," . $lastThree;
     }
     return $whole . "." . $decimal;
+}
+
+if (!function_exists('hpNormalizeStatus')) {
+    function hpNormalizeStatus($value)
+    {
+        $status = trim((string) $value);
+        if ($status === '') {
+            return 'No Status';
+        }
+        $key = strtolower(str_replace(array('-', '_', ' '), '', $status));
+        if ($key === 'active' || $key === 'valid' || $key === 'granted')
+            return 'Active';
+        if ($key === 'suspended' || $key === 'suspend')
+            return 'Suspended';
+        if ($key === 'inprocess')
+            return 'In-process';
+        if ($key === 'contractinprocess')
+            return 'Contract In-process';
+        if ($key === 'withdrawn' || $key === 'withdraw')
+            return 'Withdrawn';
+        if ($key === 'applicationcanceled' || $key === 'applicationcancelled' || $key === 'cancelled' || $key === 'canceled')
+            return 'Application canceled';
+        if ($key === 'expired' || $key === 'expire')
+            return 'Expired';
+        return $status;
+    }
+}
+
+if (!function_exists('hpDerivedStatus')) {
+    function hpDerivedStatus($customer, $serviceMap)
+    {
+        $norm = hpNormalizeStatus(isset($customer['audit_status']) ? $customer['audit_status'] : '');
+        if ($norm === 'Application canceled') {
+            return 'Application canceled';
+        }
+        $cid = isset($customer['id']) ? $customer['id'] : null;
+        $svc = ($cid !== null && isset($serviceMap[$cid])) ? $serviceMap[$cid] : null;
+        if (empty($svc)) {
+            return 'New Enquiry';
+        }
+        if (isset($svc['service_type']) && strtoupper(trim($svc['service_type'])) === 'CR') {
+            return 'Contract-Review';
+        }
+        return $norm;
+    }
 }
 
 // Data Fetching Logic (Mirrored from homePage.php)
@@ -94,6 +140,14 @@ foreach ($listOfCustomer as $customer) {
     // Service Type filter
     if ($serviceType != '' && strcasecmp($customer['next_service'], $serviceType) !== 0) {
         continue;
+    }
+
+    // Status Tab filter
+    if ($statusFilter != '') {
+        $derivedStatus = hpDerivedStatus($customer, $serviceMap);
+        if ($derivedStatus !== $statusFilter) {
+            continue;
+        }
     }
 
     // Date filters
@@ -194,21 +248,22 @@ $html = '<table border="1" cellpadding="5" cellspacing="0">
 <thead>
     <tr style="background-color:#eaf3ff; font-weight:bold; color:#0d4d8b;">
         <th width="3%" align="center">Sr.</th>
-        <th width="12%" align="center">Unique Id</th>
-        <th width="9%" align="center">Agr. Date</th>
-        <th width="22%">Client Name</th>
-        <th width="18%">Contact Person</th>
-        <th width="11%">Status</th>
-        <th width="9%" align="center">Due Date</th>
-        <th width="8%" align="center">Next Type</th>
-        <th width="8%" align="center">Hand</th>
+        <th width="10%" align="center">Unique Id</th>
+        <th width="8%" align="center">Agr. Date</th>
+        <th width="16%">Client Name</th>
+        <th width="14%">Contact Person</th>
+        <th width="9%">Status</th>
+        <th width="8%" align="center">Due Date</th>
+        <th width="6%" align="center">Next Type</th>
+        <th width="6%" align="center">Hand</th>
+        <th width="20%">Comment</th>
     </tr>
 </thead>
 <tbody>';
 
 $count = 1;
 if (empty($filteredCustomers)) {
-    $html .= '<tr><td colspan="9" align="center">No records found</td></tr>';
+    $html .= '<tr><td colspan="10" align="center">No records found</td></tr>';
 } else {
     foreach ($filteredCustomers as $customer) {
         $serviceInfo = isset($serviceMap[$customer['id']]) ? $serviceMap[$customer['id']] : array();
@@ -221,14 +276,15 @@ if (empty($filteredCustomers)) {
 
         $html .= '<tr>
             <td align="center" width="3%">' . $count++ . '</td>
-            <td align="center" width="12%">' . htmlspecialchars($customer['unique_id'] ?? '') . '</td>
-            <td align="center" width="9%">' . htmlspecialchars($customer['certification_date'] ?? '') . '</td>
-            <td width="22%"><b>' . htmlspecialchars($customer['customer_name']) . '</b></td>
-            <td width="18%">' . htmlspecialchars($customer['contact_person']) . '</td>
-            <td width="11%">' . htmlspecialchars($statusStr) . '</td>
-            <td align="center" width="9%">' . simpleDateConversion($customer['calculated_due_date']) . '</td>
-            <td align="center" width="8%">' . htmlspecialchars($customer['next_service'] ?? '') . '</td>
-            <td align="center" width="8%">' . htmlspecialchars($handlerName) . '</td>
+            <td align="center" width="10%">' . htmlspecialchars($customer['unique_id'] ?? '') . '</td>
+            <td align="center" width="8%">' . htmlspecialchars($customer['certification_date'] ?? '') . '</td>
+            <td width="16%"><b>' . htmlspecialchars($customer['customer_name']) . '</b></td>
+            <td width="14%">' . htmlspecialchars($customer['contact_person']) . '</td>
+            <td width="9%">' . htmlspecialchars($statusStr) . '</td>
+            <td align="center" width="8%">' . simpleDateConversion($customer['calculated_due_date']) . '</td>
+            <td align="center" width="6%">' . htmlspecialchars($customer['next_service'] ?? '') . '</td>
+            <td align="center" width="6%">' . htmlspecialchars($handlerName) . '</td>
+            <td width="20%">' . htmlspecialchars($customer['comment'] ?? '') . '</td>
         </tr>';
     }
 }

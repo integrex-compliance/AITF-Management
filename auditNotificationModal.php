@@ -43,20 +43,24 @@ foreach ($auditors as $name) {
         -webkit-appearance: none;
         margin: 0;
     }
+
     .auditorContact {
         -moz-appearance: textfield;
-    }  
+    }
+
     .auditorContactEdit::-webkit-inner-spin-button,
     .auditorContactEdit::-webkit-outer-spin-button {
         -webkit-appearance: none;
         margin: 0;
     }
+
     .auditorContactEdit {
         -moz-appearance: textfield;
     }
 </style>
 
-<div class="modal fade" id="auditNotification" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+<div class="modal fade" id="auditNotification" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+    aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -75,25 +79,31 @@ foreach ($auditors as $name) {
                     <div class="formAuditNotificationDiv">
                         <div class="row " style="padding-top: 10px">
                             <div class="col-sm-12 form-group float-label-control"><label>Subject:</label>
-                                <input type="text" class="auditSubject" id="auditSubject" name="auditSubject" placeholder="Subject:" value=" Intimation for acceptance to the below specified audit, auditor assignment and declaration for impartiality and confidentiality by AITF audit team member/s." required>
+                                <input type="text" class="auditSubject" id="auditSubject" name="auditSubject"
+                                    placeholder="Subject:"
+                                    value=" Intimation for acceptance to the below specified audit, auditor assignment and declaration for impartiality and confidentiality by AITF audit team member/s."
+                                    required>
                             </div>
                         </div>
                         <div class="row ">
                             <div class="col-sm-6 form-group float-label-control">
-                                <label>For the organization:</label> 
-                                <input type="text" class="auditForOrg" id="auditForOrg" name="auditForOrg" placeholder="For the organization:" required>
+                                <label>For the organization:</label>
+                                <input type="text" class="auditForOrg" id="auditForOrg" name="auditForOrg"
+                                    placeholder="For the organization:" required>
                             </div>
                             <div class="col-sm-6 form-group float-label-control">
                                 <div class="row">
                                     <div class="col-sm-12 orm-group float-label-control">
-                                        <label>Date of Intimation:</label> 
-                                        <input type="text" class="intimationDate" id="intimationDate" name="intimationDate" placeholder="Date of Intimation:" required>
+                                        <label>Date of Intimation:</label>
+                                        <input type="text" class="intimationDate" id="intimationDate"
+                                            name="intimationDate" placeholder="Date of Intimation:" required>
                                     </div>
                                 </div>
                                 <div class="row">
                                     <div class="col-sm-12 form-group float-label-control">
                                         <div id="intimationDateError" style="display: none">
-                                            <small><span id="intimationDateErrorMsg" style="color: #c9513c; font-style: italic;"></span></small>
+                                            <small><span id="intimationDateErrorMsg"
+                                                    style="color: #c9513c; font-style: italic;"></span></small>
                                         </div>
                                     </div>
                                 </div>
@@ -102,17 +112,21 @@ foreach ($auditors as $name) {
                         <div class="row ">
                             <div class="col-sm-6 form-group float-label-control">
                                 <label>Site(s):</label>
-                                <textarea rows="4" class="auditLocation" id="auditLocation" name="auditLocation" placeholder="Site(s):" required></textarea>
+                                <textarea rows="4" class="auditLocation" id="auditLocation" name="auditLocation"
+                                    placeholder="Site(s):" required></textarea>
                             </div>
                             <div class="col-sm-6 form-group float-label-control">
                                 <div class="row ">
                                     <div class="col-sm-12 form-group float-label-control">
-                                        <label>Agreement No:</label> 
-                                        <input readonly type="text"  class="auditReferance" id="auditReferance" name="auditReferance" placeholder="Agreement No:" required>
+                                        <label>Agreement No:</label>
+                                        <input readonly type="text" class="auditReferance" id="auditReferance"
+                                            name="auditReferance" placeholder="Agreement No:" required>
                                     </div>
                                     <div class="col-sm-12 form-group float-label-control">
-                                        <label>Assessment Standard/s:</label> 
-                                        <textarea readonly name="auditStandard" class="form-control form-group auditStandard" id="auditStandard" placeholder="Assessment Standard" required></textarea>
+                                        <label>Assessment Standard/s:</label>
+                                        <textarea readonly name="auditStandard"
+                                            class="form-control form-group auditStandard" id="auditStandard"
+                                            placeholder="Assessment Standard" required></textarea>
                                         <!--<input type="text" class="auditStandard" id="auditStandard" name="auditStandard" placeholder="For the standard:" required>-->
                                     </div>
                                 </div>
@@ -120,28 +134,32 @@ foreach ($auditors as $name) {
                         </div>
                         <div class="row ">
                             <div class="col-sm-6 form-group float-label-control">
-                                <label>Contact Person Name:</label> 
-                                <input type="text" class="auditContactPerson" id="auditContactPerson" name="auditContactPerson" placeholder="Contact Person Name:" required>
+                                <label>Contact Person Name:</label>
+                                <input type="text" class="auditContactPerson" id="auditContactPerson"
+                                    name="auditContactPerson" placeholder="Contact Person Name:" required>
                             </div>
                             <div class="col-sm-6 ">
                                 <div class="row">
                                     <div class="col-sm-10 form-group float-label-control">
                                         <div class="row">
                                             <div class="col-sm-12 form-group float-label-control">
-                                                <label>Audit date(s):</label> 
-                                                <input type="text" class="auditDates" name="auditDates" placeholder="Audit date(s):" required>
+                                                <label>Audit date(s):</label>
+                                                <input type="text" class="auditDates" name="auditDates"
+                                                    placeholder="Audit date(s):" required>
                                             </div>
                                         </div>
                                         <div class="row">
                                             <div class="col-sm-12 ">
                                                 <div id="auditDatesError" style="display: none">
-                                                    <small><span id="auditDatesErrorMsg" style="color: #c9513c; font-style: italic;"></span></small>
+                                                    <small><span id="auditDatesErrorMsg"
+                                                            style="color: #c9513c; font-style: italic;"></span></small>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                     <div class="col-sm-1 form-group float-label-control">
-                                        <a class="newAuditDate" style="" title="Add Multiple AuditDates"><i class="fa fa-plus"></i></a>
+                                        <a class="newAuditDate" style="" title="Add Multiple AuditDates"><i
+                                                class="fa fa-plus"></i></a>
                                     </div>
                                 </div>
                                 <div class="newAuditDates"></div>
@@ -151,102 +169,130 @@ foreach ($auditors as $name) {
                             <div class="col-sm-4 form-group float-label-control">
                                 <div class="row form-group float-label-control">
                                     <label>Designation:</label>
-                                    <input type="text" class="auditDesignation" id="auditDesignation" name="auditDesignation" placeholder="Designation:" required>
+                                    <input type="text" class="auditDesignation" id="auditDesignation"
+                                        name="auditDesignation" placeholder="Designation:" required>
                                 </div>
                                 <div class="row form-group float-label-control">
-                                    <label>Telephone / Mobile:</label> 
-                                    <input type="text" class="auditTelephone" id="auditTelephone" name="auditTelephone" placeholder="Telephone / Mobile:" required>
+                                    <label>Telephone / Mobile:</label>
+                                    <input type="text" class="auditTelephone" id="auditTelephone" name="auditTelephone"
+                                        placeholder="Telephone / Mobile:" required>
                                 </div>
                                 <div class="row form-group float-label-control">
-                                    <label>E-mail:</label> 
-                                    <input type="email" class="auditEmail" id="auditEmail" name="auditEmail" placeholder="E-mail:" required>
+                                    <label>E-mail:</label>
+                                    <input type="email" class="auditEmail" id="auditEmail" name="auditEmail"
+                                        placeholder="E-mail:" required>
                                 </div>
                             </div>
                             <div class="col-sm-8 form-group ">
                                 <div class="row form-group">
                                     <div class="col-sm-6 form-group ">
-                                        <input type="checkbox" class="stage-i" id="stage-i" name="stage-i" value="Stage-i" checked>Stage-I Audit
+                                        <input type="checkbox" class="stage-i" id="stage-i" name="stage-i"
+                                            value="Stage-i" checked>Stage-I Audit
                                     </div>
                                     <div class="col-sm-6 form-group">
-                                        <input type="checkbox" class="stage-i" id="stage-i" name="stage-i" value="Stage-ii">Stage II Audit
-                                    </div>
-                                </div>
-                                <div class="row form-group">
-                                    <div class="col-sm-6 form-group">
-                                        <input type="checkbox" class="stage-i" id="stage-i" name="stage-i" value="Surveillance">Surveillance
-                                    </div>
-                                    <div class="col-sm-6 form-group">
-                                        <input type="checkbox" class="stage-i" id="stage-i" name="stage-i" value="Re-Certification Audit">Re-Certification Audit
+                                        <input type="checkbox" class="stage-i" id="stage-i" name="stage-i"
+                                            value="Stage-ii">Stage II Audit
                                     </div>
                                 </div>
                                 <div class="row form-group">
                                     <div class="col-sm-6 form-group">
-                                        <input type="checkbox" class="stage-i" id="stage-i" name="stage-i" value="Follow-up Audit">Follow-up Audit
+                                        <input type="checkbox" class="stage-i" id="stage-i" name="stage-i"
+                                            value="Surveillance">Surveillance
                                     </div>
                                     <div class="col-sm-6 form-group">
-                                        <input type="checkbox" class="stage-i" id="stage-i" name="stage-i" value="Special Audit">Special Audit ____
+                                        <input type="checkbox" class="stage-i" id="stage-i" name="stage-i"
+                                            value="Re-Certification Audit">Re-Certification Audit
+                                    </div>
+                                </div>
+                                <div class="row form-group">
+                                    <div class="col-sm-6 form-group">
+                                        <input type="checkbox" class="stage-i" id="stage-i" name="stage-i"
+                                            value="Follow-up Audit">Follow-up Audit
+                                    </div>
+                                    <div class="col-sm-6 form-group">
+                                        <input type="checkbox" class="stage-i" id="stage-i" name="stage-i"
+                                            value="Special Audit">Special Audit ____
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <input type="hidden" class="audit-noti-service" id="audit-noti-service" name="audit-noti-service" value=""> 
-                        <input type="hidden" class="audit-noti-service1" id="audit-noti-service1" name="audit-noti-service1" value=""> 
-                        <input type="hidden" class="audit-noti-customer" id="audit-noti-customer" name="audit-noti-customer" value=""> 
-                        <input type="hidden" class="audti-service-type" id="audti-service-type" name="audti-service-type" value="">
-                        <input type="hidden" class="audit-service-type" id="audit-service-type" name="audit-service-type" value="">
+                        <input type="hidden" class="audit-noti-service" id="audit-noti-service"
+                            name="audit-noti-service" value="">
+                        <input type="hidden" class="audit-noti-service1" id="audit-noti-service1"
+                            name="audit-noti-service1" value="">
+                        <input type="hidden" class="audit-noti-customer" id="audit-noti-customer"
+                            name="audit-noti-customer" value="">
+                        <input type="hidden" class="audti-service-type" id="audti-service-type"
+                            name="audti-service-type" value="">
+                        <input type="hidden" class="audit-service-type" id="audit-service-type"
+                            name="audit-service-type" value="">
                     </div>
                     <div class="row" style="">
                         <div class="col-xs-12  text-center btn  qms_complete_btn formNotification">
-                            <span><i class="fa  ">Declaration for impartiality and confidential by Aitf-MCL team audit team member/s:</i></span>
+                            <span><i class="fa  ">Declaration for impartiality and confidential by Aitf-MCL team audit
+                                    team member/s:</i></span>
                         </div>
                     </div>
                     <div class="formNotificationDiv" style="display: none;">
                         <div class="row">
                             <div class="col-sm-12 table-responsive">
-                                <table  class="table table-bordered table-hover table-sortable service_details" id="notification_details" style="width: 100%">
+                                <table class="table table-bordered table-hover table-sortable service_details"
+                                    id="notification_details" style="width: 100%">
                                     <thead>
                                         <tr>
-                                            <th class="" width="20%" style="padding: 2px"><small>Auditor Name</small></th>
+                                            <th class="" width="20%" style="padding: 2px"><small>Auditor Name</small>
+                                            </th>
                                             <th class="" width="15%" style="padding: 2px"><small>Category </small></th>
                                             <!--<th class="" width="35%" style="padding: 2px"><small>Contact Number</small></th>-->
                                             <th class="" width="10%" style="padding: 2px"><small>Work Days</small></th>
                                             <th class="" width="10%" style="padding: 2px"><small>Acceptance</small>
-                                                <a class="btn btn-xs btn-info addAuditLink pull-right" data-row-id="" data-row-count="" title="Add new cb row" style="padding: 1px 5px;"><i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i></a>
+                                                <a class="btn btn-xs btn-info addAuditLink pull-right" data-row-id=""
+                                                    data-row-count="" title="Add new cb row"
+                                                    style="padding: 1px 5px;"><i class="fa fa-plus-circle fa-lg "
+                                                        style="padding: 3px"></i></a>
                                             </th>
                                         </tr>
                                     </thead>
                                     <tbody class="editedNotification">
-                                        <tr class="audit_subsection previousCBData" id="cb_subsection_0"  style="display: ">
+                                        <tr class="audit_subsection previousCBData" id="cb_subsection_0"
+                                            style="display: ">
                                             <td class="" width="20%" style="padding: 2px;">
                                                 <div class="table-edit-control">
                                                     <!--<input type="text" data-row-id="" class="contractAuditorName" id="contractAuditorName" name="contractAuditorName" value="" placeholder=""/>-->
-                                                    <select class="contractAuditorName form-control" id="contractAuditorName" name="contractAuditorName" required>
+                                                    <select class="contractAuditorName form-control"
+                                                        id="contractAuditorName" name="contractAuditorName" required>
                                                         <option value="">Choose Auditors</option>
                                                         <?php foreach ($auditors as $name) { ?>
-                                                            <option value="<?php echo $name['auditors_id'] ?>"><?php echo $name['auditor_name'] ?></option>
-                                                        <?php } ?>
-                                                    </select>
-                                                </div>
-                                            </td>
-                                            <td class="" width="20%" style="padding: 2px;">
-                                            <div class="table-edit-control">
-                                                <select class="auditorCategory form-control" id="auditorCategory" name="auditorCategory" required>
-                                                        <option value="">Choose Category</option>
-                                                        <?php foreach ($category as $name) { ?>
-                                                            <option value="<?php echo $name['categories_name'] ?>"><?php echo $name['categories_name'] ?></option>
+                                                            <option value="<?php echo $name['auditors_id'] ?>">
+                                                                <?php echo $name['auditor_name'] ?></option>
                                                         <?php } ?>
                                                     </select>
                                                 </div>
                                             </td>
                                             <td class="" width="20%" style="padding: 2px;">
                                                 <div class="table-edit-control">
-                                                    <input type="text" min="1" data-row-id="" class="auditorWork" id="auditorWork" name="depositWork" value="" placeholder="" required>
+                                                    <select class="auditorCategory form-control" id="auditorCategory"
+                                                        name="auditorCategory" required>
+                                                        <option value="">Choose Category</option>
+                                                        <?php foreach ($category as $name) { ?>
+                                                            <option value="<?php echo $name['categories_name'] ?>">
+                                                                <?php echo $name['categories_name'] ?></option>
+                                                        <?php } ?>
+                                                    </select>
+                                                </div>
+                                            </td>
+                                            <td class="" width="20%" style="padding: 2px;">
+                                                <div class="table-edit-control">
+                                                    <input type="text" min="1" data-row-id="" class="auditorWork"
+                                                        id="auditorWork" name="depositWork" value="" placeholder=""
+                                                        required>
                                                 </div>
                                             </td>
                                             <td class="" width="20%" style="padding: 2px;">
                                                 <div class="table-edit-control">
                                                     <!--<input type="text" data-row-id="" class="contractAuditorName" id="contractAuditorName" name="contractAuditorName" value="" placeholder=""/>-->
-                                                    <select class="auditorAcceptance form-control" id="auditorAcceptance" name="auditorAcceptance" required>
+                                                    <select class="auditorAcceptance form-control"
+                                                        id="auditorAcceptance" name="auditorAcceptance" required>
                                                         <option value="">Select</option>
                                                         <option value="Yes">Yes</option>
                                                         <option value="No">No</option>
@@ -260,22 +306,27 @@ foreach ($auditors as $name) {
                         </div>
                         <div class="row">
                             <div class="col-sm-12 table-responsive">
-                                <table  class="table table-bordered table-hover table-sortable service_details" id="notification_details" style="width: 100%">
-                                    <th> Whether same team leader was appointed for last two consequence audits (Yes  / No )?</th>
+                                <table class="table table-bordered table-hover table-sortable service_details"
+                                    id="notification_details" style="width: 100%">
+                                    <th> Whether same team leader was appointed for last two consequence audits (Yes /
+                                        No )?</th>
                                     <tr>
                                         <td><br>
                                             <div class="col-sm-8 form-group ">
                                                 <div class="col-sm-6 form-group ">
-                                                    <input type="checkbox" class="tllasty" id="tllasty" name="tllasty" value="yes">YES
+                                                    <input type="checkbox" class="tllasty" id="tllasty" name="tllasty"
+                                                        value="yes">YES
                                                 </div>
                                                 <div class="col-sm-6 form-group">
-                                                    <input type="checkbox" class="tllastn" id="tllastn" name="tllastn" value="no">NO
+                                                    <input type="checkbox" class="tllastn" id="tllastn" name="tllastn"
+                                                        value="no">NO
                                                 </div>
                                             </div>
                                             <div class="col-sm-4 form-group float-label-control">
                                                 <div class="row form-group float-label-control">
                                                     <label></label>
-                                                    <input type="text" class="tllastyc" id="tllastyc" name="tllastyc" placeholder="If yes?:" readonly>
+                                                    <input type="text" class="tllastyc" id="tllastyc" name="tllastyc"
+                                                        placeholder="If yes?:" readonly>
                                                 </div>
                                             </div>
                                         </td>
@@ -284,26 +335,29 @@ foreach ($auditors as $name) {
                             </div>
                         </div>
                         <div class="col-sm-6 form-group float-label-control">
-                                <label>Appointed By:</label> 
-                                <input type="text" class="appointedby" id="appointedby" name="appointedby" placeholder="Appointed By:" required>
-                            </div>
+                            <label>Appointed By:</label>
+                            <input type="text" class="appointedby" id="appointedby" name="appointedby"
+                                placeholder="Appointed By:" required>
+                        </div>
                         <div class="col-sm-6 form-group float-label-control">
-                                <label>AITF-MCL Designation:</label> 
-                                <input type="text" class="mcldesignation" id="mcldesignation" name="mcldesignation" placeholder="AITF-MCL Designation:" required>
-                            </div>
+                            <label>AITF-MCL Designation:</label>
+                            <input type="text" class="mcldesignation" id="mcldesignation" name="mcldesignation"
+                                placeholder="AITF-MCL Designation:" required>
+                        </div>
                         <div class="row">
                             <div class="col-sm-12 ">
                                 <div id="teamLeaderError" style="display: none">
-                                    <small><span id="teamLeaderErrorMsg" style="color: #c9513c; font-style: italic;"></span></small>
+                                    <small><span id="teamLeaderErrorMsg"
+                                            style="color: #c9513c; font-style: italic;"></span></small>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
                 <input type="hidden" class="tllast" name="tllast" id="tllast" value="">
-                <input type="hidden" class="auditorNameHidden" name="auditorNameHidden" value=""> 
+                <input type="hidden" class="auditorNameHidden" name="auditorNameHidden" value="">
                 <input type="hidden" class="auditorCategoryHidden" name="auditorCategoryHidden" value="">
-                <input type="hidden" class="auditorWorkHidden" name="auditorWorkHidden" value=""> 
+                <input type="hidden" class="auditorWorkHidden" name="auditorWorkHidden" value="">
                 <input type="hidden" class="auditDatesHidden" name="auditDatesHidden" value="">
                 <input type="hidden" class="auditorAcceptanceHidden" name="auditorAcceptanceHidden" value="">
                 <input type="hidden" class="audit-noti-id-edit" name="audit-noti-id-edit" value="">
@@ -320,7 +374,8 @@ foreach ($auditors as $name) {
                     For previous two services act as Lead Auditor</span>
             </div>
             <div style="padding: 3px;">
-                <button title="Click here to close" class="btn btn-primary btn-round btn-round-sm btn-sm confirm-ok">Ok</button>                    
+                <button title="Click here to close"
+                    class="btn btn-primary btn-round btn-round-sm btn-sm confirm-ok">Ok</button>
             </div>
         </div>
     </div>
@@ -401,7 +456,7 @@ foreach ($auditors as $name) {
             autoclose: true
         });
         $("#intimationDate").keydown(function (e) {
-//            e.preventDefault();
+            //            e.preventDefault();
         });
 
         $('#intimationDateEdit').datepicker({
@@ -414,7 +469,7 @@ foreach ($auditors as $name) {
             autoclose: true
         });
         $("#intimationDateEdit").keydown(function (e) {
-//            e.preventDefault();
+            //            e.preventDefault();
         });
 
         $(document).on('focus', ".auditDates", function () {
@@ -455,7 +510,7 @@ foreach ($auditors as $name) {
             autoclose: true
         });
         $("#auditNotiRevDate").keydown(function (e) {
-//            e.preventDefault();
+            //            e.preventDefault();
         });
 
         $('#auditNotiIsueDate').datepicker({
@@ -468,7 +523,7 @@ foreach ($auditors as $name) {
             autoclose: true
         });
         $("#auditNotiIsueDate").keydown(function (e) {
-//            e.preventDefault();
+            //            e.preventDefault();
         });
 
         $('#editAuditNotiRevDate').datepicker({
@@ -481,7 +536,7 @@ foreach ($auditors as $name) {
             autoclose: true
         });
         $("#editAuditNotiRevDate").keydown(function (e) {
-//            e.preventDefault();
+            //            e.preventDefault();
         });
 
         $('#editAuditNotiIsueDate').datepicker({
@@ -494,7 +549,7 @@ foreach ($auditors as $name) {
             autoclose: true
         });
         $("#editAuditNotiIsueDate").keydown(function (e) {
-//            e.preventDefault();
+            //            e.preventDefault();
         });
     });
 
@@ -515,7 +570,7 @@ foreach ($auditors as $name) {
                 },
                 async: false,
                 success: function (data) {
-//		                alert(data);	                    
+                    //		                alert(data);	                    
                     if (data == 1) {
                         $('#intimationDateEditErrorMsg').text("Date should be greater than or equal to assessment planning date");
                         $('#intimationDateEditError').show();
@@ -532,17 +587,18 @@ foreach ($auditors as $name) {
             $('#intimationDateEdit').removeClass('inputHighlight');
         }
 
-        $('.auditDatesEdit').each(function() {
-if (($('.auditDatesEdit').val() != "") && 
-    moment($('#intimationDateEdit').val(), "DD.MM.YYYY") >= moment($('.auditDatesEdit').val(), "DD.MM.YYYY")) {
-    $('#auditDatesEditErrorMsg').text("Date should be greater than intimation date");
-    $('#auditDatesEditError').show();
-    $('#auditDatesEdit').addClass('inputHighlight');
-    $isError = true;
-} else {
-    $('#auditDatesEditError').hide();
-    $('#auditDatesEdit').removeClass('inputHighlight');
-}});
+        $('.auditDatesEdit').each(function () {
+            if (($('.auditDatesEdit').val() != "") &&
+                moment($('#intimationDateEdit').val(), "DD.MM.YYYY") >= moment($('.auditDatesEdit').val(), "DD.MM.YYYY")) {
+                $('#auditDatesEditErrorMsg').text("Date should be greater than intimation date");
+                $('#auditDatesEditError').show();
+                $('#auditDatesEdit').addClass('inputHighlight');
+                $isError = true;
+            } else {
+                $('#auditDatesEditError').hide();
+                $('#auditDatesEdit').removeClass('inputHighlight');
+            }
+        });
         return $isError;
     }
 
@@ -563,7 +619,7 @@ if (($('.auditDatesEdit').val() != "") &&
                 },
                 async: false,
                 success: function (data) {
-//		                alert(data);	                    
+                    //		                alert(data);	                    
                     if (data == 1) {
                         $('#intimationDateErrorMsg').text("Date should be greater than or equal to assessment planning date");
                         $('#intimationDateError').show();
@@ -580,17 +636,18 @@ if (($('.auditDatesEdit').val() != "") &&
             $('#intimationDate').removeClass('inputHighlight');
         }
 
-        $('.auditDates').each(function() {
-if (($('.auditDates').val() != "") && 
-    moment($('#intimationDate').val(), "DD.MM.YYYY") >= moment($('.auditDates').val(), "DD.MM.YYYY")) {
-    $('#auditDatesErrorMsg').text("Date should be greater than intimation date");
-    $('#auditDatesError').show();
-    $('#auditDates').addClass('inputHighlight');
-    $isError = true;
-} else {
-    $('#auditDatesError').hide();
-    $('#auditDates').removeClass('inputHighlight');
-}});
+        $('.auditDates').each(function () {
+            if (($('.auditDates').val() != "") &&
+                moment($('#intimationDate').val(), "DD.MM.YYYY") >= moment($('.auditDates').val(), "DD.MM.YYYY")) {
+                $('#auditDatesErrorMsg').text("Date should be greater than intimation date");
+                $('#auditDatesError').show();
+                $('#auditDates').addClass('inputHighlight');
+                $isError = true;
+            } else {
+                $('#auditDatesError').hide();
+                $('#auditDates').removeClass('inputHighlight');
+            }
+        });
         if ($(".tllast").val() == "") {
             $('#teamLeaderErrorMsg').text("Please select atleast one checkbox");
             $('#teamLeaderError').show();
@@ -607,12 +664,12 @@ if (($('.auditDates').val() != "") &&
     $rowCB = 1;
     $(document).ready(function () {
 
-//        $(".addAuditNoti").click(function (e) {
-//            if (validateStage1()) {
-//                e.preventDefault();
-//                return;
-//            }
-//        });
+        //        $(".addAuditNoti").click(function (e) {
+        //            if (validateStage1()) {
+        //                e.preventDefault();
+        //                return;
+        //            }
+        //        });
 
         $(".newAuditDate").click(function () {
             $(".newAuditDates").append('<div class="row newAuditRowParent">\n\
@@ -638,17 +695,17 @@ if (($('.auditDates').val() != "") &&
                                 </div>');
         });
 
-//        $('body').on('change',".contractAuditorName", function (){
-//            alert($(this).val());
-//        });
+        //        $('body').on('change',".contractAuditorName", function (){
+        //            alert($(this).val());
+        //        });
 
         $('body').on("click", ".removeAuditDate", function () {
-//        alert("Atleast one action item required");
+            //        alert("Atleast one action item required");
             $(this).parent("div.deleteNewAuditParent").parent('div.newAuditRowParent').remove();
         });
 
         $('body').on("click", ".removeAuditDateEdit", function () {
-//        alert("Atleast one action item required");
+            //        alert("Atleast one action item required");
             $(this).parent("div.deleteNewAuditParentEdit").parent('div.newAuditRowParentEdit').remove();
         });
 
@@ -702,29 +759,27 @@ if (($('.auditDates').val() != "") &&
                     svcID: $(this).attr('data-service'),
                     svcids: $(this).attr('data-service1'),
                 },
-                success: function (data)
-                {
+                success: function (data) {
                     $('.auditForOrg').val(data[0]['customer_name']);
                     $('.auditLocation').val(data[0]['address']);
                     $('.auditTelephone').val(data[0]['contact']);
                     $('.auditEmail').val(data[0]['email_id']);
                     $('.auditReferance').val(data[3]['aggrement_no']);
                     $('.auditContactPerson').val(data[0]['contact_person']);
-//                    $('.auditDates').val(moment(data[1]['application_date']).format('DD.MM.YYYY'));
+                    //                    $('.auditDates').val(moment(data[1]['application_date']).format('DD.MM.YYYY'));
                     $('.auditStandard').val(data[1]['certification']);
                     $('input[type="text"]').trigger('change');
                     $('.auditLocation').trigger('change');
                     $('#auditNotification').modal('show');
                 },
-                error: function (data, status, err)
-                {
+                error: function (data, status, err) {
                     alert(status);
                 }
             });
         });
 
         $(".contractAuditorName").change(function () {
-//            alert($(this).val());
+            //            alert($(this).val());
             $.ajax({
                 url: "getNotificationInfo.php",
                 type: "GET",
@@ -733,9 +788,8 @@ if (($('.auditDates').val() != "") &&
                     customerid: $customerid,
                     auditorid: $(this).val(),
                 },
-                success: function (data)
-                {
-//                    alert(data);
+                success: function (data) {
+                    //                    alert(data);
                     if (data == '2') {
                         $("#auditor-details").show();
                         $('.confirm-ok').click(function () {
@@ -744,14 +798,13 @@ if (($('.auditDates').val() != "") &&
                         $(".contractAuditorName").val("");
                     }
                 },
-                error: function (data, status, err)
-                {
+                error: function (data, status, err) {
                     // Suppress debug alert; keep silent on error
                 }
             });
         });
 
-        
+
         $('.editAuditNotification').click(function () {
             $('.audit-noti-id-edit').val($(this).attr('data-notification'));
             $('.audit-noti-service').val($(this).attr('data-service1'));
@@ -767,8 +820,7 @@ if (($('.auditDates').val() != "") &&
                     notificationId: $(this).attr('data-notification'),
                     serviceid: $(this).attr('data-service')
                 },
-                success: function (data)
-                {
+                success: function (data) {
                     $(".auditSubject").val(data[0]['audit_subject']);
                     $('.auditForOrg').val(data[0]['for_org']);
 
@@ -799,12 +851,12 @@ if (($('.auditDates').val() != "") &&
                         var auditDate = auditDatesSource.split(',');
                         var auditDateLen = auditDate.length;
                         var max = (Math.max(auditDateLen));
-//                    alert(personLen);
+                        //                    alert(personLen);
                         for (var key = 0; key < max; key++) {
-//                        alert(auditDate[key]);
+                            //                        alert(auditDate[key]);
                             //                        var no=contact[key];                        
                             var no = key <= auditDateLen && auditDate[key] != null && String(auditDate[key]).trim() !== "" ? formatStage1DateValue(auditDate[key]) : "";
-//                        alert(no);
+                            //                        alert(no);
                             if (no === "") {
                                 continue;
                             }
@@ -824,16 +876,16 @@ if (($('.auditDates').val() != "") &&
                         }
                     }
                     var allAuditors = ("<?php echo $allAuditors; ?>");
-//                    var auditors = allAuditors.split(',');
-//                    var option = "";
-//                    for (var key in auditors) {
-//                        if (auditors[key] != null && auditors[key] != "") {
-//                            option += '<option value="' + auditors[key] + '">' + auditors[key] + '</option>';
-//                        }
-//                    }
+                    //                    var auditors = allAuditors.split(',');
+                    //                    var option = "";
+                    //                    for (var key in auditors) {
+                    //                        if (auditors[key] != null && auditors[key] != "") {
+                    //                            option += '<option value="' + auditors[key] + '">' + auditors[key] + '</option>';
+                    //                        }
+                    //                    }
 
                     var allAuditorsid = ("<?php echo $allAuditorsid ?>");
-//            alert(allAuditorsid);
+                    //            alert(allAuditorsid);
                     var auditorid = allAuditorsid.split(',');
                     var allAuditoridLen = auditorid.length;
 
@@ -867,16 +919,16 @@ if (($('.auditDates').val() != "") &&
                     $(".removable_auditor_info").remove();
                     for (var key in data[1]) {
                         $rowCounter++;
-                        if(key == 0){
+                        if (key == 0) {
                             $(".contractAuditorName").val(data[1][0]['auditor_id']);
                             $(".auditorCategory").val(data[1][0]['auditor_category']);
                             $(".auditorWork").val(data[1][0]['audit_wokrdays']);
                             $(".auditorAcceptance").val(data[1][0]['auditor_acceptance']);
                         } else {
-                        var option2 = '<option value="' + data[1][key]['auditor_id'] + '"selected>' + data[1][key]['auditor_name'] + '</option>';
-                        var option3 = '<option value="' + data[1][key]['audit_contact'] + '"selected>' + data[1][key]['auditor_name'] + ' - ' + data[1][key]['audit_contact'] + '</option>';
-//                        var option2 = '<option value="' + data[1][key]['auditor_name'] + '"selected>' + data[1][key]['auditor_name'] + '</option>';
-                        $('.editedNotification').append('<tr class="audit_subsection removable_auditor_info" id="cb_subsection_0" style="display: ">\n\
+                            var option2 = '<option value="' + data[1][key]['auditor_id'] + '"selected>' + data[1][key]['auditor_name'] + '</option>';
+                            var option3 = '<option value="' + data[1][key]['audit_contact'] + '"selected>' + data[1][key]['auditor_name'] + ' - ' + data[1][key]['audit_contact'] + '</option>';
+                            //                        var option2 = '<option value="' + data[1][key]['auditor_name'] + '"selected>' + data[1][key]['auditor_name'] + '</option>';
+                            $('.editedNotification').append('<tr class="audit_subsection removable_auditor_info" id="cb_subsection_0" style="display: ">\n\
                                                         <td class="" width="20%" style="padding:2px;">\n\
                                                         <div class="table-edit-control">\n\
                                                           <select data-row-id="" class="contractAuditorName form-control" id="contractAuditorName" name="contractAuditorName">\n\
@@ -890,36 +942,34 @@ if (($('.auditDates').val() != "") &&
             <select class="auditorCategory form-control" id="auditorCategory" name="auditorCategory" required>\n\
                 <option value="">Choose Category</option>\n\
                 <?php foreach ($category as $name) { ?>
-                    <option value="<?php echo $name['categories_name'] ?>"><?php echo $name['categories_name'] ?></option>\n\
-                <?php } ?>\n\
-            </select>\n\
-        </div>\n\
-    </td>\n\
-                                                        <td class="" width="20%" style="padding:2px;">\n\
-                                                        <div class="table-edit-control">\n\
-                                                        <input type="text" min="1" data-row-id="" class="auditorWork" id="auditorWork" name="auditorWorkii" value="' + data[1][key]['audit_wokrdays'] + '" placeholder="">\n\
-                                                        </div>\n\
-                                                        </td>\n\
-                                                        <td class="" width="20%" style="padding:2px;">\n\
-                                                        <div class="table-edit-control">\n\
-                                                        <select class="auditorAcceptance form-control" id="auditorAcceptance" name="auditorAcceptance" >\n\
-                                                        <option value="' + data[1][key]['auditor_acceptance'] + '">' + data[1][key]['auditor_acceptance'] + '</option><option value="">Select</option><option value="Yes">Yes</option><option value="No">No</option></select></div>\n\
-                                                        </td>\n\
-                                                        <td class="" width="10%" style="padding:2px;">\
-        <button class="btn btn-danger removeRowButton">Remove</button>\
-    </td>\
-                                                        </tr>');
+                                    < option value = "<?php echo $name['categories_name'] ?>" > <?php echo $name['categories_name'] ?></option >\n\
+                                <?php } ?>\n\
+            </select >\n\
+        </div >\n\
+    </td >\n\
+                                <td class="" width="20%" style="padding:2px;">\n\
+                                    <div class="table-edit-control">\n\
+                                        <input type="text" min="1" data-row-id="" class="auditorWork" id="auditorWork" name="auditorWorkii" value="' + data[1][key]['audit_wokrdays'] + '" placeholder="">\n\
+                                    </div>\n\
+                                </td>\n\
+                                <td class="" width="20%" style="padding:2px;">\n\
+                                    <div class="table-edit-control">\n\
+                                        <select class="auditorAcceptance form-control" id="auditorAcceptance" name="auditorAcceptance" >\n\
+                                            <option value="' + data[1][key]['auditor_acceptance'] + '">' + data[1][key]['auditor_acceptance'] + '</option><option value="">Select</option><option value="Yes">Yes</option><option value="No">No</option></select></div>\n\
+                                </td>\n\
+                                <td class="" width="10%" style="padding:2px;">\
+                                    <button class="btn btn-danger removeRowButton">Remove</button>\
+                                </td>\
+                                                        </tr > ');
                                                         const newAuditorCategorySelect = $('.editedNotification').find('.auditorCategory').last();
-newAuditorCategorySelect.val(data[1][key]['auditor_category']);
+                            newAuditorCategorySelect.val(data[1][key]['auditor_category']);
 
-                    }
-                    }$rowCB = $rowCounter;
-//                    alert(data[0]["auditor_check_last_two"]);
-                    if (data[0]["auditor_check_last_two"] == "YES")
-                    {
+                        }
+                    } $rowCB = $rowCounter;
+                    //                    alert(data[0]["auditor_check_last_two"]);
+                    if (data[0]["auditor_check_last_two"] == "YES") {
                         $('.tllasty').prop("checked", true);
-                    } else if (data[0]["auditor_check_last_two"] == "NO")
-                    {
+                    } else if (data[0]["auditor_check_last_two"] == "NO") {
                         $('.tllastn').prop("checked", true);
                     }
                     $('.tllast').val(data[0]["auditor_check_last_two"]);
@@ -931,8 +981,7 @@ newAuditorCategorySelect.val(data[1][key]['auditor_category']);
 
                     $('#auditNotification').modal('show');
                 },
-                error: function (data, status, err)
-                {
+                error: function (data, status, err) {
                     alert(status);
                 }
             });
@@ -945,7 +994,7 @@ newAuditorCategorySelect.val(data[1][key]['auditor_category']);
                 auditDatesEditArrayEdit.push($(this).val());
             });
             $('.auditDatesEditHiddenEdit').val(auditDatesEditArrayEdit.join(", "));
-//            alert($('.auditDatesEditHiddenEdit').val());
+            //            alert($('.auditDatesEditHiddenEdit').val());
             var auditorNameArrayEdit = [];
             $('.auditorNameEdit').each(function () {
                 auditorNameArrayEdit.push($(this).val());
@@ -969,7 +1018,7 @@ newAuditorCategorySelect.val(data[1][key]['auditor_category']);
                 auditorAcceptanceArrayEdit.push($(this).val());
             });
             $('.auditorAcceptanceHiddenEdit').val(auditorAcceptanceArrayEdit.join("~"));
-//            alert($('.auditorContactHiddenEdit').val());
+            //            alert($('.auditorContactHiddenEdit').val());
 
             if (validateStage1edit()) {
                 e.preventDefault();
@@ -980,7 +1029,7 @@ newAuditorCategorySelect.val(data[1][key]['auditor_category']);
         $(document.body).on('click', '.addAuditLink', function () {
 
             var allAuditorsid = ("<?php echo $allAuditorsid ?>");
-//            alert(allAuditorsid);
+            //            alert(allAuditorsid);
             var auditorid = allAuditorsid.split(',');
             var allAuditoridLen = auditorid.length;
 
@@ -1015,24 +1064,26 @@ newAuditorCategorySelect.val(data[1][key]['auditor_category']);
             cell4.style.padding = "0px";
 
             cell1.innerHTML = '<div class="table-edit-control"><label></label> ' + autitorsSelect + '</div>';
-            cell2.innerHTML = '<div class="table-edit-control"><label></label><select class="auditorCategory form-control" id="auditorCategory" name="auditorCategory"><?php foreach ($category as $name) { ?><option value="<?php echo $name['categories_name'] ?>" <?php if ($name['categories_name'] == $selectedCategoryId) { echo 'selected'; } ?>><?php echo $name['categories_name'] ?></option><?php } ?></select></div>';
+            cell2.innerHTML = '<div class="table-edit-control"><label></label><select class="auditorCategory form-control" id="auditorCategory" name="auditorCategory"><?php foreach ($category as $name) { ?><option value="<?php echo $name['categories_name'] ?>" <?php if ($name['categories_name'] == $selectedCategoryId) {
+                        echo 'selected';
+                    } ?>><?php echo $name['categories_name'] ?></option><?php } ?></select></div>';
             cell3.innerHTML = '<div class="table-edit-control"><label></label><input type="text" min="1" data-row-id="" class="auditorWork" id="auditorWork"  name="auditorWork" placeholder="" /></div>';
             cell4.innerHTML = '<div class="table-edit-control"><select class="auditorAcceptance form-control" id="auditorAcceptance" name="auditorAcceptance" required><option value="">Select</option><option value="Yes">Yes</option><option value="No">No</option></select></div>';
 
             row.className = "audit_subsection";
             let removeButton = document.createElement('button');
-        removeButton.textContent = 'Remove';
-        removeButton.classList.add('btn', 'btn-sm', 'btn-danger', 'removeRowButton');
+            removeButton.textContent = 'Remove';
+            removeButton.classList.add('btn', 'btn-sm', 'btn-danger', 'removeRowButton');
 
-        // Insert the button into the last cell of the new row
-        row.insertCell(-1).appendChild(removeButton);
-        $rowCB = $count;
-});
-$(document).on('click', '.removeRowButton', function() {
-    $count = $rowCB - 1;
-        $(this).closest('tr').remove();
-        $rowCB = $count;
-    });
+            // Insert the button into the last cell of the new row
+            row.insertCell(-1).appendChild(removeButton);
+            $rowCB = $count;
+        });
+        $(document).on('click', '.removeRowButton', function () {
+            $count = $rowCB - 1;
+            $(this).closest('tr').remove();
+            $rowCB = $count;
+        });
 
         $('.addAuditNoti').click(function (e) {
             if (validateStage1()) {
@@ -1048,11 +1099,11 @@ $(document).on('click', '.removeRowButton', function() {
 
             var auditorNameArray = [];
             $('.contractAuditorName').each(function () {
-//                alert($(this).val());
+                //                alert($(this).val());
                 auditorNameArray.push($(this).val());
             });
             $('.auditorNameHidden').val(auditorNameArray.join("~"));
-//            alert($('.auditorNameHidden').val());
+            //            alert($('.auditorNameHidden').val());
 
             var auditorCategoryArray = [];
             $('.auditorCategory').each(function () {

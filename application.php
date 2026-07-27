@@ -3,23 +3,16 @@ require_once './dbConnect.php';
 require_once __DIR__ . '/include/env_helper.php';
 $indiaTz = new DateTimeZone('Asia/Kolkata');
 date_default_timezone_set('Asia/Kolkata');
-$recaptchaHelperPath = __DIR__ . '/include/recaptcha_helper.php';
-if (file_exists($recaptchaHelperPath)) {
-    require_once $recaptchaHelperPath;
+$turnstileHelperPath = __DIR__ . '/include/turnstile_helper.php';
+if (file_exists($turnstileHelperPath)) {
+    require_once $turnstileHelperPath;
 }
 
-$recaptchaConfig = function_exists('aitf_get_recaptcha_config') ? aitf_get_recaptcha_config() : [
+$turnstileConfig = function_exists('aitf_get_turnstile_config') ? aitf_get_turnstile_config() : [
     'site_key' => '',
-    'secret_key' => '',
-    'version' => 'v3',
-    'action' => 'submit',
-    'minimum_score' => 0.5,
-    'theme' => 'light',
-    'enabled' => false
+    'secret_key' => ''
 ];
-$recaptchaReady = function_exists('aitf_is_recaptcha_ready') ? aitf_is_recaptcha_ready() : false;
-$recaptchaBypass = function_exists('aitf_should_bypass_recaptcha') ? aitf_should_bypass_recaptcha() : false;
-$recaptchaFrontendEnabled = $recaptchaReady && !$recaptchaBypass;
+$turnstileReady = function_exists('aitf_is_turnstile_ready') ? aitf_is_turnstile_ready() : false;
 
 $success_message = '';
 $error_message = '';
@@ -212,13 +205,13 @@ if (isset($db)) {
         $contact_person = getOnlineAuditPostValue('contact_person');
         $phone = getOnlineAuditPostValue('phone');
         $email = getOnlineAuditPostValue('email');
-        $recaptchaToken = trim($_POST['g-recaptcha-response'] ?? '');
+        $turnstileToken = trim($_POST['cf-turnstile-response'] ?? '');
 
         if ($org_name === '' || $contact_person === '' || $phone === '' || $email === '') {
             $error_message = 'Please fill in all required fields marked with *.';
         } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $error_message = 'Please enter a valid email address.';
-        } elseif (function_exists('aitf_verify_recaptcha') && !aitf_verify_recaptcha($recaptchaToken, $error_message)) {
+        } elseif (function_exists('aitf_verify_turnstile') && !aitf_verify_turnstile($turnstileToken, $error_message)) {
             if ($error_message === '') {
                 $error_message = 'Captcha verification failed. Please try again.';
             }
@@ -689,13 +682,8 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
 
 <head>
     <?php include './headSource.php'; ?>
-    <?php if ($recaptchaFrontendEnabled): ?>
-        <?php if (($recaptchaConfig['version'] ?? 'v2_checkbox') === 'v3'): ?>
-            <script
-                src="https://www.google.com/recaptcha/api.js?render=<?php echo urlencode($recaptchaConfig['site_key']); ?>"></script>
-        <?php else: ?>
-            <script src="https://www.google.com/recaptcha/api.js" async defer></script>
-        <?php endif; ?>
+    <?php if ($turnstileReady): ?>
+        <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <?php endif; ?>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap"
         rel="stylesheet">
@@ -992,14 +980,14 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
             border-radius: 14px;
         }
 
-        .captcha-wrap .g-recaptcha {
+        .captcha-wrap .cf-turnstile {
             max-width: 100%;
             display: flex;
             justify-content: center;
             width: 100%;
         }
 
-        .captcha-wrap .g-recaptcha>div {
+        .captcha-wrap .cf-turnstile>div {
             max-width: 100% !important;
             margin: 0 auto;
         }
@@ -1327,7 +1315,7 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                 font-size: 1.5rem !important;
             }
 
-            .captcha-wrap .g-recaptcha {
+            .captcha-wrap .cf-turnstile {
                 transform: scale(0.92);
                 transform-origin: center top;
             }
@@ -2466,22 +2454,14 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                                     </div>
                                     <div class="col-md-12" id="submit-area">
                                         <div class="captcha-wrap">
-                                            <?php if ($recaptchaBypass): ?>
-                                                <div class="captcha-help">Localhost mode detected, captcha is bypassed on
-                                                    this local machine.</div>
-                                            <?php elseif ($recaptchaReady && (($recaptchaConfig['version'] ?? 'v2_checkbox') === 'v2_checkbox')): ?>
-                                                <div class="g-recaptcha"
-                                                    data-sitekey="<?php echo htmlspecialchars($recaptchaConfig['site_key'], ENT_QUOTES, 'UTF-8'); ?>"
-                                                    data-theme="<?php echo htmlspecialchars($recaptchaConfig['theme'], ENT_QUOTES, 'UTF-8'); ?>"
+                                            <?php if ($turnstileReady): ?>
+                                                <div class="cf-turnstile"
+                                                    data-sitekey="<?php echo htmlspecialchars($turnstileConfig['site_key'], ENT_QUOTES, 'UTF-8'); ?>"
                                                     data-callback="applicationCaptchaSolved"
-                                                    data-expired-callback="applicationCaptchaExpired"></div>
-                                            <?php elseif ($recaptchaReady): ?>
-                                                <input type="hidden" name="g-recaptcha-response"
-                                                    id="application-recaptcha-token">
-                                                <div class="captcha-help">Spam protection is active. Your form will be
-                                                    verified automatically before submit.</div>
+                                                    data-expired-callback="applicationCaptchaExpired"
+                                                    data-error-callback="applicationCaptchaExpired"></div>
                                             <?php else: ?>
-                                                <div class="captcha-help">Captcha widget will appear after Google reCAPTCHA
+                                                <div class="captcha-help">Captcha widget will appear after Cloudflare Turnstile
                                                     keys are added in the `.env` file.</div>
                                             <?php endif; ?>
                                         </div>
@@ -2667,10 +2647,7 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
 
     <script>
         (function () {
-            var recaptchaVersion = <?php echo json_encode($recaptchaConfig['version'] ?? 'v2_checkbox'); ?>;
-            var recaptchaSiteKey = <?php echo json_encode($recaptchaConfig['site_key'] ?? ''); ?>;
-            var recaptchaAction = <?php echo json_encode($recaptchaConfig['action'] ?? 'submit'); ?>;
-            var recaptchaEnabled = <?php echo json_encode($recaptchaFrontendEnabled); ?>;
+            var turnstileEnabled = <?php echo json_encode($turnstileReady); ?>;
             var form = document.getElementById('online-application-form-main');
             if (!form) return;
 
@@ -2682,9 +2659,8 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
             var standardRows = document.getElementById('standard-rows');
             var addStandardRowBtn = document.getElementById('add-standard-row');
             var captchaStatus = document.getElementById('application-captcha-status');
-            var captchaBox = form.querySelector('.g-recaptcha');
-            var requiresVisibleCaptcha = Boolean(recaptchaEnabled && recaptchaVersion !== 'v3' && captchaBox);
-            var recaptchaSubmitting = false;
+            var captchaBox = form.querySelector('.cf-turnstile');
+            var requiresVisibleCaptcha = Boolean(turnstileEnabled && captchaBox);
             var allowedSupportExtensions = ['png', 'jpg', 'jpeg'];
             var allowedSupportMimes = ['image/png', 'image/jpeg', ''];
             var maxSupportFileSize = 5 * 1024 * 1024;
@@ -3018,7 +2994,8 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                 if (!requiresVisibleCaptcha) {
                     return true;
                 }
-                return typeof grecaptcha !== 'undefined' && grecaptcha.getResponse().trim() !== '';
+                var tokenField = form.querySelector('input[name="cf-turnstile-response"]');
+                return Boolean(tokenField && tokenField.value.trim() !== '');
             }
 
             function validateRequiredFields() {
@@ -3130,31 +3107,7 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                     otherField.value = buildOtherCertificatesText();
                 }
 
-                if (recaptchaEnabled && recaptchaVersion === 'v3') {
-                    var tokenField = document.getElementById('application-recaptcha-token');
-                    if (!recaptchaSubmitting) {
-                        e.preventDefault();
-                        if (typeof grecaptcha === 'undefined' || !recaptchaSiteKey) {
-                            alert('Captcha is not ready yet. Please wait a moment and try again.');
-                            return false;
-                        }
-                        grecaptcha.ready(function () {
-                            grecaptcha.execute(recaptchaSiteKey, { action: recaptchaAction }).then(function (token) {
-                                if (tokenField) {
-                                    tokenField.value = token;
-                                }
-                                recaptchaSubmitting = true;
-                                form.requestSubmit();
-                            }).catch(function () {
-                                alert('Captcha verification failed. Please try again.');
-                            });
-                        });
-                        return false;
-                    }
-                    recaptchaSubmitting = false;
-                }
-
-                if (recaptchaEnabled && recaptchaVersion !== 'v3' && captchaBox && typeof grecaptcha !== 'undefined' && grecaptcha.getResponse().trim() === '') {
+                if (turnstileEnabled && !isApplicationCaptchaComplete()) {
                     validateRequiredFields();
                     e.preventDefault();
                     return false;

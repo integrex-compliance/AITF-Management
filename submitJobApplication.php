@@ -2,9 +2,9 @@
 include 'dbConnect.php';
 date_default_timezone_set('Asia/Kolkata');
 
-$recaptchaHelperPath = __DIR__ . '/include/recaptcha_helper.php';
-if (file_exists($recaptchaHelperPath)) {
-    require_once $recaptchaHelperPath;
+$turnstileHelperPath = __DIR__ . '/include/turnstile_helper.php';
+if (file_exists($turnstileHelperPath)) {
+    require_once $turnstileHelperPath;
 }
 
 function redirectCareerWithError($message)
@@ -122,10 +122,10 @@ if (!in_array($applyFor, $allowedRoles, true)) {
     redirectCareerWithError('Please select Auditor or Facilitator in Apply For.');
 }
 
-$recaptchaToken = trim($_POST['g-recaptcha-response'] ?? '');
-$recaptchaError = '';
-if (function_exists('aitf_verify_recaptcha') && !aitf_verify_recaptcha($recaptchaToken, $recaptchaError)) {
-    redirectCareerWithError($recaptchaError !== '' ? $recaptchaError : 'Captcha verification failed. Please try again.');
+$turnstileToken = trim($_POST['cf-turnstile-response'] ?? '');
+$turnstileError = '';
+if (function_exists('aitf_verify_turnstile') && !aitf_verify_turnstile($turnstileToken, $turnstileError)) {
+    redirectCareerWithError($turnstileError !== '' ? $turnstileError : 'Captcha verification failed. Please try again.');
 }
 
 $resumePath = '';

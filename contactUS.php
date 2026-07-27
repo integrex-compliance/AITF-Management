@@ -1,21 +1,14 @@
 <?php
 require_once __DIR__ . '/include/env_helper.php';
-$recaptchaHelperPath = __DIR__ . '/include/recaptcha_helper.php';
-if (file_exists($recaptchaHelperPath)) {
-    require_once $recaptchaHelperPath;
+$turnstileHelperPath = __DIR__ . '/include/turnstile_helper.php';
+if (file_exists($turnstileHelperPath)) {
+    require_once $turnstileHelperPath;
 }
-$recaptchaConfig = function_exists('aitf_get_recaptcha_config') ? aitf_get_recaptcha_config() : [
+$turnstileConfig = function_exists('aitf_get_turnstile_config') ? aitf_get_turnstile_config() : [
     'site_key' => '',
-    'secret_key' => '',
-    'version' => 'v3',
-    'action' => 'submit',
-    'minimum_score' => 0.5,
-    'theme' => 'light',
-    'enabled' => false
+    'secret_key' => ''
 ];
-$recaptchaReady = function_exists('aitf_is_recaptcha_ready') ? aitf_is_recaptcha_ready() : false;
-$recaptchaBypass = function_exists('aitf_should_bypass_recaptcha') ? aitf_should_bypass_recaptcha() : false;
-$recaptchaFrontendEnabled = $recaptchaReady && !$recaptchaBypass;
+$turnstileReady = function_exists('aitf_is_turnstile_ready') ? aitf_is_turnstile_ready() : false;
 
 $successMsg = '';
 $errorMsg = '';
@@ -47,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $formData['services'] = isset($_POST['services']) && is_array($_POST['services'])
         ? array_values(array_intersect($serviceOptions, $_POST['services']))
         : [];
-    $recaptchaToken = trim($_POST['g-recaptcha-response'] ?? '');
+    $turnstileToken = trim($_POST['cf-turnstile-response'] ?? '');
 
     if (
         $formData['name'] === '' ||
@@ -62,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errorMsg = 'Please enter a valid email address.';
     } elseif (!preg_match('/^[0-9]{10,15}$/', preg_replace('/\D/', '', $formData['mobile']))) {
         $errorMsg = 'Please enter a valid mobile number (10-15 digits).';
-    } elseif (function_exists('aitf_verify_recaptcha') && !aitf_verify_recaptcha($recaptchaToken, $errorMsg)) {
+    } elseif (function_exists('aitf_verify_turnstile') && !aitf_verify_turnstile($turnstileToken, $errorMsg)) {
         if ($errorMsg === '') {
             $errorMsg = 'Captcha verification failed. Please try again.';
         }
@@ -193,13 +186,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <head>
     <?php include './headSource.php'; ?>
-    <?php if ($recaptchaFrontendEnabled): ?>
-        <?php if (($recaptchaConfig['version'] ?? 'v2_checkbox') === 'v3'): ?>
-            <script
-                src="https://www.google.com/recaptcha/api.js?render=<?php echo urlencode($recaptchaConfig['site_key']); ?>"></script>
-        <?php else: ?>
-            <script src="https://www.google.com/recaptcha/api.js" async defer></script>
-        <?php endif; ?>
+    <?php if ($turnstileReady): ?>
+        <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <?php endif; ?>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
         rel="stylesheet">
@@ -796,14 +784,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             border-radius: 14px;
         }
 
-        .captcha-wrap .g-recaptcha {
+        .captcha-wrap .cf-turnstile {
             max-width: 100%;
             display: flex;
             justify-content: center;
             width: 100%;
         }
 
-        .captcha-wrap .g-recaptcha>div {
+        .captcha-wrap .cf-turnstile>div {
             max-width: 100% !important;
             margin: 0 auto;
         }
@@ -1002,7 +990,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 align-items: center;
             }
 
-            .captcha-wrap .g-recaptcha {
+            .captcha-wrap .cf-turnstile {
                 transform: scale(0.92);
                 transform-origin: center top;
             }
@@ -1181,21 +1169,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     <div style="margin-top: 18px;">
                         <div class="captcha-wrap">
-                            <?php if ($recaptchaBypass): ?>
-                                <div class="captcha-help">Localhost mode detected, captcha is bypassed on this local
-                                    machine.</div>
-                            <?php elseif ($recaptchaReady && (($recaptchaConfig['version'] ?? 'v2_checkbox') === 'v2_checkbox')): ?>
-                                <div class="g-recaptcha"
-                                    data-sitekey="<?php echo htmlspecialchars($recaptchaConfig['site_key'], ENT_QUOTES, 'UTF-8'); ?>"
-                                    data-theme="<?php echo htmlspecialchars($recaptchaConfig['theme'], ENT_QUOTES, 'UTF-8'); ?>"
-                                    data-callback="contactCaptchaSolved" data-expired-callback="contactCaptchaExpired">
+                            <?php if ($turnstileReady): ?>
+                                <div class="cf-turnstile"
+                                    data-sitekey="<?php echo htmlspecialchars($turnstileConfig['site_key'], ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-callback="contactCaptchaSolved"
+                                    data-expired-callback="contactCaptchaExpired"
+                                    data-error-callback="contactCaptchaExpired">
                                 </div>
-                            <?php elseif ($recaptchaReady): ?>
-                                <input type="hidden" name="g-recaptcha-response" id="contact-recaptcha-token">
-                                <div class="captcha-help">Spam protection is active. Your form will be verified
-                                    automatically before submit.</div>
                             <?php else: ?>
-                                <div class="captcha-help">Captcha widget will appear after Google reCAPTCHA keys are added
+                                <div class="captcha-help">Captcha widget will appear after Cloudflare Turnstile keys are added
                                     in the `.env` file.</div>
                             <?php endif; ?>
                         </div>
@@ -1256,10 +1238,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php include './footerSource.php'; ?>
 
     <script>
-        const recaptchaVersion = <?php echo json_encode($recaptchaConfig['version'] ?? 'v2_checkbox'); ?>;
-        const recaptchaSiteKey = <?php echo json_encode($recaptchaConfig['site_key'] ?? ''); ?>;
-        const recaptchaAction = <?php echo json_encode($recaptchaConfig['action'] ?? 'submit'); ?>;
-        const recaptchaEnabled = <?php echo json_encode($recaptchaFrontendEnabled); ?>;
+        const turnstileEnabled = <?php echo json_encode($turnstileReady); ?>;
 
         // Floating contact toggle
         const floatingBtn = document.getElementById('floatingBtn');
@@ -1281,9 +1260,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         const submitOverlay = document.getElementById('submitOverlay');
         const submitBtn = document.querySelector('.submit-btn');
         const captchaStatus = document.getElementById('contact-captcha-status');
-        const captchaBox = contactForm ? contactForm.querySelector('.g-recaptcha') : null;
-        const requiresVisibleCaptcha = Boolean(recaptchaEnabled && recaptchaVersion !== 'v3' && captchaBox);
-        let recaptchaSubmitting = false;
+        const captchaBox = contactForm ? contactForm.querySelector('.cf-turnstile') : null;
+        const requiresVisibleCaptcha = Boolean(turnstileEnabled && captchaBox);
 
         function updateContactCaptchaState() {
             if (!submitBtn) {
@@ -1298,7 +1276,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 return;
             }
 
-            const captchaDone = typeof grecaptcha !== 'undefined' && grecaptcha.getResponse().trim() !== '';
+            const tokenField = contactForm.querySelector('input[name="cf-turnstile-response"]');
+            const captchaDone = Boolean(tokenField && tokenField.value.trim() !== '');
             submitBtn.disabled = !captchaDone;
             if (captchaStatus) {
                 captchaStatus.classList.toggle('show', !captchaDone);
@@ -1320,30 +1299,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             contactForm.addEventListener('submit', (event) => {
-                if (recaptchaEnabled && recaptchaVersion === 'v3') {
-                    const tokenField = document.getElementById('contact-recaptcha-token');
-                    if (!recaptchaSubmitting) {
-                        event.preventDefault();
-                        if (typeof grecaptcha === 'undefined' || !recaptchaSiteKey) {
-                            alert('Captcha is not ready yet. Please wait a moment and try again.');
-                            return;
-                        }
-                        grecaptcha.ready(() => {
-                            grecaptcha.execute(recaptchaSiteKey, { action: recaptchaAction }).then((token) => {
-                                if (tokenField) {
-                                    tokenField.value = token;
-                                }
-                                recaptchaSubmitting = true;
-                                contactForm.requestSubmit();
-                            }).catch(() => {
-                                alert('Captcha verification failed. Please try again.');
-                            });
-                        });
-                        return;
-                    }
-                    recaptchaSubmitting = false;
-                } else if (recaptchaEnabled) {
-                    if (captchaBox && typeof grecaptcha !== 'undefined' && grecaptcha.getResponse().trim() === '') {
+                if (turnstileEnabled) {
+                    const tokenField = contactForm.querySelector('input[name="cf-turnstile-response"]');
+                    if (!tokenField || tokenField.value.trim() === '') {
                         event.preventDefault();
                         updateContactCaptchaState();
                         submitOverlay.classList.remove('show');

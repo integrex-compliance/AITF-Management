@@ -1,36 +1,23 @@
 <?php
 session_start();
 
-$recaptchaHelperPath = __DIR__ . '/include/recaptcha_helper.php';
-if (file_exists($recaptchaHelperPath)) {
-    require_once $recaptchaHelperPath;
+$turnstileHelperPath = __DIR__ . '/include/turnstile_helper.php';
+if (file_exists($turnstileHelperPath)) {
+    require_once $turnstileHelperPath;
 }
 
-$recaptchaConfig = function_exists('aitf_get_recaptcha_config') ? aitf_get_recaptcha_config() : [
-    'site_key' => '6LcIHKksAAAAAAtYeQDQaBpCAyHjg4PIa7XKFMer',
-    'secret_key' => '6LcIHKksAAAAAFU1KUQ2X601xzZ-BJNbQAwVjYdA',
-    'version' => 'v2_checkbox',
-    'action' => 'submit',
-    'minimum_score' => 0.5,
-    'theme' => 'light',
-    'enabled' => false
+$turnstileConfig = function_exists('aitf_get_turnstile_config') ? aitf_get_turnstile_config() : [
+    'site_key' => '',
+    'secret_key' => ''
 ];
-$recaptchaReady = function_exists('aitf_is_recaptcha_ready') ? aitf_is_recaptcha_ready() : false;
-$recaptchaBypass = function_exists('aitf_should_bypass_recaptcha') ? aitf_should_bypass_recaptcha() : false;
-$recaptchaFrontendEnabled = $recaptchaReady && !$recaptchaBypass;
+$turnstileReady = function_exists('aitf_is_turnstile_ready') ? aitf_is_turnstile_ready() : false;
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <?php include './headSource.php'; ?>
-    <?php if ($recaptchaFrontendEnabled): ?>
-        <?php if (($recaptchaConfig['version'] ?? 'v2_checkbox') === 'v3'): ?>
-            <script
-                src="https://www.google.com/recaptcha/api.js?render=<?php echo urlencode($recaptchaConfig['site_key']); ?>"></script>
-        <?php else: ?>
-            <script src="https://www.google.com/recaptcha/api.js?onload=loginRecaptchaOnload&render=explicit" async
-                defer></script>
-        <?php endif; ?>
+    <?php if ($turnstileReady): ?>
+        <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <?php endif; ?>
     <title>AITF - Login</title>
     <!-- Font Awesome for icons -->
@@ -123,15 +110,15 @@ $recaptchaFrontendEnabled = $recaptchaReady && !$recaptchaBypass;
             text-align: center;
         }
 
-        #admin-login-recaptcha,
-        #client-login-recaptcha {
+        #admin-login-turnstile,
+        #client-login-turnstile {
             width: 100%;
             display: flex;
             justify-content: center;
         }
 
-        #admin-login-recaptcha>div,
-        #client-login-recaptcha>div {
+        #admin-login-turnstile>div,
+        #client-login-turnstile>div {
             margin: 0 auto;
         }
 
@@ -482,8 +469,8 @@ $recaptchaFrontendEnabled = $recaptchaReady && !$recaptchaBypass;
                 text-align: center;
             }
 
-            #admin-login-recaptcha,
-            #client-login-recaptcha {
+            #admin-login-turnstile,
+            #client-login-turnstile {
                 transform: scale(0.92);
                 transform-origin: center top;
             }
@@ -590,20 +577,19 @@ $recaptchaFrontendEnabled = $recaptchaReady && !$recaptchaBypass;
                             </button>
                         </div>
                         <div class="login-captcha-wrap">
-                            <?php if ($recaptchaBypass): ?>
-                                <div class="login-captcha-note">Captcha is temporarily disabled on this environment.</div>
-                            <?php elseif ($recaptchaReady && (($recaptchaConfig['version'] ?? 'v2_checkbox') === 'v2_checkbox')): ?>
-                                <div id="admin-login-recaptcha"></div>
-                            <?php elseif ($recaptchaReady): ?>
-                                <input type="hidden" name="g-recaptcha-response" id="admin-login-recaptcha-token">
-                                <div class="login-captcha-note">Login protection is active. Your request will be verified
-                                    automatically.</div>
+                            <?php if ($turnstileReady): ?>
+                                <div id="admin-login-turnstile" class="cf-turnstile"
+                                    data-sitekey="<?php echo htmlspecialchars($turnstileConfig['site_key'], ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-callback="adminLoginCaptchaSolved"
+                                    data-expired-callback="adminLoginCaptchaExpired"
+                                    data-error-callback="adminLoginCaptchaExpired"></div>
                             <?php else: ?>
-                                <div class="login-captcha-note">Captcha will be enabled after reCAPTCHA keys are configured.
+                                <div class="login-captcha-note">Captcha will be enabled after Cloudflare Turnstile keys are configured.
                                 </div>
                             <?php endif; ?>
                         </div>
-                        <input type="submit" value="Sign In" class="login-submit-btn" id="admin-login-submit">
+                        <input type="submit" value="Sign In" class="login-submit-btn" id="admin-login-submit"
+                            <?php if ($turnstileReady): ?>disabled<?php endif; ?>>
                     </form>
                 </div>
 
@@ -624,21 +610,20 @@ $recaptchaFrontendEnabled = $recaptchaReady && !$recaptchaBypass;
                             </button>
                         </div>
                         <div class="login-captcha-wrap">
-                            <?php if ($recaptchaBypass): ?>
-                                <div class="login-captcha-note">Captcha is temporarily disabled on this environment.</div>
-                            <?php elseif ($recaptchaReady && (($recaptchaConfig['version'] ?? 'v2_checkbox') === 'v2_checkbox')): ?>
-                                <div id="client-login-recaptcha"></div>
-                            <?php elseif ($recaptchaReady): ?>
-                                <input type="hidden" name="g-recaptcha-response" id="client-login-recaptcha-token">
-                                <div class="login-captcha-note">Login protection is active. Your request will be verified
-                                    automatically.</div>
+                            <?php if ($turnstileReady): ?>
+                                <div id="client-login-turnstile" class="cf-turnstile"
+                                    data-sitekey="<?php echo htmlspecialchars($turnstileConfig['site_key'], ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-callback="clientLoginCaptchaSolved"
+                                    data-expired-callback="clientLoginCaptchaExpired"
+                                    data-error-callback="clientLoginCaptchaExpired"></div>
                             <?php else: ?>
-                                <div class="login-captcha-note">Captcha will be enabled after reCAPTCHA keys are configured.
+                                <div class="login-captcha-note">Captcha will be enabled after Cloudflare Turnstile keys are configured.
                                 </div>
                             <?php endif; ?>
                         </div>
                         <input type="submit" name="login" class="login loginmodal-submit login-submit-btn"
-                            value="Sign In" id="client-login-submit">
+                            value="Sign In" id="client-login-submit"
+                            <?php if ($turnstileReady): ?>disabled<?php endif; ?>>
                     </form>
                 </div>
             </div>
@@ -652,68 +637,33 @@ $recaptchaFrontendEnabled = $recaptchaReady && !$recaptchaBypass;
     <?php include './footerSource.php'; ?>
 
     <script>
-        const recaptchaVersion = <?php echo json_encode($recaptchaConfig['version'] ?? 'v2_checkbox'); ?>;
-        const recaptchaSiteKey = <?php echo json_encode($recaptchaConfig['site_key'] ?? ''); ?>;
-        const recaptchaEnabled = <?php echo json_encode($recaptchaFrontendEnabled); ?>;
-        const recaptchaAction = <?php echo json_encode($recaptchaConfig['action'] ?? 'submit'); ?>;
-
-        let adminLoginWidgetId = null;
-        let clientLoginWidgetId = null;
+        const turnstileEnabled = <?php echo json_encode($turnstileReady); ?>;
 
         function loginUpdateButtonsState() {
             const adminBtn = document.getElementById('admin-login-submit');
             const clientBtn = document.getElementById('client-login-submit');
 
-            const requiresCheckbox = !!(recaptchaEnabled && recaptchaVersion !== 'v3');
-
-            if (!requiresCheckbox) {
+            if (!turnstileEnabled) {
                 if (adminBtn) adminBtn.disabled = false;
                 if (clientBtn) clientBtn.disabled = false;
                 return;
             }
 
-            if (typeof grecaptcha === 'undefined') {
-                if (adminBtn) adminBtn.disabled = true;
-                if (clientBtn) clientBtn.disabled = true;
-                return;
-            }
-
-            const adminDone = adminLoginWidgetId !== null && grecaptcha.getResponse(adminLoginWidgetId).trim() !== '';
-            const clientDone = clientLoginWidgetId !== null && grecaptcha.getResponse(clientLoginWidgetId).trim() !== '';
+            const adminForm = document.querySelector('#admin-login-turnstile')?.closest('form');
+            const clientForm = document.querySelector('#client-login-turnstile')?.closest('form');
+            const adminToken = adminForm ? adminForm.querySelector('input[name="cf-turnstile-response"]') : null;
+            const clientToken = clientForm ? clientForm.querySelector('input[name="cf-turnstile-response"]') : null;
+            const adminDone = Boolean(adminToken && adminToken.value.trim() !== '');
+            const clientDone = Boolean(clientToken && clientToken.value.trim() !== '');
 
             if (adminBtn) adminBtn.disabled = !adminDone;
             if (clientBtn) clientBtn.disabled = !clientDone;
         }
 
-        function loginRecaptchaOnload() {
-            if (!recaptchaEnabled || recaptchaVersion === 'v3' || typeof grecaptcha === 'undefined') {
-                return;
-            }
-
-            const adminContainer = document.getElementById('admin-login-recaptcha');
-            const clientContainer = document.getElementById('client-login-recaptcha');
-
-            if (adminContainer && adminLoginWidgetId === null) {
-                adminLoginWidgetId = grecaptcha.render(adminContainer, {
-                    sitekey: recaptchaSiteKey,
-                    callback: function () { loginUpdateButtonsState(); },
-                    'expired-callback': function () { loginUpdateButtonsState(); }
-                });
-            }
-
-            if (clientContainer && clientLoginWidgetId === null) {
-                clientLoginWidgetId = grecaptcha.render(clientContainer, {
-                    sitekey: recaptchaSiteKey,
-                    callback: function () { loginUpdateButtonsState(); },
-                    'expired-callback': function () { loginUpdateButtonsState(); }
-                });
-            }
-
-            loginUpdateButtonsState();
-            window.setInterval(loginUpdateButtonsState, 800);
-        }
-
-        window.loginRecaptchaOnload = loginRecaptchaOnload;
+        window.adminLoginCaptchaSolved = loginUpdateButtonsState;
+        window.adminLoginCaptchaExpired = loginUpdateButtonsState;
+        window.clientLoginCaptchaSolved = loginUpdateButtonsState;
+        window.clientLoginCaptchaExpired = loginUpdateButtonsState;
 
         document.addEventListener('DOMContentLoaded', function () {
             // Password toggle functionality
@@ -774,34 +724,13 @@ $recaptchaFrontendEnabled = $recaptchaReady && !$recaptchaBypass;
             forms.forEach(function (form) {
                 form.addEventListener('submit', function (e) {
                     var submitBtn = form.querySelector('input[type="submit"]');
-                    if (recaptchaEnabled && recaptchaVersion === 'v3') {
-                        var tokenField = form.querySelector('input[name="g-recaptcha-response"]');
-                        if (tokenField) {
+                    if (turnstileEnabled) {
+                        var tokenField = form.querySelector('input[name="cf-turnstile-response"]');
+                        if (!tokenField || tokenField.value.trim() === '') {
                             e.preventDefault();
-                            if (submitBtn) {
-                                submitBtn.disabled = true;
-                            }
-                            showLoginLoader();
-                            if (!recaptchaSiteKey || typeof grecaptcha === 'undefined') {
-                                hideLoginLoader();
-                                if (submitBtn) {
-                                    submitBtn.disabled = false;
-                                }
-                                alert('Captcha is not ready yet. Please wait a moment and try again.');
-                                return;
-                            }
-                            grecaptcha.ready(function () {
-                                grecaptcha.execute(recaptchaSiteKey, { action: recaptchaAction }).then(function (token) {
-                                    tokenField.value = token;
-                                    form.submit();
-                                }).catch(function () {
-                                    hideLoginLoader();
-                                    if (submitBtn) {
-                                        submitBtn.disabled = false;
-                                    }
-                                    alert('Captcha verification failed. Please try again.');
-                                });
-                            });
+                            hideLoginLoader();
+                            loginUpdateButtonsState();
+                            alert('Please complete the captcha verification.');
                             return;
                         }
                     }
