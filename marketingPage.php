@@ -731,7 +731,7 @@
         <div class="page-content inset marketing-page">
             <div class="marketing-hero">
                 <h1>Marketing Follow-up Desk</h1>
-                <p>Latest service CDC date ke according time calculate ho raha hai. New, suspended, expired, withdrawn and canceled clients are grouped for faster follow-up.</p>
+        
                 <div class="marketing-hero-stats">
                     <div class="marketing-stat">
                         <b><?php echo number_format($totalActionClients); ?></b>
