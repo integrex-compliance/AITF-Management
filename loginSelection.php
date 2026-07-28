@@ -12,6 +12,9 @@ if ($loginNotice === '' && ($_GET['reason'] ?? '') === 'not_found') {
 if ($loginNotice === '' && ($_GET['reason'] ?? '') === 'login_required') {
     $loginNotice = 'Please log in again to continue.';
 }
+if ($loginNotice === '' && ($_GET['reason'] ?? '') === 'invalid_url') {
+    $loginNotice = 'Invalid URL. Please login again.';
+}
 unset($_SESSION['login_notice'], $_SESSION['login_error'], $_SESSION['session_expired']);
 
 $turnstileHelperPath = __DIR__ . '/include/turnstile_helper.php';

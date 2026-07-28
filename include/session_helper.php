@@ -40,13 +40,14 @@ if (!function_exists('aitf_start_session')) {
     function aitf_start_session()
     {
         $lifetime = aitf_session_lifetime();
-        ini_set('session.gc_maxlifetime', (string)$lifetime);
-        ini_set('session.cookie_lifetime', (string)$lifetime);
-        ini_set('session.use_strict_mode', '1');
-        ini_set('session.cookie_httponly', '1');
-        ini_set('session.cookie_samesite', 'Lax');
 
         if (session_status() !== PHP_SESSION_ACTIVE) {
+            ini_set('session.gc_maxlifetime', (string)$lifetime);
+            ini_set('session.cookie_lifetime', (string)$lifetime);
+            ini_set('session.use_strict_mode', '1');
+            ini_set('session.cookie_httponly', '1');
+            ini_set('session.cookie_samesite', 'Lax');
+
             $options = aitf_session_cookie_options();
             session_set_cookie_params([
                 'lifetime' => $lifetime,

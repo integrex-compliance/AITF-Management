@@ -297,10 +297,10 @@ function getFlatDate($inputStr)
             <li><a href="homePage.php" class="animate <?php echo $addClass ?>">CLIENTS<i
                         class="sub_icon fa fa-building fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
-        <!-- <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForUserMarketing() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForUserMarketing() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
             <li><a href="marketingPage.php" class="animate <?php echo $addMarketingClass ?>">MARKETING<i
                         class="sub_icon fa fa-briefcase fa-2x" style="vertical-align:middle"></i></a></li>
-        <?php } ?> -->
+        <?php } ?> 
         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForUserFinance() || Utitlity::checkForUserAdmin()) { ?>
             <li><a href="paymentPage.php" class="animate <?php echo $addFinanceClass ?>">PAYMENT<i
                         class="sub_icon fa fa-money fa-2x" style="vertical-align:middle"></i></a></li>
@@ -335,8 +335,8 @@ function getFlatDate($inputStr)
                         class="sub_icon fa fa-file-text-o fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForUserFinance() || Utitlity::checkForOfficeStaff()) { ?>
-            <!-- <li><a href="suppliers.php" class="animate <?php echo isset($addSuppliersClass) ? $addSuppliersClass : ''; ?>">SUPPLIERS<i
-                        class="sub_icon fa fa-address-card-o fa-2x" style="vertical-align:middle"></i></a></li> -->
+             <li><a href="suppliers.php" class="animate <?php echo isset($addSuppliersClass) ? $addSuppliersClass : ''; ?>">SUPPLIERS<i
+                        class="sub_icon fa fa-address-card-o fa-2x" style="vertical-align:middle"></i></a></li> 
         <?php } ?>
         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
             <li><a href="quotationPage.php" class="animate <?php echo $addquotClass ?>">QUOTATIONS<i
@@ -376,8 +376,8 @@ function getFlatDate($inputStr)
             <li><a href="auditorChecklist.php"
                     class="animate <?php echo isset($addAuditorChecklistClass) ? $addAuditorChecklistClass : ''; ?>">AUDIT-DATA<i
                         class="sub_icon fa fa-clipboard fa-2x" style="vertical-align:middle"></i></a></li>
-            <!-- <li><a href="goAi.php" class="animate <?php echo isset($addGoAiClass) ? $addGoAiClass : ''; ?>">GoAI<i
-                        class="sub_icon fa fa-magic fa-2x" style="vertical-align:middle"></i></a></li> -->
+            <li><a href="goAi.php" class="animate <?php echo isset($addGoAiClass) ? $addGoAiClass : ''; ?>">GoAI<i
+                        class="sub_icon fa fa-magic fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
     </ul>
 </div>
@@ -409,14 +409,14 @@ function getFlatDate($inputStr)
                                     </span>
                                     <span class="add-new-arrow"><i class="fa fa-angle-right"></i></span>
                                 </a>
-                                <!-- <a href="suppliers.php?add=1" class="add-new-item add-new-item-supplier">
+                                <a href="suppliers.php?add=1" class="add-new-item add-new-item-supplier">
                                     <span class="add-new-ico"><i class="fa fa-truck"></i></span>
                                     <span class="add-new-text">
                                         <span class="add-new-title">Add New Supplier</span>
                                         <span class="add-new-sub">Register a new supplier</span>
                                     </span>
                                     <span class="add-new-arrow"><i class="fa fa-angle-right"></i></span>
-                                </a> -->
+                                </a>
                             </div>
                         </div>
                     </div>

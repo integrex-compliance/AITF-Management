@@ -1,5 +1,5 @@
 -iute12-<!--<div id="wrapper" class="active">-->
-<div id="wrapper" class="">
+<div id="wrapper" class="active client-portal-layout">
     <?php
     include_once './header.php';
     include_once './dbConnect.php';
@@ -1248,6 +1248,13 @@
 </div>
 <script type="text/javascript">
     $(document).ready(function () {
+        $('#menu-toggle').off('click.clientPortalLock').on('click.clientPortalLock', function (e) {
+            e.preventDefault();
+            $('#wrapper').addClass('active client-portal-layout');
+            $('.container').addClass('active');
+        });
 
+        $('#wrapper').addClass('active client-portal-layout');
+        $('.container').addClass('active');
     });
 </script>

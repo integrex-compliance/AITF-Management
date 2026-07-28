@@ -1,3 +1,15 @@
+<?php
+require_once __DIR__ . '/include/session_helper.php';
+aitf_start_session();
+
+$currentRole = strtolower(trim((string) ($_SESSION['role'] ?? '')));
+if ($currentRole === 'client') {
+    $_SESSION['login_error'] = true;
+    $_SESSION['login_notice'] = 'Invalid URL. Please login again.';
+    header('Location: loginSelection.php?reason=invalid_url');
+    exit;
+}
+?>
 <div id="wrapper" class="active">
     <?php
     include_once './header.php';
@@ -859,14 +871,7 @@
         // exit;
     }
 
-    // 2) Legacy links: customerAccount.php?customerid=123 -> store in session and redirect to this page (clean URL)
-    if (isset($_GET['customerid']) && !empty($_GET['customerid']) && strpos($_SERVER['REQUEST_URI'], 'customerAccount.php') !== false) {
-        $_SESSION['current_customer_id'] = (int) $_GET['customerid'];
-        // header("Location: customerAccount.php");
-        // exit;
-    }
-
-    // 3) For normal /account requests, hydrate $_GET['customerid'] from session if available
+    // 2) For normal /account requests, hydrate $_GET['customerid'] from session if available
     if ((!isset($_GET['customerid']) || empty($_GET['customerid'])) && isset($_SESSION['current_customer_id']) && !empty($_SESSION['current_customer_id'])) {
         $_GET['customerid'] = (int) $_SESSION['current_customer_id'];
     } else if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
@@ -874,7 +879,7 @@
         $_SESSION['current_customer_id'] = (int) $_GET['customerid'];
     }
 
-    // 4) If we still don't have a customer id, send the user back to the main dashboard
+    // 3) If we still don't have a customer id, send the user back to the main dashboard
     if (!isset($_GET['customerid']) || empty($_GET['customerid'])) {
         echo "<script>window.location.href='dashboard';</script>";
         exit;
