@@ -942,11 +942,11 @@ foreach ($auditors as $name) {
             <select class="auditorCategory form-control" id="auditorCategory" name="auditorCategory" required>\n\
                 <option value="">Choose Category</option>\n\
                 <?php foreach ($category as $name) { ?>
-                                    < option value = "<?php echo $name['categories_name'] ?>" > <?php echo $name['categories_name'] ?></option >\n\
-                                <?php } ?>\n\
-            </select >\n\
-        </div >\n\
-    </td >\n\
+                    <option value="<?php echo $name['categories_name'] ?>"><?php echo $name['categories_name'] ?></option>\n\
+                <?php } ?>
+            </select>\n\
+        </div>\n\
+    </td>\n\
                                 <td class="" width="20%" style="padding:2px;">\n\
                                     <div class="table-edit-control">\n\
                                         <input type="text" min="1" data-row-id="" class="auditorWork" id="auditorWork" name="auditorWorkii" value="' + data[1][key]['audit_wokrdays'] + '" placeholder="">\n\
@@ -960,7 +960,7 @@ foreach ($auditors as $name) {
                                 <td class="" width="10%" style="padding:2px;">\
                                     <button class="btn btn-danger removeRowButton">Remove</button>\
                                 </td>\
-                                                        </tr > ');
+                                                        </tr> ');
                                                         const newAuditorCategorySelect = $('.editedNotification').find('.auditorCategory').last();
                             newAuditorCategorySelect.val(data[1][key]['auditor_category']);
 
@@ -1064,7 +1064,7 @@ foreach ($auditors as $name) {
             cell4.style.padding = "0px";
 
             cell1.innerHTML = '<div class="table-edit-control"><label></label> ' + autitorsSelect + '</div>';
-            cell2.innerHTML = '<div class="table-edit-control"><label></label><select class="auditorCategory form-control" id="auditorCategory" name="auditorCategory"><?php foreach ($category as $name) { ?><option value="<?php echo $name['categories_name'] ?>" <?php if ($name['categories_name'] == $selectedCategoryId) {
+            cell2.innerHTML = '<div class="table-edit-control"><label></label><select class="auditorCategory form-control" id="auditorCategory" name="auditorCategory" required><option value="">Choose Category</option><?php foreach ($category as $name) { ?><option value="<?php echo $name['categories_name'] ?>" <?php if ($name['categories_name'] == $selectedCategoryId) {
                         echo 'selected';
                     } ?>><?php echo $name['categories_name'] ?></option><?php } ?></select></div>';
             cell3.innerHTML = '<div class="table-edit-control"><label></label><input type="text" min="1" data-row-id="" class="auditorWork" id="auditorWork"  name="auditorWork" placeholder="" /></div>';

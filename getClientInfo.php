@@ -480,7 +480,7 @@ if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
             $totalDays = $totalDays + $days['audit_wokrdays'];
         }
 
-        $leadAuditorList = "SELECT * FROM stage_audit_one WHERE ca_service_id = :service and (`auditor_category` LIKE '%auditor%' OR `auditor_category` LIKE '%team leader%')";
+        $leadAuditorList = "SELECT * FROM stage_audit_one WHERE ca_service_id = :service";
         $statement = $db->prepare($leadAuditorList);
         $statement->bindParam(':service', $_GET['service_id']);
         $statement->execute();
@@ -744,7 +744,7 @@ if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
         $statement->execute();
         $lead_Auditor = $statement->fetch();
 
-        $leadAuditorList = "SELECT * FROM stage_audit_two WHERE service_id = :service and (`auditor_category` LIKE '%auditor%' OR `auditor_category` LIKE '%team leader%')";
+        $leadAuditorList = "SELECT * FROM stage_audit_two WHERE service_id = :service";
         $statement = $db->prepare($leadAuditorList);
         $statement->bindParam(':service', $_GET['service_ID']);
         $statement->execute();
@@ -757,7 +757,7 @@ if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
             $statement->execute();
             $lead_Auditor = $statement->fetch();
 
-            $leadAuditorList = "SELECT * FROM stage_audit_one WHERE ca_service_id = :service and (`auditor_category` LIKE '%auditor%' OR `auditor_category` LIKE '%team leader%')";
+            $leadAuditorList = "SELECT * FROM stage_audit_one WHERE ca_service_id = :service";
             $statement = $db->prepare($leadAuditorList);
             $statement->bindParam(':service', $_GET['service_ID']);
             $statement->execute();
@@ -1395,7 +1395,7 @@ if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
         $statement->execute();
         $auditDate = $statement->fetch();
 
-        $notificationRows = "SELECT * FROM stage_audit_one WHERE audit_stage_id = :id and (`auditor_category` LIKE '%auditor%' OR `auditor_category` LIKE '%team leader%')";
+        $notificationRows = "SELECT * FROM stage_audit_one WHERE audit_stage_id = :id";
         $statement = $db->prepare($notificationRows);
         $statement->bindParam(':id', $auditDate["audit_stage_id"]);
         $statement->execute();
