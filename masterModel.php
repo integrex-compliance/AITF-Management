@@ -399,6 +399,262 @@ $iafList = $statement->fetchAll();
         });
     });
 </script>
+
+<!-- Standards Add/Edit Modal -->
+<div class="modal fade standardsAddModal" tabindex="-1" role="dialog" aria-labelledby="standardsModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">
+                    <span aria-hidden="true">x</span><span class="sr-only">Close</span>
+                </button>
+                <h4 class="modal-title" id="standardsModalLabel">Add Standard</h4>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-sm-12 form-group float-label-control">
+                        <label>Standard Name</label>
+                        <input type="text" name="newStandardsInput" class="form-control newStandardsInput" id="newStandardsInput" placeholder="Standard Name" required>
+                    </div>
+                </div>
+                <div id="newStandardsError" style="display: none">
+                    <small><span id="newStandardsErrorMsg" style="color: #c9513c; font-style: italic;"></span></small>
+                </div>
+            </div>
+            <input type="hidden" class="standardId" name="standardId" value="">
+            <div class="modal-footer">
+                <a class="btn btn-info btn-sm createStandards"><i class="fa fa-check"></i> Save</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Accreditation Add/Edit Modal -->
+<div class="modal fade accreditationAddModal" tabindex="-1" role="dialog" aria-labelledby="accreditationModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">
+                    <span aria-hidden="true">x</span><span class="sr-only">Close</span>
+                </button>
+                <h4 class="modal-title" id="accreditationModalLabel">Add Accreditation</h4>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-sm-12 form-group float-label-control">
+                        <label>Accreditation Name</label>
+                        <input type="text" name="newAccreditationInput" class="form-control newAccreditationInput" id="newAccreditationInput" placeholder="Accreditation Name" required>
+                    </div>
+                </div>
+                <div id="newAccreditationError" style="display: none">
+                    <small><span id="newAccreditationErrorMsg" style="color: #c9513c; font-style: italic;"></span></small>
+                </div>
+            </div>
+            <input type="hidden" class="accreditationId" name="accreditationId" value="">
+            <div class="modal-footer">
+                <a class="btn btn-info btn-sm createAccreditation"><i class="fa fa-check"></i> Save</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Legal Status Add/Edit Modal -->
+<div class="modal fade legalStatusAddModal" tabindex="-1" role="dialog" aria-labelledby="legalStatusModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">
+                    <span aria-hidden="true">x</span><span class="sr-only">Close</span>
+                </button>
+                <h4 class="modal-title" id="legalStatusModalLabel">Add Legal Status</h4>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-sm-12 form-group float-label-control">
+                        <label>Legal Status</label>
+                        <input type="text" name="newLegalStatusInput" class="form-control newLegalStatusInput" id="newLegalStatusInput" placeholder="Legal Status" required>
+                    </div>
+                </div>
+                <div id="newLegalStatusError" style="display: none">
+                    <small><span id="newLegalStatusErrorMsg" style="color: #c9513c; font-style: italic;"></span></small>
+                </div>
+            </div>
+            <input type="hidden" class="legalStatusId" name="legalStatusId" value="">
+            <div class="modal-footer">
+                <a class="btn btn-info btn-sm createLegalStatus"><i class="fa fa-check"></i> Save</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Status Add/Edit Modal -->
+<div class="modal fade statusAddModal" tabindex="-1" role="dialog" aria-labelledby="statusModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">
+                    <span aria-hidden="true">x</span><span class="sr-only">Close</span>
+                </button>
+                <h4 class="modal-title" id="statusModalLabel">Add Status</h4>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-sm-12 form-group float-label-control">
+                        <label>Status</label>
+                        <input type="text" name="newStatusInput" class="form-control newStatusInput" id="newStatusInput" placeholder="Status" required>
+                    </div>
+                </div>
+                <div id="newStatusError" style="display: none">
+                    <small><span id="newStatusErrorMsg" style="color: #c9513c; font-style: italic;"></span></small>
+                </div>
+            </div>
+            <input type="hidden" class="statusId" name="statusId" value="">
+            <div class="modal-footer">
+                <a class="btn btn-info btn-sm createStatus"><i class="fa fa-check"></i> Save</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Categories Add/Edit Modal -->
+<div class="modal fade categoriesAddModal" tabindex="-1" role="dialog" aria-labelledby="categoriesModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">
+                    <span aria-hidden="true">x</span><span class="sr-only">Close</span>
+                </button>
+                <h4 class="modal-title" id="categoriesModalLabel">Add Category</h4>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-sm-12 form-group float-label-control">
+                        <label>Category Name</label>
+                        <input type="text" name="newcategoriesInput" class="form-control newcategoriesInput" id="newcategoriesInput" placeholder="Category Name" required>
+                    </div>
+                </div>
+                <div id="newcategoriesError" style="display: none">
+                    <small><span id="newcategoriesErrorMsg" style="color: #c9513c; font-style: italic;"></span></small>
+                </div>
+            </div>
+            <input type="hidden" class="categoriesId" name="categoriesId" value="">
+            <div class="modal-footer">
+                <a class="btn btn-info btn-sm createcategories"><i class="fa fa-check"></i> Save</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add-To Add/Edit Modal -->
+<div class="modal fade addtoAddModal" tabindex="-1" role="dialog" aria-labelledby="addtoModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">
+                    <span aria-hidden="true">x</span><span class="sr-only">Close</span>
+                </button>
+                <h4 class="modal-title" id="addtoModalLabel">Add Add-To</h4>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-sm-12 form-group float-label-control">
+                        <label>Add-To Type</label>
+                        <input type="text" name="newAddtoInput" class="form-control newAddtoInput" id="newAddtoInput" placeholder="Add-To Type" required>
+                    </div>
+                </div>
+                <div id="newAddToError" style="display: none">
+                    <small><span id="newAddToErrorMsg" style="color: #c9513c; font-style: italic;"></span></small>
+                </div>
+            </div>
+            <input type="hidden" class="addtoId" name="addtoId" value="">
+            <div class="modal-footer">
+                <a class="btn btn-info btn-sm createAddTo"><i class="fa fa-check"></i> Save</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Handler Add/Edit Modal -->
+<div class="modal fade handlerAddModal" tabindex="-1" role="dialog" aria-labelledby="handlerModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">
+                    <span aria-hidden="true">x</span><span class="sr-only">Close</span>
+                </button>
+                <h4 class="modal-title" id="handlerModalLabel">Add Handler</h4>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-sm-12 form-group float-label-control">
+                        <label>Handler Name</label>
+                        <input type="text" name="newHandlerInput" class="form-control newHandlerInput" id="newHandlerInput" placeholder="Handler Name" required>
+                    </div>
+                </div>
+                <div id="newHandlerError" style="display: none">
+                    <small><span id="newHandlerErrorMsg" style="color: #c9513c; font-style: italic;"></span></small>
+                </div>
+            </div>
+            <input type="hidden" class="handlerId" name="handlerId" value="">
+            <div class="modal-footer">
+                <a class="btn btn-info btn-sm createHandler"><i class="fa fa-check"></i> Save</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI Rule Add/Edit Modal -->
+<div class="modal fade aiRuleAddModal" tabindex="-1" role="dialog" aria-labelledby="aiRuleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">
+                    <span aria-hidden="true">x</span><span class="sr-only">Close</span>
+                </button>
+                <h4 class="modal-title" id="aiRuleModalLabel">Add AI Review Rule</h4>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-sm-3 form-group">
+                        <label>Rule Code <span style="color:red;">*</span></label>
+                        <input type="text" name="aiRuleCode" class="form-control aiRuleCode" placeholder="e.g. ISO-DATE-001" maxlength="80" required>
+                    </div>
+                    <div class="col-sm-5 form-group">
+                        <label>Title <span style="color:red;">*</span></label>
+                        <input type="text" name="aiRuleTitle" class="form-control aiRuleTitle" placeholder="Rule Title" maxlength="255" required>
+                    </div>
+                    <div class="col-sm-3 form-group">
+                        <label>Category</label>
+                        <input type="text" name="aiRuleCategory" class="form-control aiRuleCategory" placeholder="Dates, Scope, etc" maxlength="120">
+                    </div>
+                    <div class="col-sm-1 form-group">
+                        <label>Active</label><br>
+                        <input type="checkbox" name="aiRuleActive" class="aiRuleActive" checked>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-sm-7 form-group">
+                        <label>Rule Text <span style="color:red;">*</span></label>
+                        <textarea name="aiRuleText" class="form-control aiRuleText" rows="4" required></textarea>
+                    </div>
+                    <div class="col-sm-5 form-group">
+                        <label>Expected Value / Evidence Source</label>
+                        <textarea name="aiRuleExpected" class="form-control aiRuleExpected" rows="4"></textarea>
+                    </div>
+                </div>
+                <div id="newAiRuleError" style="display: none; margin-top: 10px;">
+                    <small><span id="newAiRuleErrorMsg" style="color: #c9513c; font-style: italic;"></span></small>
+                </div>
+            </div>
+            <input type="hidden" class="aiRuleId" name="aiRuleId" value="">
+            <div class="modal-footer">
+                <a class="btn btn-success btn-sm createAiRule"><i class="fa fa-check"></i> Save Rule</a>
+                <button type="button" class="btn btn-default btn-sm" data-dismiss="modal"><i class="fa fa-times"></i> Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 
     function groupFind(selectedValue) {

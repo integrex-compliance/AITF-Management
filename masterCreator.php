@@ -750,19 +750,11 @@
                         handler_Id: $(this).attr('data-id'),
                     },
                     success: function (data) {
-                        //    	                    alert(data);                    
-
-                        $('.newHandler').empty();
-                        $('.newHandler').append('<div class="col-sm-12"><div class="well" style="height: 100px;">\n\
-                                            <div class="col-sm-12 form-group float-label-control">\n\
-                                            <input type="text" name="newHandlerInput" class="form-control newHandlerInput" id="newHandlerInput" placeholder="New Handler" value="' + data["handler_name"] + '"></div>\n\
-                                            <input type="hidden" class="handlerId" name="handlerId" value="' + data["id"] + '">\n\
-                                            <a class="btn btn-info btn-xs createHandler" style="float: right;"><i class="fa fa-check"></i></a>\n\
-                                            <div id="newHandlerError" style="display: none">\n\
-                                            <small><span id="newHandlerErrorMsg" style="color: #c9513c; font-style: italic;" ></span></small>\n\
-                                            </div>\n\
-                                            </div>\n\
-                                            </div>');
+                        $('.newHandlerInput').val(data["handler_name"]);
+                        $('.handlerId').val(data["id"]);
+                        $('#handlerModalLabel').text('Edit Handler');
+                        $("input").trigger("change");
+                        $(".handlerAddModal").modal("show");
                     },
                     error: function (data, status, err) {
                         alert(status);
@@ -1029,17 +1021,11 @@
                         addto_Id: $(this).attr('data-id'),
                     },
                     success: function (data) {
-                        $('.newAddto').empty();
-                        $('.newAddto').append('<div class="col-sm-12"><div class="well" style="height: 100px;">\n\
-                                                        <div class="col-sm-12 form-group float-label-control">\n\
-                                                        <input type="text" name="newAddtoInput" class="form-control newAddtoInpute" placeholder="New Add To" value="' + data["add_to_type"] + '"></div>\n\
-                                                        <input type="hidden" class="addtoIde" name="addtoId" value="' + data["add_to_id"] + '">\n\
-                                                        <a class="btn btn-info btn-xs editcreateAddTo" style="float: right;"><i class="fa fa-check"></i></a>\n\
-                                                        <div id="newAddToError" style="display: none">\n\
-                                                        <small><span id="newAddToErrorMsg" style="color: #c9513c; font-style: italic;" ></span></small>\n\
-                                                        </div>\n\
-                                                        </div>\n\
-                                                        </div>');
+                        $('.newAddtoInput').val(data["add_to_type"]);
+                        $('.addtoId').val(data["add_to_id"]);
+                        $('#addtoModalLabel').text('Edit Add-To');
+                        $("input").trigger("change");
+                        $(".addtoAddModal").modal("show");
                     },
                     error: function (data, status, err) {
                         alert(status);
@@ -1056,19 +1042,11 @@
                         status_Id: $(this).attr('data-id'),
                     },
                     success: function (data) {
-                        //    	                    alert(data);                    
-
-                        $('.newStatus').empty();
-                        $('.newStatus').append('<div class="col-sm-12"><div class="well" style="height: 100px;">\n\
-                                                        <div class="col-sm-12 form-group float-label-control">\n\
-                                                        <input type="text" name="newStatusInput" class="form-control newStatusInput" id="newStatusInput" placeholder="New Status" value="' + data["status"] + '"></div>\n\
-                                                        <input type="hidden" class="statusId" name="statusId" value="' + data["id"] + '">\n\
-                                                        <a class="btn btn-info btn-xs createStatus" style="float: right;"><i class="fa fa-check"></i></a>\n\
-                                                        <div id="newLegalStatusError" style="display: none">\n\
-                                                        <small><span id="newLegalStatusErrorMsg" style="color: #c9513c; font-style: italic;" ></span></small>\n\
-                                                        </div>\n\
-                                                        </div>\n\
-                                                        </div>');
+                        $('.newStatusInput').val(data["status"]);
+                        $('.statusId').val(data["id"]);
+                        $('#statusModalLabel').text('Edit Status');
+                        $("input").trigger("change");
+                        $(".statusAddModal").modal("show");
                     },
                     error: function (data, status, err) {
                         alert(status);
@@ -1119,16 +1097,11 @@
                         standatd_Id: $(this).attr('data-id'),
                     },
                     success: function (data) {
-                        //                    alert(data);
-                        $('.newStandards').empty();
-                        $('.newStandards').append('<div class="col-sm-12"><div class="well" style="height: 100px;">\n\
-                                            <div class="col-sm-12 form-group float-label-control">\n\
-                                            <input type="text" name="newStandardsInput" class="form-control newStandardsInput" id="newStandardsInput" placeholder="New Standards" value="' + data['standards_name'] + '"></div>\n\
-                                            <input type="hidden" class="standardId" name="standardId" value="' + data['id'] + '">\n\
-                                            <a class="btn btn-info btn-xs createStandards" style="float: right;"><i class="fa fa-check"></i></a>\n\
-                                            <div id="newStandardsError" style="display: none">\n\
-                                            <small><span id="newStandardsErrorMsg" style="color: #c9513c; font-style: italic;" ></span></small>\n\
-                                            </div></div></div>');
+                        $('.newStandardsInput').val(data['standards_name']);
+                        $('.standardId').val(data['id']);
+                        $('#standardsModalLabel').text('Edit Standard');
+                        $("input").trigger("change");
+                        $(".standardsAddModal").modal("show");
                     },
                     error: function (data, status, err) {
                         alert(status);
@@ -1146,16 +1119,11 @@
                         accreditation_Id: $(this).attr('data-id'),
                     },
                     success: function (data) {
-                        //                    alert(data);
-                        $('.newAccreditation').empty();
-                        $('.newAccreditation').append('<div class="col-sm-12"><div class="well" style="height: 100px;">\n\
-                                            <div class="col-sm-12 form-group float-label-control">\n\
-                                            <input type="text" name="newAccreditationInput" class="form-control newAccreditationInput" id="newAccreditationInput" placeholder="New Accreditation" value="' + data['accreditation_name'] + '"></div>\n\
-                                            <input type="hidden" class="accreditationId" name="accreditationId" value="' + data['accreditation_id'] + '">\n\
-                                            <a class="btn btn-info btn-xs createAccreditation" style="float: right;"><i class="fa fa-check"></i></a>\n\
-                                            <div id="newAccreditationError" style="display: none">\n\
-                                            <small><span id="newAccreditationErrorMsg" style="color: #c9513c; font-style: italic;" ></span></small>\n\
-                                            </div></div></div>');
+                        $('.newAccreditationInput').val(data['accreditation_name']);
+                        $('.accreditationId').val(data['accreditation_id']);
+                        $('#accreditationModalLabel').text('Edit Accreditation');
+                        $("input").trigger("change");
+                        $(".accreditationAddModal").modal("show");
                     },
                     error: function (data, status, err) {
                         alert(status);
@@ -1172,16 +1140,11 @@
                         categories_Id: $(this).attr('data-id'),
                     },
                     success: function (data) {
-                        //                    alert(data);
-                        $('.newcategories').empty();
-                        $('.newcategories').append('<div class="col-sm-12"><div class="well" style="height: 100px;">\n\
-                                            <div class="col-sm-12 form-group float-label-control">\n\
-                                            <input type="text" name="newcategoriesInput" class="form-control newcategoriesInput" id="newcategoriesInput" placeholder="New categories" value="' + data['categories_name'] + '"></div>\n\
-                                            <input type="hidden" class="categoriesId" name="categoriesId" value="' + data['categories_id'] + '">\n\
-                                            <a class="btn btn-info btn-xs createcategories" style="float: right;"><i class="fa fa-check"></i></a>\n\
-                                            <div id="newcategoriesError" style="display: none">\n\
-                                            <small><span id="newcategoriesErrorMsg" style="color: #c9513c; font-style: italic;" ></span></small>\n\
-                                            </div></div></div>');
+                        $('.newcategoriesInput').val(data['categories_name']);
+                        $('.categoriesId').val(data['categories_id']);
+                        $('#categoriesModalLabel').text('Edit Category');
+                        $("input").trigger("change");
+                        $(".categoriesAddModal").modal("show");
                     },
                     error: function (data, status, err) {
                         alert(status);
@@ -1198,18 +1161,11 @@
                         legalStatus_Id: $(this).attr('data-id'),
                     },
                     success: function (data) {
-                        //                    alert(data);
-                        $('.newLegalStatus').empty();
-                        $('.newLegalStatus').append('<div class="col-sm-12"><div class="well" style="height: 100px;">\n\
-                                            <div class="col-sm-12 form-group float-label-control">\n\
-                                            <input type="text" name="newLegalStatusInput" class="form-control newLegalStatusInput" id="newLegalStatusInput" placeholder="New Legal Status" value="' + data['status'] + '"></div>\n\
-                                            <input type="hidden" class="legalStatusId" name="legalStatusId" value="' + data['status_id'] + '">\n\
-                                            <a class="btn btn-info btn-xs createLegalStatus" style="float: right;"><i class="fa fa-check"></i></a>\n\
-                                            <div id="newLegalStatusError" style="display: none">\n\
-                                            <small><span id="newLegalStatusErrorMsg" style="color: #c9513c; font-style: italic;" ></span></small>\n\
-                                            </div>\n\
-                                            </div>\n\
-                                            </div>');
+                        $('.newLegalStatusInput').val(data['status']);
+                        $('.legalStatusId').val(data['status_id']);
+                        $('#legalStatusModalLabel').text('Edit Legal Status');
+                        $("input").trigger("change");
+                        $(".legalStatusAddModal").modal("show");
                     },
                     error: function (data, status, err) {
                         alert(status);
@@ -1402,52 +1358,30 @@
             });
 
             $('.addNewStandards').click(function () {
-                $('.newStandards').empty();
-                $('.newStandards').append('<div class="col-sm-12"><div class="well" style="height: 100px;">\n\
-                                            <div class="col-sm-12 form-group float-label-control">\n\
-                                            <input type="text" name="newStandardsInput" class="form-control newStandardsInput" id="newStandardsInput" placeholder="New Standards" value=""></div>\n\
-                                            <input type="hidden" class="standardId" name="standardId" value="">\n\
-                                            <a class="btn btn-info btn-xs createStandards" style="float: right;"><i class="fa fa-check"></i></a>\n\
-                                            <div id="newStandardsError" style="display: none">\n\
-                                            <small><span id="newStandardsErrorMsg" style="color: #c9513c; font-style: italic;" ></span></small>\n\
-                                            </div></div></div>');
+                $('.newStandardsInput').val('');
+                $('.standardId').val('');
+                $('#standardsModalLabel').text('Add Standard');
+                $(".standardsAddModal").modal("show");
             });
 
             $(".addNewAccreditation").click(function () {
-                $('.newAccreditation').empty();
-                $('.newAccreditation').append('<div class="col-sm-12"><div class="well" style="height: 100px;">\n\
-                                            <div class="col-sm-12 form-group float-label-control">\n\
-                                            <input type="text" name="newAccreditationInput" class="form-control newAccreditationInput" id="newAccreditationInput" placeholder="New Accreditation" value=""></div>\n\
-                                            <input type="hidden" class="accreditationId" name="accreditationId" value="">\n\
-                                            <a class="btn btn-info btn-xs createAccreditation" style="float: right;"><i class="fa fa-check"></i></a>\n\
-                                            <div id="newAccreditationError" style="display: none">\n\
-                                            <small><span id="newAccreditationErrorMsg" style="color: #c9513c; font-style: italic;" ></span></small>\n\
-                                            </div></div></div>');
+                $('.newAccreditationInput').val('');
+                $('.accreditationId').val('');
+                $('#accreditationModalLabel').text('Add Accreditation');
+                $(".accreditationAddModal").modal("show");
             });
             $(".addNewcategories").click(function () {
-                $('.newcategories').empty();
-                $('.newcategories').append('<div class="col-sm-12"><div class="well" style="height: 100px;">\n\
-                                            <div class="col-sm-12 form-group float-label-control">\n\
-                                            <input type="text" name="newcategoriesInput" class="form-control newcategoriesInput" id="newcategoriesInput" placeholder="New categories" value=""></div>\n\
-                                            <input type="hidden" class="categoriesId" name="categoriesId" value="">\n\
-                                            <a class="btn btn-info btn-xs createcategories" style="float: right;"><i class="fa fa-check"></i></a>\n\
-                                            <div id="newcategoriesError" style="display: none">\n\
-                                            <small><span id="newcategoriesErrorMsg" style="color: #c9513c; font-style: italic;" ></span></small>\n\
-                                            </div></div></div>');
+                $('.newcategoriesInput').val('');
+                $('.categoriesId').val('');
+                $('#categoriesModalLabel').text('Add Category');
+                $(".categoriesAddModal").modal("show");
             });
 
             $(".addNewLegalStatus").click(function () {
-                $('.newLegalStatus').empty();
-                $('.newLegalStatus').append('<div class="col-sm-12"><div class="well" style="height: 100px;">\n\
-                                            <div class="col-sm-12 form-group float-label-control">\n\
-                                            <input type="text" name="newLegalStatusInput" class="form-control newLegalStatusInput" id="newLegalStatusInput" placeholder="New Legal Status" value=""></div>\n\
-                                            <input type="hidden" class="legalStatusId" name="legalStatusId" value="">\n\
-                                            <a class="btn btn-info btn-xs createLegalStatus" style="float: right;"><i class="fa fa-check"></i></a>\n\
-                                            <div id="newLegalStatusError" style="display: none">\n\
-                                            <small><span id="newLegalStatusErrorMsg" style="color: #c9513c; font-style: italic;" ></span></small>\n\
-                                            </div>\n\
-                                            </div>\n\
-                                            </div>');
+                $('.newLegalStatusInput').val('');
+                $('.legalStatusId').val('');
+                $('#legalStatusModalLabel').text('Add Legal Status');
+                $(".legalStatusAddModal").modal("show");
             });
 
             $(".addNewNace").click(function () {
@@ -1472,48 +1406,26 @@
             });
 
             $(".addNewStatus").click(function () {
-                $('.newStatus').empty();
-                $('.newStatus').append('<div class="col-sm-12"><div class="well" style="height: 100px;">\n\
-                                            <div class="col-sm-12 form-group float-label-control">\n\
-                                            <input type="text" name="newStatusInput" class="form-control newStatusInput" id="newStatusInput" placeholder="New Status" value=""></div>\n\
-                                            <input type="hidden" class="statusId" name="statusId" value="">\n\
-                                            <a class="btn btn-info btn-xs createStatus" style="float: right;"><i class="fa fa-check"></i></a>\n\
-                                            <div id="newLegalStatusError" style="display: none">\n\
-                                            <small><span id="newLegalStatusErrorMsg" style="color: #c9513c; font-style: italic;" ></span></small>\n\
-                                            </div>\n\
-                                            </div>\n\
-                                            </div>');
-
+                $('.newStatusInput').val('');
+                $('.statusId').val('');
+                $('#statusModalLabel').text('Add Status');
+                $(".statusAddModal").modal("show");
             });
 
             $(".addNewAddto").click(function () {
-                $('.newAddto').empty();
-                $('.newAddto').append('<div class="col-sm-12"><div class="well" style="height: 100px;">\n\
-                                            <div class="col-sm-12 form-group float-label-control">\n\
-                                            <input type="text" name="newAddtoInput" class="form-control newAddtoInput" id="newAddtoInput" placeholder="New Add To" value=""></div>\n\
-                                            <input type="hidden" class="addtoId" name="addtoId" value="">\n\
-                                            <a class="btn btn-info btn-xs createAddTo" style="float: right;"><i class="fa fa-check"></i></a>\n\
-                                            <div id="newAddToError" style="display: none">\n\
-                                            <small><span id="newAddToErrorMsg" style="color: #c9513c; font-style: italic;" ></span></small>\n\
-                                            </div>\n\
-                                            </div>\n\
-                                            </div>');
+                $('.newAddtoInput').val('');
+                $('.addtoId').val('');
+                $('#addtoModalLabel').text('Add Add-To');
+                $(".addtoAddModal").modal("show");
             });
 
             $(".addNewHandler").click(function () {
-                $('.newHandler').empty();
-                $('.newHandler').append('<div class="col-sm-12"><div class="well" style="height: 100px;">\n\
-                                            <div class="col-sm-12 form-group float-label-control">\n\
-                                            <input type="text" name="newHandlerInput" class="form-control newHandlerInput" id="newHandlerInput" placeholder="New Handler" value=""></div>\n\
-                                            <input type="hidden" class="handlerId" name="handlerId" value="">\n\
-                                            <a class="btn btn-info btn-xs createHandler" style="float: right;"><i class="fa fa-check"></i></a>\n\
-                                            <div id="newHandlerError" style="display: none">\n\
-                                            <small><span id="newHandlerErrorMsg" style="color: #c9513c; font-style: italic;" ></span></small>\n\
-                                            </div>\n\
-                                            </div>\n\
-                                            </div>');
+                $('.newHandlerInput').val('');
+                $('.handlerId').val('');
+                $('#handlerModalLabel').text('Add Handler');
+                $(".handlerAddModal").modal("show");
             });
-git branch --contains c46ef29  
+
             $('.addNewTaxation').click(function () {
                 $('.newTaxation').val("");
                 $('.newRate').val("");
