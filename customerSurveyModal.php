@@ -38,11 +38,7 @@
                                     <div class="col-sm-12 form-group float-label-control">
                                         <label>Date of survey:</label>
                                         <input type="text" class="surveyDate" id="surveyDate" name="surveyDate" placeholder="Date of survey:" required>
-                                    </div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-sm-12 ">
-                                        <div id="surveyDateError" style="display: none">
+                                        <div id="surveyDateError" style="display: none; margin-top: 5px;">
                                             <small> <span id="surveyDateErrorMsg" style="color: #c9513c; font-style: italic;"></span></small>
                                         </div>
                                     </div>
@@ -199,6 +195,7 @@
                 <input type="hidden" class="survey-customer-id" name="survey-customer-id" value="" >
                 <input type="hidden" class="survay-id" name="survay-id" value="" >
                 <input type="hidden" class="cs-service-id" name="cs-service-id" value="" >
+                <input type="hidden" class="survey-service-type" name="survey-service-type" value="" >
 
                 <input type="hidden" class="leadAuditorHidden" name="leadAuditorHidden" value="" >
                 <input type="hidden" class="leadResultHidden" name="leadResultHidden" value="" >
@@ -214,6 +211,19 @@
 
 <script type="text/javascript">
     $(function () {
+        $('#customerSurvey').on('shown.bs.modal', function () {
+            DateChronologyValidator.init({
+                customerId: $('.survey-customer-id').val() || $('.customer_Id').val() || $('.customerId').val(),
+                typedServiceId: $('.cs-service-id').val() || $('.survey-service-id').val() || $('.service_Id').val() || $('.serviceId').val(),
+                serviceType: $('.survey-service-type').val(),
+                fields: {
+                    'survey_date': { input: '.surveyDate', errorDiv: '#surveyDateError', errorMsg: '#surveyDateErrorMsg' },
+                    'feedback_review_date': { input: '.reviewDateSurvey', errorDiv: '#reviewDateSurveyError', errorMsg: '#reviewDateSurveyErrorMsg' }
+                },
+                submitBtn: '.addCustomerSurvey'
+            });
+        });
+
         $('.survayRevDate').datepicker({
             minDate: '-100Y',
             maxDate: '+100Y',
@@ -262,18 +272,11 @@
             dateFormat: 'dd.mm.yy',
             autoclose: true,
             onSelect: function() {
-                // Validate on date selection
-                validateCustomerSurvay();
+                $(this).trigger('change');
             }
         });
         $(".surveyDate").keydown(function (e) {
 //            e.preventDefault();
-        });
-        $('.surveyDate').on('change blur', function() {
-            // Validate Date of Survey on change/blur
-            if ($(this).val() != "") {
-                validateCustomerSurvay();
-            }
         });
 
         $('.reviewDateSurvey').datepicker({
@@ -283,7 +286,10 @@
             changeMonth: true,
             yearRange: "-20:+100",
             dateFormat: 'dd.mm.yy',
-            autoclose: true
+            autoclose: true,
+            onSelect: function() {
+                $(this).trigger('change');
+            }
         });
         $(".reviewDateSurvey").keydown(function (e) {
 //            e.preventDefault();
@@ -291,54 +297,7 @@
     });
 
     function validateCustomerSurvay() {
-        $isError = false;
-        if ($(".surveyDate").val() == "") {
-            $('#surveyDateErrorMsg').text("Date of Survey cannot be empty");
-            $('#surveyDateError').show();
-            $('#surveyDate').addClass('inputHighlight');
-            $isError = true;
-        } else if ($(".surveyDate").val() != "") {
-            $.ajax({
-                type: "GET",
-                url: "checkCustomer.php",
-                data: {
-                    survayAuditDates: $('.surveyDate').val(),
-                    survayService_ID: $('.survey-service-id').val(),
-                },
-                async: false,
-                success: function (data) {
-
-                    if (data == 1) {
-                        $('#surveyDateErrorMsg').text("Date of Survey must be greater than or equal to Review Date or Certificate Issue Date");
-                        $('#surveyDateError').show();
-                        $('#surveyDate').addClass('inputHighlight');
-                        $isError = "True";
-                    } else {
-                        $('#surveyDateError').hide();
-                        $('#surveyDate').removeClass('inputHighlight');
-                    }
-                }
-            });
-        }
-//        else {
-//            $('#surveyDateError').hide();
-//            $('#surveyDate').removeClass('inputHighlight');
-//        }
-        if ($(".reviewDateSurvey").val() == "") {
-            $('#reviewDateSurveyErrorMsg').text("Rev Date / Issue Date cannot be empty");
-            $('#reviewDateSurveyError').show();
-            $('#reviewDateSurvey').addClass('inputHighlight');
-            $isError = true;
-        } else if ($('.reviewDateSurvey').val() != "" && (moment($('.surveyDate').val(), "DD.MM.YYYY") > (moment($('.reviewDateSurvey').val(), "DD.MM.YYYY")))) {
-            $('#reviewDateSurveyErrorMsg').text("Rev Date / Issue Date must be greater than or equal to CDC Date");
-            $('#reviewDateSurveyError').show();
-            $('#reviewDateSurvey').addClass('inputHighlight');
-            $isError = true;
-        } else {
-            $('#reviewDateSurveyError').hide();
-            $('#reviewDateSurvey').removeClass('inputHighlight');
-        }
-        return $isError;
+        return false; // Handled by DateChronologyValidator
     }
 
     $(document).ready(function () {
@@ -354,6 +313,7 @@
 
         $('.createCustomerSurvey').click(function () {
             var svctype = $(this).attr('data-svc');
+            $('.survey-service-type').val(svctype);
             $('.survey-service-id').val($(this).attr('data-service'));
             $('.survey-customer-id').val($(this).attr('data-customer'));
             $('.cs-service-id').val($(this).attr('data-id'));
@@ -500,6 +460,9 @@
         });
 
         $('.editCustomerSurvey').click(function () {
+            var svctype = $(this).attr('data-svc');
+            $('.survey-service-type').val(svctype);
+            $('.cs-service-id').val($(this).attr('data-id'));
 //            alert($(this).attr('data-row-id'));
             $.ajax({
                 url: "contractDetails.php",

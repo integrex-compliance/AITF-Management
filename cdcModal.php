@@ -449,12 +449,8 @@ $auditorsList = $statement->fetchAll();
                                             <input type="text" class="revDatecdc" id="revDatecdc"
                                                 data-base-id="revDatecdc" data-field="rev_date"
                                                 name="office_use[0][rev_date]" placeholder="Rev date:" required>
-                                        </div>
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-sm-12 ">
-                                            <div id="revDatecdcError" style="display: none">
-                                                <small> <span id="revDatecdcErrorMsg"
+                                            <div class="revDatecdcError" style="display: none; margin-top: 5px;">
+                                                <small> <span class="revDatecdcErrorMsg"
                                                         style="color: #c9513c; font-style: italic;"></span></small>
                                             </div>
                                         </div>
@@ -2805,7 +2801,7 @@ $auditorsList = $statement->fetchAll();
                 fields: {
                     'nc_closing_date': { input: '.assDate', errorDiv: '#assDateError', errorMsg: '#assDateErrorMsg' },
                     'cdc_date': { input: '.Date', errorDiv: '#DateError', errorMsg: '#DateErrorMsg' },
-                    'certificate_issue_date': { input: '.revDatecdc', errorDiv: '#revDatecdcError', errorMsg: '#revDatecdcErrorMsg' }
+                    'certificate_issue_date': { input: '.revDatecdc', errorDiv: '.revDatecdcError', errorMsg: '.revDatecdcErrorMsg' }
                 },
                 submitBtn: '.save_cdc'
             });

@@ -88,7 +88,7 @@ if(isset ($_GET['report_Id']) && !empty ($_GET['report_Id']) && isset ($_GET['se
         $customerDetailsz = $statement->fetch();
         
         // Fetch certification standards from audit_application table
-        $auditApp = "SELECT certification FROM audit_application WHERE service_id = :id";
+        $auditApp = "SELECT certification, assessment_standard FROM audit_application WHERE service_id = :id";
         $statement = $db->prepare($auditApp);
         $statement->bindParam(':id', $_GET['serviceid']);
         $statement->execute();

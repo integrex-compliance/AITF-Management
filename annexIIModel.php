@@ -701,14 +701,17 @@ function removeUnwantedOptions(selector, optionsToRemove) {
     function validateAnex2Edit() {
         const auditDateEdit = $('.auditDateIIEdit').val();
         const dates = auditDateEdit.split(", ");
-        const lastDate = dates[dates.length - 1];
+        const boundaryDate = dates
+            .map(dateValue => dateValue.trim())
+            .filter(dateValue => dateValue !== "")
+            .sort((left, right) => moment(left, "DD.MM.YYYY").valueOf() - moment(right, "DD.MM.YYYY").valueOf())[0];
         $isError = false;
         if ($(".reviewDateAnnexEdit").val() == "") {
             $('#reviewDateAnnexEditErrorMsg').text("Date can not be empty");
             $('#reviewDateAnnexEditError').show();
             $('#reviewDateAnnexEdit').addClass('inputHighlight');
             $isError = true;
-        }else if ($('.reviewDateAnnexEdit').val() != "" && (moment($('.reviewDateAnnexEdit').val(), "DD/MM/YYYY") < moment(lastDate, "DD/MM/YYYY"))) {
+        }else if (boundaryDate && $('.reviewDateAnnexEdit').val() != "" && (moment($('.reviewDateAnnexEdit').val(), "DD.MM.YYYY") < moment(boundaryDate, "DD.MM.YYYY"))) {
             $('#reviewDateAnnexEditErrorMsg').text("Date must be greater than or equal to Audit date.");
             $('#reviewDateAnnexEditError').show();
             $('#reviewDateAnnexEdit').addClass('inputHighlight');
@@ -748,7 +751,10 @@ function removeUnwantedOptions(selector, optionsToRemove) {
     function validateAnex2() {
         const auditDateEdit = $('.auditDateII').val();
         const dates = auditDateEdit.split(", ");
-        const lastDate = dates[dates.length - 1];
+        const boundaryDate = dates
+            .map(dateValue => dateValue.trim())
+            .filter(dateValue => dateValue !== "")
+            .sort((left, right) => moment(left, "DD.MM.YYYY").valueOf() - moment(right, "DD.MM.YYYY").valueOf())[0];
         $isError = false;
         if ($(".reviewDateAnnex").val() == "") {
 //            alert("1");
@@ -756,7 +762,7 @@ function removeUnwantedOptions(selector, optionsToRemove) {
             $('#reviewDateAnnexError').show();
             $('#reviewDateAnnex').addClass('inputHighlight');
             $isError = true;
-        } else if ($('.reviewDateAnnex').val() != "" && (moment($('.reviewDateAnnex').val(), "DD.MM.YYYY") < moment(lastDate, "DD.MM.YYYY"))) {
+        } else if (boundaryDate && $('.reviewDateAnnex').val() != "" && (moment($('.reviewDateAnnex').val(), "DD.MM.YYYY") < moment(boundaryDate, "DD.MM.YYYY"))) {
             $('#reviewDateAnnexErrorMsg').text("Review Date must be greater than or equal to Stage-II Audit Date");
             $('#reviewDateAnnexError').show();
             $('#reviewDateAnnex').addClass('inputHighlight');

@@ -453,10 +453,31 @@ foreach ($auditors as $name) {
             changeMonth: true,
             yearRange: "-20:+100",
             dateFormat: 'dd.mm.yy',
-            autoclose: true
+            autoclose: true,
+            onSelect: function () {
+                validateStage1();
+            }
         });
         $("#intimationDate").keydown(function (e) {
             //            e.preventDefault();
+        });
+
+        $('.intimationDate').on('change blur', function () {
+            if ($(this).val() !== "") {
+                validateStage1();
+            } else {
+                $('#intimationDateError').hide();
+                $('#intimationDate').removeClass('inputHighlight');
+            }
+        });
+
+        $(document).on('change blur', '.auditDates', function () {
+            if ($(this).val() !== "") {
+                validateStage1();
+            } else {
+                $('#auditDatesError').hide();
+                $('#auditDates').removeClass('inputHighlight');
+            }
         });
 
         $('#intimationDateEdit').datepicker({
@@ -466,10 +487,31 @@ foreach ($auditors as $name) {
             changeMonth: true,
             yearRange: "-20:+100",
             dateFormat: 'dd.mm.yy',
-            autoclose: true
+            autoclose: true,
+            onSelect: function () {
+                validateStage1edit();
+            }
         });
         $("#intimationDateEdit").keydown(function (e) {
             //            e.preventDefault();
+        });
+
+        $('.intimationDateEdit').on('change blur', function () {
+            if ($(this).val() !== "") {
+                validateStage1edit();
+            } else {
+                $('#intimationDateEditError').hide();
+                $('#intimationDateEdit').removeClass('inputHighlight');
+            }
+        });
+
+        $(document).on('change blur', '.auditDatesEdit', function () {
+            if ($(this).val() !== "") {
+                validateStage1edit();
+            } else {
+                $('#auditDatesEditError').hide();
+                $('#auditDatesEdit').removeClass('inputHighlight');
+            }
         });
 
         $(document).on('focus', ".auditDates", function () {
@@ -566,7 +608,7 @@ foreach ($auditors as $name) {
                 url: "checkCustomer.php",
                 data: {
                     intimationDate: $('.intimationDateEdit').val(),
-                    svc_id: $('.audit-noti-service-edit').val(),
+                    svc_id: $('.audit-noti-service').val() || $('.audit-noti-service1').val(),
                 },
                 async: false,
                 success: function (data) {
@@ -615,7 +657,7 @@ foreach ($auditors as $name) {
                 url: "checkCustomer.php",
                 data: {
                     intimationDate: $('.intimationDate').val(),
-                    svc_id: $('.audit-noti-service1').val(),
+                    svc_id: $('.audit-noti-service').val() || $('.audit-noti-service1').val(),
                 },
                 async: false,
                 success: function (data) {

@@ -526,33 +526,40 @@ if (isset($_POST['customerEmail']) && !empty($_POST['customerEmail'])) {
     }
 } else if (isset($_GET["reviewDateAnnex"]) && !empty($_GET["reviewDateAnnex"]) && isset($_GET["service_Id"]) && !empty($_GET["service_Id"])) {
     try {
-        //		echo $_GET["service_Id"];
         $date = date("Y-m-d", strtotime($_GET["reviewDateAnnex"]));
-        $revDate = "SELECT scheduleii_date FROM audit_scheduleii_id WHERE ca_service = :svc";
+        $revDate = "SELECT audit_dates FROM stage_twoaudit_id WHERE service_id = :svc ORDER BY audit_stageii_id DESC LIMIT 1";
         $statement = $db->prepare($revDate);
         $statement->bindParam(":svc", $_GET["service_Id"]);
         $statement->execute();
         $rowDate = $statement->fetch();
-        if ($rowDate) {
-            $aspectDate = explode(', ', $rowDate["scheduleii_date"]);
-            foreach ($aspectDate as $dates) {
-                $dateval = date("Y-m-d", strtotime($dates));
+        if ($rowDate && !empty($rowDate["audit_dates"])) {
+            $aspectDate = array_values(array_filter(array_map('trim', explode(',', $rowDate["audit_dates"]))));
+            $dateval = null;
+            foreach ($aspectDate as $singleDate) {
+                $normalizedDate = date("Y-m-d", strtotime($singleDate));
+                if ($normalizedDate !== false && ($dateval === null || $normalizedDate < $dateval)) {
+                    $dateval = $normalizedDate;
+                }
             }
-            if ($dateval > $date) {
+            if ($dateval !== null && $dateval > $date) {
                 echo "1";
             }
         } else {
-            $revDate = "SELECT * FROM stage_oneaudit_id where ca_service_id = :svc";
+            $revDate = "SELECT audit_dates FROM stage_ii_audit_id where ca_service_id = :svc ORDER BY stage_ii_id DESC LIMIT 1";
             $statement = $db->prepare($revDate);
             $statement->bindParam(":svc", $_GET["service_Id"]);
             $statement->execute();
             $rowDate = $statement->fetch();
 
-            $aspectDate = explode(', ', $rowDate["audit_dates"]);
-            foreach ($aspectDate as $dates) {
-                $dateval = date("Y-m-d", strtotime($dates));
+            $aspectDate = $rowDate && !empty($rowDate["audit_dates"]) ? array_values(array_filter(array_map('trim', explode(',', $rowDate["audit_dates"])))) : array();
+            $dateval = null;
+            foreach ($aspectDate as $singleDate) {
+                $normalizedDate = date("Y-m-d", strtotime($singleDate));
+                if ($normalizedDate !== false && ($dateval === null || $normalizedDate < $dateval)) {
+                    $dateval = $normalizedDate;
+                }
             }
-            if ($dateval > $date) {
+            if ($dateval !== null && $dateval > $date) {
                 echo "1";
             }
         }

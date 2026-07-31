@@ -10,6 +10,27 @@ session_start();
 include_once './dbConnect.php';
 include_once './include/cdc_audit_date_sync.php';
 date_default_timezone_set('Asia/Kolkata');
+
+function validateStage1IntimationDate($db, $serviceId, $intimationDateValue)
+{
+    if (empty($serviceId) || empty($intimationDateValue)) {
+        return true;
+    }
+
+    $intimationDate = date('Y-m-d', strtotime($intimationDateValue));
+    $assessmentSql = "SELECT `date` FROM `assessment_planning` WHERE `service_id` = :serviceId ORDER BY `assessment_id` DESC LIMIT 1";
+    $statement = $db->prepare($assessmentSql);
+    $statement->bindParam(':serviceId', $serviceId);
+    $statement->execute();
+    $assessmentRow = $statement->fetch(PDO::FETCH_ASSOC);
+
+    if (!$assessmentRow || empty($assessmentRow['date'])) {
+        return true;
+    }
+
+    $assessmentDate = date('Y-m-d', strtotime($assessmentRow['date']));
+    return !($intimationDate < $assessmentDate);
+}
 if (isset($_POST["audit-noti-id-edit"]) && !empty($_POST["audit-noti-id-edit"])) {
 
     try {
@@ -31,6 +52,11 @@ if (isset($_POST["audit-noti-id-edit"]) && !empty($_POST["audit-noti-id-edit"]))
             $intimationDate = date('Y-m-d', strtotime($_POST['intimationDate']));
         } else {
             $intimationDate = NULL;
+        }
+
+        if (!validateStage1IntimationDate($db, $service, $_POST['intimationDate'])) {
+            echo 'Date should be greater than or equal to assessment planning date';
+            exit;
         }
 
         $svcauditdate = "";
@@ -311,6 +337,11 @@ if (isset($_POST["audit-noti-id-edit"]) && !empty($_POST["audit-noti-id-edit"]))
             }
         } else {
             $alldates = NULL;
+        }
+
+        if (!validateStage1IntimationDate($db, $service, $_POST['intimationDate'])) {
+            echo 'Date should be greater than or equal to assessment planning date';
+            exit;
         }
 
         $auditorlist = "";

@@ -119,21 +119,29 @@ if ($actualServiceType === 'CA') {
         array('field' => 'stage2_intimation_date',   'must_be_after' => 'assessment_planning_date', 'label' => 'Stage-II Intimation Date',           'after_label' => 'Assessment Planning Date'),
         array('field' => 'stage2_intimation_date',   'must_be_after' => 'application_date',         'label' => 'Stage-II Intimation Date',           'after_label' => 'Application Date'),
         array('field' => 'stage2_audit_date',        'must_be_after' => 'stage2_intimation_date',   'label' => 'Stage-II Audit Date',                'after_label' => 'Stage-II Intimation Date'),
-        array('field' => 'nc_closing_date',          'must_be_after' => 'stage2_audit_date',        'label' => 'Assessment / NC(M) Closing Date',    'after_label' => 'Stage-II Audit Date'),
-        array('field' => 'stage2_review_date',       'must_be_after' => 'nc_closing_date',          'label' => 'Stage-II Review Date',               'after_label' => 'Assessment / NC(M) Closing Date'),
-        array('field' => 'cdc_date',                 'must_be_after' => 'stage2_review_date',       'label' => 'CDC Date',                           'after_label' => 'Stage-II Review Date'),
+        array('field' => 'stage2_review_date',       'must_be_after' => 'stage2_audit_date',        'label' => 'Stage-II Review Date',               'after_label' => 'Stage-II Audit Date'),
+        array('field' => 'nc_closing_date',          'must_be_after' => 'stage2_review_date',       'label' => 'Assessment / NC(M) Closing Date',    'after_label' => 'Stage-II Review Date'),
+        array('field' => 'cdc_date',                 'must_be_after' => 'nc_closing_date',          'label' => 'CDC Date',                           'after_label' => 'Assessment / NC(M) Closing Date'),
         array('field' => 'certificate_issue_date',   'must_be_after' => 'cdc_date',                 'label' => 'Rev Date / Certificate Issue Date',  'after_label' => 'CDC Date'),
         array('field' => 'survey_date',              'must_be_after' => 'certificate_issue_date',   'label' => 'Feedback Survey Date',               'after_label' => 'Rev Date / Certificate Issue Date'),
+        array('field' => 'survey_date',              'must_be_after' => 'cdc_date',                 'label' => 'Feedback Survey Date',               'after_label' => 'CDC Date'),
+        array('field' => 'survey_date',              'must_be_after' => 'nc_closing_date',          'label' => 'Feedback Survey Date',               'after_label' => 'Assessment / NC(M) Closing Date'),
+        array('field' => 'survey_date',              'must_be_after' => 'stage2_audit_date',        'label' => 'Feedback Survey Date',               'after_label' => 'Stage-II Audit Date'),
+        array('field' => 'feedback_review_date',     'must_be_after' => 'survey_date',              'label' => 'Review Date',                        'after_label' => 'Feedback Survey Date'),
     );
 } elseif ($actualServiceType === 'SA-I' || $actualServiceType === 'SA-II') {
     $rules = array(
         array('field' => 'intimation_date',          'must_be_after' => 'info_review_date',         'label' => 'Intimation Date',                    'after_label' => 'Information Updation Review Date'),
         array('field' => 'audit_date',               'must_be_after' => 'intimation_date',          'label' => 'Audit Date',                         'after_label' => 'Intimation Date'),
-        array('field' => 'nc_closing_date',          'must_be_after' => 'audit_date',               'label' => 'Assessment / NC(M) Closing Date',    'after_label' => 'Audit Date'),
-        array('field' => 'sa_review_date',           'must_be_after' => 'nc_closing_date',          'label' => 'Review Date',                        'after_label' => 'Assessment / NC(M) Closing Date'),
-        array('field' => 'cdc_date',                 'must_be_after' => 'sa_review_date',           'label' => 'CDC Date',                           'after_label' => 'Review Date'),
+        array('field' => 'sa_review_date',           'must_be_after' => 'audit_date',               'label' => 'Review Date',                        'after_label' => 'Audit Date'),
+        array('field' => 'nc_closing_date',          'must_be_after' => 'sa_review_date',           'label' => 'Assessment / NC(M) Closing Date',    'after_label' => 'Review Date'),
+        array('field' => 'cdc_date',                 'must_be_after' => 'nc_closing_date',          'label' => 'CDC Date',                           'after_label' => 'Assessment / NC(M) Closing Date'),
         array('field' => 'certificate_issue_date',   'must_be_after' => 'cdc_date',                 'label' => 'Rev Date / Issue Date',              'after_label' => 'CDC Date'),
         array('field' => 'survey_date',              'must_be_after' => 'certificate_issue_date',   'label' => 'Feedback Survey Date',               'after_label' => 'Rev Date / Issue Date'),
+        array('field' => 'survey_date',              'must_be_after' => 'cdc_date',                 'label' => 'Feedback Survey Date',               'after_label' => 'CDC Date'),
+        array('field' => 'survey_date',              'must_be_after' => 'nc_closing_date',          'label' => 'Feedback Survey Date',               'after_label' => 'Assessment / NC(M) Closing Date'),
+        array('field' => 'survey_date',              'must_be_after' => 'audit_date',               'label' => 'Feedback Survey Date',               'after_label' => 'Audit Date'),
+        array('field' => 'feedback_review_date',     'must_be_after' => 'survey_date',              'label' => 'Review Date',                        'after_label' => 'Feedback Survey Date'),
     );
 } elseif ($actualServiceType === 'RC') {
     $rules = array(
@@ -143,11 +151,15 @@ if ($actualServiceType === 'CA') {
         array('field' => 'assessment_planning_date', 'must_be_after' => 'aggrement_date',           'label' => 'Assessment Planning Date',           'after_label' => 'Agreement Date'),
         array('field' => 'intimation_date',          'must_be_after' => 'assessment_planning_date', 'label' => 'Intimation Date',                    'after_label' => 'Assessment Planning Date'),
         array('field' => 'audit_date',               'must_be_after' => 'intimation_date',          'label' => 'Audit Date',                         'after_label' => 'Intimation Date'),
-        array('field' => 'nc_closing_date',          'must_be_after' => 'audit_date',               'label' => 'Assessment / NC(M) Closing Date',    'after_label' => 'Audit Date'),
-        array('field' => 'rc_review_date',           'must_be_after' => 'nc_closing_date',          'label' => 'Review Date',                        'after_label' => 'Assessment / NC(M) Closing Date'),
-        array('field' => 'cdc_date',                 'must_be_after' => 'rc_review_date',           'label' => 'CDC Date',                           'after_label' => 'Review Date'),
+        array('field' => 'rc_review_date',           'must_be_after' => 'audit_date',               'label' => 'Review Date',                        'after_label' => 'Audit Date'),
+        array('field' => 'nc_closing_date',          'must_be_after' => 'rc_review_date',           'label' => 'Assessment / NC(M) Closing Date',    'after_label' => 'Review Date'),
+        array('field' => 'cdc_date',                 'must_be_after' => 'nc_closing_date',          'label' => 'CDC Date',                           'after_label' => 'Assessment / NC(M) Closing Date'),
         array('field' => 'certificate_issue_date',   'must_be_after' => 'cdc_date',                 'label' => 'Rev Date / Issue Date',              'after_label' => 'CDC Date'),
         array('field' => 'survey_date',              'must_be_after' => 'certificate_issue_date',   'label' => 'Feedback Survey Date',               'after_label' => 'Rev Date / Issue Date'),
+        array('field' => 'survey_date',              'must_be_after' => 'cdc_date',                 'label' => 'Feedback Survey Date',               'after_label' => 'CDC Date'),
+        array('field' => 'survey_date',              'must_be_after' => 'nc_closing_date',          'label' => 'Feedback Survey Date',               'after_label' => 'Assessment / NC(M) Closing Date'),
+        array('field' => 'survey_date',              'must_be_after' => 'audit_date',               'label' => 'Feedback Survey Date',               'after_label' => 'Audit Date'),
+        array('field' => 'feedback_review_date',     'must_be_after' => 'survey_date',              'label' => 'Review Date',                        'after_label' => 'Feedback Survey Date'),
     );
 
     if (!$isRecertificationContractReview) {

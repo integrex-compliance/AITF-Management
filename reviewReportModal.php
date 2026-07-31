@@ -768,25 +768,33 @@ function removeUnwantedOptions(selector, optionsToRemove) {
                 },
                 success: function (data)
                 {
-                 var isoStandards = '';
+                 var allStandards = [];
+                 if (data[4]) {
+                     if (data[4]['assessment_standard']) allStandards.push(data[4]['assessment_standard'].trim());
+                     if (data[4]['certification']) allStandards.push(data[4]['certification'].trim());
+                 }
+                 if (data[3]) {
+                     if (data[3]['assessment_standard']) allStandards.push(data[3]['assessment_standard'].trim());
+                     if (data[3]['certification']) allStandards.push(data[3]['certification'].trim());
+                 }
+                 if (data[1] && data[1]['audit_standard']) {
+                     allStandards.push(data[1]['audit_standard'].trim());
+                 }
                  
-                 // Get ISO standards - use same logic as audit application form
-                 // Priority: assessment_standard > certification (both can contain comma-separated values)
-                 if (data[4] && data[4]['assessment_standard'] && data[4]['assessment_standard'].trim() !== '') {
-                     isoStandards = data[4]['assessment_standard'].trim();
-                 } else if (data[4] && data[4]['certification'] && data[4]['certification'].trim() !== '') {
-                     isoStandards = data[4]['certification'].trim();
-                 } else if (data[3] && data[3]['assessment_standard'] && data[3]['assessment_standard'].trim() !== '') {
-                     isoStandards = data[3]['assessment_standard'].trim();
-                 } else if (data[3] && data[3]['certification'] && data[3]['certification'].trim() !== '') {
-                     isoStandards = data[3]['certification'].trim();
+                 if (allStandards.length > 0) {
+                     isoStandards = allStandards.join(', ');
                  } else {
                      isoStandards = 'ISO 9001:2015';
                  }
                  
                  // Clean up the standards - handle comma-separated values
-                 // Replace multiple commas with single comma and space
                  isoStandards = isoStandards.replace(/,+/g, ', ').replace(/\s*,\s*/g, ', ');
+                 
+                 // Deduplicate comma-separated values
+                 if (isoStandards) {
+                     var uniqueStandards = [...new Set(isoStandards.split(',').map(function(s) { return s.trim(); }).filter(function(s) { return s; }))];
+                     isoStandards = uniqueStandards.join(', ');
+                 }
                  
                  $('.assessmentStandard').val(isoStandards);
                     $('.auditOrganisation').val(data[0]['customer_name']);
@@ -954,17 +962,30 @@ removeUnwantedOptions('.reviewerNameEdit', optionsToRemove);
                     $('.reviewerNameEdit').val(data[0]['reviewer_name']);
                     $('.referenceNumberEdit').val(data[0]['referenceNumber']);
                     // Enhanced logic for assessment standard in edit mode
+                    var editAllStandards = [];
+                    if (data[5]) {
+                        if (data[5]['assessment_standard']) editAllStandards.push(data[5]['assessment_standard'].trim());
+                        if (data[5]['certification']) editAllStandards.push(data[5]['certification'].trim());
+                    }
+                    if (data[4] && data[4]['audit_standard']) {
+                        editAllStandards.push(data[4]['audit_standard'].trim());
+                    }
+                    if (data[0] && data[0]['certificationStandered']) {
+                        editAllStandards.push(data[0]['certificationStandered'].trim());
+                    }
+                    
                     var editIsoStandards = '';
-                    if (data[5] && data[5]['assessment_standard'] && data[5]['assessment_standard'].trim() !== '') {
-                        editIsoStandards = data[5]['assessment_standard'];
-                    } else if (data[5] && data[5]['certification'] && data[5]['certification'].trim() !== '') {
-                        editIsoStandards = data[5]['certification'];
-                    } else if (data[0]['certificationStandered'] && data[0]['certificationStandered'].trim() !== '') {
-                        editIsoStandards = data[0]['certificationStandered'];
+                    if (editAllStandards.length > 0) {
+                        editIsoStandards = editAllStandards.join(', ');
                     } else {
-                        // Fallback to default if no data found
                         editIsoStandards = 'ISO 9001:2015';
                         console.warn('No assessment standard found in edit mode, using default: ISO 9001:2015');
+                    }
+                    
+                    editIsoStandards = editIsoStandards.replace(/,+/g, ', ').replace(/\s*,\s*/g, ', ');
+                    if (editIsoStandards) {
+                        var uniqueEditStandards = [...new Set(editIsoStandards.split(',').map(function(s) { return s.trim(); }).filter(function(s) { return s; }))];
+                        editIsoStandards = uniqueEditStandards.join(', ');
                     }
                     $('.assessmentStandard').val(editIsoStandards);
                     $('.acceptedEdit[value = "' + data[0]["accepted"] + '"]').prop('checked', true).trigger('change');

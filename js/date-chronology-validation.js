@@ -36,6 +36,21 @@ window.DateChronologyValidator = (function () {
     function parseDate(dateStr) {
         if (!dateStr || dateStr.trim() === '') return null;
         dateStr = dateStr.trim();
+        
+        // Handle comma-separated multiple dates
+        if (dateStr.indexOf(',') !== -1) {
+            var parts = dateStr.split(',');
+            var maxDate = null;
+            for (var i = 0; i < parts.length; i++) {
+                var d = parseDate(parts[i]); // Recursive call for each part
+                if (d) {
+                    if (!maxDate || d > maxDate) {
+                        maxDate = d;
+                    }
+                }
+            }
+            return maxDate;
+        }
 
         // DD.MM.YYYY
         var match = dateStr.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);

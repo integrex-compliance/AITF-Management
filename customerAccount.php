@@ -758,8 +758,8 @@ if ($currentRole === 'client') {
                     caDateGraphAddEntry($entries, 'CA', 'CA', 'Stage-I Review Date', caDateGraphFirstValue($stageIReview, array('review_date')), 'stage_i_audit_id.review_date', $typedServiceId, $universalServiceId);
                     caDateGraphAddEntry($entries, 'CA', 'CA', 'Stage-II Intimation Date', caDateGraphFirstValue($stageTwoNotice, array('intimation_date')), 'stage_twoaudit_id.intimation_date', $typedServiceId, $universalServiceId);
                     caDateGraphAddEntry($entries, 'CA', 'CA', 'Stage-II Audit Date', caDateGraphFirstValue($stageIIReview, array('audit_dates')) ?: caDateGraphFirstValue($stageTwoNotice, array('audit_dates')), 'stage_ii_audit_id.audit_dates / stage_twoaudit_id.audit_dates', $typedServiceId, $universalServiceId);
-                    caDateGraphAddEntry($entries, 'CA', 'CA', 'Assessment / NC(M) Closing Date', caDateGraphFirstValue($cdc, array('assDate', 'Date')), 'cdc_report_review.assDate', $typedServiceId, $universalServiceId);
                     caDateGraphAddEntry($entries, 'CA', 'CA', 'Stage-II Review Date', caDateGraphFirstValue($stageIIReview, array('review_date')), 'stage_ii_audit_id.review_date', $typedServiceId, $universalServiceId);
+                    caDateGraphAddEntry($entries, 'CA', 'CA', 'Assessment / NC(M) Closing Date', caDateGraphFirstValue($cdc, array('assDate', 'Date')), 'cdc_report_review.assDate', $typedServiceId, $universalServiceId);
                     caDateGraphAddEntry($entries, 'CA', 'CA', 'CDC Date', caDateGraphFirstValue($cdc, array('Date')), 'cdc_report_review.Date', $typedServiceId, $universalServiceId);
                     caDateGraphAddEntry($entries, 'CA', 'CA', 'Rev Date / Certificate Issue Date', caDateGraphCertificateIssueDate($db, $cdc), 'cdc_report_review_office_use.rev_date / cdc_report_review.revDatecdc', $typedServiceId, $universalServiceId);
                     caDateGraphAddEntry($entries, 'CA', 'CA', 'Feedback Survey Date', caDateGraphFirstValue($survey, array('survey_date', 'review_date')), 'customer_survey_id.survey_date', $typedServiceId, $universalServiceId);
@@ -774,8 +774,8 @@ if ($currentRole === 'client') {
                     caDateGraphAddEntry($entries, $serviceType, $section, 'Information Updation Review Date', caDateGraphInfoReviewDate($db, $typedServiceId, $customerId), 'info_update_review.review_date / uploads/reviews JSON', $typedServiceId, $universalServiceId);
                     caDateGraphAddEntry($entries, $serviceType, $section, 'Intimation Date', caDateGraphFirstValue($stageOne, array('intimation_date')), 'stage_oneaudit_id.intimation_date', $typedServiceId, $universalServiceId);
                     caDateGraphAddEntry($entries, $serviceType, $section, 'Audit Date', caDateGraphFirstValue($stageIIReview, array('audit_dates')) ?: caDateGraphFirstValue($surveillancePlan, array('audit_dates')) ?: caDateGraphFirstValue($stageOne, array('audit_dates')), 'stage_ii_audit_id.audit_dates / servelance_1_id.audit_dates', $typedServiceId, $universalServiceId);
-                    caDateGraphAddEntry($entries, $serviceType, $section, 'Assessment / NC(M) Closing Date', caDateGraphFirstValue($cdc, array('assDate', 'Date')), 'cdc_report_review.assDate', $typedServiceId, $universalServiceId);
                     caDateGraphAddEntry($entries, $serviceType, $section, 'Review Date', caDateGraphFirstValue($stageIIReview, array('review_date')), 'stage_ii_audit_id.review_date', $typedServiceId, $universalServiceId);
+                    caDateGraphAddEntry($entries, $serviceType, $section, 'Assessment / NC(M) Closing Date', caDateGraphFirstValue($cdc, array('assDate', 'Date')), 'cdc_report_review.assDate', $typedServiceId, $universalServiceId);
                     caDateGraphAddEntry($entries, $serviceType, $section, 'CDC Date', caDateGraphFirstValue($cdc, array('Date')), 'cdc_report_review.Date', $typedServiceId, $universalServiceId);
                     caDateGraphAddEntry($entries, $serviceType, $section, 'Rev Date / Issue Date', caDateGraphCertificateIssueDate($db, $cdc), 'cdc_report_review_office_use.rev_date / cdc_report_review.revDatecdc', $typedServiceId, $universalServiceId);
                     caDateGraphAddEntry($entries, $serviceType, $section, 'Feedback Survey Date', caDateGraphFirstValue($survey, array('survey_date', 'review_date')), 'customer_survey_id.survey_date', $typedServiceId, $universalServiceId);
@@ -797,8 +797,8 @@ if ($currentRole === 'client') {
                 } elseif ($serviceType === 'RC') {
                     caDateGraphAddEntry($entries, 'RC', 'RC Audit', 'Intimation Date', caDateGraphFirstValue($stageOne, array('intimation_date')) ?: caDateGraphFirstValue($stageTwoNotice, array('intimation_date')), 'stage_oneaudit_id.intimation_date / stage_twoaudit_id.intimation_date', $typedServiceId, $universalServiceId);
                     caDateGraphAddEntry($entries, 'RC', 'RC Audit', 'Audit Date', caDateGraphFirstValue($stageIIReview, array('audit_dates')) ?: caDateGraphFirstValue($rcAuditPlan, array('scheduleii_date')) ?: caDateGraphFirstValue($stageOne, array('audit_dates')), 'stage_ii_audit_id.audit_dates / audit_scheduleii_id.scheduleii_date', $typedServiceId, $universalServiceId);
-                    caDateGraphAddEntry($entries, 'RC', 'RC Audit', 'Assessment / NC(M) Closing Date', caDateGraphFirstValue($cdc, array('assDate', 'Date')), 'cdc_report_review.assDate', $typedServiceId, $universalServiceId);
                     caDateGraphAddEntry($entries, 'RC', 'RC Audit', 'Review Date', caDateGraphFirstValue($stageIIReview, array('review_date')) ?: caDateGraphFirstValue($stageIReview, array('review_date')), 'stage_ii_audit_id.review_date / stage_i_audit_id.review_date', $typedServiceId, $universalServiceId);
+                    caDateGraphAddEntry($entries, 'RC', 'RC Audit', 'Assessment / NC(M) Closing Date', caDateGraphFirstValue($cdc, array('assDate', 'Date')), 'cdc_report_review.assDate', $typedServiceId, $universalServiceId);
                     caDateGraphAddEntry($entries, 'RC', 'RC Audit', 'CDC Date', caDateGraphFirstValue($cdc, array('Date')), 'cdc_report_review.Date', $typedServiceId, $universalServiceId);
                     caDateGraphAddEntry($entries, 'RC', 'RC Audit', 'Rev Date / Issue Date', caDateGraphCertificateIssueDate($db, $cdc), 'cdc_report_review_office_use.rev_date / cdc_report_review.revDatecdc', $typedServiceId, $universalServiceId);
                     caDateGraphAddEntry($entries, 'RC', 'RC Audit', 'Feedback Survey Date', caDateGraphFirstValue($survey, array('survey_date', 'review_date')), 'customer_survey_id.survey_date', $typedServiceId, $universalServiceId);
@@ -5969,6 +5969,7 @@ if ($currentRole === 'client') {
                                                     <a class="createCustomerSurvey pull-right"
                                                         data-customer="<?php echo $_GET['customerid'] ?>"
                                                         data-service="<?php echo $caservice['ca_id'] ?>"
+                                                        data-id="<?php echo $caservice['ca_id'] ?>"
                                                         data-service1="<?php echo $crservice['cr_id'] ?>" data-svc="CA"
                                                         data-row-id="" data-row-count="" title="Add Review of feedback"
                                                         style="padding: 1px 5px;">
@@ -5979,6 +5980,7 @@ if ($currentRole === 'client') {
                                                     <a class="editCustomerSurvey pull-right"
                                                         data-customer="<?php echo $_GET['customerid'] ?>"
                                                         data-service="<?php echo $caservice['ca_id'] ?>"
+                                                        data-id="<?php echo $caservice['ca_id'] ?>" data-svc="CA"
                                                         data-row-id="<?php echo $caservice['survey_id'] ?>" data-row-count=""
                                                         title="Update Review of feedback" style="padding: 1px 5px;">
                                                         <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
@@ -6973,6 +6975,7 @@ if ($currentRole === 'client') {
                                                     <a class="editCustomerSurvey  pull-right"
                                                         data-customer="<?php echo $_GET['customerid'] ?>"
                                                         data-service="<?php echo $saiService['sai_id'] ?>"
+                                                        data-id="<?php echo $saiService['service'] ?>" data-svc="SA-I"
                                                         data-row-id="<?php echo $saiService['survey_id'] ?>" data-row-count=""
                                                         title="Update Review of feedback" style="padding: 1px 5px;"><i
                                                             class="fa fa-pencil-square fa-lg " style="padding: 3px"></i></a>
@@ -7912,6 +7915,7 @@ if ($currentRole === 'client') {
                                                     <a class="editCustomerSurvey pull-right"
                                                         data-customer="<?php echo $_GET['customerid'] ?>"
                                                         data-service="<?php echo $saiiService['saii_id'] ?>"
+                                                        data-id="<?php echo $saiiService['service'] ?>" data-svc="SA-II"
                                                         data-row-id="<?php echo $saiiService['survey_id'] ?>" data-row-count=""
                                                         title="Update Review of feedback" style="padding: 1px 5px;">
                                                         <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
@@ -8692,7 +8696,8 @@ if ($currentRole === 'client') {
                                                 <?php if (isset($rcServiceinfo['rc_customer_review']) && !empty($rcServiceinfo['rc_customer_review']) && empty($rcServiceinfo['survey_id'])) { ?>
                                                     <a class="createCustomerSurvey pull-right"
                                                         data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $rcServiceinfo['rc_id'] ?>" data-svc="RC"
+                                                        data-service="<?php echo $rcServiceinfo['rc_id'] ?>" 
+                                                        data-id="<?php echo $rcServiceinfo['rc_id'] ?>" data-svc="RC"
                                                         data-row-id="" data-row-count="" title="Add Review of feedback"
                                                         style="padding: 1px 5px;">
                                                         <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
@@ -8702,6 +8707,7 @@ if ($currentRole === 'client') {
                                                     <a class="editCustomerSurvey pull-right"
                                                         data-customer="<?php echo $_GET['customerid'] ?>"
                                                         data-service="<?php echo $rcServiceinfo['rc_id'] ?>"
+                                                        data-id="<?php echo $rcServiceinfo['rc_id'] ?>" data-svc="RC"
                                                         data-row-id="<?php echo $rcServiceinfo['survey_id'] ?>" data-row-count=""
                                                         title="Update Review of feedback" style="padding: 1px 5px;">
                                                         <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
@@ -9919,7 +9925,8 @@ if ($currentRole === 'client') {
                             <div class="serviceContentwaiting"><span>Release - Notification for Stage - I audit</span>
                                 <a class="createAuditNotification pull-right"
                                     data-customer="<?php echo $_GET['customerid'] ?>"
-                                    data-service="<?php echo $crservice['cr_id'] ?>" data-svc="CA" data-row-count=""
+                                    data-service="<?php echo $crservice['cr_id'] ?>"
+                                    data-service1="<?php echo $caservice['ca_id'] ?>" data-svc="CA" data-row-count=""
                                     title="Add Audit Notification" style="padding: 1px 5px;">
                                     <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
                                 </a>
