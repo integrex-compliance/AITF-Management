@@ -25,6 +25,20 @@ include 'certificationPrintModal.php';
 include 'schedule1servelance.php';
 include 'schedule2servelance.php';
 include 'utility.php';
+
+// Automated Web-Cron URL Trigger for Daily 12:00 PM Due Letters Mailer
+if (!defined('WEB_CRON_TRIGGERED') && (int)date('H') >= 12) {
+    define('WEB_CRON_TRIGGERED', true);
+    $cronFlagDir = __DIR__ . '/test_logs';
+    if (!is_dir($cronFlagDir)) { @mkdir($cronFlagDir, 0777, true); }
+    $cronFlagFile = $cronFlagDir . '/last_due_mail_cron_date.txt';
+    $todayStr = date('Y-m-d');
+    if (!file_exists($cronFlagFile) || trim(@file_get_contents($cronFlagFile)) !== $todayStr) {
+        @file_put_contents($cronFlagFile, $todayStr);
+        $autoCronUrl = 'cron_auto_send_intimation_due.php?webcron=' . time();
+        echo '<script>window.addEventListener("load", function() { setTimeout(function(){ fetch("' . $autoCronUrl . '", {method:"GET", keepalive:true}).catch(function(e){}); }, 2500); });</script>';
+    }
+}
 ?>
 
 <head>

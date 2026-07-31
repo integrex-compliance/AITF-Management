@@ -213,7 +213,11 @@
                 <div class="row">
                     <div class="col-md-12">
                         <div class="panel panel-primary" >
-                            <h4 style="color: #053c6d; text-align: center">Intimation Due</h4>
+                            <h4 style="color: #053c6d; text-align: center; margin-bottom: 10px;">Intimation Due</h4>
+                            <div class="auto-cron-banner" style="background: rgba(47, 129, 214, 0.12); border-left: 4px solid #2f81d6; padding: 12px 18px; margin: 0 15px 15px 15px; border-radius: 4px;">
+                                <strong style="color: #2f81d6; font-size: 14px;"><i class="fa fa-clock-o"></i> Automated 12:00 PM Mail Dispatch Enabled:</strong> 
+                                <span class="cron-desc" style="font-size: 13.5px; opacity: 0.9;">Due letters generated below will automatically be emailed to clients on their due date at <b>12:00 PM (Noon)</b> without requiring button clicks. A confirmation mail ("Automatic mail sent to the client...") along with the PDF attachment will be automatically sent to <b>certification@aitf.co.in</b>.</span>
+                            </div>
                         </div>
                     </div>
                 </div>

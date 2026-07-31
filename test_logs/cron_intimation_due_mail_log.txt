@@ -1,0 +1,89 @@
+[2026-07-31 12:01:11] === STARTING AUTOMATED INTIMATION DUE LETTER CRON JOB (12:00 PM) ===
+[2026-07-31 12:01:11] Found 12 pending due letter(s) eligible for automatic mail sending.
+[2026-07-31 12:01:11] -------------------------------------------------------------------
+[2026-07-31 12:01:11] Processing due letter -> Customer: Pragati Engineering (ID: 501) | Letter: Expire Letter | Due Date: 2025-11-10
+[2026-07-31 12:01:12] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260731120112_501Expire Letter.pdf
+[2026-07-31 12:01:20] SUCCESS: Emailed due letter to client recipient(s): pragati_engineering@yahoo.co.in
+[2026-07-31 12:01:20] Updated ca_service_dates action_id 6449 status to 'sent' (sent_date: 2026-07-31).
+[2026-07-31 12:01:29] SUCCESS: Sent confirmation email to office (certification@aitf.co.in).
+[2026-07-31 12:01:29] -------------------------------------------------------------------
+[2026-07-31 12:01:29] Processing due letter -> Customer: PLASMA PAINTS (ID: 529) | Letter: 1st Reminder | Due Date: 2026-04-17
+[2026-07-31 12:01:29] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260731120129_5291st Reminder.pdf
+[2026-07-31 12:01:36] SUCCESS: Emailed due letter to client recipient(s): plasmapaints@gmail.com,
+[2026-07-31 12:01:36] Updated ca_service_dates action_id 66529 status to 'sent' (sent_date: 2026-07-31).
+[2026-07-31 12:01:44] SUCCESS: Sent confirmation email to office (certification@aitf.co.in).
+[2026-07-31 12:01:44] -------------------------------------------------------------------
+[2026-07-31 12:01:44] Processing due letter -> Customer: PLASMA PAINTS (ID: 529) | Letter: 2nd Reminder | Due Date: 2026-05-17
+[2026-07-31 12:01:44] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260731120144_5292nd Reminder.pdf
+[2026-07-31 12:01:52] SUCCESS: Emailed due letter to client recipient(s): plasmapaints@gmail.com,
+[2026-07-31 12:01:52] Updated ca_service_dates action_id 66530 status to 'sent' (sent_date: 2026-07-31).
+[2026-07-31 12:02:00] SUCCESS: Sent confirmation email to office (certification@aitf.co.in).
+[2026-07-31 12:02:00] -------------------------------------------------------------------
+[2026-07-31 12:02:00] Processing due letter -> Customer: PLASMA PAINTS (ID: 529) | Letter: Expire Letter | Due Date: 2026-06-17
+[2026-07-31 12:02:00] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260731120200_529Expire Letter.pdf
+[2026-07-31 12:02:07] SUCCESS: Emailed due letter to client recipient(s): plasmapaints@gmail.com,
+[2026-07-31 12:02:07] Updated ca_service_dates action_id 66531 status to 'sent' (sent_date: 2026-07-31).
+[2026-07-31 12:02:15] SUCCESS: Sent confirmation email to office (certification@aitf.co.in).
+[2026-07-31 12:02:15] -------------------------------------------------------------------
+[2026-07-31 12:02:15] Processing due letter -> Customer: S. G. Engineering Services (ID: 484) | Letter: Suspension Reminder | Due Date: 2026-07-25
+[2026-07-31 12:02:15] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260731120215_484Suspension Reminder.pdf
+[2026-07-31 12:02:23] SUCCESS: Emailed due letter to client recipient(s): sgengg2014@gmail.com
+[2026-07-31 12:02:23] Updated ca_service_dates action_id 65052 status to 'sent' (sent_date: 2026-07-31).
+[2026-07-31 12:02:31] SUCCESS: Sent confirmation email to office (certification@aitf.co.in).
+[2026-07-31 12:02:31] -------------------------------------------------------------------
+[2026-07-31 12:02:31] Processing due letter -> Customer: Heramb Enterprises.   (ID: 573) | Letter: Suspension Reminder | Due Date: 2026-07-25
+[2026-07-31 12:02:31] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260731120231_573Suspension Reminder.pdf
+[2026-07-31 12:02:40] SUCCESS: Emailed due letter to client recipient(s): herambpune@gmail.com
+[2026-07-31 12:02:40] Updated ca_service_dates action_id 64817 status to 'sent' (sent_date: 2026-07-31).
+[2026-07-31 12:02:47] SUCCESS: Sent confirmation email to office (certification@aitf.co.in).
+[2026-07-31 12:02:47] -------------------------------------------------------------------
+[2026-07-31 12:02:47] Processing due letter -> Customer: R. K. Industries (ID: 419) | Letter: Suspension Reminder | Due Date: 2026-07-28
+[2026-07-31 12:02:47] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260731120247_419Suspension Reminder.pdf
+[2026-07-31 12:02:55] SUCCESS: Emailed due letter to client recipient(s): r_k_industries2005@yahoo.com,
+[2026-07-31 12:02:55] Updated ca_service_dates action_id 64722 status to 'sent' (sent_date: 2026-07-31).
+[2026-07-31 12:03:03] SUCCESS: Sent confirmation email to office (certification@aitf.co.in).
+[2026-07-31 12:03:03] -------------------------------------------------------------------
+[2026-07-31 12:03:03] Processing due letter -> Customer: RATNA TECHNOLOGY (ID: 1105) | Letter: Suspension Reminder | Due Date: 2026-07-29
+[2026-07-31 12:03:03] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260731120303_1105Suspension Reminder.pdf
+[2026-07-31 12:03:40] === STARTING AUTOMATED INTIMATION DUE LETTER CRON JOB (12:00 PM) ===
+[2026-07-31 12:03:41] Found 5 pending due letter(s) eligible for automatic mail sending.
+[2026-07-31 12:03:41] -------------------------------------------------------------------
+[2026-07-31 12:03:41] Processing due letter -> Customer: RATNA TECHNOLOGY (ID: 1105) | Letter: Suspension Reminder | Due Date: 2026-07-29
+[2026-07-31 12:03:41] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260731120341_1105Suspension Reminder.pdf
+[2026-07-31 12:03:48] SUCCESS: Emailed due letter to client recipient(s): dvinoj9@gmail.com
+[2026-07-31 12:03:48] Updated ca_service_dates action_id 64696 status to 'sent' (sent_date: 2026-07-31).
+[2026-07-31 12:03:55] SUCCESS: Sent confirmation email to office (certification@aitf.co.in).
+[2026-07-31 12:03:55] -------------------------------------------------------------------
+[2026-07-31 12:03:55] Processing due letter -> Customer: GIGAMAC PRIVATE LIMITED (ID: 478) | Letter: Suspend Letter | Due Date: 2026-07-30
+[2026-07-31 12:03:55] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260731120355_478Suspend Letter.pdf
+[2026-07-31 12:04:02] SUCCESS: Emailed due letter to client recipient(s): info@gigamac.in,
+[2026-07-31 12:04:02] Updated ca_service_dates action_id 64693 status to 'sent' (sent_date: 2026-07-31).
+[2026-07-31 12:04:10] SUCCESS: Sent confirmation email to office (certification@aitf.co.in).
+[2026-07-31 12:04:10] -------------------------------------------------------------------
+[2026-07-31 12:04:10] Processing due letter -> Customer: Matchwell Engineering Pvt. Ltd. (ID: 506) | Letter: Expire Letter | Due Date: 2026-07-30
+[2026-07-31 12:04:10] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260731120410_506Expire Letter.pdf
+[2026-07-31 12:04:18] SUCCESS: Emailed due letter to client recipient(s): ranjit.patil@matchwell.in,  charu@matchwell.in
+[2026-07-31 12:04:18] Updated ca_service_dates action_id 65540 status to 'sent' (sent_date: 2026-07-31).
+[2026-07-31 12:04:25] SUCCESS: Sent confirmation email to office (certification@aitf.co.in).
+[2026-07-31 12:04:25] -------------------------------------------------------------------
+[2026-07-31 12:04:25] Processing due letter -> Customer: G - Centri- Force Engineering Pvt. Ltd. (ID: 535) | Letter: Expire Letter | Due Date: 2026-07-31
+[2026-07-31 12:04:25] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260731120425_535Expire Letter.pdf
+[2026-07-31 12:04:32] SUCCESS: Emailed due letter to client recipient(s): info@gcentriforce.com,  info@gcentriforce.com,
+[2026-07-31 12:04:33] Updated ca_service_dates action_id 64846 status to 'sent' (sent_date: 2026-07-31).
+[2026-07-31 12:04:37] === STARTING AUTOMATED INTIMATION DUE LETTER CRON JOB (12:00 PM) ===
+[2026-07-31 12:04:37] Found 1 pending due letter(s) eligible for automatic mail sending.
+[2026-07-31 12:04:37] -------------------------------------------------------------------
+[2026-07-31 12:04:37] Processing due letter -> Customer: J. B. ENTERPRISES (ID: 1162) | Letter: Suspension Reminder | Due Date: 2026-07-31
+[2026-07-31 12:04:37] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260731120437_1162Suspension Reminder.pdf
+[2026-07-31 12:04:41] SUCCESS: Sent confirmation email to office (certification@aitf.co.in).
+[2026-07-31 12:04:41] -------------------------------------------------------------------
+[2026-07-31 12:04:41] Processing due letter -> Customer: J. B. ENTERPRISES (ID: 1162) | Letter: Suspension Reminder | Due Date: 2026-07-31
+[2026-07-31 12:04:41] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260731120441_1162Suspension Reminder.pdf
+[2026-07-31 12:04:44] SUCCESS: Emailed due letter to client recipient(s): jb.enterprises2112@gmail.com
+[2026-07-31 12:04:44] Updated ca_service_dates action_id 64665 status to 'sent' (sent_date: 2026-07-31).
+[2026-07-31 12:04:49] SUCCESS: Emailed due letter to client recipient(s): jb.enterprises2112@gmail.com
+[2026-07-31 12:04:49] Updated ca_service_dates action_id 64665 status to 'sent' (sent_date: 2026-07-31).
+[2026-07-31 12:04:52] SUCCESS: Sent confirmation email to office (certification@aitf.co.in).
+[2026-07-31 12:04:52] === AUTOMATED CRON JOB COMPLETED: 1 succeeded, 0 failed ===
+[2026-07-31 12:04:56] SUCCESS: Sent confirmation email to office (certification@aitf.co.in).
+[2026-07-31 12:04:56] === AUTOMATED CRON JOB COMPLETED: 5 succeeded, 0 failed ===
