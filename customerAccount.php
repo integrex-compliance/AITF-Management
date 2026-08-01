@@ -3,7 +3,7 @@ require_once __DIR__ . '/include/session_helper.php';
 aitf_start_session();
 
 $currentRole = strtolower(trim((string) ($_SESSION['role'] ?? '')));
-if ($currentRole === 'client') {
+if ($currentRole === 'client' || $currentRole === 'external') {
     $_SESSION['login_error'] = true;
     $_SESSION['login_notice'] = 'Invalid URL. Please login again.';
     header('Location: loginSelection.php?reason=invalid_url');

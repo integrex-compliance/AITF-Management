@@ -1585,46 +1585,7 @@
                     </div>
                 </div>
 
-                <div
-                    class="dash-section-grid <?php echo ($dashboardType === 'business' || $dashboardType === 'letters') ? '' : 'hidden-dashboard'; ?>">
-                    <div class="dash-panel">
-                        <h3>Due Letter Status</h3>
-                        <canvas id="letterStatusChart" class="dash-chart"></canvas>
-                    </div>
-                    <div class="dash-panel">
-                        <h3>Letter Types</h3>
-                        <?php
-                        $maxLetterAction = 0;
-                        foreach ($letterActionRows as $row) {
-                            $maxLetterAction = max($maxLetterAction, (int) $row['total']);
-                        }
-                        ?>
-                        <div class="letter-rank-list">
-                            <?php if (empty($letterActionRows)) { ?>
-                                <div class="letter-rank-empty">No letter data found.</div>
-                            <?php } ?>
-                            <?php foreach ($letterActionRows as $row) {
-                                $letterTotal = (int) $row['total'];
-                                $letterPercent = $maxLetterAction > 0 ? max(4, round(($letterTotal / $maxLetterAction) * 100)) : 0;
-                                ?>
-                                <div class="letter-rank-item">
-                                    <div class="letter-rank-head">
-                                        <span class="letter-rank-title"
-                                            title="<?php echo htmlspecialchars($row['label']); ?>"><?php echo htmlspecialchars($row['label']); ?></span>
-                                        <span class="letter-rank-count"><?php echo dashInt($letterTotal); ?></span>
-                                    </div>
-                                    <div class="letter-rank-track">
-                                        <div class="letter-rank-fill" style="width: <?php echo $letterPercent; ?>%;"></div>
-                                    </div>
-                                    <div class="letter-rank-meta">
-                                        <span>Due <?php echo dashInt(isset($row['due']) ? $row['due'] : 0); ?></span>
-                                        <span>Sent <?php echo dashInt(isset($row['sent']) ? $row['sent'] : 0); ?></span>
-                                    </div>
-                                </div>
-                            <?php } ?>
-                        </div>
-                    </div>
-                </div>
+
 
                 <div
                     class="dash-section-grid <?php echo ($dashboardType === 'business' || $dashboardType === 'payments' || $dashboardType === 'clients') ? '' : 'hidden-dashboard'; ?>">
@@ -1638,9 +1599,8 @@
                     </div>
                 </div>
 
-                <div class="dash-section-grid">
-                    <div
-                        class="dash-panel <?php echo ($dashboardType === 'business' || $dashboardType === 'invoice') ? '' : 'hidden-dashboard'; ?>">
+                <div class="<?php echo ($dashboardType === 'business' || $dashboardType === 'invoice') ? '' : 'hidden-dashboard'; ?>" style="margin-top: 16px;">
+                    <div class="dash-panel">
                         <h3>Recent Invoices</h3>
                         <table class="dash-table">
                             <thead>
@@ -1663,35 +1623,6 @@
                                         <td><?php echo htmlspecialchars($row['invoice_status']); ?></td>
                                         <td><?php echo dashDate($row['invoice_date']); ?></td>
                                         <td><?php echo dashMoney($row['final_amount']); ?></td>
-                                    </tr>
-                                <?php } ?>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div
-                        class="dash-panel <?php echo ($dashboardType === 'business' || $dashboardType === 'letters') ? '' : 'hidden-dashboard'; ?>">
-                        <h3>Latest Letter Activity</h3>
-                        <table class="dash-table">
-                            <thead>
-                                <tr>
-                                    <th>Client</th>
-                                    <th>Service</th>
-                                    <th>Letter</th>
-                                    <th>Status</th>
-                                    <th>Due</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($recentLetters as $row) { ?>
-                                    <tr class="clickable-row open-client"
-                                        data-customer="<?php echo (int) $row['customer_id']; ?>">
-                                        <td><?php echo htmlspecialchars($row['customer_name']); ?></td>
-                                        <td><?php echo htmlspecialchars($row['service_type']); ?></td>
-                                        <td><?php echo htmlspecialchars($row['action']); ?></td>
-                                        <td><span
-                                                class="dash-pill"><?php echo htmlspecialchars($row['status'] === 'sent' ? 'sent' : 'due'); ?></span>
-                                        </td>
-                                        <td><?php echo dashDate($row['due_date']); ?></td>
                                     </tr>
                                 <?php } ?>
                             </tbody>
@@ -2202,7 +2133,6 @@
     function drawAllCharts() {
         drawInvoiceTrend('invoiceTrendChart', dashData.invoiceTrend);
         drawDonut('invoiceTypeChart', dashData.invoiceTypes);
-        drawBars('letterStatusChart', dashData.letterTotals, 'total', '#ef7b45');
         drawBars('paymentChart', dashData.paymentServices, 'amount', '#1f9d68');
         drawDots('clientDotChart', dashData.clientStatuses);
     }
