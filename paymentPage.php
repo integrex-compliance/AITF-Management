@@ -46,6 +46,7 @@
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
         }
 
+        
         .invoice-filter-item {
             flex: 1;
             min-width: 150px;

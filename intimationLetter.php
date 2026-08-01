@@ -306,63 +306,256 @@
         }
         html.theme-dark #loading-div .meeting-loading-info { color: var(--hpd-text-dim); }
 
-        /* Countdown Timer Premium Styles */
-        .timer-container {
-            background: #2f81d6;
-            color: #fff;
-            padding: 8px 15px;
-            border-radius: 6px;
+        /* Countdown Timer & Auto Cron Banner Premium Styles */
+        .auto-cron-banner {
+            background: linear-gradient(135deg, rgba(239, 246, 255, 0.9) 0%, rgba(219, 234, 254, 0.6) 100%);
+            border-left: 5px solid #2f81d6;
+            padding: 16px 22px;
+            margin: 0 15px 25px 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.06);
+            border: 1px solid rgba(191, 219, 254, 0.5);
+            border-left-width: 5px;
+        }
+
+        .auto-cron-banner .cron-title {
+            color: #1e40af;
+            font-size: 14.5px;
+            font-weight: 700;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            box-shadow: 0 2px 8px rgba(47, 129, 214, 0.3);
+            gap: 6px;
         }
-        
-        html.theme-dark .auto-cron-banner {
-            background: rgba(74, 158, 255, 0.1) !important;
-            border-left-color: var(--hpd-accent) !important;
+
+        .auto-cron-banner .cron-title i {
+            color: #2563eb;
+            animation: pulse-glow 2s infinite ease-in-out;
         }
-        
-        html.theme-dark .auto-cron-banner strong {
-            color: var(--hpd-accent) !important;
+
+        .auto-cron-banner .cron-desc {
+            font-size: 13.5px;
+            color: #334155;
+            line-height: 1.5;
+            margin-top: 4px;
+            display: block;
         }
-        
-        html.theme-dark .timer-container {
-            background: var(--hpd-accent) !important;
-            color: #0a0e14 !important;
-            box-shadow: 0 2px 8px rgba(74, 158, 255, 0.2) !important;
+
+        .auto-cron-banner .cron-desc strong {
+            font-weight: 600;
+            color: #1e293b;
         }
 
         /* Last Dispatch Info Styling */
         .last-dispatch-container {
-            background: rgba(47, 129, 214, 0.05);
-            border: 1px dashed rgba(47, 129, 214, 0.35);
-            padding: 8px 12px;
-            border-radius: 6px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            padding: 10px 14px;
+            border-radius: 8px;
             display: inline-flex;
             flex-direction: column;
-            gap: 2.5px;
-            font-size: 11px;
-            line-height: 1.35;
+            gap: 4px;
+            font-size: 11.5px;
+            line-height: 1.4;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+            min-width: 175px;
         }
 
-        .status-success { color: #2e7d32; font-weight: bold; }
-        .status-failed { color: #c62828; font-weight: bold; }
-        .status-warning { color: #ef6c00; font-weight: bold; }
-        
-        html.theme-dark .last-dispatch-container {
-            background: rgba(74, 158, 255, 0.05) !important;
-            border-color: rgba(74, 158, 255, 0.2) !important;
-            color: var(--hpd-text) !important;
+        .last-dispatch-container .dispatch-header {
+            font-weight: bold;
+            color: #2563eb;
+            text-transform: uppercase;
+            font-size: 9px;
+            letter-spacing: 0.75px;
+            margin-bottom: 2px;
+            border-bottom: 1px solid #f1f5f9;
+            padding-bottom: 4px;
         }
 
-        html.theme-dark .last-dispatch-container strong {
+        .last-dispatch-container div {
+            color: #475569;
+        }
+
+        .last-dispatch-container strong {
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .last-dispatch-container span.dispatch-val {
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .status-success {
+            background-color: #dcfce7;
+            color: #15803d;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 10.5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .status-failed {
+            background-color: #fee2e2;
+            color: #b91c1c;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 10.5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .status-warning {
+            background-color: #fef3c7;
+            color: #b45309;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 10.5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .timer-container {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: #ffffff;
+            padding: 10px 16px;
+            border-radius: 8px;
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            min-height: 72px;
+        }
+
+        .timer-label-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            line-height: 1.2;
+            text-align: center;
+        }
+
+        .timer-label-group .next-dispatch-label {
+            font-size: 9px;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.75px;
+            opacity: 0.9;
+        }
+
+        .timer-label-group .dispatch-target-text {
+            font-size: 9.5px;
+            opacity: 0.8;
+            font-style: italic;
+            margin-top: 1px;
+        }
+
+        .timer-container .dispatch-countdown {
+            font-size: 18px;
+            font-weight: 700;
+            font-family: 'Courier New', Courier, monospace;
+            letter-spacing: 1px;
+            line-height: 1;
+            margin-top: 2px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Dark Theme Overrides */
+        html.theme-dark .auto-cron-banner {
+            background: linear-gradient(135deg, rgba(17, 24, 39, 0.8) 0%, rgba(21, 29, 45, 0.6) 100%) !important;
+            border-left-color: var(--hpd-accent) !important;
+            border-color: rgba(74, 158, 255, 0.15) !important;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+        }
+
+        html.theme-dark .auto-cron-banner .cron-title {
+            color: var(--hpd-accent) !important;
+        }
+
+        html.theme-dark .auto-cron-banner .cron-title i {
+            color: var(--hpd-accent) !important;
+        }
+
+        html.theme-dark .auto-cron-banner .cron-desc {
             color: var(--hpd-text-dim) !important;
         }
 
-        html.theme-dark .status-success { color: #81c784 !important; }
-        html.theme-dark .status-failed { color: #e57373 !important; }
-        html.theme-dark .status-warning { color: #ffb74d !important; }
+        html.theme-dark .auto-cron-banner .cron-desc strong {
+            color: var(--hpd-text) !important;
+        }
+
+        html.theme-dark .last-dispatch-container {
+            background: #161d2b !important;
+            border-color: #2e3a4f !important;
+            color: var(--hpd-text) !important;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2) !important;
+        }
+
+        html.theme-dark .last-dispatch-container .dispatch-header {
+            color: var(--hpd-accent) !important;
+            border-bottom-color: #232c3d !important;
+        }
+
+        html.theme-dark .last-dispatch-container div {
+            color: var(--hpd-text-dim) !important;
+        }
+
+        html.theme-dark .last-dispatch-container strong {
+            color: var(--hpd-text-faint) !important;
+        }
+
+        html.theme-dark .last-dispatch-container span.dispatch-val {
+            color: var(--hpd-text) !important;
+        }
+
+        html.theme-dark .status-success {
+            background-color: rgba(34, 197, 94, 0.15) !important;
+            color: #4ade80 !important;
+        }
+
+        html.theme-dark .status-failed {
+            background-color: rgba(239, 68, 68, 0.15) !important;
+            color: #f87171 !important;
+        }
+
+        html.theme-dark .status-warning {
+            background-color: rgba(245, 158, 11, 0.15) !important;
+            color: #fbbf24 !important;
+        }
+
+        html.theme-dark .timer-container {
+            background: linear-gradient(135deg, var(--hpd-accent) 0%, #1e63b0 100%) !important;
+            color: #0a0e14 !important;
+            box-shadow: 0 4px 15px rgba(74, 158, 255, 0.15) !important;
+            border-color: rgba(255, 255, 255, 0.2) !important;
+        }
+
+        html.theme-dark .timer-label-group .next-dispatch-label {
+            color: #0a0e14 !important;
+        }
+
+        html.theme-dark .timer-label-group .dispatch-target-text {
+            color: #1e293b !important;
+        }
+
+        html.theme-dark .timer-container .dispatch-countdown {
+            color: #0a0e14 !important;
+            text-shadow: none !important;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.08); }
+        }
 
         /* Sent Letters Tab & Slide Panel Styles */
         .sent-intimation-tab {
@@ -634,17 +827,17 @@
                     <div class="col-md-12">
                         <div class="panel panel-primary" >
                             <h4 style="color: #053c6d; text-align: center; margin-bottom: 10px;">Intimation Due</h4>
-                            <div class="auto-cron-banner" style="background: rgba(47, 129, 214, 0.12); border-left: 4px solid #2f81d6; padding: 12px 18px; margin: 0 15px 15px 15px; border-radius: 4px;">
+                            <div class="auto-cron-banner">
                                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
                                     <div style="flex: 1; min-width: 280px;">
-                                        <strong style="color: #2f81d6; font-size: 14px;"><i class="fa fa-clock-o"></i> Automated 12:00 PM Mail Dispatch Enabled:</strong> 
-                                        <span class="cron-desc" style="font-size: 13.5px; opacity: 0.9;">Due letters generated below will automatically be emailed to clients on their due date at <b>12:00 PM (Noon)</b> without requiring button clicks. A confirmation mail ("Automatic mail sent to the client...") along with the PDF attachment will be automatically sent to <b>certification@aitf.co.in</b>.</span>
+                                        <span class="cron-title"><i class="fa fa-clock-o"></i> Automated Mailling Script Enabled:</span> 
+                                        <span class="cron-desc">Due letters will be emailed automatically to clients at 12:00 PM on their due date. If automatic delivery fails due to any technical issue, Admins will be notified and can send the email manually.</span>
                                     </div>
                                     <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px;">
                                         <div class="last-dispatch-container">
-                                            <div style="font-weight: bold; color: #2f81d6; text-transform: uppercase; font-size: 9px; letter-spacing: 0.5px;">Last Dispatch Info</div>
-                                            <div><strong>Date:</strong> <span><?php echo $lastDispatch['date'] !== 'N/A' ? date("d M Y h:i A", strtotime($lastDispatch['date'])) : 'N/A'; ?></span></div>
-                                            <div><strong>Mails Sent:</strong> <span style="font-weight: bold; color: #2f81d6;"><?php echo htmlspecialchars($lastDispatch['total'], ENT_QUOTES, 'UTF-8'); ?></span></div>
+                                            <div class="dispatch-header">Last Dispatch Info</div>
+                                            <div><strong>Date:</strong> <span class="dispatch-val"><?php echo $lastDispatch['date'] !== 'N/A' ? date("d M Y h:i A", strtotime($lastDispatch['date'])) : 'N/A'; ?></span></div>
+                                            <div><strong>Mails Sent:</strong> <span class="dispatch-val" style="color: #2563eb;"><?php echo htmlspecialchars($lastDispatch['total'], ENT_QUOTES, 'UTF-8'); ?></span></div>
                                             <div><strong>Status:</strong> 
                                                 <?php if ($lastDispatch['status'] === 'Success'): ?>
                                                     <span class="status-success"><i class="fa fa-check-circle"></i> Success</span>
@@ -656,11 +849,11 @@
                                             </div>
                                         </div>
                                         <div class="timer-container">
-                                            <div style="display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2;">
-                                                <span style="font-size: 9px; text-transform: uppercase; font-weight: bold; opacity: 0.85; letter-spacing: 0.5px;">Next Dispatch In</span>
-                                                <span id="dispatch-target-text" style="font-size: 10px; opacity: 0.85; font-style: italic;">(<?php echo $targetDayText; ?> at 12:00 PM)</span>
+                                            <div class="timer-label-group">
+                                                <span class="next-dispatch-label">Next Dispatch In</span>
+                                                <span id="dispatch-target-text" class="dispatch-target-text">(<?php echo $targetDayText; ?> at 12:00 PM)</span>
                                             </div>
-                                            <div style="font-size: 18px; font-weight: bold; font-family: Consolas, Menlo, Monaco, monospace; letter-spacing: 0.5px; line-height: 1; min-width: 82px; text-align: center;" id="dispatch-countdown">
+                                            <div id="dispatch-countdown" class="dispatch-countdown">
                                                 --:--:--
                                             </div>
                                         </div>
