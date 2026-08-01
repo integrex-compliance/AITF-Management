@@ -821,10 +821,14 @@
 
         <div class="page-content inset">
             <div class="container" >
-                <br>
-                <br>
                 <div class="row">
                     <div class="col-md-12">
+                        <?php
+                            $totalDueLetters = count($noticeDue) + count($reminderDue) + count($suspensionDue) + count($withdrawnDue) + count($expireReminderDue1) + count($expireReminderDue2) + count($expireDue) + count($stage1Due) + count($stage2Due);
+                        ?>
+                        <h4 style="text-align: center; color: #d9534f; font-weight: bold; margin-bottom: 15px;">
+                            Total due latter = <?php echo $totalDueLetters; ?>
+                        </h4>
                         <div class="panel panel-primary" >
                             <h4 style="color: #053c6d; text-align: center; margin-bottom: 10px;">Intimation Due</h4>
                             <div class="auto-cron-banner">
