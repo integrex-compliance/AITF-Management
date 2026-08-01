@@ -87,3 +87,22 @@
 [2026-07-31 12:04:52] === AUTOMATED CRON JOB COMPLETED: 1 succeeded, 0 failed ===
 [2026-07-31 12:04:56] SUCCESS: Sent confirmation email to office (certification@aitf.co.in).
 [2026-07-31 12:04:56] === AUTOMATED CRON JOB COMPLETED: 5 succeeded, 0 failed ===
+[2026-08-01 12:00:34] === STARTING AUTOMATED INTIMATION DUE LETTER CRON JOB (12:00 PM) ===
+[2026-08-01 12:00:34] Found 4 pending due letter(s) eligible for automatic mail sending.
+[2026-08-01 12:00:34] -------------------------------------------------------------------
+[2026-08-01 12:00:34] Processing due letter -> Customer: Prantech Components Pvt. Ltd. (ID: 320) | Letter: Suspension Reminder | Due Date: 2026-08-01
+[2026-08-01 12:00:34] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260801120034_320Suspension Reminder.pdf
+[2026-08-01 12:00:52] ERROR: Failed sending email to client. Reasons: [smtpout.secureserver.net:587] SMTP connect() failed. https://github.com/PHPMailer/PHPMailer/wiki/Troubleshooting | [localhost:25] SMTP connect() failed. https://github.com/PHPMailer/PHPMailer/wiki/Troubleshooting | [relay-hosting.secureserver.net:25] SMTP connect() failed. https://github.com/PHPMailer/PHPMailer/wiki/Troubleshooting
+[2026-08-01 12:00:52] -------------------------------------------------------------------
+[2026-08-01 12:00:52] Processing due letter -> Customer: Siddhivinayak  Engineering (ID: 532) | Letter: Expire Letter | Due Date: 2026-08-01
+[2026-08-01 12:00:52] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260801120052_532Expire Letter.pdf
+[2026-08-01 12:01:10] ERROR: Failed sending email to client. Reasons: [smtpout.secureserver.net:587] SMTP connect() failed. https://github.com/PHPMailer/PHPMailer/wiki/Troubleshooting | [localhost:25] SMTP connect() failed. https://github.com/PHPMailer/PHPMailer/wiki/Troubleshooting | [relay-hosting.secureserver.net:25] SMTP connect() failed. https://github.com/PHPMailer/PHPMailer/wiki/Troubleshooting
+[2026-08-01 12:01:10] -------------------------------------------------------------------
+[2026-08-01 12:01:10] Processing due letter -> Customer: MIRACLE STAMPING AND SLITTING INDUSTRIES (ID: 1159) | Letter: Suspend Letter | Due Date: 2026-08-01
+[2026-08-01 12:01:10] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260801120110_1159Suspend Letter.pdf
+[2026-08-01 12:01:27] ERROR: Failed sending email to client. Reasons: [smtpout.secureserver.net:587] SMTP connect() failed. https://github.com/PHPMailer/PHPMailer/wiki/Troubleshooting | [localhost:25] SMTP connect() failed. https://github.com/PHPMailer/PHPMailer/wiki/Troubleshooting | [relay-hosting.secureserver.net:25] SMTP connect() failed. https://github.com/PHPMailer/PHPMailer/wiki/Troubleshooting
+[2026-08-01 12:01:27] -------------------------------------------------------------------
+[2026-08-01 12:01:27] Processing due letter -> Customer: Vardhani Engineers (ID: 407) | Letter: Suspend Letter | Due Date: 2026-08-01
+[2026-08-01 12:01:27] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260801120127_407Suspend Letter.pdf
+[2026-08-01 12:01:46] ERROR: Failed sending email to client. Reasons: [smtpout.secureserver.net:587] SMTP connect() failed. https://github.com/PHPMailer/PHPMailer/wiki/Troubleshooting | [localhost:25] SMTP connect() failed. https://github.com/PHPMailer/PHPMailer/wiki/Troubleshooting | [relay-hosting.secureserver.net:25] SMTP connect() failed. https://github.com/PHPMailer/PHPMailer/wiki/Troubleshooting
+[2026-08-01 12:01:46] === AUTOMATED CRON JOB COMPLETED: 0 succeeded, 4 failed ===

@@ -1,4 +1,4 @@
-32...<div id="wrapper" class="active">
+<div id="wrapper" class="active">
     <!-- Sidebar -->
     <!-- Sidebar -->
 
@@ -44,6 +44,137 @@
     $statement = $db->prepare($expired);
     $statement->execute();
     $expireDue = $statement->fetchAll();
+
+    // Fetch pending Stage 1 notifications
+    $stage1Query = "SELECT ci.id, ci.customer_name, ci.unique_id, svc.service_id, svc.service_type, 
+                           soi.intimation_date as due_date, NULL as sent_date, 
+                           'Stage 1 Notification' as action, soi.audit_stage_id as action_id, cas.ca_id
+                    FROM stage_oneaudit_id soi
+                    INNER JOIN service_type_ca cas ON soi.ca_service_id = cas.ca_id
+                    INNER JOIN service svc ON cas.service = svc.service_id
+                    INNER JOIN customer_info ci ON svc.customer_id = ci.id
+                    LEFT JOIN ca_service_dates svcdt ON svc.service_id = svcdt.service_id 
+                        AND svcdt.action = 'Stage 1 Notification' 
+                        AND svcdt.status = 'sent' 
+                        AND svcdt.is_deleted = 'N'
+                    WHERE svcdt.action_id IS NULL
+                      AND soi.intimation_date = CURDATE()
+                      AND (ci.is_deleted IS NULL OR ci.is_deleted <> 'YES')
+                      AND (cas.service_ca_status IS NULL OR cas.service_ca_status <> 'Withdrawn')";
+    $statement = $db->prepare($stage1Query);
+    $statement->execute();
+    $stage1Due = $statement->fetchAll();
+
+    // Fetch pending Stage 2 notifications
+    $stage2Query = "SELECT ci.id, ci.customer_name, ci.unique_id, svc.service_id, svc.service_type, 
+                           stai.intimation_date as due_date, NULL as sent_date, 
+                           'Stage 2 Notification' as action, stai.audit_stageii_id as action_id, cas.ca_id
+                    FROM stage_twoaudit_id stai
+                    INNER JOIN service_type_ca cas ON stai.service_id = cas.ca_id
+                    INNER JOIN service svc ON cas.service = svc.service_id
+                    INNER JOIN customer_info ci ON svc.customer_id = ci.id
+                    LEFT JOIN ca_service_dates svcdt ON svc.service_id = svcdt.service_id 
+                        AND svcdt.action = 'Stage 2 Notification' 
+                        AND svcdt.status = 'sent' 
+                        AND svcdt.is_deleted = 'N'
+                    WHERE svcdt.action_id IS NULL
+                      AND stai.intimation_date = CURDATE()
+                      AND (ci.is_deleted IS NULL OR ci.is_deleted <> 'YES')
+                      AND (cas.service_ca_status IS NULL OR cas.service_ca_status <> 'Withdrawn')";
+    $statement = $db->prepare($stage2Query);
+    $statement->execute();
+    $stage2Due = $statement->fetchAll();
+
+    // Calculate remaining seconds for the next 12:00 PM (Noon) mail dispatch
+    date_default_timezone_set('Asia/Kolkata');
+    $now = time();
+    $targetToday = strtotime('today 12:00:00');
+    if ($now >= $targetToday) {
+        $targetTime = strtotime('tomorrow 12:00:00');
+        $targetDayText = "tomorrow";
+    } else {
+        $targetTime = $targetToday;
+        $targetDayText = "today";
+    }
+    $remainingSeconds = $targetTime - $now;
+
+    // Helper function to parse last cron dispatch info from log file
+    if (!function_exists('get_last_dispatch_info')) {
+        function get_last_dispatch_info() {
+            $logPath = __DIR__ . '/test_logs/cron_intimation_due_mail_log.txt';
+            $info = [
+                'date' => 'N/A',
+                'total' => 0,
+                'success' => 0,
+                'failed' => 0,
+                'status' => 'No logs found'
+            ];
+
+            if (!file_exists($logPath) || !is_readable($logPath)) {
+                return $info;
+            }
+
+            $lines = file($logPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            if (empty($lines)) {
+                return $info;
+            }
+
+            $lastEndIdx = -1;
+            $noPendingFoundIdx = -1;
+
+            for ($i = count($lines) - 1; $i >= 0; $i--) {
+                $line = $lines[$i];
+                if (strpos($line, '=== AUTOMATED CRON JOB COMPLETED:') !== false) {
+                    if ($lastEndIdx === -1) {
+                        $lastEndIdx = $i;
+                    }
+                }
+                if (strpos($line, 'No pending due letters found for today.') !== false) {
+                    if ($noPendingFoundIdx === -1 && $lastEndIdx === -1) {
+                        $noPendingFoundIdx = $i;
+                    }
+                }
+            }
+
+            if ($lastEndIdx !== -1) {
+                $line = $lines[$lastEndIdx];
+                if (preg_match('/^\[(.*?)\]/', $line, $matches)) {
+                    $info['date'] = $matches[1];
+                }
+                if (preg_match('/COMPLETED:\s*(\d+)\s*succeeded,\s*(\d+)\s*failed/', $line, $matches)) {
+                    $info['success'] = (int)$matches[1];
+                    $info['failed'] = (int)$matches[2];
+                    $info['total'] = $info['success'] + $info['failed'];
+                }
+                if ($info['failed'] > 0) {
+                    $info['status'] = 'Failed (' . $info['failed'] . ' error' . ($info['failed'] > 1 ? 's' : '') . ')';
+                } else if ($info['success'] > 0) {
+                    $info['status'] = 'Success';
+                } else {
+                    $info['status'] = 'Completed (0 sent)';
+                }
+            } else if ($noPendingFoundIdx !== -1) {
+                $line = $lines[$noPendingFoundIdx];
+                if (preg_match('/^\[(.*?)\]/', $line, $matches)) {
+                    $info['date'] = $matches[1];
+                }
+                $info['total'] = 0;
+                $info['success'] = 0;
+                $info['failed'] = 0;
+                $info['status'] = 'No pending letters';
+            }
+
+            return $info;
+        }
+    }
+
+    $lastDispatch = get_last_dispatch_info();
+
+    // Fetch sent intimations list for the sidebar tab (all entries)
+    $sentNoticeQuery = "SELECT ci.id, ci.customer_name, ci.email_id, ci.unique_id, svc.service_id, svc.service_type, svcdt.due_date, svcdt.sent_date, svcdt.action, svcdt.action_id FROM ca_service_dates svcdt INNER JOIN service svc ON svcdt.service_id = svc.service_id INNER JOIN customer_info ci ON svc.customer_id = ci.id WHERE svcdt.status = 'sent' AND svcdt.is_deleted = 'N' AND svcdt.due_date <= NOW() ORDER BY svcdt.sent_date DESC";
+    $sentStatement = $db->prepare($sentNoticeQuery);
+    $sentStatement->execute();
+    $sentNoticeDue = $sentStatement->fetchAll();
     ?>
 
     <style>
@@ -174,6 +305,277 @@
             color: var(--hpd-text);
         }
         html.theme-dark #loading-div .meeting-loading-info { color: var(--hpd-text-dim); }
+
+        /* Countdown Timer Premium Styles */
+        .timer-container {
+            background: #2f81d6;
+            color: #fff;
+            padding: 8px 15px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 8px rgba(47, 129, 214, 0.3);
+        }
+        
+        html.theme-dark .auto-cron-banner {
+            background: rgba(74, 158, 255, 0.1) !important;
+            border-left-color: var(--hpd-accent) !important;
+        }
+        
+        html.theme-dark .auto-cron-banner strong {
+            color: var(--hpd-accent) !important;
+        }
+        
+        html.theme-dark .timer-container {
+            background: var(--hpd-accent) !important;
+            color: #0a0e14 !important;
+            box-shadow: 0 2px 8px rgba(74, 158, 255, 0.2) !important;
+        }
+
+        /* Last Dispatch Info Styling */
+        .last-dispatch-container {
+            background: rgba(47, 129, 214, 0.05);
+            border: 1px dashed rgba(47, 129, 214, 0.35);
+            padding: 8px 12px;
+            border-radius: 6px;
+            display: inline-flex;
+            flex-direction: column;
+            gap: 2.5px;
+            font-size: 11px;
+            line-height: 1.35;
+        }
+
+        .status-success { color: #2e7d32; font-weight: bold; }
+        .status-failed { color: #c62828; font-weight: bold; }
+        .status-warning { color: #ef6c00; font-weight: bold; }
+        
+        html.theme-dark .last-dispatch-container {
+            background: rgba(74, 158, 255, 0.05) !important;
+            border-color: rgba(74, 158, 255, 0.2) !important;
+            color: var(--hpd-text) !important;
+        }
+
+        html.theme-dark .last-dispatch-container strong {
+            color: var(--hpd-text-dim) !important;
+        }
+
+        html.theme-dark .status-success { color: #81c784 !important; }
+        html.theme-dark .status-failed { color: #e57373 !important; }
+        html.theme-dark .status-warning { color: #ffb74d !important; }
+
+        /* Sent Letters Tab & Slide Panel Styles */
+        .sent-intimation-tab {
+            position: fixed;
+            right: 0;
+            top: 250px;
+            z-index: 9998;
+            border: 0;
+            border-radius: 6px 0 0 6px;
+            background: #053c6d;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            padding: 12px 10px;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            box-shadow: 0 8px 22px rgba(15, 23, 42, 0.25);
+            cursor: pointer;
+            outline: none;
+            transition: background 0.2s, padding-right 0.2s;
+        }
+
+        .sent-intimation-tab:hover {
+            background: #1468b3;
+            padding-right: 14px;
+        }
+
+        .sent-intimation-count {
+            display: inline-block;
+            min-width: 18px;
+            margin-top: 7px;
+            border-radius: 999px;
+            background: #fff;
+            color: #053c6d;
+            line-height: 18px;
+            text-align: center;
+            writing-mode: horizontal-tb;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        .sent-intimation-panel {
+            position: fixed;
+            top: 0;
+            right: -430px;
+            z-index: 9999;
+            width: 420px;
+            max-width: calc(100vw - 24px);
+            height: 100vh;
+            background: #ffffff;
+            box-shadow: -10px 0 30px rgba(15, 23, 42, 0.15);
+            transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sent-intimation-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 16px;
+            background: #053c6d;
+            color: #fff;
+        }
+
+        .sent-intimation-panel-title {
+            margin: 0;
+            font-size: 15px;
+            font-weight: 700;
+            color: #fff !important;
+        }
+
+        .sent-intimation-close {
+            border: 0;
+            background: transparent;
+            color: #fff;
+            font-size: 24px;
+            line-height: 1;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .sent-intimation-panel-body {
+            height: calc(100vh - 54px);
+            overflow-y: auto;
+            padding: 12px;
+            background: #f8fafc;
+        }
+
+        .sent-intimation-empty {
+            margin: 8px 0 0;
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+            background: #f1f5f9;
+            color: #475569;
+            text-align: center;
+            border-radius: 6px;
+        }
+
+        .sent-intimation-card {
+            border: 1px solid #e2e8f0;
+            border-left: 4px solid #053c6d;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            background: #ffffff;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .sent-intimation-card-head {
+            padding: 10px 12px;
+            border-bottom: 1px solid #f1f5f9;
+            background: #fafafa;
+        }
+
+        .sent-intimation-card-title {
+            color: #1e293b;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .sent-intimation-card-meta {
+            color: #64748b;
+            font-size: 11px;
+            margin-top: 2px;
+        }
+
+        .sent-intimation-item {
+            padding: 10px 12px;
+        }
+
+        .sent-intimation-detail {
+            color: #334155;
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+
+        .sent-intimation-detail strong {
+            color: #475569;
+            font-weight: 600;
+        }
+
+        /* Dark Mode overrides */
+        html.theme-dark .sent-intimation-tab {
+            background: var(--hpd-accent) !important;
+            color: #0a0e14 !important;
+        }
+
+        html.theme-dark .sent-intimation-count {
+            background: #0a0e14 !important;
+            color: var(--hpd-accent) !important;
+        }
+
+        html.theme-dark .sent-intimation-panel {
+            background: var(--hpd-surface) !important;
+            box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5) !important;
+        }
+
+        html.theme-dark .sent-intimation-panel-header {
+            background: var(--hpd-surface-2) !important;
+            border-bottom: 1px solid var(--hpd-border) !important;
+        }
+
+        html.theme-dark .sent-intimation-panel-body {
+            background: var(--hpd-bg) !important;
+        }
+
+        html.theme-dark .sent-intimation-card {
+            background: var(--hpd-surface) !important;
+            border-color: var(--hpd-border) !important;
+            border-left-color: var(--hpd-accent) !important;
+        }
+
+        html.theme-dark .sent-intimation-card-head {
+            background: var(--hpd-surface-2) !important;
+            border-bottom-color: var(--hpd-border) !important;
+        }
+
+        html.theme-dark .sent-intimation-card-title {
+            color: var(--hpd-text) !important;
+        }
+
+        html.theme-dark .sent-intimation-card-meta {
+            color: var(--hpd-text-dim) !important;
+        }
+
+        html.theme-dark .sent-intimation-detail {
+            color: var(--hpd-text) !important;
+        }
+
+        html.theme-dark .sent-intimation-detail strong {
+            color: var(--hpd-text-dim) !important;
+        }
+
+        html.theme-dark #sent-intimation-search-wrapper {
+            background: var(--hpd-bg) !important;
+            border-bottom-color: var(--hpd-border) !important;
+        }
+        
+        html.theme-dark #sent-intimation-search,
+        html.theme-dark #sent-intimation-filter-type,
+        html.theme-dark #sent-intimation-filter-from,
+        html.theme-dark #sent-intimation-filter-to {
+            background: var(--hpd-surface) !important;
+            border-color: var(--hpd-border) !important;
+            color: var(--hpd-text) !important;
+        }
+
+        html.theme-dark .sent-intimation-panel-body .input-group-addon {
+            background: var(--hpd-surface) !important;
+            border-color: var(--hpd-border) !important;
+            color: var(--hpd-text-dim) !important;
+        }
     </style>
 
     <div id="page-content-wrapper">
@@ -199,6 +601,24 @@
             </div>
         </div>
 
+        <div class="modal fade" id="sendStageConfirmModal" tabindex="-1" role="dialog" aria-labelledby="sendStageConfirmTitle">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header" style="background:#053c6d; color: #fff;">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                        <h4 class="modal-title" id="sendStageConfirmTitle">Send Stage Audit Notification</h4>
+                    </div>
+                    <div class="modal-body">
+                        <p style="font-size:15px; color:#333; margin-bottom: 0;">Are you sure you want to send this stage audit notification to the client?</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-warning" id="confirmSendStageBtn">Yes, Send</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div id="loading-div-background" >
             <div id="loading-div" class="ui-corner-all text-center">
                 <h1><i class="fa fa-spinner fa-spin" ></i></h1>
@@ -215,12 +635,100 @@
                         <div class="panel panel-primary" >
                             <h4 style="color: #053c6d; text-align: center; margin-bottom: 10px;">Intimation Due</h4>
                             <div class="auto-cron-banner" style="background: rgba(47, 129, 214, 0.12); border-left: 4px solid #2f81d6; padding: 12px 18px; margin: 0 15px 15px 15px; border-radius: 4px;">
-                                <strong style="color: #2f81d6; font-size: 14px;"><i class="fa fa-clock-o"></i> Automated 12:00 PM Mail Dispatch Enabled:</strong> 
-                                <span class="cron-desc" style="font-size: 13.5px; opacity: 0.9;">Due letters generated below will automatically be emailed to clients on their due date at <b>12:00 PM (Noon)</b> without requiring button clicks. A confirmation mail ("Automatic mail sent to the client...") along with the PDF attachment will be automatically sent to <b>certification@aitf.co.in</b>.</span>
+                                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                                    <div style="flex: 1; min-width: 280px;">
+                                        <strong style="color: #2f81d6; font-size: 14px;"><i class="fa fa-clock-o"></i> Automated 12:00 PM Mail Dispatch Enabled:</strong> 
+                                        <span class="cron-desc" style="font-size: 13.5px; opacity: 0.9;">Due letters generated below will automatically be emailed to clients on their due date at <b>12:00 PM (Noon)</b> without requiring button clicks. A confirmation mail ("Automatic mail sent to the client...") along with the PDF attachment will be automatically sent to <b>certification@aitf.co.in</b>.</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px;">
+                                        <div class="last-dispatch-container">
+                                            <div style="font-weight: bold; color: #2f81d6; text-transform: uppercase; font-size: 9px; letter-spacing: 0.5px;">Last Dispatch Info</div>
+                                            <div><strong>Date:</strong> <span><?php echo $lastDispatch['date'] !== 'N/A' ? date("d M Y h:i A", strtotime($lastDispatch['date'])) : 'N/A'; ?></span></div>
+                                            <div><strong>Mails Sent:</strong> <span style="font-weight: bold; color: #2f81d6;"><?php echo htmlspecialchars($lastDispatch['total'], ENT_QUOTES, 'UTF-8'); ?></span></div>
+                                            <div><strong>Status:</strong> 
+                                                <?php if ($lastDispatch['status'] === 'Success'): ?>
+                                                    <span class="status-success"><i class="fa fa-check-circle"></i> Success</span>
+                                                <?php elseif (strpos($lastDispatch['status'], 'Failed') !== false): ?>
+                                                    <span class="status-failed"><i class="fa fa-times-circle"></i> <?php echo htmlspecialchars($lastDispatch['status'], ENT_QUOTES, 'UTF-8'); ?></span>
+                                                <?php else: ?>
+                                                    <span class="status-warning"><i class="fa fa-info-circle"></i> <?php echo htmlspecialchars($lastDispatch['status'], ENT_QUOTES, 'UTF-8'); ?></span>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                        <div class="timer-container">
+                                            <div style="display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2;">
+                                                <span style="font-size: 9px; text-transform: uppercase; font-weight: bold; opacity: 0.85; letter-spacing: 0.5px;">Next Dispatch In</span>
+                                                <span id="dispatch-target-text" style="font-size: 10px; opacity: 0.85; font-style: italic;">(<?php echo $targetDayText; ?> at 12:00 PM)</span>
+                                            </div>
+                                            <div style="font-size: 18px; font-weight: bold; font-family: Consolas, Menlo, Monaco, monospace; letter-spacing: 0.5px; line-height: 1; min-width: 82px; text-align: center;" id="dispatch-countdown">
+                                                --:--:--
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
+                <!-- Stage 1 and Stage 2 Notifications Row -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="panel panel-primary" style="min-height: 140px" >
+                            <div class="panel-heading text-center" style="background: #053c6d">
+                                <h4 style="color: white">Stage 1 Notification</h4>
+                            </div>
+                            <?php foreach ($stage1Due as $notiInfo) { ?>
+                                <div class="panel-rightbody homePagePanel" id="actionItemDisplayPanel">
+                                    <div class="row event-row" id="dummyActionItemRow">
+                                        <div class="col-xs-12 col-sm-12">
+                                            <ul class="event-list">
+                                                <li>
+                                                    <div class="info showActionItem">
+                                                        <a class="PreviewStagePDF btn btn-default btn-xs btn-info" title="PDF" data-customer='<?php echo $notiInfo['id'] ?>' data-service='<?php echo $notiInfo['ca_id'] ?>' data-action ="<?php echo $notiInfo['action_id'] ?>" data-servicetype="<?php echo $notiInfo["service_type"] ?>" style="float: right;">PDF <i class="fa fa-file-pdf-o"></i></a>
+                                                        <a class="SendStageMail btn btn-default btn-xs btn-info" title="Send" data-customer='<?php echo $notiInfo['id'] ?>' data-service='<?php echo $notiInfo['ca_id'] ?>' data-action ="<?php echo $notiInfo['action_id'] ?>" data-stage="stage1" style="float: right; margin-right: 10px">Generate <i class="fa fa-envelope-o"></i></a>
+                                                        <p class="desc text-primary customerName" data-id="<?php echo $notiInfo['id'] ?>" title="Action item description" > <?php echo htmlspecialchars($notiInfo['customer_name'], ENT_QUOTES, 'UTF-8'); ?></p>
+                                                        <p class="other-info">
+                                                            <small title="Notice due date" class="text-muted"><i style="padding: 3px" class="fa fa-calendar"></i><?php echo simpleDateConversion($notiInfo['due_date']) ?></small>
+                                                        </p>
+                                                    </div>                                                
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php } ?>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 ">
+                        <div class="panel panel-primary" style="min-height: 140px" >
+                            <div class="panel-heading text-center" style="background: #053c6d">
+                                <h4 style="color: white">Stage 2 Notification</h4>
+                            </div>
+                            <?php foreach ($stage2Due as $notiInfo) { ?>
+                                <div class="panel-rightbody homePagePanel" id="actionItemDisplayPanel">
+                                    <div class="row event-row" id="dummyActionItemRow">
+                                        <div class="col-xs-12 col-sm-12">
+                                            <ul class="event-list">
+                                                <li>
+                                                    <div class="info showActionItem">
+                                                        <a class="PreviewStagePDF btn btn-default btn-xs btn-info" title="PDF" data-customer='<?php echo $notiInfo['id'] ?>' data-service='<?php echo $notiInfo['ca_id'] ?>' data-action ="<?php echo $notiInfo['action_id'] ?>" data-servicetype="<?php echo $notiInfo["service_type"] ?>" style="float: right;">PDF <i class="fa fa-file-pdf-o"></i></a>
+                                                        <a class="SendStageMail btn btn-default btn-xs btn-info" title="Send" data-customer='<?php echo $notiInfo['id'] ?>' data-service='<?php echo $notiInfo['ca_id'] ?>' data-action ="<?php echo $notiInfo['action_id'] ?>" data-stage="stage2" style="float: right; margin-right: 10px">Generate <i class="fa fa-envelope-o"></i></a>
+                                                        <p class="desc text-primary customerName" data-id="<?php echo $notiInfo['id'] ?>" title="Action item description" > <?php echo htmlspecialchars($notiInfo['customer_name'], ENT_QUOTES, 'UTF-8'); ?></p>
+                                                        <p class="other-info">
+                                                            <small title="Notice due date" class="text-muted"><i style="padding: 3px" class="fa fa-calendar"></i><?php echo simpleDateConversion($notiInfo['due_date']) ?></small>
+                                                        </p>
+                                                    </div>                                                
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php } ?>
+                        </div>                        
+                    </div>
+                </div>
+
                 <div class="row">
                     <div class="col-md-6">
                         <div class="panel panel-primary" style="min-height: 140px" >
@@ -447,6 +955,132 @@
             </div>
         </div> 
     </div>
+
+    <!-- Sent Letters Sliding Sidebar Panel -->
+    <button type="button" class="sent-intimation-tab" id="sentIntimationTab" title="View Sent Letters">
+        Sent Letters
+        <span class="sent-intimation-count"><?php echo count($sentNoticeDue); ?></span>
+    </button>
+
+    <div class="sent-intimation-panel" id="sentIntimationPanel" aria-hidden="true">
+        <div class="sent-intimation-panel-header">
+            <h4 class="sent-intimation-panel-title">Sent Letters</h4>
+            <button type="button" class="sent-intimation-close" id="sentIntimationClose" aria-label="Close">&times;</button>
+        </div>
+        <div class="sent-intimation-panel-body">
+            <div id="sent-intimation-search-wrapper" style="margin-bottom: 12px; position: sticky; top: 0; z-index: 10; background: #f8fafc; padding: 2px 0 10px 0; border-bottom: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 8px;">
+                <!-- Search Input -->
+                <div class="input-group">
+                    <span class="input-group-addon" style="background: #fff; border-right: 0;"><i class="fa fa-search"></i></span>
+                    <input type="text" id="sent-intimation-search" class="form-control" placeholder="Search Client, ID..." style="border-left: 0; box-shadow: none; height: 34px;">
+                </div>
+                
+                <!-- Type Selection -->
+                <div>
+                    <select id="sent-intimation-filter-type" class="form-control" style="height: 34px; box-shadow: none;">
+                        <option value="">Select Letter Type</option>
+                        <option value="Stage 1 Notification">Stage 1 Notification</option>
+                        <option value="Stage 2 Notification">Stage 2 Notification</option>
+                        <option value="1st Reminder">1st Reminder</option>
+                        <option value="2nd Reminder">2nd Reminder</option>
+                        <option value="Suspension Reminder">Suspension Reminder</option>
+                        <option value="Suspend Letter">Suspend Letter</option>
+                        <option value="Suspension Letter">Suspension Letter</option>
+                        <option value="Withdrawal Reminder">Withdrawal Reminder</option>
+                        <option value="Withdraw Letter">Withdraw Letter</option>
+                        <option value="Withdrawal Letter">Withdrawal Letter</option>
+                        <option value="Expire Letter">Expire Letter</option>
+                    </select>
+                </div>
+
+                <!-- Date Range Selection -->
+                <div style="display: flex; gap: 8px;">
+                    <div style="flex: 1; position: relative;">
+                        <input type="text" id="sent-intimation-filter-from" class="form-control" placeholder="Sent Date From" style="height: 34px; background: #fff; box-shadow: none;" autocomplete="off">
+                    </div>
+                    <div style="flex: 1; position: relative;">
+                        <input type="text" id="sent-intimation-filter-to" class="form-control" placeholder="Sent Date To" style="height: 34px; background: #fff; box-shadow: none;" autocomplete="off">
+                    </div>
+                </div>
+            </div>
+            <?php if (empty($sentNoticeDue)) { ?>
+                <div class="sent-intimation-empty">No sent letters found.</div>
+            <?php } else { ?>
+                <?php foreach ($sentNoticeDue as $notiInfo) { 
+                    $url = "";
+                    if ($notiInfo['action'] == "Stage 1 Notification") {
+                        $url = "AuditNotificationandAssignment.php";
+                    } else if ($notiInfo['action'] == "Stage 2 Notification") {
+                        $url = "AuditNotificationStage2.php";
+                    } else if ($notiInfo['action'] == "1st Reminder" && $notiInfo["service_type"] == "SA-II") {
+                        $url = "firstReminder.php";
+                    } else if ($notiInfo['action'] == "1st Reminder"){
+                        $url = "firstDue.php";
+                    } else if ($notiInfo['action'] == "2nd Reminder" && $notiInfo["service_type"] == "SA-II") {
+                        $url = "secondReminder.php";
+                    } else if ($notiInfo['action'] == "2nd Reminder") {
+                        $url = "reminder.php";
+                    } else if ($notiInfo['action'] == "Suspension Reminder") {
+                        $url = "suspension.php";
+                    } else if ($notiInfo['action'] == "Suspend Letter" || $notiInfo['action'] == "Suspension Letter") {
+                        $url = "suspension.php";
+                    } else if ($notiInfo['action'] == "Withdrawal Reminder") {
+                        $url = "withdrawRemind.php";
+                    } else if ($notiInfo['action'] == "Withdrawal Letter" || $notiInfo['action'] == "Withdraw Letter") {
+                        $url = "withdrawn.php";
+                    } else if ($notiInfo['action'] == "Expire Letter") {
+                        $url = "saiiWithdrawn.php";
+                    }
+
+                    if ($notiInfo['service_type'] == "CA" || $notiInfo['service_type'] == "RC") {
+                        $nextSVC = "SA-I";
+                    } else if ($notiInfo['service_type'] == "SA-I") {
+                        $nextSVC = "SA-II";
+                    } else if ($notiInfo['service_type'] == "SA-II") {
+                        $nextSVC = "RC";
+                    } else {
+                        $nextSVC = $notiInfo['service_type'];
+                    }
+                ?>
+                    <div class="sent-intimation-card">
+                        <div class="sent-intimation-card-head">
+                            <div class="sent-intimation-card-title">
+                                <?php echo htmlspecialchars($notiInfo['customer_name'], ENT_QUOTES, 'UTF-8'); ?>
+                            </div>
+                            <div class="sent-intimation-card-meta">
+                                ID: <?php echo htmlspecialchars($notiInfo['unique_id'], ENT_QUOTES, 'UTF-8'); ?>
+                            </div>
+                        </div>
+                        <div class="sent-intimation-card-body-content">
+                            <div class="sent-intimation-item">
+                                <div class="sent-intimation-detail">
+                                    <strong>Letter Type:</strong> <span class="card-letter-type"><?php echo htmlspecialchars($notiInfo['action'], ENT_QUOTES, 'UTF-8'); ?></span>
+                                </div>
+                                <div class="sent-intimation-detail">
+                                    <strong>Service:</strong> <?php echo htmlspecialchars($nextSVC, ENT_QUOTES, 'UTF-8'); ?>
+                                </div>
+                                <div class="sent-intimation-detail">
+                                    <strong>Sent Date:</strong> <span class="card-sent-date"><?php echo simpleDateConversion($notiInfo['sent_date']); ?></span>
+                                </div>
+                                <div class="sent-intimation-detail">
+                                    <strong>Mailed To:</strong> <span style="word-break: break-all;"><?php echo htmlspecialchars($notiInfo['email_id'], ENT_QUOTES, 'UTF-8'); ?></span>
+                                </div>
+                                <div style="margin-top: 8px; overflow: hidden;">
+                                    <a class="sentNotificationGenerate btn btn-default btn-xs btn-info" title="PDF Preview" 
+                                       data-customer='<?php echo $notiInfo['id'] ?>' 
+                                       data-service='<?php echo $notiInfo['service_id'] ?>' 
+                                       data-action ="<?php echo $notiInfo['action_id'] ?>" 
+                                       data-servicetype="<?php echo $notiInfo["service_type"] ?>" 
+                                       data-url="<?php echo $url; ?>" 
+                                       style="float: right;"><i class="fa fa-file-pdf-o"></i> View PDF</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                <?php } ?>
+            <?php } ?>
+        </div>
+    </div>
 </div>
 
 <script type="text/javascript" >
@@ -571,6 +1205,156 @@
 	});
 		
     $(document).ready(function () {
+        // Sent Intimations Sliding Panel Events
+        $('#sentIntimationTab').click(function () {
+            $('#sentIntimationPanel').css('right', '0').attr('aria-hidden', 'false');
+        });
+
+        $('#sentIntimationClose').click(function () {
+            $('#sentIntimationPanel').css('right', '-430px').attr('aria-hidden', 'true');
+        });
+
+        $(document).mouseup(function (e) {
+            var container = $("#sentIntimationPanel");
+            var tab = $("#sentIntimationTab");
+            var datepicker = $("#ui-datepicker-div");
+            
+            // Check if the click target is the datepicker panel or is nested inside jQuery UI datepicker elements
+            var isClickInsideDatepicker = datepicker.is(e.target) || datepicker.has(e.target).length > 0 || $(e.target).closest('.ui-datepicker').length > 0;
+            
+            if (!isClickInsideDatepicker && !container.is(e.target) && container.has(e.target).length === 0 && !tab.is(e.target) && tab.has(e.target).length === 0) {
+                container.css('right', '-430px').attr('aria-hidden', 'true');
+            }
+        });
+
+        $('.sentNotificationGenerate').click(function () {
+            var customer = $(this).attr('data-customer');
+            var service = $(this).attr('data-service');
+            var action = $(this).attr('data-action');
+            var servicetype = $(this).attr("data-servicetype");
+            var url = $(this).attr("data-url");
+            var form = $('<form action="' + url + '" method="post" target="_blank">' +
+                    '<input type="hidden" name="customer" value="' + customer + '" />' +
+                    '<input type="hidden" name="customerid" value="' + customer + '" />' +
+                    '<input type="hidden" name="service" value="' + service + '" />' +
+                    '<input type="hidden" name="serviceid" value="' + service + '" />' +
+                    '<input type="hidden" name="action" value="' + action + '" />' +
+                    '<input type="hidden" name="auditid" value="' + action + '" />' +
+                    '<input type="hidden" name="notificationid" value="' + action + '" />' +
+                    '<input type="hidden" name="servicetype" value="' + servicetype + '" />' +
+                    '</form>');
+            $('body').append(form);
+            form.submit();
+        });
+
+        // Combined filter function for Sent Letters
+        function filterSentIntimations() {
+            var searchText = $('#sent-intimation-search').val().toLowerCase();
+            var letterType = $('#sent-intimation-filter-type').val().toLowerCase();
+            var fromDateVal = $('#sent-intimation-filter-from').val();
+            var toDateVal = $('#sent-intimation-filter-to').val();
+
+            var fromDate = null;
+            if (fromDateVal) {
+                var parts = fromDateVal.split('.');
+                fromDate = new Date(parts[2], parts[1] - 1, parts[0]);
+            }
+
+            var toDate = null;
+            if (toDateVal) {
+                var parts = toDateVal.split('.');
+                toDate = new Date(parts[2], parts[1] - 1, parts[0]);
+            }
+
+            $('.sent-intimation-card').each(function() {
+                var card = $(this);
+                var cardText = card.text().toLowerCase();
+                var cardLetterType = card.find('.card-letter-type').text().trim().toLowerCase();
+                var cardSentDateVal = card.find('.card-sent-date').text().trim();
+                
+                var cardSentDate = null;
+                if (cardSentDateVal) {
+                    var parts = cardSentDateVal.split('.');
+                    cardSentDate = new Date(parts[2], parts[1] - 1, parts[0]);
+                }
+
+                var matchesText = cardText.indexOf(searchText) > -1;
+
+                var matchesLetterType = true;
+                if (letterType) {
+                    matchesLetterType = (cardLetterType === letterType);
+                }
+
+                var matchesDate = true;
+                if (cardSentDate) {
+                    if (fromDate && cardSentDate < fromDate) {
+                        matchesDate = false;
+                    }
+                    if (toDate && cardSentDate > toDate) {
+                        matchesDate = false;
+                    }
+                } else if (fromDate || toDate) {
+                    matchesDate = false;
+                }
+
+                card.toggle(matchesText && matchesLetterType && matchesDate);
+            });
+        }
+
+        // Bind filter events
+        $('#sent-intimation-search').on('keyup', filterSentIntimations);
+        $('#sent-intimation-filter-type').on('change', filterSentIntimations);
+        
+        // Initialize datepickers
+        $('#sent-intimation-filter-from, #sent-intimation-filter-to').datepicker({
+            dateFormat: 'dd.mm.yy',
+            changeMonth: true,
+            changeYear: true,
+            onSelect: function() {
+                filterSentIntimations();
+            }
+        });
+
+        // Trigger filter on date manual input or keyup
+        $('#sent-intimation-filter-from, #sent-intimation-filter-to').on('change keyup', filterSentIntimations);
+
+        // Countdown timer for automatic mail dispatch
+        (function() {
+            const initialRemainingSeconds = <?php echo isset($remainingSeconds) ? $remainingSeconds : 0; ?>;
+            const initialTargetText = "<?php echo isset($targetDayText) ? $targetDayText : 'today'; ?>";
+            const clientStartTime = Date.now();
+
+            function updateCountdown() {
+                const elapsedSeconds = Math.floor((Date.now() - clientStartTime) / 1000);
+                let currentRemaining = initialRemainingSeconds - elapsedSeconds;
+                let targetText = initialTargetText;
+                
+                if (currentRemaining <= 0) {
+                    targetText = "tomorrow";
+                    while (currentRemaining <= 0) {
+                        currentRemaining += 86400; // 24 hours
+                    }
+                }
+                
+                const hours = Math.floor(currentRemaining / 3600);
+                const minutes = Math.floor((currentRemaining % 3600) / 60);
+                const seconds = currentRemaining % 60;
+                
+                const formattedTime = 
+                    String(hours).padStart(2, '0') + ':' + 
+                    String(minutes).padStart(2, '0') + ':' + 
+                    String(seconds).padStart(2, '0');
+                    
+                $('#dispatch-countdown').text(formattedTime);
+                $('#dispatch-target-text').text('(' + targetText + ' at 12:00 PM)');
+            }
+
+            if (initialRemainingSeconds > 0) {
+                updateCountdown();
+                setInterval(updateCountdown, 1000);
+            }
+        })();
+
         $(".deleteLetter").click(function () {
             var rowid = $(this).attr("data-action");
             var url = 'addComments.php'
@@ -673,6 +1457,75 @@
                 $('body').append(form);
                 form.submit();
             
+        });
+
+        // Stage 1 & Stage 2 Notification Handlers
+        var pendingStagePayload = null;
+        
+        $('.SendStageMail').click(function () {
+            pendingStagePayload = {
+                customer: $(this).attr('data-customer'),
+                service: $(this).attr('data-service'),
+                audit: $(this).attr('data-action'),
+                stage: $(this).attr('data-stage')
+            };
+            $('#sendStageConfirmModal').modal('show');
+        });
+
+        $('#confirmSendStageBtn').click(function(){
+            if(!pendingStagePayload){ return; }
+            $('#sendStageConfirmModal').modal('hide');
+            ShowProgressAnimation();
+            
+            $.ajax({
+                url: 'sendStageNotificationMail.php',
+                type: 'POST',
+                data: pendingStagePayload,
+                dataType: 'json'
+            }).done(function(res){
+                HideProgressAnimation();
+                if(res && res.success){
+                    showToast(res.message || 'Stage notification sent successfully.', true);
+                    setTimeout(function(){ location.reload(); }, 1000);
+                } else {
+                    var msg = (res && res.message) ? res.message : 'Unable to send stage notification. Please try again.';
+                    showToast(msg, false);
+                }
+            }).fail(function(xhr){
+                HideProgressAnimation();
+                var msg = 'Unable to send stage notification. Please try again.';
+                if(xhr && xhr.responseText){
+                    try {
+                        var parsed = JSON.parse(xhr.responseText);
+                        if (parsed && parsed.message) msg = parsed.message;
+                    } catch(e) {}
+                }
+                showToast(msg, false);
+            });
+        });
+
+        $('.PreviewStagePDF').click(function () {
+            var customer = $(this).attr('data-customer');
+            var service = $(this).attr('data-service');
+            var action = $(this).attr('data-action');
+            var stage = $(this).siblings('.SendStageMail').attr('data-stage');
+            
+            var url, form;
+            if (stage === 'stage1') {
+                url = 'AuditNotificationandAssignment.php';
+                form = $('<form action="' + url + '" method="post" target="_blank">' +
+                        '<input type="hidden" name="auditid" value="' + action + '" />' +
+                        '<input type="hidden" name="customerid" value="' + customer + '" />' +
+                        '<input type="hidden" name="serviceid" value="' + service + '" />' +
+                        '</form>');
+            } else {
+                url = 'AuditNotificationStage2.php';
+                form = $('<form action="' + url + '" method="post" target="_blank">' +
+                        '<input type="hidden" name="notificationid" value="' + action + '" />' +
+                        '</form>');
+            }
+            $('body').append(form);
+            form.submit();
         });
 
     });

@@ -147,8 +147,53 @@ function runAutoSendIntimationDue($db) {
     $statement->execute();
     $dueLetters = $statement->fetchAll(PDO::FETCH_ASSOC);
 
+    // Fetch pending Stage 1 Notifications
+    $s1Query = "SELECT ci.id AS customer_id, ci.customer_name, ci.unique_id, ci.email_id, 
+                       svc.service_id, svc.service_type, cas.ca_id,
+                       soi.intimation_date as due_date, NULL as sent_date,
+                       'Stage 1 Notification' as action, soi.audit_stage_id as action_id
+                FROM stage_oneaudit_id soi
+                INNER JOIN service_type_ca cas ON soi.ca_service_id = cas.ca_id
+                INNER JOIN service svc ON cas.service = svc.service_id
+                INNER JOIN customer_info ci ON svc.customer_id = ci.id
+                LEFT JOIN ca_service_dates svcdt ON svc.service_id = svcdt.service_id 
+                    AND svcdt.action = 'Stage 1 Notification' 
+                    AND svcdt.status = 'sent' 
+                    AND svcdt.is_deleted = 'N'
+                WHERE svcdt.action_id IS NULL
+                  AND soi.intimation_date <= CURDATE()
+                  AND (ci.is_deleted IS NULL OR ci.is_deleted <> 'YES')
+                  AND (cas.service_ca_status IS NULL OR cas.service_ca_status <> 'Withdrawn')";
+    $s1Statement = $db->prepare($s1Query);
+    $s1Statement->execute();
+    $s1Letters = $s1Statement->fetchAll(PDO::FETCH_ASSOC);
+
+    // Fetch pending Stage 2 Notifications
+    $s2Query = "SELECT ci.id AS customer_id, ci.customer_name, ci.unique_id, ci.email_id, 
+                       svc.service_id, svc.service_type, cas.ca_id,
+                       stai.intimation_date as due_date, NULL as sent_date,
+                       'Stage 2 Notification' as action, stai.audit_stageii_id as action_id
+                FROM stage_twoaudit_id stai
+                INNER JOIN service_type_ca cas ON stai.service_id = cas.ca_id
+                INNER JOIN service svc ON cas.service = svc.service_id
+                INNER JOIN customer_info ci ON svc.customer_id = ci.id
+                LEFT JOIN ca_service_dates svcdt ON svc.service_id = svcdt.service_id 
+                    AND svcdt.action = 'Stage 2 Notification' 
+                    AND svcdt.status = 'sent' 
+                    AND svcdt.is_deleted = 'N'
+                WHERE svcdt.action_id IS NULL
+                  AND stai.intimation_date <= CURDATE()
+                  AND (ci.is_deleted IS NULL OR ci.is_deleted <> 'YES')
+                  AND (cas.service_ca_status IS NULL OR cas.service_ca_status <> 'Withdrawn')";
+    $s2Statement = $db->prepare($s2Query);
+    $s2Statement->execute();
+    $s2Letters = $s2Statement->fetchAll(PDO::FETCH_ASSOC);
+
+    // Merge regular due letters with Stage 1 and Stage 2 notifications
+    $dueLetters = array_merge($dueLetters, $s1Letters, $s2Letters);
+
     $totalFound = count($dueLetters);
-    logCronEvent("Found $totalFound pending due letter(s) eligible for automatic mail sending.");
+    logCronEvent("Found $totalFound pending due letter(s) (including stage notifications) eligible for automatic mail sending.");
 
     if ($totalFound == 0) {
         logCronEvent("No pending due letters found for today. Job completed.");
@@ -165,6 +210,41 @@ function runAutoSendIntimationDue($db) {
 
         logCronEvent("-------------------------------------------------------------------");
         logCronEvent("Processing due letter -> Customer: {$due['customer_name']} (ID: $customer_id) | Letter: $lettertype | Due Date: {$due['due_date']}");
+
+        if ($lettertype === 'Stage 1 Notification' || $lettertype === 'Stage 2 Notification') {
+            // Simulate $_POST variables and run the stage mailer
+            $originalPost = $_POST;
+            $_POST = [
+                'customer' => $customer_id,
+                'service' => $due['ca_id'], // ca_id
+                'audit' => $actionId,
+                'stage' => ($lettertype === 'Stage 2 Notification') ? 'stage2' : 'stage1'
+            ];
+            
+            $startLevel = ob_get_level();
+            ob_start();
+            try {
+                include __DIR__ . '/sendStageNotificationMail.php';
+                $responseJson = ob_get_clean();
+                $res = json_decode($responseJson, true);
+                if ($res && isset($res['success']) && $res['success']) {
+                    logCronEvent("SUCCESS: Automated stage notification sent successfully. Details: " . $res['message']);
+                    $successCount++;
+                } else {
+                    $errorMsg = ($res && isset($res['message'])) ? $res['message'] : 'Unknown error';
+                    logCronEvent("ERROR: Failed to send automated stage notification: " . $errorMsg);
+                    $failCount++;
+                }
+            } catch (Exception $ex) {
+                if (ob_get_level() > $startLevel) {
+                    ob_end_clean();
+                }
+                logCronEvent("EXCEPTION: Failed to run stage notification mailer: " . $ex->getMessage());
+                $failCount++;
+            }
+            $_POST = $originalPost;
+            continue; // Continue to next letter in loop
+        }
 
         // Fetch complete customer row
         $stmtCust = $db->prepare("SELECT * FROM customer_info WHERE id = :id");
@@ -454,6 +534,28 @@ function runAutoSendIntimationDue($db) {
             $stmtUpdate->execute([':id' => $actionId, ':date' => $sentDate]);
             logCronEvent("Updated ca_service_dates action_id $actionId status to 'sent' (sent_date: $sentDate).");
 
+            // ===== AUTO STATUS CHANGE: Update customer_info.audit_status based on letter type =====
+            // This mirrors the manual send scripts' behavior so status changes happen immediately
+            // when the automated cron sends the letter, without depending on manual clicks.
+            $newAuditStatus = null;
+            if ($lettertype == "Suspend Letter") {
+                $newAuditStatus = "Suspended";
+            } else if ($lettertype == "Withdraw Letter" || $lettertype == "Withdrawal Letter") {
+                $newAuditStatus = "Withdrawn";
+            } else if ($lettertype == "Expire Letter") {
+                $newAuditStatus = "Expired";
+            }
+            // Note: Reminders (Suspension Reminder, Withdrawal Reminder, 1st Reminder, 2nd Reminder)
+            // do NOT change the client status - client stays Active during reminder phase.
+
+            if ($newAuditStatus !== null) {
+                $updateStatusSql = "UPDATE customer_info SET audit_status = :status WHERE id = :id";
+                $stmtStatus = $db->prepare($updateStatusSql);
+                $stmtStatus->execute([':status' => $newAuditStatus, ':id' => $customer_id]);
+                logCronEvent("AUTO STATUS CHANGE: Customer ID $customer_id audit_status updated to '$newAuditStatus' (triggered by '$lettertype' auto-mail).");
+            }
+            // ===== END AUTO STATUS CHANGE =====
+
             // Send Confirmation Mail to certification@aitf.co.in
             $officeMail = new PHPMailer;
             $officeMail->setFrom($mailConfig['from_email'], $mailConfig['from_name']);
@@ -471,6 +573,10 @@ function runAutoSendIntimationDue($db) {
             $officeRecipientsStr = implode(', ', array_filter($contactEmail));
             $officeMail->addAttachment($fullFilePath, $fileName);
 
+            $statusChangeNote = ($newAuditStatus !== null) 
+                ? 'The client status in the ERP has been automatically updated to <strong>' . htmlspecialchars($newAuditStatus, ENT_QUOTES, 'UTF-8') . '</strong>.'
+                : 'The client status in the ERP has been automatically updated to <strong>Sent</strong> (no status change for reminder letters).';
+
             $officeBody = '<html><body style="font-family: Arial, sans-serif; color: #333; line-height: 1.5;">'
                 . '<div style="background: #053c6d; color: #ffffff; padding: 14px 20px; border-radius: 4px 4px 0 0;">'
                 . '<h3 style="margin: 0; font-size: 18px; color: #ffffff;">Automatic Due Letter Mail Sent Confirmation</h3>'
@@ -483,13 +589,14 @@ function runAutoSendIntimationDue($db) {
                 . '<tr><td style="color: #555;"><strong>Due Date:</strong></td><td>' . htmlspecialchars($date, ENT_QUOTES, 'UTF-8') . '</td></tr>'
                 . '<tr><td style="color: #555;"><strong>Mail Subject:</strong></td><td>' . htmlspecialchars($subject, ENT_QUOTES, 'UTF-8') . '</td></tr>'
                 . '<tr><td style="color: #555;"><strong>Dispatch System:</strong></td><td><span style="color: green; font-weight: bold;">SUCCESS (Automated Daily 12:00 PM Cron)</span></td></tr>'
+                . ($newAuditStatus !== null ? '<tr><td style="color: #555;"><strong>Status Changed To:</strong></td><td><span style="color: #dc3545; font-weight: bold;">' . htmlspecialchars($newAuditStatus, ENT_QUOTES, 'UTF-8') . '</span></td></tr>' : '')
                 . '</table>'
                 . '<h4 style="color: #053c6d; margin-bottom: 10px; border-bottom: 2px solid #e1ebf2; padding-bottom: 6px;">Exact Message Sent to Client:</h4>'
                 . '<div style="background: #ffffff; padding: 15px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 15px;">'
                 . $mailBodyPart
                 . '</div>'
                 . '<p style="font-size: 13.5px; color: #555; margin-bottom: 0; background: #eef5fa; padding: 10px; border-left: 4px solid #1d63b0;">'
-                . 'ℹ️ <strong>Note:</strong> A copy of the generated PDF letter (<strong>' . htmlspecialchars($fileName, ENT_QUOTES, 'UTF-8') . '</strong>) is attached to this confirmation email for your office records. The client status in the ERP has been automatically updated to <strong>Sent</strong>.'
+                . 'ℹ️ <strong>Note:</strong> A copy of the generated PDF letter (<strong>' . htmlspecialchars($fileName, ENT_QUOTES, 'UTF-8') . '</strong>) is attached to this confirmation email for your office records. ' . $statusChangeNote
                 . '</p>'
                 . '</div>'
                 . '</body></html>';
