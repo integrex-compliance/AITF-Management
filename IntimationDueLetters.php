@@ -516,6 +516,23 @@ else if($PageAction == "SendMail"){
 		$statement->bindParam(":id", $actionId);
 		$statement->bindParam(":date", $sentDate);
 		$statement->execute();
+		
+		// ===== AUTO STATUS CHANGE: Update audit_status based on letter type =====
+		$newAuditStatus = null;
+		if ($lettertype == "Suspend Letter") {
+			$newAuditStatus = "Suspended";
+		} else if ($lettertype == "Withdraw Letter" || $lettertype == "Withdrawal Letter") {
+			$newAuditStatus = "Withdrawn";
+		} else if ($lettertype == "Expire Letter") {
+			$newAuditStatus = "Expired";
+		}
+		if ($newAuditStatus !== null) {
+			$updateStatusSql = "UPDATE customer_info SET audit_status = :status WHERE id = :id";
+			$stmtStatus = $db->prepare($updateStatusSql);
+			$stmtStatus->execute([':status' => $newAuditStatus, ':id' => $customer_id]);
+		}
+		// ===== END AUTO STATUS CHANGE =====
+
 		$response['success'] = true;
 		$response['message'] = 'Mail sent successfully.';
 		if ($isAjaxRequest) {

@@ -199,7 +199,7 @@ $statement->bindParam(":id", $_POST['acction']);
 $statement->bindParam(":date", date("Y-m-d"));
 $statement->execute();
 
-$customerStatus = "suspend";
+$customerStatus = "Suspended";
 
 $updateCustomerStatus = "UPDATE `customer_info` SET `audit_status` = :status where id = :customer";
 $statement = $db->prepare($updateCustomerStatus);

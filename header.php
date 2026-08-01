@@ -1558,3 +1558,210 @@ function getFlatDate($inputStr)
         opacity: 0.9;
     }
 </style>
+
+<!-- ===== PENDING LETTER WARNING POPUP SYSTEM ===== -->
+<!-- Modal for warning about failed automation mails -->
+<div class="modal fade" id="pendingLetterWarningModal" tabindex="-1" role="dialog" aria-labelledby="pendingLetterWarningLabel" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content" style="border: none; border-radius: 12px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+            <!-- Header -->
+            <div class="modal-header" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); border: none; padding: 18px 24px;">
+                <h4 class="modal-title" id="pendingLetterWarningLabel" style="color: #fff; font-weight: 700; display: flex; align-items: center; gap: 10px; margin: 0; font-size: 18px;">
+                    <span style="font-size: 28px;">⚠️</span> Automation Mail Failed - Action Required!
+                </h4>
+                <button type="button" class="close pending-letter-dismiss-btn" data-dismiss="modal" aria-label="Close" style="color: #fff; opacity: 0.8; text-shadow: none; font-size: 28px;">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <!-- Body -->
+            <div class="modal-body" style="padding: 24px; background: #fff;">
+                <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+                    <p style="margin: 0; color: #856404; font-size: 14px; line-height: 1.6;">
+                        <strong>⚠️ Warning:</strong> Automation mail <strong>failed</strong> due to some reason for the following client(s). 
+                        Kindly send letters from the <strong>"Letters and Action"</strong> section in the client account OR from the 
+                        <strong><a href="intimationLetter.php" style="color: #0d6efd; text-decoration: underline;">Intimation Due Page</a></strong>. 
+                        <br><br>
+                        <strong style="color: #dc3545;">⛔ It is MANDATORY to send these letters, otherwise the status of our clients can be mismatched!</strong>
+                    </p>
+                </div>
+                
+                <!-- Pending letters table -->
+                <div style="max-height: 350px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 8px;">
+                    <table class="table table-striped table-hover" style="margin-bottom: 0; font-size: 13px;" id="pendingLetterTable">
+                        <thead style="background: #053c6d; color: #fff; position: sticky; top: 0; z-index: 1;">
+                            <tr>
+                                <th style="padding: 12px 10px; font-weight: 600;">#</th>
+                                <th style="padding: 12px 10px; font-weight: 600;">Client Name</th>
+                                <th style="padding: 12px 10px; font-weight: 600;">Unique ID</th>
+                                <th style="padding: 12px 10px; font-weight: 600;">Letter Type</th>
+                                <th style="padding: 12px 10px; font-weight: 600;">Due Date</th>
+                                <th style="padding: 12px 10px; font-weight: 600;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pendingLetterTableBody">
+                            <!-- Populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="margin-top: 16px; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 8px; padding: 12px 16px;">
+                    <p style="margin: 0; color: #721c24; font-size: 13px;">
+                        🔄 This popup will appear every <strong>20 minutes</strong> until all pending letters are sent.
+                        <br>Once you send the letter(s), this warning will automatically stop.
+                    </p>
+                </div>
+            </div>
+            <!-- Footer -->
+            <div class="modal-footer" style="border-top: 1px solid #eee; padding: 14px 24px; background: #f8f9fa; display: flex; gap: 10px; justify-content: space-between;">
+                <a href="intimationLetter.php" class="btn" style="background: linear-gradient(135deg, #28a745, #218838); color: #fff; border: none; border-radius: 8px; padding: 10px 24px; font-weight: 600; font-size: 14px;">
+                    📩 Go to Intimation Due Page
+                </a>
+                <button type="button" class="btn pending-letter-dismiss-btn" data-dismiss="modal" style="background: linear-gradient(135deg, #6c757d, #5a6268); color: #fff; border: none; border-radius: 8px; padding: 10px 24px; font-weight: 600; font-size: 14px;">
+                    ⏰ Remind Me in 20 Minutes
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Styles for the warning popup -->
+<style>
+    #pendingLetterWarningModal .modal-dialog {
+        margin-top: 80px;
+    }
+    #pendingLetterWarningModal .modal-content {
+        animation: pendingLetterShake 0.5s ease-in-out;
+    }
+    @keyframes pendingLetterShake {
+        0%, 100% { transform: translateX(0); }
+        10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+        20%, 40%, 60%, 80% { transform: translateX(4px); }
+    }
+    #pendingLetterTable tbody tr:hover {
+        background: #fff3cd !important;
+    }
+    #pendingLetterTable .badge-letter {
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+        display: inline-block;
+    }
+    #pendingLetterTable .badge-suspend { background: #dc3545; color: #fff; }
+    #pendingLetterTable .badge-withdraw { background: #6f42c1; color: #fff; }
+    #pendingLetterTable .badge-expire { background: #fd7e14; color: #fff; }
+    #pendingLetterTable .badge-reminder { background: #ffc107; color: #333; }
+</style>
+
+<script>
+/**
+ * PENDING LETTER WARNING SYSTEM
+ * Checks every 20 minutes for overdue unsent letters.
+ * Shows a warning popup if automation failed to send any letter.
+ * Stops showing only when all letters are sent (manually or automatically).
+ */
+(function() {
+    var PENDING_CHECK_INTERVAL = 20 * 60 * 1000; // 20 minutes in milliseconds
+    var pendingLetterTimer = null;
+    var isModalCurrentlyShown = false;
+
+    function getLetterBadgeClass(action) {
+        if (action === 'Suspend Letter') return 'badge-suspend';
+        if (action === 'Withdraw Letter' || action === 'Withdrawal Letter') return 'badge-withdraw';
+        if (action === 'Expire Letter') return 'badge-expire';
+        return 'badge-reminder';
+    }
+
+    function formatDate(dateStr) {
+        if (!dateStr || dateStr === '0000-00-00') return '-';
+        var parts = dateStr.split('-');
+        if (parts.length === 3) return parts[2] + '.' + parts[1] + '.' + parts[0];
+        return dateStr;
+    }
+
+    function checkPendingLetters() {
+        $.ajax({
+            url: 'checkPendingLetters.php',
+            method: 'GET',
+            dataType: 'json',
+            cache: false,
+            success: function(data) {
+                if (data && data.pending && data.pending.length > 0) {
+                    showPendingLetterWarning(data.pending);
+                } else {
+                    // No pending letters - hide modal if showing
+                    if (isModalCurrentlyShown) {
+                        $('#pendingLetterWarningModal').modal('hide');
+                        isModalCurrentlyShown = false;
+                    }
+                }
+            },
+            error: function() {
+                // Silently fail - don't bother admin with AJAX errors
+                console.log('[PendingLetters] Check failed, will retry in 20 min.');
+            }
+        });
+    }
+
+    function showPendingLetterWarning(pendingList) {
+        var tbody = $('#pendingLetterTableBody');
+        tbody.empty();
+
+        for (var i = 0; i < pendingList.length; i++) {
+            var item = pendingList[i];
+            var badgeClass = getLetterBadgeClass(item.action);
+            var row = '<tr>' +
+                '<td style="padding: 10px; vertical-align: middle; font-weight: 600;">' + (i + 1) + '</td>' +
+                '<td style="padding: 10px; vertical-align: middle; font-weight: 600; color: #053c6d;">' + 
+                    escapeHtml(item.customer_name) + '</td>' +
+                '<td style="padding: 10px; vertical-align: middle;">' + escapeHtml(item.unique_id || '-') + '</td>' +
+                '<td style="padding: 10px; vertical-align: middle;">' +
+                    '<span class="badge-letter ' + badgeClass + '">' + escapeHtml(item.action) + '</span></td>' +
+                '<td style="padding: 10px; vertical-align: middle;">' + formatDate(item.due_date) + '</td>' +
+                '<td style="padding: 10px; vertical-align: middle;">' +
+                    '<a href="customerAccount.php?customerid=' + item.customer_id + '" ' +
+                    'class="btn btn-sm" style="background: #053c6d; color: #fff; border-radius: 6px; font-size: 11px; padding: 4px 12px;" ' +
+                    'title="Open client Letters & Action">' +
+                    '📋 Letters & Action</a></td>' +
+                '</tr>';
+            tbody.append(row);
+        }
+
+        // Show the modal
+        if (!isModalCurrentlyShown) {
+            $('#pendingLetterWarningModal').modal('show');
+            isModalCurrentlyShown = true;
+        }
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        var div = document.createElement('div');
+        div.appendChild(document.createTextNode(text));
+        return div.innerHTML;
+    }
+
+    // When modal is dismissed (either button), set flag so it comes back in 20 min
+    $(document).on('click', '.pending-letter-dismiss-btn', function() {
+        isModalCurrentlyShown = false;
+    });
+
+    // Also handle modal hidden event
+    $('#pendingLetterWarningModal').on('hidden.bs.modal', function() {
+        isModalCurrentlyShown = false;
+    });
+
+    // Initialize on page load
+    $(document).ready(function() {
+        // First check after 3 seconds (let page load first)
+        setTimeout(function() {
+            checkPendingLetters();
+        }, 3000);
+
+        // Then check every 20 minutes
+        pendingLetterTimer = setInterval(function() {
+            checkPendingLetters();
+        }, PENDING_CHECK_INTERVAL);
+    });
+})();
+</script>
+<!-- ===== END PENDING LETTER WARNING POPUP SYSTEM ===== -->
