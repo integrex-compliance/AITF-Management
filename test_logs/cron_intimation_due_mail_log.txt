@@ -106,3 +106,32 @@
 [2026-08-01 12:01:27] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260801120127_407Suspend Letter.pdf
 [2026-08-01 12:01:46] ERROR: Failed sending email to client. Reasons: [smtpout.secureserver.net:587] SMTP connect() failed. https://github.com/PHPMailer/PHPMailer/wiki/Troubleshooting | [localhost:25] SMTP connect() failed. https://github.com/PHPMailer/PHPMailer/wiki/Troubleshooting | [relay-hosting.secureserver.net:25] SMTP connect() failed. https://github.com/PHPMailer/PHPMailer/wiki/Troubleshooting
 [2026-08-01 12:01:46] === AUTOMATED CRON JOB COMPLETED: 0 succeeded, 4 failed ===
+[2026-08-03 17:11:15] === STARTING AUTOMATED INTIMATION DUE LETTER CRON JOB (12:00 PM) ===
+[2026-08-03 17:11:15] Found 1169 pending due letter(s) (including stage notifications) eligible for automatic mail sending.
+[2026-08-03 17:11:15] -------------------------------------------------------------------
+[2026-08-03 17:11:15] Processing due letter -> Customer: GIGAMAC PRIVATE LIMITED (ID: 478) | Letter: Suspension Reminder | Due Date: 2026-06-30
+[2026-08-03 17:11:15] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260803171115_478Suspension Reminder.pdf
+[2026-08-03 17:11:34] ERROR: Failed sending email to client. Reasons: [smtpout.secureserver.net:587] SMTP connect() failed. https://github.com/PHPMailer/PHPMailer/wiki/Troubleshooting | [localhost:25] SMTP connect() failed. https://github.com/PHPMailer/PHPMailer/wiki/Troubleshooting | [relay-hosting.secureserver.net:25] SMTP connect() failed. https://github.com/PHPMailer/PHPMailer/wiki/Troubleshooting
+[2026-08-03 17:11:34] -------------------------------------------------------------------
+[2026-08-03 17:11:34] Processing due letter -> Customer: Vardhani Engineers (ID: 407) | Letter: Suspension Reminder | Due Date: 2026-07-01
+[2026-08-03 17:11:34] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260803171134_407Suspension Reminder.pdf
+[2026-08-03 17:11:52] ERROR: Failed sending email to client. Reasons: [smtpout.secureserver.net:587] SMTP connect() failed. https://github.com/PHPMailer/PHPMailer/wiki/Troubleshooting | [localhost:25] SMTP connect() failed. https://github.com/PHPMailer/PHPMailer/wiki/Troubleshooting | [relay-hosting.secureserver.net:25] SMTP connect() failed. https://github.com/PHPMailer/PHPMailer/wiki/Troubleshooting
+[2026-08-03 17:11:52] -------------------------------------------------------------------
+[2026-08-03 17:11:52] Processing due letter -> Customer: Vardhani Engineers (ID: 407) | Letter: Suspend Letter | Due Date: 2026-08-01
+[2026-08-03 17:11:52] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260803171152_407Suspend Letter.pdf
+[2026-08-03 17:12:10] ERROR: Failed sending email to client. Reasons: [smtpout.secureserver.net:587] SMTP connect() failed. https://github.com/PHPMailer/PHPMailer/wiki/Troubleshooting | [localhost:25] SMTP connect() failed. https://github.com/PHPMailer/PHPMailer/wiki/Troubleshooting | [relay-hosting.secureserver.net:25] SMTP connect() failed. https://github.com/PHPMailer/PHPMailer/wiki/Troubleshooting
+[2026-08-03 17:12:10] -------------------------------------------------------------------
+[2026-08-03 17:12:10] Processing due letter -> Customer: J. B. Engineering & Automation (QMS) (ID: 54) | Letter: 1st Reminder | Due Date: 2026-08-02
+[2026-08-03 17:12:10] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260803171210_541st Reminder.pdf
+[2026-08-03 17:12:29] ERROR: Failed sending email to client. Reasons: [smtpout.secureserver.net:587] SMTP connect() failed. https://github.com/PHPMailer/PHPMailer/wiki/Troubleshooting | [localhost:25] SMTP connect() failed. https://github.com/PHPMailer/PHPMailer/wiki/Troubleshooting | [relay-hosting.secureserver.net:25] SMTP connect() failed. https://github.com/PHPMailer/PHPMailer/wiki/Troubleshooting
+[2026-08-03 17:12:29] -------------------------------------------------------------------
+[2026-08-03 17:12:29] Processing due letter -> Customer: SAGAR GRAPHICS (ID: 1104) | Letter: Suspension Reminder | Due Date: 2026-08-02
+[2026-08-03 17:12:29] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260803171229_1104Suspension Reminder.pdf
+[2026-08-03 17:12:47] ERROR: Failed sending email to client. Reasons: [smtpout.secureserver.net:587] SMTP connect() failed. https://github.com/PHPMailer/PHPMailer/wiki/Troubleshooting | [localhost:25] SMTP connect() failed. https://github.com/PHPMailer/PHPMailer/wiki/Troubleshooting | [relay-hosting.secureserver.net:25] SMTP connect() failed. https://github.com/PHPMailer/PHPMailer/wiki/Troubleshooting
+[2026-08-03 17:12:47] -------------------------------------------------------------------
+[2026-08-03 17:12:47] Processing due letter -> Customer: DDM ENGINEERING PRIVATE LIMITED (ID: 1150) | Letter: Suspend Letter | Due Date: 2026-08-02
+[2026-08-03 17:12:47] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260803171247_1150Suspend Letter.pdf
+[2026-08-03 17:13:05] ERROR: Failed sending email to client. Reasons: [smtpout.secureserver.net:587] SMTP connect() failed. https://github.com/PHPMailer/PHPMailer/wiki/Troubleshooting | [localhost:25] SMTP connect() failed. https://github.com/PHPMailer/PHPMailer/wiki/Troubleshooting | [relay-hosting.secureserver.net:25] SMTP connect() failed. https://github.com/PHPMailer/PHPMailer/wiki/Troubleshooting
+[2026-08-03 17:13:05] -------------------------------------------------------------------
+[2026-08-03 17:13:05] Processing due letter -> Customer: Lawa Bright Bars Pvt. Ltd. (ID: 200) | Letter: Suspend Letter | Due Date: 2026-08-02
+[2026-08-03 17:13:05] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260803171305_200Suspend Letter.pdf

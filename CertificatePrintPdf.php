@@ -606,21 +606,40 @@ $expireDate = date('d.m.Y', strtotime($exp_date['due_date']));
 
  $reviewSt = '<br><font size="12" text-align: center;>Original Registration Date: ' . date('d.m.Y', strtotime($certifyInfo['registration_date'])) . ', Expired On:'.$expireDate.'</font><br>'
          . '<font size="12" text-align: center;>Recertification Audit Date: ' . date('d.m.Y', strtotime($cdcInfo["rc_audit_date"])) . ', Further Restore On Date:'.date('d.m.Y', strtotime($cdcInfo["rc_restore_date"])).'</font><br>'
-         . '<font size="12" text-align: center;>Next assessment before date: ' . date('d.m.Y', strtotime($certifyInfo['before_date'])) . '  (' . $nextaudit . ')</font><br><br>';
+         . '<font size="12" text-align: center;>Next Audit Due Date : ' . date('d.m.Y', strtotime($certifyInfo['before_date'])) . '  (' . $nextaudit . ')</font><br><br>';
 
  } else {
     $reviewSt = '<font size="12" text-align: center;>Registration Date : ' . date('d.m.Y', strtotime($certifyInfo['registration_date'])) . '</font><br><br>'
-            . '<font size="12" text-align: center;>Next assessment before date: ' . date('d.m.Y', strtotime($certifyInfo['before_date'])) . '  (' . $nextaudit . ')</font><br><br>';
+            . '<font size="12" text-align: center;>Next Audit Due Date : ' . date('d.m.Y', strtotime($certifyInfo['before_date'])) . '  (' . $nextaudit . ')</font><br><br>';
  }
 
 
-if (strlen($certifyInfo['customer_address']) > 29 && strlen($certifyInfo['customer_address']) < 140) {
-    $address = '<br><font size="12" text-align: center;>' . nl2br($certifyInfo['customer_address']) . '</font><br>';
-} else if (strlen($certifyInfo['customer_address']) > 140 && strlen($certifyInfo['customer_address']) < 400) {
-    $address = '<br><font size="12" text-align: center;>' . nl2br($certifyInfo['customer_address']) . '</font>';
+$rawAddress = trim($certifyInfo['customer_address']);
+$inlineAddress = preg_replace('/[\r\n]+/', ', ', $rawAddress);
+// Clean up any double commas just in case
+$inlineAddress = preg_replace('/,\s*,/', ',', $inlineAddress);
+
+$addrLen = strlen($inlineAddress);
+if ($addrLen <= 120) {
+    $addrFontSize = 14;
+} else if ($addrLen <= 200) {
+    $addrFontSize = 12;
+} else if ($addrLen <= 300) {
+    $addrFontSize = 11;
+} else if ($addrLen <= 400) {
+    $addrFontSize = 10;
+} else if ($addrLen <= 500) {
+    $addrFontSize = 9;
+} else if ($addrLen <= 650) {
+    $addrFontSize = 8;
+} else if ($addrLen <= 800) {
+    $addrFontSize = 7;
+} else if ($addrLen <= 950) {
+    $addrFontSize = 6;
 } else {
-    $address = '<br><font size="12" text-align: center;>' . nl2br($certifyInfo['customer_address']) . '</font><br><br>';
+    $addrFontSize = 5;
 }
+$address = '<font size="' . $addrFontSize . '">' . $inlineAddress . '</font>';
 
 // Extend the TCPDF class to create custom Header and Footer
 if (!class_exists('MYPDF')) {
@@ -789,23 +808,65 @@ if ($useBg && $certBgPath && file_exists($certBgPath)) {
     error_log('CERT BG: background file not applied. Checked PNG=' . ($certBgPng ?? '') . ' PDF=' . ($certBgPdf ?? ''));
 }
 
-$html = '<br><br><br><br><p  style="text-align: center; text-justify: inter-word;"><font size="16" text-align: center;><b>Certification Awarded to</b></font><br><br>
-        <font size="19" text-align: center;><b>' . $certifyInfo['customer_name'] . '</b></font>
-        <br>
-        <table border="" cellspacing="1" cellpadding="4"> 
-    <tr ><td style="text-align:center;" height="100"><font size="19" text-align: center;>' . $address . '</font>
-    </td>
+$rawScope = trim($certifyInfo['certificate_scope']);
+$inlineScope = preg_replace('/[\r\n]+/', ', ', $rawScope);
+$inlineScope = preg_replace('/,\s*,/', ',', $inlineScope);
+
+$scopeLen = strlen($inlineScope);
+if ($scopeLen <= 100) {
+    $scopeFontSize = 13;
+} else if ($scopeLen <= 180) {
+    $scopeFontSize = 12;
+} else if ($scopeLen <= 260) {
+    $scopeFontSize = 11;
+} else if ($scopeLen <= 320) {
+    $scopeFontSize = 10;
+} else if ($scopeLen <= 370) {
+    $scopeFontSize = 9;
+} else if ($scopeLen <= 420) {
+    $scopeFontSize = 8;
+} else if ($scopeLen <= 480) {
+    $scopeFontSize = 7;
+} else if ($scopeLen <= 580) {
+    $scopeFontSize = 6;
+} else if ($scopeLen <= 700) {
+    $scopeFontSize = 5;
+} else if ($scopeLen <= 900) {
+    $scopeFontSize = 4;
+} else {
+    $scopeFontSize = 3;
+}
+
+$scopeHtml = '<table border="0" cellspacing="0" cellpadding="0" width="100%">
+    <tr>
+        <td style="text-align:center;" height="75">
+            <font size="' . $scopeFontSize . '">' . $inlineScope . '</font>
+        </td>
     </tr>
-    </table>'
-        . '<br><br><font size="12" text-align: center;>A.I.T.F. MANAGEMENT CERTIFICATION LIMITED Certify that</font><br>'
+</table>';
+
+$html = '<br><br><br><br><p  style="text-align: center; text-justify: inter-word;"><font size="16" text-align: center;><b>Certification Awarded to</b></font><br>
+        <table border="0" cellspacing="0" cellpadding="0" width="100%">
+            <tr>
+                <td style="text-align:center;" height="55">
+                    <font size="19"><b>' . $certifyInfo['customer_name'] . '</b></font>
+                </td>
+            </tr>
+        </table>
+        <table border="0" cellspacing="1" cellpadding="4" width="100%"> 
+            <tr>
+                <td style="text-align:center;" height="100">' . $address . '</td>
+            </tr>
+        </table>'
+        . '<font size="12" text-align: center;>A.I.T.F. MANAGEMENT CERTIFICATION LIMITED Certify that</font><br>'
         . '<font size="12" text-align: center;> the management system of above organisation has been assessed <br>and found to be in compliance with the requirements of the</font><br><p>'
         . '<p  style="text-align: center; text-justify: inter-word; padding-bottom:10px" ><font size="18" text-align: center;><u>STANDARD</u></font><br>'
         . '<font size="18" text-align: center;><b>' . $standardDisplay . '</b></font><br>'
         . '<p  style="text-align: center; text-justify: inter-word; padding-bottom:10px" ><font size="14" text-align: center;><b><u>SCOPE OF CERTIFICATION</u></b></font><br>'
-        . '<br><font size="12" text-align: center;>' . nl2br($certifyInfo["certificate_scope"]) . '</font><br><br>'
+        . $scopeHtml . '<br>'
         . '<font size="18" text-align: center;><b>Certificate No : ' . $certificateNumber . '</b></font><br><br>'
         . $reviewSt. '<br><font size="11" text-align: center;>' . $saII
-        . '<br><font size="10" text-align: center;>Note: This certificate will reissue after each assessment for next due and continuity of compliance
+        . '<br><font size="10" text-align: center;>Note: This certificate will reissue after each audit for next due and continuity of compliance
 </font><br>'
         . '<br><p  style="text-align: justify; text-justify: inter-word;"><font size="12" text-align: center;><b> For and on behalf of A.I.T.F.</b></font><br><br><br><br>'
         . '<br><font size="10" text-align: center;>  Managing Director</font><br>'
