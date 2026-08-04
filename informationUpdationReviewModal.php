@@ -185,6 +185,7 @@
                             <div class="col-sm-6 form-group float-label-control">
                                 <label>Date of Review:</label>
                                 <input type="text" class="form-control info-review-date" name="review_date" placeholder="Date of Review:">
+                                <span id="info_review_date_error" style="color: red; font-size: 12px; display: none; margin-top: 5px;"></span>
                             </div>
                         </div>
                         <div class="row" style="margin-top: 25px; padding-top: 15px; border-top: 1px solid #eee;">
@@ -196,6 +197,7 @@
 
                     <input type="hidden" name="info_review_service_id" class="info-review-service-id" value="">
                     <input type="hidden" name="info_review_customer_id" class="info-review-customer-id" value="">
+                    <input type="hidden" name="info_review_suspend_date" id="info_review_suspend_date" value="">
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>

@@ -22,11 +22,19 @@ if (file_exists($turnstileHelperPath)) {
     require_once $turnstileHelperPath;
 }
 
-$turnstileConfig = function_exists('aitf_get_turnstile_config') ? aitf_get_turnstile_config() : [
+$turnstileConfig = function_exists('aitf_get_turnstile_config') ? aitf_get_turnstile_config() : array(
     'site_key' => '',
     'secret_key' => ''
-];
+);
 $turnstileReady = function_exists('aitf_is_turnstile_ready') ? aitf_is_turnstile_ready() : false;
+
+$activeMode = 'employee';
+if (isset($_GET['director'])) {
+    $activeMode = 'director';
+} elseif (isset($_GET['client'])) {
+    $activeMode = 'client';
+}
+$createAccountStep = ($_GET['step'] ?? '') === 'verify' ? 'verify' : 'start';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -36,811 +44,751 @@ $turnstileReady = function_exists('aitf_is_turnstile_ready') ? aitf_is_turnstile
         <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <?php endif; ?>
     <title>AITF - Login</title>
-    <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        .login-selection-wrapper {
+        :root {
+            --primary: #0F2742;
+            --primary-hover: #1e3a5f;
+            --primary-focus: rgba(15, 39, 66, 0.15);
+            --bg-color: #FAFAFA;
+            --card-bg: #FFFFFF;
+            --text-main: #09090B;
+            --text-muted: #71717A;
+            --border: #E4E4E7;
+            --radius: 20px;
+            --radius-sm: 12px;
+            --shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 8px 32px rgba(0, 0, 0, 0.03);
+            --shadow-hover: 0 20px 60px rgba(0, 0, 0, 0.08);
+            --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { box-sizing: border-box; }
+        
+        body.aitf-login-page {
+            margin: 0;
             min-height: 100vh;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-color);
+            background-image: radial-gradient(rgba(15, 39, 66, 0.1) 1px, transparent 1px);
+            background-size: 24px 24px;
+            color: var(--text-main);
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 80px 16px 60px;
-            background:
-                radial-gradient(circle at 20% 30%, rgba(37, 99, 235, 0.15), transparent 40%),
-                radial-gradient(circle at 80% 70%, rgba(59, 130, 246, 0.12), transparent 45%),
-                linear-gradient(135deg, #0f172a, #1e293b);
-            position: relative;
-            overflow: hidden;
+            padding: 24px;
         }
 
-        .login-selection-wrapper::before {
-            content: '';
-            position: absolute;
-            width: 600px;
-            height: 600px;
-            background: radial-gradient(circle, rgba(37, 99, 235, 0.1) 0%, transparent 70%);
-            top: -300px;
-            left: -300px;
-            z-index: 0;
-        }
-
-        .login-selection-wrapper::after {
-            content: '';
-            position: absolute;
-            width: 600px;
-            height: 600px;
-            background: radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, transparent 70%);
-            bottom: -300px;
-            right: -300px;
-            z-index: 0;
-        }
-
-        .login-selection-card {
-            max-width: 480px;
+        .auth-wrapper {
             width: 100%;
-            background: rgba(255, 255, 255, 0.98);
-            border-radius: 20px;
-            box-shadow: 0 10px 35px rgba(0, 0, 0, 0.4);
-            padding: 40px 32px;
-            margin: 20px auto 30px;
-            border: 1px solid rgba(51, 65, 85, 0.3);
-            backdrop-filter: blur(12px);
-            position: relative;
-            z-index: 1;
-            overflow: hidden;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-    <title>AITF - Login</title>
-    <!-- Font Awesome for icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        .login-selection-wrapper {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 80px 16px 60px;
-            background:
-                radial-gradient(circle at 20% 30%, rgba(37, 99, 235, 0.15), transparent 40%),
-                radial-gradient(circle at 80% 70%, rgba(59, 130, 246, 0.12), transparent 45%),
-                linear-gradient(135deg, #0f172a, #1e293b);
-            position: relative;
-            overflow: hidden;
+            max-width: 440px;
+            z-index: 10;
         }
 
-        .login-selection-wrapper::before {
-            content: '';
-            position: absolute;
-            width: 600px;
-            height: 600px;
-            background: radial-gradient(circle, rgba(37, 99, 235, 0.1) 0%, transparent 70%);
-            top: -300px;
-            left: -300px;
-            z-index: 0;
-        }
-
-        .login-selection-wrapper::after {
-            content: '';
-            position: absolute;
-            width: 600px;
-            height: 600px;
-            background: radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, transparent 70%);
-            bottom: -300px;
-            right: -300px;
-            z-index: 0;
-        }
-
-        .login-selection-card {
-            max-width: 480px;
-            width: 100%;
-            background: rgba(255, 255, 255, 0.98);
-            border-radius: 20px;
-            box-shadow: 0 10px 35px rgba(0, 0, 0, 0.4);
-            padding: 40px 32px;
-            margin: 20px auto 30px;
-            border: 1px solid rgba(51, 65, 85, 0.3);
-            backdrop-filter: blur(12px);
-            position: relative;
-            z-index: 1;
-            overflow: hidden;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .login-selection-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
-        }
-
-        .login-selection-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 6px;
-            background: linear-gradient(90deg, #2563eb, #3b82f6);
-        }
-
-        .login-captcha-wrap {
-            display: contents;
-        }
-
-        .login-captcha-note {
-            display: block;
-            margin: 12px auto 22px;
-            font-size: 0.85rem;
-            color: #64748b;
+        .brand-header {
             text-align: center;
-            padding: 0;
-            background: transparent;
-            border: 0;
-            width: fit-content;
-            max-width: 100%;
-            box-sizing: border-box;
-            line-height: 1.5;
-        }
-
-        #admin-login-turnstile,
-        #client-login-turnstile {
-            display: flex;
-            justify-content: center;
-            width: fit-content;
-            margin: 14px auto 18px;
-            filter: drop-shadow(0 14px 30px rgba(15, 23, 42, 0.16));
-        }
-
-        #admin-login-turnstile>div,
-        #client-login-turnstile>div {
-            margin: 0 auto;
-        }
-
-        .login-submit-btn {
-            width: 100%;
-            border-radius: 999px;
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
-            border: none;
-            color: #fff;
-            padding: 12px 18px;
-            font-weight: 600;
-            letter-spacing: 0.06em;
-            text-transform: uppercase;
-            cursor: pointer;
-            box-shadow: 0 10px 25px rgba(37, 99, 235, 0.35);
-            transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
-        }
-
-        .login-submit-btn:hover:not(:disabled) {
-            transform: translateY(-1px);
-            box-shadow: 0 14px 30px rgba(37, 99, 235, 0.45);
-        }
-
-        .login-submit-btn:disabled {
-            opacity: 0.55;
-            cursor: not-allowed;
-            box-shadow: 0 6px 16px rgba(148, 163, 184, 0.3);
-        }
-
-        .login-selection-title {
-            font-size: 28px;
-            font-weight: 700;
-            color: #1e293b;
-            margin: 0 0 20px 0;
-            text-align: center;
-            letter-spacing: -0.01em;
-            position: relative;
-            display: block;
-            background: linear-gradient(90deg, #2563eb, #3b82f6);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            text-fill-color: transparent;
-            line-height: 1.3;
-        }
-
-        .login-selection-title i {
-            margin-right: 10px;
-            font-size: 0.9em;
-        }
-
-        .login-selection-subtitle {
-            font-size: 15px;
-            color: #64748b;
-            text-align: center;
-            margin-bottom: 30px;
-            line-height: 1.5;
-            max-width: 360px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        .login-notice {
-            margin: -12px 0 24px;
-            padding: 12px 14px;
-            border: 1px solid #fecaca;
-            border-radius: 8px;
-            background: #fef2f2;
-            color: #991b1b;
-            font-size: 14px;
-            font-weight: 600;
-            line-height: 1.45;
-            text-align: center;
-        }
-
-        .login-tabs {
-            display: flex;
-            justify-content: center;
-            gap: 16px;
             margin-bottom: 32px;
-            flex-wrap: wrap;
+        }
+        .brand-logo {
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, #0F2742 0%, #1e3a5f 100%);
+            color: white;
+            border-radius: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            font-weight: 800;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 16px rgba(15, 39, 66, 0.2), inset 0 1px 1px rgba(255,255,255,0.2);
+        }
+        .brand-header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0 0 8px;
+            letter-spacing: -0.02em;
+        }
+        .brand-header p {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin: 0;
         }
 
-        .login-tab-btn {
-            padding: 14px 26px;
-            border-radius: 10px;
-            border: 2px solid #e2e8f0;
-            outline: none;
-            cursor: pointer;
-            font-size: 15px;
+        .auth-card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(229, 231, 235, 0.5);
+            padding: 40px;
+            position: relative;
+            overflow: hidden;
+            animation: cardSlideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes cardSlideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .auth-mode-tabs {
+            display: flex;
+            background: #F4F4F5;
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 24px;
+        }
+        .auth-mode-btn {
+            flex: 1;
+            border: none;
+            background: transparent;
+            padding: 10px 4px;
+            font-size: 13px;
             font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-            background: #f8fafc;
-            color: #475569;
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+            color: var(--text-muted);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition);
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
-            position: relative;
-            overflow: hidden;
-            min-width: 160px;
-            text-align: center;
+            gap: 6px;
+        }
+        .auth-mode-btn i { font-size: 14px; }
+        .auth-mode-btn:hover { color: var(--text-main); }
+        .auth-mode-btn.active {
+            background: white;
+            color: var(--primary);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
-        .login-tab-btn i {
-            font-size: 16px;
-        }
-
-        .login-tab-btn:hover {
-            background: #f1f5f9;
-            transform: translateY(-2px);
-            box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
-            border-color: #cbd5e1;
-        }
-
-        .login-tab-btn.active {
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
-            color: #ffffff;
-            border-color: transparent;
-            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.3);
-            transform: translateY(-2px);
-            position: relative;
-            z-index: 1;
-        }
-
-        .login-tab-btn.active::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
-            z-index: -1;
-            border-radius: 8px;
-        }
-
-        .login-tab-btn.active i {
-            color: #ffffff;
-        }
-
-        .login-panels {
-            margin-top: 8px;
-        }
-
-        .login-panel {
+        .auth-panels { position: relative; }
+        .auth-panel {
             display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        .auth-panel.active { display: block; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        .login-panel.active {
-            display: block;
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
         }
-
-        .login-panel form {
-            max-width: 360px;
-            margin: 0 auto;
+        .auth-field {
+            display: flex;
+            flex-direction: column;
         }
-
-        .input-group {
+        .auth-field label {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-main);
+        }
+        .input-wrapper {
             position: relative;
-            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
         }
-
-        .input-group i {
+        .input-wrapper i.icon-left {
             position: absolute;
             left: 16px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #94a3b8;
-            font-size: 18px;
-            transition: color 0.2s ease;
-        }
-
-        .login-panel input[type="text"],
-        .login-panel input[type="password"],
-        .input-group {
-            position: relative;
-        }
-
-        .input-group input[type="password"],
-        .input-group input[type="text"] {
-            width: 100%;
-            padding: 14px 40px 14px 46px;
-            border: 1px solid #e2e8f0;
-            border-radius: 10px;
+            color: #A1A1AA;
             font-size: 15px;
-            color: #1e293b;
-            background-color: #f8fafc;
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-            box-sizing: border-box;
+            pointer-events: none;
+            transition: var(--transition);
+        }
+        .auth-input {
+            width: 100%;
+            height: 48px;
+            background: #FFFFFF;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 0 16px 0 44px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-main);
+            transition: var(--transition);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02) inset;
+        }
+        .auth-input::placeholder { color: #A1A1AA; font-weight: 400; }
+        .auth-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px var(--primary-focus), 0 1px 2px rgba(0,0,0,0.02) inset;
+        }
+        .input-wrapper:focus-within i.icon-left {
+            color: var(--primary);
         }
 
         .password-toggle {
             position: absolute;
-            right: 0;
-            top: 0;
-            height: 100%;
-            width: 40px;
-            background: none;
+            right: 8px;
+            background: transparent;
             border: none;
-            color: #94a3b8;
+            color: #A1A1AA;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
             cursor: pointer;
-            border-radius: 0 10px 10px 0;
-            transition: all 0.2s;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 0;
+            transition: var(--transition);
         }
-
         .password-toggle:hover {
-            color: #2563eb;
+            background: #F4F4F5;
+            color: var(--text-main);
         }
 
-        .login-panel input[type="text"]:focus,
-        .login-panel input[type="password"]:focus,
-        .login-panel input[type="email"]:focus {
-            outline: none;
-            border-color: #93c5fd;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
-            background-color: #ffffff;
-        }
-
-        .login-panel input[type="text"]::placeholder,
-        .login-panel input[type="password"]::placeholder {
-            color: #9ca3af;
-        }
-
-        .login-panel input[type="text"]:focus,
-        .login-panel input[type="password"]:focus {
-            outline: none;
-            border-color: #93c5fd;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
-            background: #ffffff;
-        }
-
-        .login-panel input[type="text"]:focus+i,
-        .login-panel input[type="password"]:focus+i {
-            color: #2563eb;
-        }
-
-        .login-panel input[type="submit"] {
+        .auth-submit {
             width: 100%;
-            border-radius: 30px;
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
-            color: #ffffff;
-            font-weight: 600;
-            font-size: 15px;
-            padding: 12px 16px 12px 50px;
+            height: 48px;
+            background: var(--primary);
+            color: white;
             border: none;
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            font-weight: 600;
             cursor: pointer;
-            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
-            transition: all 0.3s ease;
-            margin-top: 10px;
-            position: relative;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            overflow: hidden;
-        }
-
-        .login-panel input[type="submit"]::before {
-            content: '→';
-            position: absolute;
-            left: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 30px;
-            height: 30px;
-            background: #3b82f6;
-            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 16px;
-            font-weight: bold;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            gap: 8px;
+            transition: var(--transition);
+            margin-top: 8px;
+        }
+        .auth-submit:hover:not(:disabled) {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(15, 39, 66, 0.2);
+        }
+        .auth-submit:active:not(:disabled) {
+            transform: translateY(0);
+        }
+        .auth-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
 
-        .login-panel input[type="submit"]:hover::before {
-            left: 100%;
+        .captcha-wrap {
+            display: flex;
+            justify-content: center;
+            margin-top: 4px;
         }
-
-        .login-panel input[type="submit"]:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.6);
-            background: linear-gradient(135deg, #1d4ed8, #1e40af);
-        }
-
-        .login-panel input[type="submit"]:disabled {
-            opacity: 0.7;
-            cursor: default;
-            box-shadow: none;
-        }
-
-        .login-selection-note {
+        .captcha-note {
             font-size: 13px;
-            color: #94a3b8;
+            color: var(--text-muted);
             text-align: center;
-            margin-top: 24px;
-            line-height: 1.5;
+            padding: 12px;
+            background: #F4F4F5;
+            border-radius: var(--radius-sm);
+            border: 1px dashed var(--border);
+            width: 100%;
+        }
+
+        .auth-footer-links {
+            margin-top: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            font-size: 14px;
+            border-top: 1px solid var(--border);
+            padding-top: 28px;
+        }
+        .auth-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+        .auth-link:hover { color: var(--text-main); }
+        .primary-link {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        .primary-link:hover { text-decoration: underline; }
+        .divider { color: var(--border); }
+
+        .login-notice {
+            background: #FEF2F2;
+            border: 1px solid #FCA5A5;
+            color: #B91C1C;
+            padding: 12px 16px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        /* Modals */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(9, 9, 11, 0.4);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            padding: 16px;
+        }
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal-container {
+            background: var(--card-bg);
+            width: 100%;
+            max-width: 440px;
+            border-radius: var(--radius);
+            box-shadow: 0 24px 48px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.05);
+            padding: 40px;
+            transform: translateY(20px) scale(0.96);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
-            padding-top: 18px;
+            border: 1px solid rgba(229, 231, 235, 0.5);
         }
-
-        .login-selection-note::before {
-            content: '';
+        .modal-overlay.active .modal-container {
+            transform: translateY(0) scale(1);
+        }
+        .modal-close {
             position: absolute;
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 60px;
-            height: 2px;
-            background: linear-gradient(90deg, #334155, #475569, #334155);
+            top: 24px;
+            right: 24px;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+        .modal-close:hover {
+            background: #F4F4F5;
+            color: var(--text-main);
+        }
+        .modal-title {
+            font-size: 22px;
+            font-weight: 700;
+            margin: 0 0 8px;
+            color: var(--text-main);
+            letter-spacing: -0.02em;
+        }
+        .modal-subtitle {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin: 0 0 32px;
+            line-height: 1.5;
+        }
+
+        .signup-steps {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 32px;
+        }
+        .signup-step {
+            flex: 1;
+            height: 4px;
+            background: #F4F4F5;
             border-radius: 2px;
+            position: relative;
         }
-
-        /* Animation for form elements */
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(15px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        .signup-step.active { background: var(--primary); }
+        .signup-step-text {
+            position: absolute;
+            top: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            white-space: nowrap;
         }
-
-        .login-panel {
-            animation: fadeInUp 0.5s ease-out forwards;
-        }
-
-        .login-tabs {
-            animation: fadeInUp 0.5s 0.1s ease-out both;
-        }
-
-        .login-selection-title {
-            animation: fadeInUp 0.5s 0.15s ease-out both;
-        }
-
-        .login-selection-subtitle {
-            animation: fadeInUp 0.5s 0.2s ease-out both;
-        }
-
-        @media (max-width: 576px) {
-            .login-selection-card {
-                padding: 24px 18px 30px;
-                border-radius: 18px;
-            }
-
-            .login-tabs {
-                flex-direction: column;
-            }
-
-            .login-tab-btn {
-                width: 100%;
-                text-align: center;
-            }
-
-            #admin-login-turnstile,
-            #client-login-turnstile {
-                transform: scale(0.92);
-                transform-origin: center top;
-            }
-        }
-
+        .signup-step.active .signup-step-text { color: var(--text-main); }
+        
         .login-loading-overlay {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(15, 23, 42, 0.82);
+            inset: 0;
+            background: rgba(255,255,255,0.8);
+            backdrop-filter: blur(4px);
             display: none;
             align-items: center;
             justify-content: center;
             z-index: 99999;
         }
-
         .login-loading-box {
-            background: #0b1220;
-            border-radius: 16px;
-            padding: 22px 26px 18px;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
-            max-width: 320px;
-            width: 90%;
+            background: white;
+            padding: 32px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-hover);
             text-align: center;
-            border: 1px solid rgba(148, 163, 184, 0.4);
+            border: 1px solid var(--border);
         }
-
         .login-loading-spinner {
-            width: 42px;
-            height: 42px;
+            width: 40px;
+            height: 40px;
+            border: 3px solid #F4F4F5;
+            border-top-color: var(--primary);
             border-radius: 50%;
-            border: 3px solid rgba(148, 163, 184, 0.5);
-            border-top-color: #38bdf8;
-            border-right-color: #4f46e5;
-            animation: login-spin 0.9s linear infinite;
-            margin: 0 auto 14px;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
         }
-
-        .login-loading-title {
-            color: #e5e7eb;
-            font-size: 15px;
-            font-weight: 600;
-            margin-bottom: 4px;
-        }
-
-        .login-loading-subtitle {
-            color: #9ca3af;
-            font-size: 12px;
-        }
-
-        @keyframes login-spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .login-loading-title { font-weight: 700; font-size: 15px; color: var(--text-main); }
+        .login-loading-subtitle { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+        
+        @media (max-width: 500px) {
+            .auth-card, .modal-container { padding: 32px 24px; }
+            .auth-footer-links { flex-direction: column; gap: 12px; }
+            .divider { display: none; }
         }
     </style>
 </head>
-
-<body id="home" data-spy="scroll" data-target="#navbar-wd" data-offset="98">
-
+<body class="aitf-login-page">
     <?php include './headerSource.php'; ?>
-
     <div id="login-loading-overlay" class="login-loading-overlay">
         <div class="login-loading-box">
             <div class="login-loading-spinner"></div>
-            <div class="login-loading-title">Connecting to Server...</div>
-            <div class="login-loading-subtitle">Please wait while we verify your credentials.</div>
+            <div class="login-loading-title">Checking credentials</div>
+            <div class="login-loading-subtitle">Please wait for a moment.</div>
         </div>
     </div>
 
-    <section class="login-selection-wrapper">
-        <div class="login-selection-card">
-            <h1 class="login-selection-title"><i class="fas fa-sign-in-alt"></i>Login</h1>
-            <p class="login-selection-subtitle">Please select your login type to access your account</p>
+    <div class="auth-wrapper">
+        <div class="brand-header">
+            <div class="brand-logo">A</div>
+            <h1>AITF ERP</h1>
+            <p>Management Certification Limited</p>
+        </div>
+
+        <div class="auth-card">
+            <div class="auth-mode-tabs">
+                <button type="button" class="auth-mode-btn <?php echo $activeMode === 'employee' ? 'active' : ''; ?>" data-mode="employee">
+                    <i class="fa fa-user"></i> Employee
+                </button>
+                <button type="button" class="auth-mode-btn <?php echo $activeMode === 'director' ? 'active' : ''; ?>" data-mode="director">
+                    <i class="fa fa-id-badge"></i> Director
+                </button>
+                <button type="button" class="auth-mode-btn <?php echo $activeMode === 'client' ? 'active' : ''; ?>" data-mode="client">
+                    <i class="fa fa-building"></i> Client
+                </button>
+            </div>
+
             <?php if ($loginNotice !== ''): ?>
                 <div class="login-notice" role="alert">
                     <?php echo htmlspecialchars($loginNotice, ENT_QUOTES, 'UTF-8'); ?>
                 </div>
             <?php endif; ?>
 
-            <div class="login-tabs">
-                <button type="button" class="login-tab-btn active" data-target="#user-login-panel">
-                    <i class="fas fa-user-shield"></i> Admin Login
-                </button>
-                <button type="button" class="login-tab-btn" data-target="#client-login-panel">
-                    <i class="fas fa-user-tie"></i> Client Login
-                </button>
-            </div>
-
-            <div class="login-panels">
-                <div id="user-login-panel" class="login-panel active">
-                    <form action="login.php" method="post" id="admin-login-form">
-                        <label class="message-view" style="display: none;">Invalid Username or Password</label>
-                        <div class="input-group">
-                            <i class="fas fa-envelope"></i>
-                            <input type="text" name="useremail" placeholder="User Email" required>
+            <div class="auth-panels">
+                <div class="auth-panel <?php echo $activeMode === 'employee' ? 'active' : ''; ?>" data-panel="employee">
+                    <form action="login.php" method="post" class="auth-form" data-requires-captcha="<?php echo $turnstileReady ? '1' : '0'; ?>">
+                        <div class="auth-field">
+                            <label>Email Address</label>
+                            <div class="input-wrapper">
+                                <i class="fa fa-envelope icon-left"></i>
+                                <input class="auth-input" type="email" name="useremail" placeholder="name@company.com" required>
+                            </div>
                         </div>
-                        <div class="input-group">
-                            <i class="fas fa-lock"></i>
-                            <input type="password" name="password" id="password" placeholder="Password" required>
-                            <button type="button" class="password-toggle" id="togglePassword">
-                                <i class="far fa-eye"></i>
-                            </button>
+                        <div class="auth-field">
+                            <label>Password</label>
+                            <div class="input-wrapper">
+                                <i class="fa fa-lock icon-left"></i>
+                                <input class="auth-input" type="password" name="password" id="employeePassword" placeholder="••••••••" required>
+                                <button type="button" class="password-toggle" data-toggle-password="#employeePassword" aria-label="Show password">
+                                    <i class="fa fa-eye"></i>
+                                </button>
+                            </div>
                         </div>
-                        <div class="login-captcha-wrap">
+                        <div class="captcha-wrap">
                             <?php if ($turnstileReady): ?>
-                                <div id="admin-login-turnstile" class="cf-turnstile"
-                                    data-sitekey="<?php echo htmlspecialchars($turnstileConfig['site_key'], ENT_QUOTES, 'UTF-8'); ?>"
-                                    data-theme="light"
-                                    data-callback="adminLoginCaptchaSolved"
-                                    data-expired-callback="adminLoginCaptchaExpired"
-                                    data-error-callback="adminLoginCaptchaExpired"></div>
+                                <div id="employee-login-turnstile" class="cf-turnstile" data-sitekey="<?php echo htmlspecialchars($turnstileConfig['site_key'], ENT_QUOTES, 'UTF-8'); ?>" data-theme="light" data-callback="authCaptchaChanged" data-expired-callback="authCaptchaChanged" data-error-callback="authCaptchaChanged"></div>
                             <?php else: ?>
-                                <div class="login-captcha-note">Captcha will be enabled after Cloudflare Turnstile keys are configured.
-                                </div>
+                                <div class="captcha-note">Captcha will be enabled after keys are configured.</div>
                             <?php endif; ?>
                         </div>
-                        <input type="submit" value="Sign In" class="login-submit-btn" id="admin-login-submit"
-                            <?php if ($turnstileReady): ?>disabled<?php endif; ?>>
+                        <button type="submit" class="auth-submit" <?php if ($turnstileReady): ?>disabled<?php endif; ?>>
+                            Sign In
+                        </button>
+                    </form>
+                    
+                    <div class="auth-footer-links">
+                        <a href="#" class="auth-link" onclick="openModal('forgotPasswordModal'); return false;">Forgot Password?</a>
+                        <span class="divider">•</span>
+                        <a href="#" class="auth-link primary-link" onclick="openModal('registerModal'); return false;">Create New Account</a>
+                    </div>
+                </div>
+
+                <div class="auth-panel <?php echo $activeMode === 'director' ? 'active' : ''; ?>" data-panel="director">
+                    <form action="login.php" method="post" class="auth-form" data-requires-captcha="<?php echo $turnstileReady ? '1' : '0'; ?>">
+                        <div class="auth-field">
+                            <label>Director Email</label>
+                            <div class="input-wrapper">
+                                <i class="fa fa-envelope icon-left"></i>
+                                <input class="auth-input" type="email" name="directorEmail" placeholder="director@company.com" required>
+                            </div>
+                        </div>
+                        <div class="auth-field">
+                            <label>Password</label>
+                            <div class="input-wrapper">
+                                <i class="fa fa-lock icon-left"></i>
+                                <input class="auth-input" type="password" name="directorPassword" id="directorPassword" placeholder="••••••••" required>
+                                <button type="button" class="password-toggle" data-toggle-password="#directorPassword" aria-label="Show password">
+                                    <i class="fa fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="captcha-wrap">
+                            <?php if ($turnstileReady): ?>
+                                <div id="director-login-turnstile" class="cf-turnstile" data-sitekey="<?php echo htmlspecialchars($turnstileConfig['site_key'], ENT_QUOTES, 'UTF-8'); ?>" data-theme="light" data-callback="authCaptchaChanged" data-expired-callback="authCaptchaChanged" data-error-callback="authCaptchaChanged"></div>
+                            <?php else: ?>
+                                <div class="captcha-note">Captcha will be enabled after keys are configured.</div>
+                            <?php endif; ?>
+                        </div>
+                        <button type="submit" class="auth-submit" <?php if ($turnstileReady): ?>disabled<?php endif; ?>>
+                            Sign In as Director
+                        </button>
                     </form>
                 </div>
 
-                <div id="client-login-panel" class="login-panel">
-                    <form action="login.php" method="post" id="client-login-form">
-                        <label class="message-view" style="display: none;">Invalid Username or Password</label>
-                        <div class="input-group">
-                            <i class="fas fa-user"></i>
-                            <input type="text" class="clientemail" id="clientemail" name="clientemail"
-                                placeholder="Client Email" required>
+                <div class="auth-panel <?php echo $activeMode === 'client' ? 'active' : ''; ?>" data-panel="client">
+                    <form action="login.php" method="post" class="auth-form" data-requires-captcha="<?php echo $turnstileReady ? '1' : '0'; ?>">
+                        <div class="auth-field">
+                            <label>Client Name / ID</label>
+                            <div class="input-wrapper">
+                                <i class="fa fa-user icon-left"></i>
+                                <input class="auth-input" type="text" name="clientemail" placeholder="Client identity" required>
+                            </div>
                         </div>
-                        <div class="input-group">
-                            <i class="fas fa-lock"></i>
-                            <input type="password" class="clientcid" id="clientcid" name="clientcid"
-                                placeholder="Password" required>
-                            <button type="button" class="password-toggle" id="toggleClientPassword">
-                                <i class="far fa-eye"></i>
-                            </button>
+                        <div class="auth-field">
+                            <label>Client Password</label>
+                            <div class="input-wrapper">
+                                <i class="fa fa-lock icon-left"></i>
+                                <input class="auth-input" type="password" name="clientcid" id="clientPassword" placeholder="••••••••" required>
+                                <button type="button" class="password-toggle" data-toggle-password="#clientPassword" aria-label="Show password">
+                                    <i class="fa fa-eye"></i>
+                                </button>
+                            </div>
                         </div>
-                        <div class="login-captcha-wrap">
+                        <div class="captcha-wrap">
                             <?php if ($turnstileReady): ?>
-                                <div id="client-login-turnstile" class="cf-turnstile"
-                                    data-sitekey="<?php echo htmlspecialchars($turnstileConfig['site_key'], ENT_QUOTES, 'UTF-8'); ?>"
-                                    data-theme="light"
-                                    data-callback="clientLoginCaptchaSolved"
-                                    data-expired-callback="clientLoginCaptchaExpired"
-                                    data-error-callback="clientLoginCaptchaExpired"></div>
+                                <div id="client-login-turnstile" class="cf-turnstile" data-sitekey="<?php echo htmlspecialchars($turnstileConfig['site_key'], ENT_QUOTES, 'UTF-8'); ?>" data-theme="light" data-callback="authCaptchaChanged" data-expired-callback="authCaptchaChanged" data-error-callback="authCaptchaChanged"></div>
                             <?php else: ?>
-                                <div class="login-captcha-note">Captcha will be enabled after Cloudflare Turnstile keys are configured.
-                                </div>
+                                <div class="captcha-note">Captcha will be enabled after keys are configured.</div>
                             <?php endif; ?>
                         </div>
-                        <input type="submit" name="login" class="login loginmodal-submit login-submit-btn"
-                            value="Sign In" id="client-login-submit"
-                            <?php if ($turnstileReady): ?>disabled<?php endif; ?>>
+                        <button type="submit" class="auth-submit" <?php if ($turnstileReady): ?>disabled<?php endif; ?>>
+                            Sign In as Client
+                        </button>
                     </form>
                 </div>
             </div>
-
-            <p class="login-selection-note">
-                <i class="fas fa-info-circle"></i> You will be redirected to the portal after successful login.
-            </p>
         </div>
-    </section>
+    </div>
 
-    <?php include './footerSource.php'; ?>
+    <!-- Registration Modal -->
+    <div id="registerModal" class="modal-overlay">
+        <div class="modal-container">
+            <button class="modal-close" onclick="closeModal('registerModal')"><i class="fa fa-times"></i></button>
+            <h2 class="modal-title">Create Account</h2>
+            <p class="modal-subtitle">Follow the steps to set up your employee access.</p>
+            
+            <div class="signup-steps">
+                <div class="signup-step active">
+                    <span class="signup-step-text">1. Email</span>
+                </div>
+                <div class="signup-step <?php echo $createAccountStep === 'verify' ? 'active' : ''; ?>">
+                    <span class="signup-step-text">2. OTP</span>
+                </div>
+                <div class="signup-step <?php echo $createAccountStep === 'verify' ? 'active' : ''; ?>">
+                    <span class="signup-step-text">3. Complete</span>
+                </div>
+            </div>
+
+            <div class="step-content">
+                <?php if ($createAccountStep === 'verify') { ?>
+                    <form action="createAccount.php" method="post" class="auth-form">
+                        <input type="hidden" name="create_account_action" value="complete_signup">
+                        <div class="auth-field">
+                            <label>OTP Code</label>
+                            <div class="input-wrapper">
+                                <i class="fa fa-shield icon-left"></i>
+                                <input class="auth-input" type="text" name="signup_otp" placeholder="Enter 6-digit OTP" maxlength="6" inputmode="numeric" required>
+                            </div>
+                        </div>
+                        <div class="auth-field">
+                            <label>Employee ID (EID)</label>
+                            <div class="input-wrapper">
+                                <i class="fa fa-id-card icon-left"></i>
+                                <input class="auth-input" type="text" name="signup_eid" placeholder="Enter your EID" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="auth-submit">Validate and Login</button>
+                    </form>
+                    <div class="captcha-note" style="margin-top: 24px;">OTP is valid for 10 minutes. After validation, you will be logged in automatically.</div>
+                <?php } else { ?>
+                    <form action="createAccount.php" method="post" class="auth-form">
+                        <input type="hidden" name="create_account_action" value="request_otp">
+                        <div class="auth-field">
+                            <label>Registered Email</label>
+                            <div class="input-wrapper">
+                                <i class="fa fa-envelope icon-left"></i>
+                                <input class="auth-input" type="email" name="signup_email" placeholder="email@company.com" required>
+                            </div>
+                        </div>
+                        <div class="auth-field">
+                            <label>Create Password</label>
+                            <div class="input-wrapper">
+                                <i class="fa fa-lock icon-left"></i>
+                                <input class="auth-input" type="password" name="signup_password" id="signupPassword" placeholder="••••••••" required>
+                                <button type="button" class="password-toggle" data-toggle-password="#signupPassword" aria-label="Show password">
+                                    <i class="fa fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="auth-field">
+                            <label>Confirm Password</label>
+                            <div class="input-wrapper">
+                                <i class="fa fa-lock icon-left"></i>
+                                <input class="auth-input" type="password" name="signup_confirm_password" id="signupConfirmPassword" placeholder="••••••••" required>
+                                <button type="button" class="password-toggle" data-toggle-password="#signupConfirmPassword" aria-label="Show password">
+                                    <i class="fa fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <button type="submit" class="auth-submit">Continue</button>
+                    </form>
+                    <div class="captcha-note" style="margin-top: 24px;">Use the email registered by your Director. An OTP will be sent to this address.</div>
+                <?php } ?>
+            </div>
+        </div>
+    </div>
+
+    <!-- Forgot Password Modal -->
+    <div id="forgotPasswordModal" class="modal-overlay">
+        <div class="modal-container">
+            <button class="modal-close" onclick="closeModal('forgotPasswordModal')"><i class="fa fa-times"></i></button>
+            <h2 class="modal-title">Reset Password</h2>
+            <p class="modal-subtitle">Enter your email address and we'll send you a link to reset your password.</p>
+            
+            <form action="forgotPassword.php" method="post" class="auth-form">
+                <div class="auth-field">
+                    <label>Email Address</label>
+                    <div class="input-wrapper">
+                        <i class="fa fa-envelope icon-left"></i>
+                        <input class="auth-input" type="email" name="reset_email" placeholder="name@company.com" required>
+                    </div>
+                </div>
+                <button type="submit" class="auth-submit">Send Reset Link</button>
+            </form>
+        </div>
+    </div>
 
     <script>
         const turnstileEnabled = <?php echo json_encode($turnstileReady); ?>;
 
-        function loginUpdateButtonsState() {
-            const adminBtn = document.getElementById('admin-login-submit');
-            const clientBtn = document.getElementById('client-login-submit');
-
-            if (!turnstileEnabled) {
-                if (adminBtn) adminBtn.disabled = false;
-                if (clientBtn) clientBtn.disabled = false;
-                return;
-            }
-
-            const adminForm = document.querySelector('#admin-login-turnstile')?.closest('form');
-            const clientForm = document.querySelector('#client-login-turnstile')?.closest('form');
-            const adminToken = adminForm ? adminForm.querySelector('input[name="cf-turnstile-response"]') : null;
-            const clientToken = clientForm ? clientForm.querySelector('input[name="cf-turnstile-response"]') : null;
-            const adminDone = Boolean(adminToken && adminToken.value.trim() !== '');
-            const clientDone = Boolean(clientToken && clientToken.value.trim() !== '');
-
-            if (adminBtn) adminBtn.disabled = !adminDone;
-            if (clientBtn) clientBtn.disabled = !clientDone;
+        function authCaptchaChanged() {
+            document.querySelectorAll('.auth-form[data-requires-captcha="1"]').forEach(function (form) {
+                var submit = form.querySelector('.auth-submit');
+                var token = form.querySelector('input[name="cf-turnstile-response"]');
+                if (submit) {
+                    submit.disabled = !(token && token.value.trim() !== '');
+                }
+            });
         }
 
-        window.adminLoginCaptchaSolved = loginUpdateButtonsState;
-        window.adminLoginCaptchaExpired = loginUpdateButtonsState;
-        window.clientLoginCaptchaSolved = loginUpdateButtonsState;
-        window.clientLoginCaptchaExpired = loginUpdateButtonsState;
+        function openModal(id) {
+            document.getElementById(id).classList.add('active');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
 
         document.addEventListener('DOMContentLoaded', function () {
-            // Password toggle functionality
-            const togglePassword = document.querySelector('#togglePassword');
-            const password = document.querySelector('#password');
-            const toggleClientPassword = document.querySelector('#toggleClientPassword');
-            const clientPassword = document.querySelector('#clientcid');
-
-            if (togglePassword && password) {
-                togglePassword.addEventListener('click', function () {
-                    const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
-                    password.setAttribute('type', type);
-                    this.querySelector('i').classList.toggle('fa-eye');
-                    this.querySelector('i').classList.toggle('fa-eye-slash');
-                });
-            }
-
-            if (toggleClientPassword && clientPassword) {
-                toggleClientPassword.addEventListener('click', function () {
-                    const type = clientPassword.getAttribute('type') === 'password' ? 'text' : 'password';
-                    clientPassword.setAttribute('type', type);
-                    this.querySelector('i').classList.toggle('fa-eye');
-                    this.querySelector('i').classList.toggle('fa-eye-slash');
-                });
-            }
-
-            // Rest of the existing code
-            var buttons = document.querySelectorAll('.login-tab-btn');
-            var panels = document.querySelectorAll('.login-panel');
             var overlay = document.getElementById('login-loading-overlay');
 
-            buttons.forEach(function (btn) {
-                btn.addEventListener('click', function () {
-                    var target = this.getAttribute('data-target');
-                    buttons.forEach(function (b) { b.classList.remove('active'); });
-                    panels.forEach(function (p) { p.classList.remove('active'); });
-                    this.classList.add('active');
-                    var panel = document.querySelector(target);
-                    if (panel) {
-                        panel.classList.add('active');
+            document.querySelectorAll('.auth-mode-btn').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    var mode = button.getAttribute('data-mode');
+                    document.querySelectorAll('.auth-mode-btn').forEach(function (item) {
+                        item.classList.toggle('active', item === button);
+                    });
+                    document.querySelectorAll('.auth-panel').forEach(function (panel) {
+                        panel.classList.toggle('active', panel.getAttribute('data-panel') === mode);
+                    });
+                    authCaptchaChanged();
+                });
+            });
+
+            document.querySelectorAll('[data-toggle-password]').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    var input = document.querySelector(button.getAttribute('data-toggle-password'));
+                    var icon = button.querySelector('i');
+                    if (!input) {
+                        return;
+                    }
+                    input.type = input.type === 'password' ? 'text' : 'password';
+                    if (icon) {
+                        icon.classList.toggle('fa-eye');
+                        icon.classList.toggle('fa-eye-slash');
                     }
                 });
             });
 
-            function showLoginLoader() {
-                if (overlay) {
-                    overlay.style.display = 'flex';
-                }
-            }
-
-            function hideLoginLoader() {
-                if (overlay) {
-                    overlay.style.display = 'none';
-                }
-            }
-
-            var forms = document.querySelectorAll('.login-panel form');
-            forms.forEach(function (form) {
-                form.addEventListener('submit', function (e) {
-                    var submitBtn = form.querySelector('input[type="submit"]');
-                    if (turnstileEnabled) {
-                        var tokenField = form.querySelector('input[name="cf-turnstile-response"]');
-                        if (!tokenField || tokenField.value.trim() === '') {
-                            e.preventDefault();
-                            hideLoginLoader();
-                            loginUpdateButtonsState();
+            document.querySelectorAll('form').forEach(function (form) {
+                form.addEventListener('submit', function (event) {
+                    var requiresCaptcha = form.getAttribute('data-requires-captcha') === '1';
+                    if (turnstileEnabled && requiresCaptcha) {
+                        var token = form.querySelector('input[name="cf-turnstile-response"]');
+                        if (!token || token.value.trim() === '') {
+                            event.preventDefault();
+                            authCaptchaChanged();
                             alert('Please complete the captcha verification.');
                             return;
                         }
                     }
 
-                    if (submitBtn && submitBtn.disabled) {
-                        e.preventDefault();
+                    var submit = form.querySelector('.auth-submit');
+                    if (submit && submit.disabled) {
+                        event.preventDefault();
                         return;
                     }
-
-                    if (submitBtn) {
-                        submitBtn.disabled = true;
+                    if (submit) {
+                        submit.disabled = true;
+                        submit.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Processing...';
+                    }
+                    if (overlay) {
+                        overlay.style.display = 'flex';
+                    }
+                });
+            });
+            
+            document.querySelectorAll('.modal-overlay').forEach(function(modal) {
+                modal.addEventListener('click', function(e) {
+                    if (e.target === modal) {
+                        modal.classList.remove('active');
                     }
                 });
             });
 
-            loginUpdateButtonsState();
+            authCaptchaChanged();
+
+            <?php if ($createAccountStep === 'verify'): ?>
+                openModal('registerModal');
+            <?php endif; ?>
         });
     </script>
 </body>
-
 </html>

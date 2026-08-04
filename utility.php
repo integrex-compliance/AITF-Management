@@ -18,16 +18,23 @@ class Utitlity {
             return 0;
         }
     }
+
+    static function checkForDirector() {
+        if (isset($_SESSION ['username']) && !empty($_SESSION ['username']) && $_SESSION ['role'] == "Director")
+            return 1;
+        else
+            return 0;
+    }
     
     static function checkForUserMainAdmin() {
-        if (isset($_SESSION ['username']) && !empty($_SESSION ['username']) && $_SESSION ['role'] == "Main Admin")
+        if (isset($_SESSION ['username']) && !empty($_SESSION ['username']) && ($_SESSION ['role'] == "Main Admin" || $_SESSION ['role'] == "Director"))
             return 1;
         else
             return 0;
     }
     
     static function checkForUserAdmin() {
-        if (isset($_SESSION ['username']) && !empty($_SESSION ['username']) && $_SESSION ['role'] == "Admin")
+        if (isset($_SESSION ['username']) && !empty($_SESSION ['username']) && ($_SESSION ['role'] == "Admin" || $_SESSION ['role'] == "Director"))
             return 1;
         else
             return 0;
@@ -62,14 +69,14 @@ class Utitlity {
     }
     
     static function checkForMainAdmin(){
-        if (isset($_SESSION['username']) && !empty($_SESSION['username']) && $_SESSION['role'] == "Main Admin")
+        if (isset($_SESSION['username']) && !empty($_SESSION['username']) && ($_SESSION['role'] == "Main Admin" || $_SESSION ['role'] == "Director"))
             return 1;
         else
             return 0;
     }
     
     static function checkForStaff(){
-        if (isset($_SESSION['username']) && !empty($_SESSION['username']) && $_SESSION['role'] == "Staff")
+        if (isset($_SESSION['username']) && !empty($_SESSION['username']) && in_array($_SESSION['role'], array("Staff", "Auditor", "STO", "Director"), true))
             return 1;
         else
             return 0;

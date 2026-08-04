@@ -6273,6 +6273,23 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     return !isset($row['is_deleted']) || $row['is_deleted'] != 'Y';
                 }));
 
+                $saiSuspendDate = '';
+                $prevServiceQuery = "SELECT service_id FROM service WHERE customer_id = :id AND service_id < :currId ORDER BY service_id DESC LIMIT 1";
+                $prevStmt = $db->prepare($prevServiceQuery);
+                $prevStmt->bindParam(':id', $_GET['customerid']);
+                $prevStmt->bindParam(':currId', $saiService['service']);
+                $prevStmt->execute();
+                $prevServiceRow = $prevStmt->fetch();
+                if ($prevServiceRow) {
+                    $prevServiceDates = aitfFetchClientStatusDates($db, $prevServiceRow['service_id'], array('Suspend Letter'));
+                    foreach ($prevServiceDates as $action) {
+                        if (trim($action['action']) == 'Suspend Letter' && !empty($action['due_date'])) {
+                            $saiSuspendDate = $action['due_date'];
+                            break;
+                        }
+                    }
+                }
+
                 if ($letestService["c_service"] == $saiService['service']) {
                     $disp = "";
                 } else {
@@ -6383,6 +6400,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                 <a class="openInfoUpdationReview pull-right"
                                                                     data-customer="<?php echo $_GET['customerid'] ?>"
                                                                     data-service="<?php echo $saiService['sai_id'] ?>"
+                                                                    data-suspend-date="<?php echo $saiSuspendDate ?>"
                                                                     title="Review Information Updation" style="padding: 1px 5px;"><i
                                                                         class="fa fa-pencil-square fa-lg "
                                                                         style="padding: 3px"></i></a>
@@ -6401,6 +6419,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                 <a class="openInfoUpdationReview pull-right"
                                                                     data-customer="<?php echo $_GET['customerid'] ?>"
                                                                     data-service="<?php echo $saiService['sai_id'] ?>"
+                                                                    data-suspend-date="<?php echo $saiSuspendDate ?>"
                                                                     title="Add Information Updation Review"
                                                                     style="padding: 1px 5px;"><i class="fa fa-plus-circle fa-lg "
                                                                         style="padding: 3px"></i></a>
@@ -7202,6 +7221,23 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     return !isset($row['is_deleted']) || $row['is_deleted'] != 'Y';
                 }));
 
+                $saiiSuspendDate = '';
+                $prevServiceQuery2 = "SELECT service_id FROM service WHERE customer_id = :id AND service_id < :currId ORDER BY service_id DESC LIMIT 1";
+                $prevStmt2 = $db->prepare($prevServiceQuery2);
+                $prevStmt2->bindParam(':id', $_GET['customerid']);
+                $prevStmt2->bindParam(':currId', $saiiService['service']);
+                $prevStmt2->execute();
+                $prevServiceRow2 = $prevStmt2->fetch();
+                if ($prevServiceRow2) {
+                    $prevServiceDates2 = aitfFetchClientStatusDates($db, $prevServiceRow2['service_id'], array('Suspend Letter'));
+                    foreach ($prevServiceDates2 as $action) {
+                        if (trim($action['action']) == 'Suspend Letter' && !empty($action['due_date'])) {
+                            $saiiSuspendDate = $action['due_date'];
+                            break;
+                        }
+                    }
+                }
+
                 if ($letestService["c_service"] == $saiiService['service']) {
                     $disp = "";
                 } else {
@@ -7309,6 +7345,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                 <a class="openInfoUpdationReview pull-right"
                                                                     data-customer="<?php echo $_GET['customerid'] ?>"
                                                                     data-service="<?php echo $saiiService['saii_id'] ?>"
+                                                                    data-suspend-date="<?php echo $saiiSuspendDate ?>"
                                                                     title="Review Information Updation" style="padding: 1px 5px;"><i
                                                                         class="fa fa-pencil-square fa-lg "
                                                                         style="padding: 3px"></i></a>
@@ -7326,6 +7363,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                 <a class="openInfoUpdationReview pull-right"
                                                                     data-customer="<?php echo $_GET['customerid'] ?>"
                                                                     data-service="<?php echo $saiiService['saii_id'] ?>"
+                                                                    data-suspend-date="<?php echo $saiiSuspendDate ?>"
                                                                     title="Add Information Updation Review"
                                                                     style="padding: 1px 5px;"><i class="fa fa-plus-circle fa-lg "
                                                                         style="padding: 3px"></i></a>
@@ -7351,6 +7389,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                         data-customer="<?php echo $_GET['customerid'] ?>"
                                                         data-service1="<?php echo $saiiService['saii_id'] ?>"
                                                         data-service="<?php echo $crservice['cr_id'] ?>" data-row-count=""
+                                                        data-type="service-type-saii"
                                                         title="Add Audit Notification" style="padding: 1px 5px;">
                                                         <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
                                                     </a>
@@ -7360,6 +7399,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                         data-customer="<?php echo $_GET['customerid'] ?>"
                                                         data-service="<?php echo $saiiService['saii_id'] ?>"
                                                         data-notification="<?php echo $saiiService['audit_stage_id'] ?>"
+                                                        data-type="service-type-saii"
                                                         title="Update Release Audit Notification" style="padding: 1px 5px;">
                                                         <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
                                                     </a>
@@ -18510,8 +18550,58 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         changeYear: true,
                         minDate: '-100Y',
                         maxDate: '+10Y',
-                        showButtonPanel: true
+                        showButtonPanel: true,
+                        onSelect: function() {
+                            $(this).trigger('change');
+                        }
                     }).datepicker('show');
+                }
+            });
+
+            $(document).off('change.customerAccount', '.info-review-date');
+            $(document).on('change.customerAccount', '.info-review-date', function () {
+                var $form = $(this).closest('form');
+                var reviewDateStr = $(this).val();
+                var suspendDateStr = $form.find('#info_review_suspend_date').val();
+                
+                if (reviewDateStr && suspendDateStr) {
+                    var rParts;
+                    if (reviewDateStr.indexOf('.') !== -1) rParts = reviewDateStr.split('.');
+                    else if (reviewDateStr.indexOf('-') !== -1) rParts = reviewDateStr.split('-');
+                    else if (reviewDateStr.indexOf('/') !== -1) rParts = reviewDateStr.split('/');
+                    
+                    var reviewDate = new Date(rParts[2], rParts[1] - 1, rParts[0]);
+                    
+                    var sParts, suspendDate;
+                    if (suspendDateStr.indexOf('-') !== -1) {
+                        sParts = suspendDateStr.split('-');
+                        suspendDate = new Date(sParts[0], sParts[1] - 1, sParts[2]);
+                    } else if (suspendDateStr.indexOf('.') !== -1) {
+                        sParts = suspendDateStr.split('.');
+                        suspendDate = new Date(sParts[2], sParts[1] - 1, sParts[0]);
+                    } else {
+                        suspendDate = new Date(suspendDateStr);
+                    }
+                    
+                    var minDate = new Date(suspendDate);
+                    minDate.setMonth(minDate.getMonth() - 2);
+                    
+                    if (isNaN(reviewDate.getTime()) || isNaN(minDate.getTime())) {
+                        alert("DEBUG ERROR: Invalid date format entered. reviewDate: " + reviewDateStr + ", suspendDate: " + suspendDateStr);
+                    } else if (reviewDate < minDate) {
+                        var d = minDate.getDate();
+                        var m = minDate.getMonth() + 1;
+                        var formattedSuspendDate = (d < 10 ? '0' : '') + d + '.' + (m < 10 ? '0' : '') + m + '.' + minDate.getFullYear();
+                        var errorMsg = 'Information Update Submission Date must be on or after ' + formattedSuspendDate + ' (within 2 months of the Suspension Date).';
+                        
+                        $form.find('#info_review_date_error')
+                            .text(errorMsg)
+                            .show();
+                    } else {
+                        $form.find('#info_review_date_error').hide().text('');
+                    }
+                } else {
+                    $form.find('#info_review_date_error').hide().text('');
                 }
             });
 
@@ -18528,6 +18618,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
 
                 $modal.find('.info-review-service-id').val(serviceId);
                 $modal.find('.info-review-customer-id').val(customerId);
+                $modal.find('#info_review_suspend_date').val($(this).attr('data-suspend-date') || '');
+                $modal.find('#info_review_date_error').hide().text('');
 
                 // Check if this is an edit (pencil icon) by checking if it has a sibling download button
                 var isEdit = $(this).closest('.image-preview').find('.downloadInfoUpdationReview').length > 0;
@@ -18842,6 +18934,56 @@ if ($currentRole === 'client' || $currentRole === 'external') {
         $(document).off('submit.customerAccount', '#informationUpdationReviewForm');
         $(document).on('submit.customerAccount', '#informationUpdationReviewForm', function (e) {
             e.preventDefault();
+
+            var $form = $(this);
+            var reviewDateStr = $form.find('input[name="review_date"]').val();
+            var suspendDateStr = $form.find('#info_review_suspend_date').val();
+            
+            if (!suspendDateStr) {
+                console.log("DEBUG ERROR: There is no Suspension Date attached to this button! (Value is empty).");
+            }
+            
+            if (reviewDateStr && suspendDateStr) {
+                var rParts;
+                if (reviewDateStr.indexOf('.') !== -1) rParts = reviewDateStr.split('.');
+                else if (reviewDateStr.indexOf('-') !== -1) rParts = reviewDateStr.split('-');
+                else if (reviewDateStr.indexOf('/') !== -1) rParts = reviewDateStr.split('/');
+                
+                var reviewDate = new Date(rParts[2], rParts[1] - 1, rParts[0]);
+                
+                var sParts, suspendDate;
+                if (suspendDateStr.indexOf('-') !== -1) {
+                    sParts = suspendDateStr.split('-');
+                    suspendDate = new Date(sParts[0], sParts[1] - 1, sParts[2]);
+                } else if (suspendDateStr.indexOf('.') !== -1) {
+                    sParts = suspendDateStr.split('.');
+                    suspendDate = new Date(sParts[2], sParts[1] - 1, sParts[0]);
+                } else {
+                    suspendDate = new Date(suspendDateStr);
+                }
+                
+                var minDate = new Date(suspendDate);
+                minDate.setMonth(minDate.getMonth() - 2);
+                
+                if (isNaN(reviewDate.getTime()) || isNaN(minDate.getTime())) {
+                    alert("DEBUG ERROR: Invalid date format entered. Cannot validate. reviewDate: " + reviewDateStr + ", suspendDate: " + suspendDateStr);
+                    return false;
+                }
+                
+                if (reviewDate < minDate) {
+                    var d = minDate.getDate();
+                    var m = minDate.getMonth() + 1;
+                    var formattedSuspendDate = (d < 10 ? '0' : '') + d + '.' + (m < 10 ? '0' : '') + m + '.' + minDate.getFullYear();
+                    var errorMsg = 'Information Update Submission Date must be on or after ' + formattedSuspendDate + ' (within 2 months of the Suspension Date).';
+                    
+                    $form.find('#info_review_date_error')
+                        .text(errorMsg)
+                        .show();
+                    return false;
+                }
+            }
+            
+            $form.find('#info_review_date_error').hide().text('');
 
             var formData = new FormData(this);
             formData.append('action', 'saveInfoUpdationReview');

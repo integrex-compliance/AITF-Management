@@ -609,12 +609,20 @@ foreach ($auditors as $name) {
                 data: {
                     intimationDate: $('.intimationDateEdit').val(),
                     svc_id: $('.audit-noti-service').val() || $('.audit-noti-service1').val(),
+                    svc_id1: $('.audit-noti-service1').val(),
+                    service_type: $('.audit-service-type').val(),
+                    cust_id: $('.audit-noti-customer').val()
                 },
                 async: false,
                 success: function (data) {
-                    //		                alert(data);	                    
-                    if (data == 1) {
-                        $('#intimationDateEditErrorMsg').text("Date should be greater than or equal to assessment planning date");
+                    data = $.trim(data);
+                    if (data !== "0" && data !== "") {
+                        var svcType = $('.audit-service-type').val();
+                        if (svcType === 'service-type-sai' || svcType === 'service-type-saii') {
+                            $('#intimationDateEditErrorMsg').text("Date should be greater than or equal to information updation review date (" + data + ")");
+                        } else {
+                            $('#intimationDateEditErrorMsg').text("Date should be greater than or equal to assessment planning date (" + data + ")");
+                        }
                         $('#intimationDateEditError').show();
                         $('#intimationDateEdit').addClass('inputHighlight');
                         $isError = true;
@@ -658,12 +666,20 @@ foreach ($auditors as $name) {
                 data: {
                     intimationDate: $('.intimationDate').val(),
                     svc_id: $('.audit-noti-service').val() || $('.audit-noti-service1').val(),
+                    svc_id1: $('.audit-noti-service1').val(),
+                    service_type: $('.audit-service-type').val(),
+                    cust_id: $('.audit-noti-customer').val()
                 },
                 async: false,
                 success: function (data) {
-                    //		                alert(data);	                    
-                    if (data == 1) {
-                        $('#intimationDateErrorMsg').text("Date should be greater than or equal to assessment planning date");
+                    data = $.trim(data);
+                    if (data !== "0" && data !== "") {
+                        var svcType = $('.audit-service-type').val();
+                        if (svcType === 'service-type-sai' || svcType === 'service-type-saii') {
+                            $('#intimationDateErrorMsg').text("Date should be greater than or equal to information updation review date (" + data + ")");
+                        } else {
+                            $('#intimationDateErrorMsg').text("Date should be greater than or equal to assessment planning date (" + data + ")");
+                        }
                         $('#intimationDateError').show();
                         $('#intimationDate').addClass('inputHighlight');
                         $isError = true;
@@ -789,7 +805,7 @@ foreach ($auditors as $name) {
             $('.audit-noti-service').val($(this).attr('data-service1'));
             $('.audit-noti-service1').val($(this).attr('data-service'));
             $('.audit-noti-customer').val($(this).attr('data-customer'));
-            $(".audit-service-type").val($(this).attr("data-svc"));
+            $(".audit-service-type").val($(this).attr("data-type"));
             $customerid = $(this).attr('data-customer');
 
             $.ajax({
@@ -852,7 +868,7 @@ foreach ($auditors as $name) {
             $('.audit-noti-service').val($(this).attr('data-service1'));
             $('.audit-noti-service1').val($(this).attr('data-service'));
             $('.audit-noti-customer').val($(this).attr('data-customer'));
-            $(".audit-service-type").val($(this).attr("data-svc"));
+            $(".audit-service-type").val($(this).attr("data-type"));
             $customerid = $(this).attr('data-customer');
             $.ajax({
                 url: "contractDetails.php",

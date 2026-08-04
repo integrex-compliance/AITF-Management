@@ -4,7 +4,13 @@
     include 'header.php';
     include 'dbConnect.php';
     include_once './include/certification_cycle_helper.php';
+    require_once __DIR__ . '/include/rbac_helper.php';
     date_default_timezone_set('Asia/Kolkata');
+
+    if (!Utitlity::checkForDirector()) {
+        header("Location: loginSelection.php?reason=login_required");
+        exit;
+    }
 
     function dashMoney($value)
     {

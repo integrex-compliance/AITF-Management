@@ -451,25 +451,31 @@ if (isset($_POST['customerEmail']) && !empty($_POST['customerEmail'])) {
         //		echo $_GET["svc_id"].$_GET["intimationDate"];
         $date = date("Y-m-d", strtotime($_GET["intimationDate"]));
 
-        // Check service type
-        $serviceTypeQuery = "SELECT service_type FROM service WHERE service_id = :svc";
-        $stmt = $db->prepare($serviceTypeQuery);
-        $stmt->bindParam(":svc", $_GET["svc_id"]);
-        $stmt->execute();
-        $serviceData = $stmt->fetch();
-
+        $trueServiceType = isset($_GET['service_type']) ? $_GET['service_type'] : '';
+        $svc_id1 = isset($_GET['svc_id1']) ? $_GET['svc_id1'] : '';
+        
         // For SA-I (SA-01) and SA-II (SA-02), check against information updation review date
-        if (isset($serviceData["service_type"]) && ($serviceData["service_type"] == 'SA-I' || $serviceData["service_type"] == 'SA-II')) {
-            // For SA-I (SA-01) and SA-II (SA-02) types, check information updation review date
-            $infoReviewQuery = "SELECT review_date FROM information_updation_review WHERE service_id = :svc ORDER BY review_date DESC LIMIT 1";
-            $statement = $db->prepare($infoReviewQuery);
-            $statement->bindParam(":svc", $_GET["svc_id"]);
-            $statement->execute();
-            $reviewDate = $statement->fetch();
-
-            if ($reviewDate && $reviewDate["review_date"] > $date) {
-                echo "1";
+        if ($trueServiceType === 'service-type-sai' || $trueServiceType === 'service-type-saii') {
+            $customerId = isset($_GET['cust_id']) ? $_GET['cust_id'] : '';
+            $saiId = isset($_GET['svc_id']) ? $_GET['svc_id'] : '';
+            $jsonFile = __DIR__ . '/uploads/reviews/data_' . $saiId . '_' . $customerId . '.json';
+            
+            if (file_exists($jsonFile)) {
+                $jsonData = json_decode(file_get_contents($jsonFile), true);
+                if ($jsonData && isset($jsonData['review_date'])) {
+                    $reviewDateStr = $jsonData['review_date'];
+                    // Parse "DD.MM.YYYY" safely
+                    $dateObj = DateTime::createFromFormat('d.m.Y', $reviewDateStr);
+                    if ($dateObj) {
+                        $reviewDateFormatted = $dateObj->format('Y-m-d');
+                        if ($reviewDateFormatted > $date) {
+                            echo $dateObj->format('d.m.Y');
+                            exit;
+                        }
+                    }
+                }
             }
+            echo "0";
         } else {
             // For CA, RC (Recertification), and other types, check assessment planning date
             $assessmentDate = "SELECT date FROM assessment_planning where service_id = :svc";
@@ -477,9 +483,10 @@ if (isset($_POST['customerEmail']) && !empty($_POST['customerEmail'])) {
             $statement->bindParam(":svc", $_GET["svc_id"]);
             $statement->execute();
             $aDate = $statement->fetch();
-            //		print_r($aDate);
-            if ($aDate["date"] > $date) {
-                echo "1";
+            if ($aDate && $aDate["date"] > $date) {
+                echo date('d.m.Y', strtotime($aDate["date"]));
+            } else {
+                echo "0";
             }
         }
     } catch (Exception $e) {

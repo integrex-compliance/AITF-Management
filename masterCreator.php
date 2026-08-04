@@ -5,9 +5,19 @@
     include_once './header.php';
     include_once './dbConnect.php';
     include_once './include/customer_feature_flags.php';
+    require_once __DIR__ . '/include/auditor_portal_helper.php';
+    require_once __DIR__ . '/include/rbac_helper.php';
     date_default_timezone_set('Asia/Kolkata');
 
+    if (!Utitlity::checkForDirector()) {
+        header("Location: loginSelection.php?reason=login_required");
+        exit;
+    }
+
     $featureToggleMessage = '';
+    aitf_ensure_auditor_portal_schema($db);
+    $auditorKeyMessage = trim((string)($_SESSION['auditor_key_notice'] ?? ''));
+    unset($_SESSION['auditor_key_notice']);
     $canManageCustomerFeatureToggles = Utitlity::checkForUserMainAdmin();
     if ($canManageCustomerFeatureToggles && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save_customer_feature_toggles') {
         aitfCustomerFeatureSet($db, 'customer_docora_ai_visible', isset($_POST['customer_docora_ai_visible']), isset($_SESSION['username']) ? $_SESSION['username'] : '');
@@ -112,6 +122,13 @@
         <div class="page-content inset">
             <div class="container" style="margin-top: 60px;">
                 <div class="row">
+                    <?php if ($auditorKeyMessage !== '') { ?>
+                        <div class="col-sm-12">
+                            <div class="alert alert-info" style="border-radius: 8px; font-weight: 600;">
+                                <?php echo htmlspecialchars($auditorKeyMessage, ENT_QUOTES, 'UTF-8'); ?>
+                            </div>
+                        </div>
+                    <?php } ?>
                     <div class="col-sm-6">
                         <div class="row" style="">
                             <div class="col-xs-12  text-center btn  qms_complete_btn ">
@@ -190,6 +207,18 @@
                                                     class="fa fa-pencil-square"></i></a>&emsp;<?php echo $auditor['auditor_name'] ?>
                                             <a class="deleteAuditor" data-id="<?php echo $auditor['auditors_id'] ?>"
                                                 style="float: right"><i class="fa fa-trash"></i></a>
+                                            <button type="button"
+                                                class="btn btn-xs btn-primary generateAuditorKey"
+                                                data-id="<?php echo (int)$auditor['auditors_id']; ?>"
+                                                data-name="<?php echo htmlspecialchars($auditor['auditor_name'], ENT_QUOTES, 'UTF-8'); ?>"
+                                                data-email="<?php echo htmlspecialchars(!empty($auditor['login_email']) ? $auditor['login_email'] : $auditor['auditor_email'], ENT_QUOTES, 'UTF-8'); ?>"
+                                                title="Generate auditor login key"
+                                                style="float: right; margin-right: 8px;">
+                                                <i class="fa fa-key"></i> Generate Key
+                                            </button>
+                                            <?php if (!empty($auditor['login_enabled'])) { ?>
+                                                <span class="label label-success" style="float:right; margin-right:8px;">Portal Enabled</span>
+                                            <?php } ?>
                                         </li>
                                     <?php } ?>
                                 </ul>

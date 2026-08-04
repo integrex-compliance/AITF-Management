@@ -5,6 +5,7 @@ aitf_start_session();
 include_once 'dbConnect.php';
 date_default_timezone_set('Asia/Kolkata');
 include 'utility.php';
+require_once __DIR__ . '/include/rbac_helper.php';
 
 $turnstileHelperPath = __DIR__ . '/include/turnstile_helper.php';
 if (file_exists($turnstileHelperPath)) {
@@ -21,21 +22,62 @@ function aitf_redirect_and_exit($location)
 }
 
 
-if (isset($_POST['useremail']) && !empty($_POST['useremail']) && isset($_POST['password']) && !empty($_POST['password'])) {
+if (isset($_POST['directorEmail']) && !empty($_POST['directorEmail']) && isset($_POST['directorPassword']) && !empty($_POST['directorPassword'])) {
     $turnstileToken = trim($_POST['cf-turnstile-response'] ?? '');
     $captchaError = '';
-    if (function_exists('aitf_verify_turnstile') && !aitf_verify_turnstile($turnstileToken, $captchaError)) {
+    if (function_exists('aitf_verify_turnstile') && function_exists('aitf_is_turnstile_ready') && aitf_is_turnstile_ready() && !aitf_verify_turnstile($turnstileToken, $captchaError)) {
+        $_SESSION['login_error'] = true;
+        $_SESSION['login_notice'] = $captchaError !== '' ? $captchaError : 'Captcha verification failed. Please try again.';
+        aitf_redirect_and_exit("loginSelection.php?director=1");
+    }
+
+    if (aitf_verify_director_credentials($_POST['directorEmail'], $_POST['directorPassword'])) {
+        $_SESSION['username'] = 'Managing Director';
+        $_SESSION['id'] = 0;
+        $_SESSION['role'] = 'Director';
+        $_SESSION['abbrevation'] = 'MD';
+        aitf_mark_session_authenticated();
+        aitf_record_login_activity($db, array(
+            'user_id' => 0,
+            'user_name' => 'Managing Director',
+            'email_id' => $_POST['directorEmail'],
+            'role' => 'Director',
+            'e_id' => 'DIRECTOR'
+        ));
+        aitf_redirect_and_exit("directorSpace.php");
+    }
+
+    $_SESSION['login_error'] = true;
+    $_SESSION['login_notice'] = 'Invalid Director ID or password.';
+    aitf_redirect_and_exit("loginSelection.php?director=1");
+} else if (isset($_POST['useremail']) && !empty($_POST['useremail']) && isset($_POST['password']) && !empty($_POST['password'])) {
+    $turnstileToken = trim($_POST['cf-turnstile-response'] ?? '');
+    $captchaError = '';
+    if (function_exists('aitf_verify_turnstile') && function_exists('aitf_is_turnstile_ready') && aitf_is_turnstile_ready() && !aitf_verify_turnstile($turnstileToken, $captchaError)) {
         $_SESSION['login_error'] = true;
         $_SESSION['login_notice'] = $captchaError !== '' ? $captchaError : 'Captcha verification failed. Please try again.';
         aitf_redirect_and_exit("loginSelection.php");
     }
     try {
         // Single query fetch instead of count + fetch
-        $userLogin = "SELECT user_id, user_name, abbreviation, email_id, password, role FROM user WHERE email_id = :useremail LIMIT 1";
+        aitf_ensure_rbac_schema($db);
+        $userLogin = "SELECT user_id, user_name, abbreviation, email_id, password, role, e_id, account_status FROM user WHERE email_id = :useremail LIMIT 1";
         $statement = $db->prepare($userLogin);
         $statement->bindParam(':useremail', $_POST['useremail']);
         $statement->execute();
         $row = $statement->fetch();
+
+        if ($row && ($row['account_status'] ?? 'active') === 'inactive') {
+            $_SESSION['login_error'] = true;
+            $_SESSION['login_notice'] = 'Your account has been deactivated by the Director.';
+            aitf_redirect_and_exit("loginSelection.php");
+        }
+
+        if ($row && ($row['account_status'] ?? 'active') !== 'active') {
+            $_SESSION['login_error'] = true;
+            $_SESSION['login_notice'] = 'Please create your account with OTP before login.';
+            aitf_redirect_and_exit("loginSelection.php?create_account=1");
+        }
 
         if ($row && password_verify($_POST['password'], $row['password'])) {
             $_SESSION['username'] = $row['user_name'];
@@ -43,7 +85,16 @@ if (isset($_POST['useremail']) && !empty($_POST['useremail']) && isset($_POST['p
             $_SESSION['role'] = $row['role'];
             $_SESSION['abbrevation'] = $row['abbreviation'];
             aitf_mark_session_authenticated();
-            if (Utitlity::checkForUserAdmin()) {
+            aitf_record_login_activity($db, array(
+                'user_id' => $row['user_id'],
+                'user_name' => $row['user_name'],
+                'email_id' => $row['email_id'],
+                'role' => $row['role'],
+                'e_id' => $row['e_id']
+            ));
+            if (aitf_is_director_role()) {
+                aitf_redirect_and_exit("directorSpace.php");
+            } elseif (Utitlity::checkForUserAdmin()) {
                 aitf_redirect_and_exit("homePage.php");
             } elseif (Utitlity::checkForOfficeStaff()) {
                 aitf_redirect_and_exit("homePage.php");
@@ -79,7 +130,7 @@ if (isset($_POST['useremail']) && !empty($_POST['useremail']) && isset($_POST['p
 } else if (isset($_POST["clientemail"]) && !empty($_POST["clientemail"]) && isset($_POST["clientcid"]) && !empty($_POST["clientcid"])) {
     $turnstileToken = trim($_POST['cf-turnstile-response'] ?? '');
     $captchaError = '';
-    if (function_exists('aitf_verify_turnstile') && !aitf_verify_turnstile($turnstileToken, $captchaError)) {
+    if (function_exists('aitf_verify_turnstile') && function_exists('aitf_is_turnstile_ready') && aitf_is_turnstile_ready() && !aitf_verify_turnstile($turnstileToken, $captchaError)) {
         $_SESSION['login_error'] = true;
         $_SESSION['login_notice'] = $captchaError !== '' ? $captchaError : 'Captcha verification failed. Please try again.';
         aitf_redirect_and_exit("loginSelection.php");
@@ -104,6 +155,13 @@ if (isset($_POST['useremail']) && !empty($_POST['useremail']) && isset($_POST['p
                 $_SESSION['role'] = "client";
                 $_SESSION['uniqueid'] = $customerinfo['unique_id'];
                 aitf_mark_session_authenticated();
+                aitf_record_login_activity($db, array(
+                    'user_id' => $customerinfo['id'],
+                    'user_name' => $customerinfo['customer_name'],
+                    'email_id' => $customerinfo['email_id'] ?? '',
+                    'role' => 'client',
+                    'e_id' => $customerinfo['unique_id'] ?? ''
+                ));
                 aitf_redirect_and_exit("clientportal.php");
             } else {
                 // Invalid client login: show generic error banner without query params

@@ -1743,7 +1743,7 @@ if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
         $rcCheckStmt->execute();
         $rcCheckResult = $rcCheckStmt->fetch();
         
-        if ($rcCheckResult && $rcCheckResult['service_type'] == 'RC') {
+        if (is_array($rcCheckResult) && isset($rcCheckResult['service_type']) && $rcCheckResult['service_type'] == 'RC') {
             // This is an RC service - use main service_id, not rc_id!
             $serviceIdToUse = $rcCheckResult['main_service_id'];
             error_log("ASSESSMENT PLANNING ISO: RC service detected! Using main service_id=" . $serviceIdToUse . " instead of rc_id=" . $_GET['svcID']);
