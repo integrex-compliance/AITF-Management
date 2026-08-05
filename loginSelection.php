@@ -33,6 +33,8 @@ if (isset($_GET['director'])) {
     $activeMode = 'director';
 } elseif (isset($_GET['client'])) {
     $activeMode = 'client';
+} elseif (isset($_GET['auditor'])) {
+    $activeMode = 'auditor';
 }
 $createAccountStep = ($_GET['step'] ?? '') === 'verify' ? 'verify' : 'start';
 ?>
@@ -483,6 +485,9 @@ $createAccountStep = ($_GET['step'] ?? '') === 'verify' ? 'verify' : 'start';
                 <button type="button" class="auth-mode-btn <?php echo $activeMode === 'client' ? 'active' : ''; ?>" data-mode="client">
                     <i class="fa fa-building"></i> Client
                 </button>
+                <button type="button" class="auth-mode-btn <?php echo $activeMode === 'auditor' ? 'active' : ''; ?>" data-mode="auditor">
+                    <i class="fa fa-clipboard-check"></i> Auditor
+                </button>
             </div>
 
             <?php if ($loginNotice !== ''): ?>
@@ -592,6 +597,41 @@ $createAccountStep = ($_GET['step'] ?? '') === 'verify' ? 'verify' : 'start';
                             Sign In as Client
                         </button>
                     </form>
+                </div>
+
+                <div class="auth-panel <?php echo $activeMode === 'auditor' ? 'active' : ''; ?>" data-panel="auditor">
+                    <form action="login.php" method="post" class="auth-form" data-requires-captcha="<?php echo $turnstileReady ? '1' : '0'; ?>">
+                        <div class="auth-field">
+                            <label>Registered Email</label>
+                            <div class="input-wrapper">
+                                <i class="fa fa-envelope icon-left"></i>
+                                <input class="auth-input" type="email" name="auditorEmail" placeholder="auditor@email.com" required>
+                            </div>
+                        </div>
+                        <div class="auth-field">
+                            <label>Login Key</label>
+                            <div class="input-wrapper">
+                                <i class="fa fa-key icon-left"></i>
+                                <input class="auth-input" type="text" name="auditorKey" id="auditorKey" placeholder="AITF-AUD-2026-XXXX-XXXX-XXXX" required>
+                                <button type="button" class="password-toggle" data-toggle-password="#auditorKey" aria-label="Show key">
+                                    <i class="fa fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="captcha-wrap">
+                            <?php if ($turnstileReady): ?>
+                                <div id="auditor-login-turnstile" class="cf-turnstile" data-sitekey="<?php echo htmlspecialchars($turnstileConfig['site_key'], ENT_QUOTES, 'UTF-8'); ?>" data-theme="light" data-callback="authCaptchaChanged" data-expired-callback="authCaptchaChanged" data-error-callback="authCaptchaChanged"></div>
+                            <?php else: ?>
+                                <div class="captcha-note">Captcha will be enabled after keys are configured.</div>
+                            <?php endif; ?>
+                        </div>
+                        <button type="submit" class="auth-submit" <?php if ($turnstileReady): ?>disabled<?php endif; ?>>
+                            Sign In as Auditor
+                        </button>
+                    </form>
+                    <div class="auth-footer-links">
+                        <span class="auth-link" style="color: var(--text-muted); font-size: 13px;">Login key is provided by AITF administrator</span>
+                    </div>
                 </div>
             </div>
         </div>

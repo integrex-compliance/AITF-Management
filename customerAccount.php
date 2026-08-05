@@ -3912,6 +3912,90 @@ if ($currentRole === 'client' || $currentRole === 'external') {
         </div>
 
         <div class="page-content inset">
+            <?php
+            $isAuditor = false;
+            $auditorAllowedServices = array();
+            
+            if (isset($_SESSION['role']) && $_SESSION['role'] === 'Auditor') {
+                $isAuditor = true;
+                $auditorId = (int)($_SESSION['auditor_id'] ?? 0);
+                $auditorName = $_SESSION['username'] ?? '';
+                
+                require_once __DIR__ . '/include/auditor_portal_helper.php';
+                $clientServices = aitf_fetch_auditor_client_services($db, $auditorId, $auditorName);
+                $cid = (int)($_GET['customerid'] ?? 0);
+                $auditorAllowedServiceIds = aitf_fetch_auditor_client_service_ids($db, $auditorId, $auditorName, $cid);
+                
+                if ($cid > 0 && !empty($clientServices[$cid])) {
+                    $auditorAllowedServices = $clientServices[$cid];
+                } else {
+                    header('Location: auditorDashboard.php');
+                    exit;
+                }
+            }
+            ?>
+            
+            <?php if ($isAuditor): ?>
+            <style>
+            /* Hide the left sidebar menu completely for auditors */
+            #sidebar-wrapper { display: none !important; }
+            #wrapper, #wrapper.active { padding-left: 0 !important; }
+            /* Hide global customer details edit/delete buttons */
+            .editCustomerDetails, .deleteCustomerDetails, .enableApplication { display: none !important; }
+            /* Hide 'Add New Service' button for the whole client */
+            .btn-info[data-target="#addServiceModal"] { display: none !important; }
+            /* Hide Payments, Settings, Invoice tabs */
+            a[href="#menu4"], a[href="#menu5"], a[href="#menu6"], a[href="#menu7"] { display: none !important; }
+            
+            /* Hide tabs for services the auditor didn't do */
+            <?php
+            $allServiceTypesMap = ['CA' => 'menu1', 'SA-I' => 'menu2', 'SA-II' => 'menu3', 'RC' => 'menu11'];
+            foreach ($allServiceTypesMap as $type => $menuId) {
+                if (!isset($auditorAllowedServices[$type])) {
+                    echo "a[href='#{$menuId}'] { display: none !important; }\n";
+                    echo "#{$menuId} { display: none !important; }\n";
+                }
+            }
+            ?>
+            
+            /* Hide delete buttons within the services to prevent accidental deletions */
+            .deleteService, .deleteReport, .deleteCDC, .deleteServiceCA, .deleteServiceSAI, .deleteServiceSAII, .deleteServiceRC, .deleteServiceCR { display: none !important; }
+            /* Hide the invoice and create service buttons */
+            .invoiceBtn, .finalInvoiceBtn, .quotationBtn { display: none !important; }
+            .qms_complete_btn { display: none !important; }
+            </style>
+            
+            <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                if (typeof jQuery !== 'undefined') {
+                    // Hide Payment System
+                    jQuery('.payment-title').closest('.servicebox-bunch').hide();
+                    // Hide Invoices block (Payment Summery)
+                    jQuery('th:contains("Total Receivable Amount")').closest('.row').parent().closest('.row').hide();
+                    
+                    // Hide unauthorized services
+                    <?php
+                    $allServiceClasses = [
+                        'CA' => '.ca-service-row',
+                        'SA-I' => '.sai-service-row',
+                        'SA-II' => '.saii-service-row',
+                        'RC' => '.rc-service-row',
+                        'CR' => '.cr-service-row'
+                    ];
+                    
+                    foreach ($allServiceClasses as $type => $rowClass) {
+                        if (!isset($auditorAllowedServices[$type])) {
+                            echo "jQuery('{$rowClass}').closest('.servicebox-bunch').hide();\n";
+                        }
+                    }
+                    ?>
+                }
+            });
+            </script>
+            
+
+            <?php endif; ?>
+
             <div class="row" style="">
                 <div class="top_qms_page">
                     <div class="row">
@@ -4433,7 +4517,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                         data-previous="<?php echo htmlspecialchars($certStatus, ENT_QUOTES, 'UTF-8'); ?>"
                                         data-iso-index="<?php echo $certIsoIndex; ?>"
                                         data-iso-label="<?php echo htmlspecialchars($standardName, ENT_QUOTES, 'UTF-8'); ?>"
-                                        style="color: black; width: 100%;">
+                                        style="color: black; width: 100%;" <?php echo isset($isAuditor) && $isAuditor ? 'disabled' : ''; ?>>
                                         <option value="<?php echo htmlspecialchars($certStatus, ENT_QUOTES, 'UTF-8'); ?>">
                                             <?php echo !empty($certStatus) ? htmlspecialchars($certStatus) : 'Select Status'; ?>
                                         </option>
@@ -4460,7 +4544,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                         data-previous="<?php echo htmlspecialchars($certAccreditation, ENT_QUOTES, 'UTF-8'); ?>"
                                         data-iso-index="<?php echo $certIsoIndex; ?>"
                                         data-iso-label="<?php echo htmlspecialchars($standardName, ENT_QUOTES, 'UTF-8'); ?>"
-                                        style="color: black; width: 100%;" <?php if ($certCrrId <= 0)
+                                        style="color: black; width: 100%;" <?php echo isset($isAuditor) && $isAuditor ? 'disabled' : ''; ?> <?php if ($certCrrId <= 0)
                                             echo 'disabled title="CDC record not available"'; ?>>
                                         <option value="">Select Accreditation</option>
                                         <option value="NABCB" <?php if ($certAccreditation === 'NABCB')
@@ -4513,7 +4597,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 <div class="col-xs-3  text-center btn qms_complete_btn quotationBtn">
                     <span><i class="fa fa-quote-left ">Quotation</i></span>
                 </div>
-                <?php if (!$isSupplierAccount) { ?>
+                <?php if (!$isSupplierAccount && !$isAuditor) { ?>
                     <div class="col-xs-3  text-center btn qms_complete_btn " style="height: 28px">
                         <select name="service-type" class="form-control service-type" id="service-type"
                             style="height: 20px; background-color: #f5821f; padding-top: 0px; font-size: 10px; color: white">
@@ -4885,6 +4969,10 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             $allcaCount = array();
         }
         foreach ($allcaCount as $service) {
+            
+            if ($isAuditor && !in_array($service['service_id'], $auditorAllowedServiceIds)) {
+                continue;
+            }
 
             //            new changes by Pallavi
         
@@ -6109,17 +6197,19 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                             <th class="" width="20%" style="padding: 2px">
                                                                 <small>Sent date</small>
                                                             </th>
-                                                            <?php if ($customerLettersEditIconVisible) { ?>
+                                                            <?php if (!$isAuditor && $customerLettersEditIconVisible) { ?>
                                                                 <th class="" width="4%" style="padding: 2px">
                                                                     <small>Actions</small>
                                                                 </th>
                                                             <?php } ?>
+                                                            <?php if (!$isAuditor) { ?>
                                                             <th class="" width="4%" style="padding: 2px">
                                                                 <small>Pdf</small>
                                                             </th>
                                                             <th class="" width="4%" style="padding: 2px">
                                                                 <small>Generate</small>
                                                             </th>
+                                                            <?php } ?>
                                                             <?php if ($customerLettersDeleteIconVisible) { ?>
                                                                 <th class="" width="4%" style="padding: 2px">
                                                                     <small>Delete</small>
@@ -6146,7 +6236,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                     </div>
                                                                 </td>
 
-                                                                <?php if ($customerLettersEditIconVisible) { ?>
+                                                                <?php if (!$isAuditor && $customerLettersEditIconVisible) { ?>
                                                                     <td class="" style="padding: 0px;">
                                                                         <!--<a class="caServiceComment" data-row-id=" echo $caActions['action_id'] ?>" data-column="comment" data-comment="</?php echo $caActions['comment'] ?>">-->
                                                                         <!--    <i class="fa fa-comment-o" aria-hidden="true"></i>-->
@@ -6158,6 +6248,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                     </td>
 
                                                                 <?php } ?>
+                                                                <?php if (!$isAuditor) { ?>
                                                                 <td class="" style="padding: 0px;">
                                                                     <?php if (date("Y-m-d") >= $caActions['due_date']) { ?>
                                                                         <a class="PreviewPDF"
@@ -6187,7 +6278,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                         </a>
                                                                     <?php } ?>
                                                                 </td>
-                                                                <?php if ($customerLettersDeleteIconVisible) { ?>
+                                                                <?php } ?>
+                                                                <?php if (!$isAuditor && $customerLettersDeleteIconVisible) { ?>
                                                                     <?php
                                                                     if ($caActions["is_deleted"] == 'Y') {
                                                                         $setDelete1 = "disabled='disabled'";
@@ -7037,13 +7129,15 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                 date</small></th>
 
                                                         <!-- update-->
-                                                        <?php if ($customerLettersEditIconVisible) { ?>
+                                                        <?php if (!$isAuditor && $customerLettersEditIconVisible) { ?>
                                                             <th class="" width="4%" style="padding: 2px"><small>Actions</small></th>
                                                         <?php } ?>
+                                                        <?php if (!$isAuditor) { ?>
                                                         <th class="" width="4%" style="padding: 2px"><small>Pdf</small></th>
                                                         <th class="" width="4%" style="padding: 2px"><small>Generate</small>
                                                         </th>
-                                                        <?php if ($customerLettersDeleteIconVisible) { ?>
+                                                        <?php } ?>
+                                                        <?php if (!$isAuditor && $customerLettersDeleteIconVisible) { ?>
                                                             <th class="" width="4%" style="padding: 2px">
                                                                 <small>Delete</small>
                                                             </th>
@@ -7078,7 +7172,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                             </td>
                                                             <!-- edit / update actions-->
 
-                                                            <?php if ($customerLettersEditIconVisible) { ?>
+                                                            <?php if (!$isAuditor && $customerLettersEditIconVisible) { ?>
                                                                 <td class="" style="padding: 0px;">
                                                                     <a
                                                                         href="editcadates.php?id=<?php echo $saiiActions['action_id'] ?>">
@@ -7088,6 +7182,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                 </td>
 
                                                             <?php } ?>
+                                                            <?php if (!$isAuditor) { ?>
                                                             <td class="" style="padding: 0px;">
                                                                 <?php
                                                                 //echo date("Y-m-d")."->".$saiiActions['sent_date'];
@@ -7120,7 +7215,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                     </a>
                                                                 <?php } ?>
                                                             </td>
-                                                            <?php if ($customerLettersDeleteIconVisible) { ?>
+                                                            <?php } ?>
+                                                            <?php if (!$isAuditor && $customerLettersDeleteIconVisible) { ?>
                                                                 <?php
                                                                 if ($saiiActions["is_deleted"] == 'Y') {
                                                                     $setDelete2 = "disabled='disabled'";
@@ -8001,13 +8097,15 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                         <th class="" width="20%" style="padding: 2px"><small>Sent on
                                                                 date</small>
                                                         </th>
-                                                        <?php if ($customerLettersEditIconVisible) { ?>
+                                                        <?php if (!$isAuditor && $customerLettersEditIconVisible) { ?>
                                                             <th class="" width="4%" style="padding: 2px"><small>Actions</small></th>
                                                         <?php } ?>
+                                                        <?php if (!$isAuditor) { ?>
                                                         <th class="" width="4%" style="padding: 2px"><small>Pdf</small></th>
                                                         <th class="" width="4%" style="padding: 2px"><small>Generate</small>
                                                         </th>
-                                                        <?php if ($customerLettersDeleteIconVisible) { ?>
+                                                        <?php } ?>
+                                                        <?php if (!$isAuditor && $customerLettersDeleteIconVisible) { ?>
                                                             <th class="" width="4%" style="padding: 2px">
                                                                 <small>Delete</small>
                                                             </th>
@@ -8033,7 +8131,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                 </div>
                                                             </td>
 
-                                                            <?php if ($customerLettersEditIconVisible) { ?>
+                                                            <?php if (!$isAuditor && $customerLettersEditIconVisible) { ?>
                                                                 <td class="" style="padding: 0px;">
                                                                     <!--<a class="saiiServiceComment" data-row-id="</?php echo $saiiActions['action_id'] ?>" data-column="comment" data-comment="</?php echo $saiiActions['comment'] ?>">-->
                                                                     <!--    <i class="fa fa-comment-o" aria-hidden="true"></i>-->
@@ -8048,6 +8146,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                 </td>
 
                                                             <?php } ?>
+                                                            <?php if (!$isAuditor) { ?>
                                                             <td class="" style="padding: 0px;">
                                                                 <?php if (date("Y-m-d") >= $saiiActions['due_date']) { ?>
                                                                     <a class="PreviewPDF"
@@ -8077,7 +8176,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                     </a>
                                                                 <?php } ?>
                                                             </td>
-                                                            <?php if ($customerLettersDeleteIconVisible) { ?>
+                                                            <?php } ?>
+                                                            <?php if (!$isAuditor && $customerLettersDeleteIconVisible) { ?>
                                                                 <?php
                                                                 if ($saiiActions["is_deleted"] == 'Y') {
                                                                     $setDelete3 = "disabled";
@@ -8876,18 +8976,20 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                             <small>Sent on date</small>
                                                         </th>
 
-                                                        <?php if ($customerLettersEditIconVisible) { ?>
+                                                        <?php if (!$isAuditor && $customerLettersEditIconVisible) { ?>
                                                             <th class="" width="4%" style="padding: 2px">
                                                                 <small>Actions</small>
                                                             </th>
                                                         <?php } ?>
+                                                        <?php if (!$isAuditor) { ?>
                                                         <th class="" width="4%" style="padding: 2px">
                                                             <small>Pdf</small>
                                                         </th>
                                                         <th class="" width="4%" style="padding: 2px">
                                                             <small>Generate</small>
                                                         </th>
-                                                        <?php if ($customerLettersDeleteIconVisible) { ?>
+                                                        <?php } ?>
+                                                        <?php if (!$isAuditor && $customerLettersDeleteIconVisible) { ?>
                                                             <th class="" width="4%" style="padding: 2px">
                                                                 <small>Delete</small>
                                                             </th>
@@ -8913,7 +9015,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                 </div>
                                                             </td>
 
-                                                            <?php if ($customerLettersEditIconVisible) { ?>
+                                                            <?php if (!$isAuditor && $customerLettersEditIconVisible) { ?>
                                                                 <td class="" style="padding: 0px;">
                                                                     <!--<a class="rcserviceComment" data-row-id=" echo $rcActions['action_id'] " data-column="comment" data-comment="<?php echo $rcActions['comment'] ?>">-->
                                                                     <!--    <i class="fa fa-comment-o" aria-hidden="true"></i>-->
@@ -8925,6 +9027,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                 </td>
 
                                                             <?php } ?>
+                                                            <?php if (!$isAuditor) { ?>
                                                             <td class="" style="padding: 0px;">
                                                                 <?php if (date("Y-m-d") >= $rcActions['due_date']) { ?>
                                                                     <a class="PreviewPDF"
@@ -8954,7 +9057,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                     </a>
                                                                 <?php } ?>
                                                             </td>
-                                                            <?php if ($customerLettersDeleteIconVisible) { ?>
+                                                            <?php } ?>
+                                                            <?php if (!$isAuditor && $customerLettersDeleteIconVisible) { ?>
                                                                 <?php
                                                                 if ($rcActions["is_deleted"] == 'Y') {
                                                                     $setDelete4 = "disabled='disabled'";

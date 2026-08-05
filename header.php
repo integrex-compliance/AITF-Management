@@ -405,7 +405,7 @@ function getFlatDate($inputStr)
         </button>
 
         <div class="navbar-content">
-            <?php if (!(Utitlity::checkClient() || Utitlity::checkExternalUser())) { ?>
+            <?php if (!(Utitlity::checkClient() || Utitlity::checkExternalUser() || (isset($_SESSION['role']) && $_SESSION['role'] === 'Auditor'))) { ?>
                 <div class="navbar-left">
                     <div class="dropdown add-new-dropdown">
                         <a href="#" class="dropdown-toggle modern-add-btn" data-toggle="dropdown" title="Add New">
@@ -447,6 +447,12 @@ function getFlatDate($inputStr)
             <?php } ?>
 
             <div class="navbar-right">
+                <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'Auditor') { ?>
+                    <a href="auditorDashboard.php" style="color: #4f46e5; background-color: #e0e7ff; font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 8px; border: 1px solid #c7d2fe; padding: 8px 16px; border-radius: 8px; margin-right: 10px; transition: all 0.2s; height: 40px;" title="Back to Dashboard" onmouseover="this.style.backgroundColor='#c7d2fe'" onmouseout="this.style.backgroundColor='#e0e7ff'">
+                        <i class="fa fa-arrow-left" aria-hidden="true"></i>
+                        <span>Dashboard</span>
+                    </a>
+                <?php } ?>
                 <button type="button" id="themeToggle" class="modern-card-btn" aria-label="Toggle dark mode"
                     title="Dark Mode">
                     <i class="fa fa-moon-o" aria-hidden="true"></i>

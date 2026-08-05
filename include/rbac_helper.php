@@ -327,7 +327,9 @@ if (!function_exists('aitf_redirect_user_by_role')) {
     {
         include_once __DIR__ . '/../utility.php';
 
-        if (aitf_is_director_role()) {
+        if (isset($_SESSION['role']) && $_SESSION['role'] === 'Auditor') {
+            header('Location: auditorDashboard.php');
+        } elseif (aitf_is_director_role()) {
             header('Location: directorSpace.php');
         } elseif (Utitlity::checkForUserFinance()) {
             header('Location: paymentPage.php');

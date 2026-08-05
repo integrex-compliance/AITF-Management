@@ -1117,6 +1117,118 @@
                 });
             });
 
+            /* --- Generate Auditor Key Handler --- */
+            $("body").on("click", ".generateAuditorKey", function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var btn = $(this);
+                var auditorId = btn.attr('data-id');
+                var auditorName = btn.attr('data-name');
+                var defaultEmail = btn.attr('data-email') || '';
+
+                // Build email prompt modal
+                var modalHtml = '<div class="modal fade" id="auditorKeyModal" tabindex="-1" role="dialog">' +
+                    '<div class="modal-dialog" role="document">' +
+                    '<div class="modal-content" style="border-radius:12px;overflow:hidden;">' +
+                    '<div class="modal-header" style="background:linear-gradient(135deg,#0F2742,#1e3a5f);color:#fff;border:0;padding:20px 24px;">' +
+                    '<button type="button" class="close" data-dismiss="modal" style="color:#fff;opacity:.8;text-shadow:none;"><span>&times;</span></button>' +
+                    '<h4 class="modal-title"><i class="fa fa-key"></i> Send EID</h4>' +
+                        '</div>' +
+                        '<div class="modal-body" style="padding:24px;">' +
+                        '<p style="margin-bottom:16px;color:#555;">Send Employee ID (EID) for <strong>' + auditorName + '</strong> to their email address.</p>' +
+                        '<div class="form-group">' +
+                        '<label style="font-weight:600;margin-bottom:6px;">Email Address <span style="color:#e53e3e;">*</span></label>' +
+                        '<input type="email" class="form-control" id="auditorKeyEmail" value="' + defaultEmail + '" placeholder="auditor@email.com" style="border-radius:8px;padding:10px 14px;border:1.5px solid #ddd;" required>' +
+                        '<small class="text-muted">EID will be sent to this email</small>' +
+                        '</div>' +
+                        '</div>' +
+                        '<div class="modal-footer" style="border-top:1px solid #eee;padding:16px 24px;">' +
+                        '<button type="button" class="btn btn-default" data-dismiss="modal" style="border-radius:8px;">Cancel</button>' +
+                        '<button type="button" class="btn btn-primary" id="confirmGenerateKey" style="border-radius:8px;background:linear-gradient(135deg,#0F2742,#1e3a5f);border:0;padding:8px 24px;">' +
+                        '<i class="fa fa-paper-plane"></i> Send EID</button>' +
+                        '</div>' +
+                        '</div></div></div>';
+
+                    // Remove old modal if any
+                    $('#auditorKeyModal').remove();
+                    $('body').append(modalHtml);
+                    $('#auditorKeyModal').modal('show');
+
+                    // Handle confirm click
+                    $('#confirmGenerateKey').off('click').on('click', function () {
+                        var email = $('#auditorKeyEmail').val().trim();
+                        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                            $('#auditorKeyEmail').css('border-color', '#e53e3e').focus();
+                            return;
+                        }
+
+                        var confirmBtn = $(this);
+                        confirmBtn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Generating...');
+
+                        $.ajax({
+                            url: 'auditorKeyAction.php',
+                            type: 'POST',
+                            dataType: 'json',
+                            data: {
+                                auditor_id: auditorId,
+                                email: email
+                            },
+                            success: function (resp) {
+                                $('#auditorKeyModal').modal('hide');
+                                if (resp.success) {
+                                    // Update the button's data-email
+                                    btn.attr('data-email', email);
+                                    // Add or update Portal Enabled badge
+                                    var li = btn.closest('li');
+                                    if (li.find('.label-success').length === 0) {
+                                        btn.after('<span class="label label-success" style="float:right; margin-right:8px;">Portal Enabled</span>');
+                                    }
+                                    // Show success alert
+                                    if (typeof Swal !== 'undefined') {
+                                        Swal.fire({
+                                            icon: 'success',
+                                            title: 'EID Sent!',
+                                            html: 'Employee ID (EID) has been sent to<br><strong>' + email + '</strong>',
+                                            confirmButtonColor: '#0F2742'
+                                        });
+                                    } else {
+                                        alert('Success! EID sent to ' + email);
+                                    }
+                                } else {
+                                    if (typeof Swal !== 'undefined') {
+                                        Swal.fire({
+                                            icon: 'error',
+                                            title: 'Error',
+                                            text: resp.message || 'Failed to generate key.',
+                                            confirmButtonColor: '#0F2742'
+                                        });
+                                    } else {
+                                        alert('Error: ' + (resp.message || 'Failed to generate key.'));
+                                    }
+                                }
+                            },
+                            error: function () {
+                                $('#auditorKeyModal').modal('hide');
+                                if (typeof Swal !== 'undefined') {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Server Error',
+                                        text: 'Could not connect to server. Please try again.',
+                                        confirmButtonColor: '#0F2742'
+                                    });
+                                } else {
+                                    alert('Server error. Please try again.');
+                                }
+                            }
+                        });
+                    });
+
+                    // Cleanup modal on hide
+                    $('#auditorKeyModal').on('hidden.bs.modal', function () {
+                        $(this).remove();
+                    });
+                });
+
             $("body").on("click", ".editStandards", function (e) {
                 $.ajax({
                     url: "addNewServices.php",

@@ -96,6 +96,13 @@ class Utitlity {
             return 0;
     }
 
+    static function checkForAuditor(){
+        if (isset($_SESSION['username']) && !empty($_SESSION['username']) && $_SESSION['role'] == "Auditor")
+            return 1;
+        else
+            return 0;
+    }
+
     static function compress($source, $destination, $quality) {
         $info = getimagesize($source);
         if ($info ['mime'] == 'image/jpeg')
@@ -109,6 +116,9 @@ class Utitlity {
     }
 
     static function getHomePageForUser() {
+        if (Utitlity::checkForAuditor()) {
+            return "auditorDashboard.php";
+        }
         if (Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin()) {
             return "homePage.php";
         }

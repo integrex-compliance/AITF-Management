@@ -6,6 +6,7 @@ include_once 'dbConnect.php';
 date_default_timezone_set('Asia/Kolkata');
 include 'utility.php';
 require_once __DIR__ . '/include/rbac_helper.php';
+require_once __DIR__ . '/include/auditor_portal_helper.php';
 
 $turnstileHelperPath = __DIR__ . '/include/turnstile_helper.php';
 if (file_exists($turnstileHelperPath)) {
@@ -94,6 +95,13 @@ if (isset($_POST['directorEmail']) && !empty($_POST['directorEmail']) && isset($
             ));
             if (aitf_is_director_role()) {
                 aitf_redirect_and_exit("directorSpace.php");
+            } elseif ($_SESSION['role'] === 'Auditor') {
+                $audStmt = $db->prepare("SELECT auditors_id FROM auditors WHERE login_email = :email OR (auditor_number = :eid AND auditor_number != '') LIMIT 1");
+                $audStmt->execute(array(':email' => $row['email_id'], ':eid' => $row['e_id']));
+                if ($audData = $audStmt->fetch(PDO::FETCH_ASSOC)) {
+                    $_SESSION['auditor_id'] = $audData['auditors_id'];
+                }
+                aitf_redirect_and_exit("auditorDashboard.php");
             } elseif (Utitlity::checkForUserAdmin()) {
                 aitf_redirect_and_exit("homePage.php");
             } elseif (Utitlity::checkForOfficeStaff()) {
@@ -257,6 +265,48 @@ if (isset($_POST['directorEmail']) && !empty($_POST['directorEmail']) && isset($
     } catch (Exception $ex) {
         $_SESSION['validation_error'] = "invalid_client_warning";
         aitf_redirect_and_exit("validation.php");
+    }
+} else if (isset($_POST['auditorEmail']) && !empty($_POST['auditorEmail']) && isset($_POST['auditorKey']) && !empty($_POST['auditorKey'])) {
+    $turnstileToken = trim($_POST['cf-turnstile-response'] ?? '');
+    $captchaError = '';
+    if (function_exists('aitf_verify_turnstile') && function_exists('aitf_is_turnstile_ready') && aitf_is_turnstile_ready() && !aitf_verify_turnstile($turnstileToken, $captchaError)) {
+        $_SESSION['login_error'] = true;
+        $_SESSION['login_notice'] = $captchaError !== '' ? $captchaError : 'Captcha verification failed. Please try again.';
+        aitf_redirect_and_exit("loginSelection.php?auditor=1");
+    }
+    try {
+        aitf_ensure_auditor_portal_schema($db);
+        $auditorLogin = "SELECT * FROM auditors WHERE login_email = :email AND login_enabled = 1 LIMIT 1";
+        $statement = $db->prepare($auditorLogin);
+        $statement->bindParam(':email', $_POST['auditorEmail']);
+        $statement->execute();
+        $row = $statement->fetch();
+
+        if ($row && password_verify($_POST['auditorKey'], $row['login_key_hash'])) {
+            $_SESSION['username'] = $row['auditor_name'];
+            $_SESSION['id'] = $row['auditors_id'];
+            $_SESSION['role'] = 'Auditor';
+            $_SESSION['auditor_id'] = $row['auditors_id'];
+            $_SESSION['abbrevation'] = $row['abbrevation'] ?? '';
+            aitf_mark_session_authenticated();
+            aitf_record_login_activity($db, array(
+                'user_id' => $row['auditors_id'],
+                'user_name' => $row['auditor_name'],
+                'email_id' => $row['login_email'],
+                'role' => 'Auditor',
+                'e_id' => 'AUDITOR'
+            ));
+            aitf_redirect_and_exit("auditorDashboard.php");
+        } else {
+            $_SESSION['login_error'] = true;
+            $_SESSION['login_notice'] = 'Invalid email or auditor key. Please try again.';
+            aitf_redirect_and_exit("loginSelection.php?auditor=1");
+        }
+    } catch (Exception $exc) {
+        error_log('Auditor Login Exception: ' . $exc->getMessage());
+        $_SESSION['login_error'] = true;
+        $_SESSION['login_notice'] = 'Login could not be completed. Please try again.';
+        aitf_redirect_and_exit("loginSelection.php?auditor=1");
     }
 } else {
     $_SESSION['login_notice'] = 'Please use the login form to continue.';

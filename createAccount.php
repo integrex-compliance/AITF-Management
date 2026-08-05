@@ -160,6 +160,14 @@ if ($action === 'complete_signup') {
             'role' => $user['role'],
             'e_id' => $user['e_id']
         ));
+
+        if ($user['role'] === 'Auditor') {
+            $audStmt = $db->prepare("SELECT auditors_id FROM auditors WHERE login_email = :email OR (auditor_number = :eid AND auditor_number != '') LIMIT 1");
+            $audStmt->execute(array(':email' => $user['email_id'], ':eid' => $user['e_id']));
+            if ($audData = $audStmt->fetch(PDO::FETCH_ASSOC)) {
+                $_SESSION['auditor_id'] = $audData['auditors_id'];
+            }
+        }
         aitf_redirect_user_by_role();
     } catch (Exception $e) {
         error_log('Create account complete error: ' . $e->getMessage());

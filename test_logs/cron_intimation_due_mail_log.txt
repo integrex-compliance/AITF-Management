@@ -164,3 +164,55 @@
 [2026-08-04 12:06:54] -------------------------------------------------------------------
 [2026-08-04 12:06:54] Processing due letter -> Customer: Lawa Bright Bars Pvt. Ltd. (ID: 200) | Letter: Suspend Letter | Due Date: 2026-08-02
 [2026-08-04 12:06:54] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260804120654_200Suspend Letter.pdf
+[2026-08-05 14:14:08] === STARTING AUTOMATED INTIMATION DUE LETTER CRON JOB (12:00 PM) ===
+[2026-08-05 14:14:08] Found 1171 pending due letter(s) (including stage notifications) eligible for automatic mail sending.
+[2026-08-05 14:14:08] -------------------------------------------------------------------
+[2026-08-05 14:14:08] Processing due letter -> Customer: GIGAMAC PRIVATE LIMITED (ID: 478) | Letter: Suspension Reminder | Due Date: 2026-06-30
+[2026-08-05 14:14:08] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260805141408_478Suspension Reminder.pdf
+[2026-08-05 14:14:17] SUCCESS: Emailed due letter to client recipient(s): info@gigamac.in,
+[2026-08-05 14:14:17] Updated ca_service_dates action_id 64692 status to 'sent' (sent_date: 2026-08-05).
+[2026-08-05 14:14:24] SUCCESS: Sent confirmation email to office (certification@aitf.co.in).
+[2026-08-05 14:14:24] -------------------------------------------------------------------
+[2026-08-05 14:14:24] Processing due letter -> Customer: Vardhani Engineers (ID: 407) | Letter: Suspension Reminder | Due Date: 2026-07-01
+[2026-08-05 14:14:24] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260805141424_407Suspension Reminder.pdf
+[2026-08-05 14:14:34] SUCCESS: Emailed due letter to client recipient(s): bkpvardhaniengineers@gmail.com,
+[2026-08-05 14:14:34] Updated ca_service_dates action_id 66365 status to 'sent' (sent_date: 2026-08-05).
+[2026-08-05 14:14:42] SUCCESS: Sent confirmation email to office (certification@aitf.co.in).
+[2026-08-05 14:14:42] -------------------------------------------------------------------
+[2026-08-05 14:14:42] Processing due letter -> Customer: Vardhani Engineers (ID: 407) | Letter: Suspend Letter | Due Date: 2026-08-01
+[2026-08-05 14:14:42] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260805141442_407Suspend Letter.pdf
+[2026-08-05 14:14:49] SUCCESS: Emailed due letter to client recipient(s): bkpvardhaniengineers@gmail.com,
+[2026-08-05 14:14:49] Updated ca_service_dates action_id 66366 status to 'sent' (sent_date: 2026-08-05).
+[2026-08-05 14:14:49] AUTO STATUS CHANGE: Customer ID 407 audit_status updated to 'Suspended' (triggered by 'Suspend Letter' auto-mail).
+[2026-08-05 14:14:57] SUCCESS: Sent confirmation email to office (certification@aitf.co.in).
+[2026-08-05 14:14:57] -------------------------------------------------------------------
+[2026-08-05 14:14:57] Processing due letter -> Customer: SAGAR GRAPHICS (ID: 1104) | Letter: Suspension Reminder | Due Date: 2026-08-02
+[2026-08-05 14:14:57] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260805141457_1104Suspension Reminder.pdf
+[2026-08-05 14:15:05] SUCCESS: Emailed due letter to client recipient(s): info@sagargraphics.com
+[2026-08-05 14:15:05] Updated ca_service_dates action_id 66379 status to 'sent' (sent_date: 2026-08-05).
+[2026-08-05 14:15:12] SUCCESS: Sent confirmation email to office (certification@aitf.co.in).
+[2026-08-05 14:15:12] -------------------------------------------------------------------
+[2026-08-05 14:15:12] Processing due letter -> Customer: J. B. Engineering & Automation (QMS) (ID: 54) | Letter: 1st Reminder | Due Date: 2026-08-02
+[2026-08-05 14:15:12] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260805141512_541st Reminder.pdf
+[2026-08-05 14:15:19] SUCCESS: Emailed due letter to client recipient(s): rahul.b@jbengineering.co.in
+[2026-08-05 14:15:19] Updated ca_service_dates action_id 65277 status to 'sent' (sent_date: 2026-08-05).
+[2026-08-05 14:15:27] SUCCESS: Sent confirmation email to office (certification@aitf.co.in).
+[2026-08-05 14:15:27] -------------------------------------------------------------------
+[2026-08-05 14:15:27] Processing due letter -> Customer: Lawa fasteners Pvt. Ltd. (ID: 199) | Letter: Suspend Letter | Due Date: 2026-08-02
+[2026-08-05 14:15:27] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260805141527_199Suspend Letter.pdf
+[2026-08-05 14:15:34] SUCCESS: Emailed due letter to client recipient(s): lawa@lawafasteners.com
+[2026-08-05 14:15:34] Updated ca_service_dates action_id 64597 status to 'sent' (sent_date: 2026-08-05).
+[2026-08-05 14:15:34] AUTO STATUS CHANGE: Customer ID 199 audit_status updated to 'Suspended' (triggered by 'Suspend Letter' auto-mail).
+[2026-08-05 14:15:41] SUCCESS: Sent confirmation email to office (certification@aitf.co.in).
+[2026-08-05 14:15:41] -------------------------------------------------------------------
+[2026-08-05 14:15:41] Processing due letter -> Customer: Lawa Bright Bars Pvt. Ltd. (ID: 200) | Letter: Suspend Letter | Due Date: 2026-08-02
+[2026-08-05 14:15:41] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260805141541_200Suspend Letter.pdf
+[2026-08-05 14:15:49] SUCCESS: Emailed due letter to client recipient(s): lawa@lawabrightbars.com
+[2026-08-05 14:15:49] Updated ca_service_dates action_id 64601 status to 'sent' (sent_date: 2026-08-05).
+[2026-08-05 14:15:49] AUTO STATUS CHANGE: Customer ID 200 audit_status updated to 'Suspended' (triggered by 'Suspend Letter' auto-mail).
+[2026-08-05 14:15:56] SUCCESS: Sent confirmation email to office (certification@aitf.co.in).
+[2026-08-05 14:15:56] -------------------------------------------------------------------
+[2026-08-05 14:15:56] Processing due letter -> Customer: HI TECH TUBE LEASER CUTTING (ID: 1106) | Letter: Suspension Reminder | Due Date: 2026-08-02
+[2026-08-05 14:15:56] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260805141556_1106Suspension Reminder.pdf
+[2026-08-05 14:16:04] SUCCESS: Emailed due letter to client recipient(s): hitechtubelasercutting@gmail.com
+[2026-08-05 14:16:04] Updated ca_service_dates action_id 64769 status to 'sent' (sent_date: 2026-08-05).
