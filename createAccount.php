@@ -30,8 +30,14 @@ if ($action === 'request_otp') {
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         aitf_create_account_redirect('Please enter a valid registered email address.');
     }
-    if ($password === '' || strlen($password) < 8) {
+    if (strlen($password) < 8) {
         aitf_create_account_redirect('Password must be at least 8 characters.');
+    }
+    if (!preg_match('/[A-Z]/', $password)) {
+        aitf_create_account_redirect('Password must contain at least one capital letter.');
+    }
+    if (!preg_match('/[^a-zA-Z0-9]/', $password)) {
+        aitf_create_account_redirect('Password must contain at least one special character.');
     }
     if ($password !== $confirmPassword) {
         aitf_create_account_redirect('Password and confirm password do not match.');
@@ -46,7 +52,7 @@ if ($action === 'request_otp') {
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$user || empty($user['e_id'])) {
-            aitf_create_account_redirect('This email has not been added by the Director.');
+            aitf_create_account_redirect('You are not allowed to create an account, try using another mail account.');
         }
         if (($user['account_status'] ?? 'active') === 'active') {
             aitf_create_account_redirect('This account is already active. Please use login.');

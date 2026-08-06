@@ -84,6 +84,20 @@ if (isset($_POST["certificationComment"]) && !empty($_POST["certificationComment
     }
 } else if (isset($_GET["customerid"]) && !empty($_GET["customerid"]) && isset($_GET["customerstatus"]) && !empty($_GET["customerstatus"])) {
     try {
+        include_once './include/customer_feature_flags.php';
+        if (!function_exists('aitfCustomerFeatureIsEnabled')) {
+            // fallback if not loaded
+            $manualEnabled = true;
+        } else {
+            $manualEnabled = aitfCustomerFeatureIsEnabled($db, 'customer_manual_status_change_enabled');
+        }
+        
+        include_once './include/rbac_helper.php';
+        if (!$manualEnabled && !Utitlity::checkForDirector()) {
+            echo "error_not_allowed: you are not allowd to change status , director needs to allow this feature";
+            exit;
+        }
+
         $sql = "UPDATE customer_info SET audit_status = :status WHERE id = :id";
         $statement = $db->prepare($sql);
         $statement->bindParam(":id", $_GET["customerid"]);

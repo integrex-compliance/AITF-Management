@@ -39,6 +39,63 @@ if (!defined('WEB_CRON_TRIGGERED') && (int)date('H') >= 12) {
         echo '<script>window.addEventListener("load", function() { setTimeout(function(){ fetch("' . $autoCronUrl . '", {method:"GET", keepalive:true}).catch(function(e){}); }, 2500); });</script>';
     }
 }
+
+// Heartbeat JS to keep online status accurate and track screen time
+echo '<script>
+    let activeSeconds = 0;
+    
+    // Count active seconds every second
+    setInterval(function() {
+        if (document.hasFocus() || document.visibilityState === "visible") {
+            activeSeconds++;
+        }
+    }, 1000);
+
+    function sendHeartbeat(isActive = true) {
+        let delta = activeSeconds;
+        activeSeconds = 0; // Reset counter after grabbing value
+        
+        const data = new FormData();
+        data.append("active", isActive);
+        data.append("delta", delta);
+        
+        if (!isActive && navigator.sendBeacon) {
+            navigator.sendBeacon("heartbeat.php", data);
+        } else {
+            fetch("heartbeat.php", {
+                method: "POST", 
+                body: data,
+                keepalive: true
+            }).catch(function(){});
+        }
+    }
+    
+    // Ping every 5 seconds
+    setInterval(function() { 
+        if (document.visibilityState === "visible") {
+            sendHeartbeat(true); 
+        }
+    }, 5000);
+    
+    // Immediate ping when user comes back or leaves the tab
+    document.addEventListener("visibilitychange", function() {
+        if (document.visibilityState === "visible") {
+            sendHeartbeat(true);
+        } else {
+            // When leaving tab, send active=false to drop offline instantly
+            sendHeartbeat(false);
+        }
+    });
+
+    window.addEventListener("pagehide", function() {
+        sendHeartbeat(false);
+    });
+
+    window.addEventListener("beforeunload", function() {
+        sendHeartbeat(false);
+    });
+</script>';
+
 ?>
 
 <head>
@@ -83,6 +140,12 @@ if (!Utitlity::checkIfLoggedIn()) {
 } else if (isset($pageIdentifier) && $pageIdentifier == "Add User") {
     $addUserClass = "active";
     if (!(Utitlity::checkForUserAdmin() || Utitlity::checkForMainAdmin())) {
+        header("Location: loginSelection.php?reason=login_required");
+        exit;
+    }
+} else if (isset($pageIdentifier) && $pageIdentifier == "Director Space") {
+    $addDirectorSpaceClass = "active";
+    if (!Utitlity::checkForDirector()) {
         header("Location: loginSelection.php?reason=login_required");
         exit;
     }
@@ -288,7 +351,11 @@ function getFlatDate($inputStr)
             </a></li>
     </ul>
     <ul class="sidebar-nav" id="sidebar">
-        <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff()) { ?>
+        <?php if (Utitlity::checkForDirector()) { ?>
+            <li><a href="directorSpace.php" class="animate <?php echo $addDirectorSpaceClass ?? '' ?>">DIRECTOR SPACE<i
+                        class="sub_icon fa fa-user-secret fa-2x" style="vertical-align:middle"></i></a></li>
+        <?php } ?>
+        <?php if ((Utitlity::checkForUserMainAdmin() || Utitlity::checkForMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff()) && (!isset($_SESSION['role']) || $_SESSION['role'] !== 'Main Admin')) { ?>
         <li><a href="adminDashboard.php" class="animate <?php echo isset($addAdminDashboardClass) ? $addAdminDashboardClass : ''; ?>">ADMIN DASHBOARD<i class="sub_icon fa fa-line-chart fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
         <?php if (!isset($_SESSION["role"]) || $_SESSION["role"] != 'client') { ?>
@@ -324,12 +391,12 @@ function getFlatDate($inputStr)
                         class="sub_icon fa fa-money fa-2x" style="vertical-align:middle"></i></a></li>
             <!--<li><a href="idealPage.php" class="animate ">IDEAL<i class="sub_icon fa fa-briefcase fa-2x" style="vertical-align:middle"></i></a></li>-->
         <?php } ?>
-        <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin()) { ?>
-            <li><a href="masterCreator.php" class="animate <?php echo $addMasterClass ?>">MASTER CREATOR<i
+        <?php if ((Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin()) && (!isset($_SESSION['role']) || $_SESSION['role'] !== 'Main Admin')) { ?>
+            <li><a href="masterCreator.php" class="animate <?php echo $addMasterClass ?? '' ?>">MASTER CREATOR<i
                         class="sub_icon fa fa-wrench  fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
-            <li><a href="listOfTds.php" class="animate <?php echo $addtds ?>">TDS DEDUCTED<i
+            <li><a href="listOfTds.php" class="animate <?php echo $addtds ?? '' ?>">TDS DEDUCTED<i
                         class="sub_icon fa fa-list  fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
@@ -488,7 +555,7 @@ function getFlatDate($inputStr)
 
         <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
             <ul class="nav navbar-nav visible-xs">
-                <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff()) { ?>
+                <?php if ((Utitlity::checkForUserMainAdmin() || Utitlity::checkForMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff()) && (!isset($_SESSION['role']) || $_SESSION['role'] !== 'Main Admin')) { ?>
                     <li><a href="adminDashboard.php">ADMIN DASHBOARD</a></li>
                 <?php } ?>
                 <?php if (!isset($_SESSION["role"]) || $_SESSION["role"] != 'client') { ?>
@@ -498,7 +565,9 @@ function getFlatDate($inputStr)
                 <li><a href="marketingPage.php">MARKETING</a></li>
                 <li><a href="paymentPage.php">PAYMENT</a></li>
                 <li><a href="auditPlanning.php">AUDIT PLANNING</a></li>
+                <?php if ((Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin()) && (!isset($_SESSION['role']) || $_SESSION['role'] !== 'Main Admin')) { ?>
                 <li><a href="masterCreator.php">MASTER CREATOR</a></li>
+                <?php } ?>
                 <li><a href="listOfTds.php">TDS DEDUCTED</a></li>
                 <li><a href="intimationLetter.php">INTIMATION LETTERS</a></li>
                 <li><a href="inbox.php" target="_blank">MAIL-BOX</a></li>

@@ -21,6 +21,10 @@ $rolesStmt = $db->prepare("SELECT role FROM user_role ORDER BY role ASC");
 $rolesStmt->execute();
 $roles = $rolesStmt->fetchAll(PDO::FETCH_COLUMN);
 
+$empRecordsStmt = $db->prepare("SELECT * FROM employment_records ORDER BY created_at DESC");
+$empRecordsStmt->execute();
+$empRecords = $empRecordsStmt->fetchAll(PDO::FETCH_ASSOC);
+
 $usersStmt = $db->prepare("SELECT user_id, user_name, email_id, role, contact_no, e_id, account_status
                            FROM user
                            WHERE is_deleted = '0'
@@ -36,7 +40,8 @@ $totalUsers = (int)$totalUsersStmt->fetchColumn();
 $activeUsersStmt = $db->prepare("SELECT activity_id, user_name, email_id, role, e_id, login_at, last_seen_at
                                  FROM user_login_activity
                                  WHERE logout_at IS NULL
-                                   AND last_seen_at >= DATE_SUB(NOW(), INTERVAL 60 MINUTE)
+                                   AND role != 'Director'
+                                   AND last_seen_at >= DATE_SUB(NOW(), INTERVAL 15 SECOND)
                                  ORDER BY last_seen_at DESC");
 $activeUsersStmt->execute();
 $activeUsers = $activeUsersStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -78,44 +83,37 @@ $todayLoginCount = count($todayActivities);
                                 <span class="stat-label">Currently Online</span>
                                 <span class="stat-value"><?php echo count($activeUsers); ?></span>
                             </div>
-                            <div class="hero-stat-card">
-                                <span class="stat-label">Last Login</span>
-                                <span class="stat-value">
-                                    <?php 
-                                        if (!empty($todayActivities)) {
-                                            echo date('h:i A', strtotime($todayActivities[0]['login_at']));
-                                        } else {
-                                            echo 'None';
-                                        }
-                                    ?>
-                                </span>
-                            </div>
-                            <div class="hero-stat-card">
-                                <span class="stat-label">Today's Date</span>
-                                <span class="stat-value"><?php echo date('d M Y'); ?></span>
-                            </div>
                         </div>
                     </div>
                     
                     <div class="hero-right">
-                        <div class="live-team-card">
-                            <div class="live-team-header">
-                                <h3>Live Team Status</h3>
-                            </div>
-                            <div class="live-team-list">
+                        <div class="modern-team-card">
+                            <h3 class="team-card-title">Live Team Status</h3>
+                            <div class="team-avatar-group">
                                 <?php 
                                 $displayLimit = 5;
                                 $count = 0;
                                 foreach ($activeUsers as $activeUser) {
                                     if ($count < $displayLimit) {
-                                        $firstName = explode(' ', aitf_rbac_escape($activeUser['user_name']))[0];
+                                        $fullName = aitf_rbac_escape($activeUser['user_name']);
+                                        // If it's the director, try to fetch their real name using their email
+                                        if ($activeUser['role'] === 'Director' && !empty($activeUser['email_id'])) {
+                                            $dirNameStmt = $db->prepare("SELECT user_name FROM user WHERE email_id = :email LIMIT 1");
+                                            $dirNameStmt->execute([':email' => $activeUser['email_id']]);
+                                            $dirActualName = $dirNameStmt->fetchColumn();
+                                            if ($dirActualName) {
+                                                $fullName = aitf_rbac_escape($dirActualName);
+                                            } else {
+                                                $fullName = "Director";
+                                            }
+                                        }
+                                        $firstName = explode(' ', $fullName)[0];
+                                        $initial = strtoupper(substr($firstName, 0, 1));
                                         ?>
-                                        <div class="live-user-pill">
-                                            <div class="avatar-circle">
-                                                <?php echo strtoupper(substr(aitf_rbac_escape($activeUser['user_name']), 0, 1)); ?>
-                                                <div class="status-dot"></div>
-                                            </div>
-                                            <span class="live-user-name"><?php echo $firstName; ?></span>
+                                        <div class="team-avatar tooltip-container">
+                                            <span><?php echo $initial; ?></span>
+                                            <div class="online-indicator"></div>
+                                            <span class="tooltip-text"><?php echo $fullName; ?> (<?php echo aitf_rbac_escape($activeUser['role']); ?>)</span>
                                         </div>
                                         <?php
                                     }
@@ -124,12 +122,14 @@ $todayLoginCount = count($todayActivities);
                                 $remaining = $count - $displayLimit;
                                 if ($remaining > 0) {
                                     ?>
-                                    <div class="live-user-more">+<?php echo $remaining; ?> more online</div>
+                                    <div class="team-avatar more-avatar">
+                                        <span>+<?php echo $remaining; ?></span>
+                                    </div>
                                     <?php
                                 }
                                 if ($count === 0) {
                                     ?>
-                                    <div class="no-users">No users currently online.</div>
+                                    <span class="no-online-text">No users online</span>
                                     <?php
                                 }
                                 ?>
@@ -192,15 +192,178 @@ $todayLoginCount = count($todayActivities);
                     </div>
                 </div>
 
-                <!-- Main Grid -->
-                <div class="dashboard-grid">
+                <!-- Tabs Navigation -->
+                <div class="director-tabs">
+                    <button class="dir-tab-btn active" data-target="tab-hr">
+                        <i class="fa fa-users"></i> Add Employment Record
+                    </button>
+                    <button class="dir-tab-btn" data-target="tab-software">
+                        <i class="fa fa-desktop"></i> Add to Software
+                    </button>
+                    <button class="dir-tab-btn" data-target="tab-permissions">
+                        <i class="fa fa-lock"></i> Permissions
+                    </button>
+                    <button class="dir-tab-btn" data-target="tab-reports">
+                        <i class="fa fa-bar-chart"></i> Reports
+                    </button>
+                    <button class="dir-tab-btn" data-target="tab-logs">
+                        <i class="fa fa-shield"></i> Security Logs
+                    </button>
+                    <button class="dir-tab-btn" data-target="tab-settings">
+                        <i class="fa fa-cog"></i> Global Settings
+                    </button>
+                </div>
+
+                <div class="director-tab-content">
+                    <!-- Tab 1: HR Employment Record (Active) -->
+                    <div id="tab-hr" class="dir-tab-pane active">
+                        <div class="dashboard-grid">
+                            <!-- Left Column: HR Form -->
+                            <div class="dashboard-col-left">
+                                <div class="premium-card">
+                                    <div class="card-header">
+                                        <h2>Add Employment Record</h2>
+                                        <p>Register a new employee in the company records.</p>
+                                    </div>
+                                    <div class="card-body">
+                                        <form action="addEmploymentRecord.php" method="post" class="premium-form" id="hrForm">
+                                            <input type="hidden" name="emp_id" id="hr_emp_id" value="">
+                                            <div class="form-group">
+                                                <label>Full Name</label>
+                                                <input type="text" name="name" id="hr_name" required placeholder="e.g. John Doe">
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Age</label>
+                                                <input type="number" name="age" id="hr_age" required placeholder="e.g. 28">
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Email Address</label>
+                                                <input type="email" name="email" id="hr_email" required placeholder="name@company.com">
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Mobile Number</label>
+                                                <input type="text" name="mobile" id="hr_mobile" required placeholder="+91 00000 00000">
+                                            </div>
+                                            <div class="form-group">
+                                                <label>CTC (Annual)</label>
+                                                <input type="text" name="ctc" id="hr_ctc" required placeholder="e.g. 500000">
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Job Profile</label>
+                                                <select name="job_profile" id="hr_job_profile" required>
+                                                    <option value="" disabled selected>Select Profile...</option>
+                                                    <option value="Auditor">Auditor</option>
+                                                    <option value="Technical Staff">Technical Staff</option>
+                                                    <option value="Operational Staff">Operational Staff</option>
+                                                    <option value="Facilitator">Facilitator</option>
+                                                    <option value="CEO">CEO</option>
+                                                    <option value="Marketing Executive">Marketing Executive</option>
+                                                    <option value="Finance">Finance</option>
+                                                    <option value="Other">Other</option>
+                                                </select>
+                                            </div>
+                                            <div style="display: flex; gap: 8px;">
+                                                <button type="submit" class="btn-primary" id="hr_submit_btn" style="flex: 1;">
+                                                    Save Employment Record
+                                                </button>
+                                                <button type="button" class="btn-action deactivate" id="hr_cancel_btn" style="display:none; padding: 10px 16px; border-radius: 8px;" onclick="cancelHrEdit()">
+                                                    Cancel
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Right Column: HR Directory -->
+                            <div class="dashboard-col-right">
+                                <div class="premium-card">
+                                    <div class="card-header flex-between">
+                                        <div>
+                                            <h2>Registered Employees (HR)</h2>
+                                            <p>Manage company employment records</p>
+                                        </div>
+                                    </div>
+                                    <div class="card-body p-0">
+                                        <div class="table-responsive">
+                                            <table class="premium-table" id="hrEmpTable">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Employee</th>
+                                                        <th>Profile</th>
+                                                        <th>Contact</th>
+                                                        <th>CTC</th>
+                                                        <th class="text-right">Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <?php foreach ($empRecords as $record) { ?>
+                                                        <tr>
+                                                            <td>
+                                                                <div class="emp-cell">
+                                                                    <div class="emp-avatar"><?php echo strtoupper(substr(aitf_rbac_escape($record['name']), 0, 1)); ?></div>
+                                                                    <div class="emp-info">
+                                                                        <span class="emp-name"><?php echo aitf_rbac_escape($record['name']); ?> (<?php echo (int)$record['age']; ?>)</span>
+                                                                        <span class="emp-email">ID: <?php echo (int)$record['id']; ?></span>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                            <td><span class="badge-role"><?php echo aitf_rbac_escape($record['job_profile']); ?></span></td>
+                                                            <td>
+                                                                <div class="text-sm"><?php echo aitf_rbac_escape($record['email']); ?></div>
+                                                                <div class="text-xs text-gray-500"><?php echo aitf_rbac_escape($record['mobile']); ?></div>
+                                                            </td>
+                                                            <td class="font-semibold text-sm" style="white-space: nowrap;">
+                                                                <span class="ctc-display" data-actual="<?php echo aitf_rbac_escape($record['ctc']); ?>">********</span>
+                                                                <button type="button" class="btn-icon text-gray-500 toggle-ctc" style="border:none; background:transparent; cursor:pointer; margin-left: 4px;" title="Toggle Visibility">
+                                                                    <i class="fa fa-eye"></i>
+                                                                </button>
+                                                            </td>
+                                                            <td>
+                                                                <div class="action-buttons text-right" style="display:flex; justify-content:flex-end; gap:8px;">
+                                                                    <button type="button" class="btn-action activate" onclick='editHrRecord(<?php echo json_encode([
+                                                                        "id" => (int)$record["id"],
+                                                                        "name" => $record["name"],
+                                                                        "age" => $record["age"],
+                                                                        "email" => $record["email"],
+                                                                        "mobile" => $record["mobile"],
+                                                                        "ctc" => $record["ctc"],
+                                                                        "job_profile" => $record["job_profile"]
+                                                                    ]); ?>)'>Edit</button>
+                                                                    <form action="addEmploymentRecord.php" method="post" class="delete-user-form" data-user-name="<?php echo aitf_rbac_escape($record['name']); ?>">
+                                                                        <input type="hidden" name="id" value="<?php echo (int)$record['id']; ?>">
+                                                                        <input type="hidden" name="action" value="delete">
+                                                                        <button type="submit" class="btn-action delete">Delete</button>
+                                                                    </form>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    <?php } ?>
+                                                    <?php if (empty($empRecords)) { ?>
+                                                        <tr>
+                                                            <td colspan="5" class="text-center py-8 text-gray-500">No employment records found.</td>
+                                                        </tr>
+                                                    <?php } ?>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div> <!-- End Tab 1 -->
+
+                    <!-- Tab 2: Software Access -->
+                    <div id="tab-software" class="dir-tab-pane">
+                        <!-- Main Grid -->
+                        <div class="dashboard-grid">
                     
                     <!-- Left Column -->
                     <div class="dashboard-col-left">
                         <div class="premium-card">
                             <div class="card-header">
-                                <h2>Add New Employee</h2>
-                                <p>Generate employee ID and set permissions.</p>
+                                <h2>Grant Software Access</h2>
+                                <p>Provide software login credentials and set role permissions.</p>
                             </div>
                             <div class="card-body">
                                 <form action="addUserToDb.php" method="post" class="premium-form">
@@ -288,22 +451,25 @@ $todayLoginCount = count($todayActivities);
                                                     </span>
                                                 </td>
                                                 <td>
-                                                    <div class="action-buttons text-right">
+                                                    <div class="action-buttons text-right" style="display:flex; justify-content:flex-end; gap:8px;">
+                                                        <button type="button" class="btn-action" style="background:#4B5563; color:white; border-color:#374151;" onclick="openScreenTimeModal(<?php echo (int)$employee['user_id']; ?>, '<?php echo aitf_rbac_escape($employee['user_name']); ?>')">
+                                                            <i class="fa fa-clock-o"></i> Time
+                                                        </button>
                                                         <?php if ($status === 'inactive') { ?>
-                                                            <form action="directorUserAction.php" method="post">
+                                                            <form action="directorUserAction.php" method="post" style="margin:0;">
                                                                 <input type="hidden" name="user_id" value="<?php echo (int)$employee['user_id']; ?>">
                                                                 <input type="hidden" name="action" value="activate">
                                                                 <button type="submit" class="btn-action activate">Activate</button>
                                                             </form>
                                                         <?php } elseif ($status === 'active') { ?>
-                                                            <form action="directorUserAction.php" method="post">
+                                                            <form action="directorUserAction.php" method="post" style="margin:0;">
                                                                 <input type="hidden" name="user_id" value="<?php echo (int)$employee['user_id']; ?>">
                                                                 <input type="hidden" name="action" value="deactivate">
                                                                 <button type="submit" class="btn-action deactivate">Deactivate</button>
                                                             </form>
                                                         <?php } ?>
 
-                                                        <form action="directorUserAction.php" method="post" class="delete-user-form" data-user-name="<?php echo aitf_rbac_escape($employee['user_name']); ?>">
+                                                        <form action="directorUserAction.php" method="post" class="delete-user-form" data-user-name="<?php echo aitf_rbac_escape($employee['user_name']); ?>" style="margin:0;">
                                                             <input type="hidden" name="user_id" value="<?php echo (int)$employee['user_id']; ?>">
                                                             <input type="hidden" name="action" value="delete">
                                                             <button type="submit" class="btn-action delete">Delete</button>
@@ -322,7 +488,69 @@ $todayLoginCount = count($todayActivities);
                             </div>
                         </div>
                     </div>
+                </div> <!-- End Main Grid -->
+                </div> <!-- End Tab 1 -->
+
+                <!-- Tab 2: Permissions -->
+                <div id="tab-permissions" class="dir-tab-pane">
+                    <div class="premium-card">
+                        <div class="card-header">
+                            <h2>Role Permissions</h2>
+                            <p>Manage what each role can access in the system.</p>
+                        </div>
+                        <div class="card-body" style="padding: 60px 40px; text-align: center; color: var(--text-secondary);">
+                            <i class="fa fa-lock" style="font-size: 48px; color: #E5E7EB; margin-bottom: 16px;"></i>
+                            <h3>Permissions Module</h3>
+                            <p>This section is under construction.</p>
+                        </div>
+                    </div>
                 </div>
+
+                <!-- Tab 3: Reports -->
+                <div id="tab-reports" class="dir-tab-pane">
+                    <div class="premium-card">
+                        <div class="card-header">
+                            <h2>System Reports</h2>
+                            <p>View overall system usage and analytics.</p>
+                        </div>
+                        <div class="card-body" style="padding: 60px 40px; text-align: center; color: var(--text-secondary);">
+                            <i class="fa fa-bar-chart" style="font-size: 48px; color: #E5E7EB; margin-bottom: 16px;"></i>
+                            <h3>Reports Module</h3>
+                            <p>This section is under construction.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 4: Logs -->
+                <div id="tab-logs" class="dir-tab-pane">
+                    <div class="premium-card">
+                        <div class="card-header">
+                            <h2>Security & Audit Logs</h2>
+                            <p>Track all critical actions performed by users.</p>
+                        </div>
+                        <div class="card-body" style="padding: 60px 40px; text-align: center; color: var(--text-secondary);">
+                            <i class="fa fa-shield" style="font-size: 48px; color: #E5E7EB; margin-bottom: 16px;"></i>
+                            <h3>Security Logs Module</h3>
+                            <p>This section is under construction.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 5: Settings -->
+                <div id="tab-settings" class="dir-tab-pane">
+                    <div class="premium-card">
+                        <div class="card-header">
+                            <h2>Global Settings</h2>
+                            <p>Configure system-wide parameters.</p>
+                        </div>
+                        <div class="card-body" style="padding: 60px 40px; text-align: center; color: var(--text-secondary);">
+                            <i class="fa fa-cog" style="font-size: 48px; color: #E5E7EB; margin-bottom: 16px;"></i>
+                            <h3>Settings Module</h3>
+                            <p>This section is under construction.</p>
+                        </div>
+                    </div>
+                </div>
+            </div> <!-- End Tab Content Container -->
             </div>
         </div>
     </div>
@@ -380,17 +608,18 @@ $todayLoginCount = count($todayActivities);
     }
 
     .hero-title {
-        font-size: 24px;
-        font-weight: 600;
-        letter-spacing: -0.01em;
-        margin: 0 0 4px 0;
-        color: var(--text-primary);
+        font-size: 20px;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+        margin: 0 0 6px 0;
+        color: #1F2937;
     }
 
     .hero-subtitle {
-        font-size: 15px;
-        color: var(--text-secondary);
-        margin: 0 0 32px 0;
+        font-size: 14px;
+        color: #6B7280;
+        font-weight: 400;
+        margin: 0 0 24px 0;
     }
 
     .hero-stats {
@@ -405,17 +634,17 @@ $todayLoginCount = count($todayActivities);
     }
 
     .stat-label {
-        font-size: 12px;
-        font-weight: 500;
-        color: var(--text-secondary);
+        font-size: 11px;
+        font-weight: 600;
+        color: #9CA3AF;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.08em;
     }
 
     .stat-value {
-        font-size: 20px;
+        font-size: 18px;
         font-weight: 600;
-        color: var(--text-primary);
+        color: #111827;
     }
 
     /* Live Team Card */
@@ -445,9 +674,157 @@ $todayLoginCount = count($todayActivities);
         font-weight: 600;
     }
 
-    .live-team-list {
+    .modern-team-card {
+        background: #ffffff;
+        border: 1px solid #E5E7EB;
+        border-radius: 12px;
+        padding: 16px 20px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         display: flex;
         flex-direction: column;
+        gap: 12px;
+        min-width: 180px;
+    }
+    
+    .team-card-title {
+        margin: 0;
+        font-size: 13px;
+        font-weight: 600;
+        color: #4B5563;
+        letter-spacing: 0.02em;
+    }
+    
+    .team-avatar-group {
+        display: flex;
+        align-items: center;
+    }
+    
+    .team-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: #F3F4F6;
+        border: 2px solid #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        font-weight: 600;
+        color: #374151;
+        margin-left: -8px;
+        position: relative;
+        cursor: pointer;
+        transition: transform 0.2s, z-index 0.2s;
+    }
+    
+    .team-avatar:first-child {
+        margin-left: 0;
+    }
+    
+    .team-avatar:hover {
+        transform: translateY(-2px);
+        z-index: 10;
+    }
+    
+    .online-indicator {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        width: 10px;
+        height: 10px;
+        background: #10B981;
+        border: 2px solid #ffffff;
+        border-radius: 50%;
+    }
+    
+    .more-avatar {
+        background: #E5E7EB;
+        color: #4B5563;
+        font-size: 12px;
+    }
+    
+    .no-online-text {
+        font-size: 13px;
+        color: #9CA3AF;
+        font-style: italic;
+    }
+    
+    .tooltip-container .tooltip-text {
+        visibility: hidden;
+        background-color: #1F2937;
+        color: #fff;
+        text-align: center;
+        border-radius: 6px;
+        padding: 4px 8px;
+        position: absolute;
+        z-index: 20;
+        bottom: 120%;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 11px;
+        opacity: 0;
+        transition: opacity 0.2s;
+        white-space: nowrap;
+    }
+    
+    .tooltip-container:hover .tooltip-text {
+        visibility: visible;
+        opacity: 1;
+    }
+
+    /* Tabs Styles */
+    .director-tabs {
+        display: flex;
+        gap: 8px;
+        background: #F3F4F6;
+        padding: 6px;
+        border-radius: 12px;
+        margin-bottom: 24px;
+        overflow-x: auto;
+        border: 1px solid var(--border);
+    }
+    
+    .dir-tab-btn {
+        padding: 12px 20px;
+        border: none;
+        background: transparent;
+        color: var(--text-secondary);
+        font-weight: 500;
+        font-size: 14px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        white-space: nowrap;
+    }
+    
+    .dir-tab-btn:hover {
+        background: #E5E7EB;
+        color: var(--text-primary);
+    }
+    
+    .dir-tab-btn.active {
+        background: var(--surface);
+        color: var(--accent);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        font-weight: 600;
+    }
+    
+    .dir-tab-pane {
+        display: none;
+        animation: fadeInTab 0.3s ease-out;
+    }
+    
+    .dir-tab-pane.active {
+        display: block;
+    }
+    
+    @keyframes fadeInTab {
+        from { opacity: 0; transform: translateY(5px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
         gap: 8px;
     }
 
@@ -1069,5 +1446,206 @@ $todayLoginCount = count($todayActivities);
             }
         });
     });
+
+    // Tabs functionality
+    document.querySelectorAll('.dir-tab-btn').forEach(button => {
+        button.addEventListener('click', () => {
+            // Remove active from all buttons
+            document.querySelectorAll('.dir-tab-btn').forEach(btn => btn.classList.remove('active'));
+            // Remove active from all panes
+            document.querySelectorAll('.dir-tab-pane').forEach(pane => pane.classList.remove('active'));
+            
+            // Add active to clicked button
+            button.classList.add('active');
+            // Show corresponding pane
+            const targetId = button.getAttribute('data-target');
+            document.getElementById(targetId).classList.add('active');
+        });
+    });
+    // CTC Toggle functionality
+    document.querySelectorAll('.toggle-ctc').forEach(button => {
+        button.addEventListener('click', function() {
+            const displaySpan = this.previousElementSibling;
+            const actualCtc = displaySpan.getAttribute('data-actual');
+            const icon = this.querySelector('i');
+            
+            if (displaySpan.textContent === '********') {
+                displaySpan.textContent = actualCtc;
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                displaySpan.textContent = '********';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        });
+    });
+
+    // Edit HR Record functionality
+    function editHrRecord(record) {
+        document.getElementById('hr_emp_id').value = record.id;
+        document.getElementById('hr_name').value = record.name;
+        document.getElementById('hr_age').value = record.age;
+        document.getElementById('hr_email').value = record.email;
+        document.getElementById('hr_mobile').value = record.mobile;
+        document.getElementById('hr_ctc').value = record.ctc;
+        document.getElementById('hr_job_profile').value = record.job_profile;
+        
+        document.getElementById('hr_submit_btn').textContent = 'Update Employment Record';
+        document.getElementById('hr_cancel_btn').style.display = 'block';
+        
+        // Scroll to form smoothly
+        document.getElementById('hrForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // Cancel Edit HR Record
+    function cancelHrEdit() {
+        document.getElementById('hrForm').reset();
+        document.getElementById('hr_emp_id').value = '';
+        document.getElementById('hr_submit_btn').textContent = 'Save Employment Record';
+        document.getElementById('hr_cancel_btn').style.display = 'none';
+    }
 </script>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<div id="screenTimeModal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999;">
+    <div class="modal-content" style="background:#f9fafb; width:95%; max-width:900px; margin:40px auto; padding:0; border-radius:12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); overflow:hidden; display:flex; flex-direction:column; max-height:90vh;">
+        <!-- Header -->
+        <div style="background:#ffffff; padding:20px 24px; border-bottom:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <h2 style="margin:0; font-size:20px; color:#1f2937; font-weight:600;">Screen Time Report</h2>
+                <p style="margin:4px 0 0 0; color:#6b7280; font-size:14px;" id="stUser"></p>
+            </div>
+            <button onclick="document.getElementById('screenTimeModal').style.display='none'" style="border:none; background:transparent; font-size:28px; cursor:pointer; color:#9ca3af; transition:color 0.2s;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#9ca3af'">&times;</button>
+        </div>
+        
+        <!-- Body -->
+        <div style="padding:24px; overflow-y:auto; flex:1;">
+            
+            <!-- Summary Stats -->
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin-bottom:24px;">
+                <div style="background:#ffffff; padding:16px; border-radius:8px; border:1px solid #e5e7eb; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+                    <div style="font-size:13px; color:#6b7280; font-weight:500; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px;">Today</div>
+                    <div id="stToday" style="font-size:24px; font-weight:700; color:#3b82f6;">0m 0s</div>
+                </div>
+                <div style="background:#ffffff; padding:16px; border-radius:8px; border:1px solid #e5e7eb; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+                    <div style="font-size:13px; color:#6b7280; font-weight:500; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px;">This Month</div>
+                    <div id="stMonth" style="font-size:24px; font-weight:700; color:#10b981;">0m 0s</div>
+                </div>
+                <div style="background:#ffffff; padding:16px; border-radius:8px; border:1px solid #e5e7eb; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+                    <div style="font-size:13px; color:#6b7280; font-weight:500; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px;">All Time</div>
+                    <div id="stTotal" style="font-size:24px; font-weight:700; color:#8b5cf6;">0m 0s</div>
+                </div>
+            </div>
+
+            <!-- Chart -->
+            <div style="background:#ffffff; padding:20px; border-radius:8px; border:1px solid #e5e7eb; margin-bottom:24px;">
+                <h3 style="margin:0 0 16px 0; font-size:16px; color:#374151;">Past 30 Days (Trend)</h3>
+                <div style="height:250px;">
+                    <canvas id="screenTimeChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div style="background:#ffffff; border-radius:8px; border:1px solid #e5e7eb; overflow:hidden;">
+                <table style="width:100%; border-collapse:collapse; text-align:left;">
+                    <thead style="background:#f3f4f6; border-bottom:1px solid #e5e7eb;">
+                        <tr>
+                            <th style="padding:12px 16px; font-size:13px; color:#4b5563; font-weight:600;">Date</th>
+                            <th style="padding:12px 16px; font-size:13px; color:#4b5563; font-weight:600;">Screen Time Logged</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stTableBody" style="font-size:14px; color:#1f2937;">
+                        <!-- Rows injected via JS -->
+                    </tbody>
+                </table>
+            </div>
+            
+        </div>
+    </div>
+</div>
+
+<script>
+    let stChart = null;
+    function openScreenTimeModal(userId, userName) {
+        document.getElementById('stUser').innerText = userName;
+        document.getElementById('screenTimeModal').style.display = 'block';
+        
+        fetch('getScreenTime.php?user_id=' + userId)
+            .then(res => res.json())
+            .then(data => {
+                // Populate Stats
+                document.getElementById('stToday').innerText = data.stats.today || '0m 0s';
+                document.getElementById('stMonth').innerText = data.stats.month || '0m 0s';
+                document.getElementById('stTotal').innerText = data.stats.total || '0m 0s';
+                
+                // Populate Table
+                const tbody = document.getElementById('stTableBody');
+                tbody.innerHTML = '';
+                if (data.table && data.table.length > 0) {
+                    data.table.forEach(row => {
+                        const tr = document.createElement('tr');
+                        tr.style.borderBottom = '1px solid #f3f4f6';
+                        tr.innerHTML = `
+                            <td style="padding:12px 16px;">${row.date}</td>
+                            <td style="padding:12px 16px; font-weight:500; color:#374151;">${row.time}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="2" style="padding:16px; text-align:center; color:#6b7280;">No screen time recorded yet.</td></tr>';
+                }
+
+                // Render Chart
+                const chartData = data.chart || [];
+                const labels = chartData.map(d => d.date);
+                const minutes = chartData.map(d => d.minutes);
+                const tooltips = chartData.map(d => d.label);
+                
+                const ctx = document.getElementById('screenTimeChart').getContext('2d');
+                if (stChart) stChart.destroy();
+                
+                stChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Screen Time (Minutes)',
+                            data: minutes,
+                            backgroundColor: '#3b82f6',
+                            borderRadius: 6,
+                            barPercentage: 0.6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return tooltips[context.dataIndex];
+                                    }
+                                }
+                            },
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Minutes'
+                                }
+                            }
+                        }
+                    }
+                });
+            })
+            .catch(err => {
+                console.error("Failed to load screen time data:", err);
+            });
+    }
+</script>

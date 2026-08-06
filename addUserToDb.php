@@ -82,48 +82,55 @@ if (isset($_POST['directorAddUser']) && $_POST['directorAddUser'] === '1') {
         header("Location: directorSpace.php");
         exit;
     }
-} else if (isset($_POST['userName']) && !empty($_POST['userName']) && isset($_POST['userEmail']) && !empty($_POST['userEmail']) && isset($_POST['userRole']) && !empty($_POST['userRole']) && isset($_POST['userPassword']) && !empty($_POST['userPassword'])) {
-    try {
-//        $str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-//        $length = 6;
-//        $ucode = substr(str_shuffle(str_repeat($str, 5)), 0, $length);
-        $hashedpwd = password_hash($_POST['userPassword'], PASSWORD_DEFAULT);
-
-        $addUser = "INSERT INTO user(user_name, abbreviation, email_id, password, role) VALUES (:name, :userAbbr, :email,:password,:role)";
-        $statement = $db->prepare($addUser);
-        $statement->bindParam(':name', $_POST['userName']);
-        $statement->bindParam(':email', $_POST['userEmail']);
-        $statement->bindParam(':userAbbr', $_POST['userAbbr']);
-        $statement->bindParam(':password', $hashedpwd);
-        $statement->bindParam(':role', $_POST['userRole']);
-        $statement->execute();
-        header("Location: addUsers.php");
-    } catch (Exception $ex) {
-        echo $ex;
-    }
-} else if (isset($_POST['userId']) && !empty($_POST['userId']) && isset($_POST['editUserName']) && !empty($_POST['editUserName']) && isset($_POST['editUserEmail']) && !empty($_POST['editUserEmail']) && isset($_POST['editUserRole']) && !empty($_POST['editUserRole'])) {
-    try {
-//        $str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-//        $length = 6;
-//        $ucode = substr(str_shuffle(str_repeat($str, 5)), 0, $length);
-//        $hashedpwd = password_hash($ucode, PASSWORD_DEFAULT);
-
-        $updateUser = "UPDATE user SET user_name = '" . $_POST['editUserName'] . "', abbreviation = '".$_POST['editUserAbbr']."', email_id = '" . $_POST['editUserEmail'] . "', role = '" . $_POST['editUserRole'] . "' WHERE user_id = '" . $_POST['userId'] . "'";
-        $statement = $db->prepare($updateUser);
-        $statement->execute();
-        header("Location: addUsers.php");
-    } catch (Exception $ex) {
-        echo $ex;
-    }
 } else {
-    if (isset($_POST['user_id']) && !empty($_POST['user_id'])) {
+    // Legacy blocks for adding/editing/deleting users.
+    if (!Utitlity::checkForDirector() && !Utitlity::checkForUserMainAdmin()) {
+        header("Location: loginSelection.php?reason=login_required");
+        exit;
+    }
+
+    if (isset($_POST['userName']) && !empty($_POST['userName']) && isset($_POST['userEmail']) && !empty($_POST['userEmail']) && isset($_POST['userRole']) && !empty($_POST['userRole']) && isset($_POST['userPassword']) && !empty($_POST['userPassword'])) {
         try {
-            $deleteUser = "DELETE FROM user WHERE user_id = '" . $_POST['user_id'] . "'";
-            $statement = $db->prepare($deleteUser);
+            $hashedpwd = password_hash($_POST['userPassword'], PASSWORD_DEFAULT);
+
+            $addUser = "INSERT INTO user(user_name, abbreviation, email_id, password, role) VALUES (:name, :userAbbr, :email,:password,:role)";
+            $statement = $db->prepare($addUser);
+            $statement->bindParam(':name', $_POST['userName']);
+            $statement->bindParam(':email', $_POST['userEmail']);
+            $statement->bindParam(':userAbbr', $_POST['userAbbr']);
+            $statement->bindParam(':password', $hashedpwd);
+            $statement->bindParam(':role', $_POST['userRole']);
             $statement->execute();
             header("Location: addUsers.php");
+            exit;
         } catch (Exception $ex) {
-            echo $ex;
+            echo $ex->getMessage();
+        }
+    } else if (isset($_POST['userId']) && !empty($_POST['userId']) && isset($_POST['editUserName']) && !empty($_POST['editUserName']) && isset($_POST['editUserEmail']) && !empty($_POST['editUserEmail']) && isset($_POST['editUserRole']) && !empty($_POST['editUserRole'])) {
+        try {
+            $updateUser = "UPDATE user SET user_name = :name, abbreviation = :abbr, email_id = :email, role = :role WHERE user_id = :userId";
+            $statement = $db->prepare($updateUser);
+            $statement->bindParam(':name', $_POST['editUserName']);
+            $statement->bindParam(':abbr', $_POST['editUserAbbr']);
+            $statement->bindParam(':email', $_POST['editUserEmail']);
+            $statement->bindParam(':role', $_POST['editUserRole']);
+            $statement->bindParam(':userId', $_POST['userId']);
+            $statement->execute();
+            header("Location: addUsers.php");
+            exit;
+        } catch (Exception $ex) {
+            echo $ex->getMessage();
+        }
+    } else if (isset($_POST['user_id']) && !empty($_POST['user_id'])) {
+        try {
+            $deleteUser = "DELETE FROM user WHERE user_id = :userId";
+            $statement = $db->prepare($deleteUser);
+            $statement->bindParam(':userId', $_POST['user_id']);
+            $statement->execute();
+            header("Location: addUsers.php");
+            exit;
+        } catch (Exception $ex) {
+            echo $ex->getMessage();
         }
     }
 }

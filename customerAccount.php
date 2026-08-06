@@ -888,6 +888,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
     $dateGraphData = array('entries' => array(), 'summary' => array('ok' => 0, 'issue' => 0, 'missing' => 0, 'total' => 0));
     $customerDocoraAiVisible = aitfCustomerFeatureIsEnabled($db, 'customer_docora_ai_visible');
     $customerDateGraphVisible = aitfCustomerFeatureIsEnabled($db, 'customer_date_graph_visible');
+    $customerManualStatusChangeEnabled = aitfCustomerFeatureIsEnabled($db, 'customer_manual_status_change_enabled');
+    $customerAccreditationChangeEnabled = aitfCustomerFeatureIsEnabled($db, 'customer_accreditation_change_enabled');
     $customerAiScanSummary = array(
         'document_scan_completed' => false,
         'software_fill_completed' => false,
@@ -4510,14 +4512,17 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                     <span>Certification Status:</span>
                                 </div>
                                 <div class="form-group float-label-control"
-                                    style="margin-bottom: 0; min-width: 150px; flex-grow: 1;">
+                                    style="margin-bottom: 0; min-width: 150px; flex-grow: 1; position: relative;">
+                                    <?php if (!$customerManualStatusChangeEnabled && (!isset($currentRole) || $currentRole !== 'director')) { ?>
+                                        <div class="disabled-status-overlay" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:10; cursor:pointer;"></div>
+                                    <?php } ?>
                                     <select class="<?php echo $statusSelectClass; ?>" name="customer_status"
                                         data-customer="<?php echo (int) $_GET["customerid"]; ?>"
                                         data-crr-id="<?php echo $certCrrId; ?>"
                                         data-previous="<?php echo htmlspecialchars($certStatus, ENT_QUOTES, 'UTF-8'); ?>"
                                         data-iso-index="<?php echo $certIsoIndex; ?>"
                                         data-iso-label="<?php echo htmlspecialchars($standardName, ENT_QUOTES, 'UTF-8'); ?>"
-                                        style="color: black; width: 100%;" <?php echo isset($isAuditor) && $isAuditor ? 'disabled' : ''; ?>>
+                                        style="color: black; width: 100%; <?php if (!$customerManualStatusChangeEnabled && (!isset($currentRole) || $currentRole !== 'director')) echo 'pointer-events: none;'; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'disabled' : ''; ?>>
                                         <option value="<?php echo htmlspecialchars($certStatus, ENT_QUOTES, 'UTF-8'); ?>">
                                             <?php echo !empty($certStatus) ? htmlspecialchars($certStatus) : 'Select Status'; ?>
                                         </option>
@@ -4537,14 +4542,17 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                     style="color: black; font-weight: small; text-align: right; white-space: nowrap; margin-left: 10px;">
                                     <span>Accreditation:</span>
                                 </div>
-                                <div class="form-group float-label-control" style="margin-bottom: 0; min-width: 120px;">
+                                <div class="form-group float-label-control" style="margin-bottom: 0; min-width: 120px; position: relative;">
+                                    <?php if (!$customerAccreditationChangeEnabled && (!isset($currentRole) || $currentRole !== 'director')) { ?>
+                                        <div class="disabled-accreditation-overlay" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:10; cursor:pointer;"></div>
+                                    <?php } ?>
                                     <select class="manual-cdc-accreditation"
                                         data-customer="<?php echo (int) $_GET["customerid"]; ?>"
                                         data-crr-id="<?php echo $certCrrId; ?>"
                                         data-previous="<?php echo htmlspecialchars($certAccreditation, ENT_QUOTES, 'UTF-8'); ?>"
                                         data-iso-index="<?php echo $certIsoIndex; ?>"
                                         data-iso-label="<?php echo htmlspecialchars($standardName, ENT_QUOTES, 'UTF-8'); ?>"
-                                        style="color: black; width: 100%;" <?php echo isset($isAuditor) && $isAuditor ? 'disabled' : ''; ?> <?php if ($certCrrId <= 0)
+                                        style="color: black; width: 100%; <?php if (!$customerAccreditationChangeEnabled && (!isset($currentRole) || $currentRole !== 'director')) echo 'pointer-events: none;'; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'disabled' : ''; ?> <?php if ($certCrrId <= 0)
                                             echo 'disabled title="CDC record not available"'; ?>>
                                         <option value="">Select Accreditation</option>
                                         <option value="NABCB" <?php if ($certAccreditation === 'NABCB')
@@ -12611,7 +12619,9 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 $existing.find('.app-status-modal__message').text(opts.message || '');
                 $existing.find('.app-status-modal__confirm').text(opts.confirmText || 'Save Status').show().prop('disabled', false);
                 $existing.find('.app-status-modal__cancel').text(opts.cancelText || 'Cancel').show();
-                $existing.toggleClass('app-status-modal--info', !!opts.infoOnly);
+                $existing.toggleClass('app-status-modal--info', !!opts.infoOnly && !opts.isError);
+                $existing.toggleClass('app-status-modal--error', !!opts.isError);
+                $existing.find('.app-status-modal__icon').html(opts.isError ? '<i class="fa fa-times"></i>' : '<i class="fa fa-exchange"></i>');
                 $existing.addClass('is-visible').attr('aria-hidden', 'false');
 
                 if (opts.infoOnly) {
@@ -12638,6 +12648,28 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     }
                 });
             }
+
+            $(document).on('click', '.disabled-status-overlay', function(e) {
+                e.preventDefault();
+                showApplicationStatusDialog({
+                    title: 'Action Not Allowed',
+                    message: 'you are not allowd to change status , director needs to allow this feature',
+                    confirmText: 'OK',
+                    infoOnly: true,
+                    isError: true
+                });
+            });
+
+            $(document).on('click', '.disabled-accreditation-overlay', function(e) {
+                e.preventDefault();
+                showApplicationStatusDialog({
+                    title: 'Action Not Allowed',
+                    message: 'you are not allowd to change accreditation , director needs to allow this feature',
+                    confirmText: 'OK',
+                    infoOnly: true,
+                    isError: true
+                });
+            });
 
             $(document).on('change', '.manual-application-status', function () {
                 var $select = $(this);
@@ -12687,11 +12719,18 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                     });
                                 } else {
                                     $select.val(previousStatus);
+                                    var errorMsg = 'Unable to save the application status. Please try again.';
+                                    var isErrorNotAllowed = false;
+                                    if (typeof data === 'string' && data.indexOf('error_not_allowed:') !== -1) {
+                                        errorMsg = data.replace('error_not_allowed:', '').trim();
+                                        isErrorNotAllowed = true;
+                                    }
                                     showApplicationStatusDialog({
                                         title: 'Status Not Saved',
-                                        message: 'Unable to save the application status. Please try again.',
+                                        message: errorMsg,
                                         confirmText: 'OK',
-                                        infoOnly: true
+                                        infoOnly: true,
+                                        isError: true
                                     });
                                 }
                             },
@@ -12756,7 +12795,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                     title: 'Status Not Saved',
                                     message: (response && response.message) || 'Unable to update ISO certification status.',
                                     confirmText: 'OK',
-                                    infoOnly: true
+                                    infoOnly: true,
+                                    isError: true
                                 });
                                 return;
                             }
@@ -12790,7 +12830,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                 title: 'Status Not Saved',
                                 message: response.message || 'Unable to update ISO certification status.',
                                 confirmText: 'OK',
-                                infoOnly: true
+                                infoOnly: true,
+                                isError: true
                             });
                         }).always(function () {
                             $select.prop('disabled', false);
@@ -12842,11 +12883,18 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         }).done(function (response) {
                             if (!response || !response.success) {
                                 $select.val(previousAccreditation);
-                                showApplicationStatusDialog({
-                                    title: 'Accreditation Not Saved',
-                                    message: (response && response.message) || 'Unable to update accreditation. Please try again.',
-                                    confirmText: 'OK',
-                                    infoOnly: true
+                                    var isErrorNotAllowed = false;
+                                    var errorMsg = (response && response.message) || 'Unable to update accreditation. Please try again.';
+                                    if (typeof errorMsg === 'string' && errorMsg.indexOf('Director needs to allow this feature') !== -1) {
+                                        errorMsg = 'you are not allowd to change accreditation , director needs to allow this feature';
+                                        isErrorNotAllowed = true;
+                                    }
+                                    showApplicationStatusDialog({
+                                        title: isErrorNotAllowed ? 'Action Not Allowed' : 'Accreditation Not Saved',
+                                        message: errorMsg,
+                                        confirmText: 'OK',
+                                        infoOnly: true,
+                                        isError: true
                                 });
                                 return;
                             }
@@ -12891,11 +12939,18 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         }).fail(function (xhr) {
                             var response = xhr.responseJSON || {};
                             $select.val(previousAccreditation);
+                            var isErrorNotAllowed = false;
+                            var errorMsg = response.message || 'Unable to update accreditation. Please try again.';
+                            if (typeof errorMsg === 'string' && errorMsg.indexOf('Director needs to allow this feature') !== -1) {
+                                errorMsg = 'you are not allowd to change accreditation , director needs to allow this feature';
+                                isErrorNotAllowed = true;
+                            }
                             showApplicationStatusDialog({
-                                title: 'Accreditation Not Saved',
-                                message: response.message || 'Unable to update accreditation. Please try again.',
+                                title: isErrorNotAllowed ? 'Action Not Allowed' : 'Accreditation Not Saved',
+                                message: errorMsg,
                                 confirmText: 'OK',
-                                infoOnly: true
+                                infoOnly: true,
+                                isError: true
                             });
                         }).always(function () {
                             $select.prop('disabled', false);
@@ -19433,5 +19488,24 @@ if ($currentRole === 'client' || $currentRole === 'external') {
         .app-status-modal--info .app-status-modal__icon {
             background: #ecfdf5;
             color: #047857;
+        }
+
+        .app-status-modal--error .app-status-modal__icon {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+
+        .app-status-modal--error .app-status-modal__title {
+            color: #dc2626;
+        }
+
+        .app-status-modal--error .app-status-modal__confirm {
+            background: #dc2626;
+            border-color: #dc2626;
+        }
+
+        .app-status-modal--error .app-status-modal__confirm:hover {
+            background: #b91c1c;
+            border-color: #b91c1c;
         }
     </style>

@@ -26,6 +26,8 @@
         aitfCustomerFeatureSet($db, 'customer_letters_delete_icon_visible', isset($_POST['customer_letters_delete_icon_visible']), isset($_SESSION['username']) ? $_SESSION['username'] : '');
         aitfCustomerFeatureSet($db, 'audit_date_conflict_visible', isset($_POST['audit_date_conflict_visible']), isset($_SESSION['username']) ? $_SESSION['username'] : '');
         aitfCustomerFeatureSet($db, 'audit_member_conflict_visible', isset($_POST['audit_member_conflict_visible']), isset($_SESSION['username']) ? $_SESSION['username'] : '');
+        aitfCustomerFeatureSet($db, 'customer_manual_status_change_enabled', isset($_POST['customer_manual_status_change_enabled']), isset($_SESSION['username']) ? $_SESSION['username'] : '');
+        aitfCustomerFeatureSet($db, 'customer_accreditation_change_enabled', isset($_POST['customer_accreditation_change_enabled']), isset($_SESSION['username']) ? $_SESSION['username'] : '');
         $featureToggleMessage = 'Client features control buttons.';
     }
 
@@ -49,6 +51,8 @@
     $customerLettersDeleteIconVisible = aitfCustomerFeatureIsEnabled($db, 'customer_letters_delete_icon_visible');
     $auditDateConflictVisible = aitfCustomerFeatureIsEnabled($db, 'audit_date_conflict_visible');
     $auditMemberConflictVisible = aitfCustomerFeatureIsEnabled($db, 'audit_member_conflict_visible');
+    $customerManualStatusChangeEnabled = aitfCustomerFeatureIsEnabled($db, 'customer_manual_status_change_enabled');
+    $customerAccreditationChangeEnabled = aitfCustomerFeatureIsEnabled($db, 'customer_accreditation_change_enabled');
 
     //    auditors
     $auditors = "SELECT * from auditors";
@@ -519,97 +523,112 @@
                     <div class="row" style="margin-top: 30px;">
                         <div class="col-sm-6">
                             <div class="row">
-                                <div class="col-xs-12 text-center btn qms_complete_btn">
-                                    <span><i class="fa fa-toggle-on"> Customer Feature Toggles</i></span>
+                                <div class="col-xs-12 text-center btn qms_complete_btn" id="master-toggle-btn" style="cursor: pointer;">
+                                    <span><i class="fa fa-toggle-on" id="master-toggle-icon"></i> Customer Feature Toggles</span>
                                 </div>
                             </div>
                             <div class="row" style="">
                                 <div class="well" style="max-height: 300px; overflow: auto;">
-                                    <form method="post" action="masterCreator.php">
+                                    <form id="feature-toggles-form" method="post" action="masterCreator.php">
                                         <input type="hidden" name="action" value="save_customer_feature_toggles">
-                                        <?php if ($featureToggleMessage !== '') { ?>
-                                            <div class="alert alert-success" style="margin: 0 0 15px;">
-                                                <?php echo htmlspecialchars($featureToggleMessage, ENT_QUOTES, 'UTF-8'); ?>
-                                            </div>
-                                        <?php } ?>
                                         <ul class="list-group">
                                             <li class="list-group-item">
-                                                <strong>GO ai</strong>
-                                                <small style="display: block; color: #777;">Customer account GO ai review
-                                                    button visibility</small>
-                                                <div style="margin-top: 8px;">
-                                                    <label style="margin-right: 15px;">
-                                                        <input type="checkbox" name="customer_docora_ai_visible" value="1"
-                                                            <?php echo $customerDocoraAiVisible ? 'checked' : ''; ?>>
-                                                        Enable GO ai Button
+                                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                                    <div>
+                                                        <strong>GO ai</strong>
+                                                        <small style="display: block; color: #777;">Customer account GO ai review button visibility</small>
+                                                    </div>
+                                                    <label class="modern-switch">
+                                                        <input type="checkbox" class="feature-toggle-checkbox" name="customer_docora_ai_visible" value="1" <?php echo $customerDocoraAiVisible ? 'checked' : ''; ?>>
+                                                        <span class="slider"></span>
                                                     </label>
                                                 </div>
                                             </li>
                                             <li class="list-group-item">
-                                                <strong>Date Graph</strong>
-                                                <small style="display: block; color: #777;">Customer chronological dates
-                                                    graph visibility</small>
-                                                <div style="margin-top: 8px;">
-                                                    <label style="margin-right: 15px;">
-                                                        <input type="checkbox" name="customer_date_graph_visible" value="1"
-                                                            <?php echo $customerDateGraphVisible ? 'checked' : ''; ?>>
-                                                        Enable Date Graph
+                                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                                    <div>
+                                                        <strong>Date Graph</strong>
+                                                        <small style="display: block; color: #777;">Customer chronological dates graph visibility</small>
+                                                    </div>
+                                                    <label class="modern-switch">
+                                                        <input type="checkbox" class="feature-toggle-checkbox" name="customer_date_graph_visible" value="1" <?php echo $customerDateGraphVisible ? 'checked' : ''; ?>>
+                                                        <span class="slider"></span>
                                                     </label>
                                                 </div>
                                             </li>
                                             <li class="list-group-item">
-                                                <strong>Letters Edit Icon</strong>
-                                                <small style="display: block; color: #777;">Customer account letters edit
-                                                    icon visibility</small>
-                                                <div style="margin-top: 8px;">
-                                                    <label style="margin-right: 15px;">
-                                                        <input type="checkbox" name="customer_letters_edit_icon_visible"
-                                                            value="1" <?php echo $customerLettersEditIconVisible ? 'checked' : ''; ?>>
-                                                        Enable Letters Edit Icon
+                                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                                    <div>
+                                                        <strong>Letters Edit Icon</strong>
+                                                        <small style="display: block; color: #777;">Customer account letters edit icon visibility</small>
+                                                    </div>
+                                                    <label class="modern-switch">
+                                                        <input type="checkbox" class="feature-toggle-checkbox" name="customer_letters_edit_icon_visible" value="1" <?php echo $customerLettersEditIconVisible ? 'checked' : ''; ?>>
+                                                        <span class="slider"></span>
                                                     </label>
                                                 </div>
                                             </li>
                                             <li class="list-group-item">
-                                                <strong>Letters Delete Icon</strong>
-                                                <small style="display: block; color: #777;">Customer account letters delete
-                                                    icon visibility</small>
-                                                <div style="margin-top: 8px;">
-                                                    <label style="margin-right: 15px;">
-                                                        <input type="checkbox" name="customer_letters_delete_icon_visible"
-                                                            value="1" <?php echo $customerLettersDeleteIconVisible ? 'checked' : ''; ?>>
-                                                        Enable Letters Delete Icon
+                                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                                    <div>
+                                                        <strong>Letters Delete Icon</strong>
+                                                        <small style="display: block; color: #777;">Customer account letters delete icon visibility</small>
+                                                    </div>
+                                                    <label class="modern-switch">
+                                                        <input type="checkbox" class="feature-toggle-checkbox" name="customer_letters_delete_icon_visible" value="1" <?php echo $customerLettersDeleteIconVisible ? 'checked' : ''; ?>>
+                                                        <span class="slider"></span>
                                                     </label>
                                                 </div>
                                             </li>
                                             <li class="list-group-item">
-                                                <strong>Audit Date Conflict</strong>
-                                                <small style="display: block; color: #777;">Audit Page date conflict panel
-                                                    visibility</small>
-                                                <div style="margin-top: 8px;">
-                                                    <label style="margin-right: 15px;">
-                                                        <input type="checkbox" name="audit_date_conflict_visible" value="1"
-                                                            <?php echo $auditDateConflictVisible ? 'checked' : ''; ?>>
-                                                        Enable Date Conflict Panel
+                                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                                    <div>
+                                                        <strong>Audit Date Conflict</strong>
+                                                        <small style="display: block; color: #777;">Audit Page date conflict panel visibility</small>
+                                                    </div>
+                                                    <label class="modern-switch">
+                                                        <input type="checkbox" class="feature-toggle-checkbox" name="audit_date_conflict_visible" value="1" <?php echo $auditDateConflictVisible ? 'checked' : ''; ?>>
+                                                        <span class="slider"></span>
                                                     </label>
                                                 </div>
                                             </li>
                                             <li class="list-group-item">
-                                                <strong>Audit Member Conflict</strong>
-                                                <small style="display: block; color: #777;">Audit Page member conflict panel
-                                                    visibility</small>
-                                                <div style="margin-top: 8px;">
-                                                    <label style="margin-right: 15px;">
-                                                        <input type="checkbox" name="audit_member_conflict_visible"
-                                                            value="1" <?php echo $auditMemberConflictVisible ? 'checked' : ''; ?>>
-                                                        Enable Member Conflict Panel
+                                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                                    <div>
+                                                        <strong>Audit Member Conflict</strong>
+                                                        <small style="display: block; color: #777;">Audit Page member conflict panel visibility</small>
+                                                    </div>
+                                                    <label class="modern-switch">
+                                                        <input type="checkbox" class="feature-toggle-checkbox" name="audit_member_conflict_visible" value="1" <?php echo $auditMemberConflictVisible ? 'checked' : ''; ?>>
+                                                        <span class="slider"></span>
+                                                    </label>
+                                                </div>
+                                            </li>
+                                            <li class="list-group-item" style="border-top: 2px solid #ddd;">
+                                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                                    <div>
+                                                        <strong>Manual Status Change</strong>
+                                                        <small style="display: block; color: #777;">Allow manual client status override</small>
+                                                    </div>
+                                                    <label class="modern-switch">
+                                                        <input type="checkbox" class="feature-toggle-checkbox" name="customer_manual_status_change_enabled" value="1" <?php echo $customerManualStatusChangeEnabled ? 'checked' : ''; ?>>
+                                                        <span class="slider"></span>
+                                                    </label>
+                                                </div>
+                                            </li>
+                                            <li class="list-group-item">
+                                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                                    <div>
+                                                        <strong>Allow Accreditation Change</strong>
+                                                        <small style="display: block; color: #777;">Allow manual accreditation change</small>
+                                                    </div>
+                                                    <label class="modern-switch">
+                                                        <input type="checkbox" class="feature-toggle-checkbox" name="customer_accreditation_change_enabled" value="1" <?php echo $customerAccreditationChangeEnabled ? 'checked' : ''; ?>>
+                                                        <span class="slider"></span>
                                                     </label>
                                                 </div>
                                             </li>
                                         </ul>
-                                        <div style="text-align: right; margin-top: 10px;">
-                                            <button type="submit" class="btn btn-info btn-sm"><i class="fa fa-save"></i>
-                                                Save Toggles</button>
-                                        </div>
                                     </form>
                                 </div>
                             </div>
@@ -737,6 +756,53 @@
         }
 
         $(document).ready(function () {
+            
+            // Feature Toggles Logic
+            var updateMasterToggleState = function() {
+                var allChecked = $('.feature-toggle-checkbox').length === $('.feature-toggle-checkbox:checked').length;
+                var $icon = $('#master-toggle-icon');
+                if (allChecked) {
+                    $icon.removeClass('fa-toggle-off').addClass('fa-toggle-on');
+                } else {
+                    $icon.removeClass('fa-toggle-on').addClass('fa-toggle-off');
+                }
+            };
+            
+            updateMasterToggleState();
+            
+            $('.feature-toggle-checkbox').on('change', function() {
+                updateMasterToggleState();
+                
+                // Submit form via AJAX
+                var form = $('#feature-toggles-form');
+                $.ajax({
+                    type: form.attr('method'),
+                    url: form.attr('action'),
+                    data: form.serialize(),
+                    success: function(response) {
+                        // success (silent save)
+                    }
+                });
+            });
+            
+            $('#master-toggle-btn').on('click', function() {
+                var allChecked = $('.feature-toggle-checkbox').length === $('.feature-toggle-checkbox:checked').length;
+                var targetState = !allChecked; // If all checked, turn all off. Else turn all on.
+                
+                $('.feature-toggle-checkbox').prop('checked', targetState);
+                updateMasterToggleState();
+                
+                // Submit form via AJAX
+                var form = $('#feature-toggles-form');
+                $.ajax({
+                    type: form.attr('method'),
+                    url: form.attr('action'),
+                    data: form.serialize(),
+                    success: function(response) {
+                        // success
+                    }
+                });
+            });
 
             $("#menu-toggle").click(function (e) {
                 e.preventDefault();
@@ -2312,6 +2378,53 @@
             --hpd-text-dim: #93a1b8;
             --hpd-text-faint: #6b7890;
             --hpd-accent: #4a9eff;
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+        /* Modern Toggle Switch */
+        .modern-switch {
+          position: relative;
+          display: inline-block;
+          width: 40px;
+          height: 20px;
+          margin: 0;
+        }
+        .modern-switch input {
+          opacity: 0;
+          width: 0;
+          height: 0;
+        }
+        .modern-switch .slider {
+          position: absolute;
+          cursor: pointer;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: #ccc;
+          transition: .4s;
+          border-radius: 20px;
+        }
+        .modern-switch .slider:before {
+          position: absolute;
+          content: "";
+          height: 16px;
+          width: 16px;
+          left: 2px;
+          bottom: 2px;
+          background-color: white;
+          transition: .4s;
+          border-radius: 50%;
+        }
+        .modern-switch input:checked + .slider {
+          background-color: #f0ad4e;
+        }
+        .modern-switch input:focus + .slider {
+          box-shadow: 0 0 1px #f0ad4e;
+        }
+        .modern-switch input:checked + .slider:before {
+          transform: translateX(20px);
         }
 
         html.theme-dark #page-content-wrapper {

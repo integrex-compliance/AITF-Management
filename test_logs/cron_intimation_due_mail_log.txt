@@ -216,3 +216,46 @@
 [2026-08-05 14:15:56] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260805141556_1106Suspension Reminder.pdf
 [2026-08-05 14:16:04] SUCCESS: Emailed due letter to client recipient(s): hitechtubelasercutting@gmail.com
 [2026-08-05 14:16:04] Updated ca_service_dates action_id 64769 status to 'sent' (sent_date: 2026-08-05).
+[2026-08-06 12:05:09] === STARTING AUTOMATED INTIMATION DUE LETTER CRON JOB (12:00 PM) ===
+[2026-08-06 12:05:09] Found 1164 pending due letter(s) (including stage notifications) eligible for automatic mail sending.
+[2026-08-06 12:05:09] -------------------------------------------------------------------
+[2026-08-06 12:05:09] Processing due letter -> Customer: DDM ENGINEERING PRIVATE LIMITED (ID: 1150) | Letter: Suspend Letter | Due Date: 2026-08-02
+[2026-08-06 12:05:09] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260806120509_1150Suspend Letter.pdf
+[2026-08-06 12:05:17] SUCCESS: Emailed due letter to client recipient(s): rohanmohite999@gmail.com
+[2026-08-06 12:05:17] Updated ca_service_dates action_id 64621 status to 'sent' (sent_date: 2026-08-06).
+[2026-08-06 12:05:17] AUTO STATUS CHANGE: Customer ID 1150 audit_status updated to 'Suspended' (triggered by 'Suspend Letter' auto-mail).
+[2026-08-06 12:05:24] SUCCESS: Sent confirmation email to office (certification@aitf.co.in).
+[2026-08-06 12:05:24] -------------------------------------------------------------------
+[2026-08-06 12:05:24] Processing due letter -> Customer: Excellent dies and moulds  (ID: 394) | Letter: Withdrawal Reminder | Due Date: 2026-08-03
+[2026-08-06 12:05:24] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260806120524_394Withdrawal Reminder.pdf
+[2026-08-06 12:05:32] SUCCESS: Emailed due letter to client recipient(s): accounts@excellentdies.com
+[2026-08-06 12:05:32] Updated ca_service_dates action_id 64637 status to 'sent' (sent_date: 2026-08-06).
+[2026-08-06 12:05:39] SUCCESS: Sent confirmation email to office (certification@aitf.co.in).
+[2026-08-06 12:05:39] -------------------------------------------------------------------
+[2026-08-06 12:05:39] Processing due letter -> Customer: Shreeram Pattern Works (ID: 581) | Letter: Suspension Reminder | Due Date: 2026-08-03
+[2026-08-06 12:05:39] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260806120539_581Suspension Reminder.pdf
+[2026-08-06 12:05:47] SUCCESS: Emailed due letter to client recipient(s): shreerampatternworks21@gmail.com,
+[2026-08-06 12:05:47] Updated ca_service_dates action_id 64765 status to 'sent' (sent_date: 2026-08-06).
+[2026-08-06 12:05:55] SUCCESS: Sent confirmation email to office (certification@aitf.co.in).
+[2026-08-06 12:05:55] -------------------------------------------------------------------
+[2026-08-06 12:05:55] Processing due letter -> Customer: JADHAV ENGINEERING WORKS (ID: 1136) | Letter: Withdraw Letter | Due Date: 2026-08-04
+[2026-08-06 12:05:55] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260806120555_1136Withdraw Letter.pdf
+[2026-08-06 12:06:03] SUCCESS: Emailed due letter to client recipient(s): jadhavengineering@gmail.com,
+[2026-08-06 12:06:03] Updated ca_service_dates action_id 6499 status to 'sent' (sent_date: 2026-08-06).
+[2026-08-06 12:06:03] AUTO STATUS CHANGE: Customer ID 1136 audit_status updated to 'Withdrawn' (triggered by 'Withdraw Letter' auto-mail).
+[2026-08-06 12:06:11] SUCCESS: Sent confirmation email to office (certification@aitf.co.in).
+[2026-08-06 12:06:11] -------------------------------------------------------------------
+[2026-08-06 12:06:11] Processing due letter -> Customer: Shri Bhavani Enterprises (ID: 409) | Letter: Suspend Letter | Due Date: 2026-08-05
+[2026-08-06 12:06:11] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260806120611_409Suspend Letter.pdf
+[2026-08-06 12:06:19] SUCCESS: Emailed due letter to client recipient(s): sbhavani.ent9@gmail.com
+[2026-08-06 12:06:19] Updated ca_service_dates action_id 64790 status to 'sent' (sent_date: 2026-08-06).
+[2026-08-06 12:06:19] AUTO STATUS CHANGE: Customer ID 409 audit_status updated to 'Suspended' (triggered by 'Suspend Letter' auto-mail).
+[2026-08-06 12:06:26] SUCCESS: Sent confirmation email to office (certification@aitf.co.in).
+[2026-08-06 12:06:26] -------------------------------------------------------------------
+[2026-08-06 12:06:26] Processing due letter -> Customer: Sankalp Industries (ID: 122) | Letter: Suspension Reminder | Due Date: 2026-08-06
+[2026-08-06 12:06:26] Generated PDF letter at: C:\xampp\htdocs\public_html/notification/20260806120626_122Suspension Reminder.pdf
+[2026-08-06 12:06:34] SUCCESS: Emailed due letter to client recipient(s): sankalpind@rediffmail.com
+[2026-08-06 12:06:35] Updated ca_service_dates action_id 64793 status to 'sent' (sent_date: 2026-08-06).
+[2026-08-06 12:06:42] SUCCESS: Sent confirmation email to office (certification@aitf.co.in).
+[2026-08-06 12:06:42] -------------------------------------------------------------------
+[2026-08-06 12:06:42] Processing due letter -> Customer: Pla Craft Engineering (Withdrawn) (ID: 18) | Letter: Stage 1 Notification | Due Date: 2014-01-20

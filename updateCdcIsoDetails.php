@@ -52,9 +52,35 @@ if ($field === 'accreditation') {
     if (!in_array($value, array('NABCB', 'SELF'), true)) {
         cdcIsoDetailsResponse(array('success' => false, 'message' => 'Accreditation must be NABCB or SELF.'), 422);
     }
+    
+    include_once './include/customer_feature_flags.php';
+    if (!function_exists('aitfCustomerFeatureIsEnabled')) {
+        $accreditationEnabled = true;
+    } else {
+        $accreditationEnabled = aitfCustomerFeatureIsEnabled($db, 'customer_accreditation_change_enabled');
+    }
+    
+    include_once './include/rbac_helper.php';
+    if (!$accreditationEnabled && !Utitlity::checkForDirector()) {
+        cdcIsoDetailsResponse(array('success' => false, 'message' => 'you are not allowd to change accreditation , director needs to allow this feature'), 403);
+    }
 } else {
     if ($value === '' || strlen($value) > 50 || !preg_match('/^[a-zA-Z0-9 ._()-]+$/', $value)) {
         cdcIsoDetailsResponse(array('success' => false, 'message' => 'Invalid certification status.'), 422);
+    }
+}
+
+if ($field === 'certification_status') {
+    include_once './include/customer_feature_flags.php';
+    if (!function_exists('aitfCustomerFeatureIsEnabled')) {
+        $manualEnabled = true;
+    } else {
+        $manualEnabled = aitfCustomerFeatureIsEnabled($db, 'customer_manual_status_change_enabled');
+    }
+    
+    include_once './include/rbac_helper.php';
+    if (!$manualEnabled && !Utitlity::checkForDirector()) {
+        cdcIsoDetailsResponse(array('success' => false, 'message' => 'Director needs to allow this feature'), 403);
     }
 }
 

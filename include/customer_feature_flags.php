@@ -9,7 +9,9 @@ if (!function_exists('aitfCustomerFeatureDefaults')) {
             'customer_letters_edit_icon_visible' => 0,
             'customer_letters_delete_icon_visible' => 0,
             'audit_date_conflict_visible' => 0,
-            'audit_member_conflict_visible' => 0
+            'audit_member_conflict_visible' => 0,
+            'customer_manual_status_change_enabled' => 0,
+            'customer_accreditation_change_enabled' => 0
         );
     }
 }

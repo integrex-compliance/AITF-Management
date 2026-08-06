@@ -6,7 +6,13 @@
 
     include_once './header.php';
     include_once './dbConnect.php';
+    include_once './utility.php';
     date_default_timezone_set('Asia/Kolkata');
+    
+    if (!Utitlity::checkForDirector() && !Utitlity::checkForUserMainAdmin()) {
+        header("Location: loginSelection.php?reason=login_required");
+        exit;
+    }
 
     $allUser = "SELECT * FROM user WHERE is_deleted = '0'";
     $statement = $db->prepare($allUser);
