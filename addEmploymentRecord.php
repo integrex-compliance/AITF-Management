@@ -6,7 +6,7 @@ require_once __DIR__ . '/include/rbac_helper.php';
 include 'utility.php';
 
 if (!Utitlity::checkForDirector()) {
-    header("Location: loginSelection.php?reason=login_required");
+    header("Location: login.php?reason=login_required");
     exit;
 }
 

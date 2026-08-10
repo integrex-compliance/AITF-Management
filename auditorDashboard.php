@@ -9,14 +9,14 @@ date_default_timezone_set('Asia/Kolkata');
 
 // Check auditor role
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'Auditor' || empty($_SESSION['auditor_id'])) {
-    header('Location: loginSelection.php?reason=login_required');
+    header('Location: login.php?reason=login_required');
     exit;
 }
 
 $auditorId = (int)$_SESSION['auditor_id'];
 $data = aitf_fetch_auditor_dashboard_data($db, $auditorId);
 if (!$data) {
-    header('Location: loginSelection.php?reason=login_required');
+    header('Location: login.php?reason=login_required');
     exit;
 }
 

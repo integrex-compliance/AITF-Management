@@ -15,7 +15,7 @@ include 'utility.php';
 if (isset($_POST['directorAddUser']) && $_POST['directorAddUser'] === '1') {
     if (!Utitlity::checkForDirector()) {
         $_SESSION['director_notice'] = 'Only Director can generate employee IDs.';
-        header("Location: loginSelection.php?reason=login_required");
+        header("Location: login.php?reason=login_required");
         exit;
     }
 
@@ -85,7 +85,7 @@ if (isset($_POST['directorAddUser']) && $_POST['directorAddUser'] === '1') {
 } else {
     // Legacy blocks for adding/editing/deleting users.
     if (!Utitlity::checkForDirector() && !Utitlity::checkForUserMainAdmin()) {
-        header("Location: loginSelection.php?reason=login_required");
+        header("Location: login.php?reason=login_required");
         exit;
     }
 

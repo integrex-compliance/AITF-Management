@@ -1490,7 +1490,7 @@
 
                     <div><a class="nav-link" href="aboutus.php">About Us</a></div>
                     <div><a class="nav-link" href="contactUS.php">Contact Us</a></div>
-                    <div><a class="nav-link login-btn" href="loginSelection.php"> Login</a></div>
+                    <div><a class="nav-link login-btn" href="login.php"> Login</a></div>
                 </div>
             </div>
     </nav>
@@ -1554,7 +1554,7 @@
                             </a>
                         </li>
                         <li>
-                            <a class="mobile-nav-item mobile-login-btn" href="loginSelection.php">
+                            <a class="mobile-nav-item mobile-login-btn" href="login.php">
                                 <span>Login</span>
                             </a>
                         </li>

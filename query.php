@@ -8,7 +8,7 @@ require_once __DIR__ . '/include/rbac_helper.php';
 date_default_timezone_set('Asia/Kolkata');
 
 if (!Utitlity::checkForDirector()) {
-    header("Location: loginSelection.php?reason=login_required");
+    header("Location: login.php?reason=login_required");
     exit;
 }
 
@@ -59,11 +59,11 @@ checkfortheDirector=(
 
 if utility::checkForDirector()
 
-header("Location: loginSelection.php?reason=invalid username of password");
+header("Location: login.php?reason=invalid username of password");
 fuction CheckStatusForUser (
 
 user value = boolean;
-user type= utility::header("Location: loginSelection.php?reason=invalid username of password");
+user type= utility::header("Location: login.php?reason=invalid username of password");
 if userStauts==={true}|| userrole==={true}
 )
 

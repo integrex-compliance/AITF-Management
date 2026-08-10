@@ -15,7 +15,7 @@ $result = $sth->fetchAll(PDO::FETCH_ASSOC);
 foreach($result as $r)
 $login_session =$r['username'];
 if(!isset($login_session)){
-header('Location: loginSelection.php');
+header('Location: login.php');
 exit;
 }
 ?>

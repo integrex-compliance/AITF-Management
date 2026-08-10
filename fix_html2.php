@@ -1,5 +1,5 @@
 <?php
-$file = 'loginSelection.php';
+$file = 'login.php';
 $content = file_get_contents($file);
 
 $brokenHTML = '                    <div class="captcha-note" style="margin-top: 24px;">OTP is valid for 10 minutes. After validation, you will be logged in automatically.</div>

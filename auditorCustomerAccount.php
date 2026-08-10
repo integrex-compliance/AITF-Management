@@ -20,7 +20,7 @@ date_default_timezone_set('Asia/Kolkata');
 
 // Enforce auditor role
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'Auditor' || empty($_SESSION['auditor_id'])) {
-    header('Location: loginSelection.php?reason=login_required');
+    header('Location: login.php?reason=login_required');
     exit;
 }
 

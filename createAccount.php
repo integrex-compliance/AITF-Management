@@ -10,7 +10,7 @@ date_default_timezone_set('Asia/Kolkata');
 function aitf_create_account_redirect($message)
 {
     $_SESSION['login_notice'] = $message;
-    header('Location: loginSelection.php?create_account=1');
+    header('Location: login.php?create_account=1');
     exit;
 }
 
@@ -83,7 +83,7 @@ if ($action === 'request_otp') {
             'requested_at' => time()
         );
         $_SESSION['login_notice'] = 'OTP sent to your registered email. It is valid for 10 minutes.';
-        header('Location: loginSelection.php?create_account=1&step=verify');
+        header('Location: login.php?create_account=1&step=verify');
         exit;
     } catch (Exception $e) {
         error_log('Create account OTP error: ' . $e->getMessage());
@@ -103,12 +103,12 @@ if ($action === 'complete_signup') {
     }
     if (!preg_match('/^[0-9]{6}$/', $otp)) {
         $_SESSION['login_notice'] = 'Please enter the 6 digit OTP.';
-        header('Location: loginSelection.php?create_account=1&step=verify');
+        header('Location: login.php?create_account=1&step=verify');
         exit;
     }
     if ($eid === '') {
         $_SESSION['login_notice'] = 'Please enter your employee ID.';
-        header('Location: loginSelection.php?create_account=1&step=verify');
+        header('Location: login.php?create_account=1&step=verify');
         exit;
     }
 
@@ -121,7 +121,7 @@ if ($action === 'complete_signup') {
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$user || strtoupper((string)$user['e_id']) !== $eid) {
             $_SESSION['login_notice'] = 'Employee ID does not match this email.';
-            header('Location: loginSelection.php?create_account=1&step=verify');
+            header('Location: login.php?create_account=1&step=verify');
             exit;
         }
 
@@ -136,7 +136,7 @@ if ($action === 'complete_signup') {
         $otpRow = $otpStmt->fetch(PDO::FETCH_ASSOC);
         if (!$otpRow || !password_verify($otp, $otpRow['otp_hash'])) {
             $_SESSION['login_notice'] = 'Invalid or expired OTP.';
-            header('Location: loginSelection.php?create_account=1&step=verify');
+            header('Location: login.php?create_account=1&step=verify');
             exit;
         }
 

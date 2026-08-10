@@ -234,7 +234,7 @@ if (!function_exists('aitf_enforce_active_user_account')) {
                 $_SESSION = array();
                 session_regenerate_id(true);
                 $_SESSION['login_notice'] = 'It seems there is a problem with your account. Contact AITF Director for more information.';
-                header('Location: loginSelection.php?reason=login_required');
+                header('Location: login.php?reason=login_required');
                 exit;
             }
         } catch (Exception $e) {

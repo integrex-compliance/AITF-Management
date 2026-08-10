@@ -1,17 +1,12 @@
 <?php
-
 require_once __DIR__ . '/include/session_helper.php';
 aitf_start_session();
-include_once 'dbConnect.php';
+include_once __DIR__ . '/dbConnect.php';
 date_default_timezone_set('Asia/Kolkata');
-include 'utility.php';
+include_once __DIR__ . '/utility.php';
 require_once __DIR__ . '/include/rbac_helper.php';
-require_once __DIR__ . '/include/auditor_portal_helper.php';
-
-$turnstileHelperPath = __DIR__ . '/include/turnstile_helper.php';
-if (file_exists($turnstileHelperPath)) {
-    require_once $turnstileHelperPath;
-}
+$auditorHelperPath = __DIR__ . '/include/auditor_portal_helper.php';
+if (file_exists($auditorHelperPath)) { require_once $auditorHelperPath; }
 
 function aitf_redirect_and_exit($location)
 {
@@ -22,234 +17,37 @@ function aitf_redirect_and_exit($location)
     exit;
 }
 
-
-if (isset($_POST['directorEmail']) && !empty($_POST['directorEmail']) && isset($_POST['directorPassword']) && !empty($_POST['directorPassword'])) {
-    $turnstileToken = trim($_POST['cf-turnstile-response'] ?? '');
-    $captchaError = '';
-    if (function_exists('aitf_verify_turnstile') && function_exists('aitf_is_turnstile_ready') && aitf_is_turnstile_ready() && !aitf_verify_turnstile($turnstileToken, $captchaError)) {
-        $_SESSION['login_error'] = true;
-        $_SESSION['login_notice'] = $captchaError !== '' ? $captchaError : 'Captcha verification failed. Please try again.';
-        aitf_redirect_and_exit("loginSelection.php?director=1");
-    }
-
-    if (aitf_verify_director_credentials($_POST['directorEmail'], $_POST['directorPassword'])) {
-        $_SESSION['username'] = 'Managing Director';
-        $_SESSION['id'] = 0;
-        $_SESSION['role'] = 'Director';
-        $_SESSION['abbrevation'] = 'MD';
-        aitf_mark_session_authenticated();
-        aitf_record_login_activity($db, array(
-            'user_id' => 0,
-            'user_name' => 'Managing Director',
-            'email_id' => $_POST['directorEmail'],
-            'role' => 'Director',
-            'e_id' => 'DIRECTOR'
-        ));
-        aitf_redirect_and_exit("directorSpace.php");
-    }
-
-    $_SESSION['login_error'] = true;
-    $_SESSION['login_notice'] = 'Invalid Director ID or password.';
-    aitf_redirect_and_exit("loginSelection.php?director=1");
-} else if (isset($_POST['useremail']) && !empty($_POST['useremail']) && isset($_POST['password']) && !empty($_POST['password'])) {
-    $turnstileToken = trim($_POST['cf-turnstile-response'] ?? '');
-    $captchaError = '';
-    if (function_exists('aitf_verify_turnstile') && function_exists('aitf_is_turnstile_ready') && aitf_is_turnstile_ready() && !aitf_verify_turnstile($turnstileToken, $captchaError)) {
-        $_SESSION['login_error'] = true;
-        $_SESSION['login_notice'] = $captchaError !== '' ? $captchaError : 'Captcha verification failed. Please try again.';
-        aitf_redirect_and_exit("loginSelection.php");
-    }
+if (isset($_POST["name"]) && !empty($_POST["name"]) && isset($_POST["cno"]) && !empty($_POST["cno"])) {
     try {
-        // Single query fetch instead of count + fetch
-        aitf_ensure_rbac_schema($db);
-        $userLogin = "SELECT user_id, user_name, abbreviation, email_id, password, role, e_id, account_status FROM user WHERE email_id = :useremail LIMIT 1";
-        $statement = $db->prepare($userLogin);
-        $statement->bindParam(':useremail', $_POST['useremail']);
-        $statement->execute();
-        $row = $statement->fetch();
-
-        if ($row && password_verify($_POST['password'], $row['password'])) {
-            if (($row['account_status'] ?? 'active') === 'inactive') {
-                $_SESSION['login_error'] = true;
-                $_SESSION['login_notice'] = 'It seems there is a problem with your account. Contact AITF Director for more information.';
-                aitf_redirect_and_exit("loginSelection.php");
-            }
-            
-            if (($row['account_status'] ?? 'active') !== 'active') {
-                $_SESSION['login_error'] = true;
-                $_SESSION['login_notice'] = 'Please create your account with OTP before login.';
-                aitf_redirect_and_exit("loginSelection.php?create_account=1");
-            }
-            $_SESSION['username'] = $row['user_name'];
-            $_SESSION['id'] = $row['user_id'];
-            $_SESSION['role'] = $row['role'];
-            $_SESSION['abbrevation'] = $row['abbreviation'];
-            aitf_mark_session_authenticated();
-            aitf_record_login_activity($db, array(
-                'user_id' => $row['user_id'],
-                'user_name' => $row['user_name'],
-                'email_id' => $row['email_id'],
-                'role' => $row['role'],
-                'e_id' => $row['e_id']
-            ));
-            if (aitf_is_director_role()) {
-                aitf_redirect_and_exit("directorSpace.php");
-            } elseif ($_SESSION['role'] === 'Auditor') {
-                $audStmt = $db->prepare("SELECT auditors_id FROM auditors WHERE login_email = :email OR (auditor_number = :eid AND auditor_number != '') LIMIT 1");
-                $audStmt->execute(array(':email' => $row['email_id'], ':eid' => $row['e_id']));
-                if ($audData = $audStmt->fetch(PDO::FETCH_ASSOC)) {
-                    $_SESSION['auditor_id'] = $audData['auditors_id'];
-                }
-                aitf_redirect_and_exit("auditorDashboard.php");
-            } elseif (Utitlity::checkForUserAdmin()) {
-                aitf_redirect_and_exit("homePage.php");
-            } elseif (Utitlity::checkForOfficeStaff()) {
-                aitf_redirect_and_exit("homePage.php");
-            } elseif (Utitlity::checkForUserConsultant()) {
-                aitf_redirect_and_exit("auditPlanning.php");
-            } elseif (Utitlity::checkForUserFinance()) {
-                aitf_redirect_and_exit("paymentPage.php");
-            } elseif (Utitlity::checkForUserMarketing()) {
-                aitf_redirect_and_exit("marketingPage.php");
-            } elseif (Utitlity::checkForMainAdmin()) {
-                aitf_redirect_and_exit("homePage.php");
-            } elseif (Utitlity::checkForStaff()) {
-                aitf_redirect_and_exit("homePage.php");
-            }
-
-            $_SESSION['login_error'] = true;
-            unset($_SESSION['username'], $_SESSION['id'], $_SESSION['role'], $_SESSION['abbrevation']);
-            $_SESSION['login_notice'] = 'This account does not have access to a portal. Please contact the administrator.';
-            aitf_redirect_and_exit("loginSelection.php");
-        } else {
-            // Invalid credentials: mark login error in session and redirect to clean login URL
-            $_SESSION['login_error'] = true;
-            $_SESSION['login_notice'] = 'Invalid username or password. Please try again.';
-            aitf_redirect_and_exit("loginSelection.php");
-        }
-    } catch (Exception $exc) {
-        // Log error instead of echoing to prevent AJAX parse errors
-        error_log('Login Exception: ' . $exc->getTraceAsString());
-        $_SESSION['login_error'] = true;
-        $_SESSION['login_notice'] = 'Login could not be completed. Please try again.';
-        aitf_redirect_and_exit("loginSelection.php");
-    }
-} else if (isset($_POST["clientemail"]) && !empty($_POST["clientemail"]) && isset($_POST["clientcid"]) && !empty($_POST["clientcid"])) {
-    $turnstileToken = trim($_POST['cf-turnstile-response'] ?? '');
-    $captchaError = '';
-    if (function_exists('aitf_verify_turnstile') && function_exists('aitf_is_turnstile_ready') && aitf_is_turnstile_ready() && !aitf_verify_turnstile($turnstileToken, $captchaError)) {
-        $_SESSION['login_error'] = true;
-        $_SESSION['login_notice'] = $captchaError !== '' ? $captchaError : 'Captcha verification failed. Please try again.';
-        aitf_redirect_and_exit("loginSelection.php");
-    }
-    try {
-        $input = preg_replace("/[^a-zA-Z]+/", "", $_POST["clientemail"]);
-        $input = strtoupper($input);
-        // Single fetch instead of count + fetch
-        $customer = "SELECT * FROM `customer_info` WHERE unique_id = :clientpassword LIMIT 1";
-        $statement = $db->prepare($customer);
-        $statement->bindParam(':clientpassword', $_POST['clientcid']);
-        $statement->execute();
-        $customerinfo = $statement->fetch();
-        //        echo $customerinfo['customer_name'];
-        if ($customerinfo) {
-            $input1 = preg_replace("/[^a-zA-Z]+/", "", $customerinfo['customer_name']);
-            $input1 = strtoupper($input1);
-
-            if (strpos($input1, $input) !== false) {
-                $_SESSION['username'] = $customerinfo['customer_name'];
-                $_SESSION['id'] = $customerinfo['id'];
-                $_SESSION['role'] = "client";
-                $_SESSION['uniqueid'] = $customerinfo['unique_id'];
-                aitf_mark_session_authenticated();
-                aitf_record_login_activity($db, array(
-                    'user_id' => $customerinfo['id'],
-                    'user_name' => $customerinfo['customer_name'],
-                    'email_id' => $customerinfo['email_id'] ?? '',
-                    'role' => 'client',
-                    'e_id' => $customerinfo['unique_id'] ?? ''
-                ));
-                aitf_redirect_and_exit("clientportal.php");
-            } else {
-                // Invalid client login: show generic error banner without query params
-                $_SESSION['login_error'] = true;
-                $_SESSION['login_notice'] = 'Invalid client name or password. Please try again.';
-                aitf_redirect_and_exit("loginSelection.php");
-            }
-        } else {
-            $_SESSION['login_error'] = true;
-            $_SESSION['login_notice'] = 'Invalid client name or password. Please try again.';
-            aitf_redirect_and_exit("loginSelection.php");
-        }
-    } catch (Exception $ex) {
-        // Log error instead of echoing to prevent AJAX parse errors
-        error_log('Client Login Exception: ' . $ex->getMessage());
-        $_SESSION['login_error'] = true;
-        $_SESSION['login_notice'] = 'Login could not be completed. Please try again.';
-        aitf_redirect_and_exit("loginSelection.php");
-    }
-} else if (isset($_POST["name"]) && !empty($_POST["name"]) && isset($_POST["cno"]) && !empty($_POST["cno"])) {
-    try {
-        // Normalize certificate number: remove all non-alphanumeric characters and uppercase
         $rawCertNo = trim($_POST['cno']);
         $normCertNo = strtoupper(preg_replace("/[^A-Za-z0-9]+/", "", $rawCertNo));
-
         $customerinfo = false;
-
-        // 1) Try to find client via CDC office-use table (latest certificate numbers)
-        $sqlCdcOffice = "SELECT ci.*
-                         FROM cdc_report_review_office_use cu
-                         INNER JOIN cdc_report_review crr ON crr.crr_id = cu.crr_id
-                         INNER JOIN customer_info ci ON ci.id = crr.customer_id
-                         WHERE UPPER(REPLACE(REPLACE(REPLACE(REPLACE(cu.certificate_no, ' ', ''), '/', ''), '-', ''), '.', '')) = :norm
-                         ORDER BY cu.id DESC
-                         LIMIT 1";
+        $sqlCdcOffice = "SELECT ci.* FROM cdc_report_review_office_use cu INNER JOIN cdc_report_review crr ON crr.crr_id = cu.crr_id INNER JOIN customer_info ci ON ci.id = crr.customer_id WHERE UPPER(REPLACE(REPLACE(REPLACE(REPLACE(cu.certificate_no, ' ', ''), '/', ''), '-', ''), '.', '')) = :norm ORDER BY cu.id DESC LIMIT 1";
         $statement = $db->prepare($sqlCdcOffice);
         $statement->bindParam(':norm', $normCertNo);
         $statement->execute();
         $customerinfo = $statement->fetch();
-
-        // 2) Then try certificate_print table (printed certificates)
         if (!$customerinfo) {
-            $sqlCertPrint = "SELECT ci.*
-                             FROM certificate_print cp
-                             INNER JOIN customer_info ci ON ci.id = cp.customer_id
-                             WHERE UPPER(REPLACE(REPLACE(REPLACE(REPLACE(cp.certificate_no, ' ', ''), '/', ''), '-', ''), '.', '')) = :norm
-                             ORDER BY cp.certificate_id DESC
-                             LIMIT 1";
+            $sqlCertPrint = "SELECT ci.* FROM certificate_print cp INNER JOIN customer_info ci ON ci.id = cp.customer_id WHERE UPPER(REPLACE(REPLACE(REPLACE(REPLACE(cp.certificate_no, ' ', ''), '/', ''), '-', ''), '.', '')) = :norm ORDER BY cp.certificate_id DESC LIMIT 1";
             $statement = $db->prepare($sqlCertPrint);
             $statement->bindParam(':norm', $normCertNo);
             $statement->execute();
             $customerinfo = $statement->fetch();
         }
-
-        // 3) Then try old CDC table field certificateNo
         if (!$customerinfo) {
-            $sqlCdcOld = "SELECT ci.*
-                          FROM cdc_report_review crr
-                          INNER JOIN customer_info ci ON ci.id = crr.customer_id
-                          WHERE UPPER(REPLACE(REPLACE(REPLACE(REPLACE(crr.certificateNo, ' ', ''), '/', ''), '-', ''), '.', '')) = :norm
-                          ORDER BY crr.crr_id DESC
-                          LIMIT 1";
+            $sqlCdcOld = "SELECT ci.* FROM cdc_report_review crr INNER JOIN customer_info ci ON ci.id = crr.customer_id WHERE UPPER(REPLACE(REPLACE(REPLACE(REPLACE(crr.certificateNo, ' ', ''), '/', ''), '-', ''), '.', '')) = :norm ORDER BY crr.crr_id DESC LIMIT 1";
             $statement = $db->prepare($sqlCdcOld);
             $statement->bindParam(':norm', $normCertNo);
             $statement->execute();
             $customerinfo = $statement->fetch();
         }
-
-        // 4) Fallback: try customer_info.certification_no (legacy storage directly on customer)
         if (!$customerinfo) {
-            $customer = "SELECT *
-                         FROM `customer_info`
-                         WHERE UPPER(REPLACE(REPLACE(REPLACE(REPLACE(certification_no, ' ', ''), '/', ''), '-', ''), '.', '')) = :norm
-                         ORDER BY id DESC
-                         LIMIT 1";
+            $customer = "SELECT * FROM `customer_info` WHERE UPPER(REPLACE(REPLACE(REPLACE(REPLACE(certification_no, ' ', ''), '/', ''), '-', ''), '.', '')) = :norm ORDER BY id DESC LIMIT 1";
             $statement = $db->prepare($customer);
             $statement->bindParam(':norm', $normCertNo);
             $statement->execute();
             $customerinfo = $statement->fetch();
         }
-
         if ($customerinfo && isset($customerinfo['id'])) {
             $_SESSION['username'] = "External User";
             $_SESSION['id'] = $customerinfo['id'];
@@ -257,7 +55,6 @@ if (isset($_POST['directorEmail']) && !empty($_POST['directorEmail']) && isset($
             aitf_mark_session_authenticated();
             aitf_redirect_and_exit("certifiedClient.php");
         } else {
-            // No client found for this certificate number at all
             $_SESSION['validation_error'] = "invalid_client_warning";
             aitf_redirect_and_exit("validation.php");
         }
@@ -265,49 +62,722 @@ if (isset($_POST['directorEmail']) && !empty($_POST['directorEmail']) && isset($
         $_SESSION['validation_error'] = "invalid_client_warning";
         aitf_redirect_and_exit("validation.php");
     }
-} else if (isset($_POST['auditorEmail']) && !empty($_POST['auditorEmail']) && isset($_POST['auditorKey']) && !empty($_POST['auditorKey'])) {
-    $turnstileToken = trim($_POST['cf-turnstile-response'] ?? '');
-    $captchaError = '';
-    if (function_exists('aitf_verify_turnstile') && function_exists('aitf_is_turnstile_ready') && aitf_is_turnstile_ready() && !aitf_verify_turnstile($turnstileToken, $captchaError)) {
-        $_SESSION['login_error'] = true;
-        $_SESSION['login_notice'] = $captchaError !== '' ? $captchaError : 'Captcha verification failed. Please try again.';
-        aitf_redirect_and_exit("loginSelection.php?auditor=1");
-    }
-    try {
-        aitf_ensure_auditor_portal_schema($db);
-        $auditorLogin = "SELECT * FROM auditors WHERE login_email = :email AND login_enabled = 1 LIMIT 1";
-        $statement = $db->prepare($auditorLogin);
-        $statement->bindParam(':email', $_POST['auditorEmail']);
-        $statement->execute();
-        $row = $statement->fetch();
-
-        if ($row && password_verify($_POST['auditorKey'], $row['login_key_hash'])) {
-            $_SESSION['username'] = $row['auditor_name'];
-            $_SESSION['id'] = $row['auditors_id'];
-            $_SESSION['role'] = 'Auditor';
-            $_SESSION['auditor_id'] = $row['auditors_id'];
-            $_SESSION['abbrevation'] = $row['abbrevation'] ?? '';
-            aitf_mark_session_authenticated();
-            aitf_record_login_activity($db, array(
-                'user_id' => $row['auditors_id'],
-                'user_name' => $row['auditor_name'],
-                'email_id' => $row['login_email'],
-                'role' => 'Auditor',
-                'e_id' => 'AUDITOR'
-            ));
-            aitf_redirect_and_exit("auditorDashboard.php");
-        } else {
-            $_SESSION['login_error'] = true;
-            $_SESSION['login_notice'] = 'Invalid email or auditor key. Please try again.';
-            aitf_redirect_and_exit("loginSelection.php?auditor=1");
-        }
-    } catch (Exception $exc) {
-        error_log('Auditor Login Exception: ' . $exc->getMessage());
-        $_SESSION['login_error'] = true;
-        $_SESSION['login_notice'] = 'Login could not be completed. Please try again.';
-        aitf_redirect_and_exit("loginSelection.php?auditor=1");
-    }
-} else {
-    $_SESSION['login_notice'] = 'Please use the login form to continue.';
-    aitf_redirect_and_exit("loginSelection.php");
 }
+
+// Setup Rate limit table
+$db->exec("CREATE TABLE IF NOT EXISTS login_rate_limits (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    account_identifier VARCHAR(255) NOT NULL,
+    role VARCHAR(50) NOT NULL,
+    attempts INT DEFAULT 0,
+    lockout_until DATETIME DEFAULT NULL,
+    UNIQUE KEY uniq_acc_role (account_identifier, role)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8");
+
+function get_rate_limit($db, $identifier, $role) {
+    $stmt = $db->prepare("SELECT * FROM login_rate_limits WHERE account_identifier = :id AND role = :role");
+    $stmt->execute([':id' => strtolower($identifier), ':role' => $role]);
+    return $stmt->fetch(PDO::FETCH_ASSOC);
+}
+
+function record_failed_attempt($db, $identifier, $role) {
+    $rec = get_rate_limit($db, $identifier, $role);
+    if ($rec) {
+        $attempts = $rec['attempts'] + 1;
+        $lockout = null;
+        if ($attempts == 5) {
+            $lockout = date('Y-m-d H:i:s', time() + 15 * 60);
+        } elseif ($attempts >= 8) {
+            $lockout = date('Y-m-d H:i:s', time() + 24 * 3600);
+        }
+        if ($lockout) {
+            $stmt = $db->prepare("UPDATE login_rate_limits SET attempts = :attempts, lockout_until = :lockout WHERE id = :id");
+            $stmt->execute([':attempts' => $attempts, ':lockout' => $lockout, ':id' => $rec['id']]);
+        } else {
+            $stmt = $db->prepare("UPDATE login_rate_limits SET attempts = :attempts WHERE id = :id");
+            $stmt->execute([':attempts' => $attempts, ':id' => $rec['id']]);
+        }
+        return ['attempts' => $attempts, 'lockout' => $lockout];
+    } else {
+        $stmt = $db->prepare("INSERT INTO login_rate_limits (account_identifier, role, attempts) VALUES (:id, :role, 1)");
+        $stmt->execute([':id' => strtolower($identifier), ':role' => $role]);
+        return ['attempts' => 1, 'lockout' => null];
+    }
+}
+
+function reset_failed_attempt($db, $identifier, $role) {
+    $stmt = $db->prepare("DELETE FROM login_rate_limits WHERE account_identifier = :id AND role = :role");
+    $stmt->execute([':id' => strtolower($identifier), ':role' => $role]);
+}
+
+function send_lockout_email($db, $identifier, $role, $durationStr) {
+    $email = ''; $name = 'User';
+    if ($role === 'Director') {
+        $email = trim((string)aitf_env('Director_id', aitf_env('DIRECTOR_ID', '')));
+        $name = 'Managing Director';
+    } elseif ($role === 'Employee') {
+        $stmt = $db->prepare("SELECT email_id, user_name FROM user WHERE LOWER(email_id) = :id OR e_id = :id_upper LIMIT 1");
+        $stmt->execute([':id' => strtolower($identifier), ':id_upper' => strtoupper($identifier)]);
+        if ($user = $stmt->fetch(PDO::FETCH_ASSOC)) { $email = $user['email_id']; $name = $user['user_name']; }
+    } elseif ($role === 'Auditor') {
+        $stmt = $db->prepare("SELECT login_email, auditor_name FROM auditors WHERE LOWER(login_email) = :id AND login_enabled = 1 LIMIT 1");
+        $stmt->execute([':id' => strtolower($identifier)]);
+        if ($aud = $stmt->fetch(PDO::FETCH_ASSOC)) { $email = $aud['login_email']; $name = $aud['auditor_name']; }
+    } elseif ($role === 'Client') {
+        $stmt = $db->prepare("SELECT email_id, customer_name FROM customer_info WHERE LOWER(email_id) = :id OR unique_id = :id OR LOWER(customer_name) = :id LIMIT 1");
+        $stmt->execute([':id' => strtolower($identifier)]);
+        if ($cli = $stmt->fetch(PDO::FETCH_ASSOC)) { $email = $cli['email_id']; $name = $cli['customer_name']; }
+    }
+    if ($email && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $subject = 'Security Alert: AITF Account Locked';
+        $body = "<p>Dear " . aitf_rbac_escape($name) . ",</p>"
+              . "<p>Your AITF account has been temporarily locked for <strong>$durationStr</strong> due to multiple incorrect login attempts.</p>"
+              . "<p>If this was not you, please contact the administrator immediately.</p>"
+              . "<p>Regards,<br>AITF Management Certification Limited</p>";
+        try { aitf_send_html_mail($email, $subject, $body); } catch (Exception $e) {}
+    }
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    header('Content-Type: application/json');
+    $action = $_POST['action'];
+    
+    if ($action === 'check_account') {
+        $identifier = trim($_POST['identifier'] ?? '');
+        if (empty($identifier)) {
+            echo json_encode(['success' => false, 'message' => 'Please enter an email or ID.']);
+            exit;
+        }
+        
+        $foundRole = null;
+        
+        // 1. Director
+        $directorEmail = trim((string)aitf_env('Director_id', aitf_env('DIRECTOR_ID', '')));
+        if ($directorEmail !== '' && strtolower($directorEmail) === strtolower($identifier)) {
+            $foundRole = 'Director';
+        }
+        
+        // 2. User
+        if (!$foundRole) {
+            aitf_ensure_rbac_schema($db);
+            $stmt = $db->prepare("SELECT * FROM user WHERE LOWER(email_id) = :id OR e_id = :id_upper LIMIT 1");
+            $stmt->execute([':id' => strtolower($identifier), ':id_upper' => strtoupper($identifier)]);
+            if ($user = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $foundRole = 'Employee';
+            }
+        }
+        
+        // 3. Auditor
+        if (!$foundRole) {
+            if (function_exists('aitf_ensure_auditor_portal_schema')) {
+                aitf_ensure_auditor_portal_schema($db);
+            }
+            $stmt = $db->prepare("SELECT * FROM auditors WHERE LOWER(login_email) = :id AND login_enabled = 1 LIMIT 1");
+            $stmt->execute([':id' => strtolower($identifier)]);
+            if ($auditor = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $foundRole = 'Auditor';
+            }
+        }
+        
+        // 4. Client
+        if (!$foundRole) {
+            $stmt = $db->prepare("SELECT * FROM customer_info WHERE LOWER(email_id) = :id OR unique_id = :id OR LOWER(customer_name) = :id LIMIT 1");
+            $stmt->execute([':id' => strtolower($identifier)]);
+            if ($client = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $foundRole = 'Client';
+            }
+        }
+        
+        if ($foundRole) {
+            echo json_encode(['success' => true, 'role' => $foundRole]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'We cannot find an account with that email/ID.']);
+        }
+        exit;
+    }
+    
+    if ($action === 'login') {
+        $identifier = trim($_POST['identifier'] ?? '');
+        $password = $_POST['password'] ?? '';
+        $role = $_POST['role'] ?? '';
+        
+        if (empty($identifier) || empty($password)) {
+            echo json_encode(['success' => false, 'message' => 'Missing credentials.']);
+            exit;
+        }
+        
+        // Check Rate limit
+        $rl = get_rate_limit($db, $identifier, $role);
+        if ($rl && $rl['lockout_until']) {
+            $lockoutTime = strtotime($rl['lockout_until']);
+            if (time() < $lockoutTime) {
+                $remaining = ceil(($lockoutTime - time()) / 60);
+                echo json_encode(['success' => false, 'message' => "Account locked due to too many failed attempts. Try again in $remaining minutes.", 'lockout_until' => $lockoutTime]);
+                exit;
+            } else {
+                // lockout expired. Clear lockout_until so it doesn't block, but do NOT delete row to keep attempts
+                $stmt = $db->prepare("UPDATE login_rate_limits SET lockout_until = NULL WHERE id = :id");
+                $stmt->execute([':id' => $rl['id']]);
+                $rl['lockout_until'] = null;
+            }
+        }
+        
+        $loginSuccess = false;
+        $redirectUrl = 'homePage.php';
+        
+        if ($role === 'Director') {
+            if (aitf_verify_director_credentials($identifier, $password)) {
+                $_SESSION['username'] = 'Managing Director';
+                $_SESSION['id'] = 0;
+                $_SESSION['role'] = 'Director';
+                $_SESSION['abbrevation'] = 'MD';
+                aitf_mark_session_authenticated();
+                aitf_record_login_activity($db, ['user_id'=>0, 'user_name'=>'Managing Director', 'email_id'=>$identifier, 'role'=>'Director', 'e_id'=>'DIRECTOR']);
+                $loginSuccess = true;
+                $redirectUrl = 'directorSpace.php';
+            }
+        } elseif ($role === 'Employee') {
+            $stmt = $db->prepare("SELECT * FROM user WHERE LOWER(email_id) = :id OR e_id = :id_upper LIMIT 1");
+            $stmt->execute([':id' => strtolower($identifier), ':id_upper' => strtoupper($identifier)]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($row && password_verify($password, $row['password'])) {
+                if (($row['account_status'] ?? 'active') === 'inactive') {
+                    echo json_encode(['success' => false, 'message' => 'Your account is inactive. Contact AITF Director.']);
+                    exit;
+                }
+                if (($row['account_status'] ?? 'active') !== 'active') {
+                    echo json_encode(['success' => false, 'message' => 'Please complete account creation first.']);
+                    exit;
+                }
+                $_SESSION['username'] = $row['user_name'];
+                $_SESSION['id'] = $row['user_id'];
+                $_SESSION['role'] = $row['role'];
+                $_SESSION['abbrevation'] = $row['abbreviation'];
+                aitf_mark_session_authenticated();
+                aitf_record_login_activity($db, ['user_id'=>$row['user_id'], 'user_name'=>$row['user_name'], 'email_id'=>$row['email_id'], 'role'=>$row['role'], 'e_id'=>$row['e_id']]);
+                
+                if (aitf_is_director_role()) { $redirectUrl = 'directorSpace.php'; }
+                elseif ($_SESSION['role'] === 'Auditor') {
+                    $audStmt = $db->prepare("SELECT auditors_id FROM auditors WHERE login_email = :email OR (auditor_number = :eid AND auditor_number != '') LIMIT 1");
+                    $audStmt->execute([':email' => $row['email_id'], ':eid' => $row['e_id']]);
+                    if ($audData = $audStmt->fetch(PDO::FETCH_ASSOC)) { $_SESSION['auditor_id'] = $audData['auditors_id']; }
+                    $redirectUrl = 'auditorDashboard.php';
+                }
+                elseif (Utitlity::checkForUserConsultant()) { $redirectUrl = 'auditPlanning.php'; }
+                elseif (Utitlity::checkForUserFinance()) { $redirectUrl = 'paymentPage.php'; }
+                elseif (Utitlity::checkForUserMarketing()) { $redirectUrl = 'marketingPage.php'; }
+                else { $redirectUrl = 'homePage.php'; }
+                
+                $loginSuccess = true;
+            }
+        } elseif ($role === 'Auditor') {
+            $stmt = $db->prepare("SELECT * FROM auditors WHERE LOWER(login_email) = :id AND login_enabled = 1 LIMIT 1");
+            $stmt->execute([':id' => strtolower($identifier)]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($row && password_verify($password, $row['login_key_hash'])) {
+                $_SESSION['username'] = $row['auditor_name'];
+                $_SESSION['id'] = $row['auditors_id'];
+                $_SESSION['role'] = 'Auditor';
+                $_SESSION['auditor_id'] = $row['auditors_id'];
+                $_SESSION['abbrevation'] = $row['abbrevation'] ?? '';
+                aitf_mark_session_authenticated();
+                aitf_record_login_activity($db, ['user_id'=>$row['auditors_id'], 'user_name'=>$row['auditor_name'], 'email_id'=>$row['login_email'], 'role'=>'Auditor', 'e_id'=>'AUDITOR']);
+                $loginSuccess = true;
+                $redirectUrl = 'auditorDashboard.php';
+            }
+        } elseif ($role === 'Client') {
+            $stmt = $db->prepare("SELECT * FROM customer_info WHERE unique_id = :pass LIMIT 1");
+            $stmt->execute([':pass' => $password]);
+            $customerinfo = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($customerinfo) {
+                $input = strtoupper(preg_replace("/[^a-zA-Z]+/", "", $identifier));
+                $cname = strtoupper(preg_replace("/[^a-zA-Z]+/", "", $customerinfo['customer_name']));
+                
+                if (strpos($cname, $input) !== false || strtolower($identifier) === strtolower($customerinfo['email_id'] ?? '')) {
+                    $_SESSION['username'] = $customerinfo['customer_name'];
+                    $_SESSION['id'] = $customerinfo['id'];
+                    $_SESSION['role'] = "client";
+                    $_SESSION['uniqueid'] = $customerinfo['unique_id'];
+                    aitf_mark_session_authenticated();
+                    aitf_record_login_activity($db, ['user_id'=>$customerinfo['id'], 'user_name'=>$customerinfo['customer_name'], 'email_id'=>$customerinfo['email_id']??'', 'role'=>'client', 'e_id'=>$customerinfo['unique_id']??'']);
+                    $loginSuccess = true;
+                    $redirectUrl = 'clientportal.php';
+                }
+            }
+        }
+        
+        if ($loginSuccess) {
+            reset_failed_attempt($db, $identifier, $role);
+            echo json_encode(['success' => true, 'redirect' => $redirectUrl]);
+        } else {
+            $rlInfo = record_failed_attempt($db, $identifier, $role);
+            $msg = 'Invalid password.';
+            $lockoutTime = null;
+            $sendEmail = false; $emailDuration = '';
+            
+            if ($rlInfo['attempts'] == 5) {
+                $msg = 'Account locked due to 5 failed attempts. Try again in 15 minutes.';
+                $lockoutTime = strtotime($rlInfo['lockout']);
+                $sendEmail = true; $emailDuration = '15 minutes';
+            } elseif ($rlInfo['attempts'] == 7) {
+                $msg = 'Invalid password. Only one attempt left, after this account will be locked for 24 hrs.';
+            } elseif ($rlInfo['attempts'] >= 8) {
+                $msg = 'Account locked for 24 hours due to repeated failed attempts.';
+                $lockoutTime = strtotime($rlInfo['lockout']);
+                $sendEmail = true; $emailDuration = '24 hours';
+            } else {
+                if ($rlInfo['attempts'] < 5) {
+                    $left = 5 - $rlInfo['attempts'];
+                    $msg .= " $left attempts remaining before temporary lock.";
+                }
+            }
+            if ($sendEmail) { send_lockout_email($db, $identifier, $role, $emailDuration); }
+            echo json_encode(['success' => false, 'message' => $msg, 'lockout_until' => $lockoutTime]);
+        }
+        exit;
+    }
+    
+    if ($action === 'create_request_otp') {
+        $email = strtolower(trim($_POST['email'] ?? ''));
+        $password = $_POST['password'] ?? '';
+        $confirmPassword = $_POST['confirm_password'] ?? '';
+        
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) { echo json_encode(['success'=>false, 'message'=>'Invalid email address.']); exit; }
+        if (strlen($password) < 8) { echo json_encode(['success'=>false, 'message'=>'Password must be at least 8 characters.']); exit; }
+        if (!preg_match('/[A-Z]/', $password)) { echo json_encode(['success'=>false, 'message'=>'Password must contain uppercase letter.']); exit; }
+        if (!preg_match('/[^a-zA-Z0-9]/', $password)) { echo json_encode(['success'=>false, 'message'=>'Password must contain special character.']); exit; }
+        if ($password !== $confirmPassword) { echo json_encode(['success'=>false, 'message'=>'Passwords do not match.']); exit; }
+        
+        aitf_ensure_rbac_schema($db);
+        $stmt = $db->prepare("SELECT * FROM user WHERE LOWER(email_id) = :email AND is_deleted = '0' LIMIT 1");
+        $stmt->execute([':email' => $email]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$user || empty($user['e_id'])) {
+            echo json_encode(['success'=>false, 'message'=>'Account not allowed or not found.']); exit;
+        }
+        if (($user['account_status'] ?? 'active') === 'active') {
+            echo json_encode(['success'=>false, 'message'=>'Account already active. Please sign in.']); exit;
+        }
+        
+        $otp = (string)random_int(100000, 999999);
+        $otpHash = password_hash($otp, PASSWORD_DEFAULT);
+        $expiresAt = date('Y-m-d H:i:s', time() + 600);
+        
+        $db->prepare("UPDATE employee_signup_otps SET consumed_at = NOW() WHERE user_id = :user_id AND consumed_at IS NULL")->execute([':user_id' => $user['user_id']]);
+        $db->prepare("INSERT INTO employee_signup_otps (user_id, email_id, otp_hash, expires_at) VALUES (:user_id, :email_id, :otp_hash, :expires_at)")
+           ->execute([':user_id' => $user['user_id'], ':email_id' => $user['email_id'], ':otp_hash' => $otpHash, ':expires_at' => $expiresAt]);
+        
+        try { aitf_send_employee_otp_mail($user, $otp); } catch(Exception $e) {}
+        
+        $_SESSION['amazon_signup'] = [
+            'user_id' => (int)$user['user_id'],
+            'email_id' => $user['email_id'],
+            'password_hash' => password_hash($password, PASSWORD_DEFAULT)
+        ];
+        
+        echo json_encode(['success'=>true]);
+        exit;
+    }
+    
+    if ($action === 'create_complete') {
+        $signup = $_SESSION['amazon_signup'] ?? [];
+        $userId = (int)($signup['user_id'] ?? 0);
+        $email = $signup['email_id'] ?? '';
+        $otp = trim($_POST['otp'] ?? '');
+        $eid = strtoupper(trim($_POST['eid'] ?? ''));
+        
+        if (!$userId || !$email) { echo json_encode(['success'=>false, 'message'=>'Session expired. Please start over.']); exit; }
+        
+        $stmt = $db->prepare("SELECT * FROM user WHERE user_id = :user_id AND LOWER(email_id) = :email LIMIT 1");
+        $stmt->execute([':user_id' => $userId, ':email' => strtolower($email)]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$user || strtoupper((string)$user['e_id']) !== $eid) {
+            echo json_encode(['success'=>false, 'message'=>'Employee ID does not match.']); exit;
+        }
+        
+        $otpStmt = $db->prepare("SELECT otp_id, otp_hash FROM employee_signup_otps WHERE user_id = :user_id AND consumed_at IS NULL AND expires_at >= NOW() ORDER BY otp_id DESC LIMIT 1");
+        $otpStmt->execute([':user_id' => $userId]);
+        $otpRow = $otpStmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$otpRow || !password_verify($otp, $otpRow['otp_hash'])) {
+            echo json_encode(['success'=>false, 'message'=>'Invalid or expired OTP.']); exit;
+        }
+        
+        $db->prepare("UPDATE user SET password = :password, account_status = 'active', password_created_at = NOW() WHERE user_id = :user_id")
+           ->execute([':password' => $signup['password_hash'], ':user_id' => $userId]);
+        $db->prepare("UPDATE employee_signup_otps SET consumed_at = NOW() WHERE otp_id = :otp_id")
+           ->execute([':otp_id' => $otpRow['otp_id']]);
+           
+        unset($_SESSION['amazon_signup']);
+        
+        echo json_encode(['success'=>true]);
+        exit;
+    }
+    
+    exit;
+}
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <?php include './headSource.php'; ?>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AITF Sign In</title>
+    <style>
+        body.aitf-login-page {
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(-45deg, #0f2027, #203a43, #2c5364);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            display: flex;
+            flex-direction: column;
+        }
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .login-page-wrapper {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            padding: 40px 0;
+            margin-top: 133px; /* 48px + 85px for nav */
+        }
+        .amazon-login-container { width: 100%; max-width: 350px; padding: 20px; margin: 0 auto; }
+        .amazon-logo { text-align: center; margin-bottom: 20px; }
+        .amazon-logo h1 { margin: 0; font-size: 28px; color: #ffffff; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+        .amazon-box { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 25px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 15px; }
+        .amazon-box h2 { font-size: 28px; font-weight: 500; margin: 0 0 15px; color: #0f172a; }
+        .amazon-login-container label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px; color: #1e293b; }
+        .amazon-login-container input[type="text"], .amazon-login-container input[type="email"], .amazon-login-container input[type="password"] { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; font-size: 14px; box-shadow: 0 1px 2px rgba(0,0,0,.05) inset; outline: none; }
+        .amazon-login-container input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.2); }
+        .amazon-btn { width: 100%; background: #3b82f6; border: 1px solid #2563eb; border-radius: 8px; padding: 10px; font-size: 14px; cursor: pointer; text-align: center; display: inline-block; font-weight: 500; color: #fff; text-decoration: none; box-sizing: border-box; transition: background 0.2s; }
+        .amazon-btn:hover { background: #2563eb; }
+        .amazon-btn-secondary { background: #fff; border: 1px solid #cbd5e1; color: #0f172a; }
+        .amazon-btn-secondary:hover { background: #f1f5f9; }
+        .amazon-alert { padding: 15px; margin-bottom: 20px; border: 1px solid transparent; border-radius: 4px; font-size: 13px; }
+        .amazon-alert-error { color: #b91c1c; background-color: #fef2f2; border-color: #f87171; }
+        .amazon-alert-success { color: #15803d; background-color: #f0fdf4; border-color: #86efac; }
+        .amazon-divider { display: flex; align-items: center; text-align: center; color: #64748b; font-size: 12px; margin-bottom: 15px; }
+        .amazon-divider::before, .amazon-divider::after { content: ''; flex: 1; border-bottom: 1px solid #e2e8f0; }
+        .amazon-divider:not(:empty)::before { margin-right: .25em; }
+        .amazon-divider:not(:empty)::after { margin-left: .25em; }
+        .amazon-hidden { display: none !important; }
+        .amazon-text-small { font-size: 12px; color: #475569; margin-top: 15px; line-height: 1.5; }
+        .amazon-text-small a { color: #2563eb; text-decoration: none; }
+        .amazon-text-small a:hover { color: #1d4ed8; text-decoration: underline; }
+        .amazon-selected-identifier { display: flex; align-items: center; justify-content: space-between; font-size: 14px; margin-bottom: 15px; }
+        .amazon-selected-identifier span { font-weight: bold; }
+        .amazon-selected-identifier a { font-size: 13px; color: #2563eb; text-decoration: none; cursor: pointer; }
+        .amazon-selected-identifier a:hover { text-decoration: underline; color: #1d4ed8; }
+        .amazon-spinner { border: 3px solid rgba(255,255,255,0.3); border-top: 3px solid #fff; border-radius: 50%; width: 14px; height: 14px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 5px; display: none; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="aitf-login-page" id="home" data-spy="scroll" data-target="#navbar-wd" data-offset="98">
+    <?php include './headerSource.php'; ?>
+    
+<div class="login-page-wrapper">
+<div class="amazon-login-container">
+    <div class="amazon-logo">
+        <h1 style="display: flex; align-items: center; justify-content: center; gap: 10px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            AITF SIGN-IN
+        </h1>
+    </div>
+    <?php
+    $showError = false;
+    $errorMsg = '';
+    if (isset($_GET['reason'])) {
+        $showError = true;
+        if ($_GET['reason'] === 'login_required') $errorMsg = 'Please sign in to access this page.';
+        else if ($_GET['reason'] === 'invalid_url') $errorMsg = 'Invalid URL or session expired.';
+        else $errorMsg = 'There was a problem. Please sign in again.';
+    }
+?>
+<?php if ($showError): ?>
+    <div class="amazon-alert amazon-alert-error" style="margin-bottom: 20px;">
+        <strong>Notice</strong><br>
+        <?php echo htmlspecialchars($errorMsg); ?>
+    </div>
+<?php endif; ?>
+
+    <div id="error-box" class="amazon-alert amazon-alert-error amazon-hidden">
+        <strong id="error-title">There was a problem</strong><br>
+        <span id="error-message"></span>
+    </div>
+
+    <!-- Sign In Panel 1: Identifier -->
+    <div id="panel-signin-1" class="amazon-box">
+        <h2>Sign in</h2>
+        <form id="form-check" onsubmit="event.preventDefault(); checkAccount();">
+            <label for="identifier">Email, Customer Name, or EID</label>
+            <input type="text" id="identifier" name="identifier" required autofocus>
+            <button type="submit" class="amazon-btn" id="btn-continue">
+                <span class="amazon-spinner" id="spin-continue"></span> Continue
+            </button>
+        </form>
+        <div class="amazon-text-small">
+            By continuing, you agree to AITF's <a href="#">Conditions of Use</a> and <a href="#">Privacy Notice</a>.
+        </div>
+    </div>
+
+    <!-- Sign In Panel 2: Password -->
+    <div id="panel-signin-2" class="amazon-box amazon-hidden">
+        <h2>Sign in</h2>
+        <div class="amazon-selected-identifier">
+            <span id="display-identifier"></span>
+            <a onclick="showPanel('panel-signin-1');">Change</a>
+        </div>
+        <form id="form-login" onsubmit="event.preventDefault(); submitLogin();">
+            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 5px;">
+                <label for="password" style="margin-bottom: 0;">Password</label>
+                <a href="#" style="font-size: 13px; color: #2563eb; text-decoration: none;">Forgot your password?</a>
+            </div>
+            <input type="password" id="password" name="password" required autofocus>
+            <button type="submit" class="amazon-btn" id="btn-signin">
+                <span class="amazon-spinner" id="spin-signin"></span> Sign in
+            </button>
+        </form>
+    </div>
+
+    <!-- Create Account Divider -->
+    <div id="create-divider" class="amazon-divider">New to AITF?</div>
+    <button id="btn-create-nav" class="amazon-btn amazon-btn-secondary" onclick="showPanel('panel-create-1');">Create your AITF account</button>
+
+    <!-- Create Account Panel 1: Details -->
+    <div id="panel-create-1" class="amazon-box amazon-hidden">
+        <h2>Create account</h2>
+        <form id="form-create-1" onsubmit="event.preventDefault(); requestOtp();">
+            <label for="create_email">Email</label>
+            <input type="email" id="create_email" required>
+            
+            <label for="create_password">Password</label>
+            <input type="password" id="create_password" placeholder="At least 8 characters" required>
+            <div style="font-size: 11px; color: #475569; margin-top: -10px; margin-bottom: 15px;">
+                <i style="color: #3b82f6;">ℹ</i> Passwords must be at least 8 characters, contain one uppercase letter and one special character.
+            </div>
+
+            <label for="create_confirm">Re-enter password</label>
+            <input type="password" id="create_confirm" required>
+            
+            <button type="submit" class="amazon-btn" id="btn-create-1">
+                <span class="amazon-spinner" id="spin-create-1"></span> Continue
+            </button>
+        </form>
+        <div class="amazon-text-small" style="margin-top: 20px;">
+            Already have an account? <a href="#" onclick="showPanel('panel-signin-1'); return false;">Sign in ▸</a>
+        </div>
+    </div>
+
+    <!-- Create Account Panel 2: OTP -->
+    <div id="panel-create-2" class="amazon-box amazon-hidden">
+        <h2>Verify email address</h2>
+        <div class="amazon-text-small" style="margin-bottom: 15px; margin-top: 0;">
+            To verify your email, we've sent a One Time Password (OTP) to <strong id="verify-email-display"></strong>.
+        </div>
+        <form id="form-create-2" onsubmit="event.preventDefault(); completeCreate();">
+            <label for="create_otp">Enter OTP</label>
+            <input type="text" id="create_otp" required>
+            
+            <label for="create_eid">Employee ID (EID)</label>
+            <input type="text" id="create_eid" required>
+            
+            <button type="submit" class="amazon-btn" id="btn-create-2">
+                <span class="amazon-spinner" id="spin-create-2"></span> Create your AITF account
+            </button>
+        </form>
+    </div>
+
+</div>
+</div>
+
+<script>
+let currentRole = '';
+let currentIdentifier = '';
+let lockoutTimer = null;
+
+function showError(msg, type = 'error', lockoutUntil = null) {
+    if (lockoutTimer) { clearInterval(lockoutTimer); lockoutTimer = null; }
+    const box = document.getElementById('error-box');
+    box.classList.remove('amazon-hidden', 'amazon-alert-error', 'amazon-alert-success');
+    box.classList.add(type === 'error' ? 'amazon-alert-error' : 'amazon-alert-success');
+    document.getElementById('error-title').innerText = type === 'error' ? 'There was a problem' : 'Success';
+    
+    if (lockoutUntil) {
+        const updateTimer = () => {
+            const now = Math.floor(Date.now() / 1000);
+            const diff = lockoutUntil - now;
+            if (diff <= 0) {
+                clearInterval(lockoutTimer);
+                document.getElementById('error-message').innerText = "Account lock expired. You can try again.";
+            } else {
+                const h = Math.floor(diff / 3600);
+                const m = Math.floor((diff % 3600) / 60);
+                const s = diff % 60;
+                let tStr = h > 0 ? h + "h " + m + "m " + s + "s" : m + "m " + s + "s";
+                document.getElementById('error-message').innerText = "Account locked due to too many failed attempts. Try again in " + tStr + ".";
+            }
+        };
+        updateTimer();
+        lockoutTimer = setInterval(updateTimer, 1000);
+    } else {
+        document.getElementById('error-message').innerText = msg;
+    }
+}
+
+function hideError() {
+    document.getElementById('error-box').classList.add('amazon-hidden');
+}
+
+function showPanel(panelId) {
+    hideError();
+    document.querySelectorAll('.amazon-box').forEach(el => el.classList.add('amazon-hidden'));
+    document.getElementById(panelId).classList.remove('amazon-hidden');
+    
+    if (panelId === 'panel-signin-1' || panelId === 'panel-signin-2') {
+        document.getElementById('create-divider').classList.remove('amazon-hidden');
+        document.getElementById('btn-create-nav').classList.remove('amazon-hidden');
+    } else {
+        document.getElementById('create-divider').classList.add('amazon-hidden');
+        document.getElementById('btn-create-nav').classList.add('amazon-hidden');
+    }
+}
+
+function checkAccount() {
+    const identifier = document.getElementById('identifier').value.trim();
+    if (!identifier) return;
+    hideError();
+    document.getElementById('spin-continue').style.display = 'inline-block';
+    document.getElementById('btn-continue').disabled = true;
+
+    fetch('login.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'action=check_account&identifier=' + encodeURIComponent(identifier)
+    })
+    .then(res => res.json())
+    .then(data => {
+        document.getElementById('spin-continue').style.display = 'none';
+        document.getElementById('btn-continue').disabled = false;
+        if (data.success) {
+            currentRole = data.role;
+            currentIdentifier = identifier;
+            document.getElementById('display-identifier').innerText = identifier;
+            showPanel('panel-signin-2');
+            document.getElementById('password').focus();
+        } else {
+            showError(data.message);
+        }
+    }).catch(e => {
+        document.getElementById('spin-continue').style.display = 'none';
+        document.getElementById('btn-continue').disabled = false;
+        showError('Network error. Please try again.');
+    });
+}
+
+function submitLogin() {
+    const password = document.getElementById('password').value;
+    if (!password) return;
+    hideError();
+    document.getElementById('spin-signin').style.display = 'inline-block';
+    document.getElementById('btn-signin').disabled = true;
+
+    fetch('login.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'action=login&identifier=' + encodeURIComponent(currentIdentifier) + '&role=' + encodeURIComponent(currentRole) + '&password=' + encodeURIComponent(password)
+    })
+    .then(res => res.json())
+    .then(data => {
+        document.getElementById('spin-signin').style.display = 'none';
+        document.getElementById('btn-signin').disabled = false;
+        if (data.success) {
+            window.location.href = data.redirect;
+        } else {
+            showError(data.message, 'error', data.lockout_until);
+            // Optionally clear password
+            document.getElementById('password').value = '';
+            document.getElementById('password').focus();
+        }
+    }).catch(e => {
+        document.getElementById('spin-signin').style.display = 'none';
+        document.getElementById('btn-signin').disabled = false;
+        showError('Network error. Please try again.');
+    });
+}
+
+function requestOtp() {
+    const email = document.getElementById('create_email').value;
+    const pass = document.getElementById('create_password').value;
+    const conf = document.getElementById('create_confirm').value;
+    hideError();
+    document.getElementById('spin-create-1').style.display = 'inline-block';
+    document.getElementById('btn-create-1').disabled = true;
+
+    fetch('login.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'action=create_request_otp&email=' + encodeURIComponent(email) + '&password=' + encodeURIComponent(pass) + '&confirm_password=' + encodeURIComponent(conf)
+    })
+    .then(res => res.json())
+    .then(data => {
+        document.getElementById('spin-create-1').style.display = 'none';
+        document.getElementById('btn-create-1').disabled = false;
+        if (data.success) {
+            document.getElementById('verify-email-display').innerText = email;
+            showPanel('panel-create-2');
+        } else {
+            showError(data.message);
+        }
+    }).catch(e => {
+        document.getElementById('spin-create-1').style.display = 'none';
+        document.getElementById('btn-create-1').disabled = false;
+        showError('Network error. Please try again.');
+    });
+}
+
+function completeCreate() {
+    const otp = document.getElementById('create_otp').value;
+    const eid = document.getElementById('create_eid').value;
+    hideError();
+    document.getElementById('spin-create-2').style.display = 'inline-block';
+    document.getElementById('btn-create-2').disabled = true;
+
+    fetch('login.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'action=create_complete&otp=' + encodeURIComponent(otp) + '&eid=' + encodeURIComponent(eid)
+    })
+    .then(res => res.json())
+    .then(data => {
+        document.getElementById('spin-create-2').style.display = 'none';
+        document.getElementById('btn-create-2').disabled = false;
+        if (data.success) {
+            showPanel('panel-signin-1');
+            document.getElementById('identifier').value = document.getElementById('create_email').value;
+            showError('Account created successfully! Please sign in.', 'success');
+        } else {
+            showError(data.message);
+        }
+    }).catch(e => {
+        document.getElementById('spin-create-2').style.display = 'none';
+        document.getElementById('btn-create-2').disabled = false;
+        showError('Network error. Please try again.');
+    });
+}
+</script>
+
+<?php include 'footerSource.php'; ?>
+</body>
+</html>

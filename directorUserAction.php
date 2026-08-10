@@ -17,7 +17,7 @@ function director_action_redirect($message)
 
 if (!Utitlity::checkForDirector()) {
     $_SESSION['login_notice'] = 'Please log in again to continue.';
-    header('Location: loginSelection.php?reason=login_required');
+    header('Location: login.php?reason=login_required');
     exit;
 }
 

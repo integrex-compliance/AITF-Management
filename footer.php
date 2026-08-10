@@ -26,7 +26,7 @@
                 <li><a href="index.php">Home</a></li>
                 <li><a href="aboutus.php">About Us</a></li>
                 <li><a href="aboutISO.php">ISO Standards</a></li>
-                <li><a href="loginSelection.php">Client Portal</a></li>
+                <li><a href="login.php">Client Portal</a></li>
             </ul>
         </div>
         <div class="footer-column">

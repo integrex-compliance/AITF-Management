@@ -7,6 +7,6 @@ if (isset($db) && $db instanceof PDO) {
     aitf_record_logout_activity($db);
 }
 aitf_destroy_session();
-header('Location: loginSelection.php');
+header('Location: login.php');
 exit;
 ?>

@@ -6,7 +6,7 @@ $currentRole = strtolower(trim((string) ($_SESSION['role'] ?? '')));
 if ($currentRole === 'client' || $currentRole === 'external') {
     $_SESSION['login_error'] = true;
     $_SESSION['login_notice'] = 'Invalid URL. Please login again.';
-    header('Location: loginSelection.php?reason=invalid_url');
+    header('Location: login.php?reason=invalid_url');
     exit;
 }
 ?>

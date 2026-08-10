@@ -62,7 +62,7 @@ if (!function_exists('aitf_auditor_allowed_scripts')) {
         // Lowercase basenames. Everything NOT listed here is denied for auditors.
         return array(
             // Auth / session
-            'login.php', 'logout.php', 'loginselection.php', 'createaccount.php',
+            'login.php', 'logout.php', 'login.php', 'createaccount.php',
             'changepassword.php', 'index.php',
             // Auditor portal pages and conditionally allowed pages (controlled by header.php)
             'auditordashboard.php', 'auditorcustomeraccount.php', 'homepage.php', 'invoicepage.php', 'billspage.php',
@@ -163,7 +163,7 @@ if (!function_exists('aitf_auditor_enforce_access')) {
 
         // A valid auditor session must carry auditor_id.
         if (empty($_SESSION['auditor_id'])
-            && !in_array($script, array('login.php', 'logout.php', 'loginselection.php', 'createaccount.php', 'index.php'), true)) {
+            && !in_array($script, array('login.php', 'logout.php', 'login.php', 'createaccount.php', 'index.php'), true)) {
             aitf_auditor_deny_request('missing_auditor_id');
         }
 
