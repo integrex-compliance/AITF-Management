@@ -495,13 +495,66 @@ $todayLoginCount = count($todayActivities);
                 <div id="tab-permissions" class="dir-tab-pane">
                     <div class="premium-card">
                         <div class="card-header">
-                            <h2>Role Permissions</h2>
-                            <p>Manage what each role can access in the system.</p>
+                            <h2>User-Level Permissions</h2>
+                            <p>Select a user from the list to configure their specific access rights.</p>
                         </div>
-                        <div class="card-body" style="padding: 60px 40px; text-align: center; color: var(--text-secondary);">
-                            <i class="fa fa-lock" style="font-size: 48px; color: #E5E7EB; margin-bottom: 16px;"></i>
-                            <h3>Permissions Module</h3>
-                            <p>This section is under construction.</p>
+                        <div class="card-body" style="padding: 0;">
+                            <div style="display: flex; height: 500px;">
+                                <!-- Left side: User List -->
+                                <div style="width: 300px; border-right: 1px solid var(--border); overflow-y: auto; background: #FAFAFA;">
+                                    <div style="padding: 16px; border-bottom: 1px solid var(--border); background: white; position: sticky; top: 0;">
+                                        <input type="text" id="permUserSearch" placeholder="Search user..." style="width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; outline: none;">
+                                    </div>
+                                    <ul id="permUserList" style="list-style: none; padding: 0; margin: 0;">
+                                        <li style="padding: 20px; text-align: center; color: #9ca3af;">Loading users...</li>
+                                    </ul>
+                                </div>
+                                
+                                <!-- Right side: Settings -->
+                                <div style="flex: 1; padding: 32px; background: white;" id="permSettingsPane">
+                                    <div style="text-align: center; color: #9ca3af; margin-top: 100px;" id="permPlaceholder">
+                                        <i class="fa fa-hand-o-left" style="font-size: 48px; margin-bottom: 16px;"></i>
+                                        <h3>Select a user</h3>
+                                        <p>Click on a user from the left panel to manage their permissions.</p>
+                                    </div>
+                                    
+                                    <div id="permSettings" style="display: none;">
+                                        <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 32px; padding-bottom: 16px; border-bottom: 1px solid var(--border);">
+                                            <div class="emp-avatar" style="width: 48px; height: 48px; font-size: 18px;" id="permAvatar">U</div>
+                                            <div>
+                                                <h3 style="margin: 0; font-size: 18px; color: var(--text-primary);" id="permName">User Name</h3>
+                                                <span class="badge-role" id="permRole" style="display: inline-block; margin-top: 4px;">Role</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div style="display: flex; flex-direction: column; gap: 24px;">
+                                            <!-- Permission Toggle 1 -->
+                                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px; background: #FAFAFA; border: 1px solid var(--border); border-radius: 8px;">
+                                                <div>
+                                                    <h4 style="margin: 0 0 4px 0; color: var(--text-primary); font-size: 15px;"><i class="fa fa-building" style="width:20px; color:var(--text-secondary);"></i> Client Access</h4>
+                                                    <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">Allow this user to see the CLIENTS tab in the left menu.</p>
+                                                </div>
+                                                <label class="switch" style="position: relative; display: inline-block; width: 44px; height: 24px;">
+                                                  <input type="checkbox" id="toggleClientAccess" style="opacity: 0; width: 0; height: 0;">
+                                                  <span class="slider round" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 24px;"></span>
+                                                </label>
+                                            </div>
+                                            
+                                            <!-- Permission Toggle 2 -->
+                                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px; background: #FAFAFA; border: 1px solid var(--border); border-radius: 8px;">
+                                                <div>
+                                                    <h4 style="margin: 0 0 4px 0; color: var(--text-primary); font-size: 15px;"><i class="fa fa-inr" style="width:20px; color:var(--text-secondary);"></i> Invoice Access</h4>
+                                                    <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">Allow this user to see the INVOICES tab in the left menu.</p>
+                                                </div>
+                                                <label class="switch" style="position: relative; display: inline-block; width: 44px; height: 24px;">
+                                                  <input type="checkbox" id="toggleInvoiceAccess" style="opacity: 0; width: 0; height: 0;">
+                                                  <span class="slider round" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 24px;"></span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -557,6 +610,54 @@ $todayLoginCount = count($todayActivities);
 </div>
 
 <style>
+    /* Toggle Switch Styles */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .4s;
+    }
+    input:checked + .slider {
+      background-color: #2563EB;
+    }
+    input:focus + .slider {
+      box-shadow: 0 0 1px #2563EB;
+    }
+    input:checked + .slider:before {
+      transform: translateX(20px);
+    }
+    .slider.round {
+      border-radius: 24px;
+    }
+    .slider.round:before {
+      border-radius: 50%;
+    }
+
     :root {
         --bg-color: #FAFAFA;
         --surface: #FFFFFF;
@@ -1648,4 +1749,110 @@ $todayLoginCount = count($todayActivities);
                 console.error("Failed to load screen time data:", err);
             });
     }
+</script>
+
+<script>
+// Permissions Logic
+let currentPermUser = null;
+
+// Load users on tab click
+document.querySelector('[data-target="tab-permissions"]').addEventListener('click', function() {
+    fetchUsers();
+});
+
+function fetchUsers() {
+    fetch('permissions_api.php?action=get_users')
+        .then(r => r.json())
+        .then(data => {
+            if (data.status === 'success') {
+                const list = document.getElementById('permUserList');
+                list.innerHTML = '';
+                data.users.forEach(u => {
+                    const li = document.createElement('li');
+                    li.style.padding = '12px 16px';
+                    li.style.borderBottom = '1px solid var(--border)';
+                    li.style.cursor = 'pointer';
+                    li.style.display = 'flex';
+                    li.style.alignItems = 'center';
+                    li.style.gap = '12px';
+                    li.className = 'perm-user-item';
+                    li.dataset.uid = u.id;
+                    li.dataset.name = u.username;
+                    li.dataset.role = u.role;
+                    
+                    const char = u.username.charAt(0).toUpperCase();
+                    li.innerHTML = `<div class="emp-avatar" style="width: 32px; height: 32px; font-size: 14px;">${char}</div>
+                                    <div style="flex: 1;">
+                                        <div style="font-weight: 500; color: var(--text-primary); font-size: 14px;">${u.username}</div>
+                                        <div style="font-size: 12px; color: var(--text-secondary);">${u.role}</div>
+                                    </div>`;
+                    
+                    li.addEventListener('click', function() {
+                        document.querySelectorAll('.perm-user-item').forEach(el => el.style.background = 'transparent');
+                        li.style.background = '#F3F4F6';
+                        loadPermissions(u);
+                    });
+                    
+                    list.appendChild(li);
+                });
+            }
+        });
+}
+
+function loadPermissions(user) {
+    currentPermUser = user.id;
+    document.getElementById('permPlaceholder').style.display = 'none';
+    document.getElementById('permSettings').style.display = 'block';
+    
+    document.getElementById('permAvatar').textContent = user.username.charAt(0).toUpperCase();
+    document.getElementById('permName').textContent = user.username;
+    document.getElementById('permRole').textContent = user.role;
+    
+    // reset toggles
+    document.getElementById('toggleClientAccess').checked = false;
+    document.getElementById('toggleInvoiceAccess').checked = false;
+    
+    fetch('permissions_api.php?action=get_permissions&user_id=' + user.id)
+        .then(r => r.json())
+        .then(data => {
+            if (data.status === 'success') {
+                document.getElementById('toggleClientAccess').checked = data.permissions.client_access;
+                document.getElementById('toggleInvoiceAccess').checked = data.permissions.invoice_access;
+            }
+        });
+}
+
+// Attach toggle events
+['toggleClientAccess', 'toggleInvoiceAccess'].forEach(id => {
+    document.getElementById(id).addEventListener('change', function(e) {
+        if (!currentPermUser) return;
+        
+        const feature = id === 'toggleClientAccess' ? 'client_access' : 'invoice_access';
+        const isAllowed = e.target.checked ? 1 : 0;
+        
+        const fd = new FormData();
+        fd.append('action', 'update_permission');
+        fd.append('user_id', currentPermUser);
+        fd.append('feature', feature);
+        fd.append('is_allowed', isAllowed);
+        
+        fetch('permissions_api.php', { method: 'POST', body: fd })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status !== 'success') {
+                    alert('Error updating permission');
+                    e.target.checked = !e.target.checked;
+                }
+            });
+    });
+});
+
+// Search filter
+document.getElementById('permUserSearch').addEventListener('input', function(e) {
+    const term = e.target.value.toLowerCase();
+    document.querySelectorAll('.perm-user-item').forEach(li => {
+        const name = li.dataset.name.toLowerCase();
+        li.style.display = name.includes(term) ? 'flex' : 'none';
+    });
+});
 </script>

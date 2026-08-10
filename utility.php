@@ -11,6 +11,36 @@ date_default_timezone_set('Asia/Kolkata');
 
 class Utitlity {
 
+    static function get_company_list() {
+        global $db;
+        $selectCompany = "SELECT id, companyName FROM `company` WHERE STATUS = 1 ORDER BY `id` ASC";
+        $companies = $db->query($selectCompany)->fetchAll(PDO::FETCH_ASSOC);
+        return $companies;
+    }
+
+    static function checkUserPermission($feature) {
+        if (!isset($_SESSION['id'])) return 0;
+        
+        // Director/MainAdmin usually have access to everything, but we can enforce strict check if needed.
+        // Let's grant MainAdmin/Director full access by default to avoid locking them out.
+        if (self::checkForDirector() || self::checkForUserMainAdmin()) {
+            return 1; 
+        }
+
+        global $db;
+        if(!$db) return 0;
+        try {
+            $stmt = $db->prepare("SELECT is_allowed FROM user_permissions WHERE user_id = :uid AND feature = :feat");
+            $stmt->execute(['uid' => $_SESSION['id'], 'feat' => $feature]);
+            $res = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($res && $res['is_allowed'] == 1) {
+                return 1;
+            }
+        } catch(Exception $e) {}
+        
+        return 0;
+    }
+
     static function checkIfLoggedIn() {
         if (isset($_SESSION ['username'])) {
             return 1;

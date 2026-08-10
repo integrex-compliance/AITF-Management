@@ -127,7 +127,7 @@ if (!Utitlity::checkIfLoggedIn()) {
     exit;
 } else if (isset($pageIdentifier) && $pageIdentifier == "Home Page") {
     $addClass = "active";
-    if (!(Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin())) {
+    if (!Utitlity::checkUserPermission('client_access')) {
         header("Location: loginSelection.php?reason=login_required");
         exit;
     }
@@ -193,7 +193,7 @@ if (!Utitlity::checkIfLoggedIn()) {
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Invoices") {
     $addInvoiceClass = "active";
-    if (!(Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin())) {
+    if (!Utitlity::checkUserPermission('invoice_access')) {
         header("Location: loginSelection.php?reason=login_required");
         exit;
     }
@@ -358,6 +358,9 @@ function getFlatDate($inputStr)
         <?php if ((Utitlity::checkForUserMainAdmin() || Utitlity::checkForMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff()) && (!isset($_SESSION['role']) || $_SESSION['role'] !== 'Main Admin')) { ?>
         <li><a href="adminDashboard.php" class="animate <?php echo isset($addAdminDashboardClass) ? $addAdminDashboardClass : ''; ?>">ADMIN DASHBOARD<i class="sub_icon fa fa-line-chart fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
+        <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'Auditor') { ?>
+        <li><a href="auditorDashboard.php" class="animate">AUDITOR DASHBOARD<i class="sub_icon fa fa-home fa-2x" style="vertical-align:middle"></i></a></li>
+        <?php } ?>
         <?php if (!isset($_SESSION["role"]) || $_SESSION["role"] != 'client') { ?>
         <li><a href="iaf_dashboard.php" class="animate <?php echo isset($iafClass) ? $iafClass : ''; ?>">IAF DASHBOARD<i
                     class="sub_icon fa fa-dashboard fa-2x" style="vertical-align:middle"></i></a></li>
@@ -374,7 +377,7 @@ function getFlatDate($inputStr)
                 </a>
             </li>
         <?php } ?>
-        <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+        <?php if (Utitlity::checkUserPermission('client_access')) { ?>
             <li><a href="homePage.php" class="animate <?php echo $addClass ?>">CLIENTS<i
                         class="sub_icon fa fa-building fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
@@ -408,7 +411,7 @@ function getFlatDate($inputStr)
                     class="animate <?php echo isset($addInboxClass) ? $addInboxClass : ''; ?>">MAIL-BOX<i
                         class="sub_icon fa fa-inbox fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
-        <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+        <?php if (Utitlity::checkUserPermission('invoice_access')) { ?>
             <!--<li><a href="clientList.php" class="animate">CLIENT LIST<i class="sub_icon fa fa-list  fa-2x" style="vertical-align:middle"></i></a></li>-->
             <li><a href="invoicePage.php" class="animate <?php echo $addInvoiceClass ?>">INVOICES<i
                         class="sub_icon fa fa-inr fa-2x" style="vertical-align:middle"></i></a></li>
@@ -441,7 +444,7 @@ function getFlatDate($inputStr)
         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin()) { ?>
             <li><a href="clientRecycle.php" class="animate <?php echo $addRecycleClass ?>">RECYCLE BIN<i
                         class="sub_icon fa fa-trash-o fa-2x" style="vertical-align:middle"></i></a></li>
-        <?php } ?>
+        <?php } ?>s
         <?php if (!(Utitlity::checkClient() || Utitlity::checkExternalUser())) { ?>
             <li><a href="auditanalysis.php" class="animate <?php echo $addcertissueClass ?>">CERT. ISSUED LIST<i
                         class="sub_icon fa fa-newspaper-o fa-2x" style="vertical-align:middle"></i></a></li>

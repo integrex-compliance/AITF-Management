@@ -68,19 +68,18 @@ if (isset($_POST['directorEmail']) && !empty($_POST['directorEmail']) && isset($
         $statement->execute();
         $row = $statement->fetch();
 
-        if ($row && ($row['account_status'] ?? 'active') === 'inactive') {
-            $_SESSION['login_error'] = true;
-            $_SESSION['login_notice'] = 'Your account has been deactivated by the Director.';
-            aitf_redirect_and_exit("loginSelection.php");
-        }
-
-        if ($row && ($row['account_status'] ?? 'active') !== 'active') {
-            $_SESSION['login_error'] = true;
-            $_SESSION['login_notice'] = 'Please create your account with OTP before login.';
-            aitf_redirect_and_exit("loginSelection.php?create_account=1");
-        }
-
         if ($row && password_verify($_POST['password'], $row['password'])) {
+            if (($row['account_status'] ?? 'active') === 'inactive') {
+                $_SESSION['login_error'] = true;
+                $_SESSION['login_notice'] = 'It seems there is a problem with your account. Contact AITF Director for more information.';
+                aitf_redirect_and_exit("loginSelection.php");
+            }
+            
+            if (($row['account_status'] ?? 'active') !== 'active') {
+                $_SESSION['login_error'] = true;
+                $_SESSION['login_notice'] = 'Please create your account with OTP before login.';
+                aitf_redirect_and_exit("loginSelection.php?create_account=1");
+            }
             $_SESSION['username'] = $row['user_name'];
             $_SESSION['id'] = $row['user_id'];
             $_SESSION['role'] = $row['role'];

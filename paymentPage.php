@@ -186,7 +186,7 @@
             box-shadow: 0 4px 14px rgba(20, 104, 179, 0.4);
         }
         html.theme-dark .btn-solid-primary:hover { background-color: #2f81d6; box-shadow: 0 8px 22px rgba(20, 104, 179, 0.5); }
-
+a
         /* Table shell */
         html.theme-dark .table-responsive {
             background: var(--pp-surface);

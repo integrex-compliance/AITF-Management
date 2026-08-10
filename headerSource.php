@@ -9,7 +9,7 @@
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&family=Montserrat:wght@700;800&family=Playfair+Display:wght@700;800;900&display=swap');
 
     :root {
-        --announcement-height: 48px;
+        --announcement-height: 0px;
         --nav-height: 85px;
         --nav-bg: #ffffff;
         --nav-text: #1e293b;
@@ -1101,27 +1101,7 @@
 <head>
 
 </head>
-<div class="aitf-public-announcement-banner" aria-label="AITF announcements">
-    <div class="aitf-public-announcement-track">
-        <?php for ($announcementSet = 0; $announcementSet < 2; $announcementSet++) { ?>
-            <div class="aitf-public-announcement-group"
-                aria-hidden="<?php echo $announcementSet === 0 ? 'false' : 'true'; ?>">
-                <span class="aitf-public-announcement-item"><i class="fa fa-certificate" aria-hidden="true"></i>NABCB
-                    Accredited Certification Body</span>
-                <span class="aitf-public-announcement-divider" aria-hidden="true"></span>
-                <span class="aitf-public-announcement-item"><i class="fa fa-balance-scale" aria-hidden="true"></i> IMPARTIAL
-                    ASSESSMENT</span>
-                <span class="aitf-public-announcement-divider" aria-hidden="true"></span>
-                <span class="aitf-public-announcement-item"><i class="fa fa-shield" aria-hidden="true"></i>Trusted.
-                    Accredited. Independent.</span>
-                <span class="aitf-public-announcement-divider" aria-hidden="true"></span>
-                <span class="aitf-public-announcement-item"><i class="fa fa-handshake-o" aria-hidden="true"></i>AUTHENTICATE
-                    CERTIFICATE</span>
-                <span class="aitf-public-announcement-divider" aria-hidden="true"></span>
-            </div>
-        <?php } ?>
-    </div>
-</div>
+
 
 <header class="top-header">
     <nav class="navbar header-nav navbar-expand-lg">

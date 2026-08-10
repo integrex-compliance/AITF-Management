@@ -64,8 +64,10 @@ if (!function_exists('aitf_auditor_allowed_scripts')) {
             // Auth / session
             'login.php', 'logout.php', 'loginselection.php', 'createaccount.php',
             'changepassword.php', 'index.php',
-            // Auditor portal pages
-            'auditordashboard.php', 'auditorcustomeraccount.php',
+            // Auditor portal pages and conditionally allowed pages (controlled by header.php)
+            'auditordashboard.php', 'auditorcustomeraccount.php', 'homepage.php', 'invoicepage.php', 'billspage.php',
+            'invoicepdf.php', 'finalinvoicepdf.php', 'finalinvoice.php', 'invoicemailsend.php', 'mailattach.php',
+            'exporthomereport.php', 'exporthomereportexcel.php', 'emailhomereport.php', 'updatecustomer.php',
             // Client account page (internally restricted to the auditor's services)
             'customeraccount.php',
             // Service document upload endpoints (ownership enforced below)

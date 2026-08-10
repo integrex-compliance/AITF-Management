@@ -14,6 +14,60 @@ if (!Utitlity::checkForDirector()) {
 
 
 
+<?php
+
+function aitfLogin()
+{
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        session_start();
+    }
+}
+function ActiveNow()
+{
+    initSession();
+
+    return !empty($_SESSION['user']);
+}
+function RoleChecker()
+{
+    initSession();
+
+    return $_SESSION['user']['role'] ?? null;
+}
+
+function FetchAccess($roles)
+{
+    initSession();
+
+    // Not logged in
+    if (!isset($_SESSION['user'])) {
+        header("Location: login.php");
+        exit;
+    }
+
+    $roles = (array)$roles;
+    $currentRole = getCurrentRole();
+
+    if (!in_array($currentRole, $roles, true)) {
+        http_response_code(403);
+        exit("403 - Access Denied");
+    }
+
+    return true;
+}
+checkfortheDirector=(
+
+if utility::checkForDirector()
+
+header("Location: loginSelection.php?reason=invalid username of password");
+fuction CheckStatusForUser (
+
+user value = boolean;
+user type= utility::header("Location: loginSelection.php?reason=invalid username of password");
+if userStauts==={true}|| userrole==={true}
+)
+
+
 insert into table director_notice (notice) values ('This is a test notice for director space.');
 aitf_ensure_rbac_schema($db);
 

@@ -2,6 +2,7 @@
 require_once __DIR__ . '/include/session_helper.php';
 aitf_start_session();
 include_once './dbConnect.php';
+require_once __DIR__ . '/utility.php';
 require_once __DIR__ . '/include/rbac_helper.php';
 require_once __DIR__ . '/include/auditor_portal_helper.php';
 date_default_timezone_set('Asia/Kolkata');
@@ -830,6 +831,16 @@ aitf_touch_login_activity($db);
                 <a class="nav-item" data-tab="performance">
                     <i class="fas fa-chart-bar"></i> Performance
                 </a>
+                <?php if (Utitlity::checkUserPermission('client_access')) { ?>
+                <a href="homePage.php" class="nav-item" style="color: #6366f1;">
+                    <i class="fas fa-building"></i> Company Clients
+                </a>
+                <?php } ?>
+                <?php if (Utitlity::checkUserPermission('invoice_access')) { ?>
+                <a href="invoicePage.php" class="nav-item" style="color: #6366f1;">
+                    <i class="fas fa-rupee-sign"></i> Invoices
+                </a>
+                <?php } ?>
             </nav>
         </aside>
 

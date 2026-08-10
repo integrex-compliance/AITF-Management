@@ -233,7 +233,7 @@ if (!function_exists('aitf_enforce_active_user_account')) {
                 aitf_record_logout_activity($db);
                 $_SESSION = array();
                 session_regenerate_id(true);
-                $_SESSION['login_notice'] = 'Your account has been deactivated by the Director.';
+                $_SESSION['login_notice'] = 'It seems there is a problem with your account. Contact AITF Director for more information.';
                 header('Location: loginSelection.php?reason=login_required');
                 exit;
             }

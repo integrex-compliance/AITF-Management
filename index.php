@@ -1,4 +1,7 @@
 <?php
+$pageTitle = "AITF - Assessment & Institute for Technical Forum";
+$pageDescription = "AITF is a premier institute for ISO certification, Quality Management, Environmental Management, and Occupational Health & Safety. Apply online for ISO certification.";
+$canonicalUrl = "https://www.aitf.co.in/";
 session_start();
 ?>
 <!DOCTYPE html>
@@ -1578,18 +1581,24 @@ session_start();
                 <div class="hero-text-content">
                     <div class="hero-label">NABCB Accredited Certification Body</div>
                     <h1 class="hero-main-title">
-                        Your Trusted Partner In<span>Management System Assessment</span>
+                        <span class="sr-only" style="position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap;">AITF - </span>Your Trusted Partner In<span>Management System Assessment</span>
                     </h1>
                     <p class="hero-sub-title">
                         Empowering organizations through accredited, authentic, impartial and ethical certification
                         services for management system standards.
                     </p>
-                    <div class="hero-btns">
-                        <a href="text/audit_application_form.pdf" class="hero-btn hero-btn-secondary" download>
-                            <i class="fas fa-file-download"></i> Download Form
+                    <div class="hero-btns" style="display:flex; flex-wrap:wrap; justify-content:center; gap:10px;">
+                        <a href="aboutus.php" class="hero-btn hero-btn-secondary">
+                            <i class="fas fa-info-circle"></i> About AITF
+                        </a>
+                        <a href="contactUS.php" class="hero-btn hero-btn-secondary">
+                            <i class="fas fa-envelope"></i> Contact Us
+                        </a>
+                        <a href="certificationProcess.php" class="hero-btn hero-btn-secondary">
+                            <i class="fas fa-certificate"></i> Certification Process
                         </a>
                         <a href="application.php#online-application-form" class="hero-btn hero-btn-primary">
-                            <i class="fas fa-edit"></i> Apply Online
+                            <i class="fas fa-edit"></i> Apply Online for ISO Certification
                         </a>
                     </div>
                 </div>

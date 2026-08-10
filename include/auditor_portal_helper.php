@@ -195,7 +195,7 @@ if (!function_exists('aitf_fetch_auditor_dashboard_data')) {
             } else {
                 $stats['conducted']++;
             }
-
+            
             if (!empty($row['customer_id']) && !isset($clients[$row['customer_id']])) {
                 $clients[$row['customer_id']] = array(
                     'customer_id' => $row['customer_id'],

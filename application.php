@@ -1,4 +1,7 @@
 <?php
+$pageTitle = "Online ISO Certification Application | AITF";
+$pageDescription = "Submit your online ISO certification application with AITF. Start your quality management and environmental management certification process here.";
+$canonicalUrl = "https://www.aitf.co.in/application.php";
 require_once './dbConnect.php';
 require_once __DIR__ . '/include/env_helper.php';
 $indiaTz = new DateTimeZone('Asia/Kolkata');
@@ -1412,8 +1415,16 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
             display: none !important;
         }
 
-        .app-tab-panel.active {
+        .app-tab-panel.active,
+        #online-tab:has(#online-application-form:target) {
             display: block !important;
+        }
+
+        @media (scripting: none) {
+            .app-tab-panel {
+                display: block !important;
+                margin-bottom: 40px;
+            }
         }
 
         /* Download Tab Card */

@@ -14,14 +14,40 @@
     <meta name="viewport" content="width=device-width, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
     <!-- Site Metas -->
-    <title>AITF - Assessment &amp; Institute for Technical Forum</title>
-    <meta name="keywords" content="">
-    <meta name="description" content="">
+    <title><?php echo isset($pageTitle) ? htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8') : 'AITF - Assessment &amp; Institute for Technical Forum'; ?></title>
+    <meta name="keywords" content="<?php echo isset($pageKeywords) ? htmlspecialchars($pageKeywords, ENT_QUOTES, 'UTF-8') : ''; ?>">
+    <meta name="description" content="<?php echo isset($pageDescription) ? htmlspecialchars($pageDescription, ENT_QUOTES, 'UTF-8') : ''; ?>">
     <meta name="author" content="">
+    <?php if (isset($canonicalUrl)): ?>
+    <link rel="canonical" href="<?php echo htmlspecialchars($canonicalUrl, ENT_QUOTES, 'UTF-8'); ?>">
+    <?php endif; ?>
 
     <!-- Site Icons -->
     <link rel="shortcut icon" href="aitfImages/aitfasset/updatedfavicon.png" type="image/png" />
     <link rel="apple-touch-icon" href="aitfImages/aitfasset/updatedfavicon.png" />
+    
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://www.aitf.co.in/#website",
+          "url": "https://www.aitf.co.in/",
+          "name": "AITF",
+          "description": "Assessment & Institute for Technical Forum"
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://www.aitf.co.in/#organization",
+          "name": "AITF Management Certification Limited",
+          "url": "https://www.aitf.co.in/",
+          "logo": "https://www.aitf.co.in/aitfImages/aitfasset/updatedfavicon.png"
+        }
+      ]
+    }
+    </script>
 
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="css/outer/bootstrap.min.css" />

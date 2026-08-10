@@ -38,10 +38,11 @@ $createAccountStep = $_SESSION['create_account_step'] ?? 'email';
 ?>
 <!DOCTYPE html>
 <html lang="en">
+<?php $pageTitle = "AITF - Portal Login"; ?>
 <head>
+    <?php include './headSource.php'; ?>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AITF - Portal Login</title>
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -87,6 +88,7 @@ $createAccountStep = $_SESSION['create_account_step'] ?? 'email';
             justify-content: center;
             width: 100%;
             padding: 24px;
+            margin-top: calc(var(--announcement-height, 48px) + var(--nav-height, 85px));
         }
 
         /* Loading Overlay */
@@ -244,7 +246,7 @@ $createAccountStep = $_SESSION['create_account_step'] ?? 'email';
 
     </style>
 </head>
-<body class="aitf-login-page">
+<body class="aitf-login-page" id="home" data-spy="scroll" data-target="#navbar-wd" data-offset="98">
     <?php include './headerSource.php'; ?>
     <div class="main-content-wrapper">
     <div id="login-loading-overlay" class="login-loading-overlay">

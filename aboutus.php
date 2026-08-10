@@ -1,13 +1,13 @@
 <?php
-include './headSource.php';
+$pageTitle = "About AITF | Assessment & Institute for Technical Forum";
+$pageDescription = "Learn about AITF, a premier institute for ISO certification, Quality Management, Environmental Management, and Occupational Health & Safety.";
+$canonicalUrl = "https://www.aitf.co.in/aboutus.php";
 ?>
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>About Us - AITF Management Certification Limited</title>
+    <?php include './headSource.php'; ?>
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
@@ -345,7 +345,11 @@ include './headSource.php';
         <div class="container">
             <h2>Ready to Begin?</h2>
             <p>Connect with our experts to start your certification journey today.</p>
-            <a href="contactUS.php" class="btn-modern">Contact Us Now</a>
+            <div style="display:flex; justify-content:center; gap:15px; flex-wrap:wrap;">
+                <a href="index.php" class="btn-modern" style="background:#475569;">Back to Home</a>
+                <a href="certificationProcess.php" class="btn-modern" style="background:#10b981;">Certification Process</a>
+                <a href="application.php#online-application-form" class="btn-modern">Apply Online for ISO Certification</a>
+            </div>
         </div>
     </section>
 

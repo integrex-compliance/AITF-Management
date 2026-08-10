@@ -28,6 +28,7 @@
         aitfCustomerFeatureSet($db, 'audit_member_conflict_visible', isset($_POST['audit_member_conflict_visible']), isset($_SESSION['username']) ? $_SESSION['username'] : '');
         aitfCustomerFeatureSet($db, 'customer_manual_status_change_enabled', isset($_POST['customer_manual_status_change_enabled']), isset($_SESSION['username']) ? $_SESSION['username'] : '');
         aitfCustomerFeatureSet($db, 'customer_accreditation_change_enabled', isset($_POST['customer_accreditation_change_enabled']), isset($_SESSION['username']) ? $_SESSION['username'] : '');
+        aitfCustomerFeatureSet($db, 'full_invoice_access_enabled', isset($_POST['full_invoice_access_enabled']), isset($_SESSION['username']) ? $_SESSION['username'] : '');
         $featureToggleMessage = 'Client features control buttons.';
     }
 
@@ -53,6 +54,7 @@
     $auditMemberConflictVisible = aitfCustomerFeatureIsEnabled($db, 'audit_member_conflict_visible');
     $customerManualStatusChangeEnabled = aitfCustomerFeatureIsEnabled($db, 'customer_manual_status_change_enabled');
     $customerAccreditationChangeEnabled = aitfCustomerFeatureIsEnabled($db, 'customer_accreditation_change_enabled');
+    $fullInvoiceAccessEnabled = aitfCustomerFeatureIsEnabled($db, 'full_invoice_access_enabled');
 
     //    auditors
     $auditors = "SELECT * from auditors";
@@ -524,7 +526,7 @@
                         <div class="col-sm-6">
                             <div class="row">
                                 <div class="col-xs-12 text-center btn qms_complete_btn" id="master-toggle-btn" style="cursor: pointer;">
-                                    <span><i class="fa fa-toggle-on" id="master-toggle-icon"></i> Customer Feature Toggles</span>
+                                    <span><i class="fa fa-toggle-on" id="master-toggle-icon"></i> Controls and Permissions</span>
                                 </div>
                             </div>
                             <div class="row" style="">
@@ -624,6 +626,18 @@
                                                     </div>
                                                     <label class="modern-switch">
                                                         <input type="checkbox" class="feature-toggle-checkbox" name="customer_accreditation_change_enabled" value="1" <?php echo $customerAccreditationChangeEnabled ? 'checked' : ''; ?>>
+                                                        <span class="slider"></span>
+                                                    </label>
+                                                </div>
+                                            </li>
+                                            <li class="list-group-item">
+                                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                                    <div>
+                                                        <strong>Allow Full Invoice Access</strong>
+                                                        <small style="display: block; color: #777;">Allow full invoice list view for other role</small>
+                                                    </div>
+                                                    <label class="modern-switch">
+                                                        <input type="checkbox" class="feature-toggle-checkbox" name="full_invoice_access_enabled" value="1" <?php echo $fullInvoiceAccessEnabled ? 'checked' : ''; ?>>
                                                         <span class="slider"></span>
                                                     </label>
                                                 </div>

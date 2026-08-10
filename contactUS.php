@@ -171,7 +171,122 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $confirm->AltBody = "Dear {$formData['name']},\n\nThank you for contacting AITF.\n\nWe acknowledge receipt of your enquiry and appreciate your interest in our assessment and certification services. Our team is currently reviewing the details shared by you and will contact you shortly with the relevant information or next steps.\n\nIf you have any additional details to provide or require urgent assistance, please feel free to reply to this email.\n\nThank you for considering AITF as your assessment and certification partner.\n\nWarm regards,\nAITF Team\nClient Support Desk\nAITF - Assessment & Institute for Technical Forum\nEmail: {$mailConfig['from_email']}\nWebsite: www.aitf.co.in";
             $confirmOk = $confirm->send();
 
-            $successMsg = $confirmOk
+            $successMsg = $confirmOk /*
+        if ($errorMsg === '') {
+            $errorMsg = 'Captcha verification failed. Please try again.';
+        }
+    } else {
+        require __DIR__ . '/PHPMailer/PHPMailerAutoload.php';
+
+        $fromEmail = $mailConfig['from_email'] ?: 'no-reply@localhost';
+
+        // GoDaddy shared hosting relay: localhost:25, no auth, no SSL
+        $attempts = [
+            ['host' => 'localhost', 'port' => 25, 'secure' => '', 'autotls' => false, 'auth' => false],
+            ['host' => 'relay-hosting.secureserver.net', 'port' => 25, 'secure' => '', 'autotls' => false, 'auth' => false],
+            [
+                'host' => $mailConfig['host'],
+                'port' => $mailConfig['port'],
+                'secure' => $mailConfig['secure'],
+                'autotls' => $mailConfig['secure'] === 'tls',
+                'auth' => ($mailConfig['username'] ?? '') !== '' && ($mailConfig['password'] ?? '') !== ''
+            ],
+        ];
+
+        $applySmtpConfig = function (PHPMailer $mailer, array $cfg) use ($mailConfig) {
+            $mailer->isSMTP();
+            $mailer->SMTPDebug = 0; // keep logs clean on production
+            $mailer->Debugoutput = 'error_log';
+            $mailer->Host = $cfg['host'];
+            $mailer->Hostname = $cfg['host'];
+            $mailer->Port = $cfg['port'];
+            $mailer->SMTPAuth = $cfg['auth'];
+            $mailer->SMTPSecure = $cfg['secure'] ?: false;
+            $mailer->SMTPAutoTLS = $cfg['autotls'];
+            if ($cfg['auth']) {
+                $mailer->Username = $mailConfig['username'];
+                $mailer->Password = $mailConfig['password'];
+            }
+            $mailer->CharSet = 'UTF-8';
+            $mailer->Timeout = 8;
+            $mailer->SMTPKeepAlive = false;
+            $mailer->SMTPOptions = [
+                'ssl' => [
+                    'verify_peer' => false,
+                    'verify_peer_name' => false,
+                    'allow_self_signed' => true
+                ]
+            ];
+        };
+
+        $mail = new PHPMailer;
+        $mail->setFrom($fromEmail, $mailConfig['from_name']);
+        $mail->Sender = $fromEmail;
+        $mail->addCustomHeader('Return-Path', $fromEmail);
+        $mail->addReplyTo($formData['email'], $formData['name']);
+        $mail->addAddress($mailConfig['admin_email'], 'AITF Certification');
+        $mail->Subject = 'New Contact Enquiry from Website';
+        $servicesText = implode(', ', $formData['services']);
+        $mobileClean = preg_replace('/\D+/', '', $formData['mobile']);
+        $body = "
+            <h3>New enquiry received from website contact form</h3>
+            <p><strong>Name:</strong> {$formData['name']}<br>
+            <strong>Email:</strong> {$formData['email']}<br>
+            <strong>Mobile:</strong> {$mobileClean}<br>
+            <strong>Company:</strong> {$formData['company']}<br>
+            <strong>Services Interested:</strong> {$servicesText}</p>
+            <p><strong>About the client / requirement:</strong><br>" . nl2br(htmlspecialchars($formData['about'], ENT_QUOTES, 'UTF-8')) . "</p>
+        ";
+        $mail->isHTML(true);
+        $mail->Body = $body;
+        $mail->AltBody = "Name: {$formData['name']}\nEmail: {$formData['email']}\nMobile: {$mobileClean}\nCompany: {$formData['company']}\nServices: {$servicesText}\nAbout:\n{$formData['about']}";
+
+        $primaryOk = false;
+        $primaryErrs = [];
+        $successfulAttempt = null;
+        foreach ($attempts as $attempt) {
+            $applySmtpConfig($mail, $attempt);
+            $primaryOk = $mail->send();
+            if ($primaryOk) {
+                $successfulAttempt = $attempt;
+                break;
+            }
+            $errLine = '[' . $attempt['host'] . ':' . $attempt['port'] . ' secure=' . ($attempt['secure'] ?: 'none') . ' auth=' . ($attempt['auth'] ? 'yes' : 'no') . '] ' . $mail->ErrorInfo;
+            $primaryErrs[] = $errLine;
+            error_log('CONTACT MAIL SEND FAIL: ' . $errLine);
+            $mail->smtpClose();
+        }
+        if (!$primaryOk) {
+            $errorMsg = 'Mail error: ' . implode(' | ', array_filter($primaryErrs));
+        }
+
+        if ($primaryOk) {
+            // Send thank-you to sender
+            $confirm = new PHPMailer;
+            $applySmtpConfig($confirm, $successfulAttempt ?: $attempts[0]);
+            $confirm->setFrom($fromEmail, 'AITF Team');
+            $confirm->Sender = $fromEmail;
+            $confirm->addCustomHeader('Return-Path', $fromEmail);
+            $confirm->addAddress($formData['email'], $formData['name']);
+            $confirm->Subject = 'Thank you for contacting AITF';
+            $confirmBody = "
+                <p>Dear {$formData['name']},</p>
+                <p>Thank you for contacting AITF.</p>
+                <p>We acknowledge receipt of your enquiry and appreciate your interest in our assessment and certification services. Our team is currently reviewing the details shared by you and will contact you shortly with the relevant information or next steps.</p>
+                <p>If you have any additional details to provide or require urgent assistance, please feel free to reply to this email.</p>
+                <p>Thank you for considering AITF as your assessment and certification partner.</p>
+                <p>Warm regards,<br>
+                AITF Team<br>
+                Client Support Desk<br>
+                AITF – Assessment &amp; Institute for Technical Forum<br>
+                Email: <a href=\"mailto:{$mailFromEmailHtml}\">{$mailFromEmailHtml}</a><br>
+                Website: <a href=\"http://www.aitf.co.in\" target=\"_blank\" rel=\"noopener\">www.aitf.co.in</a></p>
+            ";
+            $confirm->isHTML(true);
+            $confirm->Body = $confirmBody;
+            $confirm->AltBody = "Dear {$formData['name']},\n\nThank you for contacting AITF.\n\nWe acknowledge receipt of your enquiry and appreciate your interest in our assessment and certification services. Our team is currently reviewing the details shared by you and will contact you shortly with the relevant information or next steps.\n\nIf you have any additional details to provide or require urgent assistance, please feel free to reply to this email.\n\nThank you for considering AITF as your assessment and certification partner.\n\nWarm regards,\nAITF Team\nClient Support Desk\nAITF - Assessment & Institute for Technical Forum\nEmail: {$mailConfig['from_email']}\nWebsite: www.aitf.co.in";
+            $confirmOk = $confirm->send();
+*/
                 ? 'Thank you! We will get back to you shortly.'
                 : 'Thank you! We received your enquiry, but could not send confirmation to your email.';
             $formData = ['name' => '', 'email' => '', 'mobile' => '', 'company' => '', 'about' => '', 'services' => []];
@@ -180,6 +295,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+$pageTitle = "Contact Us | AITF Management Certification";
+$pageDescription = "Get in touch with AITF for ISO certification, queries, or assistance. We are here to help you with Quality Management and Environmental Management certifications.";
+$canonicalUrl = "https://www.aitf.co.in/contactUS.php";
 ?>
 <!DOCTYPE html>
 <html lang="en">

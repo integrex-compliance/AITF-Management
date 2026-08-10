@@ -6,6 +6,12 @@
     $pageIdentifier = "Invoices";
     include 'header.php';
     include 'dbConnect.php';
+    include_once './include/customer_feature_flags.php';
+    require_once './utility.php';
+
+    $fullInvoiceAccessEnabled = aitfCustomerFeatureIsEnabled($db, 'full_invoice_access_enabled');
+    $isDirector = Utitlity::checkForDirector();
+    $restrictInvoiceList = (!$fullInvoiceAccessEnabled && !$isDirector);
 
     $proformaInvoice = "SELECT id.invoice_id, customer_id, profarma_prefix, invoice_no, invoice_date, state, state_code, net_price, igst, cgst, sgst, tax_type, final_amount, invoice_type, pro_inv_sent_count, id.invoice_status, ci.customer_name, id, gstin_no FROM invoice_details id left join customer_info ci on id.customer_id = ci.id where id.invoice_type = 'proforma' AND id.is_deleted = 'No' order by invoice_date desc, invoice_no DESC";
 //    $proformaInvoice = "SELECT * FROM invoice_details WHERE invoice_type = 'proforma'";
@@ -683,10 +689,10 @@
                 </div>
                 <div class="filter-field">
                     <label for="finalClientSearch">Client Name</label>
-                    <input type="text" id="finalClientSearch" placeholder="Search by client name">
+                    <input type="text" id="finalClientSearch" placeholder="Search by client name" autocomplete="off">
                 </div>
-                <div class="filter-field btn-col">
-                    <button type="button" class="btn-download downloadFinalReport">
+                <div class="filter-field btn-col" <?php echo $restrictInvoiceList ? 'title="Limited access allowed by director"' : ''; ?>>
+                    <button type="button" class="btn-download downloadFinalReport" <?php echo $restrictInvoiceList ? 'disabled style="cursor: not-allowed; pointer-events: none; opacity: 0.6;"' : ''; ?>>
                         <i class="fa fa-cloud-download" style="font-size: 15px;"></i> Download Report
                     </button>
                 </div>
@@ -703,10 +709,10 @@
                 </div>
                 <div class="filter-field">
                     <label for="proformaClientSearch">Client Name</label>
-                    <input type="text" id="proformaClientSearch" placeholder="Search by client name">
+                    <input type="text" id="proformaClientSearch" placeholder="Search by client name" autocomplete="off">
                 </div>
-                <div class="filter-field btn-col">
-                    <button type="button" class="btn-download downloadProformaReport">
+                <div class="filter-field btn-col" <?php echo $restrictInvoiceList ? 'title="Limited access allowed by director"' : ''; ?>>
+                    <button type="button" class="btn-download downloadProformaReport" <?php echo $restrictInvoiceList ? 'disabled style="cursor: not-allowed; pointer-events: none; opacity: 0.6;"' : ''; ?>>
                         <i class="fa fa-cloud-download" style="font-size: 15px;"></i> Download Report
                     </button>
                 </div>
@@ -727,6 +733,86 @@
                             <?php echo !empty($_GET["mailerror"]) ? htmlspecialchars(urldecode($_GET["mailerror"]), ENT_QUOTES, 'UTF-8') : 'Invoice mail send failed'; ?>
                         </div>
                     <?php } ?>
+                    
+                    <?php if ($restrictInvoiceList) { ?>
+                        <div class="alert alert-warning" id="restrictedAccessMsg">
+                            <strong>Limited access is enabled.</strong> You can only view invoice using search by client name or invoice no.
+                        </div>
+                        <script>
+                            document.addEventListener("DOMContentLoaded", function() {
+                                function setupExactSearch(inputId, tableId) {
+                                    var searchInput = $('#' + inputId);
+                                    if (searchInput.length) {
+                                        searchInput.attr('autocomplete', 'off');
+                                        searchInput.on('input', function() {
+                                            $('#' + tableId).DataTable().draw();
+                                        });
+                                    }
+                                }
+                                
+                                setupExactSearch('finalClientSearch', 'table_final_invoice');
+                                setupExactSearch('proformaClientSearch', 'table_proforma_invoice');
+                                
+                                // Custom DataTables filter to enforce EXACT matching for client name or invoice no
+                                $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+                                    var tableId = settings.nTable.id;
+                                    if (tableId === 'table_final_invoice' || tableId === 'table_proforma_invoice') {
+                                        var searchInputId = (tableId === 'table_final_invoice') ? 'finalClientSearch' : 'proformaClientSearch';
+                                        var clientSearchVal = $('#' + searchInputId).val() || '';
+                                        var dtSearchVal = settings.oPreviousSearch.sSearch || '';
+                                        
+                                        clientSearchVal = clientSearchVal.trim().toLowerCase();
+                                        dtSearchVal = dtSearchVal.trim().toLowerCase();
+                                        
+                                        // Always hide if both search boxes are empty
+                                        if (clientSearchVal === '' && dtSearchVal === '') {
+                                            return false;
+                                        }
+
+                                        var rowClientName = (data[1] || '').trim().toLowerCase();
+                                        // Strip potential HTML from invoice number
+                                        var rowInvoiceNo = (data[3] || '').replace(/(<([^>]+)>)/gi, "").trim().toLowerCase();
+                                        
+                                        // Check exact match for client search box
+                                        if (clientSearchVal !== '') {
+                                            if (clientSearchVal === rowClientName || clientSearchVal === rowInvoiceNo) {
+                                                return true;
+                                            }
+                                        }
+                                        
+                                        // Check exact match for global search box
+                                        if (dtSearchVal !== '') {
+                                            if (dtSearchVal === rowClientName || dtSearchVal === rowInvoiceNo) {
+                                                return true;
+                                            }
+                                        }
+                                        
+                                        return false; // Hide row if it doesn't match EXACTLY
+                                    }
+                                    return true;
+                                });
+                                
+                                // Re-draw tables initially to apply the restrictive filter
+                                setTimeout(function() {
+                                    if ($.fn.DataTable.isDataTable('#table_final_invoice')) {
+                                        $('#table_final_invoice').DataTable().draw();
+                                    }
+                                    if ($.fn.DataTable.isDataTable('#table_proforma_invoice')) {
+                                        $('#table_proforma_invoice').DataTable().draw();
+                                    }
+                                    
+                                    // Ensure global search boxes redraw correctly for the custom filter
+                                    $('.dataTables_filter input').on('input', function() {
+                                        var table = $(this).closest('.dataTables_wrapper').find('table');
+                                        if (table.length && $.fn.DataTable.isDataTable(table)) {
+                                            table.DataTable().draw();
+                                        }
+                                    });
+                                }, 500);
+                            });
+                        </script>
+                    <?php } ?>
+
                     <div id="proformaPanel" class="invoice-tab-panel">
                     <div class="invoice-table-card">
                         <div class="row clearfix">

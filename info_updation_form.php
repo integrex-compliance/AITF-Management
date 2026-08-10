@@ -6,6 +6,16 @@ date_default_timezone_set('Asia/Kolkata');
 $errors = [];
 $successMessage = '';
 
+$turnstileHelperPath = __DIR__ . '/include/turnstile_helper.php';
+if (file_exists($turnstileHelperPath)) {
+    require_once $turnstileHelperPath;
+}
+$turnstileConfig = function_exists('aitf_get_turnstile_config') ? aitf_get_turnstile_config() : [
+    'site_key' => '',
+    'secret_key' => ''
+];
+$turnstileReady = function_exists('aitf_is_turnstile_ready') ? aitf_is_turnstile_ready() : false;
+
 // Create table if not exists
 $createTableSQL = "CREATE TABLE IF NOT EXISTS information_updation_forms (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -76,6 +86,13 @@ try {
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_info_form'])) {
+    $turnstileToken = trim($_POST['cf-turnstile-response'] ?? '');
+    if ($turnstileReady && empty($turnstileToken)) {
+        $errors[] = "Please complete the captcha verification.";
+    } elseif ($turnstileReady && function_exists('aitf_verify_turnstile') && !aitf_verify_turnstile($turnstileToken, $error_message)) {
+        $errors[] = "Captcha verification failed" . ($error_message ? ": $error_message" : ".");
+    }
+
     // Validation and sanitization
     $org_name = htmlspecialchars(trim($_POST['org_name'] ?? ''), ENT_QUOTES, 'UTF-8');
     $certificate_number = htmlspecialchars(trim($_POST['certificate_number'] ?? ''), ENT_QUOTES, 'UTF-8');
@@ -361,19 +378,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_info_form'])) 
 
 $pageIdentifier = "Information Updation Form";
 ?>
+<?php $pageTitle = "Information Updation Form - AITF"; ?>
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
+    <?php include './headSource.php'; ?>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Information Updation Form - AITF</title>
+    <?php if ($turnstileReady): ?>
+        <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    <?php endif; ?>
 </head>
 
-<body>
+<body id="home" data-spy="scroll" data-target="#navbar-wd" data-offset="98">
     <?php include './headerSource.php'; ?>
 
     <style>
+        body {
+            background: linear-gradient(-45deg, #0f2027, #203a43, #2c5364);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
         .info-update-wrapper {
             max-width: 1100px;
             margin: 30px auto;
@@ -851,84 +884,78 @@ $pageIdentifier = "Information Updation Form";
                                 <div class="change-details" id="<?php echo $fieldName; ?>_details_div"
                                     style="<?php echo ($postedValue === 'Yes') ? 'display:block;' : ''; ?>">
                                     <table class="grid-table">
-                                        <thead>
-                                            <tr>
-                                                <th style="width:16%;">Site/s</th>
-                                                <th style="width:18%;">Department</th>
-                                                <th style="width:8%;">GS Per.</th>
-                                                <th style="width:8%;">GS Cas.</th>
-                                                <th style="width:8%;">S-I Per.</th>
-                                                <th style="width:8%;">S-I Cas.</th>
-                                                <th style="width:8%;">S-II Per.</th>
-                                                <th style="width:8%;">S-II Cas.</th>
-                                                <th style="width:8%;">S-III Per.</th>
-                                                <th style="width:8%;">S-III Cas.</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php
-                                            $deptRows = [
-                                                ['key' => 'administration', 'label' => 'Administration (Incl. Mktg. / Others)'],
-                                                ['key' => 'design', 'label' => 'Design'],
-                                                ['key' => 'production', 'label' => 'Production (Incl. Quality)']
-                                            ];
-                                            for ($b = 0; $b < 2; $b++):
-                                                $siteVal = $_POST['employee_blocks'][$b]['site'] ?? '';
-                                                ?>
+                                        <table class="grid-table" style="border-collapse: collapse; width: 100%;">
+                                            <thead>
                                                 <tr>
-                                                    <td colspan="10" style="background:#f9fafb;">
-                                                        <strong>Name or type:</strong>
-                                                        <input type="text" class="form-control"
-                                                            name="employee_blocks[<?php echo $b; ?>][site]"
-                                                            value="<?php echo htmlspecialchars($siteVal, ENT_QUOTES, 'UTF-8'); ?>"
-                                                            style="display:inline-block; width: 320px; max-width: 100%; margin-left:10px;">
-                                                    </td>
+                                                    <th rowspan="2" style="width:16%; vertical-align: middle; text-align: left; border: 1px solid #000; padding: 5px;">Site/S</th>
+                                                    <th rowspan="2" style="width:20%; vertical-align: middle; text-align: left; border: 1px solid #000; padding: 5px;">Department</th>
+                                                    <th colspan="2" style="text-align: center; border: 1px solid #000; padding: 5px;">General Shift</th>
+                                                    <th colspan="2" style="text-align: center; border: 1px solid #000; padding: 5px;">Shift I</th>
+                                                    <th colspan="2" style="text-align: center; border: 1px solid #000; padding: 5px;">Shift II</th>
+                                                    <th colspan="2" style="text-align: center; border: 1px solid #000; padding: 5px;">Shift III</th>
                                                 </tr>
-                                                <?php foreach ($deptRows as $dr):
-                                                    $k = $dr['key']; ?>
-                                                    <tr>
-                                                        <td>&nbsp;</td>
-                                                        <td><strong><?php echo $dr['label']; ?></strong></td>
-                                                        <td><input type="number" class="form-control"
-                                                                name="employee_blocks[<?php echo $b; ?>][<?php echo $k; ?>][gs_per]"
-                                                                value="<?php echo htmlspecialchars($_POST['employee_blocks'][$b][$k]['gs_per'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
-                                                        </td>
-                                                        <td><input type="number" class="form-control"
-                                                                name="employee_blocks[<?php echo $b; ?>][<?php echo $k; ?>][gs_cas]"
-                                                                value="<?php echo htmlspecialchars($_POST['employee_blocks'][$b][$k]['gs_cas'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
-                                                        </td>
-                                                        <td><input type="number" class="form-control"
-                                                                name="employee_blocks[<?php echo $b; ?>][<?php echo $k; ?>][s1_per]"
-                                                                value="<?php echo htmlspecialchars($_POST['employee_blocks'][$b][$k]['s1_per'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
-                                                        </td>
-                                                        <td><input type="number" class="form-control"
-                                                                name="employee_blocks[<?php echo $b; ?>][<?php echo $k; ?>][s1_cas]"
-                                                                value="<?php echo htmlspecialchars($_POST['employee_blocks'][$b][$k]['s1_cas'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
-                                                        </td>
-                                                        <td><input type="number" class="form-control"
-                                                                name="employee_blocks[<?php echo $b; ?>][<?php echo $k; ?>][s2_per]"
-                                                                value="<?php echo htmlspecialchars($_POST['employee_blocks'][$b][$k]['s2_per'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
-                                                        </td>
-                                                        <td><input type="number" class="form-control"
-                                                                name="employee_blocks[<?php echo $b; ?>][<?php echo $k; ?>][s2_cas]"
-                                                                value="<?php echo htmlspecialchars($_POST['employee_blocks'][$b][$k]['s2_cas'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
-                                                        </td>
-                                                        <td><input type="number" class="form-control"
-                                                                name="employee_blocks[<?php echo $b; ?>][<?php echo $k; ?>][s3_per]"
-                                                                value="<?php echo htmlspecialchars($_POST['employee_blocks'][$b][$k]['s3_per'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
-                                                        </td>
-                                                        <td><input type="number" class="form-control"
-                                                                name="employee_blocks[<?php echo $b; ?>][<?php echo $k; ?>][s3_cas]"
-                                                                value="<?php echo htmlspecialchars($_POST['employee_blocks'][$b][$k]['s3_cas'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
-                                                        </td>
-                                                    </tr>
-                                                <?php endforeach; ?>
                                                 <tr>
-                                                    <td colspan="10" style="height:10px; border-left:0; border-right:0;"></td>
+                                                    <th style="width:8%; text-align: center; border: 1px solid #000; padding: 5px;">Per.</th>
+                                                    <th style="width:8%; text-align: center; border: 1px solid #000; padding: 5px;">Cas.</th>
+                                                    <th style="width:8%; text-align: center; border: 1px solid #000; padding: 5px;">Per.</th>
+                                                    <th style="width:8%; text-align: center; border: 1px solid #000; padding: 5px;">Cas.</th>
+                                                    <th style="width:8%; text-align: center; border: 1px solid #000; padding: 5px;">Per.</th>
+                                                    <th style="width:8%; text-align: center; border: 1px solid #000; padding: 5px;">Cas.</th>
+                                                    <th style="width:8%; text-align: center; border: 1px solid #000; padding: 5px;">Per.</th>
+                                                    <th style="width:8%; text-align: center; border: 1px solid #000; padding: 5px;">Cas.</th>
                                                 </tr>
-                                            <?php endfor; ?>
-                                        </tbody>
-                                    </table>
+                                            </thead>
+                                            <tbody>
+                                                <?php
+                                                $deptRows = [
+                                                    ['key' => 'administration', 'label' => 'Administration<br>(Incl. Mktg. / Others)'],
+                                                    ['key' => 'design', 'label' => 'Design'],
+                                                    ['key' => 'production', 'label' => 'Production<br>(Incl. Quality)']
+                                                ];
+                                                for ($b = 0; $b < 2; $b++):
+                                                    $siteVal = $_POST['employee_blocks'][$b]['site'] ?? '';
+                                                    
+                                                    foreach ($deptRows as $index => $dr):
+                                                        $k = $dr['key']; 
+                                                        $isLast = ($index === count($deptRows) - 1);
+                                                        $borderStyle = $isLast ? 'border-bottom: 2px solid #000;' : 'border-bottom: 1px solid #000;';
+                                                    ?>
+                                                        <tr>
+                                                            <?php if ($index === 0): ?>
+                                                            <td rowspan="3" style="vertical-align: top; border: 1px solid #000; border-bottom: 2px solid #000; padding: 10px;">
+                                                                <strong>Name or type:</strong><br><br>
+                                                                <input type="text"
+                                                                    name="employee_blocks[<?php echo $b; ?>][site]"
+                                                                    value="<?php echo htmlspecialchars($siteVal, ENT_QUOTES, 'UTF-8'); ?>"
+                                                                    style="width: 100%; border: none; border-bottom: 1px dashed #000; outline: none; background: transparent;">
+                                                            </td>
+                                                            <?php endif; ?>
+                                                            <td style="border: 1px solid #000; <?php echo $borderStyle; ?> padding: 5px;"><strong><?php echo $dr['label']; ?></strong></td>
+                                                            <td style="border: 1px solid #000; <?php echo $borderStyle; ?> padding: 0;"><input type="number" class="form-control" style="border:none; border-radius:0; height:100%; box-shadow:none;" name="employee_blocks[<?php echo $b; ?>][<?php echo $k; ?>][gs_per]" value="<?php echo htmlspecialchars($_POST['employee_blocks'][$b][$k]['gs_per'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"></td>
+                                                            <td style="border: 1px solid #000; <?php echo $borderStyle; ?> padding: 0;"><input type="number" class="form-control" style="border:none; border-radius:0; height:100%; box-shadow:none;" name="employee_blocks[<?php echo $b; ?>][<?php echo $k; ?>][gs_cas]" value="<?php echo htmlspecialchars($_POST['employee_blocks'][$b][$k]['gs_cas'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"></td>
+                                                            <td style="border: 1px solid #000; <?php echo $borderStyle; ?> padding: 0;"><input type="number" class="form-control" style="border:none; border-radius:0; height:100%; box-shadow:none;" name="employee_blocks[<?php echo $b; ?>][<?php echo $k; ?>][s1_per]" value="<?php echo htmlspecialchars($_POST['employee_blocks'][$b][$k]['s1_per'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"></td>
+                                                            <td style="border: 1px solid #000; <?php echo $borderStyle; ?> padding: 0;"><input type="number" class="form-control" style="border:none; border-radius:0; height:100%; box-shadow:none;" name="employee_blocks[<?php echo $b; ?>][<?php echo $k; ?>][s1_cas]" value="<?php echo htmlspecialchars($_POST['employee_blocks'][$b][$k]['s1_cas'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"></td>
+                                                            <td style="border: 1px solid #000; <?php echo $borderStyle; ?> padding: 0;"><input type="number" class="form-control" style="border:none; border-radius:0; height:100%; box-shadow:none;" name="employee_blocks[<?php echo $b; ?>][<?php echo $k; ?>][s2_per]" value="<?php echo htmlspecialchars($_POST['employee_blocks'][$b][$k]['s2_per'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"></td>
+                                                            <td style="border: 1px solid #000; <?php echo $borderStyle; ?> padding: 0;"><input type="number" class="form-control" style="border:none; border-radius:0; height:100%; box-shadow:none;" name="employee_blocks[<?php echo $b; ?>][<?php echo $k; ?>][s2_cas]" value="<?php echo htmlspecialchars($_POST['employee_blocks'][$b][$k]['s2_cas'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"></td>
+                                                            <td style="border: 1px solid #000; <?php echo $borderStyle; ?> padding: 0;"><input type="number" class="form-control" style="border:none; border-radius:0; height:100%; box-shadow:none;" name="employee_blocks[<?php echo $b; ?>][<?php echo $k; ?>][s3_per]" value="<?php echo htmlspecialchars($_POST['employee_blocks'][$b][$k]['s3_per'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"></td>
+                                                            <td style="border: 1px solid #000; <?php echo $borderStyle; ?> padding: 0;"><input type="number" class="form-control" style="border:none; border-radius:0; height:100%; box-shadow:none;" name="employee_blocks[<?php echo $b; ?>][<?php echo $k; ?>][s3_cas]" value="<?php echo htmlspecialchars($_POST['employee_blocks'][$b][$k]['s3_cas'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"></td>
+                                                        </tr>
+                                                    <?php endforeach; ?>
+                                                <?php endfor; ?>
+                                                
+                                                <tr>
+                                                    <td colspan="2" style="text-align: right; padding: 10px; border: 1px solid #000; background: #f0f0f0;"><strong>Total N&deg; Employee</strong></td>
+                                                    <td style="border: 1px solid #000; padding: 0; background: #f0f0f0;"></td>
+                                                    <td style="border: 1px solid #000; padding: 0; background: #f0f0f0;"></td>
+                                                    <td style="border: 1px solid #000; padding: 0; background: #f0f0f0;"></td>
+                                                    <td style="border: 1px solid #000; padding: 0; background: #f0f0f0;"></td>
+                                                    <td style="border: 1px solid #000; padding: 0; background: #f0f0f0;"></td>
+                                                    <td style="border: 1px solid #000; padding: 0; background: #f0f0f0;"></td>
+                                                    <td style="border: 1px solid #000; padding: 0; background: #f0f0f0;"></td>
+                                                    <td style="border: 1px solid #000; padding: 0; background: #f0f0f0;"></td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
                                     <div style="margin-top:10px; font-size: 14px;"><strong>For additional sites please attach
                                             annexure in the same format.</strong></div>
                                 </div>
@@ -1019,8 +1046,8 @@ $pageIdentifier = "Information Updation Form";
                                             style="font-size: 48px; color: #16a34a; margin-bottom: 10px;"></i>
                                         <p style="margin: 0; color: #166534; font-weight: 600;">Click to upload
                                             signature</p>
-                                        <p style="margin: 5px 0 0 0; color: #6b7280; font-size: 13px;">or drag and drop
-                                            your file here</p>
+                                        <p style="margin: 5px 0 0 0; color: #6b7280; font-size: 13px;">or drag and drop your file here</p>
+                                        <p style="margin: 5px 0 0 0; color: #ef4444; font-size: 13px; font-weight: 600;">Only JPEG, PNG, PDF is accepted</p>
                                     </div>
                                     <div id="file-preview" style="display: none;">
                                         <i class="fa fa-file-image-o"
@@ -1058,19 +1085,21 @@ $pageIdentifier = "Information Updation Form";
                             www.aitf.co.in<br>
                             <strong>Communication MAIL ID</strong> &ndash; aitfmcl@gmail.com (CERTIFICATION MANAGER)
                         </div>
-                        <div style="height:14px;"></div>
-                        <div style="border:1px solid #111827; padding:14px; border-radius:10px;">
-                            <strong>FOR AITF REVIEW :</strong>
-                            <div
-                                style="height:70px; border-top:1px solid #111827; margin-top:10px; display:flex; align-items:flex-end; justify-content:flex-end; padding-top:10px;">
-                                <strong>Sign of reviewer (AITF)</strong>
-                            </div>
-                        </div>
+
                     </div>
                 </div>
 
+                <!-- Captcha -->
+                <div class="captcha-wrap" style="display: flex; justify-content: center; margin-top: 30px; margin-bottom: 20px;">
+                    <?php if ($turnstileReady): ?>
+                        <div class="cf-turnstile" data-sitekey="<?php echo htmlspecialchars($turnstileConfig['site_key'], ENT_QUOTES, 'UTF-8'); ?>" data-theme="light"></div>
+                    <?php else: ?>
+                        <div class="captcha-note" style="color: #6b7280; font-size: 14px;">Captcha will appear when keys are configured.</div>
+                    <?php endif; ?>
+                </div>
+
                 <!-- Submit Button -->
-                <div style="text-align: center; margin-top: 30px;">
+                <div style="text-align: center;">
                     <button type="submit" name="submit_info_form" class="btn-submit">
                         <i class="fa fa-paper-plane"></i> Submit Information Updation Form
                     </button>
