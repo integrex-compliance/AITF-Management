@@ -247,29 +247,29 @@ if (!function_exists('aitf_generate_employee_eid')) {
     function aitf_generate_employee_eid(PDO $db)
     {
         $year = date('Y');
-        $prefix = 'AITF-EMP-' . $year;
-        $countStmt = $db->prepare("SELECT COUNT(*) FROM user WHERE e_id LIKE :prefix");
-        $likePrefix = $prefix . '%';
-        $countStmt->bindParam(':prefix', $likePrefix);
-        $countStmt->execute();
-        $sequence = 10 + (int)$countStmt->fetchColumn();
+        $prefix = 'AITF-EMP' . $year . '-';
 
         $alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        $digitsPool = '0123456789';
+        
         do {
             $chars = '';
             for ($i = 0; $i < 4; $i++) {
                 $chars .= $alphabet[random_int(0, strlen($alphabet) - 1)];
             }
-            $digits = str_pad((string)random_int(0, 99), 2, '0', STR_PAD_LEFT);
-            $candidate = $prefix . $chars . $digits . $sequence;
+            
+            $digits = '';
+            for ($i = 0; $i < 4; $i++) {
+                $digits .= $digitsPool[random_int(0, strlen($digitsPool) - 1)];
+            }
+            
+            $candidate = $prefix . $chars . $digits;
 
             $check = $db->prepare("SELECT COUNT(*) FROM user WHERE e_id = :eid");
             $check->bindParam(':eid', $candidate);
             $check->execute();
             $exists = (int)$check->fetchColumn() > 0;
-            if ($exists) {
-                $sequence++;
-            }
+            
         } while ($exists);
 
         return $candidate;
@@ -299,11 +299,26 @@ if (!function_exists('aitf_send_html_mail')) {
 if (!function_exists('aitf_send_employee_eid_mail')) {
     function aitf_send_employee_eid_mail(array $user)
     {
-        $body = '<p>Dear ' . aitf_rbac_escape($user['user_name']) . ',</p>'
-            . '<p>Your AITF employee ID has been generated.</p>'
-            . '<p><strong>Employee ID:</strong> ' . aitf_rbac_escape($user['e_id']) . '</p>'
-            . '<p>Please open the AITF login page, use <strong>Create Account</strong>, verify your email with OTP, and enter this employee ID to activate your account.</p>'
-            . '<p>Regards,<br>AITF Management Certification Limited</p>';
+        $body = '<div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">'
+            . '<div style="background-color: #193048; color: #fff; padding: 20px; text-align: center;">'
+            . '<h2 style="margin: 0; font-size: 24px;">Welcome to AITF Portal</h2>'
+            . '</div>'
+            . '<div style="padding: 30px;">'
+            . '<p style="font-size: 16px;">Dear <strong>' . aitf_rbac_escape($user['user_name']) . '</strong>,</p>'
+            . '<p style="font-size: 16px;">Your AITF Employee ID (EID) has been successfully generated. Below are your details:</p>'
+            . '<div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #3b82f6;">'
+            . '<p style="margin: 0 0 10px 0; font-size: 15px;"><strong>Email:</strong> ' . aitf_rbac_escape($user['email_id']) . '</p>'
+            . '<p style="margin: 0; font-size: 15px;"><strong>Employee ID (EID):</strong> ' . aitf_rbac_escape($user['e_id']) . '</p>'
+            . '</div>'
+            . '<p style="font-size: 16px;">To activate your account and set your password, please click the button below to visit our login page.</p>'
+            . '<div style="text-align: center; margin: 30px 0;">'
+            . '<a href="https://aitf.co.in/login.php" style="background-color: #3b82f6; color: #ffffff; text-decoration: none; padding: 12px 25px; font-size: 16px; border-radius: 5px; display: inline-block; font-weight: bold;">Login / Create Account</a>'
+            . '</div>'
+            . '<p style="font-size: 14px; color: #666;">Once on the login page (<a href="https://aitf.co.in/login.php" style="color: #3b82f6;">https://aitf.co.in/login.php</a>), please click on <strong>Create your AITF account</strong>, verify your email with OTP, and enter this EID to activate your account.</p>'
+            . '<hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">'
+            . '<p style="font-size: 15px; margin-bottom: 5px;">Regards,</p>'
+            . '<p style="font-size: 15px; font-weight: bold; margin-top: 0; color: #193048;">AITF Management Certification Limited</p>'
+            . '</div></div>';
 
         aitf_send_html_mail($user['email_id'], 'AITF employee ID generated', $body);
     }

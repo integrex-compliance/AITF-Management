@@ -42,12 +42,26 @@ if (!function_exists('aitf_send_auditor_key_mail')) {
     function aitf_send_auditor_key_mail(array $auditor, $email, $key)
     {
         $eid = !empty($auditor['auditor_number']) ? $auditor['auditor_number'] : 'AUD-' . $auditor['auditors_id'];
-        $body = '<p>Dear ' . aitf_rbac_escape($auditor['auditor_name']) . ',</p>'
-            . '<p>Your AITF auditor portal Employee ID (EID) has been generated.</p>'
-            . '<p><strong>Email:</strong> ' . aitf_rbac_escape($email) . '<br>'
-            . '<strong>Employee ID (EID):</strong> ' . aitf_rbac_escape($eid) . '</p>'
-            . '<p>Please open the AITF login page, click on <strong>Create Account</strong>, and use this email and EID to set your password and access your personalised dashboard.</p>'
-            . '<p>Regards,<br>AITF Management Certification Limited</p>';
+        $body = '<div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">'
+            . '<div style="background-color: #193048; color: #fff; padding: 20px; text-align: center;">'
+            . '<h2 style="margin: 0; font-size: 24px;">Welcome to AITF Auditor Portal</h2>'
+            . '</div>'
+            . '<div style="padding: 30px;">'
+            . '<p style="font-size: 16px;">Dear <strong>' . aitf_rbac_escape($auditor['auditor_name']) . '</strong>,</p>'
+            . '<p style="font-size: 16px;">Your AITF auditor portal Employee ID (EID) has been successfully generated. Below are your login details:</p>'
+            . '<div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #3b82f6;">'
+            . '<p style="margin: 0 0 10px 0; font-size: 15px;"><strong>Email:</strong> ' . aitf_rbac_escape($email) . '</p>'
+            . '<p style="margin: 0; font-size: 15px;"><strong>Employee ID (EID):</strong> ' . aitf_rbac_escape($eid) . '</p>'
+            . '</div>'
+            . '<p style="font-size: 16px;">To access your personalised dashboard and set your password, please click the button below to visit our login page.</p>'
+            . '<div style="text-align: center; margin: 30px 0;">'
+            . '<a href="https://aitf.co.in/login.php" style="background-color: #3b82f6; color: #ffffff; text-decoration: none; padding: 12px 25px; font-size: 16px; border-radius: 5px; display: inline-block; font-weight: bold;">Login / Create Account</a>'
+            . '</div>'
+            . '<p style="font-size: 14px; color: #666;">Once on the login page (<a href="https://aitf.co.in/login.php" style="color: #3b82f6;">https://aitf.co.in/login.php</a>), please click on <strong>Create your AITF account</strong> and use the credentials provided above to set up your password.</p>'
+            . '<hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">'
+            . '<p style="font-size: 15px; margin-bottom: 5px;">Regards,</p>'
+            . '<p style="font-size: 15px; font-weight: bold; margin-top: 0; color: #193048;">AITF Management Certification Limited</p>'
+            . '</div></div>';
 
         aitf_send_html_mail($email, 'AITF auditor portal EID details', $body);
     }

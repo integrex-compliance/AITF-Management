@@ -1,5 +1,7 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 require_once 'tcpdf_include.php';
 require_once 'dbConnect.php';
 date_default_timezone_set('Asia/Kolkata');
@@ -195,18 +197,14 @@ $page1 = '
 <div class="fieldline"><span class="labelu">Name of certified organisation:</span> ' . infoUpdH($submission['org_name'] ?? '') . '</div>
 <div style="height:8mm;"></div>
 <div class="fieldline"><span class="labelu">Certificate number:</span> ' . infoUpdH($submission['certificate_number'] ?? '') . '</div>
-<div style="height:10mm;"></div>
-<div class="para"><strong>This form need to be filled before next periodical/surveillance audit for changes made in your organisation since from last certified by AITF.</strong></div>
-<div style="height:10mm;"></div>
-<div class="para"><strong>Method of Filling:</strong> all the fields in sections 1, 2, 3, 4, 5 and 6 are to be completed, use tick Mark (<span style="font-family: dejavusans;">&#8730;/&#9745;</span>) whereas appropriate, where not applicable put N.A. or &ldquo; &ndash; &rdquo;</div>
-<div style="height:10mm;"></div>
+<div style="height:6mm;"></div>
 <div class="para"><span class="labelu">Review of change in data of organisation -</span></div>
 <div style="height:2mm;"></div>
 ';
 
 foreach ($changesPage1 as $change) {
     $hasChange = isset($submission[$change['change']]) && $submission[$change['change']] === 'Yes';
-    $page1 .= '<div class="para" style="margin-top:6mm;">'
+    $page1 .= '<div class="para" style="margin-top:4mm;">'
         . '<span class="labelu">' . infoUpdH($change['label']) . ':</span> ';
     if (!$hasChange) {
         $page1 .= 'No change ' . infoUpdTick(true);
@@ -220,12 +218,15 @@ foreach ($changesPage1 as $change) {
 $siteChange = isset($submission['site_addition_change']) && $submission['site_addition_change'] === 'Yes';
 $siteRows = $siteChange ? infoUpdParseSiteAdditionRows($submission['site_addition_details'] ?? '') : [];
 $page1 .= '
-<div class="para" style="margin-top:6mm;">
+<div class="para" style="margin-top:4mm;">
     <span class="labelu">Addition of site/s to be covered under the audit scope</span>
     <span class="small">(other sites to be certified and/or operational sites and/or external works, for additional details please attach annexure in the same format.)</span>
     : ' . ($siteChange ? '&nbsp;' : 'No change ' . infoUpdTick(true)) . '
 </div>
-<div style="height:2mm;"></div>
+';
+
+if ($siteChange) {
+    $page1 .= '<div style="height:2mm;"></div>
 <table class="grid" cellpadding="0" cellspacing="0" nobr="true">
     <tr>
         <th style="width:26%;">Name or type</th>
@@ -239,6 +240,7 @@ $page1 .= '
     <tr class="grid-last"><td>' . infoUpdH($siteRows[3]['name'] ?? '') . '</td><td>' . infoUpdH($siteRows[3]['address'] ?? '') . '</td><td>' . infoUpdH($siteRows[3]['activity'] ?? '') . '</td><td>' . infoUpdH($siteRows[3]['staff'] ?? '') . '</td></tr>
 </table>
 ';
+}
 
 $pdf->writeHTML($page1, true, false, true, false, '');
 
@@ -272,7 +274,10 @@ $page2 = '
     <span class="labelu">Change of number of employees (addition/Reduction):</span>
     ' . ($employeeChange ? '&nbsp;' : 'No change ' . infoUpdTick(true)) . '
 </div>
-<div class="para small">If there are changes please split- up employee information as per following chart, Location (Unit)/ Shifts wise:</div>
+';
+
+if ($employeeChange) {
+    $page2 .= '
 <div style="height:2mm;"></div>
 <table class="emp" cellpadding="0" cellspacing="0" nobr="true">
     <tr>
@@ -319,16 +324,27 @@ $page2 = '
     </tr>
 </table>
 ';
+}
+
+if ($employeeChange) {
+    $page2 .= '
+<div style="height:3mm;"></div>
+';
+}
 
 $page2 .= '
-<div style="height:3mm;"></div>
-<div class="para small">For additional sites please attach annexure in the same format.</div>
 <div style="height:3mm;"></div>
 <div class="para">
     Have consultancy services or in-house training been performed after certified by AITF on the subject of ISO 9001:
     Yes ' . infoUpdTick($consultancyYes) . '&nbsp;&nbsp;&nbsp; no ' . infoUpdTick($consultancyNo) . '
 </div>
-<div class="para" style="margin-top:2mm;"><span class="labelu">If yes, by whom ?</span> ' . ($consultancyYes ? infoUpdH($submission['consultancy_details'] ?? '') : '&nbsp;') . '</div>
+';
+
+if ($consultancyYes) {
+    $page2 .= '<div class="para" style="margin-top:2mm;"><span class="labelu">If yes, by whom ?</span> ' . infoUpdH($submission['consultancy_details'] ?? '') . '</div>';
+}
+
+$page2 .= '
 <div style="height:3mm;"></div>
 <div class="para"><strong>Note &ndash;</strong></div>
 <div class="para" style="margin-left:5mm;">&#8226; Surveillance manday will be decided with considering present information of the organisation status.</div>
@@ -412,5 +428,13 @@ $pdf->writeHTML($page2, true, false, true, false, '');
 
 // Output PDF
 $filename = 'Information_Updation_Form_' . $submission['org_name'] . '_' . date('Y-m-d') . '.pdf';
-$pdf->Output($filename, 'D'); // 'D' = force download
+
+$outputMode = isset($pdfOutputMode) ? $pdfOutputMode : 'D';
+if ($outputMode === 'F') {
+    if (isset($pdfOutputPath)) {
+        $pdf->Output($pdfOutputPath, 'F');
+    }
+} else {
+    $pdf->Output($filename, 'D'); // 'D' = force download
+}
 ?>

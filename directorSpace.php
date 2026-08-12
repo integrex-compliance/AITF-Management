@@ -452,7 +452,10 @@ $todayLoginCount = count($todayActivities);
                                                 </td>
                                                 <td>
                                                     <div class="action-buttons text-right" style="display:flex; justify-content:flex-end; gap:8px;">
-                                                        <button type="button" class="btn-action" style="background:#4B5563; color:white; border-color:#374151;" onclick="openScreenTimeModal(<?php echo (int)$employee['user_id']; ?>, '<?php echo aitf_rbac_escape($employee['user_name']); ?>')">
+                                                        <button type="button" class="btn-action" style="background:#10B981; color:white; border-color:#059669;" onclick="openMessageModal(<?php echo (int)$employee['user_id']; ?>, '<?php echo addslashes(aitf_rbac_escape($employee['user_name'])); ?>')">
+                                                            <i class="fa fa-envelope"></i> Message
+                                                        </button>
+                                                        <button type="button" class="btn-action" style="background:#4B5563; color:white; border-color:#374151;" onclick="openScreenTimeModal(<?php echo (int)$employee['user_id']; ?>, '<?php echo addslashes(aitf_rbac_escape($employee['user_name'])); ?>')">
                                                             <i class="fa fa-clock-o"></i> Time
                                                         </button>
                                                         <?php if ($status === 'inactive') { ?>
@@ -1855,4 +1858,133 @@ document.getElementById('permUserSearch').addEventListener('input', function(e) 
         li.style.display = name.includes(term) ? 'flex' : 'none';
     });
 });
+});
+</script>
+
+<!-- Message Modal -->
+<div id="messageModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:#fff; width:500px; max-width:90%; border-radius:8px; display:flex; flex-direction:column; overflow:hidden;">
+        <div style="padding:16px 20px; background:#193048; color:white; display:flex; justify-content:space-between; align-items:center;">
+            <h3 style="margin:0; font-size:16px;" id="messageModalTitle">Message User</h3>
+            <button type="button" onclick="closeMessageModal()" style="background:transparent; border:none; color:white; font-size:20px; cursor:pointer;">&times;</button>
+        </div>
+        <div style="padding:20px; flex:1; overflow-y:auto; max-height:400px; background:#F9FAFB;" id="messageHistory">
+            <!-- Messages will be loaded here -->
+            <div style="text-align:center; color:#9CA3AF;">Loading...</div>
+        </div>
+        <div style="padding:16px 20px; background:white; border-top:1px solid #E5E7EB;">
+            <form id="messageForm" onsubmit="event.preventDefault(); sendMessage();" enctype="multipart/form-data">
+                <input type="hidden" id="msgReceiverId" name="receiver_id">
+                <textarea id="msgText" name="message" rows="2" style="width:100%; padding:10px; border:1px solid #D1D5DB; border-radius:6px; resize:none; margin-bottom:10px;" placeholder="Type your message/update..."></textarea>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <input type="file" id="msgFile" name="attachment" accept=".pdf,.doc,.docx,.jpg,.png" style="font-size:12px;">
+                    <button type="submit" class="btn-primary" style="padding:8px 16px; border-radius:6px;">Send Message</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentMessageUserId = null;
+
+function openMessageModal(userId, userName) {
+    currentMessageUserId = userId;
+    document.getElementById('msgReceiverId').value = userId;
+    document.getElementById('messageModalTitle').innerText = 'Conversation with ' + userName;
+    document.getElementById('messageModal').style.display = 'flex';
+    document.getElementById('msgText').value = '';
+    document.getElementById('msgFile').value = '';
+    loadMessages();
+}
+
+function closeMessageModal() {
+    document.getElementById('messageModal').style.display = 'none';
+    currentMessageUserId = null;
+}
+
+function loadMessages() {
+    if (!currentMessageUserId) return;
+    const formData = new FormData();
+    formData.append('action', 'fetch_conversation');
+    formData.append('other_user_id', currentMessageUserId);
+
+    fetch('ajax_messages.php', { method: 'POST', body: formData })
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('messageHistory');
+            if (data.success) {
+                container.innerHTML = '';
+                if (data.messages.length === 0) {
+                    container.innerHTML = '<div style="text-align:center; color:#9CA3AF; margin-top:20px;">No messages yet. Start the conversation!</div>';
+                } else {
+                    data.messages.forEach(msg => {
+                        const isMe = parseInt(msg.sender_id) === parseInt(data.my_id);
+                        const align = isMe ? 'flex-end' : 'flex-start';
+                        const bg = isMe ? '#E0F2FE' : '#FFFFFF';
+                        const border = isMe ? '#BAE6FD' : '#E5E7EB';
+                        
+                        let attachmentHtml = '';
+                        if (msg.attachment) {
+                            attachmentHtml = `<div style="margin-top:8px;"><a href="${msg.attachment}" target="_blank" style="font-size:12px; color:#2563EB; text-decoration:underline;"><i class="fa fa-paperclip"></i> View Attachment</a></div>`;
+                        }
+                        
+                        const timeStr = new Date(msg.created_at).toLocaleString();
+                        
+                        const msgDiv = document.createElement('div');
+                        msgDiv.style.display = 'flex';
+                        msgDiv.style.flexDirection = 'column';
+                        msgDiv.style.alignItems = align;
+                        msgDiv.style.marginBottom = '12px';
+                        
+                        msgDiv.innerHTML = `
+                            <div style="background:${bg}; border:1px solid ${border}; padding:10px 14px; border-radius:8px; max-width:80%; font-size:14px; color:#1F2937;">
+                                <div style="margin-bottom:4px; word-wrap:break-word; white-space:pre-wrap;">${msg.message.replace(/</g, '&lt;')}</div>
+                                ${attachmentHtml}
+                                <div style="font-size:10px; color:#6B7280; text-align:right; margin-top:4px;">${timeStr}</div>
+                            </div>
+                        `;
+                        container.appendChild(msgDiv);
+                    });
+                    container.scrollTop = container.scrollHeight;
+                }
+            } else {
+                container.innerHTML = '<div style="text-align:center; color:red;">Failed to load messages.</div>';
+            }
+        });
+}
+
+function sendMessage() {
+    const form = document.getElementById('messageForm');
+    const formData = new FormData(form);
+    formData.append('action', 'send_message');
+    
+    if (!formData.get('message').trim() && !document.getElementById('msgFile').files.length) {
+        alert("Please enter a message or attach a file.");
+        return;
+    }
+
+    const submitBtn = form.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.innerText = 'Sending...';
+
+    fetch('ajax_messages.php', { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(data => {
+            submitBtn.disabled = false;
+            submitBtn.innerText = 'Send Message';
+            if (data.success) {
+                document.getElementById('msgText').value = '';
+                document.getElementById('msgFile').value = '';
+                loadMessages();
+            } else {
+                alert("Error: " + data.message);
+            }
+        })
+        .catch(err => {
+            submitBtn.disabled = false;
+            submitBtn.innerText = 'Send Message';
+            alert("Error sending message.");
+        });
+}
 </script>

@@ -828,6 +828,9 @@ aitf_touch_login_activity($db);
                 <a class="nav-item" data-tab="profile">
                     <i class="fas fa-user"></i> Profile
                 </a>
+                <a class="nav-item" data-tab="updates">
+                    <i class="fas fa-bell"></i> Updates and News
+                </a>
                 <a class="nav-item" data-tab="performance">
                     <i class="fas fa-chart-bar"></i> Performance
                 </a>
@@ -1256,6 +1259,30 @@ aitf_touch_login_activity($db);
                 </div>
             </div>
 
+        <!-- Updates and News Tab -->
+            <div id="tab-updates" class="tab-pane">
+                <div class="section-header">
+                    <h2 class="section-title">Updates and News</h2>
+                    <p style="color:var(--text-muted); margin-top:5px;">Messages and updates from the Director</p>
+                </div>
+                
+                <div style="background:var(--card-bg); border-radius:12px; border:1px solid var(--border-color); display:flex; flex-direction:column; height:500px; box-shadow:var(--shadow-sm);">
+                    <div id="auditorMessageHistory" style="flex:1; overflow-y:auto; padding:20px; background:var(--bg-color);">
+                        <div style="text-align:center; color:var(--text-muted);">Loading...</div>
+                    </div>
+                    <div style="padding:16px; border-top:1px solid var(--border-color); background:var(--card-bg); border-radius:0 0 12px 12px;">
+                        <form id="auditorMessageForm" onsubmit="event.preventDefault(); sendAuditorMessage();" enctype="multipart/form-data">
+                            <input type="hidden" id="directorId" name="receiver_id">
+                            <textarea id="auditorMsgText" name="message" rows="2" style="width:100%; padding:12px; border:1px solid var(--border-color); border-radius:8px; resize:none; margin-bottom:12px; background:var(--bg-color); color:var(--text-main);" placeholder="Reply to director..."></textarea>
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <input type="file" id="auditorMsgFile" name="attachment" accept=".pdf,.doc,.docx,.jpg,.png" style="font-size:12px;">
+                                <button type="submit" style="background:var(--accent-blue); color:white; border:none; padding:10px 20px; border-radius:8px; font-weight:600; cursor:pointer;">Send Reply</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
         </main>
     </div>
 
@@ -1377,6 +1404,112 @@ aitf_touch_login_activity($db);
                     });
                 });
             }
+
+            // Updates Tab Logic
+            let directorId = null;
+            fetch('ajax_messages.php?action=get_director_id')
+                .then(r => r.json())
+                .then(data => {
+                    if(data.success) {
+                        directorId = data.director_id;
+                        document.getElementById('directorId').value = directorId;
+                    }
+                });
+
+            const updatesTabBtn = document.querySelector('.nav-item[data-tab="updates"]');
+            if(updatesTabBtn) {
+                updatesTabBtn.addEventListener('click', () => {
+                    loadAuditorMessages();
+                });
+            }
+
+            window.loadAuditorMessages = function() {
+                if (!directorId) return;
+                const formData = new FormData();
+                formData.append('action', 'fetch_conversation');
+                formData.append('other_user_id', directorId);
+
+                fetch('ajax_messages.php', { method: 'POST', body: formData })
+                    .then(response => response.json())
+                    .then(data => {
+                        const container = document.getElementById('auditorMessageHistory');
+                        if (data.success) {
+                            container.innerHTML = '';
+                            if (data.messages.length === 0) {
+                                container.innerHTML = '<div style="text-align:center; color:var(--text-muted); margin-top:20px;">No updates or messages yet.</div>';
+                            } else {
+                                data.messages.forEach(msg => {
+                                    const isMe = parseInt(msg.sender_id) === parseInt(data.my_id);
+                                    const align = isMe ? 'flex-end' : 'flex-start';
+                                    const bg = isMe ? 'var(--primary-light)' : 'var(--card-bg)';
+                                    const color = isMe ? '#ffffff' : 'var(--text-main)';
+                                    const border = isMe ? 'transparent' : 'var(--border-color)';
+                                    
+                                    let attachmentHtml = '';
+                                    if (msg.attachment) {
+                                        attachmentHtml = `<div style="margin-top:8px;"><a href="${msg.attachment}" target="_blank" style="font-size:12px; color:${isMe?'#93c5fd':'var(--accent-blue)'}; text-decoration:underline;"><i class="fa fa-paperclip"></i> View Attachment</a></div>`;
+                                    }
+                                    
+                                    const timeStr = new Date(msg.created_at).toLocaleString();
+                                    
+                                    const msgDiv = document.createElement('div');
+                                    msgDiv.style.display = 'flex';
+                                    msgDiv.style.flexDirection = 'column';
+                                    msgDiv.style.alignItems = align;
+                                    msgDiv.style.marginBottom = '12px';
+                                    
+                                    msgDiv.innerHTML = `
+                                        <div style="background:${bg}; color:${color}; border:1px solid ${border}; padding:12px 16px; border-radius:12px; max-width:80%; font-size:14px; box-shadow:var(--shadow-sm);">
+                                            <div style="margin-bottom:4px; font-weight:bold; font-size:12px; opacity:0.8;">${isMe ? 'You' : msg.sender_name}</div>
+                                            <div style="margin-bottom:4px; word-wrap:break-word; white-space:pre-wrap;">${msg.message.replace(/</g, '&lt;')}</div>
+                                            ${attachmentHtml}
+                                            <div style="font-size:10px; opacity:0.7; text-align:right; margin-top:6px;">${timeStr}</div>
+                                        </div>
+                                    `;
+                                    container.appendChild(msgDiv);
+                                });
+                                container.scrollTop = container.scrollHeight;
+                            }
+                        } else {
+                            container.innerHTML = '<div style="text-align:center; color:var(--accent-red);">Failed to load messages.</div>';
+                        }
+                    });
+            };
+
+            window.sendAuditorMessage = function() {
+                const form = document.getElementById('auditorMessageForm');
+                const formData = new FormData(form);
+                formData.append('action', 'send_message');
+                
+                if (!formData.get('message').trim() && !document.getElementById('auditorMsgFile').files.length) {
+                    alert("Please enter a message or attach a file.");
+                    return;
+                }
+
+                const submitBtn = form.querySelector('button[type="submit"]');
+                submitBtn.disabled = true;
+                submitBtn.innerText = 'Sending...';
+
+                fetch('ajax_messages.php', { method: 'POST', body: formData })
+                    .then(r => r.json())
+                    .then(data => {
+                        submitBtn.disabled = false;
+                        submitBtn.innerText = 'Send Reply';
+                        if (data.success) {
+                            document.getElementById('auditorMsgText').value = '';
+                            document.getElementById('auditorMsgFile').value = '';
+                            loadAuditorMessages();
+                        } else {
+                            alert("Error: " + data.message);
+                        }
+                    })
+                    .catch(err => {
+                        submitBtn.disabled = false;
+                        submitBtn.innerText = 'Send Reply';
+                        alert("Error sending message.");
+                    });
+            };
+
         });
     </script>
 </body>

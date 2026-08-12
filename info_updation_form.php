@@ -365,6 +365,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_info_form'])) 
             $stmt->bindParam(':signature_image', $signature_image_path);
 
             $stmt->execute();
+            $last_insert_id = $db->lastInsertId();
+
+            try {
+                $tempPdfPath = sys_get_temp_dir() . '/Information_Updation_Form_' . $last_insert_id . '_' . time() . '.pdf';
+                
+                // Generate PDF in a clean scope to prevent variable conflicts
+                call_user_func(function() use ($last_insert_id, $tempPdfPath) {
+                    global $db;
+                    $_GET['id'] = $last_insert_id;
+                    $pdfOutputMode = 'F';
+                    $pdfOutputPath = $tempPdfPath;
+                    require 'info_updation_pdf.php';
+                });
+                
+                require_once __DIR__ . '/testemail.php';
+                $emailSender = new AITFServiceEmailSender();
+                
+                // 1. Send mail to client
+                if (!empty($email)) {
+                    $clientSubject = "Thank you for your Information Updation Form";
+                    $clientBody = "<p>Dear " . htmlspecialchars($contact_person) . ",</p>
+                                   <p>Thank you, we have received your information updation form.</p>
+                                   <p>This is a confirmation mail that we have received your form and our team is reviewing it right now.</p>
+                                   <p>Meanwhile, if you have any queries, feel free to contact us.</p>
+                                   <p>Best regards,<br>AITF Certification Services</p>";
+                    $emailSender->sendEmail($email, $contact_person, $clientBody, $clientSubject);
+                }
+                
+                // 2. Send mail to admin
+                $adminEmail = "certification@aitf.co.in";
+                $adminSubject = htmlspecialchars($org_name) . " information updation form";
+                $adminBody = "<p>Hello,</p>
+                              <p>New information updation form received from <b>" . htmlspecialchars($org_name) . "</b>.</p>
+                              <p>Please find the attached PDF form for details.</p>";
+                              
+                if (file_exists($tempPdfPath)) {
+                    $emailSender->sendAttachEmail($adminEmail, "AITF Admin", $adminBody, $adminSubject, $tempPdfPath);
+                    unlink($tempPdfPath); // Clean up temp file
+                }
+            } catch (Exception $e) {
+                error_log("Failed to send emails for info updation: " . $e->getMessage());
+            }
 
             $successMessage = "Information updation form submitted successfully!";
             // Clear form data
