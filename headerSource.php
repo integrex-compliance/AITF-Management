@@ -9,7 +9,7 @@
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&family=Montserrat:wght@700;800&family=Playfair+Display:wght@700;800;900&display=swap');
 
     :root {
-        --announcement-height: 0px;
+        --announcement-height: 38px;
         --nav-height: 85px;
         --nav-bg: #ffffff;
         --nav-text: #1e293b;
@@ -1098,10 +1098,30 @@
 </script>
 <!-- Start header -->
 
-<head>
-
-</head>
-
+<div class="aitf-public-announcement-banner">
+    <div class="aitf-public-announcement-track">
+        <div class="aitf-public-announcement-group">
+            <div class="aitf-public-announcement-item">ACCREDITED CERTIFICATION BODY</div>
+            <div class="aitf-public-announcement-divider"></div>
+            <div class="aitf-public-announcement-item"><i class="fa fa-balance-scale"></i> IMPARTIAL ASSESSMENT</div>
+            <div class="aitf-public-announcement-divider"></div>
+            <div class="aitf-public-announcement-item"><i class="fa fa-shield"></i> TRUSTED. ACCREDITED. INDEPENDENT.</div>
+            <div class="aitf-public-announcement-divider"></div>
+            <div class="aitf-public-announcement-item"><i class="fa fa-handshake-o"></i> AUTHENTICATE CERTIFICATE</div>
+            <div class="aitf-public-announcement-divider"></div>
+        </div>
+        <div class="aitf-public-announcement-group">
+            <div class="aitf-public-announcement-item">ACCREDITED CERTIFICATION BODY</div>
+            <div class="aitf-public-announcement-divider"></div>
+            <div class="aitf-public-announcement-item"><i class="fa fa-balance-scale"></i> IMPARTIAL ASSESSMENT</div>
+            <div class="aitf-public-announcement-divider"></div>
+            <div class="aitf-public-announcement-item"><i class="fa fa-shield"></i> TRUSTED. ACCREDITED. INDEPENDENT.</div>
+            <div class="aitf-public-announcement-divider"></div>
+            <div class="aitf-public-announcement-item"><i class="fa fa-handshake-o"></i> AUTHENTICATE CERTIFICATE</div>
+            <div class="aitf-public-announcement-divider"></div>
+        </div>
+    </div>
+</div>
 
 <header class="top-header">
     <nav class="navbar header-nav navbar-expand-lg">
@@ -1478,6 +1498,9 @@
                                         <a href="info_updation_form.php"
                                             style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
                                                 class="link-line"></span>Information Update Form (Fill Online)</a>
+                                        <a href="fill_nc_closing_form.php"
+                                            style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
+                                                class="link-line"></span>Fill NC Closing Form (Online)</a>
                                         <a href="circuler.php"
                                             style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
                                                 class="link-line"></span>Circulars</a>

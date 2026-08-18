@@ -3,6 +3,39 @@
 $pageIdentifier = "Application Received";
 include 'header.php';
 include 'dbConnect.php';
+$isAuditorView = isset($_SESSION['role']) && $_SESSION['role'] === 'Auditor';
+?>
+<?php if ($isAuditorView): ?>
+<style>
+    /* Hide the left sidebar menu completely for auditors */
+    #sidebar-wrapper { display: none !important; }
+    #wrapper, #wrapper.active { padding-left: 0 !important; }
+    
+    /* Disable the edit and delete buttons for auditors */
+    .fa-trash, .btn-danger, [onclick*="delete"], 
+    .fa-edit, .btn-primary[data-target*="edit"], [data-target*="edit"] { 
+        pointer-events: none !important; 
+        opacity: 0.5 !important;
+        cursor: not-allowed !important;
+    }
+    
+    /* Optional: add a tooltip-like effect for disabled items */
+    .fa-trash:hover::after, .btn-danger:hover::after, [onclick*="delete"]:hover::after,
+    .fa-edit:hover::after, [data-target*="edit"]:hover::after {
+        content: "Action not allowed";
+        position: absolute;
+        background: #333;
+        color: #fff;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        margin-top: -30px;
+        white-space: nowrap;
+        z-index: 1000;
+    }
+</style>
+<?php endif; ?>
+<?php
 
 $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id'])) {
@@ -59,6 +92,21 @@ if ($id > 0 && isset($db) && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_PO
             } catch (Exception $e) {
                 $updateError = 'Unable to update application right now. Please try again.';
             }
+        }
+    } elseif ($_POST['action'] === 'update_review') {
+        $review = trim($_POST['auditor_review'] ?? '');
+        try {
+            $stmt = $db->prepare("UPDATE online_audit_applications SET auditor_review = :review WHERE id = :id");
+            $stmt->bindParam(':review', $review, PDO::PARAM_STR);
+            $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+            $stmt->execute();
+            $updateSuccess = 'Review updated successfully.';
+            // Reload application after updating review
+            if (isset($application) && is_array($application)) {
+                $application['auditor_review'] = $review;
+            }
+        } catch (Exception $e) {
+            $updateError = 'Unable to update review right now.';
         }
     } elseif ($_POST['action'] === 'delete_app') {
         try {
@@ -270,7 +318,7 @@ if ($application) {
                                             <div class="app-detail-subtitle">No application found</div>
                                         </div>
                                     </div>
-                                    <a href="applicationReceived.php" class="btn btn-default btn-sm app-detail-back">&laquo; Back</a>
+                                    <a href="<?php echo $isAuditorView ? 'auditorDashboard.php' : 'applicationReceived.php'; ?>" class="btn btn-default btn-sm app-detail-back">&laquo; Back</a>
                                 </div>
                             </div>
                             </div>
@@ -299,7 +347,7 @@ if ($application) {
                                         <button class="btn btn-warning btn-sm" data-toggle="modal" data-target="#editApplicationModal"><i class="fa fa-pencil"></i> Edit</button>
                                         <button class="btn btn-danger btn-sm" data-toggle="modal" data-target="#deleteApplicationModal"><i class="fa fa-trash"></i> Delete</button>
                                         <a href="downloadOnlineApplication.php?id=<?php echo (int)$application['id']; ?>" class="btn btn-primary btn-sm app-detail-download"><i class="fa fa-download"></i>Download</a>
-                                        <a href="applicationReceived.php" class="btn btn-default btn-sm app-detail-back">&laquo; Back</a>
+                                        <a href="<?php echo $isAuditorView ? 'auditorDashboard.php' : 'applicationReceived.php'; ?>" class="btn btn-default btn-sm app-detail-back">&laquo; Back</a>
                                     </div>
                                 </div>
 
@@ -310,6 +358,33 @@ if ($application) {
                                 <?php } elseif ($updateError !== '') { ?>
                                     <div class="alert alert-danger" style="padding:8px 12px; margin-bottom:12px;">
                                         <?php echo htmlspecialchars($updateError, ENT_QUOTES, 'UTF-8'); ?>
+                                    </div>
+                                <?php } ?>
+
+                                <?php if (!empty($application['admin_assign_message'])) { ?>
+                                    <h4 class="app-section-title">Message from Admin</h4>
+                                    <div style="padding:16px; background-color: #eff6ff; border: 1px solid #bfdbfe; border-left: 4px solid #3b82f6; border-radius: 6px; margin-bottom: 24px;">
+                                        <p style="margin:0; font-size: 14px; color: #1e3a8a; font-style: italic;">
+                                            <?php echo nl2br(htmlspecialchars($application['admin_assign_message'], ENT_QUOTES, 'UTF-8')); ?>
+                                        </p>
+                                    </div>
+                                <?php } ?>
+
+                                <?php if (!empty($application['auditor_review']) || Utitlity::checkForAuditor() || Utitlity::checkForUserMainAdmin()) { ?>
+                                    <h4 class="app-section-title">Auditor Review</h4>
+                                    <div style="padding:16px; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 16px;">
+                                        <?php if (Utitlity::checkForAuditor() || Utitlity::checkForUserMainAdmin()) { ?>
+                                            <form method="post" action="applicationReceivedView.php?id=<?php echo (int)$application['id']; ?>">
+                                                <input type="hidden" name="id" value="<?php echo (int)$application['id']; ?>">
+                                                <input type="hidden" name="action" value="update_review">
+                                                <div class="form-group">
+                                                    <textarea name="auditor_review" class="form-control" rows="4" placeholder="Enter your review/comments here..."><?php echo htmlspecialchars($application['auditor_review'] ?? '', ENT_QUOTES, 'UTF-8'); ?></textarea>
+                                                </div>
+                                                <button type="submit" class="btn btn-primary btn-sm">Save Review</button>
+                                            </form>
+                                        <?php } else { ?>
+                                            <p style="margin:0; font-size: 13px; color: #1f2937;"><?php echo nl2br(htmlspecialchars($application['auditor_review'] ?? 'No review provided yet.', ENT_QUOTES, 'UTF-8')); ?></p>
+                                        <?php } ?>
                                     </div>
                                 <?php } ?>
 

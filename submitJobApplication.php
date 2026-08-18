@@ -38,7 +38,9 @@ function ensureJobApplicationsTable($db)
         "ALTER TABLE job_applications ADD COLUMN resume_path VARCHAR(500) NULL",
         "ALTER TABLE job_applications ADD COLUMN resume_original_name VARCHAR(255) NULL",
         "ALTER TABLE job_applications ADD COLUMN read_flag TINYINT(1) DEFAULT 0",
-        "ALTER TABLE job_applications ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP"
+        "ALTER TABLE job_applications ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP",
+        "ALTER TABLE job_applications ADD COLUMN assigned_to_auditor_id INT NULL",
+        "ALTER TABLE job_applications ADD COLUMN auditor_review TEXT NULL"
     ];
 
     foreach ($alterStatements as $sql) {
@@ -81,6 +83,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
         $stmt = $db->prepare("DELETE FROM job_applications WHERE id = ?");
         $stmt->execute([(int)$_POST['job_id']]);
+        echo json_encode(['status' => 'ok']);
+        exit;
+    }
+
+    if ($_POST['action'] === 'save_job_review' && isset($_POST['job_id'])) {
+        $stmt = $db->prepare("UPDATE job_applications SET auditor_review = ? WHERE id = ?");
+        $stmt->execute([trim($_POST['auditor_review'] ?? ''), (int)$_POST['job_id']]);
         echo json_encode(['status' => 'ok']);
         exit;
     }

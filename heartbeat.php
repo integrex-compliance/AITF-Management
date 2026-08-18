@@ -46,12 +46,23 @@ try {
     $userId = isset($_SESSION['id']) ? (int)$_SESSION['id'] : 0;
     $activityId = (int)$_SESSION['login_activity_id'];
 
+    // If userId is 0 (e.g. Director), try to fetch the actual user_id from the login_activity record
+    if ($userId <= 0 && $activityId > 0) {
+        $lookupStmt = $db->prepare("SELECT user_id FROM user_login_activity WHERE activity_id = :id LIMIT 1");
+        $lookupStmt->execute([':id' => $activityId]);
+        $lookupId = $lookupStmt->fetchColumn();
+        // Use activity_id as a fallback identifier for screen time if user_id is NULL/0
+        if ($lookupId && (int)$lookupId > 0) {
+            $userId = (int)$lookupId;
+        }
+    }
+
     if ($isActive) {
         // Update last seen to NOW() if active
         $stmt = $db->prepare("UPDATE user_login_activity SET last_seen_at = NOW() WHERE activity_id = :id AND logout_at IS NULL");
         $stmt->execute(array(':id' => $activityId));
         
-        // Add screen time
+        // Add screen time for all users (including those with user_id > 0)
         if ($userId > 0 && $delta > 0) {
             $date = date('Y-m-d');
             $stStmt = $db->prepare("INSERT INTO user_daily_screen_time (user_id, record_date, total_seconds) 
@@ -64,6 +75,7 @@ try {
                 ':sec2' => $delta
             ]);
         }
+
     } else {
         // If they switched tabs, set last_seen_at back so they immediately show as offline
         $stmt = $db->prepare("UPDATE user_login_activity SET last_seen_at = DATE_SUB(NOW(), INTERVAL 10 MINUTE) WHERE activity_id = :id AND logout_at IS NULL");

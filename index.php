@@ -12,8 +12,7 @@ session_start();
     <?php include './headSource.php'; ?>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/perfect-learn/css/methodology-styles.css">
-    <link rel="stylesheet" href="popup-advertisement.css">
-    <script src="popup-advertisement.js"></script>
+
     <style>
         /* Box Navigation */
         /* Modern Navigation Container */
@@ -4458,6 +4457,326 @@ session_start();
             }
         });
     </script>
+<style>
+/* Animation for visibility */
+@keyframes pulse-glow-right {
+    0% { box-shadow: 0 0 0 0 rgba(5, 60, 109, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(5, 60, 109, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(5, 60, 109, 0); }
+}
+
+@keyframes pulse-glow-left {
+    0% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(225, 29, 72, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0); }
+}
+
+/* Quick Forms Tab & Slide Panel Styles */
+.quick-forms-tab {
+    position: fixed;
+    right: 0;
+    top: 250px;
+    z-index: 9998;
+    border: 0;
+    border-radius: 6px 0 0 6px;
+    background: #053c6d;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding: 12px 10px;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    cursor: pointer;
+    outline: none;
+    transition: background 0.2s, padding-right 0.2s;
+    animation: pulse-glow-right 2s infinite;
+}
+
+.quick-forms-tab:hover {
+    background: #1468b3;
+    padding-right: 14px;
+}
+
+.quick-forms-panel {
+    position: fixed;
+    top: 0;
+    right: -320px;
+    width: 320px;
+    height: 100vh;
+    background: #fff;
+    box-shadow: -5px 0 25px rgba(0,0,0,0.1);
+    z-index: 9999;
+    transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+}
+
+.quick-forms-panel.open {
+    right: 0;
+}
+
+/* Quick Links (Left Tab) Styles */
+.quick-links-tab {
+    position: fixed;
+    left: 0;
+    top: 250px;
+    z-index: 9998;
+    border: 0;
+    border-radius: 0 6px 6px 0;
+    background: #e11d48; /* Red for high visibility */
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding: 12px 10px;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    cursor: pointer;
+    outline: none;
+    transition: background 0.2s, padding-left 0.2s;
+    animation: pulse-glow-left 2s infinite;
+}
+
+.quick-links-tab:hover {
+    background: #be123c;
+    padding-left: 14px;
+}
+
+.quick-links-panel {
+    position: fixed;
+    top: 0;
+    left: -320px; /* Hidden off left edge */
+    width: 320px;
+    height: 100vh;
+    background: #fff;
+    box-shadow: 5px 0 25px rgba(0,0,0,0.1);
+    z-index: 9999;
+    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+}
+
+.quick-links-panel.open {
+    left: 0;
+}
+
+.quick-links-panel-header {
+    background: #e11d48;
+    color: #fff;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.quick-links-panel-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+/* Shared structural classes */
+.quick-forms-panel-header {
+    background: #053c6d;
+    color: #fff;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.quick-forms-panel-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.quick-forms-close, .quick-links-close {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+
+.quick-forms-close:hover, .quick-links-close:hover {
+    color: #cbd5e1;
+}
+
+.quick-forms-panel-body, .quick-links-panel-body {
+    padding: 15px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.quick-form-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-left: 3px solid #053c6d;
+    padding: 12px 15px;
+    margin-bottom: 12px;
+    border-radius: 4px;
+    transition: all 0.2s;
+    display: block;
+    text-decoration: none;
+    color: inherit;
+}
+
+.quick-link-card {
+    background: #fff5f5;
+    border: 1px solid #fecdd3;
+    border-left: 3px solid #e11d48;
+    padding: 12px 15px;
+    margin-bottom: 12px;
+    border-radius: 4px;
+    transition: all 0.2s;
+    display: block;
+    text-decoration: none;
+    color: inherit;
+}
+
+.quick-form-card:hover, .quick-link-card:hover {
+    background: #f1f5f9;
+    transform: translateX(-3px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    text-decoration: none;
+    color: inherit;
+}
+.quick-link-card:hover {
+    background: #ffe4e6;
+    transform: translateX(3px); /* Move right slightly on hover */
+}
+
+.quick-form-card-title, .quick-link-card-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #0f172a;
+    margin-bottom: 2px;
+}
+.quick-form-card-desc, .quick-link-card-desc {
+    font-size: 12px;
+    color: #64748b;
+}
+</style>
+
+<!-- Quick Forms (Right) -->
+<button type="button" class="quick-forms-tab" id="quickFormsTab" title="Quick Link (fill online-form)">
+    Quick Link (fill online-form)
+</button>
+
+<div class="quick-forms-panel" id="quickFormsPanel" aria-hidden="true">
+    <div class="quick-forms-panel-header">
+        <h4 class="quick-forms-panel-title">Quick Link (fill online-form)</h4>
+        <button type="button" class="quick-forms-close" id="quickFormsClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="quick-forms-panel-body">
+        <a href="application.php#online-application-form" class="quick-form-card">
+            <div class="quick-form-card-title">Application Form</div>
+            <div class="quick-form-card-desc">Submit a new certification application</div>
+        </a>
+        <a href="info_updation_form.php" class="quick-form-card">
+            <div class="quick-form-card-title">Information Updation Form</div>
+            <div class="quick-form-card-desc">Update your existing information</div>
+        </a>
+        <a href="fill_nc_closing_form.php" class="quick-form-card">
+            <div class="quick-form-card-title">NC Closing Form</div>
+            <div class="quick-form-card-desc">Submit non-conformance closing report</div>
+        </a>
+    </div>
+</div>
+
+<!-- Quick Links (Left) -->
+<button type="button" class="quick-links-tab" id="quickLinksTab" title="Quick Link (Download form)">
+    Quick Link (Download form)
+</button>
+
+<div class="quick-links-panel" id="quickLinksPanel" aria-hidden="true">
+    <div class="quick-links-panel-header">
+        <h4 class="quick-links-panel-title">Quick Link (Download form)</h4>
+        <button type="button" class="quick-links-close" id="quickLinksClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="quick-links-panel-body">
+        <a href="text/Audit application form QMS, EMS & OHSMS.pdf" download class="quick-link-card">
+            <div class="quick-link-card-title"><i class="fa fa-download"></i> Application Form</div>
+            <div class="quick-link-card-desc">Audit application form QMS, EMS & OHSMS</div>
+        </a>
+        <a href="text/Information_Updation_form.pdf" download class="quick-link-card">
+            <div class="quick-link-card-title"><i class="fa fa-download"></i> Information Updation Form</div>
+            <div class="quick-link-card-desc">Information Updation form.pdf</div>
+        </a>
+        <a href="text/NC_Closure.pdf" download class="quick-link-card">
+            <div class="quick-link-card-title"><i class="fa fa-download"></i> NC Closing Form</div>
+            <div class="quick-link-card-desc">NC Closure Report PDF</div>
+        </a>
+        <a href="text/guidline_g_1_11.pdf" download class="quick-link-card">
+            <div class="quick-link-card-title"><i class="fa fa-download"></i> Certificate Guideline</div>
+            <div class="quick-link-card-desc">Guideline G 1-11</div>
+        </a>
+        <a href="text/Logo_Usage_Guideline.pdf" download class="quick-link-card">
+            <div class="quick-link-card-title"><i class="fa fa-download"></i> Logo Usage Guideline</div>
+            <div class="quick-link-card-desc">Client Logo Usage Guideline</div>
+        </a>
+        <a href="text/transition_guideline.pdf" download class="quick-link-card">
+            <div class="quick-link-card-title"><i class="fa fa-download"></i> Transition Guideline</div>
+            <div class="quick-link-card-desc">Transition Guideline Document</div>
+        </a>
+        <a href="text/circular_revision_of_documents.pdf" download class="quick-link-card">
+            <div class="quick-link-card-title"><i class="fa fa-download"></i> Circular</div>
+            <div class="quick-link-card-desc">Circular Revision of Documents</div>
+        </a>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // Right Tab Logic
+    var rightTab = document.getElementById("quickFormsTab");
+    var rightPanel = document.getElementById("quickFormsPanel");
+    var rightCloseBtn = document.getElementById("quickFormsClose");
+
+    if (rightTab && rightPanel && rightCloseBtn) {
+        rightTab.addEventListener("click", function() {
+            rightPanel.classList.add("open");
+            rightPanel.setAttribute("aria-hidden", "false");
+        });
+        rightCloseBtn.addEventListener("click", function() {
+            rightPanel.classList.remove("open");
+            rightPanel.setAttribute("aria-hidden", "true");
+        });
+    }
+
+    // Left Tab Logic
+    var leftTab = document.getElementById("quickLinksTab");
+    var leftPanel = document.getElementById("quickLinksPanel");
+    var leftCloseBtn = document.getElementById("quickLinksClose");
+
+    if (leftTab && leftPanel && leftCloseBtn) {
+        leftTab.addEventListener("click", function() {
+            leftPanel.classList.add("open");
+            leftPanel.setAttribute("aria-hidden", "false");
+        });
+        leftCloseBtn.addEventListener("click", function() {
+            leftPanel.classList.remove("open");
+            leftPanel.setAttribute("aria-hidden", "true");
+        });
+    }
+
+    // Global Click Outside Logic
+    document.addEventListener("click", function(event) {
+        if (rightPanel && rightPanel.classList.contains("open") && !rightPanel.contains(event.target) && event.target !== rightTab) {
+            rightPanel.classList.remove("open");
+            rightPanel.setAttribute("aria-hidden", "true");
+        }
+        if (leftPanel && leftPanel.classList.contains("open") && !leftPanel.contains(event.target) && event.target !== leftTab) {
+            leftPanel.classList.remove("open");
+            leftPanel.setAttribute("aria-hidden", "true");
+        }
+    });
+});
+</script>
 </body>
 
 </html>

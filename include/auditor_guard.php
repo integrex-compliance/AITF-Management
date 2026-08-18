@@ -88,7 +88,13 @@ if (!function_exists('aitf_auditor_allowed_scripts')) {
             'getclientinfo.php', 'checkcustomer.php', 'checkservicetype.php',
             'mastergetdata.php', 'fetch_nace_classes.php', 'get_allotment_only.php',
             'getcacertificatenumber.php', 'getcertificatenumbers.php',
-            'ai_document_review_api.php'
+            'ai_document_review_api.php',
+            
+            // Auditor assignment views
+            'applicationreceived.php', 'applicationreceivedview.php', 
+            'info_updation_view.php', 'nc_closing_form_view.php', 
+            'submitjobapplication.php',
+            'downloadonlineapplication.php', 'info_updation_pdf.php', 'nc_closing_pdf.php'
         );
     }
 }

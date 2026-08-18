@@ -21,6 +21,20 @@ if (!$data) {
 }
 
 $auditor = $data['auditor'];
+// Determine the correct user_id from the user table
+// Forms are assigned using the user_id from the `user` table, not `auditors_id`.
+$mappedUserId = (int)$_SESSION['id']; 
+try {
+    $uStmt = $db->prepare("SELECT user_id FROM user WHERE role = 'Auditor' AND (LOWER(email_id) = LOWER(:email) OR (e_id = :eid AND e_id != '')) LIMIT 1");
+    $loginEmail = !empty($auditor['login_email']) ? $auditor['login_email'] : ($auditor['email'] ?? '');
+    $eid = !empty($auditor['auditor_number']) ? $auditor['auditor_number'] : '';
+    $uStmt->execute([':email' => $loginEmail, ':eid' => $eid]);
+    if ($uRow = $uStmt->fetch(PDO::FETCH_ASSOC)) {
+        $mappedUserId = (int)$uRow['user_id'];
+    }
+} catch (Exception $e) {}
+
+$auditor = $data['auditor'];
 $stats = $data['stats'];
 $audits = $data['audits'];
 $clients = $data['clients'];
@@ -819,6 +833,9 @@ aitf_touch_login_activity($db);
                 <a class="nav-item active" data-tab="dashboard">
                     <i class="fas fa-home"></i> Dashboard
                 </a>
+                <a class="nav-item" data-tab="assignments">
+                    <i class="fas fa-tasks"></i> My Assignments
+                </a>
                 <a class="nav-item" data-tab="clients">
                     <i class="fas fa-users"></i> My Clients
                 </a>
@@ -913,6 +930,80 @@ aitf_touch_login_activity($db);
                     <p class="text-muted">You're all caught up for now.</p>
                 </div>
                 <?php endif; ?>
+            </div>
+
+            <!-- Assignments Tab -->
+            <div id="tab-assignments" class="tab-pane">
+                <div class="section-header">
+                    <h2 class="section-title">My Assignments</h2>
+                </div>
+                
+                <div class="timeline-container">
+                    <table class="timeline-table">
+                        <thead>
+                            <tr>
+                                <th>Form Type</th>
+                                <th>Date Assigned / Submitted</th>
+                                <th>Organization / Name</th>
+                                <th>Message from Admin</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php
+                            $assignedForms = [];
+                            try {
+                                // Fetch Audit Applications
+                                $stmt1 = $db->query("SELECT id, created_at, org_name as name, 'Audit Application' as type, 'applicationReceivedView.php' as view_url, admin_assign_message FROM online_audit_applications WHERE assigned_to_auditor_id = $mappedUserId");
+                                $forms1 = $stmt1->fetchAll(PDO::FETCH_ASSOC);
+                                
+                                // Fetch Information Updation
+                                $stmt2 = $db->query("SELECT id, created_at, org_name as name, 'Information Updation' as type, 'info_updation_view.php' as view_url, admin_assign_message FROM information_updation_forms WHERE assigned_to_auditor_id = $mappedUserId");
+                                $forms2 = $stmt2->fetchAll(PDO::FETCH_ASSOC);
+                                
+                                // Fetch NC Closing Form
+                                $stmt3 = $db->query("SELECT id, created_at, org_name as name, 'NC Closing Form' as type, 'nc_closing_form_view.php' as view_url, admin_assign_message FROM nc_closing_forms WHERE assigned_to_auditor_id = $mappedUserId");
+                                $forms3 = $stmt3->fetchAll(PDO::FETCH_ASSOC);
+                                
+                                $assignedForms = array_merge($forms1, $forms2, $forms3);
+                                
+                                // Sort by created_at DESC
+                                usort($assignedForms, function($a, $b) {
+                                    return strtotime($b['created_at']) - strtotime($a['created_at']);
+                                });
+                            } catch (Exception $e) {}
+
+                            if (!empty($assignedForms)):
+                                foreach ($assignedForms as $form):
+                            ?>
+                            <tr>
+                                <td style="font-weight: 500; color: var(--text-main);"><?php echo htmlspecialchars($form['type']); ?></td>
+                                <td class="timeline-date"><?php echo date('d M Y, h:i A', strtotime($form['created_at'])); ?></td>
+                                <td><?php echo htmlspecialchars($form['name']); ?></td>
+                                <td>
+                                    <?php if (!empty($form['admin_assign_message'])): ?>
+                                        <div style="font-size:12px; color:#475569; background:#f1f5f9; padding:4px 8px; border-radius:4px; border-left:3px solid #3b82f6; max-width:200px; max-height: 50px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="<?php echo htmlspecialchars($form['admin_assign_message']); ?>">
+                                            <?php echo htmlspecialchars($form['admin_assign_message']); ?>
+                                        </div>
+                                    <?php else: ?>
+                                        <span style="color:#94a3b8; font-size:12px;">-</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <a href="<?php echo $form['view_url']; ?>?id=<?php echo $form['id']; ?>" class="btn btn-sm btn-primary" style="background:#2563eb; color:#fff; border-radius:4px; padding:4px 12px; text-decoration:none; display:inline-block;"><i class="fas fa-eye"></i> View & Review</a>
+                                </td>
+                            </tr>
+                            <?php 
+                                endforeach;
+                            else:
+                            ?>
+                            <tr>
+                                <td colspan="5" style="text-align: center; padding: 20px;" class="text-muted">No forms have been assigned to you yet.</td>
+                            </tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             <!-- Clients Tab -->

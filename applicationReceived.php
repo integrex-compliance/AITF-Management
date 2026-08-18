@@ -13,6 +13,7 @@ $unreadJobCount = 0;
 $auditApps = [];
 $infoUpdates = [];
 $jobApps = [];
+$ncForms = [];
 
 if (!function_exists('ensureApplicationReceivedJobTable')) {
     function ensureApplicationReceivedJobTable($db)
@@ -45,9 +46,20 @@ if (isset($db)) {
     } catch (Exception $e) {
     }
 
+    $isAuditor = isset($_SESSION['role']) && $_SESSION['role'] === 'Auditor';
+    $auditorId = $isAuditor ? (int)$_SESSION['id'] : 0;
+    
+    $assignModalAuditorsList = [];
+    try {
+        $stmtAuditor = $db->query("SELECT user_id, user_name, email_id FROM user WHERE role = 'Auditor' AND is_deleted = '0'");
+        $assignModalAuditorsList = $stmtAuditor->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {}
+    
+    $auditorCondition = $isAuditor ? " WHERE assigned_to_auditor_id = $auditorId " : "";
+
     try {
         // Fetch audit applications
-        $stmt = $db->query("SELECT *, 'audit_application' as form_type FROM online_audit_applications ORDER BY created_at DESC");
+        $stmt = $db->query("SELECT *, 'audit_application' as form_type FROM online_audit_applications $auditorCondition ORDER BY created_at DESC");
         $auditApps = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (Exception $e) {
         $auditApps = [];
@@ -55,7 +67,7 @@ if (isset($db)) {
 
     try {
         // Fetch information updation forms
-        $stmt = $db->query("SELECT *, 'info_updation' as form_type FROM information_updation_forms ORDER BY created_at DESC");
+        $stmt = $db->query("SELECT *, 'info_updation' as form_type FROM information_updation_forms $auditorCondition ORDER BY created_at DESC");
         $infoUpdates = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (Exception $e) {
         $infoUpdates = [];
@@ -63,10 +75,18 @@ if (isset($db)) {
 
     try {
         // Fetch job applications
-        $stmt = $db->query("SELECT *, 'job_application' as form_type FROM job_applications ORDER BY created_at DESC");
+        $stmt = $db->query("SELECT *, 'job_application' as form_type FROM job_applications $auditorCondition ORDER BY created_at DESC");
         $jobApps = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (Exception $e) {
         $jobApps = [];
+    }
+
+    try {
+        // Fetch nc closing forms
+        $stmt = $db->query("SELECT *, 'nc_closing_form' as form_type FROM nc_closing_forms $auditorCondition ORDER BY created_at DESC");
+        $ncForms = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        $ncForms = [];
     }
 
     foreach ($auditApps as $row) {
@@ -87,14 +107,56 @@ if (isset($db)) {
             $unreadJobCount++;
         }
     }
+    $unreadNcCount = 0;
+    foreach ($ncForms as $row) {
+        if (isset($row['read_flag']) && (int)$row['read_flag'] === 0) {
+            $unreadCount++;
+            $unreadNcCount++;
+        }
+    }
 }
 $GLOBALS['unread_app_count'] = $unreadCount;
 include 'header.php';
 ?>
+    <?php if ($isAuditor): ?>
+    <style>
+        /* Hide the left sidebar menu completely for auditors */
+        #sidebar-wrapper { display: none !important; }
+        #wrapper, #wrapper.active { padding-left: 0 !important; }
+        
+        /* Disable the delete button for auditors */
+        .fa-trash, .btn-danger, [onclick*="delete"] { 
+            pointer-events: none !important; 
+            opacity: 0.5 !important;
+            cursor: not-allowed !important;
+        }
+        
+        /* Optional: add a tooltip-like effect for disabled items */
+        .fa-trash:hover::after, .btn-danger:hover::after, [onclick*="delete"]:hover::after {
+            content: "Action not allowed";
+            position: absolute;
+            background: #333;
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-top: -30px;
+            white-space: nowrap;
+            z-index: 1000;
+        }
+    </style>
+    <?php endif; ?>
     <div id="page-content-wrapper">
         <div class="page-content inset">
             <div class="container" >
                 <br>
+                <?php if ($isAuditor): ?>
+                <div>
+                    <a href="auditorDashboard.php" class="btn btn-primary" style="margin-bottom:15px;">
+                        <i class="fa fa-arrow-left"></i> Back to Dashboard
+                    </a>
+                </div>
+                <?php endif; ?>
                 <br>
                 <style>
                     .app-rec-wrapper {
@@ -287,11 +349,75 @@ include 'header.php';
                         font-style: italic;
                     }
 
-                    .app-rec-grid {
-                        display: grid;
-                        grid-template-columns: 1fr 1fr;
-                        gap: 18px;
+                    /* TABBED INTERFACE CSS */
+                    .app-rec-tabs {
+                        display: flex;
+                        flex-wrap: wrap;
+                        gap: 12px;
+                        margin-bottom: 24px;
+                        border-bottom: 2px solid #e2e8f0;
+                        padding-bottom: 12px;
                     }
+                    .app-rec-tab {
+                        background: #f8fafc;
+                        border: 1px solid #e2e8f0;
+                        padding: 10px 18px;
+                        border-radius: 8px;
+                        font-size: 14px;
+                        font-weight: 600;
+                        color: #64748b;
+                        cursor: pointer;
+                        transition: all 0.2s ease;
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 8px;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+                        outline: none;
+                    }
+                    .app-rec-tab:hover {
+                        background: #f1f5f9;
+                        color: #0f172a;
+                        transform: translateY(-1px);
+                    }
+                    .app-rec-tab.active {
+                        background: #2563eb;
+                        color: #ffffff;
+                        border-color: #2563eb;
+                        box-shadow: 0 4px 12px rgba(37,99,235,0.25);
+                    }
+                    .app-rec-tab-badge {
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        min-width: 22px;
+                        height: 22px;
+                        border-radius: 12px;
+                        font-size: 11px;
+                        font-weight: 700;
+                        padding: 0 6px;
+                        color: #fff;
+                    }
+                    .app-rec-tab.active .app-rec-tab-badge { background: #ffffff; color: #2563eb; }
+                    .app-rec-tab:not(.active) .app-rec-tab-badge { background: #ef4444; }
+
+                    .app-rec-tab-pane {
+                        display: none;
+                        animation: fadeIn 0.3s ease;
+                    }
+                    .app-rec-tab-pane.active {
+                        display: block;
+                    }
+                    @keyframes fadeIn {
+                        from { opacity: 0; transform: translateY(5px); }
+                        to { opacity: 1; transform: translateY(0); }
+                    }
+
+                    /* Dark Mode tabs */
+                    html.theme-dark .app-rec-tabs { border-bottom-color: var(--ar-border); }
+                    html.theme-dark .app-rec-tab { background: var(--ar-surface); border-color: var(--ar-border); color: var(--ar-text); }
+                    html.theme-dark .app-rec-tab:hover { background: var(--ar-surface-2); }
+                    html.theme-dark .app-rec-tab.active { background: #3b82f6; color: #ffffff; border-color: #3b82f6; }
+                    html.theme-dark .app-rec-tab.active .app-rec-tab-badge { background: #ffffff; color: #1d4ed8; }
 
                     .app-rec-card.audit {
                         border-top-color: #2563eb;
@@ -299,6 +425,10 @@ include 'header.php';
 
                     .app-rec-card.info {
                         border-top-color: #16a34a;
+                    }
+
+                    .app-rec-card.nc {
+                        border-top-color: #0284c7;
                     }
 
                     .app-rec-title-icon.audit {
@@ -309,6 +439,11 @@ include 'header.php';
                     .app-rec-title-icon.info {
                         background: linear-gradient(135deg, #16a34a, #15803d);
                         box-shadow: 0 6px 12px rgba(22, 163, 74, 0.35);
+                    }
+
+                    .app-rec-title-icon.nc {
+                        background: linear-gradient(135deg, #0284c7, #0369a1);
+                        box-shadow: 0 6px 12px rgba(2, 132, 199, 0.35);
                     }
 
                     .app-rec-count.info {
@@ -397,6 +532,7 @@ include 'header.php';
                     }
                     html.theme-dark .app-rec-card.audit { border-top-color: #3b82f6; }
                     html.theme-dark .app-rec-card.info  { border-top-color: #22c55e; }
+                    html.theme-dark .app-rec-card.nc  { border-top-color: #0284c7; }
                     html.theme-dark .app-rec-card.job   { border-top-color: #8b5cf6; }
 
                     /* Header text */
@@ -483,8 +619,38 @@ include 'header.php';
                             </div>
                         <?php } ?>
 
-                        <div class="app-rec-grid">
-                            <div class="app-rec-card table-responsive audit">
+                        <!-- TAB NAVIGATION -->
+                        <div class="app-rec-tabs">
+                            <button type="button" class="app-rec-tab active" data-target="tab-audit">
+                                Application Form
+                                <?php if ($unreadAuditCount > 0) { ?>
+                                    <span class="app-rec-tab-badge"><?php echo $unreadAuditCount; ?></span>
+                                <?php } ?>
+                            </button>
+                            <button type="button" class="app-rec-tab" data-target="tab-nc">
+                                NC Closing Form
+                                <?php if ($unreadNcCount > 0) { ?>
+                                    <span class="app-rec-tab-badge"><?php echo $unreadNcCount; ?></span>
+                                <?php } ?>
+                            </button>
+                            <button type="button" class="app-rec-tab" data-target="tab-info">
+                                Info Updation Form
+                                <?php if ($unreadInfoUpdateCount > 0) { ?>
+                                    <span class="app-rec-tab-badge"><?php echo $unreadInfoUpdateCount; ?></span>
+                                <?php } ?>
+                            </button>
+                            <button type="button" class="app-rec-tab" data-target="tab-job">
+                                Job Application
+                                <?php if ($unreadJobCount > 0) { ?>
+                                    <span class="app-rec-tab-badge"><?php echo $unreadJobCount; ?></span>
+                                <?php } ?>
+                            </button>
+                        </div>
+
+                        <div class="app-rec-tab-content">
+                            <!-- Audit App Pane -->
+                            <div class="app-rec-tab-pane active" id="tab-audit">
+                                <div class="app-rec-card table-responsive audit">
                                 <div class="app-rec-header">
                                     <div class="app-rec-title">
                                         <div class="app-rec-title-icon audit"><i class="fa fa-file-text-o"></i></div>
@@ -546,9 +712,19 @@ include 'header.php';
                                                             </span>
                                                         <?php } ?>
                                                         <span class="app-rec-type-badge audit_application">Audit App</span>
+                                                        <?php if (!empty($row['assigned_to_auditor_id'])) { 
+                                                            $assignedName = 'Auditor';
+                                                            foreach($assignModalAuditorsList as $aud) { if ($aud['user_id'] == $row['assigned_to_auditor_id']) $assignedName = $aud['user_name']; }
+                                                            echo '<span class="app-rec-type-badge" style="background:#fef08a; color:#854d0e; margin-left:8px;"><i class="fa fa-user"></i> '.htmlspecialchars($assignedName).'</span>';
+                                                        } ?>
                                                     </small>
                                                 </td>
                                                 <td style="text-align: center;">
+                                                    <?php if (Utitlity::checkForUserMainAdmin()) { ?>
+                                                        <button type="button" class="btn btn-xs btn-primary" title="Assign To" onclick="openAssignModal('audit_application', <?php echo (int)$row['id']; ?>, '<?php echo (int)$row['assigned_to_auditor_id']; ?>')">
+                                                            <i class="fa fa-share"></i>
+                                                        </button>
+                                                    <?php } ?>
                                                     <form action="<?php echo $viewPage; ?>" method="post" onsubmit="return confirm('Are you sure you want to delete this?');" style="display: inline;">
                                                         <input type="hidden" name="action" value="delete_app">
                                                         <input type="hidden" name="id" value="<?php echo (int)$row['id']; ?>">
@@ -571,9 +747,12 @@ include 'header.php';
                                     ?>
                                     </tbody>
                                 </table>
+                                </div>
                             </div>
-
-                            <div class="app-rec-card table-responsive info">
+                            
+                            <!-- Info Pane -->
+                            <div class="app-rec-tab-pane" id="tab-info">
+                                <div class="app-rec-card table-responsive info">
                                 <div class="app-rec-header">
                                     <div class="app-rec-title">
                                         <div class="app-rec-title-icon info"><i class="fa fa-refresh"></i></div>
@@ -633,9 +812,19 @@ include 'header.php';
                                                             </span>
                                                         <?php } ?>
                                                         <span class="app-rec-type-badge info_updation">Info Update</span>
+                                                        <?php if (!empty($row['assigned_to_auditor_id'])) { 
+                                                            $assignedName = 'Auditor';
+                                                            foreach($assignModalAuditorsList as $aud) { if ($aud['user_id'] == $row['assigned_to_auditor_id']) $assignedName = $aud['user_name']; }
+                                                            echo '<span class="app-rec-type-badge" style="background:#fef08a; color:#854d0e; margin-left:8px;"><i class="fa fa-user"></i> '.htmlspecialchars($assignedName).'</span>';
+                                                        } ?>
                                                     </small>
                                                 </td>
                                                 <td style="text-align: center;">
+                                                    <?php if (Utitlity::checkForUserMainAdmin()) { ?>
+                                                        <button type="button" class="btn btn-xs btn-primary" title="Assign To" onclick="openAssignModal('info_updation', <?php echo (int)$row['id']; ?>, '<?php echo (int)$row['assigned_to_auditor_id']; ?>')">
+                                                            <i class="fa fa-share"></i>
+                                                        </button>
+                                                    <?php } ?>
                                                     <form action="<?php echo $viewPage; ?>" method="post" onsubmit="return confirm('Are you sure you want to delete this?');" style="display: inline;">
                                                         <input type="hidden" name="action" value="delete_app">
                                                         <input type="hidden" name="id" value="<?php echo (int)$row['id']; ?>">
@@ -658,9 +847,112 @@ include 'header.php';
                                     ?>
                                     </tbody>
                                 </table>
+                                </div>
+                            </div>
+                            
+                            <!-- NC Pane -->
+                            <div class="app-rec-tab-pane" id="tab-nc">
+                                <div class="app-rec-card table-responsive nc">
+                                <div class="app-rec-header">
+                                    <div class="app-rec-title">
+                                        <div class="app-rec-title-icon nc"><i class="fa fa-file-text"></i></div>
+                                        <div>
+                                            <div class="app-rec-title-text-main">NC Closing Forms</div>
+                                            <div class="app-rec-title-text-sub">Latest NC Closer submissions</div>
+                                        </div>
+                                    </div>
+                                    <div class="app-rec-count nc"><i class="fa fa-database"></i><span><?php echo !empty($ncForms) ? count($ncForms) : 0; ?></span></div>
+                                    <?php if ($unreadNcCount > 0) { ?>
+                                        <div class="app-rec-unread nc"><i class="fa fa-bell"></i><span><?php echo (int)$unreadNcCount; ?> unread</span></div>
+                                    <?php } ?>
+                                </div>
+                                <table class="table table-hover table-sortable app-rec-table" id="tab_nc_forms" width="100%">
+                                    <thead>
+                                        <tr>
+                                            <th><small>Sr.</small></th>
+                                            <th><small>Submitted On</small></th>
+                                            <th><small>Organization</small></th>
+                                            <th style="width: 90px; text-align: center;"><small>Action</small></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                    <?php
+                                    if (!empty($ncForms)) {
+                                        $sr = 0;
+                                        foreach ($ncForms as $row) {
+                                            $sr++;
+                                            $displayDate = '';
+                                            if (!empty($row['created_at'])) {
+                                                try {
+                                                    $dt = new DateTimeImmutable($row['created_at'], new DateTimeZone('Asia/Kolkata'));
+                                                    $displayDate = $dt->format('d M Y, h:i A');
+                                                } catch (Exception $e) {
+                                                    $displayDate = $row['created_at'];
+                                                }
+                                            }
+                                            $isUnread = isset($row['read_flag']) && (int)$row['read_flag'] === 0;
+                                            $viewPage = 'nc_closing_form_view.php';
+                                            ?>
+                                            <tr class="app-rec-row <?php echo $isUnread ? 'unread' : 'read'; ?> nc_closing_form">
+                                                <td><small><?php echo $sr; ?></small></td>
+                                                <td>
+                                                    <small>
+                                                        <i class="fa fa-file-text app-rec-type-icon" style="color:#0284c7;"></i>
+                                                        <i class="fa fa-clock-o app-rec-date-icon"></i>
+                                                        <?php echo htmlspecialchars($displayDate, ENT_QUOTES, 'UTF-8'); ?>
+                                                    </small>
+                                                </td>
+                                                <td class="app-rec-org">
+                                                    <small>
+                                                        <i class="fa fa-building-o app-rec-org-icon"></i>
+                                                        <a href="<?php echo $viewPage; ?>?id=<?php echo (int)$row['id']; ?>"><em><?php echo htmlspecialchars($row['org_name'], ENT_QUOTES, 'UTF-8'); ?></em></a>
+                                                        <?php if ($isUnread) { ?>
+                                                            <span class="app-rec-unread-pill nc_closing_form">
+                                                                <i class="fa fa-bell"></i>New
+                                                            </span>
+                                                        <?php } ?>
+                                                        <span class="app-rec-type-badge nc_closing_form" style="background:#e0f2fe; color:#0369a1;">NC Form</span>
+                                                        <?php if (!empty($row['assigned_to_auditor_id'])) { 
+                                                            $assignedName = 'Auditor';
+                                                            foreach($assignModalAuditorsList as $aud) { if ($aud['user_id'] == $row['assigned_to_auditor_id']) $assignedName = $aud['user_name']; }
+                                                            echo '<span class="app-rec-type-badge" style="background:#fef08a; color:#854d0e; margin-left:8px;"><i class="fa fa-user"></i> '.htmlspecialchars($assignedName).'</span>';
+                                                        } ?>
+                                                    </small>
+                                                </td>
+                                                <td style="text-align: center;">
+                                                    <?php if (Utitlity::checkForUserMainAdmin()) { ?>
+                                                        <button type="button" class="btn btn-xs btn-primary" title="Assign To" onclick="openAssignModal('nc_closing_form', <?php echo (int)$row['id']; ?>, '<?php echo (int)$row['assigned_to_auditor_id']; ?>')">
+                                                            <i class="fa fa-share"></i>
+                                                        </button>
+                                                    <?php } ?>
+                                                    <form action="<?php echo $viewPage; ?>" method="post" onsubmit="return confirm('Are you sure you want to delete this?');" style="display: inline;">
+                                                        <input type="hidden" name="action" value="delete_app">
+                                                        <input type="hidden" name="id" value="<?php echo (int)$row['id']; ?>">
+                                                        <input type="hidden" name="form_type" value="nc_closing_form">
+                                                        <button type="submit" class="btn btn-xs btn-danger" title="Delete">
+                                                            <i class="fa fa-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                            <?php
+                                        }
+                                    } else {
+                                        ?>
+                                        <tr>
+                                            <td colspan="4"><small>No NC Closing forms received yet.</small></td>
+                                        </tr>
+                                        <?php
+                                    }
+                                    ?>
+                                    </tbody>
+                                </table>
+                                </div>
                             </div>
 
-                            <div class="app-rec-card table-responsive job">
+                            <!-- Job Pane -->
+                            <div class="app-rec-tab-pane" id="tab-job">
+                                <div class="app-rec-card table-responsive job">
                                 <div class="app-rec-header">
                                     <div class="app-rec-title">
                                         <div class="app-rec-title-icon job"><i class="fa fa-briefcase"></i></div>
@@ -727,6 +1019,11 @@ include 'header.php';
                                                             </span>
                                                         <?php } ?>
                                                         <span class="app-rec-type-badge job_application">Job App</span>
+                                                        <?php if (!empty($row['assigned_to_auditor_id'])) { 
+                                                            $assignedName = 'Auditor';
+                                                            foreach($assignModalAuditorsList as $aud) { if ($aud['user_id'] == $row['assigned_to_auditor_id']) $assignedName = $aud['user_name']; }
+                                                            echo '<span class="app-rec-type-badge" style="background:#fef08a; color:#854d0e; margin-left:8px;"><i class="fa fa-user"></i> '.htmlspecialchars($assignedName).'</span>';
+                                                        } ?>
                                                         <span class="app-rec-job-contact">
                                                             <a href="mailto:<?php echo htmlspecialchars($row['email'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($row['email'] ?? '', ENT_QUOTES, 'UTF-8'); ?></a>
                                                             &nbsp;|&nbsp; <?php echo htmlspecialchars($row['contact_no'] ?? '', ENT_QUOTES, 'UTF-8'); ?>
@@ -737,6 +1034,14 @@ include 'header.php';
                                                 <td><small title="<?php echo htmlspecialchars($messageText, ENT_QUOTES, 'UTF-8'); ?>"><?php echo $messageShort !== '' ? htmlspecialchars($messageShort, ENT_QUOTES, 'UTF-8') : '-'; ?></small></td>
                                                 <td style="text-align: center;">
                                                     <span class="app-rec-job-actions">
+                                                        <?php if (Utitlity::checkForUserMainAdmin()) { ?>
+                                                            <button type="button" class="btn btn-xs btn-primary" title="Assign To" onclick="openAssignModal('job_application', <?php echo (int)$row['id']; ?>, '<?php echo (int)$row['assigned_to_auditor_id']; ?>')">
+                                                                <i class="fa fa-share"></i>
+                                                            </button>
+                                                        <?php } ?>
+                                                        <button type="button" class="btn btn-xs btn-info" title="Review" onclick="openJobReviewModal(<?php echo (int)$row['id']; ?>, '<?php echo htmlspecialchars($row['auditor_review'] ?? '', ENT_QUOTES, 'UTF-8'); ?>')">
+                                                            <i class="fa fa-comment"></i>
+                                                        </button>
                                                         <?php if ($isUnread) { ?>
                                                             <button type="button" class="btn btn-xs btn-success" title="Mark Read" onclick="markJobApplicationRead(<?php echo (int)$row['id']; ?>)">
                                                                 <i class="fa fa-check"></i>
@@ -760,8 +1065,9 @@ include 'header.php';
                                     ?>
                                     </tbody>
                                 </table>
-                            </div>
-                        </div>
+                                </div>
+                            </div> <!-- End Job Pane -->
+                        </div> <!-- End tab content -->
                         </div>
                     </div>
                 </div>
@@ -769,7 +1075,139 @@ include 'header.php';
         </div>
     </div>
 </div>
+
+<!-- Assign Auditor Modal -->
+<div class="modal fade" id="assignAuditorModal" tabindex="-1" role="dialog" aria-labelledby="assignAuditorLabel">
+  <div class="modal-dialog modal-sm" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="assignAuditorLabel">Assign to Auditor</h4>
+      </div>
+      <form id="assignAuditorForm">
+          <div class="modal-body">
+            <input type="hidden" name="form_type" id="assign_form_type">
+            <input type="hidden" name="form_id" id="assign_form_id">
+            <input type="hidden" name="action" value="assign_auditor">
+            <div class="form-group">
+                <label>Select Auditor</label>
+                <select name="auditor_id" id="assign_auditor_id" class="form-control" required>
+                    <option value="">-- Select Auditor --</option>
+                    <?php foreach ($assignModalAuditorsList as $aud) { ?>
+                        <option value="<?php echo $aud['user_id']; ?>"><?php echo htmlspecialchars($aud['user_name']); ?> (<?php echo htmlspecialchars($aud['email_id']); ?>)</option>
+                    <?php } ?>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Message (Optional)</label>
+                <textarea name="assign_message" id="assign_message" class="form-control" rows="3" placeholder="Write a message to the auditor..."></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            <button type="submit" class="btn btn-primary">Assign Form</button>
+          </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Job Application Review Modal -->
+<div class="modal fade" id="jobReviewModal" tabindex="-1" role="dialog" aria-labelledby="jobReviewLabel">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="jobReviewLabel">Job Application Review</h4>
+      </div>
+      <form id="jobReviewForm">
+          <div class="modal-body">
+            <input type="hidden" name="job_id" id="review_job_id">
+            <input type="hidden" name="action" value="save_job_review">
+            <div class="form-group">
+                <label>Review / Comments</label>
+                <textarea name="auditor_review" id="review_job_text" class="form-control" rows="5" placeholder="Enter review/comments here..."></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            <button type="submit" class="btn btn-primary">Save Review</button>
+          </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <script>
+function openAssignModal(formType, formId, currentAuditorId) {
+    document.getElementById('assign_form_type').value = formType;
+    document.getElementById('assign_form_id').value = formId;
+    document.getElementById('assign_auditor_id').value = currentAuditorId || "";
+    $('#assignAuditorModal').modal('show');
+}
+
+function openJobReviewModal(jobId, currentReview) {
+    document.getElementById('review_job_id').value = jobId;
+    document.getElementById('review_job_text').value = currentReview || "";
+    $('#jobReviewModal').modal('show');
+}
+
+document.getElementById('assignAuditorForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var formData = $(this).serialize();
+    var btn = $(this).find('button[type="submit"]');
+    var oldText = btn.text();
+    btn.text('Assigning...').prop('disabled', true);
+    
+    $.ajax({
+        url: 'assign_form_handler.php',
+        type: 'POST',
+        data: formData,
+        dataType: 'json',
+        success: function(res) {
+            btn.text(oldText).prop('disabled', false);
+            if (res.status === 'success') {
+                alert('Form assigned and email sent successfully!');
+                location.reload();
+            } else {
+                alert(res.message || 'Error occurred while assigning.');
+            }
+        },
+        error: function() {
+            btn.text(oldText).prop('disabled', false);
+            alert('Failed to process request.');
+        }
+    });
+});
+
+document.getElementById('jobReviewForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var formData = $(this).serialize();
+    var btn = $(this).find('button[type="submit"]');
+    var oldText = btn.text();
+    btn.text('Saving...').prop('disabled', true);
+    
+    $.ajax({
+        url: 'submitJobApplication.php',
+        type: 'POST',
+        data: formData,
+        dataType: 'json',
+        success: function(res) {
+            btn.text(oldText).prop('disabled', false);
+            if (res.status === 'ok') {
+                alert('Review saved successfully!');
+                location.reload();
+            } else {
+                alert(res.message || 'Error occurred while saving review.');
+            }
+        },
+        error: function() {
+            btn.text(oldText).prop('disabled', false);
+            alert('Failed to process request.');
+        }
+    });
+});
+
 function markJobApplicationRead(id) {
     if (!id) {
         return;
@@ -805,4 +1243,24 @@ function deleteJobApplication(id) {
         }
     });
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    var tabs = document.querySelectorAll('.app-rec-tab');
+    var panes = document.querySelectorAll('.app-rec-tab-pane');
+    
+    tabs.forEach(function(tab) {
+        tab.addEventListener('click', function() {
+            // Remove active from all tabs
+            tabs.forEach(function(t) { t.classList.remove('active'); });
+            // Add active to clicked tab
+            this.classList.add('active');
+            
+            // Hide all panes
+            panes.forEach(function(p) { p.classList.remove('active'); });
+            // Show target pane
+            var targetId = this.getAttribute('data-target');
+            document.getElementById(targetId).classList.add('active');
+        });
+    });
+});
 </script>

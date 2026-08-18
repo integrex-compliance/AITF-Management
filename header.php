@@ -265,7 +265,7 @@ if (!Utitlity::checkIfLoggedIn()) {
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Application Received") {
     $addAppReceivedClass = "active";
-    if (!(Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff())) {
+    if (!(Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || (isset($_SESSION['role']) && $_SESSION['role'] === 'Auditor'))) {
         header("Location: login.php?reason=login_required");
         exit;
     }
@@ -332,6 +332,14 @@ function getFlatDate($inputStr)
 }
 ?>
 
+<?php
+// Determine if this is a limited-access user (e.g., Auditor with permission-only access)
+// on a permission-granted page (like Invoices). If so, hide the full sidebar.
+$isLimitedAccessPage = isset($pageIdentifier) && in_array($pageIdentifier, array('Invoices', 'Bills'), true);
+$hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
+?>
+
+<?php if (!$hideSidebar) { ?>
 <div id="sidebar-wrapper" class="hidden-xs">
     <ul id="sidebar_menu" class="sidebar-nav">
         <li class="sidebar-brand" style="height: 65px; overflow: hidden;"><a class="" id="menu-toggle" href="#"
@@ -353,7 +361,7 @@ function getFlatDate($inputStr)
     <ul class="sidebar-nav" id="sidebar">
         <?php if (Utitlity::checkForDirector()) { ?>
             <li><a href="directorSpace.php" class="animate <?php echo $addDirectorSpaceClass ?? '' ?>">DIRECTOR SPACE<i
-                        class="sub_icon fa fa-user-secret fa-2x" style="vertical-align:middle"></i></a></li>
+                        class="sub_icon fa-solid fa-user-tie fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
         <?php if ((Utitlity::checkForUserMainAdmin() || Utitlity::checkForMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff()) && (!isset($_SESSION['role']) || $_SESSION['role'] !== 'Main Admin')) { ?>
         <li><a href="adminDashboard.php" class="animate <?php echo isset($addAdminDashboardClass) ? $addAdminDashboardClass : ''; ?>">ADMIN DASHBOARD<i class="sub_icon fa fa-line-chart fa-2x" style="vertical-align:middle"></i></a></li>
@@ -363,17 +371,18 @@ function getFlatDate($inputStr)
         <?php } ?>
         <?php if (!isset($_SESSION["role"]) || $_SESSION["role"] != 'client') { ?>
         <li><a href="iaf_dashboard.php" class="animate <?php echo isset($iafClass) ? $iafClass : ''; ?>">IAF DASHBOARD<i
-                    class="sub_icon fa fa-dashboard fa-2x" style="vertical-align:middle"></i></a></li>
+                    class="sub_icon fa fa-globe" style="font-size: 2em; vertical-align:middle"></i></a></li>
         <?php } ?>
         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff()) { ?>
             <?php $unreadBadge = isset($GLOBALS['unread_app_count']) ? (int) $GLOBALS['unread_app_count'] : 0; ?>
             <li>
                 <a href="applicationReceived.php" class="animate app-rec-nav <?php echo $addAppReceivedClass ?>">
-                    APPLICATION RECEIVED
+                    APPLICATION
                     <?php if ($unreadBadge > 0) { ?>
                         <span
                             style="margin-left:8px; padding:2px 7px; border-radius:999px; background:#ef4444; color:#fff; font-size:11px; font-weight:700;"><?php echo $unreadBadge; ?></span>
                     <?php } ?>
+                    <i class="sub_icon fa-solid fa-file-signature fa-2x" style="vertical-align:middle"></i>
                 </a>
             </li>
         <?php } ?>
@@ -465,6 +474,21 @@ function getFlatDate($inputStr)
         <?php } ?>
     </ul>
 </div>
+<?php } // end if (!$hideSidebar) ?>
+
+<?php if ($hideSidebar) { ?>
+<style>
+    /* Full-width layout when sidebar is hidden for limited-access users */
+    #wrapper { padding-left: 0 !important; }
+    #page-content-wrapper { width: 100% !important; margin-left: 0 !important; padding-left: 0 !important; }
+    #wrapper.active #page-content-wrapper { margin-left: 0 !important; }
+    .page-content.inset { margin-left: 0 !important; padding: 20px 30px !important; }
+    #sidebar-wrapper { display: none !important; }
+    .navbar { left: 0 !important; }
+    .navbar-container { margin-left: 0 !important; }
+</style>
+<?php } ?>
+
 <nav class="navbar navbar-fixed-top modern-navbar" role="navigation">
     <div class="navbar-container">
         <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
@@ -557,6 +581,13 @@ function getFlatDate($inputStr)
         </div>
 
         <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+            <?php if ($hideSidebar) { ?>
+            <!-- Limited mobile menu for permission-only access users -->
+            <ul class="nav navbar-nav visible-xs">
+                <li><a href="auditorDashboard.php"><i class="fa fa-arrow-left"></i> Back to Dashboard</a></li>
+                <li class="active"><a href="invoicePage.php">INVOICES</a></li>
+            </ul>
+            <?php } else { ?>
             <ul class="nav navbar-nav visible-xs">
                 <?php if ((Utitlity::checkForUserMainAdmin() || Utitlity::checkForMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff()) && (!isset($_SESSION['role']) || $_SESSION['role'] !== 'Main Admin')) { ?>
                     <li><a href="adminDashboard.php">ADMIN DASHBOARD</a></li>
@@ -584,6 +615,7 @@ function getFlatDate($inputStr)
                 <li><a href="auditorChecklist.php">AUDIT-DATA</a></li>
                 <li><a href="goAi.php">GoAI</a></li>
             </ul>
+            <?php } ?>
         </div>
     </div>
 </nav>

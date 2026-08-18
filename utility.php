@@ -133,6 +133,24 @@ class Utitlity {
             return 0;
     }
 
+    /**
+     * Check if the current user is accessing the system with limited/permission-only access.
+     * This is true for Auditors (or similar restricted roles) who have been granted specific 
+     * feature permissions by the Director but should NOT see the full sidebar menu.
+     * Returns true if the user's ONLY access to the current page is via a permission grant.
+     */
+    static function isLimitedAccessUser() {
+        if (!isset($_SESSION['role'])) return false;
+        $role = $_SESSION['role'];
+        // These roles have inherent full/partial menu access — NOT limited
+        $fullAccessRoles = array('Director', 'Main Admin', 'Admin', 'Office Staff', 'Staff', 'Finance', 'Marketing', 'Working Project');
+        if (in_array($role, $fullAccessRoles, true)) {
+            return false;
+        }
+        // Auditor, STO, and other roles accessing via Director-granted permissions are limited
+        return true;
+    }
+
     static function compress($source, $destination, $quality) {
         $info = getimagesize($source);
         if ($info ['mime'] == 'image/jpeg')

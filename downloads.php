@@ -82,7 +82,7 @@ include 'headersource.php';
             <ul><li><a href="use_of_logo.php?msg=".urlencode("")>Use Of Logo Guideline</a></li></ul>
             <ul><li><a href="info_update.php?msg=".urlencode("")>Information updation form (PDF)</a></li></ul>
             
-            <!-- Highlighted Online Form Section -->
+            <!-- Highlighted Online Form Section (Info Update) -->
             <div class="online-form-highlight" style="background: linear-gradient(135deg, #16a34a, #15803d); padding: 20px; border-radius: 12px; margin: 20px 0; box-shadow: 0 8px 24px rgba(22, 163, 74, 0.3); border: 2px solid #16a34a; transition: all 0.3s ease;">
                 <div style="display: flex; align-items: center; gap: 15px;">
                     <div style="background: #ffffff; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
@@ -98,6 +98,27 @@ include 'headersource.php';
                         </p>
                         <a href="info_updation_form.php" style="display: inline-block; background: #ffffff; color: #16a34a; padding: 10px 25px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: all 0.3s ease;">
                             <i class="fa fa-arrow-right"></i> Fill Form Online Now
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Highlighted NC Closing Form Section -->
+            <div class="online-form-highlight" style="background: linear-gradient(135deg, #0284c7, #0369a1); padding: 20px; border-radius: 12px; margin: 20px 0; box-shadow: 0 8px 24px rgba(2, 132, 199, 0.3); border: 2px solid #0284c7; transition: all 0.3s ease;">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <div style="background: #ffffff; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                        <i class="fa fa-file-text" style="font-size: 24px; color: #0284c7;"></i>
+                    </div>
+                    <div style="flex: 1;">
+                        <h3 style="color: #ffffff; margin: 0 0 8px 0; font-size: 20px; font-weight: 600;">
+                            <i class="fa fa-star" style="color: #fbbf24; animation: pulse 2s infinite;"></i>
+                            Fill NC Closing Form (ONLINE)
+                        </h3>
+                        <p style="color: #f0f9ff; margin: 0 0 12px 0; font-size: 14px; line-height: 1.5;">
+                            Submit your Nonconformance Closer Report with root cause analysis and corrective actions directly through our online portal.
+                        </p>
+                        <a href="fill_nc_closing_form.php" style="display: inline-block; background: #ffffff; color: #0284c7; padding: 10px 25px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: all 0.3s ease;">
+                            <i class="fa fa-arrow-right"></i> Fill NC Closing Form Now
                         </a>
                     </div>
                 </div>

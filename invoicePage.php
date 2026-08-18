@@ -735,6 +735,12 @@
                     <?php } ?>
                     
                     <?php if ($restrictInvoiceList) { ?>
+                        <style>
+                            /* Hide table body content initially to prevent flashing restricted data during load */
+                            #table_final_invoice tbody, #table_proforma_invoice tbody {
+                                visibility: hidden;
+                            }
+                        </style>
                         <div class="alert alert-warning" id="restrictedAccessMsg">
                             <strong>Limited access is enabled.</strong> You can only view invoice using search by client name or invoice no.
                         </div>
@@ -796,9 +802,11 @@
                                 setTimeout(function() {
                                     if ($.fn.DataTable.isDataTable('#table_final_invoice')) {
                                         $('#table_final_invoice').DataTable().draw();
+                                        $('#table_final_invoice tbody').css('visibility', 'visible');
                                     }
                                     if ($.fn.DataTable.isDataTable('#table_proforma_invoice')) {
                                         $('#table_proforma_invoice').DataTable().draw();
+                                        $('#table_proforma_invoice tbody').css('visibility', 'visible');
                                     }
                                     
                                     // Ensure global search boxes redraw correctly for the custom filter
@@ -1244,7 +1252,11 @@
             { "width": "6%", "targets": 8 }, // IGST
             { "width": "8%", "targets": 9 }, // Amount
             { "width": "15%", "targets": 10 } // Particulars
-        ]
+        ],
+        "language": {
+            "emptyTable": "<?php echo $restrictInvoiceList ? 'Enter the client name to view invoice' : 'No data available in table'; ?>",
+            "zeroRecords": "<?php echo $restrictInvoiceList ? 'Enter the client name to view invoice' : 'No matching records found'; ?>"
+        }
     });
 
     var finalTable = $('#table_final_invoice').DataTable({
@@ -1269,7 +1281,11 @@
             { "width": "6%", "targets": 8 }, // IGST
             { "width": "8%", "targets": 9 }, // Amount
             { "width": "15%", "targets": 10 } // Particulars
-        ]
+        ],
+        "language": {
+            "emptyTable": "<?php echo $restrictInvoiceList ? 'Enter the client name to view invoice' : 'No data available in table'; ?>",
+            "zeroRecords": "<?php echo $restrictInvoiceList ? 'Enter the client name to view invoice' : 'No matching records found'; ?>"
+        }
     });
 
     $('.filterFromDate, .filterToDate').change(function () {

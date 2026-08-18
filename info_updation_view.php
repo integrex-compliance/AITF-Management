@@ -41,7 +41,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $stmt->execute();
             $success = 'AITF review saved successfully.';
         } catch (Exception $e) {
-            $error = "Error saving review: " . $e->getMessage();
+            $error = "Error saving AITF review: " . $e->getMessage();
+        }
+    }
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save_auditor_review') {
+    $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
+    $review = trim((string)($_POST['auditor_review'] ?? ''));
+    if ($id > 0) {
+        try {
+            $stmt = $db->prepare("UPDATE information_updation_forms SET auditor_review = :review WHERE id = :id");
+            $stmt->bindParam(':review', $review, PDO::PARAM_STR);
+            $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+            $stmt->execute();
+            $success = 'Auditor review saved successfully.';
+        } catch (Exception $e) {
+            $error = "Error saving auditor review: " . $e->getMessage();
         }
     }
 }
@@ -69,8 +85,40 @@ $pageIdentifier = "Application Received";
 ?>
 
 <div id="wrapper" class="active">
-<?php include 'header.php'; ?>
-
+<?php 
+include 'header.php';
+$isAuditorView = isset($_SESSION['role']) && $_SESSION['role'] === 'Auditor';
+?>
+<?php if ($isAuditorView): ?>
+<style>
+    /* Hide the left sidebar menu completely for auditors */
+    #sidebar-wrapper { display: none !important; }
+    #wrapper, #wrapper.active { padding-left: 0 !important; }
+    
+    /* Disable the edit and delete buttons for auditors */
+    .fa-trash, .btn-danger, [onclick*="delete"], 
+    .fa-edit, .btn-primary[data-target*="edit"], [data-target*="edit"] { 
+        pointer-events: none !important; 
+        opacity: 0.5 !important;
+        cursor: not-allowed !important;
+    }
+    
+    /* Optional: add a tooltip-like effect for disabled items */
+    .fa-trash:hover::after, .btn-danger:hover::after, [onclick*="delete"]:hover::after,
+    .fa-edit:hover::after, [data-target*="edit"]:hover::after {
+        content: "Action not allowed";
+        position: absolute;
+        background: #333;
+        color: #fff;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        margin-top: -30px;
+        white-space: nowrap;
+        z-index: 1000;
+    }
+</style>
+<?php endif; ?>
 <style>
 * { box-sizing: border-box; }
 .minimal-wrapper {
@@ -304,11 +352,23 @@ $pageIdentifier = "Application Received";
                             </div>
                         </div>
                         <div class="minimal-actions">
-                            <a href="applicationReceived.php" class="btn-header">Back</a>
+                            <a href="<?php echo $isAuditorView ? 'auditorDashboard.php' : 'applicationReceived.php'; ?>" class="btn-header">Back</a>
                             <a href="info_updation_pdf.php?id=<?php echo (int)$submission['id']; ?>" target="_blank" class="btn-header btn-header-primary">Download PDF</a>
                         </div>
                     </div>
                     
+                    
+                    <?php if (!empty($submission['admin_assign_message'])) { ?>
+                        <div class="minimal-section">
+                            <h3 class="minimal-section-title" style="color: #1e3a8a;">Message from Admin</h3>
+                            <div style="padding:16px; background-color: #eff6ff; border: 1px solid #bfdbfe; border-left: 4px solid #3b82f6; border-radius: 6px;">
+                                <p style="margin:0; font-size: 14px; color: #1e3a8a; font-style: italic;">
+                                    <?php echo nl2br(htmlspecialchars($submission['admin_assign_message'], ENT_QUOTES, 'UTF-8')); ?>
+                                </p>
+                            </div>
+                        </div>
+                    <?php } ?>
+
                     <div class="minimal-section">
                         <h3 class="minimal-section-title">Organization Details</h3>
                         <div class="minimal-grid">
@@ -430,22 +490,40 @@ $pageIdentifier = "Application Received";
                     </div>
 
                     <div class="minimal-section">
-                        <h3 class="minimal-section-title">AITF Review</h3>
+                        <h3 class="minimal-section-title">AITF Review (For PDF)</h3>
                         <div class="minimal-review">
                             <form method="post">
                                 <input type="hidden" name="action" value="save_aitf_review">
                                 <input type="hidden" name="id" value="<?php echo (int)$submission['id']; ?>">
                                 <textarea name="aitf_review" placeholder="Write AITF review here..."><?php echo htmlspecialchars($submission['aitf_review'] ?? '', ENT_QUOTES, 'UTF-8'); ?></textarea>
                                 <div class="minimal-help">This text appears inside the "FOR AITF REVIEW" box in the downloaded PDF.</div>
-                                <button type="submit" class="btn-outline btn-primary">Save Review</button>
+                                <button type="submit" class="btn-outline btn-primary">Save AITF Review</button>
                             </form>
                         </div>
                     </div>
 
+                    <?php if (!empty($submission['auditor_review']) || Utitlity::checkForAuditor() || Utitlity::checkForUserMainAdmin()) { ?>
+                    <div class="minimal-section">
+                        <h3 class="minimal-section-title">Auditor Review</h3>
+                        <div class="minimal-review">
+                            <?php if (Utitlity::checkForAuditor() || Utitlity::checkForUserMainAdmin()) { ?>
+                                <form method="post">
+                                    <input type="hidden" name="action" value="save_auditor_review">
+                                    <input type="hidden" name="id" value="<?php echo (int)$submission['id']; ?>">
+                                    <textarea name="auditor_review" placeholder="Write Auditor review here..."><?php echo htmlspecialchars($submission['auditor_review'] ?? '', ENT_QUOTES, 'UTF-8'); ?></textarea>
+                                    <button type="submit" class="btn-outline btn-primary">Save Auditor Review</button>
+                                </form>
+                            <?php } else { ?>
+                                <p style="margin:0; font-size: 14px;"><?php echo nl2br(htmlspecialchars($submission['auditor_review'] ?? 'No review provided yet.', ENT_QUOTES, 'UTF-8')); ?></p>
+                            <?php } ?>
+                        </div>
+                    </div>
+                    <?php } ?>
+
                 <?php else: ?>
                     <div style="padding: 20px; background: #fef3c7; border: 1px solid #fde68a; border-radius: 4px; color: #92400e; margin-bottom: 20px;">
                         Not Found: The requested information updation form submission could not be found.<br><br>
-                        <a href="applicationReceived.php" class="btn-outline">Back to List</a>
+                        <a href="<?php echo $isAuditorView ? 'auditorDashboard.php' : 'applicationReceived.php'; ?>" class="btn-outline">Back to List</a>
                     </div>
                 <?php endif; ?>
         </div>
