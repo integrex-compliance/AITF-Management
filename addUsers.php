@@ -7,6 +7,7 @@
     include_once './header.php';
     include_once './dbConnect.php';
     include_once './utility.php';
+    require_once __DIR__ . '/include/rbac_helper.php';
     date_default_timezone_set('Asia/Kolkata');
     
     if (!Utitlity::checkForDirector() && !Utitlity::checkForUserMainAdmin()) {
@@ -20,10 +21,10 @@
     $statement->execute();
     $allUserList = $statement->fetchAll();
 
-    $userRoles = "SELECT * FROM user_role";
-    $statement = $db->prepare($userRoles);
-    $statement->execute();
-    $allRoles = $statement->fetchAll();
+    aitf_ensure_rbac_schema($db);
+    $allRoles = array_map(function ($role) {
+        return array('role' => $role);
+    }, aitf_allowed_roles());
     ?>
     <div id="page-content-wrapper" >
         <div class="page-content inset">

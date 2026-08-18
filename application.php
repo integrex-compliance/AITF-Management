@@ -214,6 +214,8 @@ if (isset($db)) {
             $error_message = 'Please fill in all required fields marked with *.';
         } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $error_message = 'Please enter a valid email address.';
+        } elseif (!isset($_SESSION['application_email_verified']) || $_SESSION['application_email_verified'] !== $email) {
+            $error_message = 'Please verify your email address using OTP before submitting.';
         } elseif (function_exists('aitf_verify_turnstile') && !aitf_verify_turnstile($turnstileToken, $error_message)) {
             if ($error_message === '') {
                 $error_message = 'Captcha verification failed. Please try again.';
@@ -1774,13 +1776,6 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                                     </div>
                                     <div class="col-md-6">
                                         <div class="form-group">
-                                            <label>E-Mail Id <span class="required-label">*</span></label>
-                                            <input type="email" name="email" class="form-control" required
-                                                value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email'], ENT_QUOTES, 'UTF-8') : ''; ?>">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
                                             <label>Web-site <span class="required-label">*</span></label>
                                             <input type="text" name="website" class="form-control" required
                                                 value="<?php echo isset($_POST['website']) ? htmlspecialchars($_POST['website'], ENT_QUOTES, 'UTF-8') : ''; ?>">
@@ -2464,6 +2459,34 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                                         </div>
                                     </div>
                                     <div class="col-md-12" id="submit-area">
+                                        <!-- Email Verification Section -->
+                                        <div class="info-update-section" id="email-verification-section" style="text-align: center; margin-top: 30px; margin-bottom: 20px; border: 2px solid #111827; padding: 30px; border-radius: 12px; background: #ffffff;">
+                                            <h4 style="color: #111827; font-size: 22px; font-weight: 700; border-bottom: 2px solid #111827; padding-bottom: 15px; margin-bottom: 25px;"><i class="fa fa-shield"></i> Email Verification</h4>
+                                            <p style="margin-bottom: 15px; color: #dc3545; font-weight: 600; font-size: 15px;">Organisation requested to mention their registered mail id.</p>
+                                            <div style="display: flex; justify-content: center; align-items: center; flex-direction: column; gap: 15px;">
+                                                <div style="display: flex; align-items: flex-end; gap: 15px; justify-content: center; flex-wrap: wrap;" id="send-otp-container">
+                                                    <div style="text-align: left; width: 100%; max-width: 300px;">
+                                                        <label style="font-weight: 600; margin-bottom: 5px; display: block; color: #111827;">Email <span style="color: red;">*</span></label>
+                                                        <input type="email" name="email" class="form-control"
+                                                            value="<?php echo htmlspecialchars($_POST['email'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+                                                            style="width: 100%; margin-bottom: 0;"
+                                                            required>
+                                                    </div>
+                                                    <button type="button" id="btn-send-otp" class="submit-btn" style="padding: 12px 25px; font-size: 16px; background: #0056b3; width: auto; margin-top: 0; box-shadow: none;">
+                                                        <i class="fa fa-envelope"></i> Send OTP
+                                                    </button>
+                                                </div>
+                                                <div id="otp-message" style="font-size: 14px; font-weight: bold; margin-top: 5px;"></div>
+                                                <div id="otp-input-section" style="display: none; align-items: center; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                                                    <input type="text" id="otp_code" class="form-control" placeholder="Enter 6-digit OTP" style="width: 150px; text-align: center; letter-spacing: 2px; font-weight: bold; margin-bottom: 0;">
+                                                    <button type="button" id="btn-verify-otp" class="submit-btn" style="padding: 12px 25px; font-size: 16px; background: #198754; margin: 0; width: auto; box-shadow: none;">
+                                                        Verify OTP
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <input type="hidden" name="is_email_verified" id="is_email_verified" value="0">
+                                        </div>
+
                                         <div class="captcha-wrap">
                                             <?php if ($turnstileReady): ?>
                                                 <div class="cf-turnstile"
@@ -2480,7 +2503,7 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                                             captcha to enable the submit button.</div>
                                         <div id="required-warning" class="required-warning">Important fields are
                                             missing.</div>
-                                        <button type="submit" class="submit-btn">Submit Application</button>
+                                        <button type="submit" id="main-submit-btn" class="submit-btn" disabled style="background-color: #6b7280; cursor: not-allowed; opacity: 0.7;"><i class="fa fa-lock"></i> Please verify your mail</button>
                                     </div>
                                 </div>
                             </form>
@@ -3084,6 +3107,12 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
             }
 
             form.addEventListener('submit', function (e) {
+                if (document.getElementById('is_email_verified') && document.getElementById('is_email_verified').value !== '1') {
+                    alert('Please verify your email with OTP before submitting.');
+                    e.preventDefault();
+                    return false;
+                }
+
                 if (declarationCheckbox && !declarationCheckbox.checked) {
                     alert('Please confirm the declaration before submitting the application.');
                     e.preventDefault();
@@ -3142,6 +3171,104 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                     }
                 }
                 validateRequiredFields();
+            });
+
+            // Email Verification Logic
+            $('#btn-send-otp').click(function() {
+                var email = $('input[name="email"]').val();
+                var orgName = $('input[name="org_name"]').val();
+                var contactPerson = $('input[name="contact_person"]').val();
+                var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+                if (!email || !emailRegex.test(email)) {
+                    alert('Please enter a valid email address first.');
+                    $('input[name="email"]').focus();
+                    return;
+                }
+                if (!orgName) {
+                    alert('Please enter the Name of the Applicant Organization first.');
+                    $('input[name="org_name"]').focus();
+                    return;
+                }
+                if (!contactPerson) {
+                    alert('Please enter the Contact Person Name first.');
+                    $('input[name="contact_person"]').focus();
+                    return;
+                }
+
+                var $btn = $(this);
+                $btn.html('<i class="fa fa-spinner fa-spin"></i> Sending...').prop('disabled', true);
+                $('#otp-message').css('color', '#6b7280').text('Sending OTP...');
+
+                $.ajax({
+                    url: 'ajax_send_otp_app.php',
+                    type: 'POST',
+                    data: {
+                        email: email,
+                        org_name: orgName,
+                        contact_person: contactPerson
+                    },
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            $('#otp-message').css('color', '#16a34a').text(response.message);
+                            $('#send-otp-container').hide();
+                            $('#otp-input-section').css('display', 'flex');
+                            $('input[name="email"]').prop('readonly', true);
+                        } else {
+                            $btn.html('<i class="fa fa-envelope"></i> Send OTP').prop('disabled', false);
+                            $('#otp-message').css('color', '#dc3545').text(response.message);
+                        }
+                    },
+                    error: function() {
+                        $btn.html('<i class="fa fa-envelope"></i> Send OTP').prop('disabled', false);
+                        $('#otp-message').css('color', '#dc3545').text('An error occurred. Please try again.');
+                    }
+                });
+            });
+
+            $('#btn-verify-otp').click(function() {
+                var otp = $('#otp_code').val();
+                var email = $('input[name="email"]').val();
+
+                if (!otp || otp.length !== 6) {
+                    alert('Please enter a valid 6-digit OTP.');
+                    return;
+                }
+
+                var $btn = $(this);
+                $btn.html('<i class="fa fa-spinner fa-spin"></i> Verifying...').prop('disabled', true);
+                $('#otp-message').css('color', '#6b7280').text('Verifying OTP...');
+
+                $.ajax({
+                    url: 'ajax_verify_otp_app.php',
+                    type: 'POST',
+                    data: {
+                        email: email,
+                        otp: otp
+                    },
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            $('#otp-message').css('color', '#16a34a').html('<i class="fa fa-check-circle"></i> ' + response.message);
+                            $('#otp-input-section').hide();
+                            $('#is_email_verified').val('1');
+                            $('#main-submit-btn').prop('disabled', false)
+                                .css({'background-color': '#111827', 'cursor': 'pointer', 'opacity': '1'})
+                                .html('Submit Application');
+                            
+                            // Re-run validation to clear missing states
+                            validateRequiredFields();
+                        } else {
+                            $btn.html('Verify OTP').prop('disabled', false);
+                            $('#otp-message').css('color', '#dc3545').text(response.message);
+                        }
+                    },
+                    error: function() {
+                        $btn.html('Verify OTP').prop('disabled', false);
+                        $('#otp-message').css('color', '#dc3545').text('An error occurred. Please try again.');
+                    }
+                });
             });
         })();
     </script>

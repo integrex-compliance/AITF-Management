@@ -363,6 +363,10 @@ if (!function_exists('aitf_fetch_auditor_client_services')) {
             } catch (Exception $e) {}
         }
 
+        foreach (array_keys($clientServices) as $cid) {
+            $clientServices[$cid]['CR'] = true;
+        }
+
         return $clientServices;
     }
 }
@@ -460,6 +464,15 @@ if (!function_exists('aitf_fetch_auditor_client_service_ids')) {
                     AND s.customer_id = :cid");
                 $stmt->execute(array(':aname' => $likePattern, ':aname2' => $likePattern, ':cid' => $customerId));
                 foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) { $serviceIds[] = $row['service_id']; }
+            } catch (Exception $e) {}
+        }
+        if (!empty($serviceIds)) {
+            try {
+                $stmt = $db->prepare("SELECT service_id FROM service WHERE customer_id = :cid AND service_type = 'CR'");
+                $stmt->execute(array(':cid' => $customerId));
+                foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                    $serviceIds[] = $row['service_id'];
+                }
             } catch (Exception $e) {}
         }
         

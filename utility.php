@@ -2,6 +2,7 @@
 
 //session_start();
 include_once './dbConnect.php';
+require_once __DIR__ . '/include/rbac_helper.php';
 date_default_timezone_set('Asia/Kolkata');
 /*
  * To change this license header, choose License Headers in Project Properties.
@@ -21,8 +22,7 @@ class Utitlity {
     static function checkUserPermission($feature) {
         if (!isset($_SESSION['id'])) return 0;
         
-        // Director/MainAdmin usually have access to everything, but we can enforce strict check if needed.
-        // Let's grant MainAdmin/Director full access by default to avoid locking them out.
+        // Top Mgmt has full software access; all other roles use feature grants.
         if (self::checkForDirector() || self::checkForUserMainAdmin()) {
             return 1; 
         }
@@ -50,21 +50,21 @@ class Utitlity {
     }
 
     static function checkForDirector() {
-        if (isset($_SESSION ['username']) && !empty($_SESSION ['username']) && $_SESSION ['role'] == "Director")
+        if (isset($_SESSION ['username']) && !empty($_SESSION ['username']) && aitf_is_top_management_role())
             return 1;
         else
             return 0;
     }
     
     static function checkForUserMainAdmin() {
-        if (isset($_SESSION ['username']) && !empty($_SESSION ['username']) && ($_SESSION ['role'] == "Main Admin" || $_SESSION ['role'] == "Director"))
+        if (isset($_SESSION ['username']) && !empty($_SESSION ['username']) && aitf_is_top_management_role())
             return 1;
         else
             return 0;
     }
     
     static function checkForUserAdmin() {
-        if (isset($_SESSION ['username']) && !empty($_SESSION ['username']) && ($_SESSION ['role'] == "Admin" || $_SESSION ['role'] == "Director"))
+        if (isset($_SESSION ['username']) && !empty($_SESSION ['username']) && in_array($_SESSION ['role'] ?? '', array('Admin', 'Top Mgmt'), true))
             return 1;
         else
             return 0;
@@ -78,7 +78,7 @@ class Utitlity {
     }
 
     static function checkForUserConsultant() {
-        if (isset($_SESSION ['username']) && !empty($_SESSION ['username']) && $_SESSION ['role'] == "Working Project")
+        if (isset($_SESSION ['username']) && !empty($_SESSION ['username']) && $_SESSION ['role'] == "Application Reviewer")
             return 1;
         else
             return 0;
@@ -99,14 +99,14 @@ class Utitlity {
     }
     
     static function checkForMainAdmin(){
-        if (isset($_SESSION['username']) && !empty($_SESSION['username']) && ($_SESSION['role'] == "Main Admin" || $_SESSION ['role'] == "Director"))
+        if (isset($_SESSION['username']) && !empty($_SESSION['username']) && aitf_is_top_management_role())
             return 1;
         else
             return 0;
     }
     
     static function checkForStaff(){
-        if (isset($_SESSION['username']) && !empty($_SESSION['username']) && in_array($_SESSION['role'], array("Staff", "Auditor", "STO", "Director"), true))
+        if (isset($_SESSION['username']) && !empty($_SESSION['username']) && in_array($_SESSION['role'] ?? '', array("Office Staff", "Auditors", "Auditor", "Application Reviewer", "Top Mgmt"), true))
             return 1;
         else
             return 0;
@@ -127,7 +127,7 @@ class Utitlity {
     }
 
     static function checkForAuditor(){
-        if (isset($_SESSION['username']) && !empty($_SESSION['username']) && $_SESSION['role'] == "Auditor")
+        if (isset($_SESSION['username']) && !empty($_SESSION['username']) && aitf_is_auditor_role())
             return 1;
         else
             return 0;
@@ -143,7 +143,7 @@ class Utitlity {
         if (!isset($_SESSION['role'])) return false;
         $role = $_SESSION['role'];
         // These roles have inherent full/partial menu access — NOT limited
-        $fullAccessRoles = array('Director', 'Main Admin', 'Admin', 'Office Staff', 'Staff', 'Finance', 'Marketing', 'Working Project');
+        $fullAccessRoles = array('Top Mgmt', 'Admin', 'Office Staff', 'Finance', 'Marketing', 'Application Reviewer', 'Report Reviewer', 'Auditor');
         if (in_array($role, $fullAccessRoles, true)) {
             return false;
         }

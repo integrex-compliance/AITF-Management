@@ -14,12 +14,27 @@ if (!Utitlity::checkForDirector()) {
 
 aitf_ensure_rbac_schema($db);
 
+// Ensure the employment_records table exists
+try {
+    $db->exec("CREATE TABLE IF NOT EXISTS employment_records (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(150) NOT NULL,
+        age INT NULL,
+        email VARCHAR(150) NULL,
+        mobile VARCHAR(50) NULL,
+        ctc VARCHAR(50) NULL,
+        job_profile VARCHAR(100) NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8");
+} catch (Exception $e) {
+    error_log('employment_records schema error: ' . $e->getMessage());
+}
+
 $notice = trim((string)($_SESSION['director_notice'] ?? ''));
 unset($_SESSION['director_notice']);
 
-$rolesStmt = $db->prepare("SELECT role FROM user_role ORDER BY role ASC");
-$rolesStmt->execute();
-$roles = $rolesStmt->fetchAll(PDO::FETCH_COLUMN);
+$roles = aitf_allowed_roles();
 
 $empRecordsStmt = $db->prepare("SELECT * FROM employment_records ORDER BY created_at DESC");
 $empRecordsStmt->execute();

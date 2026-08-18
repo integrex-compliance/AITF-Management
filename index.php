@@ -4674,11 +4674,11 @@ session_start();
     </div>
     <div class="quick-forms-panel-body">
         <a href="application.php#online-application-form" class="quick-form-card">
-            <div class="quick-form-card-title">Application Form</div>
+            <div class="quick-form-card-title">Application Form <span style="display: block; font-size: 13.5px; font-weight: 500; color: #0d6efd; margin-top: 4px;">(for new certification)</span></div>
             <div class="quick-form-card-desc">Submit a new certification application</div>
         </a>
         <a href="info_updation_form.php" class="quick-form-card">
-            <div class="quick-form-card-title">Information Updation Form</div>
+            <div class="quick-form-card-title">Information Updation Form <span style="display: block; font-size: 13.5px; font-weight: 500; color: #0d6efd; margin-top: 4px;">(for existing client if any changes after certification)</span></div>
             <div class="quick-form-card-desc">Update your existing information</div>
         </a>
         <a href="fill_nc_closing_form.php" class="quick-form-card">

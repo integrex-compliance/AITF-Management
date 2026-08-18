@@ -3965,6 +3965,15 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             /* Hide the invoice and create service buttons */
             .invoiceBtn, .finalInvoiceBtn, .quotationBtn { display: none !important; }
             .qms_complete_btn { display: none !important; }
+            
+            /* Disabled elements for Auditor */
+            .auditor-disabled {
+                opacity: 0.5;
+                cursor: not-allowed !important;
+            }
+            .auditor-disabled * {
+                pointer-events: none;
+            }
             </style>
             
             <script>
@@ -5041,7 +5050,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                     }
                                     ?>
                                     <div class="col-sm-6">
-                                        <div class="<?php echo $addClass ?>"><span>Review - Application</span>
+                                        <div class="<?php echo $addClass ?><?php echo isset($isAuditor) && $isAuditor ? ' auditor-disabled' : ''; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ''; ?>><span>Review - Application</span>
                                             <?php if (isset($crservice['audit_id']) && !empty($crservice['audit_id'])) { ?>
                                                 <a class="editAuditApp pull-right" data-page="customer"
                                                     data-customer="<?php echo $_GET['customerid'] ?>"
@@ -5077,7 +5086,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                             $addClass2 = "serviceContent";
                                         }
                                         ?>
-                                        <div class="<?php echo $addClass2 ?>"><span>Certification Agreement</span>
+                                        <div class="<?php echo $addClass2 ?><?php echo isset($isAuditor) && $isAuditor ? ' auditor-disabled' : ''; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ''; ?>><span>Certification Agreement</span>
                                             <?php if (isset($crservice['audit_id']) && !empty($crservice['audit_id']) && empty($crservice['id'])) { ?>
                                                 <a class="certificationBtn pull-right"
                                                     data-customer="<?php echo $_GET["customerid"] ?>"
@@ -5152,7 +5161,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                             $assessmentClass = 'serviceContent';
                                         }
                                         ?>
-                                        <div class="<?php echo $assessmentClass ?>"><span>Assessment Planning</span>
+                                        <div class="<?php echo $assessmentClass ?><?php echo isset($isAuditor) && $isAuditor ? ' auditor-disabled' : ''; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ''; ?>><span>Assessment Planning</span>
                                             <?php if ($assessmentReady && empty($crservice['assessment_id'])) { ?>
                                                 <a class="addAssessmentPlanning pull-right"
                                                     data-customer="<?php echo $_GET['customerid'] ?>"
@@ -5531,7 +5540,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $serviceClass = "serviceContent";
                                             }
                                             ?>
-                                            <div class="<?php echo $serviceClass ?>">
+                                            <div class="<?php echo $serviceClass ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>>
                                                 <span>Review Report (Annex I)- Stage I Audit</span>
                                                 <?php if (isset($caservice['audit_report_I']) && !empty($caservice['audit_report_I']) && empty($caservice['stage_i_id'])) { ?>
                                                     <a class="auditStage-I pull-right"
@@ -5845,7 +5854,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $anexClass = 'serviceContent';
                                             }
                                             ?>
-                                            <div class="<?php echo $anexClass ?>">
+                                            <div class="<?php echo $anexClass ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>>
                                                 <span>Review Report (Annex II)- Stage II Audit</span>
                                                 <?php if ((isset($caservice['audit_nc_II']) && !empty($caservice['audit_nc_II']) && empty($caservice['stage_ii_id'])) || (isset($caservice['audit_scheduleii_id']) && empty($caservice['signed_notification_II']) && empty($caservice['audit_report_II']) && empty($caservice['auditor_notes']) && empty($caservice['audit_nc_II']) && empty($caservice['stage_ii_id']) && (Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin()))) { ?>
                                                     <a class="stageIIAudit pull-right"
@@ -5884,8 +5893,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                             $cdcClass = 'serviceContent';
                                         }
                                         ?>
-                                            <div class="<?php echo $cdcClass ?>">
-                                                <span>Review Report - CDC DELIBERATION AND DECISION</span>
+                                            <div class="<?php echo $cdcClass ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>Review Report - CDC DELIBERATION AND DECISION</span>
                                                 <?php
                                                 // Only show CDC button if Review Report (Annex II) - Stage II Audit is submitted (stage_ii_id exists)
                                                 // AND CDC is not yet created (crr_id is empty)
@@ -5932,7 +5940,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                             $certClass = "serviceContent";
                                         }
                                         ?>
-                                            <div class="<?php echo $certClass ?>" style="">
+                                            <div class="<?php echo $certClass ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" style="" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>>
                                                 <span>Certificate Print</span>
                                                 <?php if (isset($caservice['crr_id']) && !empty($caservice['crr_id'])) { ?>
                                                     <a class="download-certificate-print pull-right"
@@ -6104,7 +6112,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                             $cf1Class = 'serviceContent';
                                         }
                                         ?>
-                                            <div class="<?php echo $cf1Class ?>"><span>CONTROL FORMAT -1 (To be filled by
+                                            <div class="<?php echo $cf1Class ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>CONTROL FORMAT -1 (To be filled by
                                                     AITF-MCL)</span>
                                                 <?php if (empty($caservice['control_id'])) { ?>
                                                     <a class="createControlFormat1 pull-right"
@@ -6144,7 +6152,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                             $cf2Class = 'serviceContent';
                                         }
                                         ?>
-                                            <div class="<?php echo $cf2Class ?>"><span>CONTROL FORMAT -2 (SHC Comments while
+                                            <div class="<?php echo $cf2Class ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>CONTROL FORMAT -2 (SHC Comments while
                                                     meeting)</span>
                                                 <?php if (empty($caservice['control2_id'])) { ?>
                                                     <a class="createControlFormat2 pull-right"
@@ -6842,7 +6850,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $saiAnexIIClass = 'serviceContent';
                                             }
                                             ?>
-                                            <div class="<?php echo $saiAnexIIClass ?>">
+                                            <div class="<?php echo $saiAnexIIClass ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>>
                                                 <span>Review Report (Annex II)- SA - I Audit</span>
                                                 <?php if ((isset($saiService['audit_evidance_sai']) && !empty($saiService['audit_evidance_sai']) && empty($saiService['stage_ii_id'])) || (isset($saiService['servelance_id']) && empty($saiService['signed_copy_sai']) && empty($saiService['audit_report_sai']) && empty($saiService['auditor_notes_sai']) && empty($saiService['audit_evidance_sai']) && empty($saiService['stage_ii_id']) && (Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin()))) { ?>
                                                     <a class="stageIIAuditSai pull-right"
@@ -6885,8 +6893,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $saiCDCclass = 'serviceContent';
                                             }
                                             ?>
-                                            <div class="<?php echo $saiCDCclass ?>">
-                                                <span>Review Report - CDC DELIBERATION AND DECISION</span>
+                                            <div class="<?php echo $saiCDCclass ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>Review Report - CDC DELIBERATION AND DECISION</span>
                                                 <?php
                                                 // Only show CDC button if Review Report (Annex II) - Stage II Audit is submitted (stage_ii_id exists)
                                                 // AND CDC is not yet created (crr_id is empty)
@@ -6939,8 +6946,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $saiCertify = "serviceContent";
                                             }
                                             ?>
-                                            <div class="<?php echo $saiCertify; ?>">
-                                                <span>Certificate Print</span>
+                                            <div class="<?php echo $saiCertify; ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>Certificate Print</span>
                                                 <?php if (isset($saiService['crr_id']) && !empty($saiService['crr_id'])) { ?>
                                                     <a class="download-certificate-print pull-right"
                                                         data-customer="<?php echo $_GET['customerid'] ?>"
@@ -7803,7 +7809,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $newClass = "serviceContent";
                                             }
                                             ?>
-                                            <div class="<?php echo $newClass ?>">
+                                            <div class="<?php echo $newClass ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>>
                                                 <span>Review Report (Annex II)- SA - II Audit</span>
                                                 <?php if ((isset($saiiService['audit_evidences_saii']) && !empty($saiiService['audit_evidences_saii']) && empty($saiiService['stage_ii_id'])) || (isset($saiiService['servelance_id']) && empty($saiiService['signed_copy_saii']) && empty($saiiService['audit_report_saii']) && empty($saiiService['auditor_notes_saii']) && empty($saiiService['audit_evidences_saii']) && empty($saiiService['stage_ii_id']) && (Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin()))) { ?>
                                                     <a class="stageIIAuditSai pull-right"
@@ -7845,8 +7851,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $newClass = "serviceContent";
                                             }
                                             ?>
-                                            <div class="<?php echo $newClass ?>">
-                                                <span>Review Report - CDC DELIBERATION AND DECISION </span>
+                                            <div class="<?php echo $newClass ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>Review Report - CDC DELIBERATION AND DECISION </span>
                                                 <?php
                                                 // Only show CDC button if Review Report (Annex II) - Stage II Audit is submitted (stage_ii_id exists)
                                                 // AND CDC is not yet created (crr_id is empty)
@@ -7892,8 +7897,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $saiCertifyClass = "serviceContent";
                                             }
                                             ?>
-                                            <div class="<?php echo $saiCertifyClass ?>">
-                                                <span>Certificate Print</span>
+                                            <div class="<?php echo $saiCertifyClass ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>Certificate Print</span>
                                                 <?php if (isset($saiiService['crr_id']) && !empty($saiiService['crr_id'])) { ?>
                                                     <a class="download-certificate-print pull-right"
                                                         data-customer="<?php echo $_GET['customerid'] ?>"
@@ -8616,7 +8620,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $rcAnixClass = 'serviceContent';
                                             }
                                             ?>
-                                            <div class="<?php echo $rcAnixClass ?>">
+                                            <div class="<?php echo $rcAnixClass ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>>
                                                 <span>Review Report (Annex II)- RC Audit</span>
                                                 <?php if ((isset($rcServiceinfo['rc_audit_evidence']) && !empty($rcServiceinfo['rc_audit_evidence']) && empty($rcServiceinfo['stage_ii_id'])) || (isset($rcServiceinfo['audit_scheduleii_id']) && empty($rcServiceinfo['rc_signed_copy']) && empty($rcServiceinfo['rc_audit_report']) && empty($rcServiceinfo['auditor_notes_rc']) && empty($rcServiceinfo['rc_audit_evidence']) && empty($rcServiceinfo['stage_ii_id']) && (Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin()))) { ?>
                                                     <a class="stageIIAuditSai pull-right"
@@ -8659,8 +8663,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $rcCDCClass = 'serviceContent';
                                             }
                                             ?>
-                                            <div class="<?php echo $rcCDCClass ?>">
-                                                <span>Review Report - CDC DELIBERATION AND DECISION</span>
+                                            <div class="<?php echo $rcCDCClass ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>Review Report - CDC DELIBERATION AND DECISION</span>
                                                 <?php if ((isset($rcServiceinfo['stage_ii_id']) && !empty($rcServiceinfo['stage_ii_id']) && empty($rcServiceinfo['crr_id']) && !(Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin())) || (!empty($rcServiceinfo['rc_signed_copy']) && !empty($rcServiceinfo['rc_audit_report']) && !empty($rcServiceinfo['auditor_notes_rc']) && !empty($rcServiceinfo['rc_audit_evidence']) && !empty($rcServiceinfo['stage_ii_id']) && empty($rcServiceinfo['crr_id']) && (Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin()))) { ?>
                                                     <a class="cdcReport pull-right" data-svctype="RC"
                                                         data-id="<?php echo $rcServiceinfo['service'] ?>"
@@ -8702,8 +8705,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $rccertClass = "serviceContent";
                                             }
                                             ?>
-                                            <div class="<?php echo $rccertClass ?>">
-                                                <span>Certificate Print</span>
+                                            <div class="<?php echo $rccertClass ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>Certificate Print</span>
                                                 <?php if (isset($rcServiceinfo['crr_id']) && !empty($rcServiceinfo['crr_id'])) { ?>
                                                     <a class="download-certificate-print pull-right"
                                                         data-customer="<?php echo $_GET['customerid'] ?>"
@@ -8882,8 +8884,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $rcCF1Class = 'serviceContent';
                                             }
                                             ?>
-                                            <div class="<?php echo $rcCF1Class ?>">
-                                                <span>CONTROL FORMAT -1 (To be filled by AITF-MCL)</span>
+                                            <div class="<?php echo $rcCF1Class ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>CONTROL FORMAT -1 (To be filled by AITF-MCL)</span>
                                                 <?php if (empty($rcServiceinfo['control_id'])) { ?>
                                                     <a class="createControlFormat1 pull-right"
                                                         data-customer="<?php echo $_GET['customerid'] ?>"
@@ -8924,8 +8925,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $rcCF2Class = 'serviceContent';
                                             }
                                             ?>
-                                            <div class="<?php echo $rcCF2Class ?>">
-                                                <span>CONTROL FORMAT -2 (SHC Comments while meeting)</span>
+                                            <div class="<?php echo $rcCF2Class ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>CONTROL FORMAT -2 (SHC Comments while meeting)</span>
                                                 <?php if (empty($rcServiceinfo['control2_id'])) { ?>
                                                     <a class="createControlFormat2 pull-right"
                                                         data-customer="<?php echo $_GET['customerid'] ?>"
@@ -9449,7 +9449,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $newClass = "serviceContent";
                                             }
                                             ?>
-                                            <div class="<?php echo $newClass ?>">
+                                            <div class="<?php echo $newClass ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>>
                                                 <span>Review Report (Annex II)</span>
                                                 <?php if (isset($spservices['sp_audit_report']) && !empty($spservices['sp_audit_report']) && empty($spservices['stage_ii_id'])) { ?>
                                                     <a class="stageIIAuditSai pull-right"
@@ -9490,8 +9490,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $newClass = "serviceContent";
                                             }
                                             ?>
-                                            <div class="<?php echo $newClass ?>">
-                                                <span>Review Report - CDC DELIBERATION AND DECISION</span>
+                                            <div class="<?php echo $newClass ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>Review Report - CDC DELIBERATION AND DECISION</span>
                                                 <?php if (isset($spservices['stage_ii_id']) && !empty($spservices['stage_ii_id']) && empty($spservices['crr_id'])) { ?>
                                                     <a class="cdcReport pull-right" data-svctype="SP" data-prev=<?php echo $beforeSP; ?> data-id="<?php echo $spservices['service'] ?>"
                                                         data-customer="<?php echo $_GET['customerid'] ?>"
@@ -9528,8 +9527,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $rccertClass = "serviceContent";
                                             }
                                             ?>
-                                            <div class="<?php echo $rccertClass ?>">
-                                                <span>Certificate Print</span>
+                                            <div class="<?php echo $rccertClass ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>Certificate Print</span>
                                                 <?php if (isset($spservices['crr_id']) && !empty($spservices['crr_id'])) { ?>
                                                     <a class="download-certificate-print pull-right"
                                                         data-customer="<?php echo $_GET['customerid'] ?>"
@@ -10098,7 +10096,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     </div>
                     <div class="row">
                         <div class="col-sm-6">
-                            <div class="serviceContent"><span>Review Report (Annex I)- Stage I Audit</span></div>
+                            <div class="serviceContent<?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>><span>Review Report (Annex I)- Stage I Audit</span></div>
                         </div>
                         <div class="col-sm-6">
                             <div class="serviceContent"><span>Release - Notification for Stage - II audit</span></div>
@@ -10125,15 +10123,15 @@ if ($currentRole === 'client' || $currentRole === 'external') {
 
                     <div class="row">
                         <div class="col-sm-6">
-                            <div class="serviceContent"><span>Review Report (Annex II)- Stage II Audit</span></div>
+                            <div class="serviceContent<?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>><span>Review Report (Annex II)- Stage II Audit</span></div>
                         </div>
                         <div class="col-sm-6">
-                            <div class="serviceContent"><span>Review Report - CDC DELIBERATION AND DECISION</span></div>
+                            <div class="serviceContent<?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>Review Report - CDC DELIBERATION AND DECISION</span></div>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-sm-6">
-                            <div class="serviceContent"><span>Certificate Print</span></div>
+                            <div class="serviceContent<?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>Certificate Print</span></div>
                         </div>
                         <div class="col-sm-6">
                             <div class="serviceContent"><span>Client Feedback</span></div>
@@ -10144,12 +10142,12 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                             <div class="serviceContent"><span>Review Report - Review of feedback </span></div>
                         </div>
                         <div class="col-sm-6">
-                            <div class="serviceContent"><span>CONTROL FORMAT -1 (To be filled by AITF-MCL)</span></div>
+                            <div class="serviceContent<?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>CONTROL FORMAT -1 (To be filled by AITF-MCL)</span></div>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-sm-6">
-                            <div class="serviceContent"><span>CONTROL FORMAT -2 (SHC Comments while meeting) </span>
+                            <div class="serviceContent<?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>CONTROL FORMAT -2 (SHC Comments while meeting) </span>
                             </div>
                         </div>
                     </div>
@@ -10233,7 +10231,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                             </div>
                         </div>
                         <div class="col-sm-6">
-                            <div class="serviceContent">
+                            <div class="serviceContent<?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>>
                                 <span>Review Report (Annex I)- SA - I Audit</span>
                             </div>
                         </div>
@@ -10241,13 +10239,11 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     </div>
                     <div class="row">
                         <div class="col-sm-6">
-                            <div class="serviceContent">
-                                <span>Review Report - CDC DELIBERATION AND DECISION</span>
+                            <div class="serviceContent<?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>Review Report - CDC DELIBERATION AND DECISION</span>
                             </div>
                         </div>
                         <div class="col-sm-6">
-                            <div class="serviceContent">
-                                <span>Certificate Print</span>
+                            <div class="serviceContent<?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>Certificate Print</span>
                             </div>
                         </div>
                     </div>
@@ -10343,7 +10339,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                             </div>
                         </div>
                         <div class="col-sm-6">
-                            <div class="serviceContent">
+                            <div class="serviceContent<?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>>
                                 <span>Review Report (Annex II)- SA - II Audit</span>
                             </div>
                         </div>
@@ -10351,13 +10347,11 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     </div>
                     <div class="row">
                         <div class="col-sm-6">
-                            <div class="serviceContent">
-                                <span>Review Report - CDC DELIBERATION AND DECISION</span>
+                            <div class="serviceContent<?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>Review Report - CDC DELIBERATION AND DECISION</span>
                             </div>
                         </div>
                         <div class="col-sm-6">
-                            <div class="serviceContent">
-                                <span>Certificate Print</span>
+                            <div class="serviceContent<?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>Certificate Print</span>
                             </div>
                         </div>
                     </div>
@@ -10442,7 +10436,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                     Schedule </span></div>
                         </div>
                         <div class="col-sm-6">
-                            <div class="serviceContent"><span>Certificate Print</span></div>
+                            <div class="serviceContent<?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>Certificate Print</span></div>
                         </div>
                     </div>
                     <div class="row">
@@ -10455,10 +10449,10 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     </div>
                     <div class="row">
                         <div class="col-sm-6">
-                            <div class="serviceContent"><span>CONTROL FORMAT -1 (To be filled by AITF-MCL)</span></div>
+                            <div class="serviceContent<?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>CONTROL FORMAT -1 (To be filled by AITF-MCL)</span></div>
                         </div>
                         <div class="col-sm-6">
-                            <div class="serviceContent"><span>CONTROL FORMAT -2 (SHC Comments while meeting)</span>
+                            <div class="serviceContent<?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>CONTROL FORMAT -2 (SHC Comments while meeting)</span>
                             </div>
                         </div>
                     </div>
@@ -10515,15 +10509,15 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     </div>
                     <div class="row">
                         <div class="col-sm-6">
-                            <div class="serviceContent"><span>Review Report (Annex II)</span></div>
+                            <div class="serviceContent<?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>><span>Review Report (Annex II)</span></div>
                         </div>
                         <div class="col-sm-6">
-                            <div class="serviceContent"><span>Review Report - CDC DELIBERATION AND DECISION</span></div>
+                            <div class="serviceContent<?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>Review Report - CDC DELIBERATION AND DECISION</span></div>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-sm-6">
-                            <div class="serviceContent"><span>Certificate Print</span></div>
+                            <div class="serviceContent<?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>Certificate Print</span></div>
                         </div>
                     </div>
                 </div>

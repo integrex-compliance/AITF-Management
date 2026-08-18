@@ -9,10 +9,55 @@ if (!function_exists('aitf_rbac_escape')) {
     }
 }
 
+/**
+ * Internal application roles. Keep this list as the single source of truth for
+ * user creation and server-side role validation.
+ */
+if (!function_exists('aitf_allowed_roles')) {
+    function aitf_allowed_roles()
+    {
+        return array(
+            'Top Mgmt',
+            'Admin',
+            'Finance',
+            'Auditor',
+            'Application Reviewer',
+            'Report Reviewer',
+            'Office Staff',
+            'Marketing'
+        );
+    }
+}
+
+if (!function_exists('aitf_is_allowed_role')) {
+    function aitf_is_allowed_role($role)
+    {
+        return in_array(trim((string)$role), aitf_allowed_roles(), true);
+    }
+}
+
+if (!function_exists('aitf_is_top_management_role')) {
+    function aitf_is_top_management_role($role = null)
+    {
+        $role = $role === null ? ($_SESSION['role'] ?? '') : $role;
+        return trim((string)$role) === 'Top Mgmt';
+    }
+}
+
+if (!function_exists('aitf_is_auditor_role')) {
+    function aitf_is_auditor_role($role = null)
+    {
+        $role = $role === null ? ($_SESSION['role'] ?? '') : $role;
+        // Auditor is retained only as a compatibility value for the separate
+        // auditor portal; newly-created internal users use "Auditors".
+        return in_array(trim((string)$role), array('Auditors', 'Auditor'), true);
+    }
+}
+
 if (!function_exists('aitf_is_director_role')) {
     function aitf_is_director_role()
     {
-        return isset($_SESSION['role']) && $_SESSION['role'] === 'Director';
+        return aitf_is_top_management_role();
     }
 }
 
@@ -86,7 +131,14 @@ if (!function_exists('aitf_ensure_rbac_schema')) {
             error_log('Login activity schema error: ' . $e->getMessage());
         }
 
-        $roles = array('Auditor', 'Staff', 'STO');
+        // Normalize the former management role before validating new sessions.
+        try {
+            $db->exec("UPDATE user SET role = 'Top Mgmt' WHERE role IN ('Director', 'Main Admin')");
+        } catch (Exception $e) {
+            error_log('RBAC role migration error: ' . $e->getMessage());
+        }
+
+        $roles = aitf_allowed_roles();
         foreach ($roles as $role) {
             try {
                 $check = $db->prepare("SELECT COUNT(*) FROM user_role WHERE role = :role");
@@ -220,7 +272,7 @@ if (!function_exists('aitf_enforce_active_user_account')) {
         }
 
         $role = (string)($_SESSION['role'] ?? '');
-        if (in_array($role, array('Director', 'client', 'External'), true)) {
+        if (in_array($role, array('Top Mgmt', 'client', 'External'), true)) {
             return;
         }
 
