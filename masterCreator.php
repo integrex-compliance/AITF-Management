@@ -32,7 +32,7 @@
         $featureToggleMessage = 'Client features control buttons.';
     }
 
-    // AI Review Rules handling
+    // AI Review Rules handling (docoraAI now GoAI)
     include_once './include/ai_document_review_lib.php';
     aitfAiEnsureSchema($db);
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'toggle_ai_rule') {

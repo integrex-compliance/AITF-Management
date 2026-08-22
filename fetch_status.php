@@ -1,3 +1,5 @@
+<!-- this api is for to fetch user status and store the screen time of the user  -->
+
 <?php
 require_once __DIR__ . '/include/session_helper.php';
 aitf_start_session();

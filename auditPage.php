@@ -376,7 +376,7 @@
             border: 0;
             border-radius: 6px 0 0 6px;
             background: #b91c1c;
-            color: #fff;
+            color: #fff;a
             font-size: 12px;
             font-weight: 700;
             letter-spacing: 0;

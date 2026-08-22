@@ -71,7 +71,7 @@ class Utitlity {
     }    
 
     static function checkForUserMarketing() {
-        if (isset($_SESSION ['username']) && !empty($_SESSION ['username']) && $_SESSION ['role'] == "Marketing")
+        if (isset($_SESSION ['username']) && !empty($_SESSION ['username']) && in_array($_SESSION['role'] ?? '', array("Marketing", "Marketing Head", "Marketing Executive"), true))
             return 1;
         else
             return 0;
@@ -92,7 +92,7 @@ class Utitlity {
     }
 
     static function checkForOfficeStaff() {
-        if (isset($_SESSION['username']) && !empty($_SESSION['username']) && $_SESSION['role'] == "Office Staff")
+        if (isset($_SESSION['username']) && !empty($_SESSION['username']) && in_array($_SESSION['role'] ?? '', array("Office Staff", "Office Staff-A", "Office Staff-B"), true))
             return 1;
         else
             return 0;
@@ -106,7 +106,7 @@ class Utitlity {
     }
     
     static function checkForStaff(){
-        if (isset($_SESSION['username']) && !empty($_SESSION['username']) && in_array($_SESSION['role'] ?? '', array("Office Staff", "Auditors", "Auditor", "Application Reviewer", "Top Mgmt"), true))
+        if (isset($_SESSION['username']) && !empty($_SESSION['username']) && in_array($_SESSION['role'] ?? '', array("Office Staff", "Office Staff-A", "Office Staff-B", "Auditors", "Auditor", "Application Reviewer", "Top Mgmt"), true))
             return 1;
         else
             return 0;
@@ -143,7 +143,7 @@ class Utitlity {
         if (!isset($_SESSION['role'])) return false;
         $role = $_SESSION['role'];
         // These roles have inherent full/partial menu access — NOT limited
-        $fullAccessRoles = array('Top Mgmt', 'Admin', 'Office Staff', 'Finance', 'Marketing', 'Application Reviewer', 'Report Reviewer', 'Auditor');
+        $fullAccessRoles = array('Top Mgmt', 'Admin', 'Office Staff', 'Office Staff-A', 'Office Staff-B', 'Finance', 'Marketing', 'Marketing Head', 'Marketing Executive', 'Application Reviewer', 'Report Reviewer', 'Auditor');
         if (in_array($role, $fullAccessRoles, true)) {
             return false;
         }

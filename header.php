@@ -60,9 +60,9 @@ echo '<script>
         data.append("delta", delta);
         
         if (!isActive && navigator.sendBeacon) {
-            navigator.sendBeacon("heartbeat.php", data);
+            navigator.sendBeacon("fetch_status.php", data);
         } else {
-            fetch("heartbeat.php", {
+            fetch("fetch_status.php", {
                 method: "POST", 
                 body: data,
                 keepalive: true

@@ -69,7 +69,7 @@
         margin-bottom: 30px;
     }
 
-    .footer_blog h3 {
+    .footer-box .footer_blog h3 {
         color: white;
         font-size: 18px;
         font-weight: 600;
@@ -80,9 +80,10 @@
         letter-spacing: 1px;
         font-family: 'Inter', sans-serif;
         border: none !important;
+        float: none !important;
     }
 
-    .footer_blog h3::after {
+    .footer-box .footer_blog h3::after {
         content: '';
         position: absolute;
         left: 0;
@@ -119,13 +120,14 @@
 
     .social-links {
         display: flex;
+        flex-direction: column;
         gap: 15px;
         margin-top: 20px;
     }
 
-    .social-link {
-        display: flex;
-        align-items: center;
+    .footer-box .footer_blog .social-links a.social-link {
+        display: flex !important;
+        align-items: center !important;
         color: var(--text-secondary) !important;
         text-decoration: none !important;
         transition: var(--transition);
@@ -327,7 +329,7 @@
                     <div class="footer_blog">
                         <h3>FOLLOW US</h3>
                         <div class="social-links">
-                            <a href="#" class="social-link">
+                            <a href="https://www.linkedin.com/company/aitf-management-certification-ltd" target="_blank" class="social-link">
                                 <i class="fab fa-linkedin-in"></i>
                                 <span>LinkedIn</span>
                             </a>

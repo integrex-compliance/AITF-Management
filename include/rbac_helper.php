@@ -23,8 +23,10 @@ if (!function_exists('aitf_allowed_roles')) {
             'Auditor',
             'Application Reviewer',
             'Report Reviewer',
-            'Office Staff',
-            'Marketing'
+            'Office Staff-A',
+            'Office Staff-B',
+            'Marketing Head',
+            'Marketing Executive'
         );
     }
 }

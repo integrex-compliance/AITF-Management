@@ -1032,12 +1032,9 @@ $canonicalUrl = "https://www.aitf.co.in/certificationProcess.php";
         <div class="container">
             <h1>CERTIFICATION <span>PROCESS</span></h1>
             <p class="lead" style="max-width: 800px; margin: 0 auto; font-size: 1.2rem; opacity: 0.9;">
-                A Step-by-Step Guide to Achieving ISO Certification
+                A Step-by-Step Process to Achieving ISO Certification
             </p>
-            <div style="margin-top: 30px;">
-                <a href="index.php" style="display:inline-block; padding: 12px 24px; background: rgba(255,255,255,0.2); color: #fff; text-decoration: none; border-radius: 4px; margin: 10px; font-weight: 600; transition: background 0.3s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">Back to Home</a>
-                <a href="application.php#online-application-form" style="display:inline-block; padding: 12px 24px; background: #fff; color: #1a365d; text-decoration: none; border-radius: 4px; margin: 10px; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.3s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">Apply Online for ISO Certification</a>
-            </div>
+        
         </div>
     </section>
 
