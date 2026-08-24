@@ -13,13 +13,13 @@
     $isDirector = Utitlity::checkForDirector();
     $restrictInvoiceList = (!$fullInvoiceAccessEnabled && !$isDirector);
 
-    $proformaInvoice = "SELECT id.invoice_id, customer_id, profarma_prefix, invoice_no, invoice_date, state, state_code, net_price, igst, cgst, sgst, tax_type, final_amount, invoice_type, pro_inv_sent_count, id.invoice_status, ci.customer_name, id, gstin_no FROM invoice_details id left join customer_info ci on id.customer_id = ci.id where id.invoice_type = 'proforma' AND id.is_deleted = 'No' order by invoice_date desc, invoice_no DESC";
+    $proformaInvoice = "SELECT id.invoice_id, customer_id, profarma_prefix, invoice_no, invoice_date, state, state_code, net_price, igst, cgst, sgst, tax_type, final_amount, invoice_type, pro_inv_sent_count, id.invoice_status, ci.customer_name, ci.audit_status, id, gstin_no FROM invoice_details id left join customer_info ci on id.customer_id = ci.id where id.invoice_type = 'proforma' AND id.is_deleted = 'No' order by invoice_date desc, invoice_no DESC";
 //    $proformaInvoice = "SELECT * FROM invoice_details WHERE invoice_type = 'proforma'";
     $statement = $db->prepare($proformaInvoice);
     $statement->execute();
     $proformaDetails = $statement->fetchAll();
 
-    $finalInvoice = "SELECT id.invoice_id, customer_id, final_prefix, final_invoice_no, invoice_date, state, state_code, net_price, igst, cgst, sgst, tax_type, final_amount, invoice_type, final_inv_sent_count, id.invoice_status, ci.customer_name, id, gstin_no FROM invoice_details id left join customer_info ci on id.customer_id = ci.id where id.invoice_type = 'final' AND id.is_deleted = 'No' order by invoice_date desc, final_invoice_no DESC";
+    $finalInvoice = "SELECT id.invoice_id, customer_id, final_prefix, final_invoice_no, invoice_date, state, state_code, net_price, igst, cgst, sgst, tax_type, final_amount, invoice_type, final_inv_sent_count, id.invoice_status, ci.customer_name, ci.audit_status, id, gstin_no FROM invoice_details id left join customer_info ci on id.customer_id = ci.id where id.invoice_type = 'final' AND id.is_deleted = 'No' order by invoice_date desc, final_invoice_no DESC";
 //    $finalInvoice = "SELECT * FROM invoice_details WHERE invoice_type = 'final'";
     $statement = $db->prepare($finalInvoice);
     $statement->execute();
@@ -762,6 +762,69 @@
                                 // Custom DataTables filter to enforce EXACT matching for client name or invoice no
                                 $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
                                     var tableId = settings.nTable.id;
+
+                // --- START RBAC FILTER 2.0 ---
+                try {
+                    <?php
+                    $role = strtolower(trim($_SESSION['role'] ?? ''));
+                    $username = strtolower(trim($_SESSION['username'] ?? ''));
+                    $is_c_double = ($role === 'marketing head' || $role === 'office staff-a' || $role === 'office staff-b' || strpos($username, 'marketing') !== false);
+                    $is_c_single = ($role === 'marketing executive');
+                    ?>
+                    var isCDoubleTick = <?php echo $is_c_double ? 'true' : 'false'; ?>;
+                    var isCSingleTick = <?php echo $is_c_single ? 'true' : 'false'; ?>;
+                    
+                    var dtSearchVal = settings.oPreviousSearch.sSearch || "";
+                    if (dtSearchVal.trim() === '') {
+                        if (isCSingleTick) {
+                            return false;
+                        }
+                        if (isCDoubleTick) {
+                            // Extract date from data[4], e.g., "12.02.2018"
+                            var rowDate = (data[4] || "").toString();
+                            var dateSplit = rowDate.split("~");
+                            var dateStr = dateSplit.length > 1 ? dateSplit[1] : dateSplit[0];
+                            dateStr = dateStr.trim();
+                            
+                            var invDate = null;
+                            if (dateStr !== "") {
+                                var parts = dateStr.split('.');
+                                if (parts.length === 3) {
+                                    invDate = new Date(parts[2], parts[1] - 1, parts[0]);
+                                }
+                            }
+                            
+                            var clientName = (data[1] || "").toString().toLowerCase();
+                            if (clientName.indexOf('(expire)') !== -1 || clientName.indexOf('(withdrawn)') !== -1 || clientName.indexOf('(suspended)') !== -1 || clientName.indexOf('(cancel)') !== -1) {
+                                return false; 
+                            }
+                            
+                            var rowNode = settings.aoData[dataIndex].nTr;
+                            if (rowNode) {
+                                var clientStatus = $(rowNode).attr('data-client-status');
+                                if (clientStatus && clientStatus !== 'Active') {
+                                    return false;
+                                }
+                            }
+                            
+                            if (invDate !== null) {
+                                var now = new Date();
+                                var firstDayOfPrev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                                if (invDate < firstDayOfPrev) {
+                                    return false;
+                                }
+                            } else {
+                                return false; 
+                            }
+                        }
+                    }
+                } catch(e) {
+                    // Fallback in case of unexpected JS error
+                    return false;
+                }
+                // --- END RBAC FILTER 2.0 ---
+
+                
                                     if (tableId === 'table_final_invoice' || tableId === 'table_proforma_invoice') {
                                         var searchInputId = (tableId === 'table_final_invoice') ? 'finalClientSearch' : 'proformaClientSearch';
                                         var clientSearchVal = $('#' + searchInputId).val() || '';
@@ -880,7 +943,7 @@
                                                     $sgstShow = ($proforma['sgst'] === "" || $proforma['sgst'] === null || strtolower($proforma['sgst']) === 'na') ? '0' : $proforma['sgst'];
                                                     $igstShow = ($proforma['igst'] === "" || $proforma['igst'] === null || strtolower($proforma['igst']) === 'na') ? '0' : $proforma['igst'];
                                                     ?>
-                                                    <tr id='addr0' class="<?php echo $statusClass; ?>">
+                                                    <tr id='addr0' class="<?php echo $statusClass; ?>" data-inv-date="<?php echo $invoice['invoice_date']; ?>" data-client-status="<?php echo $invoice['audit_status'] ?? ''; ?>">
                                                         <td class="customerAccount" data-id="<?php echo $proforma['customer_id'] ?>" data-name="desc" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
                                                             <small><?php echo $count ?></small>
                                                         </td>
@@ -1004,7 +1067,7 @@
                                                     $sgstShow = ($final['sgst'] === "" || $final['sgst'] === null || strtolower($final['sgst']) === 'na') ? '0' : $final['sgst'];
                                                     $igstShow = ($final['igst'] === "" || $final['igst'] === null || strtolower($final['igst']) === 'na') ? '0' : $final['igst'];
                                                     ?>
-                                                    <tr id='addr0' class="<?php echo $statusClass; ?>">
+                                                    <tr id='addr0' class="<?php echo $statusClass; ?>" data-inv-date="<?php echo $invoice['invoice_date']; ?>" data-client-status="<?php echo $invoice['audit_status'] ?? ''; ?>">
                                                         <td class="customerAccount" data-id="<?php echo $final['customer_id'] ?>" data-name="desc" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
                                                             <small><?php echo $count ?></small>
                                                         </td>
@@ -1234,12 +1297,12 @@
         "sScrollX": "100%",
         "scrollY": '70vh',
         "scrollCollapse": true,
-        "paging": false,
+        "paging": true,
         "ordering": false,
         "lengthChange": false,
         "autoWidth": false,
 //            "pageLength": 10,
-        "paging": false,
+        "paging": true,
         "columnDefs": [
             { "width": "5%", "targets": 0 },
             { "width": "12%", "targets": 1 },
@@ -1263,12 +1326,12 @@
         "sScrollX": "100%",
         "scrollY": '70vh',
         "scrollCollapse": true,
-        "paging": false,
+        "paging": true,
         "ordering": false,
         "lengthChange": false,
         "autoWidth": false,
 //            "pageLength": 10,
-        "paging": false,
+        "paging": true,
         "columnDefs": [
             { "width": "5%", "targets": 0 },
             { "width": "12%", "targets": 1 },
@@ -1369,6 +1432,69 @@
     $.fn.DataTable.ext.search.push(
             function (settings, data, dataIndex) {
                 var tableId = settings.nTable.id;
+
+                // --- START RBAC FILTER 2.0 ---
+                try {
+                    <?php
+                    $role = strtolower(trim($_SESSION['role'] ?? ''));
+                    $username = strtolower(trim($_SESSION['username'] ?? ''));
+                    $is_c_double = ($role === 'marketing head' || $role === 'office staff-a' || $role === 'office staff-b' || strpos($username, 'marketing') !== false);
+                    $is_c_single = ($role === 'marketing executive');
+                    ?>
+                    var isCDoubleTick = <?php echo $is_c_double ? 'true' : 'false'; ?>;
+                    var isCSingleTick = <?php echo $is_c_single ? 'true' : 'false'; ?>;
+                    
+                    var dtSearchVal = settings.oPreviousSearch.sSearch || "";
+                    if (dtSearchVal.trim() === '') {
+                        if (isCSingleTick) {
+                            return false;
+                        }
+                        if (isCDoubleTick) {
+                            // Extract date from data[4], e.g., "12.02.2018"
+                            var rowDate = (data[4] || "").toString();
+                            var dateSplit = rowDate.split("~");
+                            var dateStr = dateSplit.length > 1 ? dateSplit[1] : dateSplit[0];
+                            dateStr = dateStr.trim();
+                            
+                            var invDate = null;
+                            if (dateStr !== "") {
+                                var parts = dateStr.split('.');
+                                if (parts.length === 3) {
+                                    invDate = new Date(parts[2], parts[1] - 1, parts[0]);
+                                }
+                            }
+                            
+                            var clientName = (data[1] || "").toString().toLowerCase();
+                            if (clientName.indexOf('(expire)') !== -1 || clientName.indexOf('(withdrawn)') !== -1 || clientName.indexOf('(suspended)') !== -1 || clientName.indexOf('(cancel)') !== -1) {
+                                return false; 
+                            }
+                            
+                            var rowNode = settings.aoData[dataIndex].nTr;
+                            if (rowNode) {
+                                var clientStatus = $(rowNode).attr('data-client-status');
+                                if (clientStatus && clientStatus !== 'Active') {
+                                    return false;
+                                }
+                            }
+                            
+                            if (invDate !== null) {
+                                var now = new Date();
+                                var firstDayOfPrev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                                if (invDate < firstDayOfPrev) {
+                                    return false;
+                                }
+                            } else {
+                                return false; 
+                            }
+                        }
+                    }
+                } catch(e) {
+                    // Fallback in case of unexpected JS error
+                    return false;
+                }
+                // --- END RBAC FILTER 2.0 ---
+
+                
                 var fromDate, toDate;
                 if (tableId === 'table_final_invoice') {
                     fromDate = $("#filterFromDate").val();
@@ -1383,7 +1509,6 @@
                 var isToDate = false;
                 if (fromDate == "" && toDate == "") {
                     return true;
-                }
                 var dateValue = data[4] || "";
                 var dateSplit = dateValue.split("~");
                 // Final invoice date cell is "date~date"; proforma is a single "date".
@@ -1982,6 +2107,16 @@
         });
 
 
+        // FORCE DataTables to redraw to apply custom ext.search filters immediately
+        setTimeout(function() {
+            if ($.fn.DataTable.isDataTable('#table_proforma_invoice')) {
+                $('#table_proforma_invoice').DataTable().draw();
+            }
+            if ($.fn.DataTable.isDataTable('#table_final_invoice')) {
+                $('#table_final_invoice').DataTable().draw();
+            }
+        }, 500);
+
         $("body").on("click", ".deleteInvoice", function () {
             var id = $(this).attr('data-id');
 
@@ -2005,3 +2140,5 @@
     });
 </script>
 t>
+
+

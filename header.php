@@ -25,6 +25,7 @@ include 'certificationPrintModal.php';
 include 'schedule1servelance.php';
 include 'schedule2servelance.php';
 include 'utility.php';
+require_once __DIR__ . '/include/rbac_matrix.php';
 
 // Automated Web-Cron URL Trigger for Daily 12:00 PM Due Letters Mailer
 if (!defined('WEB_CRON_TRIGGERED') && (int)date('H') >= 12) {
@@ -127,127 +128,127 @@ if (!Utitlity::checkIfLoggedIn()) {
     exit;
 } else if (isset($pageIdentifier) && $pageIdentifier == "Home Page") {
     $addClass = "active";
-    if (!Utitlity::checkUserPermission('client_access')) {
+    if (!aitf_has_access("Client List")) {
         header("Location: login.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Admin Dashboard") {
     $addAdminDashboardClass = "active";
-    if (!(Utitlity::checkForUserMainAdmin() || Utitlity::checkForMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff())) {
+    if (!aitf_has_access("Admin Dashboard")) {
         header("Location: login.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Add User") {
     $addUserClass = "active";
-    if (!(Utitlity::checkForUserAdmin() || Utitlity::checkForMainAdmin())) {
+    if (!aitf_has_access("Add User")) {
         header("Location: login.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Director Space") {
     $addDirectorSpaceClass = "active";
-    if (!Utitlity::checkForDirector()) {
+    if (!aitf_has_access("Directors Dashboard")) {
         header("Location: login.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Master Data") {
     $addMasterClass = "active";
-    if (!(Utitlity::checkForUserAdmin() || Utitlity::checkForMainAdmin())) {
+    if (!aitf_has_access("Master Creator")) {
         header("Location: login.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Mktg") {
     $addMarketingClass = "active";
-    if (!(Utitlity::checkForUserMarketing() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin())) {
+    if (!aitf_has_access("Marketing")) {
         header("Location: login.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Audit Planning") {
     $addWorkingClass = "active";
-    if (!(Utitlity::checkForUserAdmin() || Utitlity::checkForUserConsultant() || Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin())) {
+    if (!aitf_has_access("Audit Planning")) {
         header("Location: login.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Finance Page") {
     $addFinanceClass = "active";
-    if (!(Utitlity::checkForUserAdmin() || Utitlity::checkForUserFinance() || Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin())) {
+    if (!aitf_has_access("Payment Due")) {
         header("Location: login.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "TDS list") {
     $addtds = "active";
-    if (!(Utitlity::checkForMainAdmin() || Utitlity::checkForUserAdmin())) {
+    if (!aitf_has_access("TDS Deducted")) {
         header("Location: login.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Due letter") {
     $adddueClass = "active";
-    if (!(Utitlity::checkForUserAdmin() || Utitlity::checkForMainAdmin() || Utitlity::checkForOfficeStaff())) {
+    if (!aitf_has_access("Intimation Due")) {
         header("Location: login.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "sent letter") {
     $addsentClass = "active";
-    if (!(Utitlity::checkForUserAdmin() || Utitlity::checkForMainAdmin() || Utitlity::checkForOfficeStaff())) {
+    if (!aitf_has_access("Intimation Due")) {
         header("Location: login.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Invoices") {
     $addInvoiceClass = "active";
-    if (!Utitlity::checkUserPermission('invoice_access')) {
+    if (!aitf_has_access("Invoices")) {
         header("Location: login.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Bills") {
     $addBillsClass = "active";
-    if (!(Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin())) {
+    if (!aitf_has_access("Bills")) {
         header("Location: login.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Suppliers") {
     $addSuppliersClass = "active";
-    if (!(Utitlity::checkForUserAdmin() || Utitlity::checkForUserFinance() || Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin())) {
+    if (!aitf_has_access("Creditors")) {
         header("Location: login.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Quot") {
     $addquotClass = "active";
-    if (!(Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin())) {
+    if (!aitf_has_access("Quotations")) {
         header("Location: login.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "agreement") {
     $addagreementClass = "active";
-    if (!(Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin())) {
+    if (!aitf_has_access("Agreements")) {
         header("Location: login.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Recycle") {
     $addRecycleClass = "active";
-    if (!(Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin())) {
+    if (!aitf_has_access("Recycle Cust")) {
         header("Location: login.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Audit Records") {
     $addAuditClass = "active";
-    if (!(Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin())) {
+    if (!aitf_has_access("Audit List")) {
         header("Location: login.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "cert issue list") {
     $addcertissueClass = "active";
-    if (!(Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin())) {
+    if (!aitf_has_access("Cert Issue List")) {
         header("Location: login.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "audit perf") {
     $addauditperClass = "active";
-    if (Utitlity::checkExternalUser()) {
+    if (!aitf_has_access("Audit Performance")) {
         header("Location: login.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Client Analysis") {
     $clientanalysis = "active";
-    if (Utitlity::checkExternalUser()) {
+    if (!aitf_has_access("Client Analysis")) {
         header("Location: login.php?reason=login_required");
         exit;
     }
@@ -259,37 +260,37 @@ if (!Utitlity::checkIfLoggedIn()) {
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "app review objrctive") {
     $apprevobj = "active";
-    if (Utitlity::checkExternalUser()) {
+    if (!aitf_has_access("App Review Objective")) {
         header("Location: login.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Application Received") {
     $addAppReceivedClass = "active";
-    if (!(Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || (isset($_SESSION['role']) && $_SESSION['role'] === 'Auditor'))) {
+    if (!aitf_has_access("Application")) {
         header("Location: login.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Document Upload") {
     $docobj = "active";
-    if (Utitlity::checkExternalUser()) {
+    if (!aitf_has_access("Doc Upload Status")) {
         header("Location: login.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "GoAI") {
     $addGoAiClass = "active";
-    if (Utitlity::checkExternalUser()) {
+    if (!aitf_has_access("Go AI")) {
         header("Location: login.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "IAF Dashboard") {
     $iafClass = "active";
-    if (Utitlity::checkExternalUser()) {
+    if (!aitf_has_access("IAF Dashboard")) {
         header("Location: login.php?reason=login_required");
         exit;
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Job Applications") {
     $addJobAppClass = "active";
-    if (!(Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff())) {
+    if (!aitf_has_access("Job Applications")) {
         header("Location: login.php?reason=login_required");
         exit;
     }
@@ -363,17 +364,14 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
             <li><a href="directorSpace.php" class="animate <?php echo $addDirectorSpaceClass ?? '' ?>">DIRECTOR SPACE<i
                         class="sub_icon fa-solid fa-user-tie fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
-        <?php if ((Utitlity::checkForUserMainAdmin() || Utitlity::checkForMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff()) && (!isset($_SESSION['role']) || $_SESSION['role'] !== 'Main Admin')) { ?>
+        <?php if (aitf_has_access("Admin Dashboard")) { ?>
         <li><a href="adminDashboard.php" class="animate <?php echo isset($addAdminDashboardClass) ? $addAdminDashboardClass : ''; ?>">ADMIN DASHBOARD<i class="sub_icon fa fa-line-chart fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
         <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'Auditor') { ?>
         <li><a href="auditorDashboard.php" class="animate">AUDITOR DASHBOARD<i class="sub_icon fa fa-home fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
-        <?php if (!isset($_SESSION["role"]) || $_SESSION["role"] != 'client') { ?>
-        <li><a href="iaf_dashboard.php" class="animate <?php echo isset($iafClass) ? $iafClass : ''; ?>">IAF DASHBOARD<i
-                    class="sub_icon fa fa-globe" style="font-size: 2em; vertical-align:middle"></i></a></li>
-        <?php } ?>
-        <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff()) { ?>
+
+        <?php if (aitf_has_access("Application")) { ?>
             <?php $unreadBadge = isset($GLOBALS['unread_app_count']) ? (int) $GLOBALS['unread_app_count'] : 0; ?>
             <li>
                 <a href="applicationReceived.php" class="animate app-rec-nav <?php echo $addAppReceivedClass ?>">
@@ -386,89 +384,107 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
                 </a>
             </li>
         <?php } ?>
-        <?php if (Utitlity::checkUserPermission('client_access')) { ?>
+        <?php if (aitf_has_access('Client List')) { ?>
             <li><a href="homePage.php" class="animate <?php echo $addClass ?>">CLIENTS<i
                         class="sub_icon fa fa-building fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
-         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForUserMarketing() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+         <?php if (aitf_has_access("Marketing")) { ?>
             <li><a href="marketingPage.php" class="animate <?php echo $addMarketingClass ?>">MARKETING<i
                         class="sub_icon fa fa-briefcase fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?> 
-        <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForUserFinance() || Utitlity::checkForUserAdmin()) { ?>
+        <?php if (aitf_has_access("Payment Due")) { ?>
             <li><a href="paymentPage.php" class="animate <?php echo $addFinanceClass ?>">PAYMENT<i
                         class="sub_icon fa fa-money fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
-        <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff() || Utitlity::checkForUserConsultant()) { ?>
+        <?php if (aitf_has_access("Audit Planning")) { ?>
             <li><a href="auditPlanning.php" class="animate <?php echo $addWorkingClass ?>">AUDIT PLANNING<i
                         class="sub_icon fa fa-money fa-2x" style="vertical-align:middle"></i></a></li>
             <!--<li><a href="idealPage.php" class="animate ">IDEAL<i class="sub_icon fa fa-briefcase fa-2x" style="vertical-align:middle"></i></a></li>-->
         <?php } ?>
-        <?php if ((Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin()) && (!isset($_SESSION['role']) || $_SESSION['role'] !== 'Main Admin')) { ?>
+        <?php if (aitf_has_access("Master Creator")) { ?>
             <li><a href="masterCreator.php" class="animate <?php echo $addMasterClass ?? '' ?>">MASTER CREATOR<i
                         class="sub_icon fa fa-wrench  fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
-        <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+        <?php if (aitf_has_access("TDS Deducted")) { ?>
             <li><a href="listOfTds.php" class="animate <?php echo $addtds ?? '' ?>">TDS DEDUCTED<i
                         class="sub_icon fa fa-list  fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
-        <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+        <?php if (aitf_has_access("Intimation Due")) { ?>
             <li><a href="intimationLetter.php" class="animate <?php echo $adddueClass ?>">INTIMATION DUE<i
                         class="sub_icon fa fa-envelope-o fa-2x" style="vertical-align:middle"></i></a></li>
+            <?php } ?>
+            <?php if (aitf_has_access("Intimation Due")) { ?>
             <li><a href="sentintimation.php" class="animate <?php echo $addsentClass ?>">INTIMATION SENT<i
                         class="sub_icon fa fa-envelope fa-2x" style="vertical-align:middle"></i></a></li>
+            <?php } ?>
+            <?php if (aitf_has_access("Mailbox")) { ?>
             <li><a href="inbox.php" target="_blank"
                     class="animate <?php echo isset($addInboxClass) ? $addInboxClass : ''; ?>">MAIL-BOX<i
                         class="sub_icon fa fa-inbox fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
-        <?php if (Utitlity::checkUserPermission('invoice_access')) { ?>
+        <?php if (aitf_has_access('Invoices')) { ?>
             <!--<li><a href="clientList.php" class="animate">CLIENT LIST<i class="sub_icon fa fa-list  fa-2x" style="vertical-align:middle"></i></a></li>-->
             <li><a href="invoicePage.php" class="animate <?php echo $addInvoiceClass ?>">INVOICES<i
                         class="sub_icon fa fa-inr fa-2x" style="vertical-align:middle"></i></a></li>
+        <?php } ?>
+        <?php if (aitf_has_access('Bills')) { ?>
             <li><a href="billsPage.php" class="animate <?php echo isset($addBillsClass) ? $addBillsClass : ''; ?>">BILLS<i
                         class="sub_icon fa fa-file-text-o fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
-        <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForUserFinance() || Utitlity::checkForOfficeStaff()) { ?>
+        <?php if (aitf_has_access("Creditors")) { ?>
              <li><a href="suppliers.php" class="animate <?php echo isset($addSuppliersClass) ? $addSuppliersClass : ''; ?>">SUPPLIERS<i
                         class="sub_icon fa fa-address-card-o fa-2x" style="vertical-align:middle"></i></a></li> 
         <?php } ?>
-        <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
+        <?php if (aitf_has_access("Quotations")) { ?>
             <li><a href="quotationPage.php" class="animate <?php echo $addquotClass ?>">QUOTATIONS<i
                         class="sub_icon fa fa-quote-left fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
-        <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff()) { ?>
+        <?php if (aitf_has_access("Agreements")) { ?>
             <li><a href="agreementPage.php" class="animate <?php echo $addagreementClass ?>">AGREEMENTS<i
                         class="sub_icon fa fa-quote-left fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
 
 
 
-        <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff()) { ?>
+        <?php if (aitf_has_access("Audit List")) { ?>
             <li><a href="auditPage.php" class="animate <?php echo $addAuditClass ?>">AUDIT LIST<i
                         class="sub_icon fa fa-list-alt fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
-        <?php if (Utitlity::checkForUserMainAdmin()) { ?>
+        <?php if (aitf_has_access("Add User")) { ?>
             <li><a href="addUsers.php" class="animate <?php echo $addUserClass ?>">ADD USER<i
                         class="sub_icon fa fa-user-plus fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
-        <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin()) { ?>
+        <?php if (aitf_has_access("Recycle Cust")) { ?>
             <li><a href="clientRecycle.php" class="animate <?php echo $addRecycleClass ?>">RECYCLE BIN<i
                         class="sub_icon fa fa-trash-o fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>s
-        <?php if (!(Utitlity::checkClient() || Utitlity::checkExternalUser())) { ?>
+        <?php if (aitf_has_access("Cert Issue List")) { ?>
             <li><a href="auditanalysis.php" class="animate <?php echo $addcertissueClass ?>">CERT. ISSUED LIST<i
                         class="sub_icon fa fa-newspaper-o fa-2x" style="vertical-align:middle"></i></a></li>
+            <?php } ?>
+            <?php if (aitf_has_access("Audit Performance")) { ?>
             <li><a href="qualityanalysis.php" class="animate <?php echo $addauditperClass ?>">AUDIT PERFORMANCE<i
                         class="sub_icon fa fa-recycle fa-2x" style="vertical-align:middle"></i></a></li>
+            <?php } ?>
+            <?php if (aitf_has_access("Client Analysis")) { ?>
             <li><a href="clientanalysis.php" class="animate <?php echo $clientanalysis ?>">CLIENT ANALYSIS<i
                         class="sub_icon fa fa-eye fa-2x" style="vertical-align:middle"></i></a></li>
             <!--<li><a href="cdcobjective.php" class="animate <?php echo $cdcobj ?>">CDC OBJECTIVE<i class="sub_icon fa fa-eye fa-2x" style="vertical-align:middle"></i></a></li>-->
+            <?php } ?>
+            <?php if (aitf_has_access("App Review Objective")) { ?>
             <li><a href="apprevobjective.php" class="animate <?php echo $apprevobj ?>">APP REV OBJECTIVE<i
                         class="sub_icon fa fa-eye fa-2x" style="vertical-align:middle"></i></a></li>
+        <?php } ?>
+            <?php if (aitf_has_access("Doc Upload Status")) { ?>
         <li><a href="uploadingStatus.php" class="animate <?php echo $docobj ?>">DOC.UPLOAD STATUS<i
                     class="sub_icon fa fa-eye fa-2x" style="vertical-align:middle"></i></a></li>
+            <?php } ?>
+            <?php if (aitf_has_access("Audit Data")) { ?>
             <li><a href="auditorChecklist.php"
                     class="animate <?php echo isset($addAuditorChecklistClass) ? $addAuditorChecklistClass : ''; ?>">AUDIT-DATA<i
                         class="sub_icon fa fa-clipboard fa-2x" style="vertical-align:middle"></i></a></li>
+            <?php } ?>
+            <?php if (aitf_has_access("Go AI")) { ?>
             <li><a href="goAi.php" class="animate <?php echo isset($addGoAiClass) ? $addGoAiClass : ''; ?>">GoAI<i
                         class="sub_icon fa fa-magic fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>

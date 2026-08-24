@@ -401,11 +401,139 @@ if (!function_exists('aitf_redirect_user_by_role')) {
         } elseif (aitf_is_director_role()) {
             header('Location: directorSpace.php');
         } elseif (Utitlity::checkForUserFinance()) {
+            return;
+        }
+
+        try {
+            $stmt = $db->prepare("SELECT account_status, is_deleted FROM user WHERE user_id = :user_id LIMIT 1");
+            $stmt->execute(array(':user_id' => (int)$_SESSION['id']));
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$user || (string)$user['is_deleted'] !== '0' || (string)($user['account_status'] ?? 'active') !== 'active') {
+                aitf_record_logout_activity($db);
+                $_SESSION = array();
+                session_regenerate_id(true);
+                $_SESSION['login_notice'] = 'It seems there is a problem with your account. Contact AITF Director for more information.';
+                header('Location: login.php?reason=login_required');
+                exit;
+            }
+        } catch (Exception $e) {
+            error_log('Active account enforcement error: ' . $e->getMessage());
+        }
+    }
+}
+
+if (!function_exists('aitf_generate_employee_eid')) {
+    function aitf_generate_employee_eid(PDO $db)
+    {
+        $year = date('Y');
+        $prefix = 'AITF-EMP' . $year . '-';
+
+        $alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        $digitsPool = '0123456789';
+        
+        do {
+            $chars = '';
+            for ($i = 0; $i < 4; $i++) {
+                $chars .= $alphabet[random_int(0, strlen($alphabet) - 1)];
+            }
+            
+            $digits = '';
+            for ($i = 0; $i < 4; $i++) {
+                $digits .= $digitsPool[random_int(0, strlen($digitsPool) - 1)];
+            }
+            
+            $candidate = $prefix . $chars . $digits;
+
+            $check = $db->prepare("SELECT COUNT(*) FROM user WHERE e_id = :eid");
+            $check->bindParam(':eid', $candidate);
+            $check->execute();
+            $exists = (int)$check->fetchColumn() > 0;
+            
+        } while ($exists);
+
+        return $candidate;
+    }
+}
+
+if (!function_exists('aitf_send_html_mail')) {
+    function aitf_send_html_mail($toEmail, $subject, $bodyHtml)
+    {
+        require_once __DIR__ . '/invoice_mail_helper.php';
+        aitfLoadPHPMailer();
+
+        $mailer = new PHPMailer();
+        $mailer->isHTML(true);
+        $mailer->Subject = $subject;
+        $mailer->Body = $bodyHtml;
+        $mailer->AltBody = trim(strip_tags(str_replace(array('<br>', '<br/>', '<br />'), "\n", $bodyHtml)));
+        aitfAddEmailRecipients($mailer, $toEmail);
+
+        list($sent, $error) = aitfSendInvoiceMailer($mailer);
+        if (!$sent) {
+            throw new Exception($error !== '' ? $error : 'Mail could not be sent.');
+        }
+    }
+}
+
+if (!function_exists('aitf_send_employee_eid_mail')) {
+    function aitf_send_employee_eid_mail(array $user)
+    {
+        $body = '<div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">'
+            . '<div style="background-color: #193048; color: #fff; padding: 20px; text-align: center;">'
+            . '<h2 style="margin: 0; font-size: 24px;">Welcome to AITF Portal</h2>'
+            . '</div>'
+            . '<div style="padding: 30px;">'
+            . '<p style="font-size: 16px;">Dear <strong>' . aitf_rbac_escape($user['user_name']) . '</strong>,</p>'
+            . '<p style="font-size: 16px;">Your AITF Employee ID (EID) has been successfully generated. Below are your details:</p>'
+            . '<div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #3b82f6;">'
+            . '<p style="margin: 0 0 10px 0; font-size: 15px;"><strong>Email:</strong> ' . aitf_rbac_escape($user['email_id']) . '</p>'
+            . '<p style="margin: 0; font-size: 15px;"><strong>Employee ID (EID):</strong> ' . aitf_rbac_escape($user['e_id']) . '</p>'
+            . '</div>'
+            . '<p style="font-size: 16px;">To activate your account and set your password, please click the button below to visit our login page.</p>'
+            . '<div style="text-align: center; margin: 30px 0;">'
+            . '<a href="https://aitf.co.in/login.php" style="background-color: #3b82f6; color: #ffffff; text-decoration: none; padding: 12px 25px; font-size: 16px; border-radius: 5px; display: inline-block; font-weight: bold;">Login / Create Account</a>'
+            . '</div>'
+            . '<p style="font-size: 14px; color: #666;">Once on the login page (<a href="https://aitf.co.in/login.php" style="color: #3b82f6;">https://aitf.co.in/login.php</a>), please click on <strong>Create your AITF account</strong>, verify your email with OTP, and enter this EID to activate your account.</p>'
+            . '<hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">'
+            . '<p style="font-size: 15px; margin-bottom: 5px;">Regards,</p>'
+            . '<p style="font-size: 15px; font-weight: bold; margin-top: 0; color: #193048;">AITF Management Certification Limited</p>'
+            . '</div></div>';
+
+        aitf_send_html_mail($user['email_id'], 'AITF employee ID generated', $body);
+    }
+}
+
+if (!function_exists('aitf_send_employee_otp_mail')) {
+    function aitf_send_employee_otp_mail(array $user, $otp)
+    {
+        $body = '<p>Dear ' . aitf_rbac_escape($user['user_name']) . ',</p>'
+            . '<p>Your OTP for AITF account creation is:</p>'
+            . '<p style="font-size:22px;font-weight:bold;letter-spacing:4px;">' . aitf_rbac_escape($otp) . '</p>'
+            . '<p>This OTP is valid for 10 minutes.</p>'
+            . '<p>Regards,<br>AITF Management Certification Limited</p>';
+
+        aitf_send_html_mail($user['email_id'], 'AITF account creation OTP', $body);
+    }
+}
+
+if (!function_exists('aitf_redirect_user_by_role')) {
+    function aitf_redirect_user_by_role()
+    {
+        include_once __DIR__ . '/../utility.php';
+
+        if (isset($_SESSION['role']) && $_SESSION['role'] === 'Auditor') {
+            header('Location: auditorDashboard.php');
+        } elseif (aitf_is_director_role()) {
+            header('Location: directorSpace.php');
+        } elseif (Utitlity::checkForUserFinance()) {
             header('Location: paymentPage.php');
         } elseif (Utitlity::checkForUserMarketing()) {
             header('Location: marketingPage.php');
         } elseif (Utitlity::checkForUserConsultant()) {
             header('Location: auditPlanning.php');
+        } elseif (isset($_SESSION['role']) && $_SESSION['role'] === 'Report Reviewer') {
+            header('Location: reportReviewerDashboard.php');
         } else {
             header('Location: homePage.php');
         }

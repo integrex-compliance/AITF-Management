@@ -1,6 +1,6 @@
 <?php
 $pageTitle = "About AITF | Assessment & Institute for Technical Forum";
-$pageDescription = "Learn about AITF, a premier institute for ISO certification, Quality Management, Environmental Management, and Occupational Health & Safety.";
+$pageDescription = "Learn about AITF, a assessment institute for ISO certification, Quality Management, Environmental Management, and Occupational Health & Safety.";
 $canonicalUrl = "https://www.aitf.co.in/aboutus.php";
 ?>
 <!DOCTYPE html>

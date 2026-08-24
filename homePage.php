@@ -17,7 +17,18 @@
 
     $ststus = "YES";
     //    $customerList = "SELECT * FROM customer_info where is_deleted <> 'YES' ORDER BY unique_id";
-    $customerList = "SELECT ci.* , ac.certification_date FROM customer_info ci left join allotment_count ac on ci.id = ac.client_id where is_deleted <> 'YES' ORDER BY ac.certification_date DESC";
+    $hp_role = $_SESSION['role'] ?? '';
+$customerListBase = "SELECT ci.* , ac.certification_date FROM customer_info ci left join allotment_count ac on ci.id = ac.client_id where is_deleted <> 'YES'";
+
+if (in_array(trim($hp_role), array('Office Staff-A', 'Office Staff-B'), true)) {
+    // C✔✔ - Active Past One Month+ Running Access
+    $customerList = $customerListBase . " AND ci.audit_status = 'Active' AND ac.certification_date >= DATE_FORMAT(CURDATE() - INTERVAL 1 MONTH, '%Y-%m-01') ORDER BY ac.certification_date DESC";
+} elseif (in_array(trim($hp_role), array('Marketing Head', 'Marketing Executive'), true)) {
+    // C✔ All other like Suspended, Expired, In process, Application Cancel, New Enquiry
+    $customerList = $customerListBase . " AND ci.audit_status IN ('Suspended', 'Expired', 'In process', 'Application Cancel', 'New Enquiry') ORDER BY ac.certification_date DESC";
+} else {
+    $customerList = $customerListBase . " ORDER BY ac.certification_date DESC";
+}
     $statement = $db->prepare($customerList);
     $statement->execute();
     $listOfCustomer = $statement->fetchAll();
