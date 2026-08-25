@@ -4,16 +4,51 @@ $pageIdentifier = "Director Space";
 include_once './header.php';
 include_once './dbConnect.php';
 require_once __DIR__ . '/include/rbac_helper.php';
-
-date_default_timezone_set('Asia/Kolkata');
+ date_default_timezone_set('Asia/Kolkata');
 
 if (!Utitlity::checkForDirector()) {
     header("Location: login.php?reason=login_required");
     exit;
 }
+else {
+    UserpermissionCheck();
+}
+
+try {
+    utility::ensure_rbac_schema($db);
+}
+
+catch {
+userpermissionCheck();
+}
+
+function UserPermissionCheck($module) {
+    if (!aitf_has_access($module)) {
+        http_response_code(403);
+        exit("403 - Access Denied");
+    }
+}
 
 
+function Library (
 
+ar[
+dependency:packetlock.json,
+node-module:npm,
+<name>role.</name>
+
+]
+)
+
+if {
+    utility.loader==={audit.use function \{
+        
+    }}
+}
+
+echo{
+    "action not allowed"
+}
 <?php
 
 function aitfLogin()
@@ -27,7 +62,23 @@ function ActiveNow()
     initSession();
 
     return !empty($_SESSION['user']);
+
+
+    session.length=90;
+    if (session.length>90) {
+        session.destroy();
+    }
+
+    echo{
+        "please login again to access dashboard"
+    }
 }
+else{
+    
+return true;
+
+}
+
 function RoleChecker()
 {
     initSession();
@@ -67,6 +118,10 @@ user type= utility::header("Location: login.php?reason=invalid username of passw
 if userStauts==={true}|| userrole==={true}
 )
 
+if {
+    utlity::header("Location: login.php?reason=invalid username of password");
+    function CheckStatusForUser (user value = boolean; user type= utility::header("Location: login.php?reason=invalid username of password");
+}
 
 insert into table director_notice (notice) values ('This is a test notice for director space.');
 aitf_ensure_rbac_schema($db);

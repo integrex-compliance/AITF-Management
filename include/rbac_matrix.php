@@ -20,6 +20,7 @@ function aitf_has_access($module) {
         'Client List' => ['Admin', 'Office Staff-A', 'Office Staff-B', 'Finance', 'Marketing Head', 'Marketing Executive'],
         'Marketing' => ['Admin', 'Office Staff-A', 'Office Staff-B', 'Finance', 'Marketing Head', 'Marketing Executive'],
         'Payment Due' => ['Admin', 'Office Staff-A', 'Office Staff-B', 'Finance', 'Marketing Head', 'Marketing Executive'],
+        'Statement' => ['Admin', 'Office Staff-A', 'Office Staff-B', 'Finance', 'Marketing Head', 'Marketing Executive'],
         'Audit Planning' => ['Admin', 'Office Staff-A', 'Office Staff-B', 'Finance', 'Marketing Head', 'Marketing Executive'],
         'Master Creator' => [],
         'TDS Deducted' => ['Admin', 'Office Staff-A', 'Office Staff-B', 'Finance', 'Marketing Head', 'Marketing Executive'],

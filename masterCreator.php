@@ -126,11 +126,42 @@
     ?>
     <div id="page-content-wrapper">
         <div class="page-content inset">
-            <div class="container" style="margin-top: 60px;">
+            <div class="container-fluid master-creator-container" style="max-width: 1540px; margin: 0 auto; padding: 14px 20px 60px 20px;">
+                
+                <!-- Compact Master Creator Header -->
+                <div class="mc-hero-header">
+                    <div class="mc-hero-left">
+                        <h1 class="mc-hero-title"><i class="fa fa-database" style="color: #0d4d8b; font-size: 16px; margin-right: 8px;"></i> masterCreator</h1>
+                    </div>
+                    <div class="mc-hero-stats">
+                        <div class="mc-stat-pill">
+                            <span class="mc-stat-icon icon-blue"><i class="fa fa-user-secret"></i></span>
+                            <div>
+                                <div class="mc-stat-num"><?php echo count($auditorsList); ?></div>
+                                <div class="mc-stat-lbl">Auditors</div>
+                            </div>
+                        </div>
+                        <div class="mc-stat-pill">
+                            <span class="mc-stat-icon icon-green"><i class="fa fa-certificate"></i></span>
+                            <div>
+                                <div class="mc-stat-num"><?php echo count($standardsList); ?></div>
+                                <div class="mc-stat-lbl">Standards</div>
+                            </div>
+                        </div>
+                        <div class="mc-stat-pill">
+                            <span class="mc-stat-icon icon-purple"><i class="fa fa-shield"></i></span>
+                            <div>
+                                <div class="mc-stat-num"><?php echo count($accreditationList); ?></div>
+                                <div class="mc-stat-lbl">Accreditations</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="row">
                     <?php if ($auditorKeyMessage !== '') { ?>
                         <div class="col-sm-12">
-                            <div class="alert alert-info" style="border-radius: 8px; font-weight: 600;">
+                            <div class="alert alert-info" style="border-radius: 10px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
                                 <?php echo htmlspecialchars($auditorKeyMessage, ENT_QUOTES, 'UTF-8'); ?>
                             </div>
                         </div>
@@ -2297,6 +2328,371 @@
         });
     </script>
     <style>
+        /* =====================================================================
+           MASTER CREATOR — MODERN CLEAN SAAS DESIGN SYSTEM
+           ===================================================================== */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+        body, #wrapper {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f8fafc;
+            color: #0f172a;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .master-creator-container {
+            max-width: 1540px;
+            margin: 0 auto;
+            padding: 14px 20px 60px 20px;
+        }
+
+        /* =====================================================================
+           COMPACT HERO HEADER
+           ===================================================================== */
+        .mc-hero-header {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #eff6ff 100%);
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 10px 18px;
+            box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+            margin-bottom: 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mc-hero-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #0d4d8b 0%, #2563eb 50%, #38bdf8 100%);
+        }
+
+        .mc-hero-title {
+            font-size: 17px;
+            font-weight: 800;
+            color: #0f172a;
+            margin: 0;
+            letter-spacing: -0.01em;
+            display: flex;
+            align-items: center;
+        }
+
+        .mc-hero-stats {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .mc-stat-pill {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 6px 12px;
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+
+        .mc-stat-pill:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.04);
+        }
+
+        .mc-stat-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+
+        .mc-stat-icon.icon-blue { background: #eff6ff; color: #2563eb; }
+        .mc-stat-icon.icon-green { background: #ecfdf5; color: #059669; }
+        .mc-stat-icon.icon-purple { background: #f5f3ff; color: #7c3aed; }
+
+        .mc-stat-num {
+            font-size: 14px;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1;
+        }
+
+        .mc-stat-lbl {
+            font-size: 9.5px;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            line-height: 1;
+            margin-top: 2px;
+        }
+
+        /* =====================================================================
+           SECTION CARDS (Headers & Wells)
+           ===================================================================== */
+        .qms_complete_btn {
+            background: linear-gradient(135deg, #0d4d8b 0%, #1e40af 100%) !important;
+            border: none !important;
+            border-radius: 12px 12px 0 0 !important;
+            padding: 12px 16px !important;
+            font-size: 13px !important;
+            font-weight: 700 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.5px !important;
+            color: #ffffff !important;
+            box-shadow: 0 2px 8px rgba(13, 77, 139, 0.15) !important;
+            margin: 0 !important;
+            transition: all 0.2s ease !important;
+        }
+
+        .qms_complete_btn.addNewTaxation,
+        .qms_complete_btn.addNewAuditors,
+        .qms_complete_btn.addNewStandards,
+        .qms_complete_btn.addNewAccreditation,
+        .qms_complete_btn.addNewLegalStatus,
+        .qms_complete_btn.addNewIaf,
+        .qms_complete_btn.addNewNace,
+        .qms_complete_btn.addNewStatus,
+        .qms_complete_btn.addNewcategories,
+        .qms_complete_btn.addNewAddto,
+        .qms_complete_btn.addNewHandler,
+        .qms_complete_btn.addNewAiRule {
+            background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%) !important;
+            border-left: 1px solid rgba(255, 255, 255, 0.2) !important;
+            cursor: pointer !important;
+        }
+
+        .qms_complete_btn.addNewTaxation:hover,
+        .qms_complete_btn.addNewAuditors:hover,
+        .qms_complete_btn.addNewStandards:hover,
+        .qms_complete_btn.addNewAccreditation:hover,
+        .qms_complete_btn.addNewLegalStatus:hover,
+        .qms_complete_btn.addNewIaf:hover,
+        .qms_complete_btn.addNewNace:hover,
+        .qms_complete_btn.addNewStatus:hover,
+        .qms_complete_btn.addNewcategories:hover,
+        .qms_complete_btn.addNewAddto:hover,
+        .qms_complete_btn.addNewHandler:hover,
+        .qms_complete_btn.addNewAiRule:hover {
+            background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%) !important;
+            color: #ffffff !important;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.1) !important;
+        }
+
+        .well {
+            background: #ffffff !important;
+            border: 1px solid #e2e8f0 !important;
+            border-top: none !important;
+            border-radius: 0 0 12px 12px !important;
+            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04) !important;
+            padding: 0 !important;
+            margin-bottom: 24px !important;
+            max-height: 230px !important;
+            overflow-y: auto !important;
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e1 transparent;
+        }
+
+        .well::-webkit-scrollbar {
+            width: 6px;
+        }
+        .well::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+
+        .list-group {
+            margin-bottom: 0 !important;
+            border-radius: 0 !important;
+        }
+
+        .list-group-item {
+            border: none !important;
+            border-bottom: 1px solid #f1f5f9 !important;
+            padding: 11px 16px !important;
+            font-size: 13px !important;
+            font-weight: 500 !important;
+            color: #334155 !important;
+            transition: background 0.15s ease !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+        }
+
+        .list-group-item:last-child {
+            border-bottom: none !important;
+        }
+
+        .list-group-item:hover {
+            background: #f8fafc !important;
+        }
+
+        /* Edit and Delete Icons */
+        .list-group-item a.editFirm,
+        .list-group-item a.editTaxation,
+        .list-group-item a.editAuditor,
+        .list-group-item a.editStandards,
+        .list-group-item a.editAccreditation,
+        .list-group-item a.editLegalStatus,
+        .list-group-item a.editIaf,
+        .list-group-item a.editNaceClass,
+        .list-group-item a.editStatus,
+        .list-group-item a.editcategories,
+        .list-group-item a.editAddtos,
+        .list-group-item a.editHandlers,
+        .list-group-item a.editCertificationNo,
+        .list-group-item a.editAiRule {
+            color: #0d4d8b !important;
+            font-size: 14px !important;
+            padding: 4px 7px !important;
+            border-radius: 5px !important;
+            transition: all 0.15s !important;
+            margin-right: 8px !important;
+        }
+
+        .list-group-item a.editFirm:hover,
+        .list-group-item a.editTaxation:hover,
+        .list-group-item a.editAuditor:hover,
+        .list-group-item a.editStandards:hover,
+        .list-group-item a.editAccreditation:hover,
+        .list-group-item a.editLegalStatus:hover,
+        .list-group-item a.editIaf:hover,
+        .list-group-item a.editNaceClass:hover,
+        .list-group-item a.editStatus:hover,
+        .list-group-item a.editcategories:hover,
+        .list-group-item a.editAddtos:hover,
+        .list-group-item a.editHandlers:hover,
+        .list-group-item a.editCertificationNo:hover,
+        .list-group-item a.editAiRule:hover {
+            background: #eff6ff !important;
+            color: #2563eb !important;
+        }
+
+        .list-group-item a.deleteFirm,
+        .list-group-item a.deleteTaxation,
+        .list-group-item a.deleteAuditor,
+        .list-group-item a.deleteStandards,
+        .list-group-item a.deleteAccreditation,
+        .list-group-item a.deleteLegalStatus,
+        .list-group-item a.deleteIaf,
+        .list-group-item a.deleteStatus,
+        .list-group-item a.deletecategories,
+        .list-group-item a.deleteAddto,
+        .list-group-item a.deleteHandlers,
+        .list-group-item a.deleteAiRule {
+            color: #ef4444 !important;
+            font-size: 14px !important;
+            padding: 4px 7px !important;
+            border-radius: 5px !important;
+            transition: all 0.15s !important;
+        }
+
+        .list-group-item a.deleteFirm:hover,
+        .list-group-item a.deleteTaxation:hover,
+        .list-group-item a.deleteAuditor:hover,
+        .list-group-item a.deleteStandards:hover,
+        .list-group-item a.deleteAccreditation:hover,
+        .list-group-item a.deleteLegalStatus:hover,
+        .list-group-item a.deleteIaf:hover,
+        .list-group-item a.deleteStatus:hover,
+        .list-group-item a.deletecategories:hover,
+        .list-group-item a.deleteAddto:hover,
+        .list-group-item a.deleteHandlers:hover,
+        .list-group-item a.deleteAiRule:hover {
+            background: #fef2f2 !important;
+            color: #dc2626 !important;
+        }
+
+        .generateAuditorKey {
+            background: linear-gradient(135deg, #0d4d8b 0%, #2563eb 100%) !important;
+            border: none !important;
+            border-radius: 6px !important;
+            padding: 4px 10px !important;
+            font-weight: 700 !important;
+            font-size: 11px !important;
+            color: #ffffff !important;
+            box-shadow: 0 2px 5px rgba(13, 77, 139, 0.2) !important;
+            transition: transform 0.15s !important;
+        }
+
+        .generateAuditorKey:hover {
+            transform: scale(1.03) !important;
+            color: #ffffff !important;
+        }
+
+        .label-success {
+            background-color: #10b981 !important;
+            color: #ffffff !important;
+            border-radius: 12px !important;
+            font-weight: 700 !important;
+            padding: 3px 8px !important;
+            font-size: 10.5px !important;
+        }
+
+        /* Modern Toggle Switch */
+        .modern-switch {
+            position: relative;
+            display: inline-block;
+            width: 42px;
+            height: 22px;
+            margin: 0;
+        }
+        .modern-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .modern-switch .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #cbd5e1;
+            transition: .3s;
+            border-radius: 22px;
+        }
+        .modern-switch .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 50%;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+        }
+        .modern-switch input:checked + .slider {
+            background-color: #0d4d8b;
+        }
+        .modern-switch input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+
+        /* Dynamic form popups */
+        .newTaxation, .newAuditors, .newStandards, .newAccreditation,
+        .newLegalStatus, .newIaf, .newNace, .newStatus, .newcategories,
+        .newAddto, .newHandler, .changeCertification, .newAiRule {
+            margin-bottom: 20px;
+        }
+
+        /* Buttons & Badges */
         .btn-circle {
             width: 30px;
             height: 30px;
@@ -2307,80 +2703,8 @@
             border-radius: 15px;
         }
 
-        #loading-div-background {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            background: rgba(255, 255, 255, 0.5);
-            width: 100%;
-            height: 100%;
-        }
-
-        #loading-div {
-            width: 300px;
-            height: 150px;
-            background-color: #fff;
-            color: #1468b3;
-            border: 5px solid #1468b3;
-            text-align: center;
-            color: #202020;
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            margin-left: -150px;
-            margin-top: -100px;
-            -webkit-border-radius: 5px;
-            -moz-border-radius: 5px;
-            border-radius: 5px;
-            opacity: 1.0;
-            behavior: url("/css/pie/PIE.htc");
-            /* HANDLES IE */
-        }
-
-        #loading-div-user-info {
-            width: 350px;
-            background-color: #fff;
-            color: #1468b3;
-            border: 1px solid gray;
-            color: #202020;
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            margin-left: -150px;
-            margin-top: -100px;
-            -webkit-border-radius: 5px;
-            -moz-border-radius: 5px;
-            border-radius: 5px;
-            opacity: 1.0;
-            behavior: url("/css/pie/PIE.htc");
-            /* HANDLES IE */
-        }
-
-        #loading-div-background-resend {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            background: rgba(255, 255, 255, 0.5);
-            width: 100%;
-            height: 100%;
-        }
-
-        #loading-div-background-meetedit {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            background: rgba(255, 255, 255, 0.5);
-            width: 100%;
-            height: 100%;
-        }
-
         /* =====================================================================
-           PREMIUM DARK MODE  —  masterCreator.php
-           Palette mirrors homePage.php: deep charcoal surfaces, soft slate text,
-           jewel-toned accents. Toggle handled globally (head.php + js/app.js).
+           DARK MODE SUPPORT
            ===================================================================== */
         html.theme-dark {
             --hpd-bg: #0a0e14;
@@ -2394,143 +2718,61 @@
             --hpd-accent: #4a9eff;
         }
 
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-
-        /* Modern Toggle Switch */
-        .modern-switch {
-          position: relative;
-          display: inline-block;
-          width: 40px;
-          height: 20px;
-          margin: 0;
-        }
-        .modern-switch input {
-          opacity: 0;
-          width: 0;
-          height: 0;
-        }
-        .modern-switch .slider {
-          position: absolute;
-          cursor: pointer;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background-color: #ccc;
-          transition: .4s;
-          border-radius: 20px;
-        }
-        .modern-switch .slider:before {
-          position: absolute;
-          content: "";
-          height: 16px;
-          width: 16px;
-          left: 2px;
-          bottom: 2px;
-          background-color: white;
-          transition: .4s;
-          border-radius: 50%;
-        }
-        .modern-switch input:checked + .slider {
-          background-color: #f0ad4e;
-        }
-        .modern-switch input:focus + .slider {
-          box-shadow: 0 0 1px #f0ad4e;
-        }
-        .modern-switch input:checked + .slider:before {
-          transform: translateX(20px);
-        }
-
-        html.theme-dark #page-content-wrapper {
-            background: var(--hpd-bg);
-            color: var(--hpd-text);
-        }
-
+        html.theme-dark body, 
+        html.theme-dark #page-content-wrapper,
         html.theme-dark .page-content.inset {
             background: var(--hpd-bg);
-        }
-
-        /* Well containers (list panels) */
-        html.theme-dark .well {
-            background: var(--hpd-surface);
-            border-color: var(--hpd-border);
-            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
-        }
-
-        /* List groups */
-        html.theme-dark .list-group-item {
-            background: var(--hpd-surface);
-            border-color: var(--hpd-border);
             color: var(--hpd-text);
+        }
+
+        html.theme-dark .mc-hero-header {
+            background: linear-gradient(135deg, #111722 0%, #0d131e 100%);
+            border-color: var(--hpd-border);
+        }
+        html.theme-dark .mc-hero-title { color: #f8fafc; }
+        html.theme-dark .mc-stat-pill {
+            background: var(--hpd-surface);
+            border-color: var(--hpd-border);
+        }
+        html.theme-dark .mc-stat-num { color: #f8fafc; }
+
+        html.theme-dark .qms_complete_btn {
+            background: linear-gradient(135deg, #16243d 0%, #0d1b33 100%) !important;
+            border-color: var(--hpd-border-2);
+        }
+
+        html.theme-dark .well {
+            background: var(--hpd-surface) !important;
+            border-color: var(--hpd-border) !important;
+        }
+
+        html.theme-dark .list-group-item {
+            background: var(--hpd-surface) !important;
+            border-color: var(--hpd-border) !important;
+            color: var(--hpd-text) !important;
         }
 
         html.theme-dark .list-group-item:hover {
-            background: var(--hpd-surface-2);
+            background: var(--hpd-surface-2) !important;
         }
 
-        html.theme-dark .list-group-item a {
-            color: var(--hpd-text-dim);
+        html.theme-dark .list-group-item a.editFirm,
+        html.theme-dark .list-group-item a.editTaxation,
+        html.theme-dark .list-group-item a.editAuditor,
+        html.theme-dark .list-group-item a.editStandards,
+        html.theme-dark .list-group-item a.editAccreditation,
+        html.theme-dark .list-group-item a.editLegalStatus,
+        html.theme-dark .list-group-item a.editIaf,
+        html.theme-dark .list-group-item a.editNaceClass,
+        html.theme-dark .list-group-item a.editStatus,
+        html.theme-dark .list-group-item a.editcategories,
+        html.theme-dark .list-group-item a.editAddtos,
+        html.theme-dark .list-group-item a.editHandlers,
+        html.theme-dark .list-group-item a.editCertificationNo,
+        html.theme-dark .list-group-item a.editAiRule {
+            color: #60a5fa !important;
         }
 
-        html.theme-dark .list-group-item a:hover {
-            color: #7fb6ef;
-        }
-
-        html.theme-dark .list-group-item b {
-            color: #eaf1fb;
-        }
-
-        /* Section heading buttons stay orange — reads well on dark; just deepen border */
-        html.theme-dark .qms_complete_btn {
-            border-color: var(--hpd-border-2);
-        }
-
-        /* Panels */
-        html.theme-dark .panel {
-            background: var(--hpd-surface);
-            border-color: var(--hpd-border);
-        }
-
-        html.theme-dark .panel-heading {
-            background: linear-gradient(180deg, #161d2b 0%, #121926 100%);
-            border-color: var(--hpd-border-2);
-            color: var(--hpd-text);
-        }
-
-        html.theme-dark .panel-title {
-            color: #eaf1fb;
-        }
-
-        html.theme-dark .panel-body {
-            color: var(--hpd-text);
-        }
-
-        /* Tables */
-        html.theme-dark .table {
-            color: var(--hpd-text);
-        }
-
-        html.theme-dark .table thead th {
-            background: linear-gradient(180deg, #161d2b 0%, #121926 100%);
-            border-bottom: 1px solid var(--hpd-border-2) !important;
-            color: #aeb9cc;
-        }
-
-        html.theme-dark .table tbody td,
-        html.theme-dark .table tbody th {
-            border-top: 1px solid var(--hpd-border) !important;
-            color: var(--hpd-text);
-        }
-
-        html.theme-dark .table-striped tbody tr:nth-of-type(odd) {
-            background-color: rgba(255, 255, 255, 0.018);
-        }
-
-        html.theme-dark .table-hover tbody tr:hover td {
-            background-color: var(--hpd-surface-2);
-        }
-
-        /* Form controls */
         html.theme-dark .form-control {
             background: var(--hpd-surface-2);
             border-color: var(--hpd-border-2);
@@ -2540,116 +2782,5 @@
         html.theme-dark .form-control:focus {
             border-color: var(--hpd-accent);
             box-shadow: 0 0 0 4px rgba(74, 158, 255, 0.18);
-            background: var(--hpd-surface-2);
-        }
-
-        html.theme-dark .form-control::placeholder {
-            color: var(--hpd-text-faint);
-        }
-
-        html.theme-dark .form-control[disabled],
-        html.theme-dark .form-control[readonly] {
-            background: #0e131c;
-            color: var(--hpd-text-dim);
-        }
-
-        html.theme-dark select.form-control option {
-            background: var(--hpd-surface-2);
-            color: var(--hpd-text);
-        }
-
-        html.theme-dark .form-group label,
-        html.theme-dark .control-label,
-        html.theme-dark .float-label-control label {
-            color: var(--hpd-text-dim);
-        }
-
-        html.theme-dark .input-group-addon {
-            background: #1c2534;
-            border-color: var(--hpd-border-2);
-            color: var(--hpd-text-dim);
-        }
-
-        /* Modals (shared model includes) */
-        html.theme-dark .modal-content {
-            background: var(--hpd-surface);
-            border: 1px solid var(--hpd-border-2);
-            color: var(--hpd-text);
-        }
-
-        html.theme-dark .modal-header,
-        html.theme-dark .modal-footer {
-            border-color: var(--hpd-border);
-        }
-
-        html.theme-dark .modal-title {
-            color: var(--hpd-text);
-        }
-
-        html.theme-dark .modal-body {
-            color: var(--hpd-text);
-        }
-
-        html.theme-dark .close {
-            color: var(--hpd-text);
-            text-shadow: none;
-            opacity: 0.7;
-        }
-
-        html.theme-dark .parentrow {
-            border-color: var(--hpd-border);
-        }
-
-        /* Buttons */
-        html.theme-dark .btn-info {
-            background: linear-gradient(135deg, #1d63b0 0%, #2f81d6 100%);
-            border-color: #2f81d6;
-            color: #eaf1fb;
-        }
-
-        html.theme-dark .btn-info:hover,
-        html.theme-dark .btn-info:focus {
-            background: linear-gradient(135deg, #2470c4 0%, #3a8ee0 100%);
-            color: #fff;
-        }
-
-        html.theme-dark .btn-default {
-            background: var(--hpd-surface-2);
-            border-color: var(--hpd-border-2);
-            color: var(--hpd-text);
-        }
-
-        html.theme-dark .btn-default:hover {
-            background: #1f2a3d;
-            color: #fff;
-        }
-
-        /* Loading overlays */
-        html.theme-dark #loading-div-background,
-        html.theme-dark #loading-div-background-resend,
-        html.theme-dark #loading-div-background-meetedit {
-            background: rgba(4, 8, 14, 0.6);
-        }
-
-        html.theme-dark #loading-div,
-        html.theme-dark #loading-div-user-info {
-            background-color: var(--hpd-surface);
-            border-color: var(--hpd-accent);
-            color: var(--hpd-text);
-        }
-
-        /* AI Rules section - labels and badges */
-        html.theme-dark .label-success {
-            background-color: #22c55e;
-            color: #fff;
-        }
-
-        html.theme-dark .label-default {
-            background-color: var(--hpd-border-2);
-            color: var(--hpd-text-dim);
-        }
-
-        html.theme-dark .newAiRule h4 {
-            color: var(--hpd-text);
         }
     </style>

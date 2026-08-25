@@ -147,30 +147,31 @@ include 'header.php';
     </style>
     <?php endif; ?>
     <div id="page-content-wrapper">
-        <div class="page-content inset">
-            <div class="container" >
-                <br>
+        <div class="page-content inset" style="padding-top: 6px;">
+            <div class="container-fluid" style="padding: 0 20px 40px 20px;">
                 <?php if ($isAuditor): ?>
-                <div>
-                    <a href="auditorDashboard.php" class="btn btn-primary" style="margin-bottom:15px;">
+                <div style="margin-bottom: 12px;">
+                    <a href="auditorDashboard.php" class="btn btn-primary">
                         <i class="fa fa-arrow-left"></i> Back to Dashboard
                     </a>
                 </div>
                 <?php endif; ?>
-                <br>
                 <style>
                     .app-rec-wrapper {
-                        max-width: 900px;
-                        margin: 0 auto;
+                        width: 100%;
+                        max-width: 100%;
+                        margin: 0;
                         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                     }
                     .app-rec-card {
                         background: #ffffff;
-                        border-radius: 14px;
-                        box-shadow: 0 14px 35px rgba(15, 23, 42, 0.10);
-                        padding: 16px 20px 10px 20px;
-                        border: 1px solid #e5e7eb;
+                        border-radius: 12px;
+                        box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04);
+                        padding: 18px 24px 14px 24px;
+                        border: 1px solid #e2e8f0;
                         border-top: 4px solid #2563eb;
+                        width: 100%;
+                        box-sizing: border-box;
                     }
                     .app-rec-header {
                         display: flex;
@@ -349,75 +350,166 @@ include 'header.php';
                         font-style: italic;
                     }
 
-                    /* TABBED INTERFACE CSS */
+                    /* ==========================================================================
+                       CONNECTED FOLDER TABS SYSTEM
+                       ========================================================================== */
                     .app-rec-tabs {
+                        --art-border: #cbd5e1;
+                        --art-bg: #ffffff;
+                        --art-idle: #f8fafc;
+                        position: relative;
                         display: flex;
-                        flex-wrap: wrap;
-                        gap: 12px;
-                        margin-bottom: 24px;
-                        border-bottom: 2px solid #e2e8f0;
-                        padding-bottom: 12px;
+                        align-items: flex-end;
+                        gap: 0;
+                        margin: 10px 0 22px;
+                        padding: 14px 0 0;
+                        overflow-x: auto;
+                        overflow-y: visible;
+                        border-bottom: 1px solid var(--art-border);
+                        scrollbar-width: none;
                     }
+                    .app-rec-tabs::-webkit-scrollbar {
+                        display: none;
+                    }
+
                     .app-rec-tab {
-                        background: #f8fafc;
-                        border: 1px solid #e2e8f0;
-                        padding: 10px 18px;
-                        border-radius: 8px;
-                        font-size: 14px;
-                        font-weight: 600;
-                        color: #64748b;
-                        cursor: pointer;
-                        transition: all 0.2s ease;
+                        position: relative;
                         display: inline-flex;
                         align-items: center;
+                        justify-content: center;
                         gap: 8px;
-                        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+                        min-height: 42px;
+                        min-width: max-content;
+                        border: 1px solid var(--art-border);
+                        border-right-width: 0;
+                        border-bottom: 0;
+                        background: var(--art-idle);
+                        color: #475569;
+                        font-size: 13px;
+                        font-weight: 700;
+                        line-height: 1;
+                        padding: 11px 20px 10px;
+                        border-radius: 0;
+                        cursor: pointer;
                         outline: none;
+                        white-space: nowrap;
+                        box-shadow: inset 0 -1px 0 var(--art-border);
+                        transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
                     }
+
+                    .app-rec-tab:first-child {
+                        border-top-left-radius: 8px;
+                    }
+
+                    .app-rec-tab:last-child {
+                        border-right-width: 1px;
+                        border-top-right-radius: 8px;
+                    }
+
                     .app-rec-tab:hover {
-                        background: #f1f5f9;
+                        background: #ffffff;
                         color: #0f172a;
-                        transform: translateY(-1px);
+                        box-shadow: inset 0 -1px 0 var(--art-border), 0 -2px 7px rgba(15, 23, 42, 0.04);
+                        z-index: 2;
                     }
+
                     .app-rec-tab.active {
-                        background: #2563eb;
-                        color: #ffffff;
-                        border-color: #2563eb;
-                        box-shadow: 0 4px 12px rgba(37,99,235,0.25);
+                        margin-bottom: -1px;
+                        min-height: 48px;
+                        color: #0d4d8b;
+                        font-weight: 800;
+                        border: 1px solid var(--art-border);
+                        border-bottom-color: var(--art-bg);
+                        background: var(--art-bg);
+                        border-radius: 12px 12px 0 0;
+                        box-shadow: 0 -4px 12px rgba(15, 23, 42, 0.06);
+                        z-index: 5;
                     }
+
+                    .app-rec-tab.active::before,
+                    .app-rec-tab.active::after {
+                        content: "";
+                        position: absolute;
+                        bottom: -1px;
+                        width: 12px;
+                        height: 12px;
+                        background: transparent;
+                        pointer-events: none;
+                        z-index: -1;
+                    }
+
+                    .app-rec-tab.active::before {
+                        left: -12px;
+                        border-bottom-right-radius: 12px;
+                        box-shadow: 4px 4px 0 var(--art-bg);
+                    }
+
+                    .app-rec-tab.active::after {
+                        right: -12px;
+                        border-bottom-left-radius: 12px;
+                        box-shadow: -4px 4px 0 var(--art-bg);
+                    }
+
                     .app-rec-tab-badge {
                         display: inline-flex;
                         align-items: center;
                         justify-content: center;
-                        min-width: 22px;
-                        height: 22px;
-                        border-radius: 12px;
-                        font-size: 11px;
-                        font-weight: 700;
+                        min-width: 20px;
+                        height: 20px;
+                        border-radius: 999px;
+                        font-size: 10.5px;
+                        font-weight: 800;
                         padding: 0 6px;
-                        color: #fff;
+                        line-height: 1;
+                        background: #ef4444;
+                        color: #ffffff;
+                        box-shadow: 0 2px 4px rgba(239, 68, 68, 0.25);
                     }
-                    .app-rec-tab.active .app-rec-tab-badge { background: #ffffff; color: #2563eb; }
-                    .app-rec-tab:not(.active) .app-rec-tab-badge { background: #ef4444; }
+
+                    .app-rec-tab.active .app-rec-tab-badge {
+                        background: #0d4d8b;
+                        color: #ffffff;
+                    }
 
                     .app-rec-tab-pane {
                         display: none;
-                        animation: fadeIn 0.3s ease;
+                        animation: fadeIn 0.22s ease-out;
                     }
                     .app-rec-tab-pane.active {
                         display: block;
                     }
                     @keyframes fadeIn {
-                        from { opacity: 0; transform: translateY(5px); }
+                        from { opacity: 0; transform: translateY(4px); }
                         to { opacity: 1; transform: translateY(0); }
                     }
 
                     /* Dark Mode tabs */
-                    html.theme-dark .app-rec-tabs { border-bottom-color: var(--ar-border); }
-                    html.theme-dark .app-rec-tab { background: var(--ar-surface); border-color: var(--ar-border); color: var(--ar-text); }
-                    html.theme-dark .app-rec-tab:hover { background: var(--ar-surface-2); }
-                    html.theme-dark .app-rec-tab.active { background: #3b82f6; color: #ffffff; border-color: #3b82f6; }
-                    html.theme-dark .app-rec-tab.active .app-rec-tab-badge { background: #ffffff; color: #1d4ed8; }
+                    html.theme-dark .app-rec-tabs { 
+                        --art-border: #232c3d;
+                        --art-bg: #111722;
+                        --art-idle: #161d2b;
+                        border-bottom-color: var(--art-border); 
+                    }
+                    html.theme-dark .app-rec-tab { 
+                        color: #93a1b8; 
+                        background: var(--art-idle); 
+                        border-color: var(--art-border);
+                        box-shadow: inset 0 -1px 0 var(--art-border);
+                    }
+                    html.theme-dark .app-rec-tab:hover { 
+                        background: #111722; 
+                        color: #ffffff; 
+                    }
+                    html.theme-dark .app-rec-tab.active { 
+                        background: var(--art-bg); 
+                        color: #60a5fa; 
+                        border-color: var(--art-border); 
+                        border-bottom-color: var(--art-bg); 
+                    }
+                    html.theme-dark .app-rec-tab.active .app-rec-tab-badge { 
+                        background: #2563eb; 
+                        color: #ffffff; 
+                    }
 
                     .app-rec-card.audit {
                         border-top-color: #2563eb;

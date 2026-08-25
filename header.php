@@ -174,6 +174,12 @@ if (!Utitlity::checkIfLoggedIn()) {
         header("Location: login.php?reason=login_required");
         exit;
     }
+} else if (isset($pageIdentifier) && $pageIdentifier == "Statement Page") {
+    $addStatementClass = "active";
+    if (!aitf_has_access("Statement")) {
+        header("Location: login.php?reason=login_required");
+        exit;
+    }
 } else if (isset($pageIdentifier) && $pageIdentifier == "TDS list") {
     $addtds = "active";
     if (!aitf_has_access("TDS Deducted")) {
@@ -396,6 +402,10 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
             <li><a href="paymentPage.php" class="animate <?php echo $addFinanceClass ?>">PAYMENT<i
                         class="sub_icon fa fa-money fa-2x" style="vertical-align:middle"></i></a></li>
         <?php } ?>
+        <?php if (aitf_has_access("Statement")) { ?>
+            <li><a href="statementPage.php" class="animate <?php echo $addStatementClass ?? '' ?>">STATEMENT<i
+                        class="sub_icon fa fa-file-text fa-2x" style="vertical-align:middle"></i></a></li>
+        <?php } ?>
         <?php if (aitf_has_access("Audit Planning")) { ?>
             <li><a href="auditPlanning.php" class="animate <?php echo $addWorkingClass ?>">AUDIT PLANNING<i
                         class="sub_icon fa fa-money fa-2x" style="vertical-align:middle"></i></a></li>
@@ -614,6 +624,7 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
                 <li><a href="homePage.php">CLIENTS</a></li>
                 <li><a href="marketingPage.php">MARKETING</a></li>
                 <li><a href="paymentPage.php">PAYMENT</a></li>
+                <li><a href="statementPage.php">STATEMENT</a></li>
                 <li><a href="auditPlanning.php">AUDIT PLANNING</a></li>
                 <?php if ((Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin()) && (!isset($_SESSION['role']) || $_SESSION['role'] !== 'Main Admin')) { ?>
                 <li><a href="masterCreator.php">MASTER CREATOR</a></li>

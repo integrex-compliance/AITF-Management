@@ -73,6 +73,47 @@
     }
     $statement->execute();
     $listOfTds = $statement->fetchAll();
+
+    // Also fetch TDS from new Statement system (statement_payments where tds_decided > 0)
+    $newTdsQuery = "SELECT ci.id, ci.customer_name, ci.unique_id, sp.customer_id, 
+                    CONCAT('TDS (Statement #', sp.id, ')') as tds, 
+                    sp.tds_decided as amount_decided, sp.tds_received as payment_received,
+                    sp.payment_date, sp.comment, sp.id as payment_id,
+                    0 as service_id, sp.service_type
+                    FROM customer_info ci
+                    INNER JOIN statement_payments sp ON ci.id = sp.customer_id
+                    WHERE sp.tds_decided > 0";
+    $newTdsParams = [];
+    if ($status == 'received') {
+        $newTdsQuery .= " AND sp.tds_received > 0";
+    } elseif ($status == 'not_received') {
+        $newTdsQuery .= " AND (sp.tds_received IS NULL OR sp.tds_received = 0)";
+    }
+    if (!empty($clientSearch)) {
+        $newTdsQuery .= " AND ci.customer_name LIKE :clientSearch2";
+        $newTdsParams[':clientSearch2'] = '%' . $clientSearch . '%';
+    }
+    if (!empty($startDate)) {
+        $newTdsQuery .= " AND sp.payment_date >= :startDate2";
+        $newTdsParams[':startDate2'] = $startDate;
+    }
+    if (!empty($endDate)) {
+        $newTdsQuery .= " AND sp.payment_date <= :endDate2";
+        $newTdsParams[':endDate2'] = $endDate;
+    }
+    $newTdsQuery .= " ORDER BY sp.id DESC";
+
+    try {
+        $stmtNew = $db->prepare($newTdsQuery);
+        foreach ($newTdsParams as $key => $val) {
+            $stmtNew->bindValue($key, $val);
+        }
+        $stmtNew->execute();
+        $newTdsList = $stmtNew->fetchAll();
+        $listOfTds = array_merge($listOfTds, $newTdsList);
+    } catch (PDOException $e) {
+        // If statement_payments table doesn't exist yet, silently skip
+    }
     ?>
 
     <style>

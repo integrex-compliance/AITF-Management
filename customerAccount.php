@@ -3285,10 +3285,10 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             color: #fff !important;
         }
 
-        /* Payment System / other coloured title bars -> muted navy */
+        /* Payment System / other coloured title bars -> dark green */
         html.theme-dark .service_title.payment-title,
-        html.theme-dark [style*="#7393B3"] {
-            background: #1e2d44 !important;
+        html.theme-dark [style*="#4CAF50"] {
+            background: #1b5e20 !important;
             color: #e5eaf2 !important;
         }
 
@@ -4657,10 +4657,10 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             <div class="servicebox" style="display: ">
                 <div class="row" id="service-row" class="service-row">
                     <div class="col-sm-11 service_title payment-title"
-                        style="text-align: center; background:   #7393B3; color: #fff; font-family: 'Copperplate', 'Copperplate Gothic Light', 'sans-serif';">
+                        style="text-align: center; background:   #4CAF50; color: #fff; font-family: 'Copperplate', 'Copperplate Gothic Light', 'sans-serif';">
                         Payment System <span class="serviceStatus"></span>
                     </div>
-                    <div class="col-sm-1 service_title" style="background:   #7393B3; color: #fff; font-size: 1.7em;">
+                    <div class="col-sm-1 service_title" style="background:   #4CAF50; color: #fff; font-size: 1.7em;">
                         <a class="savePayment" id="savePayment" data-row-id="<?php if (isset($paymentDetails['payment_sy_id']))
                             echo $paymentDetails['payment_sy_id'] ?>">
                                 <i class="fa fa-floppy-o pull-right"

@@ -608,31 +608,51 @@ if (in_array(trim($hp_role), array('Office Staff-A', 'Office Staff-B'), true)) {
 
         #tab_customer_list thead th {
             background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%) !important;
-            border: 0 !important;
-            border-bottom: 1px solid #e2e8f0 !important;
-            padding: 15px 12px !important;
-            vertical-align: middle;
+            border-top: 0 !important;
+            border-left: 0 !important;
+            border-right: 1px solid #e2e8f0 !important;
+            border-bottom: 2px solid #cbd5e1 !important;
+            padding: 12px 10px !important;
+            height: 44px !important;
+            line-height: 1 !important;
+            vertical-align: middle !important;
+            white-space: nowrap !important;
             position: sticky;
             top: 0;
             z-index: 2;
+            box-sizing: border-box !important;
+        }
+
+        #tab_customer_list thead th:last-child {
+            border-right: 0 !important;
         }
 
         #tab_customer_list thead th small,
-        #tab_customer_list thead th a {
+        #tab_customer_list thead th a,
+        #tab_customer_list thead th span {
             color: #0f172a !important;
             text-decoration: none !important;
-            font-weight: 700;
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 0.6px;
+            font-weight: 700 !important;
+            font-size: 11.5px !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.6px !important;
+            white-space: nowrap !important;
+            display: inline-block !important;
+            line-height: 1.2 !important;
+            vertical-align: middle !important;
         }
 
         #tab_customer_list tbody td {
-            padding: 12px !important;
+            padding: 10px 12px !important;
             border-top: 0 !important;
+            border-left: 0 !important;
+            border-right: 1px solid #eef2f6 !important;
+            border-bottom: 1px solid #eef2f6 !important;
+            vertical-align: middle !important;
+        }
+
+        #tab_customer_list tbody td:last-child {
             border-right: 0 !important;
-            border-bottom: 1px solid #f1f5f9 !important;
-            vertical-align: middle;
         }
 
         #tab_customer_list tbody tr {
@@ -651,21 +671,117 @@ if (in_array(trim($hp_role), array('Office Staff-A', 'Office Staff-B'), true)) {
             cursor: pointer;
         }
 
-        #tab_customer_list textarea {
-            width: 100%;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 6px 8px;
-            font-size: 13px;
-            color: #334155;
-            resize: vertical;
+        /* Column Alignments */
+        #tab_customer_list th:nth-child(1), #tab_customer_list td:nth-child(1),
+        #tab_customer_list th:nth-child(2), #tab_customer_list td:nth-child(2),
+        #tab_customer_list th:nth-child(3), #tab_customer_list td:nth-child(3),
+        #tab_customer_list th:nth-child(6), #tab_customer_list td:nth-child(6),
+        #tab_customer_list th:nth-child(7), #tab_customer_list td:nth-child(7),
+        #tab_customer_list th:nth-child(8), #tab_customer_list td:nth-child(8) {
+            text-align: center !important;
         }
 
-        #tab_customer_list .setHandler {
-            border: 1px solid #d8dee9;
-            border-radius: 8px;
-            height: 36px;
-            font-size: 13px;
+        /* Hand (Handler) Column & Dropdown */
+        #tab_customer_list th:nth-child(9),
+        #tab_customer_list td:nth-child(9) {
+            min-width: 140px !important;
+            width: 150px !important;
+            text-align: center !important;
+            vertical-align: middle !important;
+        }
+
+        #tab_customer_list .float-label-control {
+            margin-bottom: 0 !important;
+        }
+
+        #tab_customer_list select.setHandler {
+            width: 100% !important;
+            height: 40px !important;
+            min-height: 40px !important;
+            line-height: 1.4 !important;
+            padding: 6px 26px 6px 12px !important;
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 8px !important;
+            background-color: #ffffff !important;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+            background-repeat: no-repeat !important;
+            background-position: right 10px center !important;
+            background-size: 12px !important;
+            appearance: none !important;
+            -webkit-appearance: none !important;
+            -moz-appearance: none !important;
+            font-size: 13px !important;
+            font-weight: 600 !important;
+            color: #0f172a !important;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+            cursor: pointer !important;
+            transition: all 0.2s ease !important;
+            box-sizing: border-box !important;
+        }
+
+        #tab_customer_list select.setHandler:focus {
+            border-color: #0d4d8b !important;
+            box-shadow: 0 0 0 3px rgba(13, 77, 139, 0.12) !important;
+            outline: none !important;
+            background-color: #ffffff !important;
+        }
+
+        /* Comments Column & Textarea */
+        #tab_customer_list th:nth-child(10),
+        #tab_customer_list td:nth-child(10) {
+            min-width: 320px !important;
+            max-width: 460px !important;
+            width: 360px !important;
+            vertical-align: middle !important;
+        }
+
+        #tab_customer_list textarea.saveChanges {
+            width: 100% !important;
+            min-height: 70px !important;
+            height: auto !important;
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 8px !important;
+            padding: 8px 12px !important;
+            font-size: 13px !important;
+            line-height: 1.45 !important;
+            color: #0f172a !important;
+            background: #ffffff !important;
+            resize: vertical !important;
+            box-sizing: border-box !important;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+            transition: all 0.2s ease !important;
+        }
+
+        #tab_customer_list textarea.saveChanges:focus {
+            background: #ffffff !important;
+            border-color: #0d4d8b !important;
+            box-shadow: 0 0 0 3px rgba(13, 77, 139, 0.12) !important;
+            outline: none !important;
+        }
+
+        html.theme-dark #tab_customer_list select.setHandler {
+            background-color: var(--hpd-surface-2) !important;
+            border-color: var(--hpd-border-2) !important;
+            color: var(--hpd-text) !important;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+        }
+
+        html.theme-dark #tab_customer_list select.setHandler:focus {
+            background-color: var(--hpd-surface) !important;
+            border-color: var(--hpd-accent) !important;
+            box-shadow: 0 0 0 3px rgba(77, 163, 255, 0.2) !important;
+        }
+
+        html.theme-dark #tab_customer_list textarea.saveChanges {
+            background: var(--hpd-surface-2) !important;
+            border-color: var(--hpd-border-2) !important;
+            color: var(--hpd-text) !important;
+        }
+
+        html.theme-dark #tab_customer_list textarea.saveChanges:focus {
+            background: var(--hpd-surface) !important;
+            border-color: var(--hpd-accent) !important;
+            box-shadow: 0 0 0 3px rgba(77, 163, 255, 0.2) !important;
         }
 
         #tab_customer_list_filter {
@@ -1055,36 +1171,16 @@ if (in_array(trim($hp_role), array('Office Staff-A', 'Office Staff-B'), true)) {
                     <table class="table table-hover table-sortable table-striped" id="tab_customer_list" width="100%">
                         <thead>
                             <tr>
-                                <th class="">
-                                    <small>Sr.</small>
-                                </th>
-                                <th class="">
-                                    <small><a>Unique Id</a></small>
-                                </th>
-                                <th class="">
-                                    <small><a>Agreement Date</a></small>
-                                </th>
-                                <th class="">
-                                    <small><a>Name of Client</a></small>
-                                </th>
-                                <th class="">
-                                    <small><a>Contact person </a></small>
-                                </th>
-                                <th class="">
-                                    <small><a>Current Status</a></small>
-                                </th>
-                                <th class="">
-                                    <small><a>Next Ser due on date</a></small>
-                                </th>
-                                <th class="">
-                                    <small><a>Next Ser Type</a></small>
-                                </th>
-                                <th class="">
-                                    <small><a>Hand</a></small>
-                                </th>
-                                <th class="">
-                                    <small><a>Comments</a></small>
-                                </th>
+                                <th style="text-align: center;"><small>#</small></th>
+                                <th style="text-align: center;"><small>Unique ID</small></th>
+                                <th style="text-align: center;"><small>Agreement Date</small></th>
+                                <th style="text-align: left;"><small>Client Name</small></th>
+                                <th style="text-align: left;"><small>Contact Person</small></th>
+                                <th style="text-align: center;"><small>Status</small></th>
+                                <th style="text-align: center;"><small>Next Due Date</small></th>
+                                <th style="text-align: center;"><small>Next Service</small></th>
+                                <th style="text-align: center;"><small>Handler</small></th>
+                                <th style="text-align: left;"><small>Comments</small></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1113,35 +1209,28 @@ if (in_array(trim($hp_role), array('Office Staff-A', 'Office Staff-B'), true)) {
                                 ?>
                                 <tr id='addr<?php echo $customer['id'] ?>'
                                     data-status="<?php echo htmlspecialchars($normStatus, ENT_QUOTES) ?>">
-                                    <td data-name="name"
-                                        style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
+                                    <td data-name="name">
                                         <small><?php echo $count ?></small>
                                     </td>
-                                    <td class="customerAccount" data-id="<?php echo $customer['id'] ?>" data-name="sel"
-                                        style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                    <td class="customerAccount" data-id="<?php echo $customer['id'] ?>" data-name="sel">
                                         <small><?php if (isset($customer['unique_id']))
                                             echo $customer['unique_id'] ?></small>
-                                        </td>
-                                        <td class="customerAccount" data-id="<?php echo $customer['id'] ?>" data-name="mail"
-                                        style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                    </td>
+                                    <td class="customerAccount" data-id="<?php echo $customer['id'] ?>" data-name="mail">
                                         <small><a><?php echo $customer['certification_date'] ?></a></small>
                                     </td>
-                                    <td class="customerAccount" data-id="<?php echo $customer['id'] ?>" data-name="mail"
-                                        style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                        <small><a><?php echo $customer['customer_name'] ?></a></small>
+                                    <td class="customerAccount" data-id="<?php echo $customer['id'] ?>" data-name="mail">
+                                        <small><a style="font-weight: 600; color: #0d4d8b;"><?php echo $customer['customer_name'] ?></a></small>
                                     </td>
-                                    <td class="customerAccount" data-id="<?php echo $customer['id'] ?>" data-name="desc"
-                                        style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                    <td class="customerAccount" data-id="<?php echo $customer['id'] ?>" data-name="desc">
                                         <small><?php echo $customer['contact_person'] ?></small>
                                     </td>
-                                    <td class="customerAccount" data-id="<?php echo $customer['id'] ?>" data-name="desc"
-                                        style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                    <td class="customerAccount" data-id="<?php echo $customer['id'] ?>" data-name="desc">
                                         <small><span
                                                 class="hp-badge hp-c-<?php echo $statusColor ?>"><?php echo htmlspecialchars($normStatus); ?><?php if ($normStatus === "In-process" && !empty($serviceInfo["service_type"]))
                                                           echo ' (' . htmlspecialchars($serviceInfo["service_type"]) . ')'; ?></span></small>
                                     </td>
-                                    <td class="customerAccount" data-id="<?php echo $customer['id'] ?>" data-name="sel"
-                                        style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                    <td class="customerAccount" data-id="<?php echo $customer['id'] ?>" data-name="sel">
                                         <small><span><?php if (isset($dueInfo["due_date"]) && !empty($dueInfo["due_date"])) {
                                             echo simpleDateConversion($dueInfo["due_date"]);
                                         } else {
@@ -1152,12 +1241,10 @@ if (in_array(trim($hp_role), array('Office Staff-A', 'Office Staff-B'), true)) {
                                              echo simpleDateConversion($dueInfoex["due_date"]);
                                          } ?></small>
                                     </td>
-                                    <td class="customerAccount" data-id="<?php echo $customer['id'] ?>" data-name="sel"
-                                        style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                    <td class="customerAccount" data-id="<?php echo $customer['id'] ?>" data-name="sel">
                                         <small><?php echo $customer['next_service']; ?></small>
                                     </td>
-                                    <td data-name="sel"
-                                        style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                    <td data-name="sel">
                                         <div class="float-label-control">
                                             <select class="form-control setHandler" data-id="<?php echo $customer['id'] ?>"
                                                 name="setHandler" style="color: black">
@@ -1176,17 +1263,16 @@ if (in_array(trim($hp_role), array('Office Staff-A', 'Office Staff-B'), true)) {
                                             </select>
                                         </div>
                                     </td>
-                                    <td data-name="sel"
-                                        style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
+                                    <td data-name="sel">
                                         <div class="table-edit-control">
                                             <!--<small><?php echo $customer['comment'] ?></small>-->
                                             <textarea rows="3" class="saveChanges" data-row="<?php echo $customer['id'] ?>"
                                                 data-column="comment" name="payComments" value=""
                                                 placeholder=""><?php if (isset($customer['comment']))
                                                     echo $customer['comment'] ?></textarea>
-                                            </div>
-                                        </td>
-                                    </tr>
+                                        </div>
+                                    </td>
+                                </tr>
                             <?php } ?>
                         </tbody>
                     </table>
@@ -1652,42 +1738,16 @@ if (in_array(trim($hp_role), array('Office Staff-A', 'Office Staff-B'), true)) {
         "ordering": false,
         "lengthChange": false,
         "columnDefs": [
-            {
-                "width": "1%",
-                "targets": 0
-            },
-            {
-                "width": "5%",
-                "targets": 1
-            },
-            {
-                "width": "5%",
-                "targets": 2
-            },
-            {
-                "width": "10%",
-                "targets": 3
-            },
-            {
-                "width": "5%",
-                "targets": 4
-            },
-            {
-                "width": "5%",
-                "targets": 5
-            },
-            {
-                "width": "1%",
-                "targets": 6
-            },
-            {
-                "width": "1%",
-                "targets": 7
-            },
-            {
-                "width": "72%",
-                "targets": 9
-            },
+            { "width": "40px", "targets": 0, "className": "text-center" },
+            { "width": "110px", "targets": 1, "className": "text-center" },
+            { "width": "100px", "targets": 2, "className": "text-center" },
+            { "width": "220px", "targets": 3 },
+            { "width": "140px", "targets": 4 },
+            { "width": "130px", "targets": 5, "className": "text-center" },
+            { "width": "110px", "targets": 6, "className": "text-center" },
+            { "width": "95px", "targets": 7, "className": "text-center" },
+            { "width": "145px", "targets": 8, "className": "text-center" },
+            { "width": "360px", "targets": 9 }
         ]
     });
     table.columns.adjust().draw();
