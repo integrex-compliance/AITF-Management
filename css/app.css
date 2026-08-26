@@ -11,22 +11,35 @@
             left: 50px;
             top: 0;
             width: 180px;
-            background: #053c6d;
+            background: linear-gradient(180deg, #0d4d8b 0%, #083b6a 100%);
             position: fixed;
             height: 100vh;
             z-index: 10000;
-            transition: all .4s ease 0s;
-            overflow-y: scroll;
+            transition: all .35s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow-x: hidden;
+            overflow-y: auto;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 3px 0 16px rgba(13, 77, 139, 0.15);
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
         }
-        /*.navbar {
-  position: static;
-}
-.navbar .nav > li {
-  z-index: 1001;
-}*/        
+
+        #sidebar-wrapper::-webkit-scrollbar {
+            width: 4px;
+        }
+        #sidebar-wrapper::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        #sidebar-wrapper::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.25);
+            border-radius: 4px;
+        }
+        #sidebar-wrapper::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.45);
+        }
+
         .sidebar-nav {
             display: block;
-            float: left;
             width: 180px;
             list-style: none;
             margin: 0;
@@ -45,14 +58,13 @@
             /* Ensure page content (including qms_customer_name header) starts fully below the fixed navbar */
             margin-top: 80px;
         }
-    #wrapper {
+        
+        #wrapper {
             padding-left: 50px;
-            transition: all .4s ease 0s;
+            transition: all .35s cubic-bezier(0.4, 0, 0.2, 1);
             height: 100%;
-        overflow-x: hidden;
+            overflow-x: hidden;
         }
-    
-
         
         #wrapper.active {
             padding-left: 180px;
@@ -64,19 +76,25 @@
         
         #sidebar_menu li a,
         .sidebar-nav li a {
-            color: #fff;
-            display: block;
-            float: left;
+            color: #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
             text-decoration: none;
             width: 180px;
-            background: #053c6d;
-            border-top: 1px solid #fff;
-            border-bottom: 1px solid #fff;
-            -webkit-transition: background .5s;
-            -moz-transition: background .5s;
-            -o-transition: background .5s;
-            -ms-transition: background .5s;
-            transition: background .5s;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            border-left: 3.5px solid transparent;
+            padding: 9px 12px;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, sans-serif;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+            line-height: 1.25;
+            transition: all .18s cubic-bezier(0.4, 0, 0.2, 1);
         }
         
         .sidebar_name {
@@ -86,61 +104,122 @@
         }
         
         .sidebar-nav li {
-            line-height: 40px;
-            text-indent: 5px;
-            font-size: 0.8em;
-        }
-        
-        .sidebar-nav li a {
-            color: #fff;
-            display: block;
-            text-decoration: none;
+            list-style: none;
+            margin: 0;
+            padding: 0;
         }
         
         .sidebar-nav li a:hover {
-            color: #fff;
-            background: #f5821f;
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.14);
             text-decoration: none;
         }
-        /*css add to show active class of header*/
+
+        .sidebar-nav li a:hover .sub_icon {
+            color: #ffffff !important;
+            transform: scale(1.1);
+        }
         
+        /* CSS active class of header */
         .sidebar-nav li a.active {
-            color: #fff;
-            background: #f5821f;
-            text-decoration: none;
+            color: #ffffff !important;
+            background: #062b4f !important;
+            border-left: 3.5px solid #38bdf8 !important;
+            font-weight: 700 !important;
+            text-decoration: none !important;
+        }
+
+        .sidebar-nav li a.active .sub_icon {
+            color: #38bdf8 !important;
         }
         
         .sidebar-nav li a:active,
         .sidebar-nav li a:focus {
             text-decoration: none;
         }
+
+        /* Top MGMT Space — Executive Star Styling */
+        .sidebar-nav li a.mgmt-space-link {
+            color: #fbbf24 !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.5px !important;
+            background: linear-gradient(90deg, rgba(245, 158, 11, 0.18) 0%, rgba(245, 158, 11, 0.04) 100%) !important;
+            border-left: 3.5px solid #f59e0b !important;
+            border-bottom: 1px solid rgba(245, 158, 11, 0.25) !important;
+        }
+
+        .sidebar-nav li a.mgmt-space-link .sub_icon,
+        .sidebar-nav li a.mgmt-space-link .mgmt-icon {
+            color: #fbbf24 !important;
+            text-shadow: 0 0 8px rgba(251, 191, 36, 0.45);
+        }
+
+        .sidebar-nav li a.mgmt-space-link:hover {
+            background: linear-gradient(90deg, rgba(245, 158, 11, 0.28) 0%, rgba(245, 158, 11, 0.1) 100%) !important;
+            color: #fffbeb !important;
+        }
+
+        .sidebar-nav li a.mgmt-space-link:hover .mgmt-star-icon {
+            transform: rotate(72deg) scale(1.25);
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar-nav li a.mgmt-space-link.active {
+            background: linear-gradient(90deg, rgba(245, 158, 11, 0.38) 0%, rgba(245, 158, 11, 0.15) 100%) !important;
+            border-left: 3.5px solid #fbbf24 !important;
+            color: #ffffff !important;
+            box-shadow: inset 0 0 12px rgba(245, 158, 11, 0.25);
+        }
+
+        .sidebar-nav li a.mgmt-space-link.active .sub_icon {
+            color: #fbbf24 !important;
+        }
         
         .sidebar-nav > .sidebar-brand {
             height: 65px;
-            line-height: 60px;
-            font-size: 18px;
+            margin: 0;
+            padding: 0;
         }
         
         .sidebar-nav > .sidebar-brand a {
             color: #fff;
+            background: #093968 !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
+            border-top: none !important;
+            border-left: none !important;
+            padding: 5px 12px !important;
         }
         
         .sidebar-nav > .sidebar-brand a:hover {
-            color: #053c6d;
-            background: none;
+            background: #093968 !important;
         }
         
         #main_icon {
-            float: right;
-            padding-right: 25px;
-            padding-top: 20px;
+            float: none;
+            margin: 0;
+            padding: 0;
+            color: #cbd5e1;
+            font-size: 16px;
+            transition: color 0.2s;
+        }
+
+        .sidebar-nav > .sidebar-brand a:hover #main_icon {
+            color: #ffffff;
         }
         
-        .sub_icon {
-            float: right;
-            padding-right: 25px;
-            padding-top: 10px;
-            vertical-align: middle;
+        .sidebar-nav .sub_icon,
+        .sidebar-nav i.sub_icon,
+        .sidebar-nav i.sub_icon.fa-2x {
+            float: none !important;
+            padding: 0 !important;
+            margin: 0 0 0 auto !important;
+            font-size: 14px !important;
+            width: 20px !important;
+            text-align: right !important;
+            vertical-align: middle !important;
+            color: #e2e8f0 !important;
+            flex-shrink: 0 !important;
+            transition: all 0.18s ease !important;
         }
 
         .navbar-bootsnipp .navbar-nav > li > a .fa,
@@ -1453,21 +1532,31 @@ html.theme-dark hr {
 }
 
 html.theme-dark #sidebar-wrapper {
-    background: #070a10 !important;
+    background: linear-gradient(180deg, #070a10 0%, #030508 100%) !important;
+    border-right-color: rgba(255, 255, 255, 0.04) !important;
 }
 
 html.theme-dark #sidebar_menu li a,
 html.theme-dark .sidebar-nav li a {
-    background: #070a10 !important;
-    border-top-color: #1f2937 !important;
-    border-bottom-color: #1f2937 !important;
-    color: #f1f5f9 !important;
+    background: transparent !important;
+    border-bottom-color: rgba(255, 255, 255, 0.04) !important;
+    border-top: none !important;
+    color: #94a3b8 !important;
 }
 
-html.theme-dark .sidebar-nav li a:hover,
-html.theme-dark .sidebar-nav li a.active {
-    background: #111827 !important;
+html.theme-dark .sidebar-nav li a:hover {
+    background: rgba(255, 255, 255, 0.05) !important;
     color: #ffffff !important;
+}
+
+html.theme-dark .sidebar-nav li a.active {
+    background: linear-gradient(90deg, rgba(37, 99, 235, 0.35) 0%, rgba(37, 99, 235, 0.08) 100%) !important;
+    border-left: 3px solid #60a5fa !important;
+    color: #ffffff !important;
+}
+
+html.theme-dark .sidebar-nav li a.active .sub_icon {
+    color: #60a5fa !important;
 }
 
 html.theme-dark .navbar-bootsnipp {

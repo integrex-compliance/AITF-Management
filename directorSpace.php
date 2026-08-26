@@ -78,7 +78,7 @@ $todayLoginCount = count($todayActivities);
                 <header class="dashboard-hero">
                     <div class="hero-left">
                         <div class="hero-badge">
-                            <span class="pulse-beacon"></span> Executive Management Portal
+                            <span class="pulse-beacon"></span> Top MGMT Space — Executive Portal
                         </div>
                         <h1 class="hero-title" id="greetingText">Welcome, Managing Director</h1>
                         <script>

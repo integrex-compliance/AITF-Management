@@ -26,39 +26,48 @@
      */
     ?>
     <style>
+        /* Base typography & resets */
+        #page-content-wrapper {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
         .custom-float-label-control {
             margin-bottom: 0em;
         }
 
-        /* Consistent styling with other pages */
+        /* Section Title Badge */
         .invoice-section-title {
-            display: inline-block;
-            margin: 0 0 15px;
-            padding: 8px 16px;
-            font-size: 22px;
-            font-weight: 700;
-            color: #0d4d8b;
-            background: #eaf3ff;
-            border-left: 4px solid #0d4d8b;
-            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0 0 16px;
+            padding: 8px 18px;
+            font-size: 18px;
+            font-weight: 800;
+            color: #ffffff;
+            background: linear-gradient(135deg, #0d4d8b 0%, #083b6a 100%);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(13, 77, 139, 0.2);
+            letter-spacing: -0.2px;
         }
 
+        /* Filter Panel Card */
         .invoice-filter-panel {
             display: flex;
             flex-wrap: wrap;
             gap: 12px;
             align-items: center;
             margin: 10px 0 20px;
-            padding: 12px 15px;
-            background: #f8fbff;
-            border: 1px solid #d6e4f0;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+            padding: 14px 18px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
         }
 
         .invoice-filter-item {
             flex: 1;
-            min-width: 150px;
+            min-width: 140px;
             display: flex;
             flex-direction: column;
             position: relative;
@@ -67,7 +76,7 @@
         /* Search Box Specific Styling */
         .search-item {
             flex: 1.5;
-            min-width: 250px;
+            min-width: 220px;
         }
 
         .search-item i {
@@ -89,20 +98,25 @@
             width: 100%;
             height: 40px;
             padding: 8px 12px;
-            border: 1px solid #bfd2e6;
-            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
             box-sizing: border-box;
             font-size: 13px;
+            font-weight: 500;
             background-color: #fff;
-            color: #333;
-            transition: all 0.2s;
+            color: #1e293b;
+            transition: all 0.2s ease;
+        }
+
+        .invoice-filter-item input::placeholder {
+            color: #94a3b8;
         }
 
         .invoice-filter-item input:focus,
         .invoice-filter-item select:focus {
             border-color: #0d4d8b;
             outline: none;
-            box-shadow: 0 0 0 3px rgba(13, 77, 139, 0.1);
+            box-shadow: 0 0 0 3px rgba(13, 77, 139, 0.12);
         }
 
         .btn-report-export {
@@ -114,9 +128,9 @@
             margin: 0;
             padding: 0 20px;
             box-sizing: border-box;
-            font-family: 'Inter', -apple-system, sans-serif;
+            font-family: inherit;
             font-size: 13px;
-            font-weight: 600;
+            font-weight: 700;
             letter-spacing: 0.2px;
             border-radius: 8px;
             cursor: pointer;
@@ -127,24 +141,277 @@
         }
 
         .btn-solid-primary {
-            background-color: #0d4d8b;
+            background: linear-gradient(135deg, #0d4d8b 0%, #083b6a 100%);
             color: #ffffff;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(13, 77, 139, 0.1);
+            box-shadow: 0 2px 6px rgba(13, 77, 139, 0.25);
         }
 
         .btn-solid-primary:hover {
-            background-color: #0b3d6e;
-            box-shadow: 0 4px 12px rgba(13, 77, 139, 0.15);
+            background: linear-gradient(135deg, #11599e 0%, #0a467e 100%);
+            box-shadow: 0 4px 12px rgba(13, 77, 139, 0.35);
             transform: translateY(-1px);
+            color: #ffffff;
         }
 
         .btn-solid-primary:active {
             transform: translateY(0);
-            box-shadow: 0 2px 4px rgba(13, 77, 139, 0.1);
+            box-shadow: 0 2px 4px rgba(13, 77, 139, 0.2);
         }
 
         #tab_customer_list_filter {
             display: none;
+        }
+
+        /* Table Shell & DataTable Styling */
+        .table-responsive {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+            overflow: hidden;
+        }
+
+        #tab_customer_list thead th {
+            background: #0f2744 !important;
+            color: #ffffff !important;
+            padding: 12px 14px !important;
+            border: none !important;
+            font-size: 12px !important;
+            font-weight: 700 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.5px !important;
+            vertical-align: middle !important;
+        }
+
+        #tab_customer_list thead th small,
+        #tab_customer_list thead th a {
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            font-size: 12px !important;
+            text-decoration: none !important;
+        }
+
+        #tab_customer_list tbody td {
+            border: none !important;
+            border-bottom: 1px solid #f1f5f9 !important;
+            padding: 10px 14px !important;
+            font-size: 12.5px !important;
+            color: #334155 !important;
+            background-color: #ffffff;
+            vertical-align: middle !important;
+        }
+
+        #tab_customer_list tbody tr:hover td {
+            background-color: #f8fafc !important;
+        }
+
+        #tab_customer_list tbody tr:nth-of-type(odd) td {
+            background-color: #fcfdfe;
+        }
+
+        /* Unique ID column */
+        #tab_customer_list tbody td:first-child small {
+            font-weight: 700;
+            color: #475569;
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        /* Client Name click style */
+        #tab_customer_list tbody td:nth-child(2) small {
+            font-weight: 700;
+            color: #0d4d8b;
+            cursor: pointer;
+            transition: color 0.15s ease;
+            font-size: 12.5px;
+        }
+
+        #tab_customer_list tbody td:nth-child(2):hover small {
+            color: #0284c7;
+            text-decoration: underline;
+        }
+
+        /* Service Type column badge */
+        #tab_customer_list tbody td:nth-child(3) small {
+            background: #e0f2fe;
+            color: #0369a1;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            display: inline-block;
+        }
+
+        /* Audit Date column badge */
+        #tab_customer_list tbody td:nth-child(4) small {
+            background: #fef3c7;
+            color: #92400e;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11.5px;
+            display: inline-block;
+        }
+
+        /* Auditor name column */
+        #tab_customer_list tbody td:nth-child(5) small {
+            font-weight: 600;
+            color: #334155;
+        }
+
+        /* Action Buttons */
+        .downloadAuditNotification,
+        .downloadAuditNotificationii {
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            background: #ecfdf5 !important;
+            color: #059669 !important;
+            border-radius: 6px !important;
+            border: 1px solid #a7f3d0 !important;
+            margin: 0 2px !important;
+            text-decoration: none !important;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .downloadAuditNotification:hover,
+        .downloadAuditNotificationii:hover {
+            background: #059669 !important;
+            color: #ffffff !important;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25);
+        }
+
+        .editAuditNotification,
+        .editAuditNotificationii {
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            background: #eff6ff !important;
+            color: #2563eb !important;
+            border-radius: 6px !important;
+            border: 1px solid #bfdbfe !important;
+            margin: 0 2px !important;
+            text-decoration: none !important;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .editAuditNotification:hover,
+        .editAuditNotificationii:hover {
+            background: #2563eb !important;
+            color: #ffffff !important;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+        }
+
+        /* =====================================================================
+           PREMIUM DARK MODE  —  auditPlanning.php
+           ===================================================================== */
+        html.theme-dark {
+            --ap-bg:        #0a0e14;
+            --ap-surface:   #111722;
+            --ap-surface-2: #161d2b;
+            --ap-border:    #232c3d;
+            --ap-border-2:  #2e3a4f;
+            --ap-text:      #dbe3f0;
+            --ap-text-dim:  #93a1b8;
+            --ap-text-faint:#6b7890;
+            --ap-accent:    #4a9eff;
+        }
+
+        html.theme-dark #page-content-wrapper { background: var(--ap-bg); color: var(--ap-text); }
+
+        /* Section title */
+        html.theme-dark .invoice-section-title {
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 100%);
+            color: #ffffff;
+        }
+
+        /* Filter panel */
+        html.theme-dark .invoice-filter-panel {
+            background: var(--ap-surface);
+            border-color: var(--ap-border);
+            box-shadow: 0 6px 26px rgba(0, 0, 0, 0.45);
+        }
+        html.theme-dark .search-item i { color: #7aa9f5; }
+        html.theme-dark .invoice-filter-item input,
+        html.theme-dark .invoice-filter-item select {
+            background-color: var(--ap-surface-2) !important;
+            border-color: var(--ap-border-2) !important;
+            color: var(--ap-text) !important;
+        }
+        html.theme-dark .invoice-filter-item input::placeholder { color: var(--ap-text-faint); }
+        html.theme-dark .invoice-filter-item input:focus,
+        html.theme-dark .invoice-filter-item select:focus {
+            border-color: var(--ap-accent);
+            box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.18);
+        }
+
+        /* Download button */
+        html.theme-dark .btn-solid-primary {
+            background: linear-gradient(135deg, #1d63b0 0%, #174e8c 100%);
+            box-shadow: 0 4px 14px rgba(20, 104, 179, 0.4);
+        }
+        html.theme-dark .btn-solid-primary:hover { 
+            background: linear-gradient(135deg, #2f81d6 0%, #1d63b0 100%); 
+            box-shadow: 0 8px 22px rgba(20, 104, 179, 0.5); 
+        }
+
+        /* Table shell */
+        html.theme-dark .table-responsive {
+            background: var(--ap-surface);
+            border: 1px solid var(--ap-border);
+            border-radius: 12px;
+            box-shadow: 0 6px 26px rgba(0, 0, 0, 0.45);
+        }
+        html.theme-dark #tab_customer_list thead th {
+            background: #090e17 !important;
+            border-color: var(--ap-border-2) !important;
+        }
+        html.theme-dark #tab_customer_list thead th small,
+        html.theme-dark #tab_customer_list thead th a { color: #f1f5f9 !important; }
+        html.theme-dark #tab_customer_list small { color: var(--ap-text) !important; }
+        html.theme-dark #tab_customer_list tbody td {
+            border-color: var(--ap-border) !important;
+            color: var(--ap-text) !important;
+            background-color: var(--ap-surface) !important;
+        }
+        html.theme-dark #tab_customer_list tbody tr:hover td { background-color: var(--ap-surface-2) !important; }
+        html.theme-dark .table-striped tbody tr:nth-of-type(odd) td { background-color: rgba(255, 255, 255, 0.02) !important; }
+        html.theme-dark #tab_customer_list tbody td:first-child small { color: #94a3b8 !important; }
+        html.theme-dark #tab_customer_list tbody td:nth-child(2) small { color: #38bdf8 !important; }
+        html.theme-dark #tab_customer_list tbody td:nth-child(3) small { background: rgba(56, 189, 248, 0.15); color: #7dd3fc; }
+        html.theme-dark #tab_customer_list tbody td:nth-child(4) small { background: rgba(245, 158, 11, 0.15); color: #fcd34d; }
+        html.theme-dark #tab_customer_list tbody td:nth-child(5) small { color: #e2e8f0 !important; }
+
+        html.theme-dark .downloadAuditNotification,
+        html.theme-dark .downloadAuditNotificationii {
+            background: rgba(16, 185, 129, 0.15) !important;
+            color: #34d399 !important;
+            border-color: rgba(16, 185, 129, 0.3) !important;
+        }
+        html.theme-dark .downloadAuditNotification:hover,
+        html.theme-dark .downloadAuditNotificationii:hover {
+            background: #059669 !important;
+            color: #ffffff !important;
+        }
+
+        html.theme-dark .editAuditNotification,
+        html.theme-dark .editAuditNotificationii {
+            background: rgba(59, 130, 246, 0.15) !important;
+            color: #60a5fa !important;
+            border-color: rgba(59, 130, 246, 0.3) !important;
+        }
+        html.theme-dark .editAuditNotification:hover,
+        html.theme-dark .editAuditNotificationii:hover {
+            background: #2563eb !important;
+            color: #ffffff !important;
         }
     </style>
 
@@ -154,7 +421,7 @@
             <div class="container">
                 <div class="row">
                     <div class="col-sm-12">
-                        <h5 class="invoice-section-title">Audit Planning & Reports </h5>
+                        <h5 class="invoice-section-title"><i class="fa fa-calendar-check-o"></i> Audit Planning & Reports</h5>
                     </div>
                 </div>
                 <div class="row">

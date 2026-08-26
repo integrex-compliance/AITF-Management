@@ -1,6 +1,6 @@
 <div id="wrapper" class="active">
     <?php
-    $pageIdentifier = "Admin Dashboard";
+    $pageIdentifier = "Top Mgmt Dashboard";
     include 'header.php';
     include 'dbConnect.php';
     include_once './include/certification_cycle_helper.php';
@@ -26,7 +26,7 @@
             $restUnits = preg_replace("/\B(?=(\d{2})+(?!\d))/", ",", $restUnits);
             $whole = $restUnits . "," . $lastThree;
         }
-        return 'Rs. ' . $whole . '.' . $decimal;
+        return 'Rs.&nbsp;' . $whole . '.' . $decimal;
     }
 
     function dashInt($value)
@@ -814,165 +814,193 @@
     ?>
 
     <style>
+        /* ==========================================================
+           ADMIN DASHBOARD — MODERN EXECUTIVE STYLING & TYPOGRAPHY
+           ========================================================== */
         .admin-dash-wrap {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background:
-                radial-gradient(circle at 12% 8%, rgba(38, 121, 162, 0.12), transparent 28%),
-                radial-gradient(circle at 92% 18%, rgba(31, 157, 104, 0.10), transparent 26%),
-                linear-gradient(180deg, #eef3f8 0%, #f8fafc 42%, #f4f7fb 100%);
+                radial-gradient(circle at 12% 8%, rgba(13, 77, 139, 0.08), transparent 30%),
+                radial-gradient(circle at 92% 18%, rgba(16, 185, 129, 0.06), transparent 28%),
+                linear-gradient(180deg, #f0f4f8 0%, #f8fafc 40%, #f1f5f9 100%);
             min-height: 100vh;
             padding-bottom: 48px;
-            color: #132238;
+            color: #1e293b;
         }
 
         .admin-dashboard {
-            max-width: 1320px;
+            max-width: 1340px;
             margin: 0 auto;
-            padding: 30px 20px 64px;
+            padding: 24px 20px 60px;
         }
 
-        .dash-hero {
-            background: rgba(255, 255, 255, 0.92);
-            border: 1px solid rgba(198, 211, 228, 0.9);
-            border-radius: 10px;
-            padding: 24px;
-            box-shadow: 0 22px 55px rgba(25, 42, 70, 0.11);
-            position: relative;
-            overflow: hidden;
+        /* Top Title Bar */
+        .dash-top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 14px;
         }
 
-        .dash-hero:before {
-            content: "";
-            position: absolute;
-            inset: 0;
-            background:
-                linear-gradient(120deg, rgba(21, 94, 149, 0.09), transparent 34%),
-                linear-gradient(280deg, rgba(31, 157, 104, 0.09), transparent 36%);
-            pointer-events: none;
-        }
-
-        .dash-hero:after {
-            content: "";
-            position: absolute;
-            right: 24px;
-            bottom: 15px;
-            width: 260px;
-            height: 2px;
-            background: repeating-linear-gradient(90deg, #155e95 0 8px, transparent 8px 17px);
-            opacity: .22;
-        }
-
-        .dash-hero>* {
-            position: relative;
-            z-index: 1;
-        }
-
-        .dash-title {
+        .dash-section-title {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
             margin: 0;
-            color: #0f1f33;
-            font-weight: 900;
-            font-size: 32px;
-            letter-spacing: 0;
-            line-height: 1.15;
+            padding: 8px 18px;
+            font-size: 18px;
+            font-weight: 800;
+            color: #ffffff;
+            background: linear-gradient(135deg, #0d4d8b 0%, #083b6a 100%);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(13, 77, 139, 0.2);
+            letter-spacing: -0.2px;
         }
 
-        .dash-subtitle {
-            color: #5c6c83;
-            margin-top: 9px;
-            font-size: 14px;
-            font-weight: 500;
+        .dash-module-badge {
+            display: inline-block;
+            margin-left: 6px;
+            padding: 2px 10px;
+            border-radius: 12px;
+            color: #0d4d8b;
+            background: #ffffff;
+            font-size: 11px;
+            font-weight: 800;
+            vertical-align: middle;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+            letter-spacing: 0.3px;
         }
 
         .live-pulse {
             display: inline-flex;
             align-items: center;
-            gap: 7px;
-            padding: 8px 13px;
-            border-radius: 999px;
-            background: #e7f8ef;
-            color: #12633a;
-            font-weight: 800;
+            gap: 8px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            background: #ecfdf5;
+            color: #047857;
+            font-weight: 700;
             font-size: 12px;
-            border: 1px solid #c8ecd8;
-            box-shadow: 0 8px 20px rgba(31, 157, 104, 0.12);
+            border: 1px solid #a7f3d0;
+            box-shadow: 0 2px 6px rgba(16, 185, 129, 0.12);
         }
 
         .live-pulse span {
             width: 8px;
             height: 8px;
             border-radius: 50%;
-            background: #1fc16b;
-            box-shadow: 0 0 0 0 rgba(31, 193, 107, .55);
+            background: #10b981;
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
             animation: dashPulse 1.6s infinite;
         }
 
         @keyframes dashPulse {
             70% {
-                box-shadow: 0 0 0 9px rgba(31, 193, 107, 0);
+                box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
             }
-
             100% {
-                box-shadow: 0 0 0 0 rgba(31, 193, 107, 0);
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
             }
         }
 
+        /* Filter Panel */
         .dash-filter {
-            margin-top: 22px;
+            margin: 0 0 20px 0;
             display: grid;
-            grid-template-columns: repeat(6, minmax(132px, 1fr));
-            gap: 12px;
-            align-items: end;
-            padding: 15px;
-            background: rgba(255, 255, 255, .74);
-            border: 1px solid rgba(209, 219, 233, .9);
-            border-radius: 9px;
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, .75);
+            grid-template-columns: repeat(8, minmax(0, 1fr));
+            gap: 10px;
+            align-items: flex-end;
+            padding: 16px 20px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
         }
 
-        .dash-filter label {
-            display: block;
-            color: #52647d;
-            font-size: 10px;
-            text-transform: uppercase;
-            font-weight: 900;
-            margin-bottom: 7px;
-            letter-spacing: 0;
+        .dash-filter-item {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            min-width: 0;
+        }
+
+        .dash-filter-item label {
+            display: block !important;
+            color: #0d4d8b !important;
+            font-size: 11px !important;
+            text-transform: uppercase !important;
+            font-weight: 700 !important;
+            margin: 0 0 6px 0 !important;
+            padding: 0 !important;
+            height: 16px !important;
+            line-height: 16px !important;
+            white-space: nowrap !important;
+            letter-spacing: 0.5px !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
         }
 
         .dash-filter .form-control {
-            height: 40px;
-            border: 1px solid #c7d3e2;
-            border-radius: 7px;
-            box-shadow: none;
-            color: #17233a;
-            background: #fff;
-            font-weight: 700;
-            font-size: 12px;
+            width: 100% !important;
+            height: 38px !important;
+            min-height: 38px !important;
+            max-height: 38px !important;
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 8px !important;
+            box-shadow: none !important;
+            color: #1e293b !important;
+            background: #ffffff !important;
+            font-weight: 500 !important;
+            font-size: 12px !important;
+            padding: 0 8px !important;
+            line-height: 36px !important;
+            box-sizing: border-box !important;
+            margin: 0 !important;
+            vertical-align: middle !important;
             transition: border-color .18s ease, box-shadow .18s ease;
         }
 
         .dash-filter .form-control:focus {
-            border-color: #155e95;
-            box-shadow: 0 0 0 3px rgba(21, 94, 149, .12);
+            border-color: #0d4d8b !important;
+            outline: none !important;
+            box-shadow: 0 0 0 3px rgba(13, 77, 139, 0.12) !important;
         }
 
         .dash-btn {
-            height: 40px;
-            border-radius: 7px;
-            border: 0;
-            background: linear-gradient(135deg, #155e95, #1f7a8c);
-            color: #fff;
-            font-weight: 900;
-            padding: 0 18px;
-            box-shadow: 0 12px 24px rgba(21, 94, 149, .22);
-            transition: transform .18s ease, box-shadow .18s ease;
+            width: 100% !important;
+            height: 38px !important;
+            min-height: 38px !important;
+            max-height: 38px !important;
+            line-height: 38px !important;
+            border-radius: 8px !important;
+            border: 0 !important;
+            background: linear-gradient(135deg, #0d4d8b 0%, #083b6a 100%) !important;
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            font-size: 12px !important;
+            padding: 0 12px !important;
+            box-shadow: 0 2px 6px rgba(13, 77, 139, 0.25) !important;
+            transition: all 0.2s ease;
+            cursor: pointer !important;
+            white-space: nowrap !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 6px !important;
+            box-sizing: border-box !important;
+            margin: 0 !important;
         }
 
         .dash-btn:hover {
+            background: linear-gradient(135deg, #11599e 0%, #0a467e 100%) !important;
+            box-shadow: 0 4px 12px rgba(13, 77, 139, 0.35) !important;
             transform: translateY(-1px);
-            box-shadow: 0 16px 28px rgba(21, 94, 149, .26);
-            color: #fff;
+            color: #ffffff !important;
         }
 
+        /* KPI Cards Grid */
         .dash-card-grid {
             display: grid;
             grid-template-columns: repeat(4, minmax(190px, 1fr));
@@ -981,21 +1009,24 @@
         }
 
         .dash-card {
-            background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
-            border: 1px solid rgba(209, 219, 233, .95);
-            border-radius: 10px;
-            padding: 19px;
-            box-shadow: 0 16px 34px rgba(25, 42, 70, 0.08);
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 16px 18px 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
             position: relative;
             overflow: hidden;
-            min-height: 148px;
-            transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
         }
 
         .dash-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 22px 44px rgba(25, 42, 70, 0.12);
-            border-color: #b8cadf;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.07);
+            border-color: #cbd5e1;
         }
 
         .dash-card:before {
@@ -1003,98 +1034,104 @@
             position: absolute;
             left: 0;
             top: 0;
-            width: 5px;
+            width: 4px;
             height: 100%;
-            background: #155e95;
-        }
-
-        .dash-card:after {
-            content: "";
-            position: absolute;
-            right: -32px;
-            top: -32px;
-            width: 92px;
-            height: 92px;
-            border-radius: 50%;
-            background: rgba(21, 94, 149, .07);
+            background: #0d4d8b;
         }
 
         .dash-card:nth-child(2):before {
-            background: #1f9d68;
+            background: #10b981;
         }
 
         .dash-card:nth-child(3):before {
-            background: #ef7b45;
+            background: #f59e0b;
         }
 
         .dash-card:nth-child(4):before {
-            background: #9b6bdf;
+            background: #8b5cf6;
         }
 
         .dash-card .icon {
             position: absolute;
-            right: 17px;
-            top: 18px;
-            color: #7e96b1;
-            font-size: 24px;
+            right: 16px;
+            top: 16px;
+            color: #94a3b8;
+            font-size: 20px;
             z-index: 1;
+            opacity: 0.65;
         }
 
         .dash-card .label {
-            color: #61738d;
+            color: #64748b;
             display: block;
             padding: 0;
             font-size: 11px;
             text-align: left;
             text-transform: uppercase;
-            font-weight: 900;
+            font-weight: 700;
+            letter-spacing: 0.5px;
             background: transparent;
+            margin-bottom: 4px;
+            padding-right: 28px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .dash-card .value {
-            color: #0f1f33;
-            font-size: 27px;
-            font-weight: 900;
-            margin-top: 9px;
-            word-break: break-word;
-            line-height: 1.15;
+            color: #0f172a !important;
+            font-size: 18px !important;
+            font-weight: 800 !important;
+            margin: 2px 0 4px !important;
+            white-space: nowrap !important;
+            word-break: keep-all !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            line-height: 1.25 !important;
+            letter-spacing: -0.3px !important;
+            display: block !important;
         }
 
         .dash-card .meta {
-            color: #74839a;
-            margin-top: 7px;
-            font-size: 12px;
+            color: #64748b;
+            margin: 0;
+            font-size: 11.5px;
             font-weight: 600;
-            padding-right: 26px;
+            padding-right: 10px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .dash-spark {
             position: absolute;
-            left: 19px;
-            right: 19px;
-            bottom: 13px;
-            height: 19px;
+            left: 16px;
+            right: 16px;
+            bottom: 4px;
+            height: 4px;
             display: flex;
-            align-items: end;
-            gap: 4px;
-            opacity: .85;
+            align-items: flex-end;
+            gap: 3px;
+            opacity: 0.35;
+            pointer-events: none;
         }
 
         .dash-spark span {
             flex: 1;
-            min-width: 4px;
-            border-radius: 3px 3px 0 0;
-            background: #dce8f7;
+            min-width: 3px;
+            border-radius: 2px 2px 0 0;
+            background: #cbd5e1;
         }
 
         .dash-spark span:nth-child(2n) {
-            background: #cdebdc;
+            background: #93c5fd;
         }
 
         .dash-spark span:nth-child(3n) {
-            background: #f6d8c5;
+            background: #fdba74;
         }
 
+        /* Insight Strip */
         .insight-strip {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -1103,63 +1140,65 @@
         }
 
         .insight-box {
-            background: linear-gradient(145deg, #ffffff 0%, #f9fcff 100%);
-            border: 1px solid rgba(202, 215, 231, .98);
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
             border-radius: 10px;
-            padding: 18px 18px 17px 58px;
-            color: #334963;
-            box-shadow: 0 16px 32px rgba(25, 42, 70, .075);
-            line-height: 1.48;
+            padding: 16px 18px 16px 54px;
+            color: #475569;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+            line-height: 1.45;
             position: relative;
             overflow: hidden;
-            min-height: 104px;
-            font-weight: 650;
+            min-height: 96px;
+            font-weight: 500;
+            font-size: 12.5px;
         }
 
         .insight-box:before {
             content: "";
             position: absolute;
-            left: 18px;
-            top: 18px;
-            width: 28px;
-            height: 28px;
+            left: 16px;
+            top: 16px;
+            width: 26px;
+            height: 26px;
             border-radius: 8px;
-            background: linear-gradient(135deg, #155e95, #1f7a8c);
-            box-shadow: 0 10px 18px rgba(21, 94, 149, .22);
+            background: linear-gradient(135deg, #0d4d8b, #083b6a);
+            box-shadow: 0 2px 6px rgba(13, 77, 139, 0.25);
         }
 
         .insight-box:after {
             content: "";
             position: absolute;
-            left: 27px;
-            top: 27px;
+            left: 24px;
+            top: 24px;
             width: 10px;
             height: 10px;
             border-radius: 50%;
-            background: #fff;
-            box-shadow: 0 0 0 4px rgba(255, 255, 255, .28);
+            background: #ffffff;
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
         }
 
         .insight-box:nth-child(2):before {
-            background: linear-gradient(135deg, #1f9d68, #67b26f);
+            background: linear-gradient(135deg, #10b981, #059669);
         }
 
         .insight-box:nth-child(3):before {
-            background: linear-gradient(135deg, #ef7b45, #d14f62);
+            background: linear-gradient(135deg, #f59e0b, #d97706);
         }
 
         .insight-box strong {
             display: block;
-            color: #0f1f33;
-            font-size: 15px;
-            margin-bottom: 6px;
-            font-weight: 900;
+            color: #0f172a;
+            font-size: 14px;
+            margin-bottom: 4px;
+            font-weight: 700;
         }
 
-        .insight-box strong+br {
+        .insight-box strong + br {
             display: none;
         }
 
+        /* Section Grids & Panels */
         .dash-section-grid {
             display: grid;
             grid-template-columns: minmax(0, 1.55fr) minmax(330px, 1fr);
@@ -1168,150 +1207,120 @@
         }
 
         .dash-panel {
-            background: rgba(255, 255, 255, .96);
-            border: 1px solid rgba(209, 219, 233, .95);
-            border-radius: 10px;
-            padding: 18px;
-            box-shadow: 0 16px 34px rgba(25, 42, 70, 0.075);
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
             overflow: hidden;
         }
 
         .dash-panel h3 {
-            margin: 0 0 15px;
-            color: #0f1f33;
+            margin: 0 0 16px;
+            color: #0f172a;
             font-size: 16px;
-            font-weight: 900;
+            font-weight: 800;
             display: flex;
             align-items: center;
             gap: 8px;
+            letter-spacing: -0.2px;
         }
 
         .dash-panel h3:before {
             content: "";
-            width: 9px;
-            height: 9px;
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
-            background: #1f9d68;
-            box-shadow: 0 0 0 5px rgba(31, 157, 104, .12);
+            background: #10b981;
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
         }
 
         .dash-chart {
             width: 100%;
-            height: 320px;
+            height: 300px;
             display: block;
         }
 
+        /* Tables */
         .dash-table {
             width: 100%;
             border-collapse: separate;
             border-spacing: 0;
-            font-size: 12px;
+            font-size: 12.5px;
         }
 
         .dash-table th {
-            color: #52647d;
+            color: #ffffff !important;
             text-transform: uppercase;
-            font-size: 10px;
-            border-bottom: 1px solid #dfe7f2;
-            padding: 10px 9px;
-            background: #f6f9fd;
-            font-weight: 900;
+            font-size: 11px;
+            border: none;
+            padding: 10px 12px;
+            background: #0f2744;
+            font-weight: 700;
+            letter-spacing: 0.5px;
             position: sticky;
             top: 0;
             z-index: 1;
         }
 
         .dash-table th:first-child {
-            border-radius: 7px 0 0 0;
+            border-radius: 8px 0 0 0;
         }
 
         .dash-table th:last-child {
-            border-radius: 0 7px 0 0;
+            border-radius: 0 8px 0 0;
         }
 
         .dash-table td {
-            color: #24364f;
-            border-bottom: 1px solid #edf2f8;
-            padding: 11px 9px;
-            vertical-align: top;
-            font-weight: 600;
+            color: #334155;
+            border-bottom: 1px solid #f1f5f9;
+            padding: 10px 12px;
+            vertical-align: middle;
+            font-weight: 500;
         }
 
         .dash-table small {
-            color: #71829a;
-            font-weight: 600;
+            color: #64748b;
+            font-weight: 500;
         }
 
         .dash-table tr.clickable-row {
             cursor: pointer;
+            transition: background 0.15s ease;
         }
 
         .dash-table tr.clickable-row:hover td {
-            background: #f4f9ff;
-            color: #0f1f33;
+            background: #f8fafc;
+            color: #0f172a;
         }
 
         .dash-pill {
             display: inline-block;
-            border-radius: 999px;
-            padding: 4px 9px;
-            background: #edf6ff;
-            color: #155e95;
-            font-weight: 900;
-            font-size: 10px;
-            border: 1px solid #d8eaff;
-            text-transform: uppercase;
-        }
-
-        .dash-kicker {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 10px;
-            color: #155e95;
+            border-radius: 20px;
+            padding: 2px 10px;
+            background: #e0f2fe;
+            color: #0369a1;
+            font-weight: 700;
             font-size: 11px;
-            font-weight: 900;
+            border: 1px solid #bae6fd;
             text-transform: uppercase;
-        }
-
-        .dash-kicker:before {
-            content: "";
-            width: 22px;
-            height: 2px;
-            border-radius: 3px;
-            background: #ef7b45;
-        }
-
-        .dash-module-badge {
-            display: inline-block;
-            margin-left: 8px;
-            padding: 4px 9px;
-            border-radius: 999px;
-            color: #fff;
-            background: #155e95;
-            font-size: 11px;
-            font-weight: 900;
-            vertical-align: middle;
-        }
-
-        .dash-card:nth-child(2) .dash-module-badge {
-            background: #1f9d68;
+            letter-spacing: 0.2px;
         }
 
         .letter-rank-list {
             display: flex;
             flex-direction: column;
-            gap: 11px;
+            gap: 10px;
             max-height: 320px;
             overflow-y: auto;
             padding-right: 4px;
         }
 
         .letter-rank-item {
-            border: 1px solid #e3ebf5;
-            border-radius: 9px;
-            padding: 11px 12px;
-            background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 10px 12px;
+            background: #f8fafc;
         }
 
         .letter-rank-head {
@@ -1319,8 +1328,8 @@
             align-items: center;
             justify-content: space-between;
             gap: 10px;
-            color: #0f1f33;
-            font-weight: 900;
+            color: #0f172a;
+            font-weight: 700;
             font-size: 12px;
         }
 
@@ -1333,39 +1342,40 @@
 
         .letter-rank-count {
             flex: 0 0 auto;
-            color: #155e95;
-            background: #edf6ff;
-            border: 1px solid #d8eaff;
-            border-radius: 999px;
-            padding: 3px 8px;
+            color: #0d4d8b;
+            background: #e0f2fe;
+            border: 1px solid #bae6fd;
+            border-radius: 20px;
+            padding: 2px 8px;
             font-size: 11px;
+            font-weight: 700;
         }
 
         .letter-rank-track {
-            height: 8px;
-            border-radius: 999px;
-            background: #edf2f8;
+            height: 6px;
+            border-radius: 10px;
+            background: #e2e8f0;
             overflow: hidden;
-            margin: 9px 0 7px;
+            margin: 8px 0 6px;
         }
 
         .letter-rank-fill {
             height: 100%;
-            border-radius: 999px;
-            background: linear-gradient(90deg, #155e95, #1f9d68);
+            border-radius: 10px;
+            background: linear-gradient(90deg, #0d4d8b, #10b981);
         }
 
         .letter-rank-meta {
             display: flex;
             justify-content: space-between;
-            color: #6a7b92;
+            color: #64748b;
             font-size: 11px;
-            font-weight: 700;
+            font-weight: 600;
         }
 
         .letter-rank-empty {
-            color: #6a7b92;
-            font-weight: 700;
+            color: #64748b;
+            font-weight: 600;
             padding: 20px 0;
             text-align: center;
         }
@@ -1374,48 +1384,215 @@
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 10px;
-            margin-bottom: 12px;
+            margin-bottom: 14px;
         }
 
         .trend-chip {
-            border: 1px solid #e3ebf5;
-            border-radius: 9px;
-            background: #f8fbff;
-            padding: 10px 11px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            background: #f8fafc;
+            padding: 8px 12px;
+            min-width: 0;
         }
 
         .trend-chip span {
             display: block;
-            color: #6a7b92;
+            color: #64748b;
             font-size: 10px;
-            font-weight: 900;
+            font-weight: 700;
             text-transform: uppercase;
-            margin-bottom: 4px;
+            margin-bottom: 3px;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .trend-chip strong {
             display: block;
-            color: #0f1f33;
-            font-size: 14px;
-            font-weight: 900;
+            color: #0f172a;
+            font-size: 12.5px;
+            font-weight: 800;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.3;
         }
 
         .trend-chip.up strong {
-            color: #16703c;
+            color: #059669;
         }
 
         .trend-chip.down strong {
-            color: #c2410c;
+            color: #dc2626;
         }
 
         .trend-chip.flat strong {
-            color: #155e95;
+            color: #0d4d8b;
         }
 
         .hidden-dashboard {
             display: none;
         }
 
+        /* ==========================================================
+           PREMIUM DARK MODE — adminDashboard.php
+           ========================================================== */
+        html.theme-dark .admin-dash-wrap {
+            background: #0a0e14;
+            color: #dbe3f0;
+        }
+
+        html.theme-dark .dash-hero {
+            background: #111722;
+            border-color: #232c3d;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+        }
+
+        html.theme-dark .dash-title {
+            color: #f1f5f9;
+        }
+
+        html.theme-dark .dash-subtitle {
+            color: #94a3b8;
+        }
+
+        html.theme-dark .live-pulse {
+            background: rgba(16, 185, 129, 0.15);
+            border-color: rgba(16, 185, 129, 0.3);
+            color: #6ee7b7;
+        }
+
+        html.theme-dark .dash-filter {
+            background: #161d2b;
+            border-color: #232c3d;
+        }
+
+        html.theme-dark .dash-filter label {
+            color: #7aa9f5 !important;
+        }
+
+        html.theme-dark .dash-filter .form-control {
+            background-color: #111722 !important;
+            border-color: #2e3a4f !important;
+            color: #dbe3f0 !important;
+        }
+
+        html.theme-dark .dash-card {
+            background: #111722;
+            border-color: #232c3d;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+        }
+
+        html.theme-dark .dash-card:hover {
+            border-color: #2e3a4f;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+        }
+
+        html.theme-dark .dash-card .value {
+            color: #f1f5f9;
+        }
+
+        html.theme-dark .dash-card .label,
+        html.theme-dark .dash-card .meta {
+            color: #94a3b8;
+        }
+
+        html.theme-dark .insight-box {
+            background: #111722;
+            border-color: #232c3d;
+            color: #cbd5e1;
+        }
+
+        html.theme-dark .insight-box strong {
+            color: #f1f5f9;
+        }
+
+        html.theme-dark .dash-panel {
+            background: #111722;
+            border-color: #232c3d;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+        }
+
+        html.theme-dark .dash-panel h3 {
+            color: #f1f5f9;
+        }
+
+        html.theme-dark .dash-table th {
+            background: #090e17 !important;
+        }
+
+        html.theme-dark .dash-table td {
+            color: #cbd5e1;
+            border-bottom-color: #1e293b;
+        }
+
+        html.theme-dark .dash-table tr.clickable-row:hover td {
+            background: #161d2b;
+            color: #f1f5f9;
+        }
+
+        html.theme-dark .dash-pill {
+            background: rgba(56, 189, 248, 0.15);
+            border-color: rgba(56, 189, 248, 0.3);
+            color: #7dd3fc;
+        }
+
+        html.theme-dark .trend-chip {
+            background: #161d2b;
+            border-color: #232c3d;
+        }
+
+        html.theme-dark .trend-chip strong {
+            color: #f1f5f9;
+        }
+
+        html.theme-dark .letter-rank-item {
+            background: #161d2b;
+            border-color: #232c3d;
+        }
+
+        html.theme-dark .letter-rank-head {
+            color: #f1f5f9;
+        }
+
+        html.theme-dark .letter-rank-track {
+            background: #1e293b;
+        }
+
+        /* Modal Dark Mode */
+        html.theme-dark .modal-content {
+            background: #111722 !important;
+            color: #dbe3f0 !important;
+            border: 1px solid #232c3d !important;
+        }
+
+        html.theme-dark .modal-body,
+        html.theme-dark .modal-footer {
+            background: #111722 !important;
+            border-color: #232c3d !important;
+            color: #dbe3f0 !important;
+        }
+
+        html.theme-dark .modal-body table thead,
+        html.theme-dark .modal-body table tfoot {
+            background: #090e17 !important;
+            border-color: #232c3d !important;
+        }
+
+        html.theme-dark .modal-body table td {
+            color: #cbd5e1 !important;
+            border-bottom-color: #1e293b !important;
+        }
+
+        html.theme-dark .modal-body .btn-default,
+        html.theme-dark .modal-footer .btn-default {
+            background: #161d2b !important;
+            border-color: #2e3a4f !important;
+            color: #dbe3f0 !important;
+        }
+
+        /* Responsive Breakpoints */
         @media (max-width: 1100px) {
             .dash-filter {
                 grid-template-columns: repeat(3, 1fr);
@@ -1455,92 +1632,73 @@
     <div id="page-content-wrapper" class="admin-dash-wrap">
         <div class="page-content inset">
             <div class="admin-dashboard">
-                <div class="dash-hero">
-                    <div class="row">
-                        <div class="col-sm-8">
-                            <div class="dash-kicker">Admin Dashboard</div>
-                            <h1 class="dash-title">Admin Dashboard <span
-                                    class="dash-module-badge"><?php echo ucfirst($dashboardType); ?></span></h1>
-                            <div class="dash-subtitle">Business insights, invoices, due letters, payments and client
-                                health in one place.</div>
-                        </div>
-                        <div class="col-sm-4 text-right">
-                            <div class="live-pulse"><span></span> Real time Values </div>
-                        </div>
-                    </div>
-                    <form class="dash-filter" method="get" action="adminDashboard.php">
-                        <div>
-                            <label>Dashboard</label>
-                            <select name="dashboard_type" class="form-control">
-                                <option value="business" <?php echo $dashboardType === 'business' ? 'selected' : ''; ?>>
-                                    Business Insights</option>
-                                <option value="invoice" <?php echo $dashboardType === 'invoice' ? 'selected' : ''; ?>>
-                                    Invoice</option>
-                                <option value="letters" <?php echo $dashboardType === 'letters' ? 'selected' : ''; ?>>Due
-                                    Letters</option>
-                                <option value="payments" <?php echo $dashboardType === 'payments' ? 'selected' : ''; ?>>
-                                    Payments</option>
-                                <option value="clients" <?php echo $dashboardType === 'clients' ? 'selected' : ''; ?>>
-                                    Clients</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label>Invoice Type</label>
-                            <select name="invoice_type" class="form-control">
-                                <option value="all" <?php echo $invoiceType === 'all' ? 'selected' : ''; ?>>All</option>
-                                <option value="proforma" <?php echo $invoiceType === 'proforma' ? 'selected' : ''; ?>>
-                                    Proforma</option>
-                                <option value="final" <?php echo $invoiceType === 'final' ? 'selected' : ''; ?>>Final
-                                </option>
-                            </select>
-                        </div>
-                        <div>
-                            <label>Invoice Status</label>
-                            <select name="invoice_status" class="form-control">
-                                <option value="all" <?php echo $invoiceStatus === 'all' ? 'selected' : ''; ?>>All</option>
-                                <option value="Rcv" <?php echo $invoiceStatus === 'Rcv' ? 'selected' : ''; ?>>Received
-                                </option>
-                                <option value="NotRcv" <?php echo $invoiceStatus === 'NotRcv' ? 'selected' : ''; ?>>Not
-                                    Received</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label>Letter</label>
-                            <select name="letter_action" class="form-control">
-                                <option value="all" <?php echo $letterAction === 'all' ? 'selected' : ''; ?>>All Letters
-                                </option>
-                                <?php foreach ($letterActionOptions as $actionRow) { ?>
-                                    <option value="<?php echo htmlspecialchars($actionRow['action']); ?>" <?php echo $letterAction === $actionRow['action'] ? 'selected' : ''; ?>>
-                                        <?php echo htmlspecialchars($actionRow['action']); ?>
-                                    </option>
-                                <?php } ?>
-                            </select>
-                        </div>
-                        <div>
-                            <label>Letter Status</label>
-                            <select name="letter_status" class="form-control">
-                                <option value="all" <?php echo $letterStatus === 'all' ? 'selected' : ''; ?>>All</option>
-                                <option value="pending" <?php echo $letterStatus === 'pending' ? 'selected' : ''; ?>>Due
-                                    Pending</option>
-                                <option value="sent" <?php echo $letterStatus === 'sent' ? 'selected' : ''; ?>>Sent
-                                </option>
-                                <option value="upcoming" <?php echo $letterStatus === 'upcoming' ? 'selected' : ''; ?>>
-                                    Upcoming</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label>Date From</label>
-                            <input type="date" name="date_from" class="form-control"
-                                value="<?php echo htmlspecialchars($dateFrom); ?>">
-                        </div>
-                        <div>
-                            <label>Date To</label>
-                            <input type="date" name="date_to" class="form-control"
-                                value="<?php echo htmlspecialchars($dateTo); ?>">
-                        </div>
-                        <div><button type="submit" class="dash-btn"><i class="fa fa-filter"></i> Apply</button></div>
-                    </form>
+                <div class="dash-top-bar">
+                    <h2 class="dash-section-title">
+                        <i class="fa fa-line-chart"></i> Top Mgmt Dashboard
+                        <span class="dash-module-badge"><?php echo ucfirst($dashboardType); ?></span>
+                    </h2>
+                    <div class="live-pulse"><span></span> Real time Values</div>
                 </div>
+                <form class="dash-filter" method="get" action="adminDashboard.php">
+                    <div class="dash-filter-item">
+                        <label>Dashboard</label>
+                        <select name="dashboard_type" class="form-control">
+                            <option value="business" <?php echo $dashboardType === 'business' ? 'selected' : ''; ?>>Business Insights</option>
+                            <option value="invoice" <?php echo $dashboardType === 'invoice' ? 'selected' : ''; ?>>Invoice</option>
+                            <option value="letters" <?php echo $dashboardType === 'letters' ? 'selected' : ''; ?>>Due Letters</option>
+                            <option value="payments" <?php echo $dashboardType === 'payments' ? 'selected' : ''; ?>>Payments</option>
+                            <option value="clients" <?php echo $dashboardType === 'clients' ? 'selected' : ''; ?>>Clients</option>
+                        </select>
+                    </div>
+                    <div class="dash-filter-item">
+                        <label>Invoice Type</label>
+                        <select name="invoice_type" class="form-control">
+                            <option value="all" <?php echo $invoiceType === 'all' ? 'selected' : ''; ?>>All</option>
+                            <option value="proforma" <?php echo $invoiceType === 'proforma' ? 'selected' : ''; ?>>Proforma</option>
+                            <option value="final" <?php echo $invoiceType === 'final' ? 'selected' : ''; ?>>Final</option>
+                        </select>
+                    </div>
+                    <div class="dash-filter-item">
+                        <label>Invoice Status</label>
+                        <select name="invoice_status" class="form-control">
+                            <option value="all" <?php echo $invoiceStatus === 'all' ? 'selected' : ''; ?>>All</option>
+                            <option value="Rcv" <?php echo $invoiceStatus === 'Rcv' ? 'selected' : ''; ?>>Received</option>
+                            <option value="NotRcv" <?php echo $invoiceStatus === 'NotRcv' ? 'selected' : ''; ?>>Not Received</option>
+                        </select>
+                    </div>
+                    <div class="dash-filter-item">
+                        <label>Letter</label>
+                        <select name="letter_action" class="form-control">
+                            <option value="all" <?php echo $letterAction === 'all' ? 'selected' : ''; ?>>All Letters</option>
+                            <?php foreach ($letterActionOptions as $actionRow) { ?>
+                                <option value="<?php echo htmlspecialchars($actionRow['action']); ?>" <?php echo $letterAction === $actionRow['action'] ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($actionRow['action']); ?>
+                                </option>
+                            <?php } ?>
+                        </select>
+                    </div>
+                    <div class="dash-filter-item">
+                        <label>Letter Status</label>
+                        <select name="letter_status" class="form-control">
+                            <option value="all" <?php echo $letterStatus === 'all' ? 'selected' : ''; ?>>All</option>
+                            <option value="pending" <?php echo $letterStatus === 'pending' ? 'selected' : ''; ?>>Due Pending</option>
+                            <option value="sent" <?php echo $letterStatus === 'sent' ? 'selected' : ''; ?>>Sent</option>
+                            <option value="upcoming" <?php echo $letterStatus === 'upcoming' ? 'selected' : ''; ?>>Upcoming</option>
+                        </select>
+                    </div>
+                    <div class="dash-filter-item">
+                        <label>Date From</label>
+                        <input type="date" name="date_from" class="form-control" value="<?php echo htmlspecialchars($dateFrom); ?>">
+                    </div>
+                    <div class="dash-filter-item">
+                        <label>Date To</label>
+                        <input type="date" name="date_to" class="form-control" value="<?php echo htmlspecialchars($dateTo); ?>">
+                    </div>
+                    <div class="dash-filter-item dash-filter-btn">
+                        <label>&nbsp;</label>
+                        <button type="submit" class="dash-btn"><i class="fa fa-filter"></i> Apply</button>
+                    </div>
+                </form>
 
                 <div class="dash-card-grid">
                     <?php foreach ($dashboardCards as $cardIndex => $card) { ?>
@@ -1831,18 +1989,12 @@
 
     <!-- Due Letters Modal -->
     <div class="modal fade" id="lettersModal" tabindex="-1" role="dialog">
-...
-        </div>
-    </div>
-
-    <!-- Payment Pending Modal -->
-    <div class="modal fade" id="paymentsModal" tabindex="-1" role="dialog">
         <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content" style="border-radius: 12px; overflow: hidden; border: none; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
-                <div class="modal-header" style="background: linear-gradient(135deg, #ef7b45, #d14f62); color:#fff; padding: 20px 25px;">
+                <div class="modal-header" style="background: linear-gradient(135deg, #0d4d8b, #083b6a); color:#fff; padding: 20px 25px;">
                     <button type="button" class="close" data-dismiss="modal" style="color:#fff; opacity: 0.8; font-size: 28px;">&times;</button>
                     <h4 class="modal-title" style="font-weight: 900; letter-spacing: 0.5px; display: flex; align-items: center; gap: 10px;">
-                        <i class="fa fa-credit-card"></i> Outstanding Payment Breakdown
+                        <i class="fa fa-envelope-o"></i> Current Due Letters Breakdown
                     </h4>
                 </div>
                 <div class="modal-body" style="padding: 0; background: #fff;">
@@ -1851,9 +2003,60 @@
                             <thead style="background: #f8fafc;">
                                 <tr>
                                     <th style="padding: 15px 25px;">Client Name</th>
-                                    <th style="padding: 15px 25px; text-align: center;">Open Entries</th>
-                                    <th style="padding: 15px 25px; text-align: right;">Total Pending Amount</th>
+                                    <th style="padding: 15px 25px;">Action</th>
+                                    <th style="padding: 15px 25px; text-align: center;">Due Date</th>
                                     <th style="padding: 15px 25px; text-align: center;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if (empty($pendingLettersDetail)) { ?>
+                                    <tr>
+                                        <td colspan="4" style="padding: 40px; text-align: center; color: #64748b; font-weight: 600;">
+                                            <i class="fa fa-check-circle" style="font-size: 40px; color: #10b981; display: block; margin-bottom: 10px;"></i>
+                                            No pending due letters!
+                                        </td>
+                                    </tr>
+                                <?php } else {
+                                    foreach ($pendingLettersDetail as $pLetter) { ?>
+                                        <tr class="clickable-row">
+                                            <td style="padding: 15px 25px; font-weight: 700; color: #1e293b;"><?php echo htmlspecialchars($pLetter['customer_name']); ?></td>
+                                            <td style="padding: 15px 25px;"><span class="dash-pill"><?php echo htmlspecialchars($pLetter['action']); ?></span></td>
+                                            <td style="padding: 15px 25px; text-align: center; font-weight: 600; color: #ef4444;"><?php echo dashDate($pLetter['due_date']); ?></td>
+                                            <td style="padding: 15px 25px; text-align: center;">
+                                                <button class="btn btn-default btn-xs open-client" data-customer="<?php echo (int) $pLetter['customer_id']; ?>" style="border-radius: 6px; font-weight: 700; padding: 4px 12px; border-color: #e2e8f0;">Details</button>
+                                            </td>
+                                        </tr>
+                                <?php } } ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer" style="background: #fff; border-top: 1px solid #f1f5f9; padding: 15px 25px;">
+                    <button type="button" class="btn btn-default" data-dismiss="modal" style="font-weight: 700; border-radius: 8px; padding: 8px 20px;">Close</button>
+                    <a href="intimationLetter.php" class="btn btn-primary" style="background: #0d4d8b; border: none; font-weight: 700; border-radius: 8px; padding: 8px 20px;">Open Letters</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Pending Modal -->
+    <div class="modal fade" id="paymentsModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content" style="border-radius: 12px; overflow: hidden; border: none; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
+                <div class="modal-header" style="background: linear-gradient(135deg, #0d4d8b, #083b6a); color:#fff; padding: 18px 24px; display: flex; align-items: center; justify-content: space-between;">
+                    <h4 class="modal-title" style="font-weight: 800; font-size: 16px; letter-spacing: -0.2px; display: flex; align-items: center; gap: 10px; margin: 0;">
+                        <i class="fa fa-credit-card" style="color: #60a5fa;"></i> Outstanding Payment Breakdown
+                    </h4>
+                    <button type="button" class="close" data-dismiss="modal" style="color:#fff; opacity: 0.85; font-size: 24px; margin: 0; padding: 0; line-height: 1;">&times;</button>
+                </div>
+                <div class="modal-body" style="padding: 0; background: #fff;">
+                    <div class="table-responsive">
+                        <table class="table table-hover dash-table" style="margin-bottom: 0;">
+                            <thead>
+                                <tr>
+                                    <th style="padding: 12px 20px;">Client Name</th>
+                                    <th style="padding: 12px 20px; text-align: right;">Pending Amount</th>
+                                    <th style="padding: 12px 20px; text-align: center; width: 110px;">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1861,8 +2064,8 @@
                                 $totalPending = 0;
                                 if (empty($pendingPaymentsDetail)) { ?>
                                     <tr>
-                                        <td colspan="4" style="padding: 40px; text-align: center; color: #64748b; font-weight: 600;">
-                                            <i class="fa fa-check-circle" style="font-size: 40px; color: #10b981; display: block; margin-bottom: 10px;"></i>
+                                        <td colspan="3" style="padding: 40px; text-align: center; color: #64748b; font-weight: 600;">
+                                            <i class="fa fa-check-circle" style="font-size: 38px; color: #10b981; display: block; margin-bottom: 10px;"></i>
                                             All payments are up to date!
                                         </td>
                                     </tr>
@@ -1871,7 +2074,6 @@
                                         $clientPending = isset($pay['pending_amount']) ? (float) $pay['pending_amount'] : 0;
                                         $totalPending += $clientPending;
                                         $resolvedCustomerId = isset($pay['resolved_customer_id']) ? (int) $pay['resolved_customer_id'] : 0;
-                                        $entryCount = isset($pay['entry_count']) ? (int) $pay['entry_count'] : 0;
                                         $fallbackRef = isset($pay['fallback_ref']) ? trim((string)$pay['fallback_ref']) : '';
                                         $paymentGroupId = isset($pay['payment_group_id']) ? (int) $pay['payment_group_id'] : 0;
                                         $displayName = !empty($pay['customer_name'])
@@ -1881,14 +2083,20 @@
                                                 : ($paymentGroupId > 0 ? ('Client Payment #' . $paymentGroupId) : 'Client'));
                                 ?>
                                     <tr class="clickable-row">
-                                        <td style="padding: 15px 25px; font-weight: 700; color: #1e293b;"><?php echo htmlspecialchars($displayName); ?></td>
-                                        <td style="padding: 15px 25px; text-align: center;"><span class="dash-pill" style="background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0;"><?php echo dashInt($entryCount); ?></span></td>
-                                        <td style="padding: 15px 25px; text-align: right; font-weight: 800; color: #ef4444;"><?php echo dashMoney($clientPending); ?></td>
-                                        <td style="padding: 15px 25px; text-align: center;">
+                                        <td style="padding: 13px 20px; font-weight: 700; color: #1e293b;">
+                                            <i class="fa fa-building-o" style="color: #0d4d8b; margin-right: 8px; font-size: 13px;"></i>
+                                            <?php echo htmlspecialchars($displayName); ?>
+                                        </td>
+                                        <td style="padding: 13px 20px; text-align: right; font-weight: 800; color: #dc2626; font-size: 13.5px; font-family: Inter, Segoe UI, sans-serif;">
+                                            <?php echo dashMoney($clientPending); ?>
+                                        </td>
+                                        <td style="padding: 13px 20px; text-align: center;">
                                             <?php if ($resolvedCustomerId > 0) { ?>
-                                                <button class="btn btn-default btn-xs open-client" data-customer="<?php echo $resolvedCustomerId; ?>" style="border-radius: 6px; font-weight: 700; padding: 4px 12px; border-color: #e2e8f0;">Details</button>
+                                                <button class="btn btn-default btn-xs open-client" data-customer="<?php echo $resolvedCustomerId; ?>" style="border-radius: 6px; font-weight: 700; padding: 4px 14px; border: 1px solid #cbd5e1; background: #f8fafc; color: #0d4d8b; transition: all 0.2s;">
+                                                    View <i class="fa fa-arrow-right" style="font-size: 10px; margin-left: 3px;"></i>
+                                                </button>
                                             <?php } else { ?>
-                                                <button class="btn btn-default btn-xs" disabled style="border-radius: 6px; font-weight: 700; padding: 4px 12px; border-color: #e2e8f0; opacity: 0.55; cursor: not-allowed;">N/A</button>
+                                                <button class="btn btn-default btn-xs" disabled style="border-radius: 6px; font-weight: 700; padding: 4px 12px; border-color: #e2e8f0; opacity: 0.5; cursor: not-allowed;">N/A</button>
                                             <?php } ?>
                                         </td>
                                     </tr>
@@ -1896,17 +2104,17 @@
                             </tbody>
                             <tfoot style="background: #f8fafc; border-top: 2px solid #e2e8f0;">
                                 <tr>
-                                    <td colspan="2" style="padding: 15px 25px; font-weight: 900; text-align: right; color: #64748b; text-transform: uppercase; font-size: 11px;">Total Pending Collection</td>
-                                    <td style="padding: 15px 25px; text-align: right; font-weight: 900; font-size: 16px; color: #ef4444;"><?php echo dashMoney($totalPending); ?></td>
+                                    <td style="padding: 14px 20px; font-weight: 800; color: #64748b; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">Total Pending Collection</td>
+                                    <td style="padding: 14px 20px; text-align: right; font-weight: 900; font-size: 15px; color: #dc2626; font-family: Inter, Segoe UI, sans-serif;"><?php echo dashMoney($totalPending); ?></td>
                                     <td></td>
                                 </tr>
                             </tfoot>
                         </table>
                     </div>
                 </div>
-                <div class="modal-footer" style="background: #fff; border-top: 1px solid #f1f5f9; padding: 15px 25px;">
-                    <button type="button" class="btn btn-default" data-dismiss="modal" style="font-weight: 700; border-radius: 8px; padding: 8px 20px;">Close</button>
-                    <a href="paymentReceive.php" class="btn btn-primary" style="background: #155e95; border: none; font-weight: 700; border-radius: 8px; padding: 8px 20px;">Record Payment</a>
+                <div class="modal-footer" style="background: #fff; border-top: 1px solid #f1f5f9; padding: 14px 24px; display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button" class="btn btn-default" data-dismiss="modal" style="font-weight: 700; border-radius: 8px; padding: 7px 18px; border: 1px solid #cbd5e1;">Close</button>
+                    <a href="paymentReceive.php" class="btn btn-primary" style="background: linear-gradient(135deg, #0d4d8b 0%, #083b6a 100%); border: none; font-weight: 700; border-radius: 8px; padding: 7px 18px; box-shadow: 0 2px 6px rgba(13, 77, 139, 0.25);">Record Payment</a>
                 </div>
             </div>
         </div>
@@ -1968,7 +2176,7 @@
     function drawBars(id, rows, key, color) {
         var c = setupCanvas(id);
         if (!c) return;
-        var ctx = c.ctx, w = c.width, h = c.height, leftPad = 34, topPad = 24, rightPad = 16, bottomPad = 72;
+        var ctx = c.ctx, w = c.width, h = c.height, leftPad = 34, topPad = 24, rightPad = 16, bottomPad = 56;
         ctx.clearRect(0, 0, w, h);
         rows = rows || [];
         var max = Math.max.apply(null, rows.map(function (r) { return parseFloat(r[key] || 0); }).concat([1]));
@@ -1976,7 +2184,7 @@
         var plotH = h - topPad - bottomPad;
         var gap = rows.length > 8 ? 8 : 12;
         var barW = Math.max(14, Math.min(42, (plotW / Math.max(rows.length, 1)) - gap));
-        ctx.strokeStyle = '#e3eaf3';
+        ctx.strokeStyle = '#e2e8f0';
         ctx.beginPath();
         ctx.moveTo(leftPad, topPad);
         ctx.lineTo(leftPad, h - bottomPad);
@@ -1990,11 +2198,11 @@
             var y = h - bottomPad - bh;
             ctx.fillStyle = color;
             ctx.fillRect(x, y, barW, bh);
-            ctx.fillStyle = '#59708d';
-            ctx.font = '11px Arial';
-            drawAxisLabel(ctx, row.label || '', x + barW / 2, h - 38, slotW - 4);
-            ctx.fillStyle = '#132238';
-            ctx.font = '700 11px Arial';
+            ctx.fillStyle = '#64748b';
+            ctx.font = '11px Inter, Segoe UI, sans-serif';
+            drawAxisLabel(ctx, row.label || '', x + barW / 2, h - 28, slotW - 4);
+            ctx.fillStyle = '#0f172a';
+            ctx.font = '700 11px Inter, Segoe UI, sans-serif';
             ctx.textAlign = 'center';
             ctx.fillText(compactNumber(val), x + barW / 2, Math.max(14, y - 7));
             ctx.textAlign = 'left';
@@ -2004,23 +2212,40 @@
     function drawInvoiceTrend(id, rows) {
         var c = setupCanvas(id);
         if (!c) return;
-        var ctx = c.ctx, w = c.width, h = c.height, leftPad = 54, topPad = 26, rightPad = 24, bottomPad = 76;
+        var ctx = c.ctx, w = c.width, h = c.height, leftPad = 54, topPad = 32, rightPad = 24, bottomPad = 56;
         rows = rows || [];
         var maxAmount = Math.max.apply(null, rows.map(function (r) { return parseFloat(r.amount || 0); }).concat([1]));
         var maxCount = Math.max.apply(null, rows.map(function (r) { return parseFloat(r.total || 0); }).concat([1]));
         ctx.clearRect(0, 0, w, h);
         var plotW = w - leftPad - rightPad;
         var plotH = h - topPad - bottomPad;
+
+        // Top-right Legend (completely separated from bottom axis labels)
+        var legX = Math.max(leftPad, w - rightPad - 230);
+        ctx.fillStyle = '#0d4d8b';
+        ctx.fillRect(legX, 10, 12, 8);
+        ctx.fillStyle = '#64748b';
+        ctx.font = '600 11px Inter, -apple-system, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText('Amount (Bars)', legX + 16, 18);
+
+        ctx.beginPath();
+        ctx.arc(legX + 118, 14, 4, 0, Math.PI * 2);
+        ctx.fillStyle = '#f59e0b';
+        ctx.fill();
+        ctx.fillStyle = '#64748b';
+        ctx.fillText('Count (Line)', legX + 128, 18);
+
         for (var g = 0; g < 4; g++) {
             var gy = topPad + g * (plotH / 3);
-            ctx.strokeStyle = '#edf2f8';
+            ctx.strokeStyle = '#f1f5f9';
             ctx.beginPath();
             ctx.moveTo(leftPad, gy);
             ctx.lineTo(w - rightPad, gy);
             ctx.stroke();
             var gridValue = maxAmount - (maxAmount * g / 3);
-            ctx.fillStyle = '#8a9aaf';
-            ctx.font = '10px Arial';
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '10px Inter, Segoe UI, sans-serif';
             ctx.textAlign = 'right';
             ctx.fillText(compactNumber(gridValue), leftPad - 8, gy + 3);
         }
@@ -2032,12 +2257,12 @@
             var bh = plotH * val / maxAmount;
             var y = h - bottomPad - bh;
             var gradient = ctx.createLinearGradient(0, y, 0, h - bottomPad);
-            gradient.addColorStop(0, 'rgba(21, 94, 149, .72)');
-            gradient.addColorStop(1, 'rgba(21, 94, 149, .14)');
+            gradient.addColorStop(0, 'rgba(13, 77, 139, 0.85)');
+            gradient.addColorStop(1, 'rgba(13, 77, 139, 0.15)');
             ctx.fillStyle = gradient;
             ctx.fillRect(x, y, barW, bh);
         });
-        ctx.strokeStyle = '#155e95';
+        ctx.strokeStyle = '#0d4d8b';
         ctx.lineWidth = 2.5;
         ctx.beginPath();
         rows.forEach(function (row, i) {
@@ -2055,29 +2280,17 @@
             ctx.beginPath();
             ctx.arc(x, y, 5, 0, Math.PI * 2);
             ctx.fill();
-            ctx.strokeStyle = '#ef7b45';
+            ctx.strokeStyle = '#f59e0b';
             ctx.lineWidth = 2.5;
             ctx.stroke();
-            ctx.fillStyle = '#0f1f33';
-            ctx.font = '800 10px Arial';
+            ctx.fillStyle = '#0f172a';
+            ctx.font = '800 10px Inter, Segoe UI, sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText(compactNumber(amount), x, Math.max(14, h - bottomPad - (plotH * amount / maxAmount) - 7));
-            ctx.fillStyle = '#59708d';
-            ctx.font = '11px Arial';
-            drawAxisLabel(ctx, row.label || '', x, h - 34, 58);
+            ctx.fillText(compactNumber(amount), x, Math.max(topPad + 12, h - bottomPad - (plotH * amount / maxAmount) - 7));
+            ctx.fillStyle = '#64748b';
+            ctx.font = '11px Inter, Segoe UI, sans-serif';
+            drawAxisLabel(ctx, row.label || '', x, h - 28, 58);
         });
-        ctx.textAlign = 'left';
-        ctx.fillStyle = '#155e95';
-        ctx.fillRect(leftPad, h - 18, 10, 6);
-        ctx.fillStyle = '#52647d';
-        ctx.font = '11px Arial';
-        ctx.fillText('Amount bars', leftPad + 15, h - 12);
-        ctx.beginPath();
-        ctx.arc(leftPad + 106, h - 15, 4, 0, Math.PI * 2);
-        ctx.fillStyle = '#ef7b45';
-        ctx.fill();
-        ctx.fillStyle = '#52647d';
-        ctx.fillText('Invoice count line', leftPad + 116, h - 12);
     }
 
     function drawDonut(id, rows) {
@@ -2146,7 +2359,7 @@
     function formatCounter(value, format) {
         value = Number(value) || 0;
         if (format === 'money') {
-            return 'Rs. ' + value.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            return 'Rs.\u00A0' + value.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
         return Math.round(value).toLocaleString('en-IN');
     }

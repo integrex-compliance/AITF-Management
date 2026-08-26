@@ -16,37 +16,45 @@
 
     ?>
     <style>
+        /* Base typography & resets */
+        #page-content-wrapper {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
         .custom-float-label-control {
             margin-bottom: 0em;
         }
 
-        /* Added for consistency with other pages */
+        /* Section Title Badge */
         .invoice-section-title {
-            display: inline-block;
-            margin: 0 0 15px;
-            padding: 8px 16px;
-            font-size: 22px;
-            font-weight: 700;
-            color: #0d4d8b;
-            background: #eaf3ff;
-            border-left: 4px solid #0d4d8b;
-            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0 0 16px;
+            padding: 8px 18px;
+            font-size: 18px;
+            font-weight: 800;
+            color: #ffffff;
+            background: linear-gradient(135deg, #0d4d8b 0%, #083b6a 100%);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(13, 77, 139, 0.2);
+            letter-spacing: -0.2px;
         }
 
+        /* Filter Panel Card */
         .invoice-filter-panel {
             display: flex;
             flex-wrap: wrap;
             gap: 12px;
             align-items: center;
             margin: 10px 0 20px;
-            padding: 12px 15px;
-            background: #f8fbff;
-            border: 1px solid #d6e4f0;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+            padding: 14px 18px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
         }
 
-        
         .invoice-filter-item {
             flex: 1;
             min-width: 150px;
@@ -79,19 +87,24 @@
             width: 100%;
             height: 40px;
             padding: 8px 12px;
-            border: 1px solid #bfd2e6;
-            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
             box-sizing: border-box;
             font-size: 13px;
+            font-weight: 500;
             background-color: #fff;
-            color: #333;
+            color: #1e293b;
             transition: all 0.2s;
+        }
+
+        .invoice-filter-item input::placeholder {
+            color: #94a3b8;
         }
 
         .invoice-filter-item input:focus {
             border-color: #0d4d8b;
             outline: none;
-            box-shadow: 0 0 0 3px rgba(13, 77, 139, 0.1);
+            box-shadow: 0 0 0 3px rgba(13, 77, 139, 0.12);
         }
 
         .btn-report-export {
@@ -103,9 +116,9 @@
             margin: 0;
             padding: 0 20px;
             box-sizing: border-box;
-            font-family: 'Inter', -apple-system, sans-serif;
+            font-family: inherit;
             font-size: 13px;
-            font-weight: 600;
+            font-weight: 700;
             letter-spacing: 0.2px;
             border-radius: 8px;
             cursor: pointer;
@@ -116,30 +129,131 @@
         }
 
         .btn-solid-primary {
-            background-color: #0d4d8b;
+            background: linear-gradient(135deg, #0d4d8b 0%, #083b6a 100%);
             color: #ffffff;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(13, 77, 139, 0.1);
+            box-shadow: 0 2px 6px rgba(13, 77, 139, 0.25);
         }
 
         .btn-solid-primary:hover {
-            background-color: #0b3d6e;
-            box-shadow: 0 4px 12px rgba(13, 77, 139, 0.15);
+            background: linear-gradient(135deg, #11599e 0%, #0a467e 100%);
+            box-shadow: 0 4px 12px rgba(13, 77, 139, 0.35);
             transform: translateY(-1px);
+            color: #ffffff;
         }
 
         .btn-solid-primary:active {
             transform: translateY(0);
-            box-shadow: 0 2px 4px rgba(13, 77, 139, 0.1);
+            box-shadow: 0 2px 4px rgba(13, 77, 139, 0.2);
         }
 
         #tab_customer_list_filter {
             display: none;
         }
 
+        /* Table Container & DataTable Styling */
+        .table-responsive {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+            overflow: hidden;
+        }
+
+        #tab_customer_list thead th {
+            background: #0f2744 !important;
+            color: #ffffff !important;
+            padding: 12px 14px !important;
+            border: none !important;
+            font-size: 12px !important;
+            font-weight: 700 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.5px !important;
+            vertical-align: middle !important;
+        }
+
+        #tab_customer_list thead th small,
+        #tab_customer_list thead th a {
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            font-size: 12px !important;
+            text-decoration: none !important;
+        }
+
+        #tab_customer_list tbody td {
+            border: none !important;
+            border-bottom: 1px solid #f1f5f9 !important;
+            padding: 10px 14px !important;
+            font-size: 12.5px !important;
+            color: #334155 !important;
+            background-color: #ffffff;
+            vertical-align: middle !important;
+        }
+
+        #tab_customer_list tbody tr:hover td {
+            background-color: #f8fafc !important;
+        }
+
+        #tab_customer_list tbody tr:nth-of-type(odd) td {
+            background-color: #fcfdfe;
+        }
+
+        /* Client Name click style */
+        #tab_customer_list tbody td:first-child small {
+            font-weight: 700;
+            color: #0d4d8b;
+            cursor: pointer;
+            transition: color 0.15s ease;
+            font-size: 12.5px;
+        }
+
+        #tab_customer_list tbody td:first-child:hover small {
+            color: #0284c7;
+            text-decoration: underline;
+        }
+
+        /* Service Type column badge */
+        #tab_customer_list tbody td:nth-child(4) small {
+            background: #e0f2fe;
+            color: #0369a1;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            display: inline-block;
+        }
+
+        /* Payment Pending Amount */
+        #tab_customer_list tbody td:nth-child(5) small {
+            color: #dc2626;
+            font-weight: 800;
+            font-size: 13px;
+        }
+
+        /* Comment Textarea Styling */
+        #tab_customer_list textarea.saveChanges {
+            width: 100% !important;
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 6px !important;
+            padding: 6px 10px !important;
+            font-size: 12px !important;
+            color: #1e293b !important;
+            background: #f8fafc !important;
+            resize: vertical !important;
+            min-height: 48px;
+            line-height: 1.4;
+            transition: all 0.2s ease;
+            outline: none;
+            box-sizing: border-box;
+        }
+
+        #tab_customer_list textarea.saveChanges:focus {
+            background: #ffffff !important;
+            border-color: #0d4d8b !important;
+            box-shadow: 0 0 0 3px rgba(13, 77, 139, 0.12) !important;
+        }
+
         /* =====================================================================
            PREMIUM DARK MODE  —  paymentPage.php
-           Deep charcoal surfaces, soft slate text, accent-blue highlights.
-           Matches homePage / iaf_dashboard / applicationReceived treatment.
            ===================================================================== */
         html.theme-dark {
             --pp-bg:        #0a0e14;
@@ -157,9 +271,8 @@
 
         /* Section title */
         html.theme-dark .invoice-section-title {
-            background: rgba(74, 158, 255, 0.12);
-            color: #9cc4ff;
-            border-left-color: var(--pp-accent);
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 100%);
+            color: #ffffff;
         }
 
         /* Filter panel */
@@ -182,11 +295,14 @@
 
         /* Download button */
         html.theme-dark .btn-solid-primary {
-            background-color: #1d63b0;
+            background: linear-gradient(135deg, #1d63b0 0%, #174e8c 100%);
             box-shadow: 0 4px 14px rgba(20, 104, 179, 0.4);
         }
-        html.theme-dark .btn-solid-primary:hover { background-color: #2f81d6; box-shadow: 0 8px 22px rgba(20, 104, 179, 0.5); }
-a
+        html.theme-dark .btn-solid-primary:hover { 
+            background: linear-gradient(135deg, #2f81d6 0%, #1d63b0 100%); 
+            box-shadow: 0 8px 22px rgba(20, 104, 179, 0.5); 
+        }
+
         /* Table shell */
         html.theme-dark .table-responsive {
             background: var(--pp-surface);
@@ -195,21 +311,22 @@ a
             box-shadow: 0 6px 26px rgba(0, 0, 0, 0.45);
         }
         html.theme-dark #tab_customer_list thead th {
-            background: linear-gradient(180deg, #161d2b 0%, #121926 100%) !important;
+            background: #090e17 !important;
             border-color: var(--pp-border-2) !important;
         }
         html.theme-dark #tab_customer_list thead th small,
-        html.theme-dark #tab_customer_list thead th a { color: #aeb9cc !important; }
-        html.theme-dark #tab_customer_list small { color: var(--pp-text-dim) !important; }
-        /* Override the inline white cell borders */
+        html.theme-dark #tab_customer_list thead th a { color: #f1f5f9 !important; }
+        html.theme-dark #tab_customer_list small { color: var(--pp-text) !important; }
         html.theme-dark #tab_customer_list tbody td {
             border-color: var(--pp-border) !important;
-            color: var(--pp-text);
-            background-color: var(--pp-surface);
+            color: var(--pp-text) !important;
+            background-color: var(--pp-surface) !important;
         }
         html.theme-dark #tab_customer_list tbody tr:hover td { background-color: var(--pp-surface-2) !important; }
-        html.theme-dark .table-striped tbody tr:nth-of-type(odd) td { background-color: rgba(255, 255, 255, 0.018); }
-        html.theme-dark #tab_customer_list a { color: #cdd6e5; }
+        html.theme-dark .table-striped tbody tr:nth-of-type(odd) td { background-color: rgba(255, 255, 255, 0.02) !important; }
+        html.theme-dark #tab_customer_list tbody td:first-child small { color: #38bdf8 !important; }
+        html.theme-dark #tab_customer_list tbody td:nth-child(4) small { background: rgba(56, 189, 248, 0.15); color: #7dd3fc; }
+        html.theme-dark #tab_customer_list tbody td:nth-child(5) small { color: #f87171 !important; }
 
         /* Comment textarea */
         html.theme-dark #tab_customer_list textarea,
@@ -218,7 +335,29 @@ a
             border: 1px solid var(--pp-border-2) !important;
             color: var(--pp-text) !important;
         }
+        html.theme-dark .saveChanges:focus {
+            border-color: var(--pp-accent) !important;
+            box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.2) !important;
+        }
         html.theme-dark .saveChanges::placeholder { color: var(--pp-text-faint); }
+
+        /* Report Modal Dark Mode */
+        html.theme-dark #report-format-chooser > div {
+            background: var(--pp-surface) !important;
+            border: 1px solid var(--pp-border) !important;
+            color: var(--pp-text) !important;
+        }
+        html.theme-dark #report-format-chooser p {
+            color: var(--pp-text) !important;
+        }
+        html.theme-dark .report-email-box label {
+            color: var(--pp-text) !important;
+        }
+        html.theme-dark .report-email-input {
+            background-color: var(--pp-surface-2) !important;
+            border-color: var(--pp-border-2) !important;
+            color: var(--pp-text) !important;
+        }
     </style>
 
     <div id="page-content-wrapper">
@@ -227,7 +366,7 @@ a
             <div class="container">
                 <div class="row">
                     <div class="col-sm-12">
-                        <h5 class="invoice-section-title"> Due Payments & Follow-Up</h5>
+                        <h5 class="invoice-section-title"><i class="fa fa-money"></i> Due Payments & Follow-Up</h5>
                     </div>
                 </div>
                 <div class="row">

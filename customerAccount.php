@@ -3203,6 +3203,339 @@ if ($currentRole === 'client' || $currentRole === 'external') {
         }
 
         /* =====================================================================
+           TOP CLIENT INFO SECTION — CLEAN FONTS & CRISP CONTRAST
+           ===================================================================== */
+        .top_qms_page {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #ffffff !important;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 8px !important;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04) !important;
+            margin-bottom: 15px !important;
+            overflow: hidden !important;
+        }
+
+        /* Field Labels */
+        .top_qms_page span[style*="color: black"],
+        .top_qms_page span[style*="color:black"] {
+            color: #0d4d8b !important;
+            font-size: 11.5px !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.3px !important;
+            display: inline-block;
+        }
+
+        /* Field Values */
+        .top_qms_page span[style*="color: gray"],
+        .top_qms_page span[style*="color:gray"] {
+            color: #1e293b !important;
+            font-size: 12.5px !important;
+            font-weight: 500 !important;
+            line-height: 1.45 !important;
+        }
+
+        /* Add Notes Textarea */
+        .top_qms_page textarea.notebox {
+            background: #f8fafc !important;
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 6px !important;
+            color: #0f172a !important;
+            font-size: 12.5px !important;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+            line-height: 1.5 !important;
+            padding: 8px 12px !important;
+            box-sizing: border-box !important;
+            transition: all 0.2s ease !important;
+            width: 100% !important;
+        }
+
+        .top_qms_page textarea.notebox:focus {
+            background: #ffffff !important;
+            border-color: #0d4d8b !important;
+            box-shadow: 0 0 0 3px rgba(13, 77, 139, 0.12) !important;
+            outline: none !important;
+        }
+
+        .top_qms_page hr {
+            border-color: #e2e8f0 !important;
+            margin: 0 !important;
+        }
+
+        /* =====================================================================
+           CONTRACT REVIEW & CA SERVICE — COLOR, FONT & CRISP ICONS (NO POSITION CHANGES)
+           ===================================================================== */
+        .servicebox-bunch .serviceContent,
+        .servicebox-bunch .serviceContentwaiting,
+        .servicebox-bunch .serviceContentCompleted,
+        .new-cr-service-add .serviceContent,
+        .new-cr-service-add .serviceContentwaiting,
+        .new-cr-service-add .serviceContentCompleted {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+            font-style: normal !important;
+            font-size: 11.5px !important;
+            font-weight: 600 !important;
+            line-height: 23px !important;
+        }
+
+        /* 1. Completed state (Rich Vibrant Blue with crisp white icons & text) */
+        .servicebox-bunch .serviceContentCompleted,
+        .new-cr-service-add .serviceContentCompleted {
+            background-color: #3b82f6 !important;
+            color: #ffffff !important;
+        }
+        .servicebox-bunch .serviceContentCompleted span,
+        .servicebox-bunch .serviceContentCompleted a,
+        .servicebox-bunch .serviceContentCompleted i,
+        .new-cr-service-add .serviceContentCompleted span,
+        .new-cr-service-add .serviceContentCompleted a,
+        .new-cr-service-add .serviceContentCompleted i {
+            color: #ffffff !important;
+        }
+
+        /* 2. Waiting state (Fresh Mint Green with dark crisp icons & text) */
+        .servicebox-bunch .serviceContentwaiting,
+        .new-cr-service-add .serviceContentwaiting {
+            background-color: #86efac !important;
+            color: #064e3b !important;
+        }
+        .servicebox-bunch .serviceContentwaiting span,
+        .servicebox-bunch .serviceContentwaiting a,
+        .servicebox-bunch .serviceContentwaiting i,
+        .new-cr-service-add .serviceContentwaiting span,
+        .new-cr-service-add .serviceContentwaiting a,
+        .new-cr-service-add .serviceContentwaiting i {
+            color: #064e3b !important;
+        }
+
+        /* 3. Pending state (Clean Soft Slate) */
+        .servicebox-bunch .serviceContent,
+        .new-cr-service-add .serviceContent {
+            background-color: #e2e8f0 !important;
+            color: #334155 !important;
+        }
+        .servicebox-bunch .serviceContent span,
+        .servicebox-bunch .serviceContent a,
+        .servicebox-bunch .serviceContent i,
+        .new-cr-service-add .serviceContent span,
+        .new-cr-service-add .serviceContent a,
+        .new-cr-service-add .serviceContent i {
+            color: #334155 !important;
+        }
+
+        /* Crisp Icon Clarity & Sizing across CA & CR */
+        .servicebox-bunch .serviceContent i.fa,
+        .servicebox-bunch .serviceContentwaiting i.fa,
+        .servicebox-bunch .serviceContentCompleted i.fa,
+        .servicebox-bunch .image-preview-input,
+        .new-cr-service-add .serviceContent i.fa,
+        .new-cr-service-add .serviceContentwaiting i.fa,
+        .new-cr-service-add .serviceContentCompleted i.fa,
+        .new-cr-service-add .image-preview-input {
+            font-size: 13px !important;
+            line-height: 23px !important;
+            display: inline-block !important;
+            vertical-align: middle !important;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Clean upload icon background */
+        .servicebox-bunch .image-preview-input,
+        .new-cr-service-add .image-preview-input {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            color: inherit !important;
+            padding: 0 4px !important;
+            cursor: pointer;
+        }
+
+        /* Checkboxes inside document pills */
+        .servicebox-bunch input[type="checkbox"],
+        .new-cr-service-add input[type="checkbox"] {
+            vertical-align: middle !important;
+            margin: 0 4px !important;
+            cursor: pointer;
+        }
+
+        /* Action icons spacing & interaction */
+        .servicebox-bunch .serviceContent a,
+        .servicebox-bunch .serviceContentwaiting a,
+        .servicebox-bunch .serviceContentCompleted a,
+        .new-cr-service-add .serviceContent a,
+        .new-cr-service-add .serviceContentwaiting a,
+        .new-cr-service-add .serviceContentCompleted a {
+            display: inline-block !important;
+            line-height: 23px !important;
+            padding: 0 3px !important;
+            text-decoration: none !important;
+            opacity: 0.95;
+            transition: transform 0.15s ease, opacity 0.15s ease;
+        }
+        .servicebox-bunch .serviceContent a:hover,
+        .servicebox-bunch .serviceContentwaiting a:hover,
+        .servicebox-bunch .serviceContentCompleted a:hover,
+        .new-cr-service-add .serviceContent a:hover,
+        .new-cr-service-add .serviceContentwaiting a:hover,
+        .new-cr-service-add .serviceContentCompleted a:hover {
+            opacity: 1 !important;
+            transform: scale(1.15);
+        }
+
+        /* CA Top Audit Planning Controls (Labels & Inputs) */
+        .servicebox-bunch .float-label-control label {
+            color: #0d4d8b !important;
+            font-size: 11px !important;
+            font-weight: 700 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.3px !important;
+        }
+
+        .servicebox-bunch .float-label-control input,
+        .servicebox-bunch .float-label-control select {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+            font-size: 12px !important;
+            font-weight: 600 !important;
+            color: #0f172a !important;
+            border: none !important;
+            border-bottom: 1.5px solid #cbd5e1 !important;
+            background: transparent !important;
+            padding: 2px 4px !important;
+            transition: border-color 0.2s ease !important;
+        }
+
+        .servicebox-bunch .float-label-control input:focus,
+        .servicebox-bunch .float-label-control select:focus {
+            border-bottom-color: #0d4d8b !important;
+            outline: none !important;
+        }
+
+        .servicebox-bunch .sendStageNotificationMail i.fa-envelope {
+            color: #0d4d8b !important;
+            font-size: 14px !important;
+            cursor: pointer;
+            transition: transform 0.15s ease, color 0.15s ease;
+        }
+        .servicebox-bunch .sendStageNotificationMail i.fa-envelope:hover {
+            color: #083b6a !important;
+            transform: scale(1.15);
+        }
+
+        /* =====================================================================
+           LETTERS & ACTIONS SECTION — COMPACT, SLEEK & CRISP TABLE
+           ===================================================================== */
+        .aitf_service_date {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+            background: #0f2744 !important;
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            font-size: 10px !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.4px !important;
+            padding: 3px 8px !important;
+            border-radius: 4px 4px 0 0 !important;
+            line-height: 1.2 !important;
+            width: 100% !important;
+            display: block !important;
+        }
+
+        .service_details {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+            border: 1px solid #e2e8f0 !important;
+            background: #ffffff !important;
+            width: 100% !important;
+            font-size: 10.5px !important;
+            margin-bottom: 0 !important;
+        }
+
+        .service_details thead th {
+            background: #f8fafc !important;
+            color: #0d4d8b !important;
+            font-weight: 700 !important;
+            font-size: 9.5px !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.3px !important;
+            padding: 3px 6px !important;
+            border-bottom: 1.5px solid #e2e8f0 !important;
+            border-top: none !important;
+            line-height: 1.2 !important;
+            text-align: center !important;
+        }
+        .service_details thead th:first-child {
+            text-align: left !important;
+            padding-left: 10px !important;
+        }
+
+        .service_details thead th small {
+            font-size: 9.5px !important;
+            font-weight: 700 !important;
+            color: #0d4d8b !important;
+        }
+
+        .service_details tbody tr td {
+            font-size: 10.5px !important;
+            font-weight: 500 !important;
+            color: #0f172a !important;
+            padding: 2px 6px !important;
+            border-bottom: 1px solid #f1f5f9 !important;
+            vertical-align: middle !important;
+            line-height: 16px !important;
+            text-align: center !important;
+        }
+        .service_details tbody tr td:first-child {
+            text-align: left !important;
+            padding-left: 10px !important;
+        }
+
+        .service_details tbody tr:hover td {
+            background-color: #f8fafc !important;
+        }
+
+        .service_details tbody tr td small {
+            font-size: 10.5px !important;
+            color: #0f172a !important;
+            font-weight: 500 !important;
+            line-height: 16px !important;
+        }
+
+        .service_details tbody tr td .table-edit-control {
+            margin: 0 !important;
+            padding: 0 !important;
+            line-height: 16px !important;
+        }
+
+        /* Letters & Actions Table Compact Icons */
+        .service_details a i.fa {
+            line-height: 16px !important;
+            vertical-align: middle !important;
+        }
+        .service_details a i.fa-pencil-square {
+            color: #0d4d8b !important;
+            font-size: 11px !important;
+            transition: transform 0.15s ease, color 0.15s ease;
+        }
+        .service_details a i.fa-file-pdf-o {
+            color: #dc2626 !important;
+            font-size: 11px !important;
+            transition: transform 0.15s ease, color 0.15s ease;
+        }
+        .service_details a i.fa-envelope-o {
+            color: #059669 !important;
+            font-size: 11px !important;
+            transition: transform 0.15s ease, color 0.15s ease;
+        }
+        .service_details a i.fa-trash {
+            color: #ef4444 !important;
+            font-size: 11px !important;
+            transition: transform 0.15s ease, color 0.15s ease;
+        }
+
+        .service_details a:hover i.fa {
+            transform: scale(1.15) !important;
+            opacity: 1 !important;
+        }
+
+        /* =====================================================================
            PREMIUM DARK MODE  —  customerAccount.php
            -----------------------------------------------------------------
            This page relies heavily on inline styles (color:black / color:gray
@@ -4503,88 +4836,78 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                             echo '<div class="iso-details" style="display: none;">';
                             ?>
 
-                            <div class="row" style="padding: 15px; display: flex; align-items: center; gap: 15px; flex-wrap: nowrap; overflow-x: auto; <?php if ($i > 0)
-                                echo 'margin-top: 10px;'; ?>">
-                                <div style="color: black; font-weight: small; text-align: right; white-space: nowrap;">
-                                    <span>Certificate No:</span>
-                                </div>
-                                <div style="color: black; font-weight: small; white-space: nowrap;">
+                            <div class="row iso-details-row" style="padding: 8px 14px; display: flex; align-items: center; justify-content: flex-start; flex-wrap: nowrap !important; overflow-x: auto; gap: 14px; <?php if ($i > 0) echo 'margin-top: 10px;'; ?>">
+                                <!-- 1. Certificate No -->
+                                <div class="iso-field-group" style="display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; flex-shrink: 0;">
+                                    <span style="color: #0d4d8b; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px;">Certificate No:</span>
                                     <?php if ($hasCertNumber) { ?>
-                                        <span
-                                            style="font-weight: bold; color: #006400;"><?php echo htmlspecialchars($certNo); ?></span>
+                                        <span style="font-weight: 700; color: #16a34a; font-size: 12.5px;"><?php echo htmlspecialchars($certNo); ?></span>
                                     <?php } else { ?>
-                                        <span style="color: #999; font-style: italic; font-size: 11px;">Not Assigned Yet</span>
+                                        <span style="color: #94a3b8; font-style: italic; font-size: 11px;">Not Assigned Yet</span>
                                     <?php } ?>
                                 </div>
-                                <div
-                                    style="color: black; font-weight: small; text-align: right; white-space: nowrap; margin-left: 10px;">
-                                    <span>Certification Status:</span>
-                                </div>
-                                <div class="form-group float-label-control"
-                                    style="margin-bottom: 0; min-width: 150px; flex-grow: 1; position: relative;">
-                                    <?php if (!$customerManualStatusChangeEnabled && (!isset($currentRole) || $currentRole !== 'director')) { ?>
-                                        <div class="disabled-status-overlay" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:10; cursor:pointer;"></div>
-                                    <?php } ?>
-                                    <select class="<?php echo $statusSelectClass; ?>" name="customer_status"
-                                        data-customer="<?php echo (int) $_GET["customerid"]; ?>"
-                                        data-crr-id="<?php echo $certCrrId; ?>"
-                                        data-previous="<?php echo htmlspecialchars($certStatus, ENT_QUOTES, 'UTF-8'); ?>"
-                                        data-iso-index="<?php echo $certIsoIndex; ?>"
-                                        data-iso-label="<?php echo htmlspecialchars($standardName, ENT_QUOTES, 'UTF-8'); ?>"
-                                        style="color: black; width: 100%; <?php if (!$customerManualStatusChangeEnabled && (!isset($currentRole) || $currentRole !== 'director')) echo 'pointer-events: none;'; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'disabled' : ''; ?>>
-                                        <option value="<?php echo htmlspecialchars($certStatus, ENT_QUOTES, 'UTF-8'); ?>">
-                                            <?php echo !empty($certStatus) ? htmlspecialchars($certStatus) : 'Select Status'; ?>
-                                        </option>
-                                        <?php foreach ($applicationStatusOptions as $stat) {
-                                            $statusValue = trim((string) $stat["status"]);
-                                            if ($statusValue === '' || $statusValue === $certStatus) {
-                                                continue;
-                                            }
-                                            ?>
-                                            <option value="<?php echo htmlspecialchars($statusValue, ENT_QUOTES, 'UTF-8'); ?>">
-                                                <?php echo htmlspecialchars($statusValue); ?>
-                                            </option>
+
+                                <!-- 2. Certification Status -->
+                                <div class="iso-field-group" style="display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; flex-shrink: 0;">
+                                    <span style="color: #0d4d8b; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px;">Certification Status:</span>
+                                    <div style="min-width: 110px; position: relative;">
+                                        <?php if (!$customerManualStatusChangeEnabled && (!isset($currentRole) || $currentRole !== 'director')) { ?>
+                                            <div class="disabled-status-overlay" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:10; cursor:pointer;"></div>
                                         <?php } ?>
-                                    </select>
+                                        <select class="<?php echo $statusSelectClass; ?>" name="customer_status"
+                                            data-customer="<?php echo (int) $_GET["customerid"]; ?>"
+                                            data-crr-id="<?php echo $certCrrId; ?>"
+                                            data-previous="<?php echo htmlspecialchars($certStatus, ENT_QUOTES, 'UTF-8'); ?>"
+                                            data-iso-index="<?php echo $certIsoIndex; ?>"
+                                            data-iso-label="<?php echo htmlspecialchars($standardName, ENT_QUOTES, 'UTF-8'); ?>"
+                                            style="height: 28px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 2px 6px; color: #0f172a; font-weight: 600; font-size: 11.5px; background: #ffffff; width: 100%; <?php if (!$customerManualStatusChangeEnabled && (!isset($currentRole) || $currentRole !== 'director')) echo 'pointer-events: none;'; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'disabled' : ''; ?>>
+                                            <option value="<?php echo htmlspecialchars($certStatus, ENT_QUOTES, 'UTF-8'); ?>">
+                                                <?php echo !empty($certStatus) ? htmlspecialchars($certStatus) : 'Select Status'; ?>
+                                            </option>
+                                            <?php foreach ($applicationStatusOptions as $stat) {
+                                                $statusValue = trim((string) $stat["status"]);
+                                                if ($statusValue === '' || $statusValue === $certStatus) {
+                                                    continue;
+                                                }
+                                                ?>
+                                                <option value="<?php echo htmlspecialchars($statusValue, ENT_QUOTES, 'UTF-8'); ?>">
+                                                    <?php echo htmlspecialchars($statusValue); ?>
+                                                </option>
+                                            <?php } ?>
+                                        </select>
+                                    </div>
                                 </div>
-                                <div
-                                    style="color: black; font-weight: small; text-align: right; white-space: nowrap; margin-left: 10px;">
-                                    <span>Accreditation:</span>
+
+                                <!-- 3. Accreditation -->
+                                <div class="iso-field-group" style="display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; flex-shrink: 0;">
+                                    <span style="color: #0d4d8b; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px;">Accreditation:</span>
+                                    <div style="min-width: 90px; position: relative;">
+                                        <?php if (!$customerAccreditationChangeEnabled && (!isset($currentRole) || $currentRole !== 'director')) { ?>
+                                            <div class="disabled-accreditation-overlay" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:10; cursor:pointer;"></div>
+                                        <?php } ?>
+                                        <select class="manual-cdc-accreditation"
+                                            data-customer="<?php echo (int) $_GET["customerid"]; ?>"
+                                            data-crr-id="<?php echo $certCrrId; ?>"
+                                            data-previous="<?php echo htmlspecialchars($certAccreditation, ENT_QUOTES, 'UTF-8'); ?>"
+                                            data-iso-index="<?php echo $certIsoIndex; ?>"
+                                            data-iso-label="<?php echo htmlspecialchars($standardName, ENT_QUOTES, 'UTF-8'); ?>"
+                                            style="height: 28px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 2px 6px; color: #0f172a; font-weight: 600; font-size: 11.5px; background: #ffffff; width: 100%; <?php if (!$customerAccreditationChangeEnabled && (!isset($currentRole) || $currentRole !== 'director')) echo 'pointer-events: none;'; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'disabled' : ''; ?> <?php if ($certCrrId <= 0) echo 'disabled title="CDC record not available"'; ?>>
+                                            <option value="">Select Accreditation</option>
+                                            <option value="NABCB" <?php if ($certAccreditation === 'NABCB') echo 'selected'; ?>>NABCB</option>
+                                            <option value="SELF" <?php if ($certAccreditation === 'SELF') echo 'selected'; ?>>SELF</option>
+                                        </select>
+                                    </div>
                                 </div>
-                                <div class="form-group float-label-control" style="margin-bottom: 0; min-width: 120px; position: relative;">
-                                    <?php if (!$customerAccreditationChangeEnabled && (!isset($currentRole) || $currentRole !== 'director')) { ?>
-                                        <div class="disabled-accreditation-overlay" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:10; cursor:pointer;"></div>
-                                    <?php } ?>
-                                    <select class="manual-cdc-accreditation"
-                                        data-customer="<?php echo (int) $_GET["customerid"]; ?>"
-                                        data-crr-id="<?php echo $certCrrId; ?>"
-                                        data-previous="<?php echo htmlspecialchars($certAccreditation, ENT_QUOTES, 'UTF-8'); ?>"
-                                        data-iso-index="<?php echo $certIsoIndex; ?>"
-                                        data-iso-label="<?php echo htmlspecialchars($standardName, ENT_QUOTES, 'UTF-8'); ?>"
-                                        style="color: black; width: 100%; <?php if (!$customerAccreditationChangeEnabled && (!isset($currentRole) || $currentRole !== 'director')) echo 'pointer-events: none;'; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'disabled' : ''; ?> <?php if ($certCrrId <= 0)
-                                            echo 'disabled title="CDC record not available"'; ?>>
-                                        <option value="">Select Accreditation</option>
-                                        <option value="NABCB" <?php if ($certAccreditation === 'NABCB')
-                                            echo 'selected'; ?>>NABCB
-                                        </option>
-                                        <option value="SELF" <?php if ($certAccreditation === 'SELF')
-                                            echo 'selected'; ?>>SELF
-                                        </option>
-                                    </select>
-                                </div>
-                                <div
-                                    style="color: black; font-weight: small; text-align: right; white-space: nowrap; margin-left: 10px;">
-                                    <span>ORIGINAL REGISTRATION DATE (CDC):</span>
-                                </div>
-                                <div style="min-width: 120px;">
-                                    <input class="lookslike-label<?php if ($i == 0)
-                                        echo ' saveChanges'; ?>"
-                                        style="color: <?php echo (!empty($decisionDate) ? 'black' : 'gray'); ?>; width: 100%;"
-                                        placeholder="<?php echo ($i > 0 && empty($decisionDate)) ? 'No date for this ISO' : 'Click to enter'; ?>"
-                                        data-column="certification_stage_date" data-iso-index="<?php echo $certIsoIndex; ?>" value="<?php if (!empty($decisionDate))
-                                               echo simpleDateConversion($decisionDate); ?>" <?php if ($i == 0)
-                                                     echo 'id="certificationDate"'; ?>         <?php if ($i > 0)
-                                                                    echo 'readonly'; ?> />
+
+                                <!-- 4. Original Registration Date (CDC) -->
+                                <div class="iso-field-group" style="display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; flex-shrink: 0;">
+                                    <span style="color: #0d4d8b; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px;">Original Reg. Date (CDC):</span>
+                                    <div style="min-width: 95px; width: 100px;">
+                                        <input class="lookslike-label<?php if ($i == 0) echo ' saveChanges'; ?>"
+                                            style="height: 28px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 2px 6px; color: <?php echo (!empty($decisionDate) ? '#0f172a' : '#94a3b8'); ?>; font-weight: 600; font-size: 11.5px; background: #ffffff; width: 100%; text-align: center;"
+                                            placeholder="<?php echo ($i > 0 && empty($decisionDate)) ? 'No date' : 'Click date'; ?>"
+                                            data-column="certification_stage_date" data-iso-index="<?php echo $certIsoIndex; ?>" value="<?php if (!empty($decisionDate)) echo simpleDateConversion($decisionDate); ?>" <?php if ($i == 0) echo 'id="certificationDate"'; ?> <?php if ($i > 0) echo 'readonly'; ?> />
+                                    </div>
                                 </div>
                             </div>
 

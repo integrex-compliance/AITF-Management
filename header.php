@@ -132,9 +132,9 @@ if (!Utitlity::checkIfLoggedIn()) {
         header("Location: login.php?reason=login_required");
         exit;
     }
-} else if (isset($pageIdentifier) && $pageIdentifier == "Admin Dashboard") {
+} else if (isset($pageIdentifier) && ($pageIdentifier == "Admin Dashboard" || $pageIdentifier == "Management Dashboard" || $pageIdentifier == "Top Mgmt Dashboard" || $pageIdentifier == "MGMT Dashboard" || $pageIdentifier == "Mgmt Dashboard")) {
     $addAdminDashboardClass = "active";
-    if (!aitf_has_access("Admin Dashboard")) {
+    if (!aitf_has_access("Admin Dashboard") && !aitf_has_access("Management Dashboard") && !aitf_has_access("Top Mgmt Dashboard") && !aitf_has_access("MGMT Dashboard") && !aitf_has_access("Mgmt Dashboard")) {
         header("Location: login.php?reason=login_required");
         exit;
     }
@@ -367,141 +367,138 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
     </ul>
     <ul class="sidebar-nav" id="sidebar">
         <?php if (Utitlity::checkForDirector()) { ?>
-            <li><a href="directorSpace.php" class="animate <?php echo $addDirectorSpaceClass ?? '' ?>">DIRECTOR SPACE<i
-                        class="sub_icon fa-solid fa-user-tie fa-2x" style="vertical-align:middle"></i></a></li>
+            <li class="mgmt-space-item"><a href="directorSpace.php" class="animate mgmt-space-link <?php echo $addDirectorSpaceClass ?? '' ?>"><span class="mgmt-space-text"><i class="fa fa-star mgmt-star-icon" style="color: #fbbf24; margin-right: 4px; font-size: 10px;"></i> TOP MGMT SPACE</span><i
+                        class="sub_icon fa fa-black-tie mgmt-icon"></i></a></li>
         <?php } ?>
-        <?php if (aitf_has_access("Admin Dashboard")) { ?>
-        <li><a href="adminDashboard.php" class="animate <?php echo isset($addAdminDashboardClass) ? $addAdminDashboardClass : ''; ?>">ADMIN DASHBOARD<i class="sub_icon fa fa-line-chart fa-2x" style="vertical-align:middle"></i></a></li>
+        <?php if (aitf_has_access("Admin Dashboard") || aitf_has_access("Management Dashboard") || aitf_has_access("Top Mgmt Dashboard") || aitf_has_access("MGMT Dashboard") || aitf_has_access("Mgmt Dashboard")) { ?>
+        <li><a href="adminDashboard.php" class="animate <?php echo isset($addAdminDashboardClass) ? $addAdminDashboardClass : ''; ?>"><span>MGMT DASHBOARD</span><i class="sub_icon fa fa-line-chart"></i></a></li>
         <?php } ?>
         <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'Auditor') { ?>
-        <li><a href="auditorDashboard.php" class="animate">AUDITOR DASHBOARD<i class="sub_icon fa fa-home fa-2x" style="vertical-align:middle"></i></a></li>
+        <li><a href="auditorDashboard.php" class="animate"><span>AUDITOR DASHBOARD</span><i class="sub_icon fa fa-home"></i></a></li>
+        <?php } ?>
+        <?php if (aitf_has_access("IAF Dashboard")) { ?>
+        <li><a href="iaf_dashboard.php" class="animate <?php echo isset($iafClass) ? $iafClass : ''; ?>"><span>IAF DASHBOARD</span><i class="sub_icon fa fa-globe"></i></a></li>
         <?php } ?>
 
         <?php if (aitf_has_access("Application")) { ?>
             <?php $unreadBadge = isset($GLOBALS['unread_app_count']) ? (int) $GLOBALS['unread_app_count'] : 0; ?>
             <li>
                 <a href="applicationReceived.php" class="animate app-rec-nav <?php echo $addAppReceivedClass ?>">
-                    APPLICATION
+                    <span>APPLICATION
                     <?php if ($unreadBadge > 0) { ?>
                         <span
-                            style="margin-left:8px; padding:2px 7px; border-radius:999px; background:#ef4444; color:#fff; font-size:11px; font-weight:700;"><?php echo $unreadBadge; ?></span>
+                            style="margin-left:6px; padding:1px 6px; border-radius:999px; background:#ef4444; color:#fff; font-size:10px; font-weight:700;"><?php echo $unreadBadge; ?></span>
                     <?php } ?>
-                    <i class="sub_icon fa-solid fa-file-signature fa-2x" style="vertical-align:middle"></i>
+                    </span>
+                    <i class="sub_icon fa fa-wpforms"></i>
                 </a>
             </li>
         <?php } ?>
         <?php if (aitf_has_access('Client List')) { ?>
-            <li><a href="homePage.php" class="animate <?php echo $addClass ?>">CLIENTS<i
-                        class="sub_icon fa fa-building fa-2x" style="vertical-align:middle"></i></a></li>
+            <li><a href="homePage.php" class="animate <?php echo $addClass ?>"><span>CLIENTS</span><i
+                        class="sub_icon fa fa-building"></i></a></li>
         <?php } ?>
          <?php if (aitf_has_access("Marketing")) { ?>
-            <li><a href="marketingPage.php" class="animate <?php echo $addMarketingClass ?>">MARKETING<i
-                        class="sub_icon fa fa-briefcase fa-2x" style="vertical-align:middle"></i></a></li>
+            <li><a href="marketingPage.php" class="animate <?php echo $addMarketingClass ?>"><span>MARKETING</span><i
+                        class="sub_icon fa fa-briefcase"></i></a></li>
         <?php } ?> 
         <?php if (aitf_has_access("Payment Due")) { ?>
-            <li><a href="paymentPage.php" class="animate <?php echo $addFinanceClass ?>">PAYMENT<i
-                        class="sub_icon fa fa-money fa-2x" style="vertical-align:middle"></i></a></li>
+            <li><a href="paymentPage.php" class="animate <?php echo $addFinanceClass ?>"><span>PAYMENT</span><i
+                        class="sub_icon fa fa-money"></i></a></li>
         <?php } ?>
         <?php if (aitf_has_access("Statement")) { ?>
-            <li><a href="statementPage.php" class="animate <?php echo $addStatementClass ?? '' ?>">STATEMENT<i
-                        class="sub_icon fa fa-file-text fa-2x" style="vertical-align:middle"></i></a></li>
+            <li><a href="statementPage.php" class="animate <?php echo $addStatementClass ?? '' ?>"><span>STATEMENT</span><i
+                        class="sub_icon fa fa-file-text"></i></a></li>
         <?php } ?>
         <?php if (aitf_has_access("Audit Planning")) { ?>
-            <li><a href="auditPlanning.php" class="animate <?php echo $addWorkingClass ?>">AUDIT PLANNING<i
-                        class="sub_icon fa fa-money fa-2x" style="vertical-align:middle"></i></a></li>
-            <!--<li><a href="idealPage.php" class="animate ">IDEAL<i class="sub_icon fa fa-briefcase fa-2x" style="vertical-align:middle"></i></a></li>-->
+            <li><a href="auditPlanning.php" class="animate <?php echo $addWorkingClass ?>"><span>AUDIT PLANNING</span><i
+                        class="sub_icon fa fa-calendar-check-o"></i></a></li>
         <?php } ?>
         <?php if (aitf_has_access("Master Creator")) { ?>
-            <li><a href="masterCreator.php" class="animate <?php echo $addMasterClass ?? '' ?>">MASTER CREATOR<i
-                        class="sub_icon fa fa-wrench  fa-2x" style="vertical-align:middle"></i></a></li>
+            <li><a href="masterCreator.php" class="animate <?php echo $addMasterClass ?? '' ?>"><span>MASTER CREATOR</span><i
+                        class="sub_icon fa fa-wrench"></i></a></li>
         <?php } ?>
         <?php if (aitf_has_access("TDS Deducted")) { ?>
-            <li><a href="listOfTds.php" class="animate <?php echo $addtds ?? '' ?>">TDS DEDUCTED<i
-                        class="sub_icon fa fa-list  fa-2x" style="vertical-align:middle"></i></a></li>
+            <li><a href="listOfTds.php" class="animate <?php echo $addtds ?? '' ?>"><span>TDS DEDUCTED</span><i
+                        class="sub_icon fa fa-list"></i></a></li>
         <?php } ?>
         <?php if (aitf_has_access("Intimation Due")) { ?>
-            <li><a href="intimationLetter.php" class="animate <?php echo $adddueClass ?>">INTIMATION DUE<i
-                        class="sub_icon fa fa-envelope-o fa-2x" style="vertical-align:middle"></i></a></li>
-            <?php } ?>
-            <?php if (aitf_has_access("Intimation Due")) { ?>
-            <li><a href="sentintimation.php" class="animate <?php echo $addsentClass ?>">INTIMATION SENT<i
-                        class="sub_icon fa fa-envelope fa-2x" style="vertical-align:middle"></i></a></li>
-            <?php } ?>
-            <?php if (aitf_has_access("Mailbox")) { ?>
+            <li><a href="intimationLetter.php" class="animate <?php echo $adddueClass ?>"><span>INTIMATION DUE</span><i
+                        class="sub_icon fa fa-envelope-o"></i></a></li>
+        <?php } ?>
+        <?php if (aitf_has_access("Intimation Due")) { ?>
+            <li><a href="sentintimation.php" class="animate <?php echo $addsentClass ?>"><span>INTIMATION SENT</span><i
+                        class="sub_icon fa fa-envelope"></i></a></li>
+        <?php } ?>
+        <?php if (aitf_has_access("Mailbox")) { ?>
             <li><a href="inbox.php" target="_blank"
-                    class="animate <?php echo isset($addInboxClass) ? $addInboxClass : ''; ?>">MAIL-BOX<i
-                        class="sub_icon fa fa-inbox fa-2x" style="vertical-align:middle"></i></a></li>
+                    class="animate <?php echo isset($addInboxClass) ? $addInboxClass : ''; ?>"><span>MAIL-BOX</span><i
+                        class="sub_icon fa fa-inbox"></i></a></li>
         <?php } ?>
         <?php if (aitf_has_access('Invoices')) { ?>
-            <!--<li><a href="clientList.php" class="animate">CLIENT LIST<i class="sub_icon fa fa-list  fa-2x" style="vertical-align:middle"></i></a></li>-->
-            <li><a href="invoicePage.php" class="animate <?php echo $addInvoiceClass ?>">INVOICES<i
-                        class="sub_icon fa fa-inr fa-2x" style="vertical-align:middle"></i></a></li>
+            <li><a href="invoicePage.php" class="animate <?php echo $addInvoiceClass ?>"><span>INVOICES</span><i
+                        class="sub_icon fa fa-inr"></i></a></li>
         <?php } ?>
         <?php if (aitf_has_access('Bills')) { ?>
-            <li><a href="billsPage.php" class="animate <?php echo isset($addBillsClass) ? $addBillsClass : ''; ?>">BILLS<i
-                        class="sub_icon fa fa-file-text-o fa-2x" style="vertical-align:middle"></i></a></li>
+            <li><a href="billsPage.php" class="animate <?php echo isset($addBillsClass) ? $addBillsClass : ''; ?>"><span>BILLS</span><i
+                        class="sub_icon fa fa-file-text-o"></i></a></li>
         <?php } ?>
         <?php if (aitf_has_access("Creditors")) { ?>
-             <li><a href="suppliers.php" class="animate <?php echo isset($addSuppliersClass) ? $addSuppliersClass : ''; ?>">SUPPLIERS<i
-                        class="sub_icon fa fa-address-card-o fa-2x" style="vertical-align:middle"></i></a></li> 
+             <li><a href="suppliers.php" class="animate <?php echo isset($addSuppliersClass) ? $addSuppliersClass : ''; ?>"><span>SUPPLIERS</span><i
+                        class="sub_icon fa fa-address-card-o"></i></a></li> 
         <?php } ?>
         <?php if (aitf_has_access("Quotations")) { ?>
-            <li><a href="quotationPage.php" class="animate <?php echo $addquotClass ?>">QUOTATIONS<i
-                        class="sub_icon fa fa-quote-left fa-2x" style="vertical-align:middle"></i></a></li>
+            <li><a href="quotationPage.php" class="animate <?php echo $addquotClass ?>"><span>QUOTATIONS</span><i
+                        class="sub_icon fa fa-quote-left"></i></a></li>
         <?php } ?>
         <?php if (aitf_has_access("Agreements")) { ?>
-            <li><a href="agreementPage.php" class="animate <?php echo $addagreementClass ?>">AGREEMENTS<i
-                        class="sub_icon fa fa-quote-left fa-2x" style="vertical-align:middle"></i></a></li>
+            <li><a href="agreementPage.php" class="animate <?php echo $addagreementClass ?>"><span>AGREEMENTS</span><i
+                        class="sub_icon fa fa-handshake-o"></i></a></li>
         <?php } ?>
-
-
-
         <?php if (aitf_has_access("Audit List")) { ?>
-            <li><a href="auditPage.php" class="animate <?php echo $addAuditClass ?>">AUDIT LIST<i
-                        class="sub_icon fa fa-list-alt fa-2x" style="vertical-align:middle"></i></a></li>
+            <li><a href="auditPage.php" class="animate <?php echo $addAuditClass ?>"><span>AUDIT LIST</span><i
+                        class="sub_icon fa fa-list-alt"></i></a></li>
         <?php } ?>
         <?php if (aitf_has_access("Add User")) { ?>
-            <li><a href="addUsers.php" class="animate <?php echo $addUserClass ?>">ADD USER<i
-                        class="sub_icon fa fa-user-plus fa-2x" style="vertical-align:middle"></i></a></li>
+            <li><a href="addUsers.php" class="animate <?php echo $addUserClass ?>"><span>ADD USER</span><i
+                        class="sub_icon fa fa-user-plus"></i></a></li>
         <?php } ?>
         <?php if (aitf_has_access("Recycle Cust")) { ?>
-            <li><a href="clientRecycle.php" class="animate <?php echo $addRecycleClass ?>">RECYCLE BIN<i
-                        class="sub_icon fa fa-trash-o fa-2x" style="vertical-align:middle"></i></a></li>
-        <?php } ?>s
-        <?php if (aitf_has_access("Cert Issue List")) { ?>
-            <li><a href="auditanalysis.php" class="animate <?php echo $addcertissueClass ?>">CERT. ISSUED LIST<i
-                        class="sub_icon fa fa-newspaper-o fa-2x" style="vertical-align:middle"></i></a></li>
-            <?php } ?>
-            <?php if (aitf_has_access("Audit Performance")) { ?>
-            <li><a href="qualityanalysis.php" class="animate <?php echo $addauditperClass ?>">AUDIT PERFORMANCE<i
-                        class="sub_icon fa fa-recycle fa-2x" style="vertical-align:middle"></i></a></li>
-            <?php } ?>
-            <?php if (aitf_has_access("Client Analysis")) { ?>
-            <li><a href="clientanalysis.php" class="animate <?php echo $clientanalysis ?>">CLIENT ANALYSIS<i
-                        class="sub_icon fa fa-eye fa-2x" style="vertical-align:middle"></i></a></li>
-            <!--<li><a href="cdcobjective.php" class="animate <?php echo $cdcobj ?>">CDC OBJECTIVE<i class="sub_icon fa fa-eye fa-2x" style="vertical-align:middle"></i></a></li>-->
-            <?php } ?>
-            <?php if (aitf_has_access("App Review Objective")) { ?>
-            <li><a href="apprevobjective.php" class="animate <?php echo $apprevobj ?>">APP REV OBJECTIVE<i
-                        class="sub_icon fa fa-eye fa-2x" style="vertical-align:middle"></i></a></li>
+            <li><a href="clientRecycle.php" class="animate <?php echo $addRecycleClass ?>"><span>RECYCLE BIN</span><i
+                        class="sub_icon fa fa-trash-o"></i></a></li>
         <?php } ?>
-            <?php if (aitf_has_access("Doc Upload Status")) { ?>
-        <li><a href="uploadingStatus.php" class="animate <?php echo $docobj ?>">DOC.UPLOAD STATUS<i
-                    class="sub_icon fa fa-eye fa-2x" style="vertical-align:middle"></i></a></li>
-            <?php } ?>
-            <?php if (aitf_has_access("Audit Data")) { ?>
+        <?php if (aitf_has_access("Cert Issue List")) { ?>
+            <li><a href="auditanalysis.php" class="animate <?php echo $addcertissueClass ?>"><span>CERT. ISSUED LIST</span><i
+                        class="sub_icon fa fa-newspaper-o"></i></a></li>
+        <?php } ?>
+        <?php if (aitf_has_access("Audit Performance")) { ?>
+            <li><a href="qualityanalysis.php" class="animate <?php echo $addauditperClass ?>"><span>AUDIT PERFORMANCE</span><i
+                        class="sub_icon fa fa-line-chart"></i></a></li>
+        <?php } ?>
+        <?php if (aitf_has_access("Client Analysis")) { ?>
+            <li><a href="clientanalysis.php" class="animate <?php echo $clientanalysis ?>"><span>CLIENT ANALYSIS</span><i
+                        class="sub_icon fa fa-pie-chart"></i></a></li>
+        <?php } ?>
+        <?php if (aitf_has_access("App Review Objective")) { ?>
+            <li><a href="apprevobjective.php" class="animate <?php echo $apprevobj ?>"><span>APP REV OBJECTIVE</span><i
+                        class="sub_icon fa fa-eye"></i></a></li>
+        <?php } ?>
+        <?php if (aitf_has_access("Doc Upload Status")) { ?>
+        <li><a href="uploadingStatus.php" class="animate <?php echo $docobj ?>"><span>DOC.UPLOAD STATUS</span><i
+                    class="sub_icon fa fa-cloud-upload"></i></a></li>
+        <?php } ?>
+        <?php if (aitf_has_access("Audit Data")) { ?>
             <li><a href="auditorChecklist.php"
-                    class="animate <?php echo isset($addAuditorChecklistClass) ? $addAuditorChecklistClass : ''; ?>">AUDIT-DATA<i
-                        class="sub_icon fa fa-clipboard fa-2x" style="vertical-align:middle"></i></a></li>
-            <?php } ?>
-            <?php if (aitf_has_access("Go AI")) { ?>
-            <li><a href="goAi.php" class="animate <?php echo isset($addGoAiClass) ? $addGoAiClass : ''; ?>">GoAI<i
-                        class="sub_icon fa fa-magic fa-2x" style="vertical-align:middle"></i></a></li>
+                    class="animate <?php echo isset($addAuditorChecklistClass) ? $addAuditorChecklistClass : ''; ?>"><span>AUDIT-DATA</span><i
+                        class="sub_icon fa fa-clipboard"></i></a></li>
+        <?php } ?>
+        <?php if (aitf_has_access("Go AI")) { ?>
+            <li><a href="goAi.php" class="animate <?php echo isset($addGoAiClass) ? $addGoAiClass : ''; ?>"><span>GoAI</span><i
+                        class="sub_icon fa fa-magic"></i></a></li>
         <?php } ?>
     </ul>
 </div>
 <?php } // end if (!$hideSidebar) ?>
-
 <?php if ($hideSidebar) { ?>
 <style>
     /* Full-width layout when sidebar is hidden for limited-access users */
@@ -616,7 +613,7 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
             <?php } else { ?>
             <ul class="nav navbar-nav visible-xs">
                 <?php if ((Utitlity::checkForUserMainAdmin() || Utitlity::checkForMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff()) && (!isset($_SESSION['role']) || $_SESSION['role'] !== 'Main Admin')) { ?>
-                    <li><a href="adminDashboard.php">ADMIN DASHBOARD</a></li>
+                    <li><a href="adminDashboard.php">MGMT DASHBOARD</a></li>
                 <?php } ?>
                 <?php if (!isset($_SESSION["role"]) || $_SESSION["role"] != 'client') { ?>
                 <li><a href="iaf_dashboard.php">IAF DASHBOARD</a></li>

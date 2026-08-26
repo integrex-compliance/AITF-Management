@@ -207,26 +207,226 @@
         <div class="page-content inset">
             <div class="container">
                 <style>
-                    .serviceContentwaiting,
-                    .serviceContentCompleted {
-                        height: auto;
-                        min-height: 23px;
-                        white-space: normal;
-                        overflow-wrap: anywhere;
-                        word-break: break-word;
-                        line-height: 1.2;
-                        padding: 3px 5px;
+                    /* Clean typography & modern color scheme for Uploading Status */
+                    .container {
+                        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
                     }
 
-                    .serviceContentwaiting span,
-                    .serviceContentCompleted span {
-                        display: block;
+                    /* Summary Header Card */
+                    .row:first-of-type .panel.panel-primary {
+                        background: #ffffff;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 12px;
+                        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+                        padding: 18px 20px;
+                        margin-bottom: 20px;
+                        text-align: center;
+                    }
+
+                    .row:first-of-type .panel.panel-primary h4 {
+                        color: #0d4d8b !important;
+                        font-size: 20px !important;
+                        font-weight: 800 !important;
+                        letter-spacing: -0.3px;
+                        margin: 0 0 8px 0;
+                    }
+
+                    .row:first-of-type .panel.panel-primary p {
+                        font-size: 13px;
+                        font-weight: 700;
+                        margin-bottom: 0;
+                        display: inline-block;
+                        background: #fef2f2;
+                        color: #dc2626 !important;
+                        padding: 4px 16px;
+                        border-radius: 20px;
+                        border: 1px solid #fecaca;
+                    }
+
+                    /* Accordion Service Panels */
+                    .panel.panel-primary {
+                        border: 1px solid #e2e8f0;
+                        border-radius: 10px;
+                        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+                        margin-bottom: 16px;
+                        overflow: hidden;
+                        background: #ffffff;
+                        transition: box-shadow 0.2s ease;
+                    }
+
+                    .panel.panel-primary:hover {
+                        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+                    }
+
+                    /* Clickable Section Headers */
+                    .panel-heading.CR-Head,
+                    .panel-heading.CA-Head,
+                    .panel-heading.SAi-Head,
+                    .panel-heading.SAii-Head,
+                    .panel-heading.RC-Head {
+                        background: linear-gradient(135deg, #0d4d8b 0%, #083b6a 100%) !important;
+                        height: auto !important;
+                        padding: 12px 18px !important;
+                        cursor: pointer;
+                        user-select: none;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        transition: background 0.2s ease;
+                    }
+
+                    .panel-heading.CR-Head:hover,
+                    .panel-heading.CA-Head:hover,
+                    .panel-heading.SAi-Head:hover,
+                    .panel-heading.SAii-Head:hover,
+                    .panel-heading.RC-Head:hover {
+                        background: linear-gradient(135deg, #11599e 0%, #0a467e 100%) !important;
+                    }
+
+                    .panel-heading h4 {
+                        font-size: 14.5px !important;
+                        font-weight: 700 !important;
+                        letter-spacing: 0.3px;
+                        color: #ffffff !important;
+                        margin: 0 !important;
+                    }
+
+                    /* Panel Body */
+                    .panel-rightbody.homePagePanel {
+                        padding: 16px 18px;
+                        background: #f8fafc;
+                        border-top: 1px solid #e2e8f0;
+                    }
+
+                    /* Column Category Title Buttons */
+                    .btn.qms_complete_btn {
+                        background: #0d4d8b !important;
+                        color: #ffffff !important;
+                        border: none !important;
+                        border-radius: 6px !important;
+                        padding: 6px 10px !important;
+                        height: auto !important;
+                        min-height: 32px !important;
+                        font-size: 12px !important;
+                        font-weight: 700 !important;
+                        letter-spacing: 0.2px;
+                        text-transform: none;
+                        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+                        margin-bottom: 8px;
+                        cursor: default;
+                    }
+
+                    .btn.qms_complete_btn span i.fa {
+                        font-style: normal;
+                        font-family: inherit;
+                        font-weight: 700;
                     }
 
                     .uploading-section-count {
                         font-style: normal;
-                        font-size: 0.85em;
+                        font-size: 11px;
                         margin-left: 4px;
+                        padding: 1px 6px;
+                        background: rgba(255, 255, 255, 0.22);
+                        border-radius: 10px;
+                        color: #bae6fd;
+                    }
+
+                    /* Pending Document Items */
+                    .serviceContentwaiting {
+                        height: auto;
+                        min-height: 26px;
+                        white-space: normal;
+                        overflow-wrap: anywhere;
+                        word-break: break-word;
+                        line-height: 1.35;
+                        padding: 6px 10px;
+                        margin-bottom: 5px;
+                        background: #ffffff;
+                        border: 1px solid #e2e8f0;
+                        border-left: 3px solid #f59e0b;
+                        border-radius: 5px;
+                        color: #1e293b;
+                        font-size: 12px;
+                        font-weight: 600;
+                        transition: background 0.15s ease, border-color 0.15s ease;
+                    }
+
+                    .serviceContentwaiting:hover {
+                        background: #fffbeb;
+                        border-color: #fde68a;
+                        border-left-color: #d97706;
+                    }
+
+                    .serviceContentwaiting span {
+                        display: block;
+                    }
+
+                    /* Completed Document State */
+                    .serviceContentCompleted {
+                        height: auto;
+                        min-height: 26px;
+                        white-space: normal;
+                        overflow-wrap: anywhere;
+                        word-break: break-word;
+                        line-height: 1.35;
+                        padding: 6px 10px;
+                        margin-bottom: 5px;
+                        background: #f0fdf4;
+                        border: 1px solid #bbf7d0;
+                        border-left: 3px solid #10b981;
+                        border-radius: 5px;
+                        color: #047857;
+                        font-size: 11.5px;
+                        font-weight: 700;
+                    }
+
+                    .serviceContentCompleted span {
+                        display: block;
+                    }
+
+                    /* Dark Theme Support */
+                    html.theme-dark .panel.panel-primary {
+                        background: #0f172a;
+                        border-color: #1e293b;
+                    }
+
+                    html.theme-dark .row:first-of-type .panel.panel-primary {
+                        background: #0f172a;
+                        border-color: #1e293b;
+                    }
+
+                    html.theme-dark .row:first-of-type .panel.panel-primary h4 {
+                        color: #38bdf8 !important;
+                    }
+
+                    html.theme-dark .row:first-of-type .panel.panel-primary p {
+                        background: rgba(220, 38, 38, 0.15);
+                        color: #fca5a5 !important;
+                        border-color: rgba(220, 38, 38, 0.3);
+                    }
+
+                    html.theme-dark .panel-rightbody.homePagePanel {
+                        background: #0b1120;
+                        border-top-color: #1e293b;
+                    }
+
+                    html.theme-dark .serviceContentwaiting {
+                        background: #1e293b;
+                        border-color: #334155;
+                        border-left-color: #f59e0b;
+                        color: #f1f5f9;
+                    }
+
+                    html.theme-dark .serviceContentwaiting:hover {
+                        background: #334155;
+                    }
+
+                    html.theme-dark .serviceContentCompleted {
+                        background: rgba(16, 185, 129, 0.15);
+                        border-color: rgba(16, 185, 129, 0.3);
+                        border-left-color: #10b981;
+                        color: #6ee7b7;
                     }
                 </style>
                 <br>
@@ -252,7 +452,7 @@
                                 <div class="row event-row" id="dummyActionItemRow">
                                     <div class="col-xs-12 col-sm-12">
                                         <div class="row" style="">
-                                            <div class="col-xs-6 text-center btn qms_complete_btn">
+                                             <div class="col-xs-6 text-center btn qms_complete_btn">
                                                 <span><i class="fa"><?php echo uploadingSectionTitle('Application Form', $crAuditApplicationPending); ?></i></span>
                                             </div>
                                             <div class="col-xs-6  text-center btn qms_complete_btn">
@@ -479,7 +679,7 @@
                                             </div>
                                             <div class="col-sm-4">
                                                 <?php
-                                                if ($saiCustomerReviewPending) {
+                                                if ($caCertificatePending) {
                                                     foreach ($caCertificatePending as $certificatePending) {
                                                         ?>
                                                         <div class="serviceContentwaiting">

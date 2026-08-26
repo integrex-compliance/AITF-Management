@@ -117,97 +117,377 @@
     ?>
 
     <style>
-        .invoice-section-title {
-            display: inline-block;
-            margin: 0 0 15px;
-            padding: 8px 16px;
-            font-size: 22px;
-            font-weight: 700;
-            color: #0d4d8b;
-            background: #eaf3ff;
-            border-left: 4px solid #0d4d8b;
-            border-radius: 4px;
+        /* Base typography & resets */
+        #page-content-wrapper {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
 
+        /* Section Title Badge */
+        .invoice-section-title {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0 0 16px;
+            padding: 8px 18px;
+            font-size: 18px;
+            font-weight: 800;
+            color: #ffffff;
+            background: linear-gradient(135deg, #0d4d8b 0%, #083b6a 100%);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(13, 77, 139, 0.2);
+            letter-spacing: -0.2px;
+        }
+
+        /* Filter Panel Card */
         .invoice-filter-panel {
             display: flex;
             flex-wrap: wrap;
             gap: 12px;
             align-items: flex-end;
             margin: 10px 0 20px;
-            padding: 12px 15px;
-            background: #f8fbff;
-            border: 1px solid #d6e4f0;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            padding: 14px 18px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
         }
 
         .invoice-filter-item {
-            flex: 1;
-            min-width: 150px;
+            flex: 1 1 130px;
             display: flex;
             flex-direction: column;
+            justify-content: flex-end;
             position: relative;
         }
 
+        .invoice-filter-item.item-client {
+            flex: 1.5 1 180px;
+        }
+
+        .invoice-filter-item.item-action {
+            flex: 1.2 1 170px;
+        }
+
         .invoice-filter-item label {
-            display: block;
-            margin-bottom: 6px;
-            color: #0d4d8b;
-            font-size: 11px;
+            display: block !important;
+            margin: 0 0 6px 0 !important;
+            padding: 0 !important;
+            color: #0d4d8b !important;
+            font-size: 11px !important;
+            font-weight: 700 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.5px !important;
+            height: 16px !important;
+            line-height: 16px !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+        }
+
+        .invoice-filter-item select, 
+        .invoice-filter-item input {
+            width: 100% !important;
+            height: 40px !important;
+            min-height: 40px !important;
+            max-height: 40px !important;
+            padding: 0 12px !important;
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 8px !important;
+            box-sizing: border-box !important;
+            font-size: 13px !important;
+            font-weight: 500 !important;
+            color: #1e293b !important;
+            background-color: #fff !important;
+            line-height: 38px !important;
+            margin: 0 !important;
+            vertical-align: middle !important;
+            transition: all 0.2s ease;
+        }
+
+        .invoice-filter-item input::placeholder {
+            color: #94a3b8 !important;
+        }
+
+        .invoice-filter-item select:focus, 
+        .invoice-filter-item input:focus {
+            border-color: #0d4d8b !important;
+            outline: none !important;
+            box-shadow: 0 0 0 3px rgba(13, 77, 139, 0.12) !important;
+        }
+
+        .btn-premium,
+        .downloadTdsReport {
+            width: 100% !important;
+            height: 40px !important;
+            min-height: 40px !important;
+            max-height: 40px !important;
+            line-height: 40px !important;
+            padding: 0 16px !important;
+            font-family: inherit !important;
+            font-weight: 700 !important;
+            border-radius: 8px !important;
+            font-size: 12.5px !important;
+            letter-spacing: 0.3px !important;
+            white-space: nowrap !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 6px !important;
+            border: none !important;
+            cursor: pointer !important;
+            text-transform: none !important;
+            box-sizing: border-box !important;
+            margin: 0 !important;
+        }
+
+        .btn-solid-primary {
+            background: linear-gradient(135deg, #0d4d8b 0%, #083b6a 100%) !important;
+            color: #ffffff !important;
+            box-shadow: 0 2px 6px rgba(13, 77, 139, 0.25);
+        }
+
+        .btn-solid-primary:hover {
+            background: linear-gradient(135deg, #11599e 0%, #0a467e 100%) !important;
+            box-shadow: 0 4px 12px rgba(13, 77, 139, 0.35);
+            transform: translateY(-1px);
+        }
+
+        /* Table Shell & DataTable Styling */
+        .table-responsive {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+            overflow: hidden;
+        }
+
+        #table_finance_details thead th {
+            background: #0f2744 !important;
+            color: #ffffff !important;
+            padding: 12px 14px !important;
+            border: none !important;
+            font-size: 12px !important;
+            font-weight: 700 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.5px !important;
+            vertical-align: middle !important;
+        }
+
+        #table_finance_details thead th small,
+        #table_finance_details thead th a {
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            font-size: 12px !important;
+            text-decoration: none !important;
+        }
+
+        #table_finance_details tbody td {
+            border: none !important;
+            border-bottom: 1px solid #f1f5f9 !important;
+            padding: 10px 14px !important;
+            font-size: 12.5px !important;
+            color: #334155 !important;
+            background-color: #ffffff;
+            vertical-align: middle !important;
+        }
+
+        #table_finance_details tbody tr:hover td {
+            background-color: #f8fafc !important;
+        }
+
+        #table_finance_details tbody tr:nth-of-type(odd) td {
+            background-color: #fcfdfe;
+        }
+
+        /* Unique ID column */
+        #table_finance_details tbody td:first-child small a {
             font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            height: 14px;
-            line-height: 14px;
-        }
-
-        .invoice-filter-item select, .invoice-filter-item input {
-            width: 100%;
-            height: 38px;
-            padding: 8px 12px;
-            border: 1px solid #bfd2e6;
-            border-radius: 6px;
-            box-sizing: border-box;
-            font-size: 13px;
-            color: #333;
-            background-color: #fff;
-            transition: all 0.2s;
-        }
-
-        .invoice-filter-item select:focus, .invoice-filter-item input:focus {
-            border-color: #0d4d8b;
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(13, 77, 139, 0.1);
-        }
-
-        .btn-filter-group {
-            display: flex;
-            gap: 8px;
-            height: 38px;
-            align-items: center;
-        }
-
-        .btn-premium {
-            height: 38px;
-            padding: 0 20px;
-            font-weight: 600;
-            border-radius: 6px;
-            text-transform: uppercase;
+            color: #475569;
+            font-family: monospace;
             font-size: 12px;
-            letter-spacing: 0.5px;
-            transition: all 0.2s;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border: none;
+            text-decoration: none;
+            cursor: pointer;
         }
 
-        .btn-print { background: #5bc0de; color: #fff; }
-        .btn-print:hover { background: #31b0d5; transform: translateY(-1px); }
+        /* Client Name click style */
+        #table_finance_details tbody td:nth-child(2) small {
+            font-weight: 700;
+            color: #0d4d8b;
+            cursor: pointer;
+            transition: color 0.15s ease;
+            font-size: 12.5px;
+        }
 
-        .btn-export { background: #5cb85c; color: #fff; }
-        .btn-export:hover { background: #449d44; transform: translateY(-1px); }
+        #table_finance_details tbody td:nth-child(2):hover small {
+            color: #0284c7;
+            text-decoration: underline;
+        }
+
+        /* Service Type column badge */
+        #table_finance_details tbody td:nth-child(3) small {
+            background: #e0f2fe;
+            color: #0369a1;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            display: inline-block;
+        }
+
+        /* TDS Deducted Amount */
+        #table_finance_details tbody td:nth-child(4) small {
+            color: #d97706;
+            font-weight: 800;
+            font-size: 13px;
+        }
+
+        /* Payment Received Amount */
+        #table_finance_details tbody td:nth-child(5) small {
+            color: #059669;
+            font-weight: 800;
+            font-size: 13px;
+        }
+
+        /* Date column */
+        #table_finance_details tbody td:nth-child(6) small {
+            background: #f1f5f9;
+            color: #475569;
+            font-weight: 600;
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: 11.5px;
+            display: inline-block;
+        }
+
+        /* Comments Textarea */
+        #table_finance_details textarea.saveChanges {
+            width: 100% !important;
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 6px !important;
+            padding: 6px 10px !important;
+            font-size: 12px !important;
+            color: #1e293b !important;
+            background: #f8fafc !important;
+            resize: vertical !important;
+            min-height: 44px;
+            line-height: 1.4;
+            transition: all 0.2s ease;
+            outline: none;
+            box-sizing: border-box;
+        }
+
+        #table_finance_details textarea.saveChanges:focus {
+            background: #ffffff !important;
+            border-color: #0d4d8b !important;
+            box-shadow: 0 0 0 3px rgba(13, 77, 139, 0.12) !important;
+        }
+
+        /* =====================================================================
+           PREMIUM DARK MODE  —  listOfTds.php
+           ===================================================================== */
+        html.theme-dark {
+            --tds-bg:        #0a0e14;
+            --tds-surface:   #111722;
+            --tds-surface-2: #161d2b;
+            --tds-border:    #232c3d;
+            --tds-border-2:  #2e3a4f;
+            --tds-text:      #dbe3f0;
+            --tds-text-dim:  #93a1b8;
+            --tds-text-faint:#6b7890;
+            --tds-accent:    #4a9eff;
+        }
+
+        html.theme-dark #page-content-wrapper { background: var(--tds-bg); color: var(--tds-text); }
+
+        /* Section title */
+        html.theme-dark .invoice-section-title {
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 100%);
+            color: #ffffff;
+        }
+
+        /* Filter panel */
+        html.theme-dark .invoice-filter-panel {
+            background: var(--tds-surface);
+            border-color: var(--tds-border);
+            box-shadow: 0 6px 26px rgba(0, 0, 0, 0.45);
+        }
+        html.theme-dark .invoice-filter-item label { color: #7aa9f5; }
+        html.theme-dark .invoice-filter-item input,
+        html.theme-dark .invoice-filter-item select {
+            background-color: var(--tds-surface-2) !important;
+            border-color: var(--tds-border-2) !important;
+            color: var(--tds-text) !important;
+        }
+        html.theme-dark .invoice-filter-item input::placeholder { color: var(--tds-text-faint); }
+        html.theme-dark .invoice-filter-item input:focus,
+        html.theme-dark .invoice-filter-item select:focus {
+            border-color: var(--tds-accent);
+            box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.18);
+        }
+
+        /* Download button */
+        html.theme-dark .btn-solid-primary {
+            background: linear-gradient(135deg, #1d63b0 0%, #174e8c 100%) !important;
+            box-shadow: 0 4px 14px rgba(20, 104, 179, 0.4);
+        }
+        html.theme-dark .btn-solid-primary:hover { 
+            background: linear-gradient(135deg, #2f81d6 0%, #1d63b0 100%) !important; 
+            box-shadow: 0 8px 22px rgba(20, 104, 179, 0.5); 
+        }
+
+        /* Table shell */
+        html.theme-dark .table-responsive {
+            background: var(--tds-surface);
+            border: 1px solid var(--tds-border);
+            border-radius: 12px;
+            box-shadow: 0 6px 26px rgba(0, 0, 0, 0.45);
+        }
+        html.theme-dark #table_finance_details thead th {
+            background: #090e17 !important;
+            border-color: var(--tds-border-2) !important;
+        }
+        html.theme-dark #table_finance_details thead th small,
+        html.theme-dark #table_finance_details thead th a { color: #f1f5f9 !important; }
+        html.theme-dark #table_finance_details small { color: var(--tds-text) !important; }
+        html.theme-dark #table_finance_details tbody td {
+            border-color: var(--tds-border) !important;
+            color: var(--tds-text) !important;
+            background-color: var(--tds-surface) !important;
+        }
+        html.theme-dark #table_finance_details tbody tr:hover td { background-color: var(--tds-surface-2) !important; }
+        html.theme-dark .table-striped tbody tr:nth-of-type(odd) td { background-color: rgba(255, 255, 255, 0.02) !important; }
+        html.theme-dark #table_finance_details tbody td:first-child small a { color: #94a3b8 !important; }
+        html.theme-dark #table_finance_details tbody td:nth-child(2) small { color: #38bdf8 !important; }
+        html.theme-dark #table_finance_details tbody td:nth-child(3) small { background: rgba(56, 189, 248, 0.15); color: #7dd3fc; }
+        html.theme-dark #table_finance_details tbody td:nth-child(4) small { color: #fbbf24 !important; }
+        html.theme-dark #table_finance_details tbody td:nth-child(5) small { color: #34d399 !important; }
+        html.theme-dark #table_finance_details tbody td:nth-child(6) small { background: rgba(148, 163, 184, 0.15); color: #cbd5e1; }
+
+        /* Comment textarea */
+        html.theme-dark #table_finance_details textarea,
+        html.theme-dark .saveChanges {
+            background-color: var(--tds-surface-2) !important;
+            border: 1px solid var(--tds-border-2) !important;
+            color: var(--tds-text) !important;
+        }
+        html.theme-dark .saveChanges:focus {
+            border-color: var(--tds-accent) !important;
+            box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.2) !important;
+        }
+
+        /* Report Modal Dark Mode */
+        html.theme-dark #tds-report-format-chooser > div {
+            background: var(--tds-surface) !important;
+            border: 1px solid var(--tds-border) !important;
+            color: var(--tds-text) !important;
+        }
+        html.theme-dark #tds-report-format-chooser p { color: var(--tds-text) !important; }
+        html.theme-dark .tds-report-email-box label { color: var(--tds-text) !important; }
+        html.theme-dark .tds-report-email-input {
+            background-color: var(--tds-surface-2) !important;
+            border-color: var(--tds-border-2) !important;
+            color: var(--tds-text) !important;
+        }
     </style>
 
     <!-- Page content -->
@@ -219,7 +499,7 @@
                     <div class="container-fluid" style="margin-top: 20px;">
                         <div class="row">
                             <div class="col-md-12">
-                                <h2 class="invoice-section-title">TDS List & Reports</h2>
+                                <h2 class="invoice-section-title"><i class="fa fa-percent"></i> TDS List & Reports</h2>
                                 <form method="GET" action="listOfTds.php" id="filterForm">
                                     <div class="invoice-filter-panel">
                                         <div class="invoice-filter-item">
@@ -230,7 +510,7 @@
                                                 <option value="not_received" <?php echo $status == 'not_received' ? 'selected' : ''; ?>>Not Received</option>
                                             </select>
                                         </div>
-                                        <div class="invoice-filter-item">
+                                        <div class="invoice-filter-item item-client">
                                             <label for="clientSearch">Client Name</label>
                                             <input type="text" name="clientSearch" id="clientSearch" value="<?php echo $clientSearch; ?>" placeholder="Search Client..." onkeyup="if(event.keyCode == 13) $('#filterForm').submit()">
                                         </div>
@@ -250,9 +530,9 @@
                                                 <option value="low" <?php echo $sortOrder == 'low' ? 'selected' : ''; ?>>Low to High</option>
                                             </select>
                                         </div>
-                                        <div class="invoice-filter-item">
+                                        <div class="invoice-filter-item item-action">
                                             <label>Action</label>
-                                            <button type="button" class="btn-premium btn-solid-primary downloadTdsReport" style="width: 100%; height: 38px; background: #0d4d8b; color: #fff; border: none; border-radius: 6px; font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px;">
+                                            <button type="button" class="btn-premium btn-solid-primary downloadTdsReport">
                                                 <i class="fa fa-cloud-download" style="font-size: 15px;"></i> Download Report
                                             </button>
                                         </div>
