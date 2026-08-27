@@ -11,9 +11,14 @@
     include 'header.php';
     include 'dbConnect.php';
 
-    //    $quotationList = "SELECT qd.quotation_id, qd.customer_id, quotationno, quotation_date, free_covers, stage_i_audit, stage_ii_audit, total_cost, maintenance, ci.id, customer_name, ci.address, svc.service_id, service_type FROM quotation_detail qd left join customer_info ci on qd.customer_id = ci.id left join service svc on qd.customer_id = svc.customer_id where svc.service_id = (select max(tmp.service_id) from service tmp where tmp.customer_id = ci.id)";
-//    $quotationList = "SELECT s.service_id, service_type, s.customer_id, ci.customer_name, qd.quotation_id, quotationno, quotation_date, total_cost, 'Quotation' as quotid FROM customer_info ci join service s on ci.id = s.customer_id join quotation_detail qd on ci.id = qd.customer_id where s.service_id = (select max(tmp.service_id) from service tmp where tmp.customer_id = ci.id) union SELECT s.service_id, service_type, s.customer_id, ci.customer_name, aa.audit_id as quotation_id, uni_svc_id as quotationno, application_date as quotation_date, '' as total_cost, 'Aggrement' as quotid  FROM customer_info ci join service s on ci.id = s.customer_id join audit_application aa on s.service_id = aa.uni_svc_id where s.service_id = (select max(tmp.service_id) from service tmp where tmp.customer_id = ci.id) order by customer_name";
-//    $quotationList = "SELECT s.service_id, service_type, s.customer_id, ci.customer_name, ci.unique_id, aa.audit_id as quotation_id, uni_svc_id as quotationno, application_date as quotation_date, '' as total_cost, 'Aggrement' as quotid  FROM customer_info ci join service s on ci.id = s.customer_id join audit_application aa on s.service_id = aa.uni_svc_id where s.service_id = (select max(tmp.service_id) from service tmp where tmp.customer_id = ci.id) and ci.is_deleted = 'NO' order by customer_name";
+    $invRole = trim($_SESSION['role'] ?? '');
+    $isMarketingHead = in_array($invRole, array('Marketing Head', 'Marketing Executive'), true)
+        || strtolower(str_replace(' ', '', $invRole)) === 'marketinghead'
+        || (isset($_SESSION['username']) && strtolower(trim($_SESSION['username'])) === 'marketingh');
+    $isOfficeStaff = in_array($invRole, array('Office Staff-A', 'Office Staff-B'), true)
+        || in_array(strtolower(str_replace(array(' ', '-'), '', $invRole)), array('officestaffa', 'officestaffb'), true);
+    $isRestrictedRole = $isMarketingHead || $isOfficeStaff;
+
     $quotationList = "SELECT s.service_id, service_type, s.customer_id, ci.customer_name, ci.audit_status, aa.audit_id as quotation_id, aa.service_id as casvcid, uni_svc_id as quotationno, application_date as quotation_date,'Aggrement' as quotid,refundable_amount,audit_stage_i, audit_stage_iI, initial_assessment, ca.id, ca.aggrement_date, ca.aggrement_no FROM customer_info ci join service s on ci.id = s.customer_id join audit_application aa on s.service_id = aa.uni_svc_id left join certification_aggrement ca on aa.service_id = ca.service where ci.is_deleted = 'NO' order by aggrement_date DESC";
     $statement = $db->prepare($quotationList);
     $statement->execute();
@@ -144,6 +149,86 @@
 
         #table_quotation_filter {
             display: none;
+        }
+
+        /* ===== Modern DataTable Footer (Showing entries + Pagination) ===== */
+        .dt-bottom-row {
+            margin: 0 !important;
+            padding: 12px 18px !important;
+            border-top: 1px solid #e2e8f0;
+            background: #ffffff;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            flex-wrap: wrap !important;
+            gap: 10px;
+        }
+        .dataTables_wrapper .dataTables_info {
+            padding: 0 !important;
+            margin: 0 !important;
+            font-size: 13px !important;
+            font-weight: 600 !important;
+            color: #475569 !important;
+            line-height: 32px;
+            display: block !important;
+        }
+        .dataTables_wrapper .dataTables_paginate {
+            padding: 0 !important;
+            margin: 0 !important;
+            text-align: right !important;
+        }
+        .dataTables_wrapper .dataTables_paginate ul.pagination {
+            margin: 0 !important;
+            white-space: nowrap;
+        }
+        .dataTables_wrapper .dataTables_paginate .pagination > li > a,
+        .dataTables_wrapper .dataTables_paginate .pagination > li > span {
+            color: #0d4d8b;
+            border-color: #e2e8f0;
+            font-size: 12.5px;
+            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: 6px;
+            margin: 0 2px;
+        }
+        .dataTables_wrapper .dataTables_paginate .pagination > .active > a,
+        .dataTables_wrapper .dataTables_paginate .pagination > .active > span {
+            background: linear-gradient(135deg, #0d4d8b 0%, #1e4b8a 100%) !important;
+            border-color: #0d4d8b !important;
+            color: #ffffff !important;
+            box-shadow: 0 2px 6px rgba(13, 77, 139, 0.25);
+        }
+        .dataTables_wrapper .dataTables_paginate .pagination > .disabled > a,
+        .dataTables_wrapper .dataTables_paginate .pagination > .disabled > span {
+            color: #94a3b8 !important;
+            border-color: #eef2f6 !important;
+            background-color: #f8fafc !important;
+        }
+
+        html.theme-dark .dt-bottom-row {
+            border-top-color: #334155 !important;
+            background: #111827 !important;
+        }
+        html.theme-dark .dataTables_wrapper .dataTables_info {
+            color: #94a3b8 !important;
+        }
+        html.theme-dark .dataTables_wrapper .dataTables_paginate .pagination > li > a,
+        html.theme-dark .dataTables_wrapper .dataTables_paginate .pagination > li > span {
+            background-color: #1f2937 !important;
+            border-color: #374151 !important;
+            color: #e5e7eb !important;
+        }
+        html.theme-dark .dataTables_wrapper .dataTables_paginate .pagination > .active > a,
+        html.theme-dark .dataTables_wrapper .dataTables_paginate .pagination > .active > span {
+            background: #3b82f6 !important;
+            border-color: #3b82f6 !important;
+            color: #ffffff !important;
+        }
+        html.theme-dark .dataTables_wrapper .dataTables_paginate .pagination > .disabled > a,
+        html.theme-dark .dataTables_wrapper .dataTables_paginate .pagination > .disabled > span {
+            background-color: #111827 !important;
+            border-color: #374151 !important;
+            color: #64748b !important;
         }
     </style>
 
@@ -353,6 +438,19 @@
         };
     }
 
+    function normalizeSearchText(str) {
+        if (!str) return "";
+        return str.replace(/<[^>]*>/g, "")
+                  .replace(/&amp;/g, '&')
+                  .replace(/\s+/g, ' ')
+                  .trim()
+                  .toLowerCase();
+    }
+
+    var isMarketingHead = <?php echo $isMarketingHead ? 'true' : 'false'; ?>;
+    var isOfficeStaff = <?php echo $isOfficeStaff ? 'true' : 'false'; ?>;
+    var isRestrictedRole = <?php echo $isRestrictedRole ? 'true' : 'false'; ?>;
+
     function compareMinDates(filterDate, rowDate) {
         var filterDateSplit = filterDate.split(".");
         var rowDateSplit = rowDate.split(".");
@@ -398,43 +496,75 @@
 
     $.fn.DataTable.ext.search.push(
         function (settings, data, dataIndex) {
-            //                var serviceType = $(".service-type").val();
-            var fromDate = $(".filterFromDate").val();
-            var toDate = $(".filterToDate").val();
-            //                var isServiceType = false;
-            var isfromDate = false;
-            var isToDate = false;
-            //            alert(serviceType);
-            if (fromDate == "" && toDate == "") {
+            var tableId = settings.nTable.id;
+            if (tableId !== 'table_quotation') {
                 return true;
             }
-            //                if (serviceType != "") {
-            //                    var servieTypeStr = data[6] || ""; // use data for the age column
-            ////                    alert(servieTypeStr);
-            //                    if (servieTypeStr.toUpperCase().trim() == serviceType.toUpperCase().trim()) {
-            //                        //                alert("test");
-            //                        isServiceType = true;
-            //                    }
-            //                } else {
-            //                    isServiceType = true;
-            //                }
+
+            var fromDate = $(".filterFromDate").val() || $("#filterFromDate").val() || "";
+            var toDate = $(".filterToDate").val() || $("#filterToDate").val() || "";
+            var clientSearch = ($("#agreementClientSearch").val() || "").trim();
+
+            var rowClient = normalizeSearchText(data[0] || "");
+            var rowAggNo = normalizeSearchText(data[2] || "");
+
             var dateValue = data[4] || "";
             var dateSplit = dateValue.split("~");
-            //            alert(dateSplit[1]);
-            //            alert(fromDate);
-            if (fromDate != "") {
-                //                      alert(dateValue);
-                isfromDate = compareMinDates(fromDate, dateSplit[1]);
-            } else {
-                isfromDate = true;
+            var rowDate = (dateSplit.length > 1 ? dateSplit[1] : dateSplit[0]) || "";
+            rowDate = rowDate.replace(/<[^>]*>/g, "").trim();
+
+            var searchVal = normalizeSearchText(clientSearch);
+            var isCurrentOrRecent = false;
+            if (rowDate !== "") {
+                var parts = rowDate.split(".");
+                if (parts.length === 3) {
+                    var day = parseInt(parts[0], 10);
+                    var month = parseInt(parts[1], 10) - 1;
+                    var year = parseInt(parts[2], 10);
+                    var aggDate = new Date(year, month, day);
+                    var now = new Date();
+                    var firstDayOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
+                    if (aggDate >= firstDayOfPrevMonth) {
+                        isCurrentOrRecent = true;
+                    }
+                }
             }
-            if (toDate != "") {
-                isToDate = compareMaxDates(toDate, dateSplit[1]);
+
+            // 1. Client Search (search by client name or agreement no):
+            // When client search has text, show all matching records.
+            // When client search is empty, restrict view to current month + past 1 month (for marketing & office staff roles).
+            if (clientSearch !== "") {
+                var isMatch = (rowClient.indexOf(searchVal) !== -1 || rowAggNo.indexOf(searchVal) !== -1);
+                if (!isMatch) {
+                    return false;
+                }
+                // For restricted roles: past records (older than 1 month) are ONLY unlocked when full client name/agg no is typed
+                if (isRestrictedRole && !isCurrentOrRecent) {
+                    var isExactMatch = (rowClient === searchVal || rowAggNo === searchVal);
+                    if (!isExactMatch) {
+                        return false;
+                    }
+                }
             } else {
-                isToDate = true;
+                // When client search is empty:
+                if (isRestrictedRole) {
+                    if (!isCurrentOrRecent) {
+                        return false;
+                    }
+                }
             }
-            finalResult = (isfromDate && isToDate);
-            return finalResult;
+
+            // 2. Explicit From Date and To Date range filters
+            if (fromDate !== "" || toDate !== "") {
+                if (rowDate === "") {
+                    return false;
+                }
+                var isfromDate = (fromDate !== "") ? compareMinDates(fromDate, rowDate) : true;
+                var isToDate = (toDate !== "") ? compareMaxDates(toDate, rowDate) : true;
+                return (isfromDate && isToDate);
+            }
+
+            return true;
         }
     );
 
@@ -442,22 +572,23 @@
         "sScrollX": "100%",
         "scrollY": '70vh',
         "scrollCollapse": true,
-        "paging": false,
+        "paging": true,
         "ordering": false,
         "lengthChange": false,
-        //            "pageLength": 10,
-        "paging": false,
+        "pageLength": 50,
+        "info": true,
+        "dom": "tr<'row dt-bottom-row'<'col-sm-6 col-xs-12'i><'col-sm-6 col-xs-12'p>>",
         "columnDefs": [
             {
-                "width": "10%",
+                "width": "20%",
                 "targets": 0
             },
             {
-                "width": "15%",
+                "width": "12%",
                 "targets": 1
             },
             {
-                "width": "15%",
+                "width": "18%",
                 "targets": 2
             },
             {
@@ -465,20 +596,41 @@
                 "targets": 3
             },
             {
-                "width": "10%",
+                "width": "14%",
                 "targets": 4
             },
-        ]
-        //        "paging":         false
+            {
+                "width": "12%",
+                "targets": 5
+            },
+            {
+                "width": "12%",
+                "targets": 6
+            }
+        ],
+        "language": {
+            "emptyTable": "No data available in table",
+            "zeroRecords": "No client found or incorrect spelling, check the spelling of client",
+            "info": "Showing _START_ to _END_ of _TOTAL_ entries",
+            "infoEmpty": "Showing 0 to 0 of 0 entries",
+            "infoFiltered": "(filtered from _MAX_ total entries)",
+            "paginate": {
+                "first": "First",
+                "last": "Last",
+                "next": "Next",
+                "previous": "Previous"
+            }
+        }
     });
+    table.columns.adjust().draw();
 
     $(document).ready(function () {
 
         var debouncedAgreementSearch = debounce(function () {
-            table.column(0).search($('#agreementClientSearch').val()).draw();
+            table.draw();
         }, 200);
 
-        $('#agreementClientSearch').on('input', debouncedAgreementSearch);
+        $('#agreementClientSearch').on('input keyup change', debouncedAgreementSearch);
 
         var pendingAgreementReport = null;
         var pendingAgreementFormat = null;

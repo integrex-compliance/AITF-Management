@@ -10,6 +10,17 @@ function respond($success, $message) {
     exit;
 }
 
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+$hp_role = trim($_SESSION['role'] ?? '');
+$isMarketingHead = in_array($hp_role, array('Marketing Head', 'Marketing Executive'), true)
+    || strtolower(str_replace(' ', '', $hp_role)) === 'marketinghead'
+    || (isset($_SESSION['username']) && strtolower(trim($_SESSION['username'])) === 'marketingh');
+$isOfficeStaff = in_array($hp_role, array('Office Staff-A', 'Office Staff-B'), true)
+    || in_array(strtolower(str_replace(array(' ', '-'), '', $hp_role)), array('officestaffa', 'officestaffb'), true);
+
 $fromDate = $_POST['fromDate'] ?? '';
 $toDate = $_POST['toDate'] ?? '';
 $serviceType = $_POST['serviceType'] ?? '';
@@ -104,10 +115,36 @@ try {
 
     $filteredCustomers = [];
     foreach ($listOfCustomer as $customer) {
-        if ($clientName != '' && stripos($customer['customer_name'], $clientName) === false) continue;
+        $derivedStatus = hpDerivedStatus($customer, $serviceMap);
+
+        if ($isMarketingHead && in_array($derivedStatus, array('Active', 'Withdrawn', 'Withdrawal', 'Withdraw'), true)) {
+            continue;
+        }
+
+        $isCurrentOrRecent = empty($customer['certification_date']) || ($customer['certification_date'] >= date('Y-m-01', strtotime('-1 month')));
+        if ($clientName != '') {
+            $searchVal = strtolower(trim($clientName));
+            $custName = strtolower(trim($customer['customer_name'] ?? ''));
+            $uniqId = strtolower(trim($customer['unique_id'] ?? ''));
+            $isMatch = (stripos($custName, $searchVal) !== false || stripos($uniqId, $searchVal) !== false);
+            if (!$isMatch) {
+                continue;
+            }
+            if ($isOfficeStaff && !$isCurrentOrRecent) {
+                if ($custName !== $searchVal && $uniqId !== $searchVal) {
+                    continue;
+                }
+            }
+        } else {
+            if ($isOfficeStaff && empty($fromDate) && empty($toDate)) {
+                if (!$isCurrentOrRecent) {
+                    continue;
+                }
+            }
+        }
         if ($serviceType != '' && strcasecmp($customer['next_service'], $serviceType) !== 0) continue;
         if ($statusFilter != '') {
-            if (hpDerivedStatus($customer, $serviceMap) !== $statusFilter) continue;
+            if ($derivedStatus !== $statusFilter) continue;
         }
 
         $sid = isset($serviceNonSpMap[$customer['id']]) ? $serviceNonSpMap[$customer['id']] : null;

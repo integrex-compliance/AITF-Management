@@ -61,18 +61,26 @@ if (!function_exists('aitf_auditor_allowed_scripts')) {
     {
         // Lowercase basenames. Everything NOT listed here is denied for auditors.
         return array(
-            // Auth / session
-            'login.php', 'logout.php', 'login.php', 'createaccount.php',
+            // Auth / session / profile
+            'login.php', 'logout.php', 'createaccount.php',
             'changepassword.php', 'index.php',
-            // Auditor portal pages and conditionally allowed pages (controlled by header.php)
-            'auditordashboard.php', 'auditorcustomeraccount.php', 'homepage.php', 'invoicepage.php', 'billspage.php',
-            'invoicepdf.php', 'finalinvoicepdf.php', 'finalinvoice.php', 'invoicemailsend.php', 'mailattach.php',
-            'exporthomereport.php', 'exporthomereportexcel.php', 'emailhomereport.php', 'updatecustomer.php',
-            // Client account page (internally restricted to the auditor's services)
-            'customeraccount.php',
-            // Service document upload endpoints (ownership enforced below)
-            'servicetypeca.php', 'servicetypesai.php', 'servicetypesaii.php', 'servicetyperc.php',
-            // Audit-workflow forms the auditor is allowed to fill
+
+            // Auditor portal & client view pages
+            'auditordashboard.php', 'auditorcustomeraccount.php',
+            'customeraccount.php', 'homepage.php', 'auditplanning.php',
+            'invoicepage.php', 'billspage.php',
+            'invoicepdf.php', 'finalinvoicepdf.php', 'finalinvoice.php',
+            'invoicemailsend.php', 'mailattach.php',
+            'exporthomereport.php', 'exporthomereportexcel.php',
+            'emailhomereport.php', 'exportauditplanningreport.php',
+            'exportauditorchecklistexcel.php', 'updatecustomer.php',
+
+            // Service document upload endpoints
+            'servicetypeca.php', 'servicetypesai.php', 'servicetypesaii.php',
+            'servicetyperc.php', 'servicetypeptr.php', 'servicetypecr.php',
+            'servicetypesp.php', 'servicetypeta.php',
+
+            // Audit workflow form/modal endpoints (Add / Update / Save)
             'auditapplication.php', 'getauditapplication.php',
             'addcontractreview.php', 'updatecontractreview.php', 'contractdetails.php',
             'addauditnotification.php', 'addauditnotificationii.php', 'getnotificationinfo.php',
@@ -83,18 +91,46 @@ if (!function_exists('aitf_auditor_allowed_scripts')) {
             'addcontrolformat1.php', 'addcontrolformat2.php',
             'addcustomersurvey.php', 'csa.php', 'addannexiimodel.php',
             'getinfoupdationreview.php', 'saveinfoupdationreview.php',
-            'sendstagenotificationmail.php',
-            // Read-only lookups used by the allowed forms
+            'sendstagenotificationmail.php', 'sendcdcmail.php',
+            'editcadates.php', 'addcomments.php', 'savecomments.php',
+
+            // Audit workflow download / print / PDF endpoints
+            'auditnotificationandassignment.php',
+            'auditnotificationstage2.php',
+            'auditschedule.php',
+            'surveillanceaudit1.php',
+            'surveillanceaudit2.php',
+            'servelance1.php',
+            'servelance2.php',
+            'contractreview1.php',
+            'contractreview.php',
+            'assessmentplanning.php',
+            'customersatisfaction.php',
+            'controlformat-1.php',
+            'controlformat-2.php',
+            'f7.32anex-1.php',
+            'f7.32anex-2.php',
+            '32anex-1.php',
+            '32anex-2.php',
+            'cdcrecomendation.php',
+            'certificateprintpdf.php',
+            'generate_certificate.php',
+            'download_certificate.php',
+            'download_file.php',
+
+            // Read-only lookups / APIs used by allowed pages and forms
             'getclientinfo.php', 'checkcustomer.php', 'checkservicetype.php',
             'mastergetdata.php', 'fetch_nace_classes.php', 'get_allotment_only.php',
             'getcacertificatenumber.php', 'getcertificatenumbers.php',
-            'ai_document_review_api.php',
+            'ai_document_review_api.php', 'datechronologycheck.php',
             
-            // Auditor assignment views
+            // Auditor assignment & application views
             'applicationreceived.php', 'applicationreceivedview.php', 
-            'info_updation_view.php', 'nc_closing_form_view.php', 
+            'info_updation_view.php', 'info_updation_form.php',
+            'nc_closing_form_view.php', 'fill_nc_closing_form.php', 
             'submitjobapplication.php',
-            'downloadonlineapplication.php', 'info_updation_pdf.php', 'nc_closing_pdf.php'
+            'downloadonlineapplication.php', 'info_updation_pdf.php',
+            'nc_closing_pdf.php', 'downloadinfoupdationreview.php'
         );
     }
 }
@@ -169,7 +205,7 @@ if (!function_exists('aitf_auditor_enforce_access')) {
 
         // A valid auditor session must carry auditor_id.
         if (empty($_SESSION['auditor_id'])
-            && !in_array($script, array('login.php', 'logout.php', 'login.php', 'createaccount.php', 'index.php'), true)) {
+            && !in_array($script, array('login.php', 'logout.php', 'createaccount.php', 'index.php'), true)) {
             aitf_auditor_deny_request('missing_auditor_id');
         }
 
@@ -180,11 +216,15 @@ if (!function_exists('aitf_auditor_enforce_access')) {
             'servicetypeca.php' => 'CA',
             'servicetypesai.php' => 'SA-I',
             'servicetypesaii.php' => 'SA-II',
-            'servicetyperc.php' => 'RC'
+            'servicetyperc.php' => 'RC',
+            'servicetypeptr.php' => 'PTR',
+            'servicetypecr.php' => 'CR',
+            'servicetypesp.php' => 'SP',
+            'servicetypeta.php' => 'TA'
         );
 
         if (isset($uploadEndpointTypes[$script])) {
-            $customerId = (int)($_POST['customerid'] ?? $_POST['dataid'] ?? $_POST['customerId'] ?? 0);
+            $customerId = (int)($_POST['customerid'] ?? $_POST['dataid'] ?? $_POST['customerId'] ?? $_POST['spCustomerId'] ?? 0);
             $dataService = trim((string)($_POST['dataService'] ?? ''));
             if ($customerId <= 0 || $dataService === '') {
                 // Blocks the "create new service" branch of these endpoints.
@@ -196,12 +236,13 @@ if (!function_exists('aitf_auditor_enforce_access')) {
 
         // Generic customer-scoped requests: whenever the request references a
         // customer, it must be one of the auditor's own clients.
-        $customerParams = array('customerid', 'customerId', 'customer_id', 'customer', 'cid', 'clientId', 'client_id');
-        foreach ($customerParams as $param) {
-            $value = $_POST[$param] ?? $_GET[$param] ?? null;
-            if ($value !== null && $value !== '' && ctype_digit((string)$value)) {
-                aitf_auditor_assert_customer_access($db, (int)$value);
-                break;
+        $targetCustomerKeys = array('customerid', 'customer_id', 'customer', 'cid', 'clientid', 'client_id', 'customid', 'spcustomerid', 'client');
+        foreach (array_merge($_GET, $_POST) as $paramKey => $val) {
+            if (in_array(strtolower((string)$paramKey), $targetCustomerKeys, true)) {
+                if ($val !== null && $val !== '' && ctype_digit((string)$val)) {
+                    aitf_auditor_assert_customer_access($db, (int)$val);
+                    break;
+                }
             }
         }
     }

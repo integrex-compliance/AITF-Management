@@ -74,6 +74,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
 
     if ($_POST['action'] === 'delete' && isset($_POST['job_id'])) {
+        if (!isset($_SESSION)) {
+            require_once __DIR__ . '/include/session_helper.php';
+            aitf_start_session();
+        }
+        $isTopMgmt = (isset($_SESSION['role']) && trim($_SESSION['role']) === 'Top Mgmt') || (function_exists('aitf_is_top_management_role') && aitf_is_top_management_role());
+        if (!$isTopMgmt) {
+            echo json_encode(['status' => 'error', 'message' => 'You are not allowed to perform this action. Only Top Management can delete the form.']);
+            exit;
+        }
+
         $stmt = $db->prepare("SELECT resume_path FROM job_applications WHERE id = ?");
         $stmt->execute([(int)$_POST['job_id']]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);

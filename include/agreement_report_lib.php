@@ -45,6 +45,15 @@ function fetchAgreementReportData($db, $fromDate, $toDate, $clientName) {
             WHERE ci.is_deleted = 'NO'";
 
     $params = array();
+
+    $invRole = trim($_SESSION['role'] ?? '');
+    $isMarketingHead = in_array($invRole, array('Marketing Head', 'Marketing Executive'), true)
+        || strtolower(str_replace(' ', '', $invRole)) === 'marketinghead'
+        || (isset($_SESSION['username']) && strtolower(trim($_SESSION['username'])) === 'marketingh');
+    $isOfficeStaff = in_array($invRole, array('Office Staff-A', 'Office Staff-B'), true)
+        || in_array(strtolower(str_replace(array(' ', '-'), '', $invRole)), array('officestaffa', 'officestaffb'), true);
+    $isRestrictedRole = $isMarketingHead || $isOfficeStaff;
+
     if ($fromDate !== '') {
         $sql .= " AND ca.aggrement_date >= :fromDate";
         $params[':fromDate'] = agreementReportDateForSql($fromDate);
@@ -54,8 +63,17 @@ function fetchAgreementReportData($db, $fromDate, $toDate, $clientName) {
         $params[':toDate'] = agreementReportDateForSql($toDate);
     }
     if ($clientName !== '') {
-        $sql .= " AND ci.customer_name LIKE :clientName";
         $params[':clientName'] = '%' . $clientName . '%';
+        if ($isRestrictedRole && $fromDate === '' && $toDate === '') {
+            $params[':exactClient'] = $clientName;
+            $sql .= " AND (ci.customer_name = :exactClient OR ca.aggrement_date >= DATE_FORMAT(CURDATE() - INTERVAL 1 MONTH, '%Y-%m-01')) AND ci.customer_name LIKE :clientName";
+        } else {
+            $sql .= " AND ci.customer_name LIKE :clientName";
+        }
+    } else {
+        if ($isRestrictedRole && $fromDate === '' && $toDate === '') {
+            $sql .= " AND ca.aggrement_date >= DATE_FORMAT(CURDATE() - INTERVAL 1 MONTH, '%Y-%m-01')";
+        }
     }
 
     $sql .= " ORDER BY ca.aggrement_date DESC, ca.id DESC";

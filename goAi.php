@@ -8,8 +8,8 @@
     include_once './include/ai_document_review_lib.php';
     date_default_timezone_set('Asia/Kolkata');
 
-    if (Utitlity::checkClient() || Utitlity::checkExternalUser()) {
-        header("Location: homePage.php");
+    if (!aitf_has_access("Go AI") || Utitlity::checkClient() || Utitlity::checkExternalUser()) {
+        echo "<script>window.location.href='homePage.php';</script>";
         exit;
     }
 

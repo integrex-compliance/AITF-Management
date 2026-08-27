@@ -4,6 +4,11 @@
     include 'header.php';
     include 'dbConnect.php';
 
+    if (!aitf_has_access("Doc Upload Status")) {
+        echo "<script>window.location.href='homePage.php';</script>";
+        exit;
+    }
+
     //    Service CR
     $crAuditApplication = "SELECT cr.cr_id, service, customer_id, application_form, ci.customer_name FROM service_type_cr cr LEFT JOIN customer_info ci on cr.customer_id = ci.id WHERE application_form like '%scanning%' and is_deleted = 'NO' and ci.audit_status <> 'Application canceled' ORDER BY ci.customer_name";
     $statement = $db->prepare($crAuditApplication);

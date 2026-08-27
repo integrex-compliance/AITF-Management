@@ -3,6 +3,12 @@
     $pageIdentifier = "Auditor Checklist";
     include 'header.php';
     include 'dbConnect.php';
+
+    if (!aitf_has_access("Audit Data")) {
+        echo "<script>window.location.href='homePage.php';</script>";
+        exit;
+    }
+
     include_once './include/cdc_iso_metadata.php';
     date_default_timezone_set('Asia/Kolkata');
 

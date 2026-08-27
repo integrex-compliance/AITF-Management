@@ -339,7 +339,8 @@ if (isset($_POST["audit-noti-id-edit"]) && !empty($_POST["audit-noti-id-edit"]))
             $alldates = NULL;
         }
 
-        if (!validateStage1IntimationDate($db, $service, $_POST['intimationDate'])) {
+        $checkServiceId = !empty($service) ? $service : (isset($_POST['audit-noti-service1']) ? $_POST['audit-noti-service1'] : '');
+        if (!validateStage1IntimationDate($db, $checkServiceId, $_POST['intimationDate'])) {
             echo 'Date should be greater than or equal to assessment planning date';
             exit;
         }
@@ -349,11 +350,23 @@ if (isset($_POST["audit-noti-id-edit"]) && !empty($_POST["audit-noti-id-edit"]))
             $auditorlist = $auditorlist . $auditor . ", ";
         }
 
-        if (isset($_POST["audit-service-type"]) && ($_POST["audit-service-type"] == "CA" || $_POST["audit-service-type"] == "RC") || $_POST["audit-service-type"] == "PTR" || $_POST["audit-service-type"] == "SP" || $_POST["audit-service-type"] == "TA") {
+        $rawServiceType = isset($_POST["audit-service-type"]) ? trim($_POST["audit-service-type"]) : '';
+        if (empty($rawServiceType) && isset($_POST["audti-service-type"])) {
+            $rawServiceType = trim($_POST["audti-service-type"]);
+        }
+        if ($rawServiceType === 'service-type-ca') $rawServiceType = 'CA';
+        if ($rawServiceType === 'service-type-rc') $rawServiceType = 'RC';
+        if ($rawServiceType === 'service-type-sai') $rawServiceType = 'SA-I';
+        if ($rawServiceType === 'service-type-saii') $rawServiceType = 'SA-II';
+        if ($rawServiceType === 'service-type-sp') $rawServiceType = 'SP';
+        if ($rawServiceType === 'service-type-ta') $rawServiceType = 'TA';
+        if ($rawServiceType === 'service-type-ptr') $rawServiceType = 'PTR';
+
+        if (in_array($rawServiceType, array('CA', 'RC', 'PTR', 'SP', 'TA'))) {
             $service_id = "INSERT INTO service (service_type, customer_id) VALUES (:svctype, :customerID)";
             $statement = $db->prepare($service_id);
             $statement->bindParam(':customerID', $_POST['audit-noti-customer']);
-            $statement->bindParam(':svctype', $_POST['audit-service-type']);
+            $statement->bindParam(':svctype', $rawServiceType);
             $statement->execute();
 
             $sql = "SELECT max(LAST_INSERT_ID(service_id)) as id From service";
@@ -362,7 +375,7 @@ if (isset($_POST["audit-noti-id-edit"]) && !empty($_POST["audit-noti-id-edit"]))
             $row = $statement->fetch();
             $serviceid = $row['id'];
 
-            if ($_POST["audit-service-type"] == "CA") {
+            if ($rawServiceType == "CA") {
                 $casvc = "INSERT INTO `service_type_ca`(`service`, `customer_id`) VALUES (:svc, :customerID)";
                 $statement = $db->prepare($casvc);
                 $statement->bindParam(":svc", $serviceid);
@@ -379,7 +392,7 @@ if (isset($_POST["audit-noti-id-edit"]) && !empty($_POST["audit-noti-id-edit"]))
                 $statement = $db->prepare($sql);
                 $statement->bindParam(":customer", $_POST['audit-noti-customer']);
                 $statement->execute();
-            } else if ($_POST["audit-service-type"] == "RC") {
+            } else if ($rawServiceType == "RC") {
 //                echo "in rc insert"; die;
                 $rcsvc = "INSERT INTO `service_type_rc`(`service`, `rc_customer`) VALUES (:svc, :customerID)";
                 $statement = $db->prepare($rcsvc);
@@ -397,7 +410,7 @@ if (isset($_POST["audit-noti-id-edit"]) && !empty($_POST["audit-noti-id-edit"]))
                 $statement = $db->prepare($sql);
                 $statement->bindParam(":customer", $_POST['audit-noti-customer']);
                 $statement->execute();
-            } else if ($_POST["audit-service-type"] == "PTR") {
+            } else if ($rawServiceType == "PTR") {
                 $ptrsvc = "INSERT INTO service_type_ptr(service, customer_id) VALUES (:svc, :customerID)";
                 $statement = $db->prepare($ptrsvc);
                 $statement->bindParam(":svc", $serviceid);
@@ -409,7 +422,7 @@ if (isset($_POST["audit-noti-id-edit"]) && !empty($_POST["audit-noti-id-edit"]))
                 $statement->execute();
                 $row1 = $statement->fetch();
                 $service = $row1['id'];
-            } else if ($_POST["audit-service-type"] == "SP") {
+            } else if ($rawServiceType == "SP") {
                 $spservice = "INSERT INTO `service_type_sp`(`service`, `sp_customer`) VALUES (:svc, :customerID)";
                 $statement = $db->prepare($spservice);
                 $statement->bindParam(":svc", $serviceid);
@@ -421,7 +434,7 @@ if (isset($_POST["audit-noti-id-edit"]) && !empty($_POST["audit-noti-id-edit"]))
                 $statement->execute();
                 $row1 = $statement->fetch();
                 $service = $row1['id'];
-            } else if ($_POST["audit-service-type"] == "TA") {
+            } else if ($rawServiceType == "TA") {
                 $taservice = "INSERT INTO `service_type_ta`(`service_id`, `customer_id`) VALUES (:svc, :customerID)";
                 $statement = $db->prepare($taservice);
                 $statement->bindParam(":svc", $serviceid);

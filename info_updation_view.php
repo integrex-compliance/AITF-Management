@@ -16,16 +16,21 @@ $success = '';
 
 // Handle delete action
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_app') {
-    $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
-    if ($id > 0) {
-        try {
-            $stmt = $db->prepare("DELETE FROM information_updation_forms WHERE id = :id");
-            $stmt->bindParam(':id', $id, PDO::PARAM_INT);
-            $stmt->execute();
-            header('Location: applicationReceived.php?deleted=1');
-            exit;
-        } catch (Exception $e) {
-            $error = "Error deleting submission: " . $e->getMessage();
+    $isTopMgmt = (isset($_SESSION['role']) && trim($_SESSION['role']) === 'Top Mgmt') || (function_exists('aitf_is_top_management_role') && aitf_is_top_management_role());
+    if (!$isTopMgmt) {
+        $error = 'You are not allowed to perform this action. Only Top Management can delete the form.';
+    } else {
+        $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
+        if ($id > 0) {
+            try {
+                $stmt = $db->prepare("DELETE FROM information_updation_forms WHERE id = :id");
+                $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+                $stmt->execute();
+                header('Location: applicationReceived.php?deleted=1');
+                exit;
+            } catch (Exception $e) {
+                $error = "Error deleting submission: " . $e->getMessage();
+            }
         }
     }
 }

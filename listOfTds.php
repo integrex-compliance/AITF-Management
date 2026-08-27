@@ -7,10 +7,18 @@
     include_once './dbConnect.php';
     date_default_timezone_set('Asia/Kolkata');
 
+    $tdsRole = trim($_SESSION['role'] ?? '');
+    $isMarketingHead = in_array($tdsRole, array('Marketing Head', 'Marketing Executive'), true)
+        || strtolower(str_replace(' ', '', $tdsRole)) === 'marketinghead'
+        || (isset($_SESSION['username']) && strtolower(trim($_SESSION['username'])) === 'marketingh');
+    $isOfficeStaff = in_array($tdsRole, array('Office Staff-A', 'Office Staff-B'), true)
+        || in_array(strtolower(str_replace(array(' ', '-'), '', $tdsRole)), array('officestaffa', 'officestaffb'), true);
+    $isRestrictedRole = $isMarketingHead || $isOfficeStaff;
+
     $status = $_GET['status'] ?? 'all';
     $startDateStr = $_GET['startDate'] ?? '';
     $endDateStr = $_GET['endDate'] ?? '';
-    $clientSearch = $_GET['clientSearch'] ?? '';
+    $clientSearch = trim($_GET['clientSearch'] ?? '');
     $sortOrder = $_GET['sortOrder'] ?? '';
 
     $startDate = '';
@@ -43,20 +51,6 @@
         $allTds .= " AND ps.payment_received > 0";
     } elseif ($status == 'not_received') {
         $allTds .= " AND (ps.payment_received IS NULL OR ps.payment_received = 0 OR ps.payment_received = '' OR ps.payment_received = '0.00' OR ps.payment_received = '0')";
-    }
-
-    if (!empty($clientSearch)) {
-        $allTds .= " AND ci.customer_name LIKE :clientSearch";
-        $params[':clientSearch'] = '%' . $clientSearch . '%';
-    }
-
-    if (!empty($startDate)) {
-        $allTds .= " AND ps.payment_date >= :startDate";
-        $params[':startDate'] = $startDate;
-    }
-    if (!empty($endDate)) {
-        $allTds .= " AND ps.payment_date <= :endDate";
-        $params[':endDate'] = $endDate;
     }
 
     if ($sortOrder == 'high') {
@@ -92,6 +86,10 @@
     if (!empty($clientSearch)) {
         $newTdsQuery .= " AND ci.customer_name LIKE :clientSearch2";
         $newTdsParams[':clientSearch2'] = '%' . $clientSearch . '%';
+    } else {
+        if ($isRestrictedRole && empty($startDate) && empty($endDate)) {
+            $newTdsQuery .= " AND sp.payment_date >= DATE_FORMAT(CURDATE() - INTERVAL 1 MONTH, '%Y-%m-01')";
+        }
     }
     if (!empty($startDate)) {
         $newTdsQuery .= " AND sp.payment_date >= :startDate2";
@@ -512,7 +510,7 @@
                                         </div>
                                         <div class="invoice-filter-item item-client">
                                             <label for="clientSearch">Client Name</label>
-                                            <input type="text" name="clientSearch" id="clientSearch" value="<?php echo $clientSearch; ?>" placeholder="Search Client..." onkeyup="if(event.keyCode == 13) $('#filterForm').submit()">
+                                            <input type="text" name="clientSearch" id="clientSearch" value="<?php echo htmlspecialchars($clientSearch); ?>" placeholder="Search Client..." autocomplete="off">
                                         </div>
                                         <div class="invoice-filter-item">
                                             <label for="startDate">From Date</label>
@@ -662,6 +660,133 @@
 </div>
 
 <script type="text/javascript">
+    function debounce(callback, delay) {
+        var timer;
+        return function () {
+            var context = this;
+            var args = arguments;
+            clearTimeout(timer);
+            timer = setTimeout(function () {
+                callback.apply(context, args);
+            }, delay);
+        };
+    }
+
+    function normalizeSearchText(val) {
+        return (val || "").toString().toLowerCase().replace(/\s+/g, " ").trim();
+    }
+
+    function compareMinDates(filterDate, rowDate) {
+        if (!filterDate || !rowDate) return true;
+        var filterDateSplit = filterDate.split(".");
+        var rowDateSplit = rowDate.split(".");
+        if (filterDateSplit.length === 3 && rowDateSplit.length === 3) {
+            if (parseInt(filterDateSplit[2], 10) < parseInt(rowDateSplit[2], 10)) {
+                return true;
+            } else if (filterDateSplit[2] === rowDateSplit[2]) {
+                if (parseInt(filterDateSplit[1], 10) < parseInt(rowDateSplit[1], 10)) {
+                    return true;
+                } else if (filterDateSplit[1] === rowDateSplit[1]) {
+                    return parseInt(filterDateSplit[0], 10) <= parseInt(rowDateSplit[0], 10);
+                }
+            }
+        }
+        return false;
+    }
+
+    function compareMaxDates(filterDate, rowDate) {
+        if (!filterDate || !rowDate) return true;
+        var filterDateSplit = filterDate.split(".");
+        var rowDateSplit = rowDate.split(".");
+        if (filterDateSplit.length === 3 && rowDateSplit.length === 3) {
+            if (parseInt(filterDateSplit[2], 10) > parseInt(rowDateSplit[2], 10)) {
+                return true;
+            } else if (filterDateSplit[2] === rowDateSplit[2]) {
+                if (parseInt(filterDateSplit[1], 10) > parseInt(rowDateSplit[1], 10)) {
+                    return true;
+                } else if (filterDateSplit[1] === rowDateSplit[1]) {
+                    return parseInt(filterDateSplit[0], 10) >= parseInt(rowDateSplit[0], 10);
+                }
+            }
+        }
+        return false;
+    }
+
+    var isRestrictedRole = <?php echo ($isRestrictedRole) ? 'true' : 'false'; ?>;
+
+    $.fn.DataTable.ext.search.push(
+        function (settings, data, dataIndex) {
+            if (settings.nTable.id !== 'table_finance_details') {
+                return true;
+            }
+
+            var clientSearch = ($("#clientSearch").val() || "").trim();
+            var fromDate = ($("#startDate").val() || "").trim();
+            var toDate = ($("#endDate").val() || "").trim();
+
+            var rowUniqueId = normalizeSearchText(data[0] || "");
+            var rowClient = normalizeSearchText(data[1] || "");
+            var rowServiceType = normalizeSearchText(data[2] || "");
+            var dateValue = (data[5] || "").replace(/<[^>]*>/g, "").trim();
+
+            var searchVal = normalizeSearchText(clientSearch);
+            var isCurrentOrRecent = true;
+            if (dateValue !== "") {
+                var parts = dateValue.split(".");
+                if (parts.length === 3) {
+                    var day = parseInt(parts[0], 10);
+                    var month = parseInt(parts[1], 10) - 1;
+                    var year = parseInt(parts[2], 10);
+                    var entryDate = new Date(year, month, day);
+
+                    var now = new Date();
+                    // 1st day of the previous month at 00:00:00
+                    var firstDayOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
+                    if (entryDate < firstDayOfPrevMonth) {
+                        isCurrentOrRecent = false;
+                    }
+                }
+            }
+
+            // 1. Client Search:
+            // When client search has text, show all matching records.
+            // When client search is empty, restrict view to current month + past 1 month (or undated/pending entries) for restricted roles.
+            if (clientSearch !== "") {
+                var isMatch = (rowClient.indexOf(searchVal) !== -1 || rowUniqueId.indexOf(searchVal) !== -1 || rowServiceType.indexOf(searchVal) !== -1);
+                if (!isMatch) {
+                    return false;
+                }
+                // For restricted roles: past records (older than 1 month) are ONLY unlocked when full client name/unique ID is typed
+                if (isRestrictedRole && !isCurrentOrRecent) {
+                    var isExactMatch = (rowClient === searchVal || rowUniqueId === searchVal);
+                    if (!isExactMatch) {
+                        return false;
+                    }
+                }
+            } else {
+                if (isRestrictedRole) {
+                    if (!isCurrentOrRecent) {
+                        return false;
+                    }
+                }
+            }
+
+            // 2. Custom From Date and To Date filters
+            if (fromDate !== "" || toDate !== "") {
+                if (dateValue === "") {
+                    return false;
+                }
+                var isFrom = (fromDate !== "") ? compareMinDates(fromDate, dateValue) : true;
+                var isTo = (toDate !== "") ? compareMaxDates(toDate, dateValue) : true;
+                if (!isFrom || !isTo) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+    );
+
     $(document).ready(function () {
         var pendingTdsReport = null;
         var pendingTdsFormat = null;
@@ -829,6 +954,19 @@
             }
         });
 
+        var debouncedTdsSearch = debounce(function () {
+            table.draw();
+        }, 150);
+
+        $('#clientSearch').on('input keyup change', debouncedTdsSearch);
+        $('#startDate, #endDate').on('change', function () {
+            table.draw();
+        });
+        $('#filterForm').on('submit', function (e) {
+            e.preventDefault();
+            table.draw();
+        });
+
         // Use a slight delay to ensure all scripts are fully loaded
         setTimeout(function() {
             if (typeof $.fn.datepicker !== 'undefined') {
@@ -840,7 +978,7 @@
                     yearRange: "-20:+100",
                     dateFormat: 'dd.mm.yy',
                     onSelect: function() {
-                        $('#filterForm').submit();
+                        table.draw();
                     }
                 });
             }
@@ -849,16 +987,33 @@
         var table = $('#table_finance_details').DataTable({
             "scrollY": '70vh',
             "scrollCollapse": true,
-            "paging": false,
+            "paging": true,
+            "pageLength": 50,
             "ordering": false,
             "lengthChange": false,
+            "dom": "tr<'row dt-bottom-row'<'col-sm-6 col-xs-12'i><'col-sm-6 col-xs-12'p>>",
             "columnDefs": [
-                { "width": "10%", "targets": 0 },
-                { "width": "15%", "targets": 1 },
-                { "width": "15%", "targets": 2 },
-                { "width": "12%", "targets": 3 },
-                { "width": "10%", "targets": 4 },
-            ]
+                { "width": "12%", "targets": 0 },
+                { "width": "18%", "targets": 1 },
+                { "width": "14%", "targets": 2 },
+                { "width": "14%", "targets": 3 },
+                { "width": "12%", "targets": 4 },
+                { "width": "10%", "targets": 5 },
+                { "width": "20%", "targets": 6 }
+            ],
+            "language": {
+                "emptyTable": "No TDS records available in table",
+                "zeroRecords": "No client found or incorrect spelling, check the spelling of client",
+                "info": "Showing _START_ to _END_ of _TOTAL_ entries",
+                "infoEmpty": "Showing 0 to 0 of 0 entries",
+                "infoFiltered": "(filtered from _MAX_ total entries)",
+                "paginate": {
+                    "first": "First",
+                    "last": "Last",
+                    "next": "Next",
+                    "previous": "Previous"
+                }
+            }
         });
 
         $("#menu-toggle").click(function (e) {

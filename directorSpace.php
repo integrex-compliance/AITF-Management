@@ -90,7 +90,7 @@ $todayLoginCount = count($todayActivities);
                                 document.getElementById('greetingText').innerText = g + ', Managing Director';
                             })();
                         </script>
-                        <p class="hero-subtitle">Real-time workforce intelligence, employee records, and system administration.</p>
+                        <p class="hero-subtitle"> Workforce management, employee records administration.</p>
                         
                         <div class="hero-stats">
                             <div class="hero-stat-card">
@@ -104,7 +104,7 @@ $todayLoginCount = count($todayActivities);
                                 <div class="stat-icon-wrap icon-green"><i class="fa fa-dot-circle-o"></i></div>
                                 <div class="stat-info">
                                     <span class="stat-label">Active Online</span>
-                                    <span class="stat-value"><?php echo count($activeUsers); ?> <small class="stat-unit">Live Sessions</small></span>
+                                    <span class="stat-value"><?php echo count($activeUsers); ?> <small class="stat-unit">Live status</small></span>
                                 </div>
                             </div>
                             <div class="hero-stat-card">
@@ -120,7 +120,7 @@ $todayLoginCount = count($todayActivities);
                     <div class="hero-right">
                         <div class="modern-team-card">
                             <div class="team-card-top">
-                                <h3 class="team-card-title"><span class="live-dot-pulse"></span> Live Team Presence</h3>
+                                <h3 class="team-card-title"><span class="live-dot-pulse"></span> Live Team </h3>
                                 <span class="team-live-pill"><?php echo count($activeUsers); ?> Online</span>
                             </div>
                             <div class="team-avatar-group">
@@ -257,7 +257,7 @@ $todayLoginCount = count($todayActivities);
                                 <div class="premium-card">
                                     <div class="card-header">
                                         <h2>Add Employment Record</h2>
-                                        <p>Register a new employee in the company records.</p>
+                                        <p>Register a new employee.</p>
                                     </div>
                                     <div class="card-body">
                                         <form action="addEmploymentRecord.php" method="post" class="premium-form" id="hrForm">

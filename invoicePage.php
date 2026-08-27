@@ -9,9 +9,17 @@
     include_once './include/customer_feature_flags.php';
     require_once './utility.php';
 
+    $invRole = trim($_SESSION['role'] ?? '');
+    $isMarketingHead = in_array($invRole, array('Marketing Head', 'Marketing Executive'), true)
+        || strtolower(str_replace(' ', '', $invRole)) === 'marketinghead'
+        || (isset($_SESSION['username']) && strtolower(trim($_SESSION['username'])) === 'marketingh');
+    $isOfficeStaff = in_array($invRole, array('Office Staff', 'Office Staff-A', 'Office Staff-B'), true)
+        || in_array(strtolower(str_replace(array(' ', '-'), '', $invRole)), array('officestaff', 'officestaffa', 'officestaffb'), true);
+    $isRestrictedRole = $isMarketingHead || $isOfficeStaff;
+
     $fullInvoiceAccessEnabled = aitfCustomerFeatureIsEnabled($db, 'full_invoice_access_enabled');
     $isDirector = Utitlity::checkForDirector();
-    $restrictInvoiceList = (!$fullInvoiceAccessEnabled && !$isDirector);
+    $restrictInvoiceList = (!$fullInvoiceAccessEnabled && !$isDirector && !Utitlity::checkForUserFinance() && !Utitlity::checkForUserAdmin() && !$isRestrictedRole);
 
     $proformaInvoice = "SELECT id.invoice_id, customer_id, profarma_prefix, invoice_no, invoice_date, state, state_code, net_price, igst, cgst, sgst, tax_type, final_amount, invoice_type, pro_inv_sent_count, id.invoice_status, ci.customer_name, ci.audit_status, id, gstin_no FROM invoice_details id left join customer_info ci on id.customer_id = ci.id where id.invoice_type = 'proforma' AND id.is_deleted = 'No' order by invoice_date desc, invoice_no DESC";
 //    $proformaInvoice = "SELECT * FROM invoice_details WHERE invoice_type = 'proforma'";
@@ -373,6 +381,60 @@
             display: none;
         }
 
+        /* ===== Modern DataTable Footer (Showing entries + Pagination) ===== */
+        .dt-bottom-row {
+            margin: 0 !important;
+            padding: 12px 18px !important;
+            border-top: 1px solid #f1f5f9;
+            background: #ffffff;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            flex-wrap: wrap !important;
+            gap: 10px;
+        }
+        .dataTables_wrapper .dataTables_info {
+            padding: 0 !important;
+            margin: 0 !important;
+            font-size: 13px !important;
+            font-weight: 600 !important;
+            color: #475569 !important;
+            line-height: 32px;
+            display: block !important;
+        }
+        .dataTables_wrapper .dataTables_paginate {
+            padding: 0 !important;
+            margin: 0 !important;
+            text-align: right !important;
+        }
+        .dataTables_wrapper .dataTables_paginate ul.pagination {
+            margin: 0 !important;
+            white-space: nowrap;
+        }
+        .dataTables_wrapper .dataTables_paginate .pagination > li > a,
+        .dataTables_wrapper .dataTables_paginate .pagination > li > span {
+            color: #0d4d8b;
+            border-color: #e2e8f0;
+            font-size: 12.5px;
+            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: 6px;
+            margin: 0 2px;
+        }
+        .dataTables_wrapper .dataTables_paginate .pagination > .active > a,
+        .dataTables_wrapper .dataTables_paginate .pagination > .active > span {
+            background: linear-gradient(135deg, #0d4d8b 0%, #1468b3 100%) !important;
+            border-color: #0d4d8b !important;
+            color: #ffffff !important;
+            box-shadow: 0 2px 6px rgba(13, 77, 139, 0.25);
+        }
+        .dataTables_wrapper .dataTables_paginate .pagination > .disabled > a,
+        .dataTables_wrapper .dataTables_paginate .pagination > .disabled > span {
+            color: #94a3b8 !important;
+            border-color: #eef2f6 !important;
+            background-color: #f8fafc !important;
+        }
+
         .invoice-mail-confirm {
             margin-bottom: 12px;
             padding: 10px 12px;
@@ -469,6 +531,33 @@
         html.theme-dark .table td a.mailProformaInvoice:hover,
         html.theme-dark .table td a.mailInvoice:hover { background-color: rgba(124,58,237,0.22); color: #c4b5fd !important; }
         html.theme-dark .table td a.deleteInvoice:hover { background-color: rgba(220,38,38,0.22); color: #fca5a5 !important; }
+
+        /* Dark mode DataTable footer */
+        html.theme-dark .dt-bottom-row {
+            border-top-color: var(--hpd-border) !important;
+            background: var(--hpd-surface) !important;
+        }
+        html.theme-dark .dataTables_wrapper .dataTables_info {
+            color: var(--hpd-text-dim) !important;
+        }
+        html.theme-dark .dataTables_wrapper .dataTables_paginate .pagination > li > a,
+        html.theme-dark .dataTables_wrapper .dataTables_paginate .pagination > li > span {
+            background-color: var(--hpd-surface-2) !important;
+            border-color: var(--hpd-border-2) !important;
+            color: var(--hpd-text) !important;
+        }
+        html.theme-dark .dataTables_wrapper .dataTables_paginate .pagination > .active > a,
+        html.theme-dark .dataTables_wrapper .dataTables_paginate .pagination > .active > span {
+            background: var(--hpd-accent) !important;
+            border-color: var(--hpd-accent) !important;
+            color: #ffffff !important;
+        }
+        html.theme-dark .dataTables_wrapper .dataTables_paginate .pagination > .disabled > a,
+        html.theme-dark .dataTables_wrapper .dataTables_paginate .pagination > .disabled > span {
+            background-color: var(--hpd-surface) !important;
+            border-color: var(--hpd-border) !important;
+            color: var(--hpd-text-faint) !important;
+        }
 
         /* ---- Toolbar / tabs ---- */
         html.theme-dark .invoice-toolbar {
@@ -1301,8 +1390,9 @@
         "ordering": false,
         "lengthChange": false,
         "autoWidth": false,
-//            "pageLength": 10,
-        "paging": true,
+        "pageLength": 50,
+        "info": true,
+        "dom": "tr<'row dt-bottom-row'<'col-sm-6 col-xs-12'i><'col-sm-6 col-xs-12'p>>",
         "columnDefs": [
             { "width": "5%", "targets": 0 },
             { "width": "12%", "targets": 1 },
@@ -1317,8 +1407,17 @@
             { "width": "15%", "targets": 10 } // Particulars
         ],
         "language": {
-            "emptyTable": "<?php echo $restrictInvoiceList ? 'Enter the client name to view invoice' : 'No data available in table'; ?>",
-            "zeroRecords": "<?php echo $restrictInvoiceList ? 'Enter the client name to view invoice' : 'No matching records found'; ?>"
+            "emptyTable": "No data available in table",
+            "zeroRecords": "No client found or incorrect spelling, check the spelling of client",
+            "info": "Showing _START_ to _END_ of _TOTAL_ entries",
+            "infoEmpty": "Showing 0 to 0 of 0 entries",
+            "infoFiltered": "(filtered from _MAX_ total entries)",
+            "paginate": {
+                "first": "First",
+                "last": "Last",
+                "next": "Next",
+                "previous": "Previous"
+            }
         }
     });
 
@@ -1330,8 +1429,9 @@
         "ordering": false,
         "lengthChange": false,
         "autoWidth": false,
-//            "pageLength": 10,
-        "paging": true,
+        "pageLength": 50,
+        "info": true,
+        "dom": "tr<'row dt-bottom-row'<'col-sm-6 col-xs-12'i><'col-sm-6 col-xs-12'p>>",
         "columnDefs": [
             { "width": "5%", "targets": 0 },
             { "width": "12%", "targets": 1 },
@@ -1346,8 +1446,17 @@
             { "width": "15%", "targets": 10 } // Particulars
         ],
         "language": {
-            "emptyTable": "<?php echo $restrictInvoiceList ? 'Enter the client name to view invoice' : 'No data available in table'; ?>",
-            "zeroRecords": "<?php echo $restrictInvoiceList ? 'Enter the client name to view invoice' : 'No matching records found'; ?>"
+            "emptyTable": "No data available in table",
+            "zeroRecords": "No client found or incorrect spelling, check the spelling of client",
+            "info": "Showing _START_ to _END_ of _TOTAL_ entries",
+            "infoEmpty": "Showing 0 to 0 of 0 entries",
+            "infoFiltered": "(filtered from _MAX_ total entries)",
+            "paginate": {
+                "first": "First",
+                "last": "Last",
+                "next": "Next",
+                "previous": "Previous"
+            }
         }
     });
 
@@ -1429,101 +1538,101 @@
         return false;
     }
 
+    function normalizeSearchText(str) {
+        if (!str) return "";
+        return str.replace(/<[^>]*>/g, "")
+                  .replace(/&amp;/g, '&')
+                  .replace(/\s+/g, ' ')
+                  .trim()
+                  .toLowerCase();
+    }
+
+    var isMarketingHead = <?php echo $isMarketingHead ? 'true' : 'false'; ?>;
+    var isOfficeStaff = <?php echo $isOfficeStaff ? 'true' : 'false'; ?>;
+    var isRestrictedRole = <?php echo $isRestrictedRole ? 'true' : 'false'; ?>;
+
     $.fn.DataTable.ext.search.push(
             function (settings, data, dataIndex) {
                 var tableId = settings.nTable.id;
-
-                // --- START RBAC FILTER 2.0 ---
-                try {
-                    <?php
-                    $role = strtolower(trim($_SESSION['role'] ?? ''));
-                    $username = strtolower(trim($_SESSION['username'] ?? ''));
-                    $is_c_double = ($role === 'marketing head' || $role === 'office staff-a' || $role === 'office staff-b' || strpos($username, 'marketing') !== false);
-                    $is_c_single = ($role === 'marketing executive');
-                    ?>
-                    var isCDoubleTick = <?php echo $is_c_double ? 'true' : 'false'; ?>;
-                    var isCSingleTick = <?php echo $is_c_single ? 'true' : 'false'; ?>;
-                    
-                    var dtSearchVal = settings.oPreviousSearch.sSearch || "";
-                    if (dtSearchVal.trim() === '') {
-                        if (isCSingleTick) {
-                            return false;
-                        }
-                        if (isCDoubleTick) {
-                            // Extract date from data[4], e.g., "12.02.2018"
-                            var rowDate = (data[4] || "").toString();
-                            var dateSplit = rowDate.split("~");
-                            var dateStr = dateSplit.length > 1 ? dateSplit[1] : dateSplit[0];
-                            dateStr = dateStr.trim();
-                            
-                            var invDate = null;
-                            if (dateStr !== "") {
-                                var parts = dateStr.split('.');
-                                if (parts.length === 3) {
-                                    invDate = new Date(parts[2], parts[1] - 1, parts[0]);
-                                }
-                            }
-                            
-                            var clientName = (data[1] || "").toString().toLowerCase();
-                            if (clientName.indexOf('(expire)') !== -1 || clientName.indexOf('(withdrawn)') !== -1 || clientName.indexOf('(suspended)') !== -1 || clientName.indexOf('(cancel)') !== -1) {
-                                return false; 
-                            }
-                            
-                            var rowNode = settings.aoData[dataIndex].nTr;
-                            if (rowNode) {
-                                var clientStatus = $(rowNode).attr('data-client-status');
-                                if (clientStatus && clientStatus !== 'Active') {
-                                    return false;
-                                }
-                            }
-                            
-                            if (invDate !== null) {
-                                var now = new Date();
-                                var firstDayOfPrev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-                                if (invDate < firstDayOfPrev) {
-                                    return false;
-                                }
-                            } else {
-                                return false; 
-                            }
-                        }
-                    }
-                } catch(e) {
-                    // Fallback in case of unexpected JS error
-                    return false;
+                if (tableId !== 'table_final_invoice' && tableId !== 'table_proforma_invoice') {
+                    return true;
                 }
-                // --- END RBAC FILTER 2.0 ---
 
-                
-                var fromDate, toDate;
+                var fromDate = "";
+                var toDate = "";
+                var clientSearch = "";
                 if (tableId === 'table_final_invoice') {
-                    fromDate = $("#filterFromDate").val();
-                    toDate = $("#filterToDate").val();
+                    fromDate = $(".filterFromDate").val() || $("#filterFromDate").val() || "";
+                    toDate = $(".filterToDate").val() || $("#filterToDate").val() || "";
+                    clientSearch = ($('#finalClientSearch').val() || "").trim();
                 } else if (tableId === 'table_proforma_invoice') {
-                    fromDate = $("#proformaFromDate").val();
-                    toDate = $("#proformaToDate").val();
-                } else {
-                    return true;
+                    fromDate = $(".proformaFromDate").val() || $("#proformaFromDate").val() || "";
+                    toDate = $(".proformaToDate").val() || $("#proformaToDate").val() || "";
+                    clientSearch = ($('#proformaClientSearch').val() || "").trim();
                 }
-                var isfromDate = false;
-                var isToDate = false;
-                if (fromDate == "" && toDate == "") {
-                    return true;
+
+                var rowClient = normalizeSearchText(data[1] || "");
+                var rowInvoice = normalizeSearchText(data[3] || "");
                 var dateValue = data[4] || "";
                 var dateSplit = dateValue.split("~");
                 // Final invoice date cell is "date~date"; proforma is a single "date".
-                var rowDate = dateSplit.length > 1 ? dateSplit[1] : dateSplit[0];
-                if (fromDate != "") {
-                    isfromDate = compareMinDates(fromDate, rowDate);
-                } else {
-                    isfromDate = true;
+                var rowDate = (dateSplit.length > 1 ? dateSplit[1] : dateSplit[0]) || "";
+                rowDate = rowDate.trim();
+
+                var searchVal = normalizeSearchText(clientSearch);
+                var isCurrentOrRecent = false;
+                if (rowDate !== "") {
+                    var parts = rowDate.split(".");
+                    if (parts.length === 3) {
+                        var day = parseInt(parts[0], 10);
+                        var month = parseInt(parts[1], 10) - 1; // 0-indexed month
+                        var year = parseInt(parts[2], 10);
+                        var invDate = new Date(year, month, day);
+
+                        var now = new Date();
+                        // 1st day of the previous month at 00:00:00
+                        var firstDayOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
+                        if (invDate >= firstDayOfPrevMonth) {
+                            isCurrentOrRecent = true;
+                        }
+                    }
                 }
-                if (toDate != "") {
-                    isToDate = compareMaxDates(toDate, rowDate);
+
+                // 1. Client search (when searching, search across client name, invoice no)
+                if (clientSearch !== "") {
+                    var isMatch = (rowClient.indexOf(searchVal) !== -1 || rowInvoice.indexOf(searchVal) !== -1);
+                    if (!isMatch) {
+                        return false;
+                    }
+                    // For restricted roles (Office Staff-A, Office Staff-B, Marketing Head, Marketing Executive):
+                    // Past records (older than 1 month) are ONLY unlocked when full client name / invoice no is typed
+                    if (isRestrictedRole && !isCurrentOrRecent) {
+                        var isExactMatch = (rowClient === searchVal || rowInvoice === searchVal);
+                        if (!isExactMatch) {
+                            return false;
+                        }
+                    }
                 } else {
-                    isToDate = true;
+                    // When search is empty:
+                    // For restricted roles, only show current month + past 1 month (running month + previous month)
+                    if (isRestrictedRole) {
+                        if (!isCurrentOrRecent) {
+                            return false;
+                        }
+                    }
                 }
-                return (isfromDate && isToDate);
+
+                // 2. Explicit From Date and To Date range filters
+                if (fromDate !== "" || toDate !== "") {
+                    if (rowDate === "") {
+                        return false;
+                    }
+                    var isfromDate = (fromDate !== "") ? compareMinDates(fromDate, rowDate) : true;
+                    var isToDate = (toDate !== "") ? compareMaxDates(toDate, rowDate) : true;
+                    return (isfromDate && isToDate);
+                }
+
+                return true;
             }
     );
 
@@ -1551,15 +1660,15 @@
         });
 
         var debouncedProformaSearch = debounce(function () {
-            proformaTable.column(1).search($('#proformaClientSearch').val()).draw();
+            proformaTable.draw();
         }, 200);
 
         var debouncedFinalSearch = debounce(function () {
-            finalTable.column(1).search($('#finalClientSearch').val()).draw();
+            finalTable.draw();
         }, 200);
 
-        $('#proformaClientSearch').on('input', debouncedProformaSearch);
-        $('#finalClientSearch').on('input', debouncedFinalSearch);
+        $('#proformaClientSearch').on('input keyup change', debouncedProformaSearch);
+        $('#finalClientSearch').on('input keyup change', debouncedFinalSearch);
 
         // Holds the report parameters chosen when a Download Report button is clicked.
         var pendingReport = null;
@@ -1859,23 +1968,7 @@
             $(".container").toggleClass("active");
         });
 
-        // Enable DataTables with paging to reduce render cost; guard against reinit
-        if ($.fn.DataTable) {
-            if (!$.fn.DataTable.isDataTable('#table_proforma_invoice')) {
-                $("#table_proforma_invoice").DataTable({
-                    pageLength: 50,
-                    deferRender: true,
-                    lengthChange: false
-                });
-            }
-            if (!$.fn.DataTable.isDataTable('#table_final_invoice')) {
-                $("#table_final_invoice").DataTable({
-                    pageLength: 50,
-                    deferRender: true,
-                    lengthChange: false
-                });
-            }
-        }
+
 
         $('.finalInvoice').click(function () {
             var invoice = $(this).attr('data-id');

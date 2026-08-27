@@ -365,6 +365,9 @@ if (!function_exists('aitf_fetch_auditor_client_services')) {
 
         foreach (array_keys($clientServices) as $cid) {
             $clientServices[$cid]['CR'] = true;
+            $clientServices[$cid]['PTR'] = true;
+            $clientServices[$cid]['SP'] = true;
+            $clientServices[$cid]['TA'] = true;
         }
 
         return $clientServices;

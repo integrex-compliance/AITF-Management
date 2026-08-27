@@ -302,7 +302,7 @@ if (!Utitlity::checkIfLoggedIn()) {
     }
 } else if (isset($pageIdentifier) && $pageIdentifier == "Auditor Checklist") {
     $addAuditorChecklistClass = "active";
-    if (Utitlity::checkExternalUser() || Utitlity::checkClient()) {
+    if (!aitf_has_access("Audit Data") || Utitlity::checkExternalUser() || Utitlity::checkClient()) {
         header("Location: login.php?reason=login_required");
         exit;
     }
@@ -612,7 +612,7 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
             </ul>
             <?php } else { ?>
             <ul class="nav navbar-nav visible-xs">
-                <?php if ((Utitlity::checkForUserMainAdmin() || Utitlity::checkForMainAdmin() || Utitlity::checkForUserAdmin() || Utitlity::checkForOfficeStaff()) && (!isset($_SESSION['role']) || $_SESSION['role'] !== 'Main Admin')) { ?>
+                <?php if (Utitlity::checkForDirector()) { ?>
                     <li><a href="adminDashboard.php">MGMT DASHBOARD</a></li>
                 <?php } ?>
                 <?php if (!isset($_SESSION["role"]) || $_SESSION["role"] != 'client') { ?>
@@ -636,7 +636,9 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
                 <li><a href="quotationPage.php">QUOTATION</a></li>
                 <li><a href="addUsers.php">ADD USER</a></li>
                 <li><a href="clientRecycle.php">RECYCLE BIN</a></li>
+                <?php if (aitf_has_access("Audit Data")) { ?>
                 <li><a href="auditorChecklist.php">AUDIT-DATA</a></li>
+                <?php } ?>
                 <li><a href="goAi.php">GoAI</a></li>
             </ul>
             <?php } ?>

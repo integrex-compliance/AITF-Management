@@ -23,8 +23,20 @@ while (ob_get_level() > 0) {
 // Read filter params
 $serviceType   = $_POST['serviceType'] ?? '';
 $auditorFilter = $_POST['auditorFilter'] ?? '';
+$clientSearch  = trim($_POST['clientSearch'] ?? '');
 $fromDate      = $_POST['fromDate'] ?? '';
 $toDate        = $_POST['toDate'] ?? '';
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+$invRole = trim($_SESSION['role'] ?? '');
+$isMarketingHead = in_array($invRole, array('Marketing Head', 'Marketing Executive'), true)
+    || strtolower(str_replace(' ', '', $invRole)) === 'marketinghead'
+    || (isset($_SESSION['username']) && strtolower(trim($_SESSION['username'])) === 'marketingh');
+$isOfficeStaffA = in_array($invRole, array('Office Staff-A'), true)
+    || strtolower(str_replace(array(' ', '-'), '', $invRole)) === 'officestaffa';
+$isRestrictedRole = $isMarketingHead || $isOfficeStaffA;
 
 // ---- Fetch data (same logic as qualityanalysis.php) ----
 
@@ -195,6 +207,28 @@ foreach ($listOfCustomer as $customer) {
     if (empty($oplusDisplay) && $surveyDetail && !empty($surveyDetail['oplusval'])) $oplusDisplay = $surveyDetail['oplusval'];
 
     // Apply filters
+    // Client Search
+    $entryDate = (!empty($sub['audit_date'])) ? $sub['audit_date'] : $customer['audit_date'];
+    $isCurrentOrRecent = (!empty($entryDate) && $entryDate >= date('Y-m-01', strtotime('-1 month')));
+    if ($clientSearch !== '') {
+        $searchVal = strtolower(trim($clientSearch));
+        $custName = strtolower(trim($customer['customer_name'] ?? ''));
+        if (stripos($custName, $searchVal) === false) {
+            continue;
+        }
+        if ($isRestrictedRole && !$isCurrentOrRecent) {
+            if ($custName !== $searchVal) {
+                continue;
+            }
+        }
+    } else {
+        if ($isRestrictedRole && $fromDate === '' && $toDate === '') {
+            if (!$isCurrentOrRecent) {
+                continue;
+            }
+        }
+    }
+
     // Service type filter
     if ($serviceType !== '' && strtoupper(trim($svcType)) !== strtoupper(trim($serviceType))) {
         continue;

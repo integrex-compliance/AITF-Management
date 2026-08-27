@@ -69,6 +69,14 @@ function fetchAppReviewObjectiveReportData($db, $fromDate, $toDate, $clientName 
               AND svc.service_type = 'CR'";
     $params = array();
 
+    $invRole = trim($_SESSION['role'] ?? '');
+    $isMarketingHead = in_array($invRole, array('Marketing Head', 'Marketing Executive'), true)
+        || strtolower(str_replace(' ', '', $invRole)) === 'marketinghead'
+        || (isset($_SESSION['username']) && strtolower(trim($_SESSION['username'])) === 'marketingh');
+    $isOfficeStaffA = in_array($invRole, array('Office Staff-A'), true)
+        || strtolower(str_replace(array(' ', '-'), '', $invRole)) === 'officestaffa';
+    $isRestrictedRole = $isMarketingHead || $isOfficeStaffA;
+
     $fromDateSql = appReviewObjectiveSqlDate($fromDate);
     $toDateSql = appReviewObjectiveSqlDate($toDate);
     if ($fromDateSql !== '' && $toDateSql !== '' && $fromDateSql > $toDateSql) {
@@ -84,8 +92,17 @@ function fetchAppReviewObjectiveReportData($db, $fromDate, $toDate, $clientName 
         $params[':toDate'] = $toDateSql;
     }
     if (trim((string) $clientName) !== '') {
-        $sql .= " AND ci.customer_name LIKE :clientName";
         $params[':clientName'] = '%' . trim($clientName) . '%';
+        if ($isRestrictedRole && $fromDateSql === '' && $toDateSql === '') {
+            $params[':exactClient'] = trim($clientName);
+            $sql .= " AND (ci.customer_name = :exactClient OR aa.application_rcv_date >= DATE_FORMAT(CURDATE() - INTERVAL 1 MONTH, '%Y-%m-01')) AND ci.customer_name LIKE :clientName";
+        } else {
+            $sql .= " AND ci.customer_name LIKE :clientName";
+        }
+    } else {
+        if ($isRestrictedRole && $fromDateSql === '' && $toDateSql === '') {
+            $sql .= " AND aa.application_rcv_date >= DATE_FORMAT(CURDATE() - INTERVAL 1 MONTH, '%Y-%m-01')";
+        }
     }
 
     $sql .= " ORDER BY aa.application_rcv_date DESC, ci.customer_name ASC";

@@ -9,6 +9,17 @@ while (ob_get_level() > 0) {
 }
 ob_start();
 
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+$hp_role = trim($_SESSION['role'] ?? '');
+$isMarketingHead = in_array($hp_role, array('Marketing Head', 'Marketing Executive'), true)
+    || strtolower(str_replace(' ', '', $hp_role)) === 'marketinghead'
+    || (isset($_SESSION['username']) && strtolower(trim($_SESSION['username'])) === 'marketingh');
+$isOfficeStaff = in_array($hp_role, array('Office Staff-A', 'Office Staff-B'), true)
+    || in_array(strtolower(str_replace(array(' ', '-'), '', $hp_role)), array('officestaffa', 'officestaffb'), true);
+
 $fromDate = $_POST['fromDate'] ?? '';
 $toDate = $_POST['toDate'] ?? '';
 $serviceType = $_POST['serviceType'] ?? '';
@@ -132,9 +143,32 @@ if (!empty($customerIds)) {
 // Filtering the results in PHP to match DataTables search
 $filteredCustomers = [];
 foreach ($listOfCustomer as $customer) {
-    // Client Name filter
-    if ($clientName != '' && stripos($customer['customer_name'], $clientName) === false) {
+    $derivedStatus = hpDerivedStatus($customer, $serviceMap);
+
+    if ($isMarketingHead && in_array($derivedStatus, array('Active', 'Withdrawn', 'Withdrawal', 'Withdraw'), true)) {
         continue;
+    }
+
+    $isCurrentOrRecent = empty($customer['certification_date']) || ($customer['certification_date'] >= date('Y-m-01', strtotime('-1 month')));
+    if ($clientName != '') {
+        $searchVal = strtolower(trim($clientName));
+        $custName = strtolower(trim($customer['customer_name'] ?? ''));
+        $uniqId = strtolower(trim($customer['unique_id'] ?? ''));
+        $isMatch = (stripos($custName, $searchVal) !== false || stripos($uniqId, $searchVal) !== false);
+        if (!$isMatch) {
+            continue;
+        }
+        if ($isOfficeStaff && !$isCurrentOrRecent) {
+            if ($custName !== $searchVal && $uniqId !== $searchVal) {
+                continue;
+            }
+        }
+    } else {
+        if ($isOfficeStaff && empty($fromDate) && empty($toDate)) {
+            if (!$isCurrentOrRecent) {
+                continue;
+            }
+        }
     }
 
     // Service Type filter
@@ -144,7 +178,6 @@ foreach ($listOfCustomer as $customer) {
 
     // Status Tab filter
     if ($statusFilter != '') {
-        $derivedStatus = hpDerivedStatus($customer, $serviceMap);
         if ($derivedStatus !== $statusFilter) {
             continue;
         }

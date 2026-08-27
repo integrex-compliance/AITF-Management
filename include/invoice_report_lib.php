@@ -152,6 +152,14 @@ function fetchInvoiceReportData($db, $invoiceType, $fromDate, $toDate, $clientNa
 
     $params = [':invoiceType' => $invoiceType];
 
+    $invRole = trim($_SESSION['role'] ?? '');
+    $isMarketingHead = in_array($invRole, array('Marketing Head', 'Marketing Executive'), true)
+        || strtolower(str_replace(' ', '', $invRole)) === 'marketinghead'
+        || (isset($_SESSION['username']) && strtolower(trim($_SESSION['username'])) === 'marketingh');
+    $isOfficeStaff = in_array($invRole, array('Office Staff', 'Office Staff-A', 'Office Staff-B'), true)
+        || in_array(strtolower(str_replace(array(' ', '-'), '', $invRole)), array('officestaff', 'officestaffa', 'officestaffb'), true);
+    $isRestrictedRole = $isMarketingHead || $isOfficeStaff;
+
     if ($fromDate != '') {
         $sql .= " AND id.invoice_date >= :fromDate";
         $params[':fromDate'] = date("Y-m-d", strtotime(str_replace('.', '-', $fromDate)));
@@ -161,8 +169,17 @@ function fetchInvoiceReportData($db, $invoiceType, $fromDate, $toDate, $clientNa
         $params[':toDate'] = date("Y-m-d", strtotime(str_replace('.', '-', $toDate)));
     }
     if ($clientName != '') {
-        $sql .= " AND ci.customer_name LIKE :clientName";
         $params[':clientName'] = '%' . $clientName . '%';
+        if ($isRestrictedRole && $fromDate == '' && $toDate == '') {
+            $params[':exactClient'] = $clientName;
+            $sql .= " AND (ci.customer_name = :exactClient OR id.invoice_date >= DATE_FORMAT(CURDATE() - INTERVAL 1 MONTH, '%Y-%m-01')) AND ci.customer_name LIKE :clientName";
+        } else {
+            $sql .= " AND ci.customer_name LIKE :clientName";
+        }
+    } else {
+        if ($isRestrictedRole && $fromDate == '' && $toDate == '') {
+            $sql .= " AND id.invoice_date >= DATE_FORMAT(CURDATE() - INTERVAL 1 MONTH, '%Y-%m-01')";
+        }
     }
 
     $sql .= " ORDER BY id.invoice_date DESC, id.invoice_id DESC";

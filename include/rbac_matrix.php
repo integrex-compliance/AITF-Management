@@ -39,10 +39,14 @@ function aitf_has_access($module) {
         'App Review Objective' => ['Admin', 'Office Staff-A', 'Finance', 'Marketing Head', 'Marketing Executive'],
         'Doc Upload Status' => ['Admin', 'Office Staff-A', 'Finance', 'Marketing Head', 'Marketing Executive'],
         'Audit Data' => ['Admin', 'Office Staff-A', 'Finance', 'Marketing Head', 'Marketing Executive'],
-        'Go AI' => ['Admin', 'Office Staff-A', 'Office Staff-B', 'Finance', 'Marketing Head', 'Marketing Executive'],
+        'Go AI' => ['Admin', 'Office Staff-A', 'Finance', 'Marketing Head', 'Marketing Executive'],
         
         // Modules not explicitly in the matrix but normally accessed by staff
-        'Admin Dashboard' => ['Admin', 'Office Staff-A', 'Office Staff-B'],
+        'Admin Dashboard' => ['Top Mgmt'],
+        'Management Dashboard' => ['Top Mgmt'],
+        'Top Mgmt Dashboard' => ['Top Mgmt'],
+        'MGMT Dashboard' => ['Top Mgmt'],
+        'Mgmt Dashboard' => ['Top Mgmt'],
         'Mailbox' => ['Admin', 'Office Staff-A', 'Office Staff-B', 'Finance', 'Marketing Head', 'Marketing Executive'],
         'Job Applications' => ['Admin', 'Office Staff-A', 'Office Staff-B'],
     ];

@@ -44,6 +44,17 @@ function tdsReportFilterText($status, $startDateStr, $endDateStr, $clientSearch)
 }
 
 function fetchTdsReportData($db, $status, $startDateStr, $endDateStr, $clientSearch, $sortOrder) {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    $tdsRole = trim($_SESSION['role'] ?? '');
+    $isMarketingHead = in_array($tdsRole, array('Marketing Head', 'Marketing Executive'), true)
+        || strtolower(str_replace(' ', '', $tdsRole)) === 'marketinghead'
+        || (isset($_SESSION['username']) && strtolower(trim($_SESSION['username'])) === 'marketingh');
+    $isOfficeStaff = in_array($tdsRole, array('Office Staff-A', 'Office Staff-B'), true)
+        || in_array(strtolower(str_replace(array(' ', '-'), '', $tdsRole)), array('officestaffa', 'officestaffb'), true);
+    $isRestrictedRole = $isMarketingHead || $isOfficeStaff;
+
     $startDate = tdsReportDateForSql($startDateStr);
     $endDate = tdsReportDateForSql($endDateStr);
 
@@ -62,8 +73,17 @@ function fetchTdsReportData($db, $status, $startDateStr, $endDateStr, $clientSea
         $sql .= " AND (ps.payment_received IS NULL OR ps.payment_received = 0 OR ps.payment_received = '' OR ps.payment_received = '0.00' OR ps.payment_received = '0')";
     }
     if ($clientSearch !== '') {
-        $sql .= " AND ci.customer_name LIKE :clientSearch";
         $params[':clientSearch'] = '%' . $clientSearch . '%';
+        if ($isRestrictedRole && $startDate === '' && $endDate === '') {
+            $params[':exactClient'] = $clientSearch;
+            $sql .= " AND (ci.customer_name = :exactClient OR ci.unique_id = :exactClient OR ps.payment_date >= DATE_FORMAT(CURDATE() - INTERVAL 1 MONTH, '%Y-%m-01') OR ps.payment_date IS NULL OR ps.payment_date = '' OR ps.payment_date = '0000-00-00') AND (ci.customer_name LIKE :clientSearch OR ci.unique_id LIKE :clientSearch)";
+        } else {
+            $sql .= " AND (ci.customer_name LIKE :clientSearch OR ci.unique_id LIKE :clientSearch)";
+        }
+    } else {
+        if ($isRestrictedRole && $startDate === '' && $endDate === '') {
+            $sql .= " AND (ps.payment_date >= DATE_FORMAT(CURDATE() - INTERVAL 1 MONTH, '%Y-%m-01') OR ps.payment_date IS NULL OR ps.payment_date = '' OR ps.payment_date = '0000-00-00')";
+        }
     }
     if ($startDate !== '') {
         $sql .= " AND ps.payment_date >= :startDate";

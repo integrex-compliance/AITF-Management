@@ -32,6 +32,13 @@ if ($currentRole === 'client' || $currentRole === 'external') {
     $customerLettersEditIconVisible = aitfCustomerFeatureIsEnabled($db, 'customer_letters_edit_icon_visible');
     $customerLettersDeleteIconVisible = aitfCustomerFeatureIsEnabled($db, 'customer_letters_delete_icon_visible');
 
+    $userRole = trim((string) ($_SESSION['role'] ?? ''));
+    $userRoleLower = strtolower(str_replace(' ', '', $userRole));
+    $userNameLower = strtolower(trim((string) ($_SESSION['username'] ?? '')));
+    $isMarketingRole = in_array($userRole, array('Marketing Head', 'Marketing Executive'), true)
+        || in_array($userRoleLower, array('marketinghead', 'marketingexecutive'), true)
+        || in_array($userNameLower, array('marketingh', 'marketinge'), true);
+
     if (!function_exists('caDateGraphTargetForEntry')) {
         function caDateGraphTargetForEntry($serviceType, $label, $source, $typedServiceId)
         {
@@ -1460,17 +1467,31 @@ if ($currentRole === 'client' || $currentRole === 'external') {
         </div>
     <?php } ?>
     <style>
-        td {
+        /* =====================================================================
+           CUSTOMER ACCOUNT — MODERN CLEAN SAAS DESIGN SYSTEM (MATCHING MASTERCREATOR)
+           ===================================================================== */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-            .table>tbody>tr>td,
-            .table>tbody>tr>th,
-            .table>tfoot>tr>td,
-            .table>tfoot>tr>th,
-            .table>thead>tr>td,
-            .table>thead>tr>th {
-                padding: 2px;
-                line-height: 1.0;
-            }
+        body, #wrapper, #page-content-wrapper, .page-content.inset {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+            background-color: #f8fafc !important;
+            color: #0f172a !important;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        input, select, textarea, button, .form-control, table, th, td, label, a, span, p, h1, h2, h3, h4, h5, h6, div {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .table>tbody>tr>td,
+        .table>tbody>tr>th,
+        .table>tfoot>tr>td,
+        .table>tfoot>tr>th,
+        .table>thead>tr>td,
+        .table>thead>tr>th {
+            padding: 2px;
+            line-height: 1.0;
         }
 
         #loading-div-background {
@@ -3203,16 +3224,47 @@ if ($currentRole === 'client' || $currentRole === 'external') {
         }
 
         /* =====================================================================
-           TOP CLIENT INFO SECTION — CLEAN FONTS & CRISP CONTRAST
+           TOP CLIENT INFO SECTION — CLEAN FONTS & CRISP WHITE CONTRAST
            ===================================================================== */
-        .top_qms_page {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        .top_qms_page,
+        .background_lightblue {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
             background: #ffffff !important;
             border: 1px solid #e2e8f0 !important;
-            border-radius: 8px !important;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04) !important;
+            border-radius: 12px !important;
+            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04) !important;
             margin-bottom: 15px !important;
             overflow: hidden !important;
+        }
+
+        /* Top Header & Headings matching masterCreator gradient headers */
+        .qms_customer_name {
+            background: linear-gradient(135deg, #0d4d8b 0%, #1e40af 100%) !important;
+            color: #ffffff !important;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+            font-weight: 700 !important;
+            font-size: 15px !important;
+            letter-spacing: 0.3px !important;
+            border-radius: 12px 12px 0 0 !important;
+            box-shadow: 0 2px 8px rgba(13, 77, 139, 0.15) !important;
+            text-transform: uppercase !important;
+        }
+
+        .qms_customer_name.canceled-client-header {
+            background: linear-gradient(135deg, #991b1b 0%, #dc2626 100%) !important;
+        }
+
+        .qms_customer_name.supplier-account-header {
+            background: linear-gradient(135deg, #5b21b6 0%, #7c3aed 100%) !important;
+        }
+
+        /* Top Client Header ONLY (Not ISO headers, Not services) */
+        .top_qms_page > .row:first-child > .qms_customer_name {
+            min-height: 48px !important;
+            height: auto !important;
+            padding: 8px 16px !important;
+            display: flex !important;
+            align-items: center !important;
         }
 
         /* Field Labels */
@@ -3223,22 +3275,25 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             font-weight: 700 !important;
             letter-spacing: 0.3px !important;
             display: inline-block;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
         }
 
         /* Field Values */
         .top_qms_page span[style*="color: gray"],
         .top_qms_page span[style*="color:gray"] {
-            color: #1e293b !important;
+            color: #0f172a !important;
             font-size: 12.5px !important;
             font-weight: 500 !important;
             line-height: 1.45 !important;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
         }
 
         /* Add Notes Textarea */
-        .top_qms_page textarea.notebox {
+        .top_qms_page textarea.notebox,
+        #add-notes {
             background: #f8fafc !important;
             border: 1px solid #cbd5e1 !important;
-            border-radius: 6px !important;
+            border-radius: 8px !important;
             color: #0f172a !important;
             font-size: 12.5px !important;
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
@@ -3249,7 +3304,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             width: 100% !important;
         }
 
-        .top_qms_page textarea.notebox:focus {
+        .top_qms_page textarea.notebox:focus,
+        #add-notes:focus {
             background: #ffffff !important;
             border-color: #0d4d8b !important;
             box-shadow: 0 0 0 3px rgba(13, 77, 139, 0.12) !important;
@@ -3259,6 +3315,205 @@ if ($currentRole === 'client' || $currentRole === 'external') {
         .top_qms_page hr {
             border-color: #e2e8f0 !important;
             margin: 0 !important;
+        }
+
+        /* =====================================================================
+           SECTION CARDS, BOXES & BUTTONS (MATCHING MASTERCREATOR)
+           ===================================================================== */
+        .servicebox {
+            background: #ffffff !important;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 12px !important;
+            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04) !important;
+            overflow: hidden !important;
+            margin-bottom: 16px !important;
+        }
+
+        .servicebox-data {
+            background: #ffffff !important;
+        }
+
+        .service_title {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+            font-weight: 700 !important;
+        }
+
+        .service_title.payment-title,
+        .payment-title {
+            background: linear-gradient(135deg, #047857 0%, #059669 100%) !important;
+            color: #ffffff !important;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+            font-weight: 700 !important;
+        }
+
+        .servicebox .service_title.payment-title + .service_title {
+            background: linear-gradient(135deg, #047857 0%, #059669 100%) !important;
+        }
+
+        /* Action Buttons matching masterCreator */
+        .qms_complete_btn {
+            background: linear-gradient(135deg, #0d4d8b 0%, #1e40af 100%) !important;
+            border: none !important;
+            border-radius: 8px !important;
+            padding: 8px 14px !important;
+            font-size: 12px !important;
+            font-weight: 700 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.4px !important;
+            color: #ffffff !important;
+            box-shadow: 0 2px 8px rgba(13, 77, 139, 0.15) !important;
+            transition: all 0.2s ease !important;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+        }
+
+        .qms_complete_btn:hover {
+            background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%) !important;
+            color: #ffffff !important;
+            box-shadow: 0 4px 12px rgba(13, 77, 139, 0.25) !important;
+        }
+
+        .invoiceBtn, .finalInvoiceBtn, .quotationBtn {
+            background: linear-gradient(135deg, #0d4d8b 0%, #1e40af 100%) !important;
+            border: none !important;
+            border-radius: 8px !important;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+            font-weight: 700 !important;
+            color: #ffffff !important;
+            box-shadow: 0 2px 8px rgba(13, 77, 139, 0.15) !important;
+            transition: all 0.2s ease !important;
+        }
+
+        .invoiceBtn:hover, .finalInvoiceBtn:hover, .quotationBtn:hover {
+            background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%) !important;
+            color: #ffffff !important;
+            box-shadow: 0 4px 12px rgba(13, 77, 139, 0.25) !important;
+        }
+
+        #service-type.form-control {
+            background-color: #0d4d8b !important;
+            color: #ffffff !important;
+            border: none !important;
+            border-radius: 8px !important;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+            font-weight: 700 !important;
+        }
+
+        /* ISO Header & Section Details */
+        .iso-cert-section {
+            border-radius: 8px;
+            overflow: hidden;
+            width: 100% !important;
+            margin-bottom: 10px !important;
+        }
+
+        .iso-header {
+            margin: 0 !important;
+            width: 100% !important;
+        }
+
+        .iso-header .qms_customer_name {
+            background: linear-gradient(135deg, #0d4d8b 0%, #1e40af 100%) !important;
+            color: #ffffff !important;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+            font-weight: 700 !important;
+            border-radius: 8px 8px 0 0 !important;
+            text-align: center !important;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            gap: 8px !important;
+            width: 100% !important;
+            min-height: 44px !important;
+            height: auto !important;
+            padding: 9px 16px !important;
+            font-size: 14px !important;
+            letter-spacing: 0.3px !important;
+            box-sizing: border-box !important;
+        }
+
+        .iso-details {
+            background: #ffffff !important;
+            border: 1px solid #e2e8f0 !important;
+            border-top: none !important;
+            border-radius: 0 0 8px 8px !important;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03) !important;
+        }
+
+        .iso-details-row {
+            background: #ffffff !important;
+        }
+
+        .iso-field-group span[style*="color: #0d4d8b"] {
+            color: #0d4d8b !important;
+            font-weight: 700 !important;
+            font-size: 11px !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.3px !important;
+        }
+
+        /* Modern Wells, Panels & Lists */
+        .well, .panel {
+            background: #ffffff !important;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 12px !important;
+            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04) !important;
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e1 transparent;
+        }
+
+        .well::-webkit-scrollbar {
+            width: 6px;
+        }
+        .well::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+
+        .list-group-item {
+            background: #ffffff !important;
+            border: none !important;
+            border-bottom: 1px solid #f1f5f9 !important;
+            color: #334155 !important;
+            font-weight: 500 !important;
+            transition: background 0.15s ease !important;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+        }
+
+        .list-group-item:hover {
+            background: #f8fafc !important;
+        }
+
+        /* Form Controls */
+        .form-control,
+        input[type="text"],
+        input[type="number"],
+        input[type="email"],
+        input[type="date"],
+        input[type="password"],
+        select,
+        textarea,
+        .serviceTypeName {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+            background-color: #ffffff !important;
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 6px !important;
+            color: #0f172a !important;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+        }
+
+        .form-control:focus,
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        input[type="email"]:focus,
+        input[type="date"]:focus,
+        input[type="password"]:focus,
+        select:focus,
+        textarea:focus,
+        .serviceTypeName:focus {
+            background-color: #ffffff !important;
+            border-color: #0d4d8b !important;
+            box-shadow: 0 0 0 3px rgba(13, 77, 139, 0.12) !important;
+            outline: none !important;
         }
 
         /* =====================================================================
@@ -3275,6 +3530,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             font-size: 11.5px !important;
             font-weight: 600 !important;
             line-height: 23px !important;
+            border-radius: 4px !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
         }
 
         /* 1. Completed state (Rich Vibrant Blue with crisp white icons & text) */
@@ -3382,6 +3639,35 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             transform: scale(1.15);
         }
 
+        /* Subtle Faded Disabled State for Marketing Roles (Stage-I Audit Plan) */
+        .ca-stage1-auditplan-disabled,
+        .ca-stage1-auditplan-disabled * {
+            cursor: not-allowed !important;
+        }
+        .ca-stage1-auditplan-disabled {
+            opacity: 0.55 !important;
+            background-color: #f1f5f9 !important;
+            border: 1px solid #cbd5e1 !important;
+            color: #94a3b8 !important;
+            user-select: none !important;
+            pointer-events: auto !important;
+            transition: all 0.2s ease !important;
+        }
+        .ca-stage1-auditplan-disabled span {
+            color: #94a3b8 !important;
+        }
+        .ca-stage1-auditplan-disabled:hover {
+            cursor: not-allowed !important;
+            opacity: 0.65 !important;
+            background-color: #e2e8f0 !important;
+        }
+        .ca-stage1-auditplan-disabled .ca-stage1-disabled-icon {
+            color: #94a3b8 !important;
+            font-size: 13px !important;
+            padding: 2px 6px !important;
+            cursor: not-allowed !important;
+        }
+
         /* CA Top Audit Planning Controls (Labels & Inputs) */
         .servicebox-bunch .float-label-control label {
             color: #0d4d8b !important;
@@ -3439,7 +3725,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             display: block !important;
         }
 
-        .service_details {
+        .service_details,
+        .service_details_201 {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
             border: 1px solid #e2e8f0 !important;
             background: #ffffff !important;
@@ -3448,7 +3735,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             margin-bottom: 0 !important;
         }
 
-        .service_details thead th {
+        .service_details thead th,
+        .service_details_201 thead th {
             background: #f8fafc !important;
             color: #0d4d8b !important;
             font-weight: 700 !important;
@@ -3461,18 +3749,21 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             line-height: 1.2 !important;
             text-align: center !important;
         }
-        .service_details thead th:first-child {
+        .service_details thead th:first-child,
+        .service_details_201 thead th:first-child {
             text-align: left !important;
             padding-left: 10px !important;
         }
 
-        .service_details thead th small {
+        .service_details thead th small,
+        .service_details_201 thead th small {
             font-size: 9.5px !important;
             font-weight: 700 !important;
             color: #0d4d8b !important;
         }
 
-        .service_details tbody tr td {
+        .service_details tbody tr td,
+        .service_details_201 tbody tr td {
             font-size: 10.5px !important;
             font-weight: 500 !important;
             color: #0f172a !important;
@@ -3482,55 +3773,73 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             line-height: 16px !important;
             text-align: center !important;
         }
-        .service_details tbody tr td:first-child {
+        .service_details tbody tr td:first-child,
+        .service_details_201 tbody tr td:first-child {
             text-align: left !important;
             padding-left: 10px !important;
         }
 
-        .service_details tbody tr:hover td {
+        .service_details tbody tr:hover td,
+        .service_details_201 tbody tr:hover td {
             background-color: #f8fafc !important;
         }
 
-        .service_details tbody tr td small {
+        .service_details tbody tr td small,
+        .service_details_201 tbody tr td small {
             font-size: 10.5px !important;
             color: #0f172a !important;
             font-weight: 500 !important;
             line-height: 16px !important;
         }
 
-        .service_details tbody tr td .table-edit-control {
+        .service_details tbody tr td .table-edit-control,
+        .service_details_201 tbody tr td .table-edit-control {
             margin: 0 !important;
             padding: 0 !important;
             line-height: 16px !important;
         }
 
         /* Letters & Actions Table Compact Icons */
-        .service_details a i.fa {
+        .service_details a i.fa,
+        .service_details_201 a i.fa {
             line-height: 16px !important;
             vertical-align: middle !important;
         }
-        .service_details a i.fa-pencil-square {
+        .service_details a i.fa-pencil-square,
+        .service_details_201 a i.fa-pencil-square,
+        a i.fa-pencil-square,
+        a i.fa-edit {
             color: #0d4d8b !important;
             font-size: 11px !important;
             transition: transform 0.15s ease, color 0.15s ease;
         }
-        .service_details a i.fa-file-pdf-o {
+        .service_details a i.fa-file-pdf-o,
+        .service_details_201 a i.fa-file-pdf-o,
+        a i.fa-file-pdf-o {
             color: #dc2626 !important;
             font-size: 11px !important;
             transition: transform 0.15s ease, color 0.15s ease;
         }
-        .service_details a i.fa-envelope-o {
+        .service_details a i.fa-envelope-o,
+        .service_details_201 a i.fa-envelope-o,
+        a i.fa-envelope-o {
             color: #059669 !important;
             font-size: 11px !important;
             transition: transform 0.15s ease, color 0.15s ease;
         }
-        .service_details a i.fa-trash {
+        .service_details a i.fa-trash,
+        .service_details a i.fa-trash-o,
+        .service_details_201 a i.fa-trash,
+        .service_details_201 a i.fa-trash-o,
+        a i.fa-trash,
+        a i.fa-trash-o {
             color: #ef4444 !important;
             font-size: 11px !important;
             transition: transform 0.15s ease, color 0.15s ease;
         }
 
-        .service_details a:hover i.fa {
+        .service_details a:hover i.fa,
+        .service_details_201 a:hover i.fa {
             transform: scale(1.15) !important;
             opacity: 1 !important;
         }
@@ -4508,8 +4817,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         <div class="col-sm-6">
                             <div class="row" style="padding: 5px; padding-left: 20px">
                                 <div class="col-sm-10 ">
-                                    <textarea name="add-notes"
-                                        style="color: black; background-color: #e3eaf3; border: none" rows="10"
+                                    <textarea name="add-notes" rows="10"
                                         cols="50" class="form-group notebox saveChanges" data-column="comment"
                                         id="add-notes" placeholder="Add Notes"><?php
                                         if (isset($clientInfo['comment'])) {
@@ -4826,7 +5134,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                             // Add prominent section header for all certificates (single or multiple)
                             echo '<div class="iso-cert-section" style="margin-top: ' . ($i == 0 ? '0' : '5') . 'px;">';
                             echo '<div class="row iso-header" onclick="toggleISOSection(this)" style="cursor: pointer;">';
-                            echo '<div class="  qms_customer_name service_title" style="text-align: center;">';
+                            echo '<div class="qms_customer_name service_title text-center" style="text-align: center; display: flex; justify-content: center; align-items: center; gap: 8px; width: 100%;">';
                             if ($certCount > 1) {
                                 echo '<i class="fa fa-certificate"></i> ISO STANDARD ' . ($i + 1) . ' OF ' . $certCount . ' - ' . htmlspecialchars($standardName);
                             } else {
@@ -4980,10 +5288,10 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             <div class="servicebox" style="display: ">
                 <div class="row" id="service-row" class="service-row">
                     <div class="col-sm-11 service_title payment-title"
-                        style="text-align: center; background:   #4CAF50; color: #fff; font-family: 'Copperplate', 'Copperplate Gothic Light', 'sans-serif';">
+                        style="text-align: center; color: #fff;">
                         Payment System <span class="serviceStatus"></span>
                     </div>
-                    <div class="col-sm-1 service_title" style="background:   #4CAF50; color: #fff; font-size: 1.7em;">
+                    <div class="col-sm-1 service_title payment-title" style="color: #fff; font-size: 1.7em;">
                         <a class="savePayment" id="savePayment" data-row-id="<?php if (isset($paymentDetails['payment_sy_id']))
                             echo $paymentDetails['payment_sy_id'] ?>">
                                 <i class="fa fa-floppy-o pull-right"
@@ -5307,6 +5615,14 @@ if ($currentRole === 'client' || $currentRole === 'external') {
         // Additional safety check before foreach
         if (!is_array($allcaCount)) {
             $allcaCount = array();
+        }
+        $crLookupSql = "SELECT crs.cr_id, crs.service FROM service_type_cr crs INNER JOIN service s ON crs.service = s.service_id WHERE s.customer_id = :cid ORDER BY crs.cr_id DESC LIMIT 1";
+        $crLookupStmt = $db->prepare($crLookupSql);
+        $crLookupStmt->bindParam(':cid', $_GET['customerid']);
+        $crLookupStmt->execute();
+        $defaultCrRow = $crLookupStmt->fetch();
+        if ($defaultCrRow) {
+            $crservice = $defaultCrRow;
         }
         foreach ($allcaCount as $service) {
             
@@ -5704,29 +6020,36 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $enterClass = "serviceContentwaiting";
                                             }
                                             ?>
-                                            <div class="<?php echo $enterClass ?>">
+                                            <div class="<?php echo $enterClass; ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>"
+                                                <?php if ($isMarketingRole) { ?> title="Disabled for Marketing role" <?php } ?>>
                                                 <span>Release - Stage - I Audit Plan</span>
-                                                <?php if (empty($caservice['audit_schedule_id'])) { ?>
-                                                    <a class="createStageSchedule pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $caservice['ca_id'] ?>" data-serviceType="CA"
-                                                        data-row-id="" data-row-count="" title="Add Stage - I Schedule"
-                                                        style="padding: 1px 5px;"><i class="fa fa-plus-circle fa-lg "
-                                                            style="padding: 3px"></i></a>
-                                                <?php }
-                                                if (isset($caservice['audit_schedule_id']) && !empty($caservice['audit_schedule_id'])) { ?>
-                                                    <a class="editStageSchedule pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $caservice['ca_id'] ?>"
-                                                        data-row-id="<?php echo $caservice['audit_schedule_id'] ?>"
-                                                        data-row-count="" title="Add audit application" style="padding: 1px 5px;"><i
-                                                            class="fa fa-pencil-square fa-lg " style="padding: 3px"></i></a>
-                                                    <a class="downloadScheduleStageOne pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-caservice-id="<?php echo $caservice['ca_id'] ?>"
-                                                        data-schedulei="<?php echo $caservice['audit_schedule_id'] ?>"
-                                                        title="Download stage one schedule" style="padding: 1px 5px;"><i
-                                                            class="fa fa-download fa-lg " style="padding: 3px"></i></a>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <?php if (empty($caservice['audit_schedule_id'])) { ?>
+                                                        <a class="createStageSchedule pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-service="<?php echo $caservice['ca_id'] ?>" data-serviceType="CA"
+                                                            data-row-id="" data-row-count="" title="Add Stage - I Schedule"
+                                                            style="padding: 1px 5px;"><i class="fa fa-plus-circle fa-lg "
+                                                                style="padding: 3px"></i></a>
+                                                    <?php }
+                                                    if (isset($caservice['audit_schedule_id']) && !empty($caservice['audit_schedule_id'])) { ?>
+                                                        <a class="editStageSchedule pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-service="<?php echo $caservice['ca_id'] ?>"
+                                                            data-row-id="<?php echo $caservice['audit_schedule_id'] ?>"
+                                                            data-row-count="" title="Add audit application" style="padding: 1px 5px;"><i
+                                                                class="fa fa-pencil-square fa-lg " style="padding: 3px"></i></a>
+                                                        <a class="downloadScheduleStageOne pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-caservice-id="<?php echo $caservice['ca_id'] ?>"
+                                                            data-schedulei="<?php echo $caservice['audit_schedule_id'] ?>"
+                                                            title="Download stage one schedule" style="padding: 1px 5px;"><i
+                                                                class="fa fa-download fa-lg " style="padding: 3px"></i></a>
+                                                    <?php } ?>
                                                 <?php } ?>
                                             </div>
                                         </div>
@@ -5824,31 +6147,38 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $classAdd4 = "serviceContent";
                                             }
                                             ?>
-                                            <div class="<?php echo $classAdd4 ?>">
+                                            <div class="<?php echo $classAdd4 ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>"
+                                                <?php if ($isMarketingRole) { ?> title="Disabled for Marketing role" <?php } ?>>
                                                 <span>Stage - I Audit Report </span>
-                                                <div style="float: right" class="image-preview form-inline">
-                                                    <div class=" ">
-                                                        <?php if (isset($caservice['signed_copy']) && !empty($caservice['signed_copy'])) { ?>
-                                                            <span class=" image-preview-input  fa fa-upload"
-                                                                style="padding-right: 15px">
-                                                                <input type="file"
-                                                                    accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
-                                                                    data-id="<?php echo $_GET['customerid'] ?>"
-                                                                    data-service="<?php echo $caservice['ca_id'] ?>"
-                                                                    service-type="CA" data-column="audit_report_I"
-                                                                    class="signedAuditReport1 input-audit-1report<?php echo $caservice['ca_id'] ?>"
-                                                                    name="input-audit-1report" />
-                                                            </span>
-                                                        <?php } ?>
-                                                        <?php if (isset($caservice['audit_report_I']) && !empty($caservice['audit_report_I'])) { ?>
-                                                            <span style="padding-right: 5px">
-                                                                <a href="<?php echo $caservice['audit_report_I'] ?>" data-id=""
-                                                                    download class="customerReviewFileDownload"
-                                                                    title="Download Signed Copy"><i class="fa fa-download"></i></a>
-                                                            </span>
-                                                        <?php } ?>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <div style="float: right" class="image-preview form-inline">
+                                                        <div class=" ">
+                                                            <?php if (isset($caservice['signed_copy']) && !empty($caservice['signed_copy'])) { ?>
+                                                                <span class=" image-preview-input  fa fa-upload"
+                                                                    style="padding-right: 15px">
+                                                                    <input type="file"
+                                                                        accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
+                                                                        data-id="<?php echo $_GET['customerid'] ?>"
+                                                                        data-service="<?php echo $caservice['ca_id'] ?>"
+                                                                        service-type="CA" data-column="audit_report_I"
+                                                                        class="signedAuditReport1 input-audit-1report<?php echo $caservice['ca_id'] ?>"
+                                                                        name="input-audit-1report" />
+                                                                </span>
+                                                            <?php } ?>
+                                                            <?php if (isset($caservice['audit_report_I']) && !empty($caservice['audit_report_I'])) { ?>
+                                                                <span style="padding-right: 5px">
+                                                                    <a href="<?php echo $caservice['audit_report_I'] ?>" data-id=""
+                                                                        download class="customerReviewFileDownload"
+                                                                        title="Download Signed Copy"><i class="fa fa-download"></i></a>
+                                                                </span>
+                                                            <?php } ?>
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                <?php } ?>
                                             </div>
                                         </div>
                                         <div class="col-sm-6">
@@ -5863,30 +6193,36 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $serviceClass = "serviceContent";
                                             }
                                             ?>
-                                            <div class="<?php echo $serviceClass ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>>
+                                            <div class="<?php echo $serviceClass ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo $isMarketingRole ? 'title="Disabled for Marketing role"' : (isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""); ?>>
                                                 <span>Review Report (Annex I)- Stage I Audit</span>
-                                                <?php if (isset($caservice['audit_report_I']) && !empty($caservice['audit_report_I']) && empty($caservice['stage_i_id'])) { ?>
-                                                    <a class="auditStage-I pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $caservice['ca_id'] ?>" data-row-count=""
-                                                        title="Review Report (Annex I)" style="padding: 1px 5px;">
-                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
-                                                    </a>
-                                                <?php } else if (isset($caservice['stage_i_id']) && !empty($caservice['stage_i_id'])) { ?>
-                                                        <a class="editReviewReport  pull-right"
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <?php if (isset($caservice['audit_report_I']) && !empty($caservice['audit_report_I']) && empty($caservice['stage_i_id'])) { ?>
+                                                        <a class="auditStage-I pull-right"
                                                             data-customer="<?php echo $_GET['customerid'] ?>"
-                                                            data-service="<?php echo $caservice['ca_id'] ?>"
-                                                            data-notification="<?php echo $caservice['stage_i_id'] ?>"
-                                                            title="Add Review Report (Annex I)" style="padding: 1px 5px;">
-                                                            <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                            data-service="<?php echo $caservice['ca_id'] ?>" data-row-count=""
+                                                            title="Review Report (Annex I)" style="padding: 1px 5px;">
+                                                            <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
                                                         </a>
-                                                        <a class="downloadAnnexI pull-right"
-                                                            data-customer="<?php echo $_GET['customerid'] ?>"
-                                                            data-caservice-id="<?php echo $caservice['ca_id'] ?>"
-                                                            data-stageii="<?php echo $caservice['stage_i_id'] ?>"
-                                                            title="Download Review Report (Annex I)" style="padding: 1px 5px;">
-                                                            <i class="fa fa-download fa-lg " style="padding: 3px"></i>
-                                                        </a>
+                                                    <?php } else if (isset($caservice['stage_i_id']) && !empty($caservice['stage_i_id'])) { ?>
+                                                            <a class="editReviewReport  pull-right"
+                                                                data-customer="<?php echo $_GET['customerid'] ?>"
+                                                                data-service="<?php echo $caservice['ca_id'] ?>"
+                                                                data-notification="<?php echo $caservice['stage_i_id'] ?>"
+                                                                title="Add Review Report (Annex I)" style="padding: 1px 5px;">
+                                                                <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                            </a>
+                                                            <a class="downloadAnnexI pull-right"
+                                                                data-customer="<?php echo $_GET['customerid'] ?>"
+                                                                data-caservice-id="<?php echo $caservice['ca_id'] ?>"
+                                                                data-stageii="<?php echo $caservice['stage_i_id'] ?>"
+                                                                title="Download Review Report (Annex I)" style="padding: 1px 5px;">
+                                                                <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                            </a>
+                                                    <?php } ?>
                                                 <?php } ?>
                                             </div>
                                         </div>
@@ -5986,32 +6322,39 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $classTo = 'serviceContent';
                                             }
                                             ?>
-                                            <div class="<?php echo $classTo ?>">
+                                            <div class="<?php echo $classTo; ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>"
+                                                <?php if ($isMarketingRole) { ?> title="Disabled for Marketing role" <?php } ?>>
                                                 <span>Signed Notification Stage II, And Copy of Stage II Audit Plan</span>
-                                                <div style="float: right" class="image-preview form-inline">
-                                                    <div class=" ">
-                                                        <?php if (isset($caservice['audit_scheduleii_id']) && !empty($caservice['audit_scheduleii_id'])) { ?>
-                                                            <span class=" image-preview-input  fa fa-upload"
-                                                                style="padding-right: 15px">
-                                                                <input type="file"
-                                                                    accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
-                                                                    data-id="<?php echo $_GET['customerid'] ?>"
-                                                                    data-service="<?php echo $caservice['ca_id'] ?>"
-                                                                    service-type="CA" data-column="signed_notification_II"
-                                                                    class="signedNotiCA2 input-signed-noti2<?php echo $caservice['ca_id'] ?>"
-                                                                    name="input-signed-noti2" />
-                                                            </span>
-                                                        <?php }
-                                                        if (isset($caservice['signed_notification_II']) && !empty($caservice['signed_notification_II']) && isset($caservice['audit_scheduleii_id']) && !empty($caservice['audit_scheduleii_id'])) { ?>
-                                                            <span style="padding-right: 5px">
-                                                                <a href="<?php echo $caservice['signed_notification_II'] ?>"
-                                                                    download class="download" title="Download Application Form">
-                                                                    <i class="fa fa-download"></i>
-                                                                </a>
-                                                            </span>
-                                                        <?php } ?>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <div style="float: right" class="image-preview form-inline">
+                                                        <div class=" ">
+                                                            <?php if (isset($caservice['audit_scheduleii_id']) && !empty($caservice['audit_scheduleii_id'])) { ?>
+                                                                <span class=" image-preview-input  fa fa-upload"
+                                                                    style="padding-right: 15px">
+                                                                    <input type="file"
+                                                                        accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
+                                                                        data-id="<?php echo $_GET['customerid'] ?>"
+                                                                        data-service="<?php echo $caservice['ca_id'] ?>"
+                                                                        service-type="CA" data-column="signed_notification_II"
+                                                                        class="signedNotiCA2 input-signed-noti2<?php echo $caservice['ca_id'] ?>"
+                                                                        name="input-signed-noti2" />
+                                                                </span>
+                                                            <?php }
+                                                            if (isset($caservice['signed_notification_II']) && !empty($caservice['signed_notification_II']) && isset($caservice['audit_scheduleii_id']) && !empty($caservice['audit_scheduleii_id'])) { ?>
+                                                                <span style="padding-right: 5px">
+                                                                    <a href="<?php echo $caservice['signed_notification_II'] ?>"
+                                                                        download class="download" title="Download Application Form">
+                                                                        <i class="fa fa-download"></i>
+                                                                    </a>
+                                                                </span>
+                                                            <?php } ?>
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                <?php } ?>
                                             </div>
                                         </div>
                                         <div class="col-sm-6">
@@ -6026,32 +6369,39 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $classNoti2 = 'serviceContent';
                                             }
                                             ?>
-                                            <div class="<?php echo $classNoti2 ?>">
+                                            <div class="<?php echo $classNoti2; ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>"
+                                                <?php if ($isMarketingRole) { ?> title="Disabled for Marketing role" <?php } ?>>
                                                 <span>Stage - II Audit Report, Summery and Checklists</span>
-                                                <div style="float: right" class="image-preview form-inline">
-                                                    <div class=" ">
-                                                        <?php if (isset($caservice['signed_notification_II']) && !empty($caservice['signed_notification_II'])) { ?>
-                                                            <span class=" image-preview-input  fa fa-upload"
-                                                                style="padding-right: 15px">
-                                                                <input type="file"
-                                                                    accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
-                                                                    data-id="<?php echo $_GET['customerid'] ?>"
-                                                                    data-service="<?php echo $caservice['ca_id'] ?>"
-                                                                    service-type="CA" data-column="audit_report_II"
-                                                                    class="auditReportStage2 input-audit-report2<?php echo $caservice['ca_id'] ?>"
-                                                                    name="input-audit-report2" />
-                                                            </span>
-                                                        <?php } ?>
-                                                        <?php if (isset($caservice['audit_report_II']) && !empty($caservice['audit_report_II']) && isset($caservice['signed_notification_II']) && !empty($caservice['signed_notification_II'])) { ?>
-                                                            <span style="padding-right: 5px">
-                                                                <a href="<?php echo $caservice['audit_report_II'] ?>" download
-                                                                    class="download" title="Download Application Form">
-                                                                    <i class="fa fa-download "></i>
-                                                                </a>
-                                                            </span>
-                                                        <?php } ?>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <div style="float: right" class="image-preview form-inline">
+                                                        <div class=" ">
+                                                            <?php if (isset($caservice['signed_notification_II']) && !empty($caservice['signed_notification_II'])) { ?>
+                                                                <span class=" image-preview-input  fa fa-upload"
+                                                                    style="padding-right: 15px">
+                                                                    <input type="file"
+                                                                        accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
+                                                                        data-id="<?php echo $_GET['customerid'] ?>"
+                                                                        data-service="<?php echo $caservice['ca_id'] ?>"
+                                                                        service-type="CA" data-column="audit_report_II"
+                                                                        class="auditReportStage2 input-audit-report2<?php echo $caservice['ca_id'] ?>"
+                                                                        name="input-audit-report2" />
+                                                                </span>
+                                                            <?php } ?>
+                                                            <?php if (isset($caservice['audit_report_II']) && !empty($caservice['audit_report_II']) && isset($caservice['signed_notification_II']) && !empty($caservice['signed_notification_II'])) { ?>
+                                                                <span style="padding-right: 5px">
+                                                                    <a href="<?php echo $caservice['audit_report_II'] ?>" download
+                                                                        class="download" title="Download Application Form">
+                                                                        <i class="fa fa-download "></i>
+                                                                    </a>
+                                                                </span>
+                                                            <?php } ?>
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                <?php } ?>
                                             </div>
                                         </div>
                                     </div>
@@ -6068,32 +6418,39 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $classAudRep2 = 'serviceContent';
                                             }
                                             ?>
-                                            <div class="<?php echo $classAudRep2 ?>">
+                                            <div class="<?php echo $classAudRep2; ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>"
+                                                <?php if ($isMarketingRole) { ?> title="Disabled for Marketing role" <?php } ?>>
                                                 <span>Stage - II Auditor Notes</span>
-                                                <div style="float: right" class="image-preview form-inline">
-                                                    <div class=" ">
-                                                        <?php if (isset($caservice['audit_report_II']) && !empty($caservice['audit_report_II'])) { ?>
-                                                            <span class=" image-preview-input  fa fa-upload"
-                                                                style="padding-right: 15px">
-                                                                <input type="file"
-                                                                    accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
-                                                                    data-id="<?php echo $_GET['customerid'] ?>"
-                                                                    data-service="<?php echo $caservice['ca_id'] ?>"
-                                                                    service-type="CA" data-column="auditor_notes"
-                                                                    class="auditornotes input-auditor-notes<?php echo $caservice['ca_id'] ?>"
-                                                                    name="input-auditor-notes" />
-                                                            </span>
-                                                        <?php } ?>
-                                                        <?php if (isset($caservice['auditor_notes']) && !empty($caservice['auditor_notes']) && isset($caservice['audit_report_II']) && !empty($caservice['audit_report_II'])) { ?>
-                                                            <span style="padding-right: 5px">
-                                                                <a href="<?php echo $caservice['auditor_notes'] ?>" download
-                                                                    class="download" title="Download Application Form">
-                                                                    <i class="fa fa-download "></i>
-                                                                </a>
-                                                            </span>
-                                                        <?php } ?>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <div style="float: right" class="image-preview form-inline">
+                                                        <div class=" ">
+                                                            <?php if (isset($caservice['audit_report_II']) && !empty($caservice['audit_report_II'])) { ?>
+                                                                <span class=" image-preview-input  fa fa-upload"
+                                                                    style="padding-right: 15px">
+                                                                    <input type="file"
+                                                                        accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
+                                                                        data-id="<?php echo $_GET['customerid'] ?>"
+                                                                        data-service="<?php echo $caservice['ca_id'] ?>"
+                                                                        service-type="CA" data-column="auditor_notes"
+                                                                        class="auditornotes input-auditor-notes<?php echo $caservice['ca_id'] ?>"
+                                                                        name="input-auditor-notes" />
+                                                                </span>
+                                                            <?php } ?>
+                                                            <?php if (isset($caservice['auditor_notes']) && !empty($caservice['auditor_notes']) && isset($caservice['audit_report_II']) && !empty($caservice['audit_report_II'])) { ?>
+                                                                <span style="padding-right: 5px">
+                                                                    <a href="<?php echo $caservice['auditor_notes'] ?>" download
+                                                                        class="download" title="Download Application Form">
+                                                                        <i class="fa fa-download "></i>
+                                                                    </a>
+                                                                </span>
+                                                            <?php } ?>
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                <?php } ?>
                                             </div>
                                         </div>
                                         <div class="col-sm-6">
@@ -6108,58 +6465,62 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $evidanceClass = 'serviceContent';
                                             }
                                             ?>
-                                            <div class="caservicedivclass <?php echo $evidanceClass ?>">
+                                            <div class="caservicedivclass <?php echo $evidanceClass; ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>"
+                                                <?php if ($isMarketingRole) { ?> title="Disabled for Marketing role" <?php } ?>>
                                                 <span>CA Audit NC And evidences of closer
                                                     <?php if (isset($caservice['audit_nc_II']) && !empty($caservice['audit_nc_II']) && $caservice['audit_nc_II'] == "NONC" && isset($caservice['auditor_notes']) && !empty($caservice['auditor_notes'])) { ?>
-                                                        <!--                                                    <a class="" title="No NC Flag" style="padding: 1px 5px;">
-                                                                                                                <i class="fa fa-times-circle fa-lg " style="padding: 3px"></i>
-                                                                                                            </a>-->
                                                         *(No NC)<?php } ?></span>
-                                                <div style="float: right" class="image-preview form-inline">
-                                                    <div class=" ">
-                                                        <?php if (isset($caservice['auditor_notes']) && !empty($caservice['auditor_notes']) && empty($caservice['audit_nc_II'])) { ?>
-                                                            <span class=" image-preview-input" style="padding-right: 15px">
-                                                                <input type="checkbox" class="no_nc_file" name="no_nc_file"
-                                                                    data-svctype="CA"
-                                                                    data-service="<?php echo $caservice['ca_id'] ?>" value="">
-                                                            </span>
-                                                        <?php } ?>
-                                                        <?php if (isset($caservice['audit_nc_II']) && !empty($caservice['audit_nc_II']) && $caservice['audit_nc_II'] == "NONC" && isset($caservice['auditor_notes']) && !empty($caservice['auditor_notes'])) { ?>
-                                                            <span class=" image-preview-input" style="padding-right: 15px">
-                                                                <input type="checkbox" class="no_nc_file" name="no_nc_file"
-                                                                    data-svctype="CA"
-                                                                    data-service="<?php echo $caservice['ca_id'] ?>" checked>
-                                                            </span>
-                                                        <?php } ?>
-                                                        <?php if (isset($caservice['audit_nc_II']) && !empty($caservice['audit_nc_II']) && isset($caservice['auditor_notes']) && !empty($caservice['auditor_notes']) && $caservice['audit_nc_II'] <> "NONC") { ?>
-                                                            <span class=" image-preview-input" style="padding-right: 15px">
-                                                                <input type="checkbox" class="no_nc_file" name="no_nc_file"
-                                                                    data-svctype="CA"
-                                                                    data-service="<?php echo $caservice['ca_id'] ?>">
-                                                            </span>
-                                                        <?php } ?>
-                                                        <?php if (isset($caservice['audit_report_II']) && !empty($caservice['auditor_notes'])) { ?>
-                                                            <span class=" image-preview-input  fa fa-upload"
-                                                                style="padding-right: 15px">
-                                                                <input type="file"
-                                                                    accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
-                                                                    data-id="<?php echo $_GET['customerid'] ?>"
-                                                                    data-service="<?php echo $caservice['ca_id'] ?>"
-                                                                    service-type="CA" data-column="audit_nc_II"
-                                                                    class="auditNcII input-nc-ii<?php echo $caservice['ca_id'] ?>"
-                                                                    name="input-nc-ii" />
-                                                            </span>
-                                                        <?php } ?>
-                                                        <?php if (isset($caservice['audit_nc_II']) && !empty($caservice['audit_nc_II']) && $caservice['audit_nc_II'] != "NONC" && isset($caservice['auditor_notes']) && !empty($caservice['auditor_notes'])) { ?>
-                                                            <span style="padding-right: 5px">
-                                                                <a href="<?php echo $caservice['audit_nc_II'] ?>" download
-                                                                    class="download" title="Download Application Form">
-                                                                    <i class="fa fa-download "></i>
-                                                                </a>
-                                                            </span>
-                                                        <?php } ?>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <div style="float: right" class="image-preview form-inline">
+                                                        <div class=" ">
+                                                            <?php if (isset($caservice['auditor_notes']) && !empty($caservice['auditor_notes']) && empty($caservice['audit_nc_II'])) { ?>
+                                                                <span class=" image-preview-input" style="padding-right: 15px">
+                                                                    <input type="checkbox" class="no_nc_file" name="no_nc_file"
+                                                                        data-svctype="CA"
+                                                                        data-service="<?php echo $caservice['ca_id'] ?>" value="">
+                                                                </span>
+                                                            <?php } ?>
+                                                            <?php if (isset($caservice['audit_nc_II']) && !empty($caservice['audit_nc_II']) && $caservice['audit_nc_II'] == "NONC" && isset($caservice['auditor_notes']) && !empty($caservice['auditor_notes'])) { ?>
+                                                                <span class=" image-preview-input" style="padding-right: 15px">
+                                                                    <input type="checkbox" class="no_nc_file" name="no_nc_file"
+                                                                        data-svctype="CA"
+                                                                        data-service="<?php echo $caservice['ca_id'] ?>" checked>
+                                                                </span>
+                                                            <?php } ?>
+                                                            <?php if (isset($caservice['audit_nc_II']) && !empty($caservice['audit_nc_II']) && isset($caservice['auditor_notes']) && !empty($caservice['auditor_notes']) && $caservice['audit_nc_II'] <> "NONC") { ?>
+                                                                <span class=" image-preview-input" style="padding-right: 15px">
+                                                                    <input type="checkbox" class="no_nc_file" name="no_nc_file"
+                                                                        data-svctype="CA"
+                                                                        data-service="<?php echo $caservice['ca_id'] ?>">
+                                                                </span>
+                                                            <?php } ?>
+                                                            <?php if (isset($caservice['audit_report_II']) && !empty($caservice['auditor_notes'])) { ?>
+                                                                <span class=" image-preview-input  fa fa-upload"
+                                                                    style="padding-right: 15px">
+                                                                    <input type="file"
+                                                                        accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
+                                                                        data-id="<?php echo $_GET['customerid'] ?>"
+                                                                        data-service="<?php echo $caservice['ca_id'] ?>"
+                                                                        service-type="CA" data-column="audit_nc_II"
+                                                                        class="auditNcII input-nc-ii<?php echo $caservice['ca_id'] ?>"
+                                                                        name="input-nc-ii" />
+                                                                </span>
+                                                            <?php } ?>
+                                                            <?php if (isset($caservice['audit_nc_II']) && !empty($caservice['audit_nc_II']) && $caservice['audit_nc_II'] != "NONC" && isset($caservice['auditor_notes']) && !empty($caservice['auditor_notes'])) { ?>
+                                                                <span style="padding-right: 5px">
+                                                                    <a href="<?php echo $caservice['audit_nc_II'] ?>" download
+                                                                        class="download" title="Download Application Form">
+                                                                        <i class="fa fa-download "></i>
+                                                                    </a>
+                                                                </span>
+                                                            <?php } ?>
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                <?php } ?>
                                             </div>
                                         </div>
 
@@ -6177,30 +6538,36 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $anexClass = 'serviceContent';
                                             }
                                             ?>
-                                            <div class="<?php echo $anexClass ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>>
+                                            <div class="<?php echo $anexClass; ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo $isMarketingRole ? 'title="Disabled for Marketing role"' : (isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""); ?>>
                                                 <span>Review Report (Annex II)- Stage II Audit</span>
-                                                <?php if ((isset($caservice['audit_nc_II']) && !empty($caservice['audit_nc_II']) && empty($caservice['stage_ii_id'])) || (isset($caservice['audit_scheduleii_id']) && empty($caservice['signed_notification_II']) && empty($caservice['audit_report_II']) && empty($caservice['auditor_notes']) && empty($caservice['audit_nc_II']) && empty($caservice['stage_ii_id']) && (Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin()))) { ?>
-                                                    <a class="stageIIAudit pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $caservice['ca_id'] ?>" data-row-count=""
-                                                        title="Review Report (Annex II)" style="padding: 1px 5px;">
-                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
-                                                    </a>
-                                                <?php } else if (isset($caservice['stage_ii_id']) && !empty($caservice['stage_ii_id'])) { ?>
-                                                        <a class="editstageIIAudit2  pull-right"
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <?php if ((isset($caservice['audit_nc_II']) && !empty($caservice['audit_nc_II']) && empty($caservice['stage_ii_id'])) || (isset($caservice['audit_scheduleii_id']) && empty($caservice['signed_notification_II']) && empty($caservice['audit_report_II']) && empty($caservice['auditor_notes']) && empty($caservice['audit_nc_II']) && empty($caservice['stage_ii_id']) && (Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin()))) { ?>
+                                                        <a class="stageIIAudit pull-right"
                                                             data-customer="<?php echo $_GET['customerid'] ?>"
-                                                            data-service="<?php echo $caservice['ca_id'] ?>"
-                                                            data-notification="<?php echo $caservice['stage_ii_id'] ?>"
-                                                            title="Edit Review Report(Annex II)" style="padding: 1px 5px;">
-                                                            <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                            data-service="<?php echo $caservice['ca_id'] ?>" data-row-count=""
+                                                            title="Review Report (Annex II)" style="padding: 1px 5px;">
+                                                            <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
                                                         </a>
-                                                        <a class="downloadAnnexII pull-right"
-                                                            data-customer="<?php echo $_GET['customerid'] ?>"
-                                                            data-caservice-id="<?php echo $caservice['ca_id'] ?>"
-                                                            data-stage-ii="<?php echo $caservice['stage_ii_id'] ?>"
-                                                            title="Download Review Report (Annex II)" style="padding: 1px 5px;">
-                                                            <i class="fa fa-download fa-lg " style="padding: 3px"></i>
-                                                        </a>
+                                                    <?php } else if (isset($caservice['stage_ii_id']) && !empty($caservice['stage_ii_id'])) { ?>
+                                                            <a class="editstageIIAudit2  pull-right"
+                                                                data-customer="<?php echo $_GET['customerid'] ?>"
+                                                                data-service="<?php echo $caservice['ca_id'] ?>"
+                                                                data-notification="<?php echo $caservice['stage_ii_id'] ?>"
+                                                                title="Edit Review Report(Annex II)" style="padding: 1px 5px;">
+                                                                <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                            </a>
+                                                            <a class="downloadAnnexII pull-right"
+                                                                data-customer="<?php echo $_GET['customerid'] ?>"
+                                                                data-caservice-id="<?php echo $caservice['ca_id'] ?>"
+                                                                data-stage-ii="<?php echo $caservice['stage_ii_id'] ?>"
+                                                                title="Download Review Report (Annex II)" style="padding: 1px 5px;">
+                                                                <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                            </a>
+                                                    <?php } ?>
                                                 <?php } ?>
                                             </div>
                                         </div>
@@ -6216,39 +6583,43 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                             $cdcClass = 'serviceContent';
                                         }
                                         ?>
-                                            <div class="<?php echo $cdcClass ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>Review Report - CDC DELIBERATION AND DECISION</span>
-                                                <?php
-                                                // Only show CDC button if Review Report (Annex II) - Stage II Audit is submitted (stage_ii_id exists)
-                                                // AND CDC is not yet created (crr_id is empty)
-                                                if (isset($caservice['stage_ii_id']) && !empty($caservice['stage_ii_id']) && empty($caservice['crr_id'])) { ?>
-                                                    <a class="cdcReport pull-right" data-svctype="CA"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $caservice['ca_id'] ?>"
-                                                        data-service1="<?php echo $crservice['cr_id'] ?>"
-                                                        data-id="<?php echo $caservice['service'] ?>" audit-data="CA"
-                                                        data-row-count="" title="CDC DELIBERATION AND DECISION"
-                                                        style="padding: 1px 5px;"><i class="fa fa-plus-circle fa-lg"
-                                                            style="padding: 3px"></i></a>
-                                                <?php } else if (isset($caservice['crr_id']) && !empty($caservice['crr_id'])) { ?>
-                                                        <a class="editCDC pull-right" data-customer="<?php echo $_GET['customerid'] ?>"
-                                                            data-service="<?php echo $caservice['ca_id'] ?>"
-                                                            data-notification="<?php echo $caservice['crr_id'] ?>"
-                                                            title="Edit CDC DELIBERATION AND DECISION" style="padding: 1px 5px;">
-                                                            <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
-                                                        </a>
-                                                        <a class="sendCdcMail pull-right" data-svctype="CA"
+                                            <div class="<?php echo $cdcClass; ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo $isMarketingRole ? 'title="Disabled for Marketing role"' : (isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""); ?>> <span>Review Report - CDC DELIBERATION AND DECISION</span>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <?php
+                                                    if (isset($caservice['stage_ii_id']) && !empty($caservice['stage_ii_id']) && empty($caservice['crr_id'])) { ?>
+                                                        <a class="cdcReport pull-right" data-svctype="CA"
                                                             data-customer="<?php echo $_GET['customerid'] ?>"
                                                             data-service="<?php echo $caservice['ca_id'] ?>"
-                                                            data-crr="<?php echo $caservice['crr_id'] ?>"
-                                                            title="Send certificate by email" style="padding: 1px 5px;">
-                                                            <i class="fa fa-envelope fa-lg" style="padding: 3px"></i>
-                                                        </a>
-                                                        <a class="downloadCdc pull-right"
-                                                            data-customer="<?php echo $_GET['customerid'] ?>"
-                                                            data-caservice-id="<?php echo $caservice['ca_id'] ?>"
-                                                            data-crr="<?php echo $caservice['crr_id'] ?>"
-                                                            title="Download  CDC DELIBERATION AND DECISION" style="padding: 1px 5px;"><i
-                                                                class="fa fa-download fa-lg " style="padding: 3px"></i></a>
+                                                            data-service1="<?php echo $crservice['cr_id'] ?>"
+                                                            data-id="<?php echo $caservice['service'] ?>" audit-data="CA"
+                                                            data-row-count="" title="CDC DELIBERATION AND DECISION"
+                                                            style="padding: 1px 5px;"><i class="fa fa-plus-circle fa-lg"
+                                                                style="padding: 3px"></i></a>
+                                                    <?php } else if (isset($caservice['crr_id']) && !empty($caservice['crr_id'])) { ?>
+                                                            <a class="editCDC pull-right" data-customer="<?php echo $_GET['customerid'] ?>"
+                                                                data-service="<?php echo $caservice['ca_id'] ?>"
+                                                                data-notification="<?php echo $caservice['crr_id'] ?>"
+                                                                title="Edit CDC DELIBERATION AND DECISION" style="padding: 1px 5px;">
+                                                                <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                            </a>
+                                                            <a class="sendCdcMail pull-right" data-svctype="CA"
+                                                                data-customer="<?php echo $_GET['customerid'] ?>"
+                                                                data-service="<?php echo $caservice['ca_id'] ?>"
+                                                                data-crr="<?php echo $caservice['crr_id'] ?>"
+                                                                title="Send certificate by email" style="padding: 1px 5px;">
+                                                                <i class="fa fa-envelope fa-lg" style="padding: 3px"></i>
+                                                            </a>
+                                                            <a class="downloadCdc pull-right"
+                                                                data-customer="<?php echo $_GET['customerid'] ?>"
+                                                                data-caservice-id="<?php echo $caservice['ca_id'] ?>"
+                                                                data-crr="<?php echo $caservice['crr_id'] ?>"
+                                                                title="Download  CDC DELIBERATION AND DECISION" style="padding: 1px 5px;"><i
+                                                                    class="fa fa-download fa-lg " style="padding: 3px"></i></a>
+                                                    <?php } ?>
                                                 <?php } ?>
                                             </div>
                                         </div>
@@ -6263,17 +6634,23 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                             $certClass = "serviceContent";
                                         }
                                         ?>
-                                            <div class="<?php echo $certClass ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" style="" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>>
+                                            <div class="<?php echo $certClass; ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" style="" <?php echo $isMarketingRole ? 'title="Disabled for Marketing role"' : (isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""); ?>>
                                                 <span>Certificate Print</span>
-                                                <?php if (isset($caservice['crr_id']) && !empty($caservice['crr_id'])) { ?>
-                                                    <a class="download-certificate-print pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $caservice['ca_id'] ?>"
-                                                        data-id="<?php echo $caservice['service'] ?>"
-                                                        data-certificate="<?php echo !empty($caservice['certificate_id']) ? $caservice['certificate_id'] : '' ?>"
-                                                        data-crr="<?php echo $caservice['crr_id'] ?>" data-row-count=""
-                                                        title="Certificate Print" style="padding: 1px 5px;">
-                                                        <i class="fa fa-download fa-lg" style="padding: 3px"></i></a>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <?php if (isset($caservice['crr_id']) && !empty($caservice['crr_id'])) { ?>
+                                                        <a class="download-certificate-print pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-service="<?php echo $caservice['ca_id'] ?>"
+                                                            data-id="<?php echo $caservice['service'] ?>"
+                                                            data-certificate="<?php echo !empty($caservice['certificate_id']) ? $caservice['certificate_id'] : '' ?>"
+                                                            data-crr="<?php echo $caservice['crr_id'] ?>" data-row-count=""
+                                                            title="Certificate Print" style="padding: 1px 5px;">
+                                                            <i class="fa fa-download fa-lg" style="padding: 3px"></i></a>
+                                                    <?php } ?>
                                                 <?php } ?>
                                             </div>
                                         </div>
@@ -6289,29 +6666,35 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $certClass = "serviceContent";
                                             }
                                             ?>
-                                            <div class="<?php echo $certClass ?>" style="">
+                                            <div class="<?php echo $certClass; ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" style="" <?php if ($isMarketingRole) { ?> title="Disabled for Marketing role" <?php } ?>>
                                                 <span>Certificate Upload</span>
-                                                <div style="float: right" class="image-preview form-inline">
-                                                    <?php if (isset($caservice['crr_id']) && !empty($caservice['crr_id'])) { ?>
-                                                        <span class="image-preview-input fa fa-upload" style="padding-right: 15px">
-                                                            <input type="file"
-                                                                accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
-                                                                data-id="<?php echo $_GET['customerid'] ?>"
-                                                                data-service="<?php echo $caservice['ca_id'] ?>" service-type="CA"
-                                                                data-column="certificate_print"
-                                                                class="certificatePrint input-certificate-print<?php echo $caservice['ca_id'] ?>"
-                                                                name="input-certificate-print" />
-                                                        </span>
-                                                    <?php }
-                                                    if (isset($caservice['certificate_print']) && !empty($caservice['certificate_print'])) { ?>
-                                                        <span style="padding-right: 5px">
-                                                            <a href="<?php echo $caservice['certificate_print'] ?>" download
-                                                                class="download" title="Download Certificate">
-                                                                <i class="fa fa-download"></i>
-                                                            </a>
-                                                        </span>
-                                                    <?php } ?>
-                                                </div>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <div style="float: right" class="image-preview form-inline">
+                                                        <?php if (isset($caservice['crr_id']) && !empty($caservice['crr_id'])) { ?>
+                                                            <span class="image-preview-input fa fa-upload" style="padding-right: 15px">
+                                                                <input type="file"
+                                                                    accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
+                                                                    data-id="<?php echo $_GET['customerid'] ?>"
+                                                                    data-service="<?php echo $caservice['ca_id'] ?>" service-type="CA"
+                                                                    data-column="certificate_print"
+                                                                    class="certificatePrint input-certificate-print<?php echo $caservice['ca_id'] ?>"
+                                                                    name="input-certificate-print" />
+                                                            </span>
+                                                        <?php }
+                                                        if (isset($caservice['certificate_print']) && !empty($caservice['certificate_print'])) { ?>
+                                                            <span style="padding-right: 5px">
+                                                                <a href="<?php echo $caservice['certificate_print'] ?>" download
+                                                                    class="download" title="Download Certificate">
+                                                                    <i class="fa fa-download"></i>
+                                                                </a>
+                                                            </span>
+                                                        <?php } ?>
+                                                    </div>
+                                                <?php } ?>
                                             </div>
                                         </div>
                                     </div>
@@ -6328,54 +6711,60 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $survayClass = 'serviceContent';
                                             }
                                             ?>
-                                            <div class="<?php echo $survayClass ?>">
+                                            <div class="<?php echo $survayClass; ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php if ($isMarketingRole) { ?> title="Disabled for Marketing role" <?php } ?>>
                                                 <span>Client Feedback
                                                     <?php if (isset($caservice['customer_satisfaction']) && !empty($caservice['customer_satisfaction']) && $caservice['customer_satisfaction'] == "NONC" && isset($caservice['certificate_print']) && !empty($caservice['certificate_print'])) { ?>
                                                         <!--                                                    <a class="" title="No Client Feedback Flag" style="padding: 1px 5px;">
                                                                                                                 <i class="fa fa-times-circle fa-lg " style="padding: 3px"></i>
                                                                                                             </a>-->
                                                         *(No Client Feedback)<?php } ?></span>
-                                                <div style="float: right" class="image-preview form-inline">
-                                                    <?php if (isset($caservice['certificate_print']) && !empty($caservice['certificate_print']) && empty($caservice['customer_satisfaction'])) { ?>
-                                                        <span class="image-preview-input" style="padding-right: 15px">
-                                                            <input type="checkbox" class="no_feedback_file" name="no_feedback_file"
-                                                                data-svctype="CA" data-service="<?php echo $caservice['ca_id'] ?>">
-                                                        </span>
-                                                    <?php } ?>
-                                                    <?php if (isset($caservice['customer_satisfaction']) && !empty($caservice['customer_satisfaction']) && $caservice['customer_satisfaction'] == "NONC" && isset($caservice['certificate_print']) && !empty($caservice['certificate_print'])) { ?>
-                                                        <span class="image-preview-input" style="padding-right: 15px">
-                                                            <input type="checkbox" class="no_feedback_file" name="no_feedback_file"
-                                                                data-svctype="CA" data-service="<?php echo $caservice['ca_id'] ?>"
-                                                                checked>
-                                                        </span>
-                                                    <?php } ?>
-                                                    <?php if (isset($caservice['customer_satisfaction']) && !empty($caservice['customer_satisfaction']) && isset($caservice['certificate_print']) && !empty($caservice['certificate_print']) && $caservice['customer_satisfaction'] <> "NONC") { ?>
-                                                        <span class="image-preview-input" style="padding-right: 15px">
-                                                            <input type="checkbox" class="no_feedback_file" name="no_feedback_file"
-                                                                data-svctype="CA" data-service="<?php echo $caservice['ca_id'] ?>">
-                                                        </span>
-                                                    <?php } ?>
-                                                    <?php if (isset($caservice['certificate_print']) && !empty($caservice['certificate_print'])) { ?>
-                                                        <span class=" image-preview-input  fa fa-upload"
-                                                            style="padding-right: 15px">
-                                                            <input type="file"
-                                                                accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
-                                                                data-id="<?php echo $_GET['customerid'] ?>"
-                                                                data-service="<?php echo $caservice['ca_id'] ?>" service-type="CA"
-                                                                data-column="customer_satisfaction"
-                                                                class="customerReview input-customer-review<?php echo $caservice['ca_id'] ?>"
-                                                                name="input-customer-review" />
-                                                        </span>
-                                                    <?php } ?>
-                                                    <?php if (isset($caservice['customer_satisfaction']) && !empty($caservice['customer_satisfaction']) && $caservice['customer_satisfaction'] != "NONC") { ?>
-                                                        <span style="padding-right: 5px">
-                                                            <a href="<?php echo $caservice['customer_satisfaction'] ?>" download
-                                                                class="download" title="Download Application Form">
-                                                                <i class="fa fa-download"></i>
-                                                            </a>
-                                                        </span>
-                                                    <?php } ?>
-                                                </div>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <div style="float: right" class="image-preview form-inline">
+                                                        <?php if (isset($caservice['certificate_print']) && !empty($caservice['certificate_print']) && empty($caservice['customer_satisfaction'])) { ?>
+                                                            <span class="image-preview-input" style="padding-right: 15px">
+                                                                <input type="checkbox" class="no_feedback_file" name="no_feedback_file"
+                                                                    data-svctype="CA" data-service="<?php echo $caservice['ca_id'] ?>">
+                                                            </span>
+                                                        <?php } ?>
+                                                        <?php if (isset($caservice['customer_satisfaction']) && !empty($caservice['customer_satisfaction']) && $caservice['customer_satisfaction'] == "NONC" && isset($caservice['certificate_print']) && !empty($caservice['certificate_print'])) { ?>
+                                                            <span class="image-preview-input" style="padding-right: 15px">
+                                                                <input type="checkbox" class="no_feedback_file" name="no_feedback_file"
+                                                                    data-svctype="CA" data-service="<?php echo $caservice['ca_id'] ?>"
+                                                                    checked>
+                                                            </span>
+                                                        <?php } ?>
+                                                        <?php if (isset($caservice['customer_satisfaction']) && !empty($caservice['customer_satisfaction']) && isset($caservice['certificate_print']) && !empty($caservice['certificate_print']) && $caservice['customer_satisfaction'] <> "NONC") { ?>
+                                                            <span class="image-preview-input" style="padding-right: 15px">
+                                                                <input type="checkbox" class="no_feedback_file" name="no_feedback_file"
+                                                                    data-svctype="CA" data-service="<?php echo $caservice['ca_id'] ?>">
+                                                            </span>
+                                                        <?php } ?>
+                                                        <?php if (isset($caservice['certificate_print']) && !empty($caservice['certificate_print'])) { ?>
+                                                            <span class=" image-preview-input  fa fa-upload"
+                                                                style="padding-right: 15px">
+                                                                <input type="file"
+                                                                    accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
+                                                                    data-id="<?php echo $_GET['customerid'] ?>"
+                                                                    data-service="<?php echo $caservice['ca_id'] ?>" service-type="CA"
+                                                                    data-column="customer_satisfaction"
+                                                                    class="customerReview input-customer-review<?php echo $caservice['ca_id'] ?>"
+                                                                    name="input-customer-review" />
+                                                            </span>
+                                                        <?php } ?>
+                                                        <?php if (isset($caservice['customer_satisfaction']) && !empty($caservice['customer_satisfaction']) && $caservice['customer_satisfaction'] != "NONC") { ?>
+                                                            <span style="padding-right: 5px">
+                                                                <a href="<?php echo $caservice['customer_satisfaction'] ?>" download
+                                                                    class="download" title="Download Application Form">
+                                                                    <i class="fa fa-download"></i>
+                                                                </a>
+                                                            </span>
+                                                        <?php } ?>
+                                                    </div>
+                                                <?php } ?>
                                             </div>
                                         </div>
                                         <div class="col-sm-6">
@@ -6390,35 +6779,41 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $satiSurvayClass = 'serviceContent';
                                             }
                                             ?>
-                                            <div class="<?php echo $satiSurvayClass ?>">
+                                            <div class="<?php echo $satiSurvayClass; ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php if ($isMarketingRole) { ?> title="Disabled for Marketing role" <?php } ?>>
                                                 <span>Review Report - Review of feedback</span>
-                                                <?php if (isset($caservice['customer_satisfaction']) && !empty($caservice['customer_satisfaction']) && empty($caservice['survey_id'])) { ?>
-                                                    <a class="createCustomerSurvey pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $caservice['ca_id'] ?>"
-                                                        data-id="<?php echo $caservice['ca_id'] ?>"
-                                                        data-service1="<?php echo $crservice['cr_id'] ?>" data-svc="CA"
-                                                        data-row-id="" data-row-count="" title="Add Review of feedback"
-                                                        style="padding: 1px 5px;">
-                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
-                                                    </a>
-                                                <?php } ?>
-                                                <?php if (isset($caservice['survey_id']) && !empty($caservice['survey_id'])) { ?>
-                                                    <a class="editCustomerSurvey pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $caservice['ca_id'] ?>"
-                                                        data-id="<?php echo $caservice['ca_id'] ?>" data-svc="CA"
-                                                        data-row-id="<?php echo $caservice['survey_id'] ?>" data-row-count=""
-                                                        title="Update Review of feedback" style="padding: 1px 5px;">
-                                                        <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
-                                                    </a>
-                                                    <a class="downloadCustomersatisfaction pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-caservice-id="<?php echo $caservice['ca_id'] ?>"
-                                                        data-surveyid="<?php echo $caservice['survey_id'] ?>"
-                                                        title="Download  Review of feedback" style="padding: 1px 5px;">
-                                                        <i class="fa fa-download fa-lg " style="padding: 3px"></i>
-                                                    </a>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <?php if (isset($caservice['customer_satisfaction']) && !empty($caservice['customer_satisfaction']) && empty($caservice['survey_id'])) { ?>
+                                                        <a class="createCustomerSurvey pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-service="<?php echo $caservice['ca_id'] ?>"
+                                                            data-id="<?php echo $caservice['ca_id'] ?>"
+                                                            data-service1="<?php echo $crservice['cr_id'] ?>" data-svc="CA"
+                                                            data-row-id="" data-row-count="" title="Add Review of feedback"
+                                                            style="padding: 1px 5px;">
+                                                            <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                        </a>
+                                                    <?php } ?>
+                                                    <?php if (isset($caservice['survey_id']) && !empty($caservice['survey_id'])) { ?>
+                                                        <a class="editCustomerSurvey pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-service="<?php echo $caservice['ca_id'] ?>"
+                                                            data-id="<?php echo $caservice['ca_id'] ?>" data-svc="CA"
+                                                            data-row-id="<?php echo $caservice['survey_id'] ?>" data-row-count=""
+                                                            title="Update Review of feedback" style="padding: 1px 5px;">
+                                                            <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                        </a>
+                                                        <a class="downloadCustomersatisfaction pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-caservice-id="<?php echo $caservice['ca_id'] ?>"
+                                                            data-surveyid="<?php echo $caservice['survey_id'] ?>"
+                                                            title="Download  Review of feedback" style="padding: 1px 5px;">
+                                                            <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                        </a>
+                                                    <?php } ?>
                                                 <?php } ?>
                                             </div>
                                         </div>
@@ -6435,32 +6830,38 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                             $cf1Class = 'serviceContent';
                                         }
                                         ?>
-                                            <div class="<?php echo $cf1Class ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>CONTROL FORMAT -1 (To be filled by
+                                            <div class="<?php echo $cf1Class; ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo $isMarketingRole ? 'title="Disabled for Marketing role"' : (isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""); ?>> <span>CONTROL FORMAT -1 (To be filled by
                                                     AITF-MCL)</span>
-                                                <?php if (empty($caservice['control_id'])) { ?>
-                                                    <a class="createControlFormat1 pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $caservice['ca_id'] ?>"
-                                                        data-row-id="<?php echo $caservice['control_id'] ?>"
-                                                        title="Add control format 1" style="padding: 1px 5px;">
-                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
-                                                    </a>
-                                                <?php } ?>
-                                                <?php if (isset($caservice['control_id']) && !empty($caservice['control_id'])) { ?>
-                                                    <a class="editControlFormat1 pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $caservice['ca_id'] ?>"
-                                                        data-row-id="<?php echo $caservice['control_id'] ?>"
-                                                        title="Add control format 1" style="padding: 1px 5px;">
-                                                        <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
-                                                    </a>
-                                                    <a class="downloadControlFormat1 pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-caservice-id="<?php echo $caservice['ca_id'] ?>"
-                                                        data-cfi-id="<?php echo $caservice['control_id'] ?>"
-                                                        title="Download  control format 1" style="padding: 1px 5px;">
-                                                        <i class="fa fa-download fa-lg " style="padding: 3px"></i>
-                                                    </a>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <?php if (empty($caservice['control_id'])) { ?>
+                                                        <a class="createControlFormat1 pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-service="<?php echo $caservice['ca_id'] ?>"
+                                                            data-row-id="<?php echo $caservice['control_id'] ?>"
+                                                            title="Add control format 1" style="padding: 1px 5px;">
+                                                            <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                        </a>
+                                                    <?php } ?>
+                                                    <?php if (isset($caservice['control_id']) && !empty($caservice['control_id'])) { ?>
+                                                        <a class="editControlFormat1 pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-service="<?php echo $caservice['ca_id'] ?>"
+                                                            data-row-id="<?php echo $caservice['control_id'] ?>"
+                                                            title="Add control format 1" style="padding: 1px 5px;">
+                                                            <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                        </a>
+                                                        <a class="downloadControlFormat1 pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-caservice-id="<?php echo $caservice['ca_id'] ?>"
+                                                            data-cfi-id="<?php echo $caservice['control_id'] ?>"
+                                                            title="Download  control format 1" style="padding: 1px 5px;">
+                                                            <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                        </a>
+                                                    <?php } ?>
                                                 <?php } ?>
                                             </div>
                                         </div>
@@ -6475,31 +6876,37 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                             $cf2Class = 'serviceContent';
                                         }
                                         ?>
-                                            <div class="<?php echo $cf2Class ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>CONTROL FORMAT -2 (SHC Comments while
+                                            <div class="<?php echo $cf2Class; ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php if ($isMarketingRole) { ?> title="Disabled for Marketing role" <?php } ?>> <span>CONTROL FORMAT -2 (SHC Comments while
                                                     meeting)</span>
-                                                <?php if (empty($caservice['control2_id'])) { ?>
-                                                    <a class="createControlFormat2 pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $caservice['ca_id'] ?>"
-                                                        data-id="<?php echo $caservice['service'] ?>" data-row-count=""
-                                                        title="Add control format 2" style="padding: 1px 5px;">
-                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
-                                                    </a>
-                                                <?php } else if (isset($caservice['control2_id']) && !empty($caservice['control2_id'])) { ?>
-                                                        <a class="editControlFormat2  pull-right"
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <?php if (empty($caservice['control2_id'])) { ?>
+                                                        <a class="createControlFormat2 pull-right"
                                                             data-customer="<?php echo $_GET['customerid'] ?>"
                                                             data-service="<?php echo $caservice['ca_id'] ?>"
-                                                            data-notification="<?php echo $caservice['control2_id'] ?>"
-                                                            title="Update control format 2" style="padding: 1px 5px;">
-                                                            <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                            data-id="<?php echo $caservice['service'] ?>" data-row-count=""
+                                                            title="Add control format 2" style="padding: 1px 5px;">
+                                                            <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
                                                         </a>
-                                                        <a class="downloadControlFormat2 pull-right"
-                                                            data-customer="<?php echo $_GET['customerid'] ?>"
-                                                            data-caservice-id="<?php echo $caservice['ca_id'] ?>"
-                                                            data-cf-id="<?php echo $caservice['control2_id'] ?>"
-                                                            title="Download  control format 2" style="padding: 1px 5px;">
-                                                            <i class="fa fa-download fa-lg " style="padding: 3px"></i>
-                                                        </a>
+                                                    <?php } else if (isset($caservice['control2_id']) && !empty($caservice['control2_id'])) { ?>
+                                                            <a class="editControlFormat2  pull-right"
+                                                                data-customer="<?php echo $_GET['customerid'] ?>"
+                                                                data-service="<?php echo $caservice['ca_id'] ?>"
+                                                                data-notification="<?php echo $caservice['control2_id'] ?>"
+                                                                title="Update control format 2" style="padding: 1px 5px;">
+                                                                <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                            </a>
+                                                            <a class="downloadControlFormat2 pull-right"
+                                                                data-customer="<?php echo $_GET['customerid'] ?>"
+                                                                data-caservice-id="<?php echo $caservice['ca_id'] ?>"
+                                                                data-cf-id="<?php echo $caservice['control2_id'] ?>"
+                                                                title="Download  control format 2" style="padding: 1px 5px;">
+                                                                <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                            </a>
+                                                    <?php } ?>
                                                 <?php } ?>
                                             </div>
                                         </div>
@@ -6914,29 +7321,35 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $saiScheduleClass = 'serviceContent';
                                             }
                                             ?>
-                                            <div class="<?php echo $saiScheduleClass ?>">
+                                            <div class="<?php echo $saiScheduleClass ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php if ($isMarketingRole) { ?> title="Disabled for Marketing role" <?php } ?>>
                                                 <span>Release SA Audit Plan (SA-I)</span>
-                                                <?php if (isset($saiService['audit_stage_id']) && !empty($saiService['audit_stage_id']) && empty($saiService['servelance_id'])) { ?>
-                                                    <a class="createStageServelance pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $saiService['sai_id'] ?>" data-serviceType="SA-1"
-                                                        data-type="service-type-sai" data-row-id="" title="Add SA Schedule (SA-I)"
-                                                        style="padding: 1px 5px;"><i class="fa fa-plus-circle fa-lg "
-                                                            style="padding: 3px"></i></a>
-                                                <?php } ?>
-                                                <?php if (isset($saiService['servelance_id']) && !empty($saiService['servelance_id'])) { ?>
-                                                    <a class="editStage1Servelance pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $saiService['sai_id'] ?>"
-                                                        data-row-id="<?php echo $saiService['servelance_id'] ?>"
-                                                        title="Add Release Audit Notification" style="padding: 1px 5px;"><i
-                                                            class="fa fa-pencil-square fa-lg " style="padding: 3px"></i></a>
-                                                    <a class="downloadStageScheduleSai pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-caservice-id="<?php echo $saiService['sai_id'] ?>"
-                                                        data-schedulei="<?php echo $saiService['servelance_id'] ?>"
-                                                        title="Download Release Audit Notification" style="padding: 1px 5px;"><i
-                                                            class="fa fa-download fa-lg " style="padding: 3px"></i></a>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <?php if (isset($saiService['audit_stage_id']) && !empty($saiService['audit_stage_id']) && empty($saiService['servelance_id'])) { ?>
+                                                        <a class="createStageServelance pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-service="<?php echo $saiService['sai_id'] ?>" data-serviceType="SA-1"
+                                                            data-type="service-type-sai" data-row-id="" title="Add SA Schedule (SA-I)"
+                                                            style="padding: 1px 5px;"><i class="fa fa-plus-circle fa-lg "
+                                                                style="padding: 3px"></i></a>
+                                                    <?php } ?>
+                                                    <?php if (isset($saiService['servelance_id']) && !empty($saiService['servelance_id'])) { ?>
+                                                        <a class="editStage1Servelance pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-service="<?php echo $saiService['sai_id'] ?>"
+                                                            data-row-id="<?php echo $saiService['servelance_id'] ?>"
+                                                            title="Add Release Audit Notification" style="padding: 1px 5px;"><i
+                                                                class="fa fa-pencil-square fa-lg " style="padding: 3px"></i></a>
+                                                        <a class="downloadStageScheduleSai pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-caservice-id="<?php echo $saiService['sai_id'] ?>"
+                                                            data-schedulei="<?php echo $saiService['servelance_id'] ?>"
+                                                            title="Download Release Audit Notification" style="padding: 1px 5px;"><i
+                                                                class="fa fa-download fa-lg " style="padding: 3px"></i></a>
+                                                    <?php } ?>
                                                 <?php } ?>
                                             </div>
                                         </div>
@@ -6954,31 +7367,37 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $saiSignNoti = 'serviceContent';
                                             }
                                             ?>
-                                            <div class="<?php echo $saiSignNoti ?>">
+                                            <div class="<?php echo $saiSignNoti ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php if ($isMarketingRole) { ?> title="Disabled for Marketing role" <?php } ?>>
                                                 <span>Signed Notification SA I Audit</span>
-                                                <div style="float: right" class="image-preview form-inline">
-                                                    <div class=" ">
-                                                        <?php if (isset($saiService['servelance_id']) && !empty($saiService['servelance_id'])) { ?>
-                                                            <span class=" image-preview-input  fa fa-upload"
-                                                                style="padding-right: 15px">
-                                                                <input type="file"
-                                                                    accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
-                                                                    data-id="<?php echo $_GET['customerid'] ?>"
-                                                                    data-service="<?php echo $saiService['sai_id'] ?>"
-                                                                    service-type="SA-I" data-column="signed_noti_sai"
-                                                                    name="input-signed-noti-sai"
-                                                                    class="signedNotiSai input-signed-noti-sai<?php echo $saiService['sai_id'] ?>" />
-                                                            </span>
-                                                        <?php } ?>
-                                                        <?php if (isset($saiService['signed_noti_sai']) && !empty($saiService['signed_noti_sai'])) { ?>
-                                                            <span style="padding-right: 5px">
-                                                                <a href="<?php echo $saiService['signed_noti_sai'] ?>" data-id=""
-                                                                    download class="customerReviewFileDownload"><i
-                                                                        class="fa fa-download"></i></a>
-                                                            </span>
-                                                        <?php } ?>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <div style="float: right" class="image-preview form-inline">
+                                                        <div class=" ">
+                                                            <?php if (isset($saiService['servelance_id']) && !empty($saiService['servelance_id'])) { ?>
+                                                                <span class=" image-preview-input  fa fa-upload"
+                                                                    style="padding-right: 15px">
+                                                                    <input type="file"
+                                                                        accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
+                                                                        data-id="<?php echo $_GET['customerid'] ?>"
+                                                                        data-service="<?php echo $saiService['sai_id'] ?>"
+                                                                        service-type="SA-I" data-column="signed_noti_sai"
+                                                                        name="input-signed-noti-sai"
+                                                                        class="signedNotiSai input-signed-noti-sai<?php echo $saiService['sai_id'] ?>" />
+                                                                </span>
+                                                            <?php } ?>
+                                                            <?php if (isset($saiService['signed_noti_sai']) && !empty($saiService['signed_noti_sai'])) { ?>
+                                                                <span style="padding-right: 5px">
+                                                                    <a href="<?php echo $saiService['signed_noti_sai'] ?>" data-id=""
+                                                                        download class="customerReviewFileDownload"><i
+                                                                            class="fa fa-download"></i></a>
+                                                                </span>
+                                                            <?php } ?>
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                <?php } ?>
                                             </div>
                                         </div>
                                         <div class="col-sm-6">
@@ -6993,30 +7412,36 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $saiSignedClass = 'serviceContent';
                                             }
                                             ?>
-                                            <div class="<?php echo $saiSignedClass ?>"><span>Audit Plan Scanned Copy</span>
-                                                <div style="float: right" class="image-preview form-inline">
-                                                    <div class=" ">
-                                                        <?php if (isset($saiService['signed_noti_sai']) && !empty($saiService['signed_noti_sai'])) { ?>
-                                                            <span class=" image-preview-input  fa fa-upload"
-                                                                style="padding-right: 15px">
-                                                                <input type="file"
-                                                                    accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
-                                                                    data-id="<?php echo $_GET['customerid'] ?>"
-                                                                    data-service="<?php echo $saiService['sai_id'] ?>"
-                                                                    service-type="SA-I" data-column="signed_copy_sai"
-                                                                    name="input-signed-copy-sai"
-                                                                    class="signedCopySai input-signed-copy-sai<?php echo $saiService['sai_id'] ?>" />
-                                                            </span>
-                                                        <?php } ?>
-                                                        <?php if (isset($saiService['signed_copy_sai']) && !empty($saiService['signed_copy_sai'])) { ?>
-                                                            <span style="padding-right: 5px">
-                                                                <a href="<?php echo $saiService['signed_copy_sai'] ?>" data-id=""
-                                                                    download class="customerReviewFileDownload"><i
-                                                                        class="fa fa-download"></i></a>
-                                                            </span>
-                                                        <?php } ?>
+                                            <div class="<?php echo $saiSignedClass ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php if ($isMarketingRole) { ?> title="Disabled for Marketing role" <?php } ?>><span>Audit Plan Scanned Copy</span>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <div style="float: right" class="image-preview form-inline">
+                                                        <div class=" ">
+                                                            <?php if (isset($saiService['signed_noti_sai']) && !empty($saiService['signed_noti_sai'])) { ?>
+                                                                <span class=" image-preview-input  fa fa-upload"
+                                                                    style="padding-right: 15px">
+                                                                    <input type="file"
+                                                                        accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
+                                                                        data-id="<?php echo $_GET['customerid'] ?>"
+                                                                        data-service="<?php echo $saiService['sai_id'] ?>"
+                                                                        service-type="SA-I" data-column="signed_copy_sai"
+                                                                        name="input-signed-copy-sai"
+                                                                        class="signedCopySai input-signed-copy-sai<?php echo $saiService['sai_id'] ?>" />
+                                                                </span>
+                                                            <?php } ?>
+                                                            <?php if (isset($saiService['signed_copy_sai']) && !empty($saiService['signed_copy_sai'])) { ?>
+                                                                <span style="padding-right: 5px">
+                                                                    <a href="<?php echo $saiService['signed_copy_sai'] ?>" data-id=""
+                                                                        download class="customerReviewFileDownload"><i
+                                                                            class="fa fa-download"></i></a>
+                                                                </span>
+                                                            <?php } ?>
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                <?php } ?>
                                             </div>
                                         </div>
                                     </div>
@@ -7033,28 +7458,34 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $saiAuditReportClass = 'serviceContent';
                                             }
                                             ?>
-                                            <div class="<?php echo $saiAuditReportClass ?>">
+                                            <div class="<?php echo $saiAuditReportClass ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php if ($isMarketingRole) { ?> title="Disabled for Marketing role" <?php } ?>>
                                                 <span>SA - I Audit Report, Summery and Checklists</span>
-                                                <div style="float: right" class="image-preview form-inline">
-                                                    <?php if (isset($saiService['signed_copy_sai']) && !empty($saiService['signed_copy_sai'])) { ?>
-                                                        <span class=" image-preview-input fa fa-upload" style="padding-right: 15px">
-                                                            <input type="file"
-                                                                accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
-                                                                data-id="<?php echo $_GET['customerid'] ?>"
-                                                                data-service="<?php echo $saiService['sai_id'] ?>"
-                                                                service-type="SA-I" data-column="audit_report_sai"
-                                                                name="input-audit-report-sai"
-                                                                class="auditReportSai input-audit-report-sai<?php echo $saiService['sai_id'] ?>" />
-                                                        </span>
-                                                    <?php } ?>
-                                                    <?php if (isset($saiService['audit_report_sai']) && !empty($saiService['audit_report_sai'])) { ?>
-                                                        <span style="padding-right: 5px">
-                                                            <a href="<?php echo $saiService['audit_report_sai'] ?>" data-id=""
-                                                                download class="customerReviewFileDownload"><i
-                                                                    class="fa fa-download"></i></a>
-                                                        </span>
-                                                    <?php } ?>
-                                                </div>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <div style="float: right" class="image-preview form-inline">
+                                                        <?php if (isset($saiService['signed_copy_sai']) && !empty($saiService['signed_copy_sai'])) { ?>
+                                                            <span class=" image-preview-input fa fa-upload" style="padding-right: 15px">
+                                                                <input type="file"
+                                                                    accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
+                                                                    data-id="<?php echo $_GET['customerid'] ?>"
+                                                                    data-service="<?php echo $saiService['sai_id'] ?>"
+                                                                    service-type="SA-I" data-column="audit_report_sai"
+                                                                    name="input-audit-report-sai"
+                                                                    class="auditReportSai input-audit-report-sai<?php echo $saiService['sai_id'] ?>" />
+                                                            </span>
+                                                        <?php } ?>
+                                                        <?php if (isset($saiService['audit_report_sai']) && !empty($saiService['audit_report_sai'])) { ?>
+                                                            <span style="padding-right: 5px">
+                                                                <a href="<?php echo $saiService['audit_report_sai'] ?>" data-id=""
+                                                                    download class="customerReviewFileDownload"><i
+                                                                        class="fa fa-download"></i></a>
+                                                            </span>
+                                                        <?php } ?>
+                                                    </div>
+                                                <?php } ?>
                                             </div>
                                         </div>
                                         <div class="col-sm-6">
@@ -7069,28 +7500,34 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $saiAuditReportClass = 'serviceContent';
                                             }
                                             ?>
-                                            <div class="<?php echo $saiAuditReportClass ?>">
+                                            <div class="<?php echo $saiAuditReportClass ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php if ($isMarketingRole) { ?> title="Disabled for Marketing role" <?php } ?>>
                                                 <span>SA - I Auditor Notes</span>
-                                                <div style="float: right" class="image-preview form-inline">
-                                                    <?php if (isset($saiService['audit_report_sai']) && !empty($saiService['audit_report_sai'])) { ?>
-                                                        <span class=" image-preview-input fa fa-upload" style="padding-right: 15px">
-                                                            <input type="file"
-                                                                accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
-                                                                data-id="<?php echo $_GET['customerid'] ?>"
-                                                                data-service="<?php echo $saiService['sai_id'] ?>"
-                                                                service-type="SA-I" data-column="auditor_notes_sai"
-                                                                name="input-auditor-notes-sai"
-                                                                class="auditorNotesSai input-auditor-notes-sai<?php echo $saiService['sai_id'] ?>" />
-                                                        </span>
-                                                    <?php } ?>
-                                                    <?php if (isset($saiService['auditor_notes_sai']) && !empty($saiService['auditor_notes_sai'])) { ?>
-                                                        <span style="padding-right: 5px">
-                                                            <a href="<?php echo $saiService['auditor_notes_sai'] ?>" data-id=""
-                                                                download class="customerReviewFileDownload"><i
-                                                                    class="fa fa-download"></i></a>
-                                                        </span>
-                                                    <?php } ?>
-                                                </div>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <div style="float: right" class="image-preview form-inline">
+                                                        <?php if (isset($saiService['audit_report_sai']) && !empty($saiService['audit_report_sai'])) { ?>
+                                                            <span class=" image-preview-input fa fa-upload" style="padding-right: 15px">
+                                                                <input type="file"
+                                                                    accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
+                                                                    data-id="<?php echo $_GET['customerid'] ?>"
+                                                                    data-service="<?php echo $saiService['sai_id'] ?>"
+                                                                    service-type="SA-I" data-column="auditor_notes_sai"
+                                                                    name="input-auditor-notes-sai"
+                                                                    class="auditorNotesSai input-auditor-notes-sai<?php echo $saiService['sai_id'] ?>" />
+                                                            </span>
+                                                        <?php } ?>
+                                                        <?php if (isset($saiService['auditor_notes_sai']) && !empty($saiService['auditor_notes_sai'])) { ?>
+                                                            <span style="padding-right: 5px">
+                                                                <a href="<?php echo $saiService['auditor_notes_sai'] ?>" data-id=""
+                                                                    download class="customerReviewFileDownload"><i
+                                                                        class="fa fa-download"></i></a>
+                                                            </span>
+                                                        <?php } ?>
+                                                    </div>
+                                                <?php } ?>
                                             </div>
                                         </div>
                                     </div>
@@ -7107,7 +7544,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $saiNcClsaa = 'serviceContent';
                                             }
                                             ?>
-                                            <div class="<?php echo $saiNcClsaa ?>">
+                                            <div class="<?php echo $saiNcClsaa ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php if ($isMarketingRole) { ?> title="Disabled for Marketing role" <?php } ?>>
                                                 <span>SA - I Audit NC And evidences of closer
                                                     <?php if (isset($saiService['audit_evidance_sai']) && !empty($saiService['audit_evidance_sai']) && $saiService['audit_evidance_sai'] == "NONC" && isset($saiService['auditor_notes_sai']) && !empty($saiService['auditor_notes_sai'])) { ?>
                                                         <!--                                                    <a class="" title="No NC Flag" style="padding: 1px 5px;">
@@ -7115,50 +7552,56 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                                                             </a>-->
                                                         *(No NC)<?php } ?>
                                                 </span>
-                                                <div style="float: right" class="image-preview form-inline">
-                                                    <div class=" ">
-                                                        <?php if (isset($saiService['auditor_notes_sai']) && !empty($saiService['auditor_notes_sai']) && empty($saiService['audit_evidance_sai'])) { ?>
-                                                            <span class=" image-preview-input" style="padding-right: 15px">
-                                                                <input type="checkbox" class="no_nc_file" name="no_nc_file"
-                                                                    data-svctype="SA-1"
-                                                                    data-service="<?php echo $saiService['sai_id'] ?>" value="">
-                                                            </span>
-                                                        <?php } ?>
-                                                        <?php if (isset($saiService['audit_evidance_sai']) && !empty($saiService['audit_evidance_sai']) && $saiService['audit_evidance_sai'] == "NONC" && isset($saiService['auditor_notes_sai']) && !empty($saiService['auditor_notes_sai'])) { ?>
-                                                            <span class=" image-preview-input" style="padding-right: 15px">
-                                                                <input type="checkbox" class="no_nc_file" name="no_nc_file"
-                                                                    data-svctype="SA-1"
-                                                                    data-service="<?php echo $saiService['sai_id'] ?>" checked>
-                                                            </span>
-                                                        <?php } ?>
-                                                        <?php if (isset($saiService['audit_evidance_sai']) && !empty($saiService['audit_evidance_sai']) && isset($saiService['auditor_notes_sai']) && !empty($saiService['auditor_notes_sai']) && $saiService['audit_evidance_sai'] <> "NONC") { ?>
-                                                            <span class=" image-preview-input" style="padding-right: 15px">
-                                                                <input type="checkbox" class="no_nc_file" name="no_nc_file"
-                                                                    data-svctype="SA-1"
-                                                                    data-service="<?php echo $saiService['sai_id'] ?>">
-                                                            </span>
-                                                        <?php } ?>
-                                                        <?php if (isset($saiService['auditor_notes_sai']) && !empty($saiService['auditor_notes_sai'])) { ?>
-                                                            <span class=" image-preview-input  fa fa-upload"
-                                                                style="padding-right: 15px">
-                                                                <input type="file"
-                                                                    accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
-                                                                    data-id="<?php echo $_GET['customerid'] ?>"
-                                                                    data-service="<?php echo $saiService['sai_id'] ?>"
-                                                                    service-type="SA-I" data-column="audit_evidance_sai"
-                                                                    name="input-audit-evidance-sai"
-                                                                    class="auditEvidanceSai input-audit-evidance-sai<?php echo $saiService['sai_id'] ?>" />
-                                                            </span>
-                                                        <?php } ?>
-                                                        <?php if (isset($saiService['audit_evidance_sai']) && !empty($saiService['audit_evidance_sai']) && $saiService['audit_evidance_sai'] != "NONC" && isset($saiService['auditor_notes_sai']) && !empty($saiService['auditor_notes_sai'])) { ?>
-                                                            <span style="padding-right: 5px">
-                                                                <a href="<?php echo $saiService['audit_evidance_sai'] ?>" data-id=""
-                                                                    download class="customerReviewFileDownload"><i
-                                                                        class="fa fa-download"></i></a>
-                                                            </span>
-                                                        <?php } ?>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <div style="float: right" class="image-preview form-inline">
+                                                        <div class=" ">
+                                                            <?php if (isset($saiService['auditor_notes_sai']) && !empty($saiService['auditor_notes_sai']) && empty($saiService['audit_evidance_sai'])) { ?>
+                                                                <span class=" image-preview-input" style="padding-right: 15px">
+                                                                    <input type="checkbox" class="no_nc_file" name="no_nc_file"
+                                                                        data-svctype="SA-1"
+                                                                        data-service="<?php echo $saiService['sai_id'] ?>" value="">
+                                                                </span>
+                                                            <?php } ?>
+                                                            <?php if (isset($saiService['audit_evidance_sai']) && !empty($saiService['audit_evidance_sai']) && $saiService['audit_evidance_sai'] == "NONC" && isset($saiService['auditor_notes_sai']) && !empty($saiService['auditor_notes_sai'])) { ?>
+                                                                <span class=" image-preview-input" style="padding-right: 15px">
+                                                                    <input type="checkbox" class="no_nc_file" name="no_nc_file"
+                                                                        data-svctype="SA-1"
+                                                                        data-service="<?php echo $saiService['sai_id'] ?>" checked>
+                                                                </span>
+                                                            <?php } ?>
+                                                            <?php if (isset($saiService['audit_evidance_sai']) && !empty($saiService['audit_evidance_sai']) && isset($saiService['auditor_notes_sai']) && !empty($saiService['auditor_notes_sai']) && $saiService['audit_evidance_sai'] <> "NONC") { ?>
+                                                                <span class=" image-preview-input" style="padding-right: 15px">
+                                                                    <input type="checkbox" class="no_nc_file" name="no_nc_file"
+                                                                        data-svctype="SA-1"
+                                                                        data-service="<?php echo $saiService['sai_id'] ?>">
+                                                                </span>
+                                                            <?php } ?>
+                                                            <?php if (isset($saiService['auditor_notes_sai']) && !empty($saiService['auditor_notes_sai'])) { ?>
+                                                                <span class=" image-preview-input  fa fa-upload"
+                                                                    style="padding-right: 15px">
+                                                                    <input type="file"
+                                                                        accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
+                                                                        data-id="<?php echo $_GET['customerid'] ?>"
+                                                                        data-service="<?php echo $saiService['sai_id'] ?>"
+                                                                        service-type="SA-I" data-column="audit_evidance_sai"
+                                                                        name="input-audit-evidance-sai"
+                                                                        class="auditEvidanceSai input-audit-evidance-sai<?php echo $saiService['sai_id'] ?>" />
+                                                                </span>
+                                                            <?php } ?>
+                                                            <?php if (isset($saiService['audit_evidance_sai']) && !empty($saiService['audit_evidance_sai']) && $saiService['audit_evidance_sai'] != "NONC" && isset($saiService['auditor_notes_sai']) && !empty($saiService['auditor_notes_sai'])) { ?>
+                                                                <span style="padding-right: 5px">
+                                                                    <a href="<?php echo $saiService['audit_evidance_sai'] ?>" data-id=""
+                                                                        download class="customerReviewFileDownload"><i
+                                                                            class="fa fa-download"></i></a>
+                                                                </span>
+                                                            <?php } ?>
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                <?php } ?>
                                             </div>
                                         </div>
                                         <div class="col-sm-6">
@@ -7173,32 +7616,38 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $saiAnexIIClass = 'serviceContent';
                                             }
                                             ?>
-                                            <div class="<?php echo $saiAnexIIClass ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>>
+                                            <div class="<?php echo $saiAnexIIClass ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ($isMarketingRole ? 'title="Disabled for Marketing role"' : ""); ?>>
                                                 <span>Review Report (Annex II)- SA - I Audit</span>
-                                                <?php if ((isset($saiService['audit_evidance_sai']) && !empty($saiService['audit_evidance_sai']) && empty($saiService['stage_ii_id'])) || (isset($saiService['servelance_id']) && empty($saiService['signed_copy_sai']) && empty($saiService['audit_report_sai']) && empty($saiService['auditor_notes_sai']) && empty($saiService['audit_evidance_sai']) && empty($saiService['stage_ii_id']) && (Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin()))) { ?>
-                                                    <a class="stageIIAuditSai pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $saiService['sai_id'] ?>"
-                                                        data-type="service-type-sai" data-row-id="" title="Add SA Schedule (SA-I)"
-                                                        style="padding: 1px 5px;">
-                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
-                                                    </a>
-                                                <?php } ?>
-                                                <?php if (isset($saiService['stage_ii_id']) && !empty($saiService['stage_ii_id'])) { ?>
-                                                    <a class="editstageIIAudit2  pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $saiService['sai_id'] ?>"
-                                                        data-notification="<?php echo $saiService['stage_ii_id'] ?>"
-                                                        title="Add Review Report(Annex II)" style="padding: 1px 5px;">
-                                                        <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
-                                                    </a>
-                                                    <a class="downloadAnnexIISai pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-caservice-id="<?php echo $saiService['sai_id'] ?>"
-                                                        data-stage-ii="<?php echo $saiService['stage_ii_id'] ?>"
-                                                        title="Download Review Report (Annex II)" style="padding: 1px 5px;">
-                                                        <i class="fa fa-download fa-lg " style="padding: 3px"></i>
-                                                    </a>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <?php if ((isset($saiService['audit_evidance_sai']) && !empty($saiService['audit_evidance_sai']) && empty($saiService['stage_ii_id'])) || (isset($saiService['servelance_id']) && empty($saiService['signed_copy_sai']) && empty($saiService['audit_report_sai']) && empty($saiService['auditor_notes_sai']) && empty($saiService['audit_evidance_sai']) && empty($saiService['stage_ii_id']) && (Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin()))) { ?>
+                                                        <a class="stageIIAuditSai pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-service="<?php echo $saiService['sai_id'] ?>"
+                                                            data-type="service-type-sai" data-row-id="" title="Add SA Schedule (SA-I)"
+                                                            style="padding: 1px 5px;">
+                                                            <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                        </a>
+                                                    <?php } ?>
+                                                    <?php if (isset($saiService['stage_ii_id']) && !empty($saiService['stage_ii_id'])) { ?>
+                                                        <a class="editstageIIAudit2  pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-service="<?php echo $saiService['sai_id'] ?>"
+                                                            data-notification="<?php echo $saiService['stage_ii_id'] ?>"
+                                                            title="Add Review Report(Annex II)" style="padding: 1px 5px;">
+                                                            <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                        </a>
+                                                        <a class="downloadAnnexIISai pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-caservice-id="<?php echo $saiService['sai_id'] ?>"
+                                                            data-stage-ii="<?php echo $saiService['stage_ii_id'] ?>"
+                                                            title="Download Review Report (Annex II)" style="padding: 1px 5px;">
+                                                            <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                        </a>
+                                                    <?php } ?>
                                                 <?php } ?>
                                             </div>
                                         </div>
@@ -7216,39 +7665,45 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $saiCDCclass = 'serviceContent';
                                             }
                                             ?>
-                                            <div class="<?php echo $saiCDCclass ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>Review Report - CDC DELIBERATION AND DECISION</span>
-                                                <?php
-                                                // Only show CDC button if Review Report (Annex II) - Stage II Audit is submitted (stage_ii_id exists)
-                                                // AND CDC is not yet created (crr_id is empty)
-                                                if (isset($saiService['stage_ii_id']) && !empty($saiService['stage_ii_id']) && empty($saiService['crr_id'])) { ?>
-                                                    <a class="cdcReport pull-right" data-svctype="SA1"
-                                                        data-id="<?php echo $saiService['service'] ?>"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $saiService['sai_id'] ?>"
-                                                        data-caservice="<?php echo $caservice['ca_id'] ?>"
-                                                        data-service1="<?php echo $crservice['cr_id'] ?>"
-                                                        data-type="service-type-sai" data-row-id="" audit-data="SA-I"
-                                                        title="Add CDC DELIBERATION AND DECISION" style="padding: 1px 5px;">
-                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
-                                                    </a>
-                                                <?php } else if (isset($saiService['crr_id']) && !empty($saiService['crr_id'])) { ?>
-                                                        <a class="editCDC pull-right" data-svctype="SA1"
+                                            <div class="<?php echo $saiCDCclass ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ($isMarketingRole ? 'title="Disabled for Marketing role"' : ""); ?>> <span>Review Report - CDC DELIBERATION AND DECISION</span>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <?php
+                                                    // Only show CDC button if Review Report (Annex II) - Stage II Audit is submitted (stage_ii_id exists)
+                                                    // AND CDC is not yet created (crr_id is empty)
+                                                    if (isset($saiService['stage_ii_id']) && !empty($saiService['stage_ii_id']) && empty($saiService['crr_id'])) { ?>
+                                                        <a class="cdcReport pull-right" data-svctype="SA1"
+                                                            data-id="<?php echo $saiService['service'] ?>"
                                                             data-customer="<?php echo $_GET['customerid'] ?>"
                                                             data-service="<?php echo $saiService['sai_id'] ?>"
-                                                            data-notification="<?php echo $saiService['crr_id'] ?>"
-                                                            title="Edit CDC DELIBERATION AND DECISION" style="padding: 1px 5px;">
-                                                            <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                            data-caservice="<?php echo $caservice['ca_id'] ?>"
+                                                            data-service1="<?php echo $crservice['cr_id'] ?>"
+                                                            data-type="service-type-sai" data-row-id="" audit-data="SA-I"
+                                                            title="Add CDC DELIBERATION AND DECISION" style="padding: 1px 5px;">
+                                                            <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
                                                         </a>
-                                                        <!-- <a class="sendCdcMail pull-right" data-svctype="SA1" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiService['sai_id'] ?>" data-crr="<?php echo $saiService['crr_id'] ?>" title="Send certificate by email" style="padding: 1px 5px;">
-                                                        <i class="fa fa-envelope fa-lg" style="padding: 3px"></i>
-                                                    </a> -->
-                                                        <a class="downloadCDCsai pull-right"
-                                                            data-customer="<?php echo $_GET['customerid'] ?>"
-                                                            data-caservice-id="<?php echo $saiService['sai_id'] ?>"
-                                                            data-crr="<?php echo $saiService['crr_id'] ?>"
-                                                            title="Download  CDC DELIBERATION AND DECISION" style="padding: 1px 5px;">
-                                                            <i class="fa fa-download fa-lg " style="padding: 3px"></i>
-                                                        </a>
+                                                    <?php } else if (isset($saiService['crr_id']) && !empty($saiService['crr_id'])) { ?>
+                                                            <a class="editCDC pull-right" data-svctype="SA1"
+                                                                data-customer="<?php echo $_GET['customerid'] ?>"
+                                                                data-service="<?php echo $saiService['sai_id'] ?>"
+                                                                data-notification="<?php echo $saiService['crr_id'] ?>"
+                                                                title="Edit CDC DELIBERATION AND DECISION" style="padding: 1px 5px;">
+                                                                <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                            </a>
+                                                            <!-- <a class="sendCdcMail pull-right" data-svctype="SA1" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiService['sai_id'] ?>" data-crr="<?php echo $saiService['crr_id'] ?>" title="Send certificate by email" style="padding: 1px 5px;">
+                                                            <i class="fa fa-envelope fa-lg" style="padding: 3px"></i>
+                                                        </a> -->
+                                                            <a class="downloadCDCsai pull-right"
+                                                                data-customer="<?php echo $_GET['customerid'] ?>"
+                                                                data-caservice-id="<?php echo $saiService['sai_id'] ?>"
+                                                                data-crr="<?php echo $saiService['crr_id'] ?>"
+                                                                title="Download  CDC DELIBERATION AND DECISION" style="padding: 1px 5px;">
+                                                                <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                            </a>
+                                                    <?php } ?>
                                                 <?php } ?>
                                             </div>
                                         </div>
@@ -7269,17 +7724,23 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $saiCertify = "serviceContent";
                                             }
                                             ?>
-                                            <div class="<?php echo $saiCertify; ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>Certificate Print</span>
-                                                <?php if (isset($saiService['crr_id']) && !empty($saiService['crr_id'])) { ?>
-                                                    <a class="download-certificate-print pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $saiService['sai_id'] ?>"
-                                                        data-id="<?php echo $saiService['service'] ?>"
-                                                        data-certificate="<?php echo !empty($saiService['certificate_id']) ? $saiService['certificate_id'] : '' ?>"
-                                                        data-crr="<?php echo $saiService['crr_id'] ?>" data-row-count=""
-                                                        title="Certificate Print" style="padding: 1px 5px;">
-                                                        <i class="fa fa-download fa-lg" style="padding: 3px"></i>
-                                                    </a> <?php } ?>
+                                            <div class="<?php echo $saiCertify; ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ($isMarketingRole ? 'title="Disabled for Marketing role"' : ""); ?>> <span>Certificate Print</span>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <?php if (isset($saiService['crr_id']) && !empty($saiService['crr_id'])) { ?>
+                                                        <a class="download-certificate-print pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-service="<?php echo $saiService['sai_id'] ?>"
+                                                            data-id="<?php echo $saiService['service'] ?>"
+                                                            data-certificate="<?php echo !empty($saiService['certificate_id']) ? $saiService['certificate_id'] : '' ?>"
+                                                            data-crr="<?php echo $saiService['crr_id'] ?>" data-row-count=""
+                                                            title="Certificate Print" style="padding: 1px 5px;">
+                                                            <i class="fa fa-download fa-lg" style="padding: 3px"></i>
+                                                        </a> <?php } ?>
+                                                <?php } ?>
                                             </div>
                                         </div>
                                     </div>
@@ -7295,30 +7756,36 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                             $saiSurvayClass = 'serviceContent';
                                         }
                                         ?>
-                                            <div class="<?php echo $saiSurvayClass ?>">
+                                            <div class="<?php echo $saiSurvayClass ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php if ($isMarketingRole) { ?> title="Disabled for Marketing role" <?php } ?>>
                                                 <span>Certificate Upload</span>
-                                                <div style="float: right" class="image-preview form-inline">
-                                                    <div class=" ">
-                                                        <?php if (isset($saiService['crr_id']) && !empty($saiService['crr_id'])) { ?>
-                                                            <span class=" image-preview-input  fa fa-upload"
-                                                                style="padding-right: 15px">
-                                                                <input type="file"
-                                                                    accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
-                                                                    data-id="<?php echo $_GET['customerid'] ?>"
-                                                                    data-service="<?php echo $saiService['sai_id'] ?>"
-                                                                    service-type="SA-I" data-column="certificate_print"
-                                                                    name="input-certificate-print-sai"
-                                                                    class="auditCertificatePrintSai input-certificate-print-sai<?php echo $saiService['sai_id'] ?>" />
-                                                            </span>
-                                                        <?php } ?>
-                                                        <?php if (isset($saiService['certificate_print']) && !empty($saiService['certificate_print'])) { ?>
-                                                            <span style="padding-right: 5px"> <a
-                                                                    href="<?php echo $saiService['certificate_print'] ?>" data-id=""
-                                                                    download class="customerReviewFileDownload"><i
-                                                                        class="fa fa-download"></i></a></span>
-                                                        <?php } ?>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <div style="float: right" class="image-preview form-inline">
+                                                        <div class=" ">
+                                                            <?php if (isset($saiService['crr_id']) && !empty($saiService['crr_id'])) { ?>
+                                                                <span class=" image-preview-input  fa fa-upload"
+                                                                    style="padding-right: 15px">
+                                                                    <input type="file"
+                                                                        accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
+                                                                        data-id="<?php echo $_GET['customerid'] ?>"
+                                                                        data-service="<?php echo $saiService['sai_id'] ?>"
+                                                                        service-type="SA-I" data-column="certificate_print"
+                                                                        name="input-certificate-print-sai"
+                                                                        class="auditCertificatePrintSai input-certificate-print-sai<?php echo $saiService['sai_id'] ?>" />
+                                                                </span>
+                                                            <?php } ?>
+                                                            <?php if (isset($saiService['certificate_print']) && !empty($saiService['certificate_print'])) { ?>
+                                                                <span style="padding-right: 5px"> <a
+                                                                        href="<?php echo $saiService['certificate_print'] ?>" data-id=""
+                                                                        download class="customerReviewFileDownload"><i
+                                                                            class="fa fa-download"></i></a></span>
+                                                            <?php } ?>
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                <?php } ?>
                                             </div>
                                         </div>
                                         <div class="col-sm-6"><?php
@@ -7332,7 +7799,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                             $saiSurvayClass = 'serviceContent';
                                         }
                                         ?>
-                                            <div class="<?php echo $saiSurvayClass ?>">
+                                            <div class="<?php echo $saiSurvayClass ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php if ($isMarketingRole) { ?> title="Disabled for Marketing role" <?php } ?>>
                                                 <span>Client Feedback
                                                     <?php if (isset($saiService['customer_review_sai']) && !empty($saiService['customer_review_sai']) && $saiService['customer_review_sai'] == "NONC" && isset($saiService['certificate_print']) && !empty($saiService['certificate_print'])) { ?>
                                                         <!--                                                    <a class="" title="No Client Feedback Flag" style="padding: 1px 5px;">
@@ -7340,59 +7807,54 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                                                             </a>-->
                                                         *(No Client Feedback)<?php } ?>
                                                 </span>
-                                                <div style="float: right" class="image-preview form-inline">
-                                                    <?php if (isset($saiService['certificate_print']) && !empty($saiService['certificate_print']) && empty($saiService['customer_review_sai'])) { ?>
-                                                        <span class="image-preview-input" style="padding-right: 15px">
-                                                            <input type="checkbox" class="no_feedback_file" name="no_feedback_file"
-                                                                data-svctype="SA-I"
-                                                                data-service="<?php echo $saiService['sai_id'] ?>">
-                                                        </span>
-                                                    <?php } ?>
-                                                    <?php if (isset($saiService['customer_review_sai']) && !empty($saiService['customer_review_sai']) && $saiService['customer_review_sai'] == "NONC" && isset($saiService['certificate_print']) && !empty($saiService['certificate_print'])) { ?>
-                                                        <span class="image-preview-input" style="padding-right: 15px">
-                                                            <input type="checkbox" class="no_feedback_file" name="no_feedback_file"
-                                                                data-svctype="SA-I"
-                                                                data-service="<?php echo $saiService['sai_id'] ?>" checked>
-                                                        </span>
-                                                    <?php } ?>
-                                                    <?php if (isset($saiService['customer_review_sai']) && !empty($saiService['customer_review_sai']) && isset($saiService['certificate_print']) && !empty($saiService['certificate_print']) && $saiService['customer_review_sai'] <> "NONC") { ?>
-                                                        <span class="image-preview-input" style="padding-right: 15px">
-                                                            <input type="checkbox" class="no_feedback_file" name="no_feedback_file"
-                                                                data-svctype="SA-I"
-                                                                data-service="<?php echo $saiService['sai_id'] ?>">
-                                                        </span>
-                                                    <?php } ?>
-                                                    <?php if (isset($saiService['certificate_print']) && !empty($saiService['certificate_print'])) { ?>
-                                                        <span class=" image-preview-input  fa fa-upload"
-                                                            style="padding-right: 15px">
-                                                            <input type="file"
-                                                                accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
-                                                                data-id="<?php echo $_GET['customerid'] ?>"
-                                                                data-service="<?php echo $saiService['sai_id'] ?>"
-                                                                service-type="SA-I" data-column="customer_review_sai"
-                                                                name="input-customer-review-sai"
-                                                                class="auditCustomerReviewSai input-customer-review-sai<?php echo $saiService['sai_id'] ?>" />
-                                                        </span>
-                                                    <?php } ?>
-                                                    <?php if (isset($saiService['customer_review_sai']) && !empty($saiService['customer_review_sai']) && $saiService['customer_review_sai'] != "NONC") { ?>
-                                                        <span style="padding-right: 5px">
-                                                            <a href="<?php echo $saiService['customer_review_sai'] ?>" data-id=""
-                                                                download class="customerReviewFileDownload"><i
-                                                                    class="fa fa-download"></i></a>
-                                                        </span>
-                                                    <?php } ?>
-                                                </div>
-
-                                                <!--                                                <div style="float: right" class="image-preview form-inline">
-                                                <?php if (isset($saiService['certificate_print']) && !empty($saiService['certificate_print'])) { ?>
-                                                                                                                                                                                                                    <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
-                                                                                                                                                                                                                    <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiService['sai_id'] ?>" service-type="SA-I" data-column="customer_review_sai" name="input-customer-review-sai" class="auditCustomerReviewSai input-customer-review-sai<?php echo $saiService['sai_id'] ?>" />
-                                                                                                                                                                                                                    </span> 
-                                                <?php } ?> 
-                                                <?php if (isset($saiService['customer_review_sai']) && !empty($saiService['customer_review_sai'])) { ?>
-                                                                                                                                                                                                                    <span style="padding-right: 5px"> <a href="<?php echo $saiService['customer_review_sai'] ?>" data-id="" download class="customerReviewFileDownload"><i class="fa fa-download"></i></a></span> 
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <div style="float: right" class="image-preview form-inline">
+                                                        <?php if (isset($saiService['certificate_print']) && !empty($saiService['certificate_print']) && empty($saiService['customer_review_sai'])) { ?>
+                                                            <span class="image-preview-input" style="padding-right: 15px">
+                                                                <input type="checkbox" class="no_feedback_file" name="no_feedback_file"
+                                                                    data-svctype="SA-I"
+                                                                    data-service="<?php echo $saiService['sai_id'] ?>">
+                                                            </span>
+                                                        <?php } ?>
+                                                        <?php if (isset($saiService['customer_review_sai']) && !empty($saiService['customer_review_sai']) && $saiService['customer_review_sai'] == "NONC" && isset($saiService['certificate_print']) && !empty($saiService['certificate_print'])) { ?>
+                                                            <span class="image-preview-input" style="padding-right: 15px">
+                                                                <input type="checkbox" class="no_feedback_file" name="no_feedback_file"
+                                                                    data-svctype="SA-I"
+                                                                    data-service="<?php echo $saiService['sai_id'] ?>" checked>
+                                                            </span>
+                                                        <?php } ?>
+                                                        <?php if (isset($saiService['customer_review_sai']) && !empty($saiService['customer_review_sai']) && isset($saiService['certificate_print']) && !empty($saiService['certificate_print']) && $saiService['customer_review_sai'] <> "NONC") { ?>
+                                                            <span class="image-preview-input" style="padding-right: 15px">
+                                                                <input type="checkbox" class="no_feedback_file" name="no_feedback_file"
+                                                                    data-svctype="SA-I"
+                                                                    data-service="<?php echo $saiService['sai_id'] ?>">
+                                                            </span>
+                                                        <?php } ?>
+                                                        <?php if (isset($saiService['certificate_print']) && !empty($saiService['certificate_print'])) { ?>
+                                                            <span class=" image-preview-input  fa fa-upload"
+                                                                style="padding-right: 15px">
+                                                                <input type="file"
+                                                                    accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
+                                                                    data-id="<?php echo $_GET['customerid'] ?>"
+                                                                    data-service="<?php echo $saiService['sai_id'] ?>"
+                                                                    service-type="SA-I" data-column="customer_review_sai"
+                                                                    name="input-customer-review-sai"
+                                                                    class="auditCustomerReviewSai input-customer-review-sai<?php echo $saiService['sai_id'] ?>" />
+                                                            </span>
+                                                        <?php } ?>
+                                                        <?php if (isset($saiService['customer_review_sai']) && !empty($saiService['customer_review_sai']) && $saiService['customer_review_sai'] != "NONC") { ?>
+                                                            <span style="padding-right: 5px">
+                                                                <a href="<?php echo $saiService['customer_review_sai'] ?>" data-id=""
+                                                                    download class="customerReviewFileDownload"><i
+                                                                        class="fa fa-download"></i></a>
+                                                            </span>
+                                                        <?php } ?>
+                                                    </div>
                                                 <?php } ?>
-                                                                                                </div>-->
                                             </div>
                                         </div>
                                     </div>
@@ -7408,31 +7870,37 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                             $saiSurvayRvClass = 'serviceContent';
                                         }
                                         ?>
-                                            <div class="<?php echo $saiSurvayRvClass ?>">
+                                            <div class="<?php echo $saiSurvayRvClass ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php if ($isMarketingRole) { ?> title="Disabled for Marketing role" <?php } ?>>
                                                 <span>Review Report - Review of feedback</span>
-                                                <?php if (isset($saiService['customer_review_sai']) && !empty($saiService['customer_review_sai']) && empty($saiService['survey_id'])) { ?>
-                                                    <a class="createCustomerSurvey pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $saiService['sai_id'] ?>"
-                                                        data-id="<?php echo $saiService['service'] ?>" data-svc="SA-I"
-                                                        data-row-id="" data-row-count="" title="Add Review of feedback"
-                                                        style="padding: 1px 5px;">
-                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i></a>
-                                                <?php } ?>
-                                                <?php if (isset($saiService['survey_id']) && !empty($saiService['survey_id'])) { ?>
-                                                    <a class="editCustomerSurvey  pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $saiService['sai_id'] ?>"
-                                                        data-id="<?php echo $saiService['service'] ?>" data-svc="SA-I"
-                                                        data-row-id="<?php echo $saiService['survey_id'] ?>" data-row-count=""
-                                                        title="Update Review of feedback" style="padding: 1px 5px;"><i
-                                                            class="fa fa-pencil-square fa-lg " style="padding: 3px"></i></a>
-                                                    <a class="downloadSaiSurvey pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-caservice-id="<?php echo $saiService['sai_id'] ?>"
-                                                        data-surveyid="<?php echo $saiService['survey_id'] ?>"
-                                                        title="Download  Review of feedback" style="padding: 1px 5px;"><i
-                                                            class="fa fa-download fa-lg " style="padding: 3px"></i></a>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <?php if (isset($saiService['customer_review_sai']) && !empty($saiService['customer_review_sai']) && empty($saiService['survey_id'])) { ?>
+                                                        <a class="createCustomerSurvey pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-service="<?php echo $saiService['sai_id'] ?>"
+                                                            data-id="<?php echo $saiService['service'] ?>" data-svc="SA-I"
+                                                            data-row-id="" data-row-count="" title="Add Review of feedback"
+                                                            style="padding: 1px 5px;">
+                                                            <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i></a>
+                                                    <?php } ?>
+                                                    <?php if (isset($saiService['survey_id']) && !empty($saiService['survey_id'])) { ?>
+                                                        <a class="editCustomerSurvey  pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-service="<?php echo $saiService['sai_id'] ?>"
+                                                            data-id="<?php echo $saiService['service'] ?>" data-svc="SA-I"
+                                                            data-row-id="<?php echo $saiService['survey_id'] ?>" data-row-count=""
+                                                            title="Update Review of feedback" style="padding: 1px 5px;"><i
+                                                                class="fa fa-pencil-square fa-lg " style="padding: 3px"></i></a>
+                                                        <a class="downloadSaiSurvey pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-caservice-id="<?php echo $saiService['sai_id'] ?>"
+                                                            data-surveyid="<?php echo $saiService['survey_id'] ?>"
+                                                            title="Download  Review of feedback" style="padding: 1px 5px;"><i
+                                                                class="fa fa-download fa-lg " style="padding: 3px"></i></a>
+                                                    <?php } ?>
                                                 <?php } ?>
                                             </div>
                                         </div>
@@ -7858,32 +8326,37 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $newClass = "serviceContent";
                                             }
                                             ?>
-                                            <div class="<?php echo $newClass ?>">
+                                            <div class="<?php echo $newClass ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php if ($isMarketingRole) { ?> title="Disabled for Marketing role" <?php } ?>>
                                                 <span>Release SA Audit Plan (SA-II)</span>
-                                                <?php if (isset($saiiService['audit_stage_id']) && !empty($saiiService['audit_stage_id']) && empty($saiiService['servelance_id'])) { ?>
-                                                    <a class="servelancestage2 pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $saiiService['saii_id'] ?>" data-row-id=""
-                                                        data-row-count="" title="Add Release - SA Schedule (SA-II)"
-                                                        style="padding: 1px 5px;">
-                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
-                                                    </a>
-                                                <?php }
-                                                if (isset($saiiService['servelance_id']) && !empty($saiiService['servelance_id'])) { ?>
-                                                    <a class="editStage2Servelance pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $saiiService['saii_id'] ?>"
-                                                        data-row-id="<?php echo $saiiService['servelance_id'] ?>" data-row-count=""
-                                                        title="Add Release - SA Schedule (SA-II)" style="padding: 1px 5px;">
-                                                        <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
-                                                    </a>
-                                                    <a class="downloadScheduleStageOneSii pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-caservice-id="<?php echo $saiiService['saii_id'] ?>"
-                                                        data-schedulei="<?php echo $saiiService['servelance_id'] ?>"
-                                                        title="Download Release - SA Schedule (SA-II)" style="padding: 1px 5px;">
-                                                        <i class="fa fa-download fa-lg " style="padding: 3px"></i>
-                                                    </a>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <?php if (isset($saiiService['audit_stage_id']) && !empty($saiiService['audit_stage_id']) && empty($saiiService['servelance_id'])) { ?>
+                                                        <a class="servelancestage2 pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-service="<?php echo $saiiService['saii_id'] ?>" data-row-id=""
+                                                            data-row-count="" title="Add Release - SA Schedule (SA-II)"
+                                                            style="padding: 1px 5px;"><i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                        </a>
+                                                    <?php }
+                                                    if (isset($saiiService['servelance_id']) && !empty($saiiService['servelance_id'])) { ?>
+                                                        <a class="editStage2Servelance pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-service="<?php echo $saiiService['saii_id'] ?>"
+                                                            data-row-id="<?php echo $saiiService['servelance_id'] ?>" data-row-count=""
+                                                            title="Add Release - SA Schedule (SA-II)" style="padding: 1px 5px;">
+                                                            <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                        </a>
+                                                        <a class="downloadScheduleStageOneSii pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-caservice-id="<?php echo $saiiService['saii_id'] ?>"
+                                                            data-schedulei="<?php echo $saiiService['servelance_id'] ?>"
+                                                            title="Download Release - SA Schedule (SA-II)" style="padding: 1px 5px;">
+                                                            <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                        </a>
+                                                    <?php } ?>
                                                 <?php } ?>
                                             </div>
                                         </div>
@@ -7901,32 +8374,38 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $newClass = "serviceContent";
                                             }
                                             ?>
-                                            <div class="<?php echo $newClass ?>">
+                                            <div class="<?php echo $newClass ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php if ($isMarketingRole) { ?> title="Disabled for Marketing role" <?php } ?>>
                                                 <span>Signed Notification SA - II Audit</span>
-                                                <div style="float: right" class="image-preview form-inline">
-                                                    <div class="">
-                                                        <?php if (isset($saiiService['audit_stage_id']) && !empty($saiiService['audit_stage_id']) && empty($caservice['signed_noti_saii']) || (isset($saiiService['signed_noti_saii']) && !empty($saiiService['signed_noti_saii']))) { ?>
-                                                            <span class=" image-preview-input  fa fa-upload"
-                                                                style="padding-right: 15px">
-                                                                <input type="file"
-                                                                    accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
-                                                                    data-id="<?php echo $_GET['customerid'] ?>"
-                                                                    data-service="<?php echo $saiiService['saii_id'] ?>"
-                                                                    service-type="SA-II" data-column="signed_noti_saii"
-                                                                    name="input-signed-form"
-                                                                    class="updateSigned input-signed-form<?php echo $saiiService['saii_id'] ?>" />
-                                                            </span>
-                                                        <?php } ?>
-                                                        <?php if (isset($saiiService['signed_noti_saii']) && !empty($saiiService['signed_noti_saii'])) { ?>
-                                                            <span style="padding-right: 5px">
-                                                                <a href="<?php echo $saiiService['signed_noti_saii'] ?>" download
-                                                                    class="signednotisaiiFileDownload">
-                                                                    <i class="fa fa-download"></i>
-                                                                </a>
-                                                            </span>
-                                                        <?php } ?>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <div style="float: right" class="image-preview form-inline">
+                                                        <div class="">
+                                                            <?php if (isset($saiiService['audit_stage_id']) && !empty($saiiService['audit_stage_id']) && empty($caservice['signed_noti_saii']) || (isset($saiiService['signed_noti_saii']) && !empty($saiiService['signed_noti_saii']))) { ?>
+                                                                <span class=" image-preview-input  fa fa-upload"
+                                                                    style="padding-right: 15px">
+                                                                    <input type="file"
+                                                                        accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
+                                                                        data-id="<?php echo $_GET['customerid'] ?>"
+                                                                        data-service="<?php echo $saiiService['saii_id'] ?>"
+                                                                        service-type="SA-II" data-column="signed_noti_saii"
+                                                                        name="input-signed-form"
+                                                                        class="updateSigned input-signed-form<?php echo $saiiService['saii_id'] ?>" />
+                                                                </span>
+                                                            <?php } ?>
+                                                            <?php if (isset($saiiService['signed_noti_saii']) && !empty($saiiService['signed_noti_saii'])) { ?>
+                                                                <span style="padding-right: 5px">
+                                                                    <a href="<?php echo $saiiService['signed_noti_saii'] ?>" download
+                                                                        class="signednotisaiiFileDownload">
+                                                                        <i class="fa fa-download"></i>
+                                                                    </a>
+                                                                </span>
+                                                            <?php } ?>
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                <?php } ?>
                                             </div>
                                         </div>
                                         <div class="col-sm-6">
@@ -7941,32 +8420,38 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $newClass = "serviceContent";
                                             }
                                             ?>
-                                            <div class="<?php echo $newClass ?>">
+                                            <div class="<?php echo $newClass ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php if ($isMarketingRole) { ?> title="Disabled for Marketing role" <?php } ?>>
                                                 <span>Audit Plan Scanned Copy</span>
-                                                <div style="float: right" class="image-preview form-inline">
-                                                    <div class="">
-                                                        <?php if (isset($saiiService['signed_noti_saii']) && !empty($saiiService['signed_noti_saii']) && empty($caservice['signed_copy_saii'])) { ?>
-                                                            <span class=" image-preview-input  fa fa-upload"
-                                                                style="padding-right: 15px">
-                                                                <input type="file"
-                                                                    accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
-                                                                    data-id="<?php echo $_GET['customerid'] ?>"
-                                                                    data-service="<?php echo $saiiService['saii_id'] ?>"
-                                                                    service-type="SA-II" data-column="signed_copy_saii"
-                                                                    name="input-signedcopy-form"
-                                                                    class="updateSignedCopy input-signedcopy-form<?php echo $saiiService['saii_id'] ?>" />
-                                                            </span>
-                                                        <?php } ?>
-                                                        <?php if (isset($saiiService['signed_copy_saii']) && !empty($saiiService['signed_copy_saii'])) { ?>
-                                                            <span style="padding-right: 5px">
-                                                                <a href="<?php echo $saiiService['signed_copy_saii'] ?>" data-id=""
-                                                                    download class="signedcopysaiiFileDownload">
-                                                                    <i class="fa fa-download"></i>
-                                                                </a>
-                                                            </span>
-                                                        <?php } ?>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <div style="float: right" class="image-preview form-inline">
+                                                        <div class="">
+                                                            <?php if (isset($saiiService['signed_noti_saii']) && !empty($saiiService['signed_noti_saii']) && empty($caservice['signed_copy_saii'])) { ?>
+                                                                <span class=" image-preview-input  fa fa-upload"
+                                                                    style="padding-right: 15px">
+                                                                    <input type="file"
+                                                                        accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
+                                                                        data-id="<?php echo $_GET['customerid'] ?>"
+                                                                        data-service="<?php echo $saiiService['saii_id'] ?>"
+                                                                        service-type="SA-II" data-column="signed_copy_saii"
+                                                                        name="input-signedcopy-form"
+                                                                        class="updateSignedCopy input-signedcopy-form<?php echo $saiiService['saii_id'] ?>" />
+                                                                </span>
+                                                            <?php } ?>
+                                                            <?php if (isset($saiiService['signed_copy_saii']) && !empty($saiiService['signed_copy_saii'])) { ?>
+                                                                <span style="padding-right: 5px">
+                                                                    <a href="<?php echo $saiiService['signed_copy_saii'] ?>" data-id=""
+                                                                        download class="signedcopysaiiFileDownload">
+                                                                        <i class="fa fa-download"></i>
+                                                                    </a>
+                                                                </span>
+                                                            <?php } ?>
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                <?php } ?>
                                             </div>
                                         </div>
                                     </div>
@@ -7983,32 +8468,38 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $newClass = "serviceContent";
                                             }
                                             ?>
-                                            <div class="<?php echo $newClass ?>">
+                                            <div class="<?php echo $newClass ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php if ($isMarketingRole) { ?> title="Disabled for Marketing role" <?php } ?>>
                                                 <span>SA - II Audit Report, Summery and Checklists</span>
-                                                <div style="float: right" class="image-preview form-inline">
-                                                    <div class="">
-                                                        <?php if (isset($saiiService['signed_copy_saii']) && !empty($saiiService['signed_copy_saii']) && empty($caservice['audit_report_saii']) || (isset($saiiService['audit_report_saii']) && !empty($saiiService['audit_report_saii']))) { ?>
-                                                            <span class=" image-preview-input  fa fa-upload"
-                                                                style="padding-right: 15px">
-                                                                <input type="file"
-                                                                    accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
-                                                                    data-id="<?php echo $_GET['customerid'] ?>"
-                                                                    data-service="<?php echo $saiiService['saii_id'] ?>"
-                                                                    service-type="SA-II" data-column="audit_report_saii"
-                                                                    name="input-auditreport-form"
-                                                                    class="updateAuditReport input-auditreport-form<?php echo $saiiService['saii_id'] ?>" />
-                                                            </span>
-                                                        <?php } ?>
-                                                        <?php if (isset($saiiService['audit_report_saii']) && !empty($saiiService['audit_report_saii'])) { ?>
-                                                            <span style="padding-right: 5px">
-                                                                <a href="<?php echo $saiiService['audit_report_saii'] ?>" data-id=""
-                                                                    download class="auditReportFileDownload">
-                                                                    <i class="fa fa-download"></i>
-                                                                </a>
-                                                            </span>
-                                                        <?php } ?>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <div style="float: right" class="image-preview form-inline">
+                                                        <div class="">
+                                                            <?php if (isset($saiiService['signed_copy_saii']) && !empty($saiiService['signed_copy_saii']) && empty($caservice['audit_report_saii']) || (isset($saiiService['audit_report_saii']) && !empty($saiiService['audit_report_saii']))) { ?>
+                                                                <span class=" image-preview-input  fa fa-upload"
+                                                                    style="padding-right: 15px">
+                                                                    <input type="file"
+                                                                        accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
+                                                                        data-id="<?php echo $_GET['customerid'] ?>"
+                                                                        data-service="<?php echo $saiiService['saii_id'] ?>"
+                                                                        service-type="SA-II" data-column="audit_report_saii"
+                                                                        name="input-auditreport-form"
+                                                                        class="updateAuditReport input-auditreport-form<?php echo $saiiService['saii_id'] ?>" />
+                                                                </span>
+                                                            <?php } ?>
+                                                            <?php if (isset($saiiService['audit_report_saii']) && !empty($saiiService['audit_report_saii'])) { ?>
+                                                                <span style="padding-right: 5px">
+                                                                    <a href="<?php echo $saiiService['audit_report_saii'] ?>" data-id=""
+                                                                        download class="auditReportFileDownload">
+                                                                        <i class="fa fa-download"></i>
+                                                                    </a>
+                                                                </span>
+                                                            <?php } ?>
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                <?php } ?>
                                             </div>
                                         </div>
                                         <div class="col-sm-6">
@@ -8023,32 +8514,38 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $newClass = "serviceContent";
                                             }
                                             ?>
-                                            <div class="<?php echo $newClass ?>">
+                                            <div class="<?php echo $newClass ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php if ($isMarketingRole) { ?> title="Disabled for Marketing role" <?php } ?>>
                                                 <span>SA - II Auditor Notes</span>
-                                                <div style="float: right" class="image-preview form-inline">
-                                                    <div class="">
-                                                        <?php if (isset($saiiService['audit_report_saii']) && !empty($saiiService['audit_report_saii']) && empty($caservice['auditor_notes_saii']) || (isset($saiiService['auditor_notes_saii']) && !empty($saiiService['auditor_notes_saii']))) { ?>
-                                                            <span class=" image-preview-input  fa fa-upload"
-                                                                style="padding-right: 15px">
-                                                                <input type="file"
-                                                                    accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
-                                                                    data-id="<?php echo $_GET['customerid'] ?>"
-                                                                    data-service="<?php echo $saiiService['saii_id'] ?>"
-                                                                    service-type="SA-II" data-column="auditor_notes_saii"
-                                                                    name="input-auditor-notes-saii"
-                                                                    class="auditornotessaii input-auditor-notes-saii<?php echo $saiiService['saii_id'] ?>" />
-                                                            </span>
-                                                        <?php } ?>
-                                                        <?php if (isset($saiiService['auditor_notes_saii']) && !empty($saiiService['auditor_notes_saii'])) { ?>
-                                                            <span style="padding-right: 5px">
-                                                                <a href="<?php echo $saiiService['auditor_notes_saii'] ?>"
-                                                                    data-id="" download class="auditReportFileDownload">
-                                                                    <i class="fa fa-download"></i>
-                                                                </a>
-                                                            </span>
-                                                        <?php } ?>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <div style="float: right" class="image-preview form-inline">
+                                                        <div class="">
+                                                            <?php if (isset($saiiService['audit_report_saii']) && !empty($saiiService['audit_report_saii']) && empty($caservice['auditor_notes_saii']) || (isset($saiiService['auditor_notes_saii']) && !empty($saiiService['auditor_notes_saii']))) { ?>
+                                                                <span class=" image-preview-input  fa fa-upload"
+                                                                    style="padding-right: 15px">
+                                                                    <input type="file"
+                                                                        accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
+                                                                        data-id="<?php echo $_GET['customerid'] ?>"
+                                                                        data-service="<?php echo $saiiService['saii_id'] ?>"
+                                                                        service-type="SA-II" data-column="auditor_notes_saii"
+                                                                        name="input-auditor-notes-saii"
+                                                                        class="auditornotessaii input-auditor-notes-saii<?php echo $saiiService['saii_id'] ?>" />
+                                                                </span>
+                                                            <?php } ?>
+                                                            <?php if (isset($saiiService['auditor_notes_saii']) && !empty($saiiService['auditor_notes_saii'])) { ?>
+                                                                <span style="padding-right: 5px">
+                                                                    <a href="<?php echo $saiiService['auditor_notes_saii'] ?>"
+                                                                        data-id="" download class="auditReportFileDownload">
+                                                                        <i class="fa fa-download"></i>
+                                                                    </a>
+                                                                </span>
+                                                            <?php } ?>
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                <?php } ?>
                                             </div>
                                         </div>
                                     </div>
@@ -8065,7 +8562,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $newClass = "serviceContent";
                                             }
                                             ?>
-                                            <div class="<?php echo $newClass ?>">
+                                            <div class="<?php echo $newClass ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php if ($isMarketingRole) { ?> title="Disabled for Marketing role" <?php } ?>>
                                                 <span>SA - II Audit NC And evidences of closer
                                                     <?php if (isset($saiiService['audit_evidences_saii']) && !empty($saiiService['audit_evidences_saii']) && $saiiService['audit_evidences_saii'] == "NONC" && isset($saiiService['auditor_notes_saii']) && !empty($saiiService['auditor_notes_saii'])) { ?>
                                                         <!--                                                    <a class="" title="No NC Flag" style="padding: 1px 5px;">
@@ -8073,51 +8570,57 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                                                             </a>-->
                                                         *(No NC)<?php } ?>
                                                 </span>
-                                                <div style="float: right" class="image-preview form-inline">
-                                                    <div class=" ">
-                                                        <?php if (isset($saiiService['auditor_notes_saii']) && !empty($saiiService['auditor_notes_saii']) && empty($saiiService['audit_evidences_saii'])) { ?>
-                                                            <span class=" image-preview-input" style="padding-right: 15px">
-                                                                <input type="checkbox" class="no_nc_file" name="no_nc_file"
-                                                                    data-svctype="SA-2"
-                                                                    data-service="<?php echo $saiiService['saii_id'] ?>" value="">
-                                                            </span>
-                                                        <?php } ?>
-                                                        <?php if (isset($saiiService['audit_evidences_saii']) && !empty($saiiService['audit_evidences_saii']) && $saiiService['audit_evidences_saii'] == "NONC" && isset($saiiService['auditor_notes_saii']) && !empty($saiiService['auditor_notes_saii'])) { ?>
-                                                            <span class=" image-preview-input" style="padding-right: 15px">
-                                                                <input type="checkbox" class="no_nc_file" name="no_nc_file"
-                                                                    data-svctype="SA-2"
-                                                                    data-service="<?php echo $saiiService['saii_id'] ?>" checked>
-                                                            </span>
-                                                        <?php } ?>
-                                                        <?php if (isset($saiiService['audit_evidences_saii']) && !empty($saiiService['audit_evidences_saii']) && isset($saiiService['auditor_notes_saii']) && !empty($saiiService['auditor_notes_saii']) && $saiiService['audit_evidences_saii'] <> "NONC") { ?>
-                                                            <span class=" image-preview-input" style="padding-right: 15px">
-                                                                <input type="checkbox" class="no_nc_file" name="no_nc_file"
-                                                                    data-svctype="SA-2"
-                                                                    data-service="<?php echo $saiiService['saii_id'] ?>">
-                                                            </span>
-                                                        <?php } ?>
-                                                        <?php if (isset($saiiService['auditor_notes_saii']) && !empty($saiiService['auditor_notes_saii'])) { ?>
-                                                            <span class=" image-preview-input  fa fa-upload"
-                                                                style="padding-right: 15px">
-                                                                <input type="file"
-                                                                    accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
-                                                                    data-id="<?php echo $_GET['customerid'] ?>"
-                                                                    data-service="<?php echo $saiiService['saii_id'] ?>"
-                                                                    service-type="SA-II" data-column="audit_evidences_saii"
-                                                                    name="input-evidences-form"
-                                                                    class="updateEvidences input-evidences-form<?php echo $saiiService['saii_id'] ?>" />
-                                                            </span>
-                                                        <?php } ?>
-                                                        <?php if (isset($saiiService['audit_evidences_saii']) && !empty($saiiService['audit_evidences_saii']) && $saiiService['audit_evidences_saii'] != "NONC" && isset($saiiService['auditor_notes_saii']) && !empty($saiiService['auditor_notes_saii'])) { ?>
-                                                            <span style="padding-right: 5px">
-                                                                <a href="<?php echo $saiiService['audit_evidences_saii'] ?>"
-                                                                    data-id="" download class="evidencesFileDownload">
-                                                                    <i class="fa fa-download"></i>
-                                                                </a>
-                                                            </span>
-                                                        <?php } ?>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <div style="float: right" class="image-preview form-inline">
+                                                        <div class=" ">
+                                                            <?php if (isset($saiiService['auditor_notes_saii']) && !empty($saiiService['auditor_notes_saii']) && empty($saiiService['audit_evidences_saii'])) { ?>
+                                                                <span class=" image-preview-input" style="padding-right: 15px">
+                                                                    <input type="checkbox" class="no_nc_file" name="no_nc_file"
+                                                                        data-svctype="SA-2"
+                                                                        data-service="<?php echo $saiiService['saii_id'] ?>" value="">
+                                                                </span>
+                                                            <?php } ?>
+                                                            <?php if (isset($saiiService['audit_evidences_saii']) && !empty($saiiService['audit_evidences_saii']) && $saiiService['audit_evidences_saii'] == "NONC" && isset($saiiService['auditor_notes_saii']) && !empty($saiiService['auditor_notes_saii'])) { ?>
+                                                                <span class=" image-preview-input" style="padding-right: 15px">
+                                                                    <input type="checkbox" class="no_nc_file" name="no_nc_file"
+                                                                        data-svctype="SA-2"
+                                                                        data-service="<?php echo $saiiService['saii_id'] ?>" checked>
+                                                                </span>
+                                                            <?php } ?>
+                                                            <?php if (isset($saiiService['audit_evidences_saii']) && !empty($saiiService['audit_evidences_saii']) && isset($saiiService['auditor_notes_saii']) && !empty($saiiService['auditor_notes_saii']) && $saiiService['audit_evidences_saii'] <> "NONC") { ?>
+                                                                <span class=" image-preview-input" style="padding-right: 15px">
+                                                                    <input type="checkbox" class="no_nc_file" name="no_nc_file"
+                                                                        data-svctype="SA-2"
+                                                                        data-service="<?php echo $saiiService['saii_id'] ?>">
+                                                                </span>
+                                                            <?php } ?>
+                                                            <?php if (isset($saiiService['auditor_notes_saii']) && !empty($saiiService['auditor_notes_saii'])) { ?>
+                                                                <span class=" image-preview-input  fa fa-upload"
+                                                                    style="padding-right: 15px">
+                                                                    <input type="file"
+                                                                        accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
+                                                                        data-id="<?php echo $_GET['customerid'] ?>"
+                                                                        data-service="<?php echo $saiiService['saii_id'] ?>"
+                                                                        service-type="SA-II" data-column="audit_evidences_saii"
+                                                                        name="input-evidences-form"
+                                                                        class="updateEvidences input-evidences-form<?php echo $saiiService['saii_id'] ?>" />
+                                                                </span>
+                                                            <?php } ?>
+                                                            <?php if (isset($saiiService['audit_evidences_saii']) && !empty($saiiService['audit_evidences_saii']) && $saiiService['audit_evidences_saii'] != "NONC" && isset($saiiService['auditor_notes_saii']) && !empty($saiiService['auditor_notes_saii'])) { ?>
+                                                                <span style="padding-right: 5px">
+                                                                    <a href="<?php echo $saiiService['audit_evidences_saii'] ?>"
+                                                                        data-id="" download class="evidencesFileDownload">
+                                                                        <i class="fa fa-download"></i>
+                                                                    </a>
+                                                                </span>
+                                                            <?php } ?>
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                <?php } ?>
                                             </div>
                                         </div>
                                         <div class="col-sm-6">
@@ -8132,31 +8635,37 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $newClass = "serviceContent";
                                             }
                                             ?>
-                                            <div class="<?php echo $newClass ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>>
+                                            <div class="<?php echo $newClass ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ($isMarketingRole ? 'title="Disabled for Marketing role"' : ""); ?>>
                                                 <span>Review Report (Annex II)- SA - II Audit</span>
-                                                <?php if ((isset($saiiService['audit_evidences_saii']) && !empty($saiiService['audit_evidences_saii']) && empty($saiiService['stage_ii_id'])) || (isset($saiiService['servelance_id']) && empty($saiiService['signed_copy_saii']) && empty($saiiService['audit_report_saii']) && empty($saiiService['auditor_notes_saii']) && empty($saiiService['audit_evidences_saii']) && empty($saiiService['stage_ii_id']) && (Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin()))) { ?>
-                                                    <a class="stageIIAuditSai pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $saiiService['saii_id'] ?>" data-row-count=""
-                                                        title="Add (Annex II)- SA - II Audit" style="padding: 1px 5px;">
-                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
-                                                    </a>
-                                                <?php }
-                                                if (isset($saiiService['stage_ii_id']) && !empty($saiiService['stage_ii_id'])) { ?>
-                                                    <a class="editstageIIAudit2  pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $saiiService['saii_id'] ?>"
-                                                        data-notification="<?php echo $saiiService['stage_ii_id'] ?>"
-                                                        title="Update (Annex II)- SA - II Audit" style="padding: 1px 5px;">
-                                                        <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
-                                                    </a>
-                                                    <a class="downloadAnnexIISii pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-caservice-id="<?php echo $saiiService['saii_id'] ?>"
-                                                        data-stage-ii="<?php echo $saiiService['stage_ii_id'] ?>"
-                                                        title="Download (Annex II)- SA - II Audit" style="padding: 1px 5px;">
-                                                        <i class="fa fa-download fa-lg " style="padding: 3px"></i>
-                                                    </a>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <?php if ((isset($saiiService['audit_evidences_saii']) && !empty($saiiService['audit_evidences_saii']) && empty($saiiService['stage_ii_id'])) || (isset($saiiService['servelance_id']) && empty($saiiService['signed_copy_saii']) && empty($saiiService['audit_report_saii']) && empty($saiiService['auditor_notes_saii']) && empty($saiiService['audit_evidences_saii']) && empty($saiiService['stage_ii_id']) && (Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin()))) { ?>
+                                                        <a class="stageIIAuditSai pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-service="<?php echo $saiiService['saii_id'] ?>" data-row-count=""
+                                                            title="Add (Annex II)- SA - II Audit" style="padding: 1px 5px;">
+                                                            <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                        </a>
+                                                    <?php }
+                                                    if (isset($saiiService['stage_ii_id']) && !empty($saiiService['stage_ii_id'])) { ?>
+                                                        <a class="editstageIIAudit2  pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-service="<?php echo $saiiService['saii_id'] ?>"
+                                                            data-notification="<?php echo $saiiService['stage_ii_id'] ?>"
+                                                            title="Update (Annex II)- SA - II Audit" style="padding: 1px 5px;">
+                                                            <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                        </a>
+                                                        <a class="downloadAnnexIISii pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-caservice-id="<?php echo $saiiService['saii_id'] ?>"
+                                                            data-stage-ii="<?php echo $saiiService['stage_ii_id'] ?>"
+                                                            title="Download (Annex II)- SA - II Audit" style="padding: 1px 5px;">
+                                                            <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                        </a>
+                                                    <?php } ?>
                                                 <?php } ?>
                                             </div>
                                         </div>
@@ -8174,39 +8683,45 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $newClass = "serviceContent";
                                             }
                                             ?>
-                                            <div class="<?php echo $newClass ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>Review Report - CDC DELIBERATION AND DECISION </span>
-                                                <?php
-                                                // Only show CDC button if Review Report (Annex II) - Stage II Audit is submitted (stage_ii_id exists)
-                                                // AND CDC is not yet created (crr_id is empty)
-                                                if (isset($saiiService['stage_ii_id']) && !empty($saiiService['stage_ii_id']) && empty($saiiService['crr_id'])) { ?>
-                                                    <a class="cdcReport pull-right" data-svctype="SA2"
-                                                        data-id="<?php echo $saiiService['service'] ?>"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $saiiService['saii_id'] ?>"
-                                                        data-caservice="<?php echo $caservice['ca_id'] ?>"
-                                                        data-service1="<?php echo $crservice['cr_id'] ?>" data-row-count=""
-                                                        audit-data="SA-II" title="CDC DELIBERATION AND DECISION"
-                                                        style="padding: 1px 5px;">
-                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
-                                                    </a>
-                                                <?php } else if (isset($saiiService['crr_id']) && !empty($saiiService['crr_id'])) { ?>
-                                                        <a class="editCDC pull-right" data-svctype="SA2"
+                                            <div class="<?php echo $newClass ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ($isMarketingRole ? 'title="Disabled for Marketing role"' : ""); ?>> <span>Review Report - CDC DELIBERATION AND DECISION </span>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <?php
+                                                    // Only show CDC button if Review Report (Annex II) - Stage II Audit is submitted (stage_ii_id exists)
+                                                    // AND CDC is not yet created (crr_id is empty)
+                                                    if (isset($saiiService['stage_ii_id']) && !empty($saiiService['stage_ii_id']) && empty($saiiService['crr_id'])) { ?>
+                                                        <a class="cdcReport pull-right" data-svctype="SA2"
+                                                            data-id="<?php echo $saiiService['service'] ?>"
                                                             data-customer="<?php echo $_GET['customerid'] ?>"
                                                             data-service="<?php echo $saiiService['saii_id'] ?>"
-                                                            data-notification="<?php echo $saiiService['crr_id'] ?>"
-                                                            title="Edit CDC DELIBERATION AND DECISION" style="padding: 1px 5px;">
-                                                            <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                            data-caservice="<?php echo $caservice['ca_id'] ?>"
+                                                            data-service1="<?php echo $crservice['cr_id'] ?>" data-row-count=""
+                                                            audit-data="SA-II" title="CDC DELIBERATION AND DECISION"
+                                                            style="padding: 1px 5px;">
+                                                            <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
                                                         </a>
-                                                        <!-- <a class="sendCdcMail pull-right" data-svctype="SA2" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiiService['saii_id'] ?>" data-crr="<?php echo $saiiService['crr_id'] ?>" title="Send certificate by email" style="padding: 1px 5px;">
-                                                        <i class="fa fa-envelope fa-lg" style="padding: 3px"></i>
-                                                    </a> -->
-                                                        <a class="downloadCdcSii pull-right"
-                                                            data-customer="<?php echo $_GET['customerid'] ?>"
-                                                            data-caservice-id="<?php echo $saiiService['saii_id'] ?>"
-                                                            data-crr="<?php echo $saiiService['crr_id'] ?>"
-                                                            title="Download  CDC DELIBERATION AND DECISION" style="padding: 1px 5px;">
-                                                            <i class="fa fa-download fa-lg " style="padding: 3px"></i>
-                                                        </a>
+                                                    <?php } else if (isset($saiiService['crr_id']) && !empty($saiiService['crr_id'])) { ?>
+                                                            <a class="editCDC pull-right" data-svctype="SA2"
+                                                                data-customer="<?php echo $_GET['customerid'] ?>"
+                                                                data-service="<?php echo $saiiService['saii_id'] ?>"
+                                                                data-notification="<?php echo $saiiService['crr_id'] ?>"
+                                                                title="Edit CDC DELIBERATION AND DECISION" style="padding: 1px 5px;">
+                                                                <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                            </a>
+                                                            <!-- <a class="sendCdcMail pull-right" data-svctype="SA2" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiiService['saii_id'] ?>" data-crr="<?php echo $saiiService['crr_id'] ?>" title="Send certificate by email" style="padding: 1px 5px;">
+                                                            <i class="fa fa-envelope fa-lg" style="padding: 3px"></i>
+                                                        </a> -->
+                                                            <a class="downloadCdcSii pull-right"
+                                                                data-customer="<?php echo $_GET['customerid'] ?>"
+                                                                data-caservice-id="<?php echo $saiiService['saii_id'] ?>"
+                                                                data-crr="<?php echo $saiiService['crr_id'] ?>"
+                                                                title="Download  CDC DELIBERATION AND DECISION" style="padding: 1px 5px;">
+                                                                <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                            </a>
+                                                    <?php } ?>
                                                 <?php } ?>
                                             </div>
                                         </div>
@@ -8220,17 +8735,23 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $saiCertifyClass = "serviceContent";
                                             }
                                             ?>
-                                            <div class="<?php echo $saiCertifyClass ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>Certificate Print</span>
-                                                <?php if (isset($saiiService['crr_id']) && !empty($saiiService['crr_id'])) { ?>
-                                                    <a class="download-certificate-print pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $saiiService['saii_id'] ?>"
-                                                        data-id="<?php echo $saiiService['service'] ?>"
-                                                        data-certificate="<?php echo !empty($saiiService['certificate_id']) ? $saiiService['certificate_id'] : '' ?>"
-                                                        data-crr="<?php echo $saiiService['crr_id'] ?>" data-row-count=""
-                                                        title="Certificate Print" style="padding: 1px 5px;">
-                                                        <i class="fa fa-download fa-lg" style="padding: 3px"></i>
-                                                    </a>
+                                            <div class="<?php echo $saiCertifyClass ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ($isMarketingRole ? 'title="Disabled for Marketing role"' : ""); ?>> <span>Certificate Print</span>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <?php if (isset($saiiService['crr_id']) && !empty($saiiService['crr_id'])) { ?>
+                                                        <a class="download-certificate-print pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-service="<?php echo $saiiService['saii_id'] ?>"
+                                                            data-id="<?php echo $saiiService['service'] ?>"
+                                                            data-certificate="<?php echo !empty($saiiService['certificate_id']) ? $saiiService['certificate_id'] : '' ?>"
+                                                            data-crr="<?php echo $saiiService['crr_id'] ?>" data-row-count=""
+                                                            title="Certificate Print" style="padding: 1px 5px;">
+                                                            <i class="fa fa-download fa-lg" style="padding: 3px"></i>
+                                                        </a>
+                                                    <?php } ?>
                                                 <?php } ?>
                                             </div>
                                         </div>
@@ -8248,32 +8769,38 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $newClass = "serviceContent";
                                             }
                                             ?>
-                                            <div class="<?php echo $newClass ?>">
+                                            <div class="<?php echo $newClass ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php if ($isMarketingRole) { ?> title="Disabled for Marketing role" <?php } ?>>
                                                 <span>Certificate Upload</span>
-                                                <div style="float: right" class="image-preview form-inline">
-                                                    <div class="">
-                                                        <?php if (isset($saiiService['crr_id']) && !empty($saiiService['crr_id'])) { ?>
-                                                            <span class=" image-preview-input  fa fa-upload"
-                                                                style="padding-right: 15px">
-                                                                <input type="file"
-                                                                    accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
-                                                                    data-id="<?php echo $_GET['customerid'] ?>"
-                                                                    data-service="<?php echo $saiiService['saii_id'] ?>"
-                                                                    service-type="SA-II" data-column="certificate_print"
-                                                                    name="input-certificate-print-form"
-                                                                    class="updateCertificatePrint input-certificate-print-form<?php echo $saiiService['saii_id'] ?>" />
-                                                            </span>
-                                                        <?php } ?>
-                                                        <?php if (isset($saiiService['certificate_print']) && !empty($saiiService['certificate_print'])) { ?>
-                                                            <span style="padding-right: 5px">
-                                                                <a href="<?php echo $saiiService['certificate_print'] ?>" data-id=""
-                                                                    download class="customerReviewsaiiFileDownload">
-                                                                    <i class="fa fa-download"></i>
-                                                                </a>
-                                                            </span>
-                                                        <?php } ?>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <div style="float: right" class="image-preview form-inline">
+                                                        <div class="">
+                                                            <?php if (isset($saiiService['crr_id']) && !empty($saiiService['crr_id'])) { ?>
+                                                                <span class=" image-preview-input  fa fa-upload"
+                                                                    style="padding-right: 15px">
+                                                                    <input type="file"
+                                                                        accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
+                                                                        data-id="<?php echo $_GET['customerid'] ?>"
+                                                                        data-service="<?php echo $saiiService['saii_id'] ?>"
+                                                                        service-type="SA-II" data-column="certificate_print"
+                                                                        name="input-certificate-print-form"
+                                                                        class="updateCertificatePrint input-certificate-print-form<?php echo $saiiService['saii_id'] ?>" />
+                                                                </span>
+                                                            <?php } ?>
+                                                            <?php if (isset($saiiService['certificate_print']) && !empty($saiiService['certificate_print'])) { ?>
+                                                                <span style="padding-right: 5px">
+                                                                    <a href="<?php echo $saiiService['certificate_print'] ?>" data-id=""
+                                                                        download class="customerReviewsaiiFileDownload">
+                                                                        <i class="fa fa-download"></i>
+                                                                    </a>
+                                                                </span>
+                                                            <?php } ?>
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                <?php } ?>
                                             </div>
                                         </div>
                                         <div class="col-sm-6">
@@ -8288,7 +8815,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $newClass = "serviceContent";
                                             }
                                             ?>
-                                            <div class="<?php echo $newClass ?>">
+                                            <div class="<?php echo $newClass ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php if ($isMarketingRole) { ?> title="Disabled for Marketing role" <?php } ?>>
                                                 <span>Client Feedback
                                                     <?php if (isset($saiiService['customer_review_saii']) && !empty($saiiService['customer_review_saii']) && $saiiService['customer_review_saii'] == "NONC" && isset($saiiService['certificate_print']) && !empty($saiiService['certificate_print'])) { ?>
                                                         <!--                                                    <a class="" title="No Client Feedback Flag" style="padding: 1px 5px;">
@@ -8296,64 +8823,55 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                                                             </a>-->
                                                         *(No Client Feedback)<?php } ?>
                                                 </span>
-                                                <div style="float: right" class="image-preview form-inline">
-                                                    <?php if (isset($saiiService['certificate_print']) && !empty($saiiService['certificate_print']) && empty($saiiService['customer_review_saii'])) { ?>
-                                                        <span class="image-preview-input" style="padding-right: 15px">
-                                                            <input type="checkbox" class="no_feedback_file" name="no_feedback_file"
-                                                                data-svctype="SA-II"
-                                                                data-service="<?php echo $saiiService['saii_id'] ?>">
-                                                        </span>
-                                                    <?php } ?>
-                                                    <?php if (isset($saiiService['customer_review_saii']) && !empty($saiiService['customer_review_saii']) && $saiiService['customer_review_saii'] == "NONC" && isset($saiiService['certificate_print']) && !empty($saiiService['certificate_print'])) { ?>
-                                                        <span class="image-preview-input" style="padding-right: 15px">
-                                                            <input type="checkbox" class="no_feedback_file" name="no_feedback_file"
-                                                                data-svctype="SA-II"
-                                                                data-service="<?php echo $saiiService['saii_id'] ?>" checked>
-                                                        </span>
-                                                    <?php } ?>
-                                                    <?php if (isset($saiiService['customer_review_saii']) && !empty($saiiService['customer_review_saii']) && isset($saiiService['certificate_print']) && !empty($saiiService['certificate_print']) && $saiiService['customer_review_saii'] <> "NONC") { ?>
-                                                        <span class="image-preview-input" style="padding-right: 15px">
-                                                            <input type="checkbox" class="no_feedback_file" name="no_feedback_file"
-                                                                data-svctype="SA-II"
-                                                                data-service="<?php echo $saiiService['saii_id'] ?>">
-                                                        </span>
-                                                    <?php } ?>
-                                                    <?php if (isset($saiiService['certificate_print']) && !empty($saiiService['certificate_print'])) { ?>
-                                                        <span class=" image-preview-input  fa fa-upload"
-                                                            style="padding-right: 15px">
-                                                            <input type="file"
-                                                                accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
-                                                                data-id="<?php echo $_GET['customerid'] ?>"
-                                                                data-service="<?php echo $saiiService['saii_id'] ?>"
-                                                                service-type="SA-II" data-column="customer_review_saii"
-                                                                name="input-customerreview-form"
-                                                                class="updateCustomerReview input-customerreview-form<?php echo $saiiService['saii_id'] ?>" />
-                                                        </span>
-                                                    <?php } ?>
-                                                    <?php if (isset($saiiService['customer_review_saii']) && !empty($saiiService['customer_review_saii']) && $saiiService['customer_review_saii'] != "NONC") { ?>
-                                                        <span style="padding-right: 5px">
-                                                            <a href="<?php echo $saiiService['customer_review_saii'] ?>" data-id=""
-                                                                download class="customerReviewsaiiFileDownload">
-                                                                <i class="fa fa-download"></i>
-                                                            </a>
-                                                        </span>
-                                                    <?php } ?>
-                                                </div>
-
-                                                <!--                                                <div style="float: right" class="image-preview form-inline">
-                                                <?php if (isset($saiiService['certificate_print']) && !empty($saiiService['certificate_print'])) { ?>
-                                                                                                                                                                                                                    <span class=" image-preview-input  fa fa-upload" style="padding-right: 15px"> 
-                                                                                                                                                                                                                    <input type="file" accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed" data-id="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $saiiService['saii_id'] ?>" service-type="SA-II" data-column="customer_review_saii" name="input-customerreview-form" class="updateCustomerReview input-customerreview-form<?php echo $saiiService['saii_id'] ?>" />
-                                                                                                                                                                                                                    </span> 
-                                                <?php } ?> 
-                                                <?php if (isset($saiiService['customer_review_saii']) && !empty($saiiService['customer_review_saii'])) { ?>
-                                                                                                                                                                                                                    <span style="padding-right: 5px"> 
-                                                                                                                                                                                                                    <a href="<?php echo $saiiService['customer_review_saii'] ?>" data-id="" download class="customerReviewsaiiFileDownload">
-                                                                                                                                                                                                                    <i class="fa fa-download"></i>
-                                                                                                                                                                                                                    </a> 
-                                                                                                                                                                                                                    </span> 
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <div style="float: right" class="image-preview form-inline">
+                                                        <?php if (isset($saiiService['certificate_print']) && !empty($saiiService['certificate_print']) && empty($saiiService['customer_review_saii'])) { ?>
+                                                            <span class="image-preview-input" style="padding-right: 15px">
+                                                                <input type="checkbox" class="no_feedback_file" name="no_feedback_file"
+                                                                    data-svctype="SA-II"
+                                                                    data-service="<?php echo $saiiService['saii_id'] ?>">
+                                                            </span>
+                                                        <?php } ?>
+                                                        <?php if (isset($saiiService['customer_review_saii']) && !empty($saiiService['customer_review_saii']) && $saiiService['customer_review_saii'] == "NONC" && isset($saiiService['certificate_print']) && !empty($saiiService['certificate_print'])) { ?>
+                                                            <span class="image-preview-input" style="padding-right: 15px">
+                                                                <input type="checkbox" class="no_feedback_file" name="no_feedback_file"
+                                                                    data-svctype="SA-II"
+                                                                    data-service="<?php echo $saiiService['saii_id'] ?>" checked>
+                                                            </span>
+                                                        <?php } ?>
+                                                        <?php if (isset($saiiService['customer_review_saii']) && !empty($saiiService['customer_review_saii']) && isset($saiiService['certificate_print']) && !empty($saiiService['certificate_print']) && $saiiService['customer_review_saii'] <> "NONC") { ?>
+                                                            <span class="image-preview-input" style="padding-right: 15px">
+                                                                <input type="checkbox" class="no_feedback_file" name="no_feedback_file"
+                                                                    data-svctype="SA-II"
+                                                                    data-service="<?php echo $saiiService['saii_id'] ?>">
+                                                            </span>
+                                                        <?php } ?>
+                                                        <?php if (isset($saiiService['certificate_print']) && !empty($saiiService['certificate_print'])) { ?>
+                                                            <span class=" image-preview-input  fa fa-upload"
+                                                                style="padding-right: 15px">
+                                                                <input type="file"
+                                                                    accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
+                                                                    data-id="<?php echo $_GET['customerid'] ?>"
+                                                                    data-service="<?php echo $saiiService['saii_id'] ?>"
+                                                                    service-type="SA-II" data-column="customer_review_saii"
+                                                                    name="input-customerreview-form"
+                                                                    class="updateCustomerReview input-customerreview-form<?php echo $saiiService['saii_id'] ?>" />
+                                                            </span>
+                                                        <?php } ?>
+                                                        <?php if (isset($saiiService['customer_review_saii']) && !empty($saiiService['customer_review_saii']) && $saiiService['customer_review_saii'] != "NONC") { ?>
+                                                            <span style="padding-right: 5px">
+                                                                <a href="<?php echo $saiiService['customer_review_saii'] ?>" data-id=""
+                                                                    download class="customerReviewsaiiFileDownload">
+                                                                    <i class="fa fa-download"></i>
+                                                                </a>
+                                                            </span>
+                                                        <?php } ?>
+                                                    </div>
                                                 <?php } ?>
-                                                                                                </div>-->
                                             </div>
                                         </div>
                                     </div>
@@ -8370,34 +8888,40 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $newClass = "serviceContent";
                                             }
                                             ?>
-                                            <div class="<?php echo $newClass ?>">
+                                            <div class="<?php echo $newClass ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php if ($isMarketingRole) { ?> title="Disabled for Marketing role" <?php } ?>>
                                                 <span>Review Report - Review of feedback</span>
-                                                <?php if (isset($saiiService['customer_review_saii']) && !empty($saiiService['customer_review_saii']) && empty($saiiService['survey_id'])) { ?>
-                                                    <a class="createCustomerSurvey pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $saiiService['saii_id'] ?>"
-                                                        data-id="<?php echo $saiiService['service'] ?>" data-svc="SA-II"
-                                                        data-row-id="" data-row-count="" title="Add Review of feedback"
-                                                        style="padding: 1px 5px;">
-                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
-                                                    </a>
-                                                <?php } ?>
-                                                <?php if (isset($saiiService['survey_id']) && !empty($saiiService['survey_id'])) { ?>
-                                                    <a class="editCustomerSurvey pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $saiiService['saii_id'] ?>"
-                                                        data-id="<?php echo $saiiService['service'] ?>" data-svc="SA-II"
-                                                        data-row-id="<?php echo $saiiService['survey_id'] ?>" data-row-count=""
-                                                        title="Update Review of feedback" style="padding: 1px 5px;">
-                                                        <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
-                                                    </a>
-                                                    <a class="downloadCustomersatisfactionSii pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-caservice-id="<?php echo $saiiService['saii_id'] ?>"
-                                                        data-surveyid="<?php echo $saiiService['survey_id'] ?>"
-                                                        title="Download  Review of feedback" style="padding: 1px 5px;">
-                                                        <i class="fa fa-download fa-lg " style="padding: 3px"></i>
-                                                    </a>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <?php if (isset($saiiService['customer_review_saii']) && !empty($saiiService['customer_review_saii']) && empty($saiiService['survey_id'])) { ?>
+                                                        <a class="createCustomerSurvey pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-service="<?php echo $saiiService['saii_id'] ?>"
+                                                            data-id="<?php echo $saiiService['service'] ?>" data-svc="SA-II"
+                                                            data-row-id="" data-row-count="" title="Add Review of feedback"
+                                                            style="padding: 1px 5px;">
+                                                            <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                        </a>
+                                                    <?php } ?>
+                                                    <?php if (isset($saiiService['survey_id']) && !empty($saiiService['survey_id'])) { ?>
+                                                        <a class="editCustomerSurvey pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-service="<?php echo $saiiService['saii_id'] ?>"
+                                                            data-id="<?php echo $saiiService['service'] ?>" data-svc="SA-II"
+                                                            data-row-id="<?php echo $saiiService['survey_id'] ?>" data-row-count=""
+                                                            title="Update Review of feedback" style="padding: 1px 5px;">
+                                                            <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                        </a>
+                                                        <a class="downloadCustomersatisfactionSii pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-caservice-id="<?php echo $saiiService['saii_id'] ?>"
+                                                            data-surveyid="<?php echo $saiiService['survey_id'] ?>"
+                                                            title="Download  Review of feedback" style="padding: 1px 5px;">
+                                                            <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                        </a>
+                                                    <?php } ?>
                                                 <?php } ?>
                                             </div>
                                         </div>
@@ -8665,32 +9189,38 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $rcStage2Class = 'serviceContent';
                                             }
                                             ?>
-                                            <div class="<?php echo $rcStage2Class ?>">
+                                            <div class="<?php echo $rcStage2Class ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php if ($isMarketingRole) { ?> title="Disabled for Marketing role" <?php } ?>>
                                                 <span>Release - RC Audit Plan/ Recertification</span>
-                                                <?php if (isset($rcServiceinfo['audit_stage_id']) && !empty($rcServiceinfo['audit_stage_id']) && empty($rcServiceinfo['audit_scheduleii_id'])) { ?>
-                                                    <a class="createStageIISchedule pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $rcServiceinfo['rc_id'] ?>" data-serviceType="RC"
-                                                        data-type="service-type-rc" data-row-id="" title="Add Stage - II Schedule"
-                                                        style="padding: 1px 5px;">
-                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
-                                                    </a>
-                                                <?php } ?>
-                                                <?php if (isset($rcServiceinfo['audit_scheduleii_id']) && !empty($rcServiceinfo['audit_scheduleii_id'])) { ?>
-                                                    <a class="editStageiiAudit pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $rcServiceinfo['rc_id'] ?>"
-                                                        data-row-id="<?php echo $rcServiceinfo['audit_scheduleii_id'] ?>"
-                                                        title="Add Release - Audit Notification" style="padding: 1px 5px;">
-                                                        <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
-                                                    </a>
-                                                    <a class="downloadStageScheduleRC pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-caservice-id="<?php echo $rcServiceinfo['rc_id'] ?>"
-                                                        data-schedulei="<?php echo $rcServiceinfo['audit_scheduleii_id'] ?>"
-                                                        title="Download Release - Audit Notification" style="padding: 1px 5px;">
-                                                        <i class="fa fa-download fa-lg " style="padding: 3px"></i>
-                                                    </a>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <?php if (isset($rcServiceinfo['audit_stage_id']) && !empty($rcServiceinfo['audit_stage_id']) && empty($rcServiceinfo['audit_scheduleii_id'])) { ?>
+                                                        <a class="createStageIISchedule pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-service="<?php echo $rcServiceinfo['rc_id'] ?>" data-serviceType="RC"
+                                                            data-type="service-type-rc" data-row-id="" title="Add Stage - II Schedule"
+                                                            style="padding: 1px 5px;">
+                                                            <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                        </a>
+                                                    <?php } ?>
+                                                    <?php if (isset($rcServiceinfo['audit_scheduleii_id']) && !empty($rcServiceinfo['audit_scheduleii_id'])) { ?>
+                                                        <a class="editStageiiAudit pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-service="<?php echo $rcServiceinfo['rc_id'] ?>"
+                                                            data-row-id="<?php echo $rcServiceinfo['audit_scheduleii_id'] ?>"
+                                                            title="Add Release - Audit Notification" style="padding: 1px 5px;">
+                                                            <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                        </a>
+                                                        <a class="downloadStageScheduleRC pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-caservice-id="<?php echo $rcServiceinfo['rc_id'] ?>"
+                                                            data-schedulei="<?php echo $rcServiceinfo['audit_scheduleii_id'] ?>"
+                                                            title="Download Release - Audit Notification" style="padding: 1px 5px;">
+                                                            <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                        </a>
+                                                    <?php } ?>
                                                 <?php } ?>
 
                                             </div>
@@ -8711,32 +9241,38 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $rcSignedNotiClass = 'serviceContent';
                                             }
                                             ?>
-                                            <div class="<?php echo $rcSignedNotiClass ?>">
+                                            <div class="<?php echo $rcSignedNotiClass ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php if ($isMarketingRole) { ?> title="Disabled for Marketing role" <?php } ?>>
                                                 <span>Signed Notification RC Audit </span>
-                                                <div style="float: right" class="image-preview form-inline">
-                                                    <div class=" ">
-                                                        <?php if (isset($rcServiceinfo['audit_scheduleii_id']) && !empty($rcServiceinfo['audit_scheduleii_id'])) { ?>
-                                                            <span class=" image-preview-input  fa fa-upload"
-                                                                style="padding-right: 15px">
-                                                                <input type="file"
-                                                                    accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
-                                                                    data-id="<?php echo $_GET['customerid'] ?>"
-                                                                    data-service="<?php echo $rcServiceinfo['rc_id'] ?>"
-                                                                    service-type="RC" data-column="rc_signed_noti"
-                                                                    name="input-signed-noti-rc"
-                                                                    class="signedNotiRc input-signed-noti-rc<?php echo $rcServiceinfo['rc_id'] ?>" />
-                                                            </span>
-                                                        <?php } ?>
-                                                        <?php if (isset($rcServiceinfo['rc_signed_noti']) && !empty($rcServiceinfo['rc_signed_noti'])) { ?>
-                                                            <span style="padding-right: 5px">
-                                                                <a href="<?php echo $rcServiceinfo['rc_signed_noti'] ?>" data-id=""
-                                                                    download class="customerReviewFileDownload">
-                                                                    <i class="fa fa-download"></i>
-                                                                </a>
-                                                            </span>
-                                                        <?php } ?>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <div style="float: right" class="image-preview form-inline">
+                                                        <div class=" ">
+                                                            <?php if (isset($rcServiceinfo['audit_scheduleii_id']) && !empty($rcServiceinfo['audit_scheduleii_id'])) { ?>
+                                                                <span class=" image-preview-input  fa fa-upload"
+                                                                    style="padding-right: 15px">
+                                                                    <input type="file"
+                                                                        accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
+                                                                        data-id="<?php echo $_GET['customerid'] ?>"
+                                                                        data-service="<?php echo $rcServiceinfo['rc_id'] ?>"
+                                                                        service-type="RC" data-column="rc_signed_noti"
+                                                                        name="input-signed-noti-rc"
+                                                                        class="signedNotiRc input-signed-noti-rc<?php echo $rcServiceinfo['rc_id'] ?>" />
+                                                                </span>
+                                                            <?php } ?>
+                                                            <?php if (isset($rcServiceinfo['rc_signed_noti']) && !empty($rcServiceinfo['rc_signed_noti'])) { ?>
+                                                                <span style="padding-right: 5px">
+                                                                    <a href="<?php echo $rcServiceinfo['rc_signed_noti'] ?>" data-id=""
+                                                                        download class="customerReviewFileDownload">
+                                                                        <i class="fa fa-download"></i>
+                                                                    </a>
+                                                                </span>
+                                                            <?php } ?>
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                <?php } ?>
                                             </div>
                                         </div>
 
@@ -8754,30 +9290,36 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $rcSignCopyClass = 'serviceContent';
                                             }
                                             ?>
-                                            <div class="<?php echo $rcSignCopyClass ?>">
+                                            <div class="<?php echo $rcSignCopyClass ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php if ($isMarketingRole) { ?> title="Disabled for Marketing role" <?php } ?>>
                                                 <span>Audit Plan Scanned Copy</span>
-                                                <div style="float: right" class="image-preview form-inline">
-                                                    <?php if (isset($rcServiceinfo['rc_signed_noti']) && !empty($rcServiceinfo['rc_signed_noti'])) { ?>
-                                                        <span class=" image-preview-input  fa fa-upload"
-                                                            style="padding-right: 15px">
-                                                            <input type="file"
-                                                                accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
-                                                                data-id="<?php echo $_GET['customerid'] ?>"
-                                                                data-service="<?php echo $rcServiceinfo['rc_id'] ?>"
-                                                                service-type="RC" data-column="rc_signed_copy"
-                                                                name="input-signed-copy-rc"
-                                                                class="signedCopyRc input-signed-copy-rc<?php echo $rcServiceinfo['rc_id'] ?>" />
-                                                        </span>
-                                                    <?php } ?>
-                                                    <?php if (isset($rcServiceinfo['rc_signed_copy']) && !empty($rcServiceinfo['rc_signed_copy'])) { ?>
-                                                        <span style="padding-right: 5px">
-                                                            <a href="<?php echo $rcServiceinfo['rc_signed_copy'] ?>" data-id=""
-                                                                download class="customerReviewFileDownload">
-                                                                <i class="fa fa-download"></i>
-                                                            </a>
-                                                        </span>
-                                                    <?php } ?>
-                                                </div>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <div style="float: right" class="image-preview form-inline">
+                                                        <?php if (isset($rcServiceinfo['rc_signed_noti']) && !empty($rcServiceinfo['rc_signed_noti'])) { ?>
+                                                            <span class=" image-preview-input  fa fa-upload"
+                                                                style="padding-right: 15px">
+                                                                <input type="file"
+                                                                    accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
+                                                                    data-id="<?php echo $_GET['customerid'] ?>"
+                                                                    data-service="<?php echo $rcServiceinfo['rc_id'] ?>"
+                                                                    service-type="RC" data-column="rc_signed_copy"
+                                                                    name="input-signed-copy-rc"
+                                                                    class="signedCopyRc input-signed-copy-rc<?php echo $rcServiceinfo['rc_id'] ?>" />
+                                                            </span>
+                                                        <?php } ?>
+                                                        <?php if (isset($rcServiceinfo['rc_signed_copy']) && !empty($rcServiceinfo['rc_signed_copy'])) { ?>
+                                                            <span style="padding-right: 5px">
+                                                                <a href="<?php echo $rcServiceinfo['rc_signed_copy'] ?>" data-id=""
+                                                                    download class="customerReviewFileDownload">
+                                                                    <i class="fa fa-download"></i>
+                                                                </a>
+                                                            </span>
+                                                        <?php } ?>
+                                                    </div>
+                                                <?php } ?>
                                             </div>
                                         </div>
                                     </div>
@@ -8794,32 +9336,38 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $rcAudit2Class = 'serviceContent';
                                             }
                                             ?>
-                                            <div class="<?php echo $rcAudit2Class ?>">
+                                            <div class="<?php echo $rcAudit2Class ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php if ($isMarketingRole) { ?> title="Disabled for Marketing role" <?php } ?>>
                                                 <span>RC Audit Report, Summery and Checklists/Recertification</span>
-                                                <div style="float: right" class="image-preview form-inline">
-                                                    <div class=" ">
-                                                        <?php if (isset($rcServiceinfo['rc_signed_copy']) && !empty($rcServiceinfo['rc_signed_copy'])) { ?>
-                                                            <span class=" image-preview-input  fa fa-upload"
-                                                                style="padding-right: 15px">
-                                                                <input type="file"
-                                                                    accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
-                                                                    data-id="<?php echo $_GET['customerid'] ?>"
-                                                                    data-service="<?php echo $rcServiceinfo['rc_id'] ?>"
-                                                                    service-type="RC" data-column="rc_audit_report"
-                                                                    name="input-audit-report-rc"
-                                                                    class="auditReportRc input-audit-report-rc<?php echo $rcServiceinfo['rc_id'] ?>" />
-                                                            </span>
-                                                        <?php } ?>
-                                                        <?php if (isset($rcServiceinfo['rc_audit_report']) && !empty($rcServiceinfo['rc_audit_report'])) { ?>
-                                                            <span style="padding-right: 5px">
-                                                                <a href="<?php echo $rcServiceinfo['rc_audit_report'] ?>" data-id=""
-                                                                    download class="customerReviewFileDownload">
-                                                                    <i class="fa fa-download"></i>
-                                                                </a>
-                                                            </span>
-                                                        <?php } ?>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <div style="float: right" class="image-preview form-inline">
+                                                        <div class=" ">
+                                                            <?php if (isset($rcServiceinfo['rc_signed_copy']) && !empty($rcServiceinfo['rc_signed_copy'])) { ?>
+                                                                <span class=" image-preview-input  fa fa-upload"
+                                                                    style="padding-right: 15px">
+                                                                    <input type="file"
+                                                                        accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
+                                                                        data-id="<?php echo $_GET['customerid'] ?>"
+                                                                        data-service="<?php echo $rcServiceinfo['rc_id'] ?>"
+                                                                        service-type="RC" data-column="rc_audit_report"
+                                                                        name="input-audit-report-rc"
+                                                                        class="auditReportRc input-audit-report-rc<?php echo $rcServiceinfo['rc_id'] ?>" />
+                                                                </span>
+                                                            <?php } ?>
+                                                            <?php if (isset($rcServiceinfo['rc_audit_report']) && !empty($rcServiceinfo['rc_audit_report'])) { ?>
+                                                                <span style="padding-right: 5px">
+                                                                    <a href="<?php echo $rcServiceinfo['rc_audit_report'] ?>" data-id=""
+                                                                        download class="customerReviewFileDownload">
+                                                                        <i class="fa fa-download"></i>
+                                                                    </a>
+                                                                </span>
+                                                            <?php } ?>
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                <?php } ?>
                                             </div>
                                         </div>
                                         <div class="col-sm-6">
@@ -8834,32 +9382,38 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $rcAudit2Class = 'serviceContent';
                                             }
                                             ?>
-                                            <div class="<?php echo $rcAudit2Class ?>">
+                                            <div class="<?php echo $rcAudit2Class ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php if ($isMarketingRole) { ?> title="Disabled for Marketing role" <?php } ?>>
                                                 <span>RC Auditor Notes</span>
-                                                <div style="float: right" class="image-preview form-inline">
-                                                    <div class=" ">
-                                                        <?php if (isset($rcServiceinfo['rc_audit_report']) && !empty($rcServiceinfo['rc_audit_report'])) { ?>
-                                                            <span class=" image-preview-input  fa fa-upload"
-                                                                style="padding-right: 15px">
-                                                                <input type="file"
-                                                                    accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
-                                                                    data-id="<?php echo $_GET['customerid'] ?>"
-                                                                    data-service="<?php echo $rcServiceinfo['rc_id'] ?>"
-                                                                    service-type="RC" data-column="auditor_notes_rc"
-                                                                    name="input-auditor-notes-rc"
-                                                                    class="auditorNotesRc input-auditor-notes-rc<?php echo $rcServiceinfo['rc_id'] ?>" />
-                                                            </span>
-                                                        <?php } ?>
-                                                        <?php if (isset($rcServiceinfo['auditor_notes_rc']) && !empty($rcServiceinfo['auditor_notes_rc'])) { ?>
-                                                            <span style="padding-right: 5px">
-                                                                <a href="<?php echo $rcServiceinfo['auditor_notes_rc'] ?>"
-                                                                    data-id="" download class="customerReviewFileDownload">
-                                                                    <i class="fa fa-download"></i>
-                                                                </a>
-                                                            </span>
-                                                        <?php } ?>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <div style="float: right" class="image-preview form-inline">
+                                                        <div class=" ">
+                                                            <?php if (isset($rcServiceinfo['rc_audit_report']) && !empty($rcServiceinfo['rc_audit_report'])) { ?>
+                                                                <span class=" image-preview-input  fa fa-upload"
+                                                                    style="padding-right: 15px">
+                                                                    <input type="file"
+                                                                        accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
+                                                                        data-id="<?php echo $_GET['customerid'] ?>"
+                                                                        data-service="<?php echo $rcServiceinfo['rc_id'] ?>"
+                                                                        service-type="RC" data-column="auditor_notes_rc"
+                                                                        name="input-auditor-notes-rc"
+                                                                        class="auditorNotesRc input-auditor-notes-rc<?php echo $rcServiceinfo['rc_id'] ?>" />
+                                                                </span>
+                                                            <?php } ?>
+                                                            <?php if (isset($rcServiceinfo['auditor_notes_rc']) && !empty($rcServiceinfo['auditor_notes_rc'])) { ?>
+                                                                <span style="padding-right: 5px">
+                                                                    <a href="<?php echo $rcServiceinfo['auditor_notes_rc'] ?>"
+                                                                        data-id="" download class="customerReviewFileDownload">
+                                                                        <i class="fa fa-download"></i>
+                                                                    </a>
+                                                                </span>
+                                                            <?php } ?>
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                <?php } ?>
                                             </div>
                                         </div>
                                     </div>
@@ -8876,7 +9430,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $rcEvidenceClass = 'serviceContent';
                                             }
                                             ?>
-                                            <div class="<?php echo $rcEvidenceClass ?>">
+                                            <div class="<?php echo $rcEvidenceClass ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php if ($isMarketingRole) { ?> title="Disabled for Marketing role" <?php } ?>>
                                                 <span>RC Audit NC And evidence of closer
                                                     <?php if (isset($rcServiceinfo['rc_audit_evidence']) && !empty($rcServiceinfo['rc_audit_evidence']) && $rcServiceinfo['rc_audit_evidence'] == "NONC" && isset($rcServiceinfo['auditor_notes_rc']) && !empty($rcServiceinfo['auditor_notes_rc'])) { ?>
                                                         <!--                                                    <a class="" title="No NC Flag" style="padding: 1px 5px;">
@@ -8884,51 +9438,57 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                                                             </a>-->
                                                         *(No NC)<?php } ?>
                                                 </span>
-                                                <div style="float: right" class="image-preview form-inline">
-                                                    <div class=" ">
-                                                        <?php if (isset($rcServiceinfo['auditor_notes_rc']) && !empty($rcServiceinfo['auditor_notes_rc']) && empty($rcServiceinfo['rc_audit_evidence'])) { ?>
-                                                            <span class=" image-preview-input" style="padding-right: 15px">
-                                                                <input type="checkbox" class="no_nc_file" name="no_nc_file"
-                                                                    data-svctype="RC"
-                                                                    data-service="<?php echo $rcServiceinfo['rc_id'] ?>" value="">
-                                                            </span>
-                                                        <?php } ?>
-                                                        <?php if (isset($rcServiceinfo['rc_audit_evidence']) && !empty($rcServiceinfo['rc_audit_evidence']) && $rcServiceinfo['rc_audit_evidence'] == "NONC" && isset($rcServiceinfo['auditor_notes_rc']) && !empty($rcServiceinfo['auditor_notes_rc'])) { ?>
-                                                            <span class=" image-preview-input" style="padding-right: 15px">
-                                                                <input type="checkbox" class="no_nc_file" name="no_nc_file"
-                                                                    data-svctype="RC"
-                                                                    data-service="<?php echo $rcServiceinfo['rc_id'] ?>" checked>
-                                                            </span>
-                                                        <?php } ?>
-                                                        <?php if (isset($rcServiceinfo['rc_audit_evidence']) && !empty($rcServiceinfo['rc_audit_evidence']) && isset($rcServiceinfo['auditor_notes_rc']) && !empty($rcServiceinfo['auditor_notes_rc']) && $rcServiceinfo['rc_audit_evidence'] <> "NONC") { ?>
-                                                            <span class=" image-preview-input" style="padding-right: 15px">
-                                                                <input type="checkbox" class="no_nc_file" name="no_nc_file"
-                                                                    data-svctype="RC"
-                                                                    data-service="<?php echo $rcServiceinfo['rc_id'] ?>">
-                                                            </span>
-                                                        <?php } ?>
-                                                        <?php if (isset($rcServiceinfo['auditor_notes_rc']) && !empty($rcServiceinfo['auditor_notes_rc'])) { ?>
-                                                            <span class=" image-preview-input  fa fa-upload"
-                                                                style="padding-right: 15px">
-                                                                <input type="file"
-                                                                    accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
-                                                                    data-id="<?php echo $_GET['customerid'] ?>"
-                                                                    data-service="<?php echo $rcServiceinfo['rc_id'] ?>"
-                                                                    service-type="RC" data-column="rc_audit_evidence"
-                                                                    name="input-audit-evidence-rc"
-                                                                    class="auditEvidenceRc input-audit-evidence-rc<?php echo $rcServiceinfo['rc_id'] ?>" />
-                                                            </span>
-                                                        <?php } ?>
-                                                        <?php if (isset($rcServiceinfo['rc_audit_evidence']) && !empty($rcServiceinfo['rc_audit_evidence']) && $rcServiceinfo['rc_audit_evidence'] != "NONC" && isset($rcServiceinfo['auditor_notes_rc']) && !empty($rcServiceinfo['auditor_notes_rc'])) { ?>
-                                                            <span style="padding-right: 5px">
-                                                                <a href="<?php echo $rcServiceinfo['rc_audit_evidence'] ?>"
-                                                                    data-id="" download class="customerReviewFileDownload">
-                                                                    <i class="fa fa-download"></i>
-                                                                </a>
-                                                            </span>
-                                                        <?php } ?>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <div style="float: right" class="image-preview form-inline">
+                                                        <div class=" ">
+                                                            <?php if (isset($rcServiceinfo['auditor_notes_rc']) && !empty($rcServiceinfo['auditor_notes_rc']) && empty($rcServiceinfo['rc_audit_evidence'])) { ?>
+                                                                <span class=" image-preview-input" style="padding-right: 15px">
+                                                                    <input type="checkbox" class="no_nc_file" name="no_nc_file"
+                                                                        data-svctype="RC"
+                                                                        data-service="<?php echo $rcServiceinfo['rc_id'] ?>" value="">
+                                                                </span>
+                                                            <?php } ?>
+                                                            <?php if (isset($rcServiceinfo['rc_audit_evidence']) && !empty($rcServiceinfo['rc_audit_evidence']) && $rcServiceinfo['rc_audit_evidence'] == "NONC" && isset($rcServiceinfo['auditor_notes_rc']) && !empty($rcServiceinfo['auditor_notes_rc'])) { ?>
+                                                                <span class=" image-preview-input" style="padding-right: 15px">
+                                                                    <input type="checkbox" class="no_nc_file" name="no_nc_file"
+                                                                        data-svctype="RC"
+                                                                        data-service="<?php echo $rcServiceinfo['rc_id'] ?>" checked>
+                                                                </span>
+                                                            <?php } ?>
+                                                            <?php if (isset($rcServiceinfo['rc_audit_evidence']) && !empty($rcServiceinfo['rc_audit_evidence']) && isset($rcServiceinfo['auditor_notes_rc']) && !empty($rcServiceinfo['auditor_notes_rc']) && $rcServiceinfo['rc_audit_evidence'] <> "NONC") { ?>
+                                                                <span class=" image-preview-input" style="padding-right: 15px">
+                                                                    <input type="checkbox" class="no_nc_file" name="no_nc_file"
+                                                                        data-svctype="RC"
+                                                                        data-service="<?php echo $rcServiceinfo['rc_id'] ?>">
+                                                                </span>
+                                                            <?php } ?>
+                                                            <?php if (isset($rcServiceinfo['auditor_notes_rc']) && !empty($rcServiceinfo['auditor_notes_rc'])) { ?>
+                                                                <span class=" image-preview-input  fa fa-upload"
+                                                                    style="padding-right: 15px">
+                                                                    <input type="file"
+                                                                        accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
+                                                                        data-id="<?php echo $_GET['customerid'] ?>"
+                                                                        data-service="<?php echo $rcServiceinfo['rc_id'] ?>"
+                                                                        service-type="RC" data-column="rc_audit_evidence"
+                                                                        name="input-audit-evidence-rc"
+                                                                        class="auditEvidenceRc input-audit-evidence-rc<?php echo $rcServiceinfo['rc_id'] ?>" />
+                                                                </span>
+                                                            <?php } ?>
+                                                            <?php if (isset($rcServiceinfo['rc_audit_evidence']) && !empty($rcServiceinfo['rc_audit_evidence']) && $rcServiceinfo['rc_audit_evidence'] != "NONC" && isset($rcServiceinfo['auditor_notes_rc']) && !empty($rcServiceinfo['auditor_notes_rc'])) { ?>
+                                                                <span style="padding-right: 5px">
+                                                                    <a href="<?php echo $rcServiceinfo['rc_audit_evidence'] ?>"
+                                                                        data-id="" download class="customerReviewFileDownload">
+                                                                        <i class="fa fa-download"></i>
+                                                                    </a>
+                                                                </span>
+                                                            <?php } ?>
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                <?php } ?>
                                             </div>
                                         </div>
                                         <div class="col-sm-6">
@@ -8943,31 +9503,37 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $rcAnixClass = 'serviceContent';
                                             }
                                             ?>
-                                            <div class="<?php echo $rcAnixClass ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>>
+                                            <div class="<?php echo $rcAnixClass ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ($isMarketingRole ? 'title="Disabled for Marketing role"' : ""); ?>>
                                                 <span>Review Report (Annex II)- RC Audit</span>
-                                                <?php if ((isset($rcServiceinfo['rc_audit_evidence']) && !empty($rcServiceinfo['rc_audit_evidence']) && empty($rcServiceinfo['stage_ii_id'])) || (isset($rcServiceinfo['audit_scheduleii_id']) && empty($rcServiceinfo['rc_signed_copy']) && empty($rcServiceinfo['rc_audit_report']) && empty($rcServiceinfo['auditor_notes_rc']) && empty($rcServiceinfo['rc_audit_evidence']) && empty($rcServiceinfo['stage_ii_id']) && (Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin()))) { ?>
-                                                    <a class="stageIIAuditSai pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $rcServiceinfo['rc_id'] ?>" data-row-count=""
-                                                        title="Review Report (Annex II)" style="padding: 1px 5px;">
-                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
-                                                    </a>
-                                                <?php } ?>
-                                                <?php if (isset($rcServiceinfo['stage_ii_id']) && !empty($rcServiceinfo['stage_ii_id'])) { ?>
-                                                    <a class="editstageIIAudit2  pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $rcServiceinfo['rc_id'] ?>"
-                                                        data-notification="<?php echo $rcServiceinfo['stage_ii_id'] ?>"
-                                                        title="Add Review Report(Annex II)" style="padding: 1px 5px;">
-                                                        <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
-                                                    </a>
-                                                    <a class="downloadStageIIAuditRC pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-caservice-id="<?php echo $rcServiceinfo['rc_id'] ?>"
-                                                        data-stage-ii="<?php echo $rcServiceinfo['stage_ii_id'] ?>"
-                                                        title="Download Review Report (Annex II)" style="padding: 1px 5px;">
-                                                        <i class="fa fa-download fa-lg " style="padding: 3px"></i>
-                                                    </a>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <?php if ((isset($rcServiceinfo['rc_audit_evidence']) && !empty($rcServiceinfo['rc_audit_evidence']) && empty($rcServiceinfo['stage_ii_id'])) || (isset($rcServiceinfo['audit_scheduleii_id']) && empty($rcServiceinfo['rc_signed_copy']) && empty($rcServiceinfo['rc_audit_report']) && empty($rcServiceinfo['auditor_notes_rc']) && empty($rcServiceinfo['rc_audit_evidence']) && empty($rcServiceinfo['stage_ii_id']) && (Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin()))) { ?>
+                                                        <a class="stageIIAuditSai pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-service="<?php echo $rcServiceinfo['rc_id'] ?>" data-row-count=""
+                                                            title="Review Report (Annex II)" style="padding: 1px 5px;">
+                                                            <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                        </a>
+                                                    <?php } ?>
+                                                    <?php if (isset($rcServiceinfo['stage_ii_id']) && !empty($rcServiceinfo['stage_ii_id'])) { ?>
+                                                        <a class="editstageIIAudit2  pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-service="<?php echo $rcServiceinfo['rc_id'] ?>"
+                                                            data-notification="<?php echo $rcServiceinfo['stage_ii_id'] ?>"
+                                                            title="Add Review Report(Annex II)" style="padding: 1px 5px;">
+                                                            <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                        </a>
+                                                        <a class="downloadStageIIAuditRC pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-caservice-id="<?php echo $rcServiceinfo['rc_id'] ?>"
+                                                            data-stage-ii="<?php echo $rcServiceinfo['stage_ii_id'] ?>"
+                                                            title="Download Review Report (Annex II)" style="padding: 1px 5px;">
+                                                            <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                        </a>
+                                                    <?php } ?>
                                                 <?php } ?>
                                             </div>
                                         </div>
@@ -8986,35 +9552,41 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $rcCDCClass = 'serviceContent';
                                             }
                                             ?>
-                                            <div class="<?php echo $rcCDCClass ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>Review Report - CDC DELIBERATION AND DECISION</span>
-                                                <?php if ((isset($rcServiceinfo['stage_ii_id']) && !empty($rcServiceinfo['stage_ii_id']) && empty($rcServiceinfo['crr_id']) && !(Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin())) || (!empty($rcServiceinfo['rc_signed_copy']) && !empty($rcServiceinfo['rc_audit_report']) && !empty($rcServiceinfo['auditor_notes_rc']) && !empty($rcServiceinfo['rc_audit_evidence']) && !empty($rcServiceinfo['stage_ii_id']) && empty($rcServiceinfo['crr_id']) && (Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin()))) { ?>
-                                                    <a class="cdcReport pull-right" data-svctype="RC"
-                                                        data-id="<?php echo $rcServiceinfo['service'] ?>"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $rcServiceinfo['rc_id'] ?>"
-                                                        data-service1="<?php echo $crservice['cr_id'] ?>"
-                                                        data-type="service-type-sai" data-row-id="" audit-data="RC"
-                                                        title="Add CDC DELIBERATION AND DECISION" style="padding: 1px 5px;">
-                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
-                                                    </a>
-                                                <?php } else if (isset($rcServiceinfo['crr_id']) && !empty($rcServiceinfo['crr_id'])) { ?>
-                                                        <a class="editCDCRC pull-right" data-svctype="RC"
+                                            <div class="<?php echo $rcCDCClass ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ($isMarketingRole ? 'title="Disabled for Marketing role"' : ""); ?>> <span>Review Report - CDC DELIBERATION AND DECISION</span>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <?php if ((isset($rcServiceinfo['stage_ii_id']) && !empty($rcServiceinfo['stage_ii_id']) && empty($rcServiceinfo['crr_id']) && !(Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin())) || (!empty($rcServiceinfo['rc_signed_copy']) && !empty($rcServiceinfo['rc_audit_report']) && !empty($rcServiceinfo['auditor_notes_rc']) && !empty($rcServiceinfo['rc_audit_evidence']) && !empty($rcServiceinfo['stage_ii_id']) && empty($rcServiceinfo['crr_id']) && (Utitlity::checkForOfficeStaff() || Utitlity::checkForMainAdmin()))) { ?>
+                                                        <a class="cdcReport pull-right" data-svctype="RC"
+                                                            data-id="<?php echo $rcServiceinfo['service'] ?>"
                                                             data-customer="<?php echo $_GET['customerid'] ?>"
                                                             data-service="<?php echo $rcServiceinfo['rc_id'] ?>"
-                                                            data-notification="<?php echo $rcServiceinfo['crr_id'] ?>"
-                                                            title="Edit CDC DELIBERATION AND DECISION" style="padding: 1px 5px;">
-                                                            <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                            data-service1="<?php echo $crservice['cr_id'] ?>"
+                                                            data-type="service-type-sai" data-row-id="" audit-data="RC"
+                                                            title="Add CDC DELIBERATION AND DECISION" style="padding: 1px 5px;">
+                                                            <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
                                                         </a>
-                                                        <!-- <a class="sendCdcMail pull-right" data-svctype="RC" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $rcServiceinfo['rc_id'] ?>" data-crr="<?php echo $rcServiceinfo['crr_id'] ?>" title="Send certificate by email" style="padding: 1px 5px;">
-                                                        <i class="fa fa-envelope fa-lg" style="padding: 3px"></i>
-                                                    </a> -->
-                                                        <a class="downloadCDCRC pull-right"
-                                                            data-customer="<?php echo $_GET['customerid'] ?>"
-                                                            data-caservice-id="<?php echo $rcServiceinfo['rc_id'] ?>"
-                                                            data-crr="<?php echo $rcServiceinfo['crr_id'] ?>"
-                                                            title="Download  CDC DELIBERATION AND DECISION" style="padding: 1px 5px;">
-                                                            <i class="fa fa-download fa-lg " style="padding: 3px"></i>
-                                                        </a>
+                                                    <?php } else if (isset($rcServiceinfo['crr_id']) && !empty($rcServiceinfo['crr_id'])) { ?>
+                                                            <a class="editCDCRC pull-right" data-svctype="RC"
+                                                                data-customer="<?php echo $_GET['customerid'] ?>"
+                                                                data-service="<?php echo $rcServiceinfo['rc_id'] ?>"
+                                                                data-notification="<?php echo $rcServiceinfo['crr_id'] ?>"
+                                                                title="Edit CDC DELIBERATION AND DECISION" style="padding: 1px 5px;">
+                                                                <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                            </a>
+                                                            <!-- <a class="sendCdcMail pull-right" data-svctype="RC" data-customer="<?php echo $_GET['customerid'] ?>" data-service="<?php echo $rcServiceinfo['rc_id'] ?>" data-crr="<?php echo $rcServiceinfo['crr_id'] ?>" title="Send certificate by email" style="padding: 1px 5px;">
+                                                            <i class="fa fa-envelope fa-lg" style="padding: 3px"></i>
+                                                        </a> -->
+                                                            <a class="downloadCDCRC pull-right"
+                                                                data-customer="<?php echo $_GET['customerid'] ?>"
+                                                                data-caservice-id="<?php echo $rcServiceinfo['rc_id'] ?>"
+                                                                data-crr="<?php echo $rcServiceinfo['crr_id'] ?>"
+                                                                title="Download  CDC DELIBERATION AND DECISION" style="padding: 1px 5px;">
+                                                                <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                            </a>
+                                                    <?php } ?>
                                                 <?php } ?>
                                             </div>
                                         </div>
@@ -9028,17 +9600,23 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $rccertClass = "serviceContent";
                                             }
                                             ?>
-                                            <div class="<?php echo $rccertClass ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>Certificate Print</span>
-                                                <?php if (isset($rcServiceinfo['crr_id']) && !empty($rcServiceinfo['crr_id'])) { ?>
-                                                    <a class="download-certificate-print pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $rcServiceinfo['rc_id'] ?>"
-                                                        data-id="<?php echo $rcServiceinfo['service'] ?>"
-                                                        data-certificate="<?php echo !empty($rcServiceinfo['certificate_id']) ? $rcServiceinfo['certificate_id'] : '' ?>"
-                                                        data-crr="<?php echo $rcServiceinfo['crr_id'] ?>" data-row-count=""
-                                                        title="Certificate Print" style="padding: 1px 5px;">
-                                                        <i class="fa fa-download fa-lg" style="padding: 3px"></i>
-                                                    </a>
+                                            <div class="<?php echo $rccertClass ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ($isMarketingRole ? 'title="Disabled for Marketing role"' : ""); ?>> <span>Certificate Print</span>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <?php if (isset($rcServiceinfo['crr_id']) && !empty($rcServiceinfo['crr_id'])) { ?>
+                                                        <a class="download-certificate-print pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-service="<?php echo $rcServiceinfo['rc_id'] ?>"
+                                                            data-id="<?php echo $rcServiceinfo['service'] ?>"
+                                                            data-certificate="<?php echo !empty($rcServiceinfo['certificate_id']) ? $rcServiceinfo['certificate_id'] : '' ?>"
+                                                            data-crr="<?php echo $rcServiceinfo['crr_id'] ?>" data-row-count=""
+                                                            title="Certificate Print" style="padding: 1px 5px;">
+                                                            <i class="fa fa-download fa-lg" style="padding: 3px"></i>
+                                                        </a>
+                                                    <?php } ?>
                                                 <?php } ?>
                                             </div>
                                         </div>
@@ -9057,32 +9635,38 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $rcCustSatisfyClass = 'serviceContent';
                                             }
                                             ?>
-                                            <div class="<?php echo $rcCustSatisfyClass ?>">
+                                            <div class="<?php echo $rcCustSatisfyClass ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php if ($isMarketingRole) { ?> title="Disabled for Marketing role" <?php } ?>>
                                                 <span>Certificate Upload</span>
-                                                <div style="float: right" class="image-preview form-inline">
-                                                    <div class=" ">
-                                                        <?php if (isset($rcServiceinfo['crr_id']) && !empty($rcServiceinfo['crr_id'])) { ?>
-                                                            <span class=" image-preview-input  fa fa-upload"
-                                                                style="padding-right: 15px">
-                                                                <input type="file"
-                                                                    accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
-                                                                    data-id="<?php echo $_GET['customerid'] ?>"
-                                                                    data-service="<?php echo $rcServiceinfo['rc_id'] ?>"
-                                                                    service-type="RC" data-column="certificate_print"
-                                                                    name="input-certificate-upload-rc"
-                                                                    class="customerCertificateUploadRc input-certificate-upload-rc<?php echo $rcServiceinfo['rc_id'] ?>" />
-                                                            </span>
-                                                        <?php } ?>
-                                                        <?php if (isset($rcServiceinfo['certificate_print']) && !empty($rcServiceinfo['certificate_print'])) { ?>
-                                                            <span style="padding-right: 5px">
-                                                                <a href="<?php echo $rcServiceinfo['certificate_print'] ?>"
-                                                                    data-id="" download class="customerReviewFileDownload">
-                                                                    <i class="fa fa-download"></i>
-                                                                </a>
-                                                            </span>
-                                                        <?php } ?>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <div style="float: right" class="image-preview form-inline">
+                                                        <div class=" ">
+                                                            <?php if (isset($rcServiceinfo['crr_id']) && !empty($rcServiceinfo['crr_id'])) { ?>
+                                                                <span class=" image-preview-input  fa fa-upload"
+                                                                    style="padding-right: 15px">
+                                                                    <input type="file"
+                                                                        accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
+                                                                        data-id="<?php echo $_GET['customerid'] ?>"
+                                                                        data-service="<?php echo $rcServiceinfo['rc_id'] ?>"
+                                                                        service-type="RC" data-column="certificate_print"
+                                                                        name="input-certificate-upload-rc"
+                                                                        class="customerCertificateUploadRc input-certificate-upload-rc<?php echo $rcServiceinfo['rc_id'] ?>" />
+                                                                </span>
+                                                            <?php } ?>
+                                                            <?php if (isset($rcServiceinfo['certificate_print']) && !empty($rcServiceinfo['certificate_print'])) { ?>
+                                                                <span style="padding-right: 5px">
+                                                                    <a href="<?php echo $rcServiceinfo['certificate_print'] ?>"
+                                                                        data-id="" download class="customerReviewFileDownload">
+                                                                        <i class="fa fa-download"></i>
+                                                                    </a>
+                                                                </span>
+                                                            <?php } ?>
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                <?php } ?>
                                             </div>
                                         </div>
                                         <div class="col-sm-6">
@@ -9097,7 +9681,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $rcCustSatisfyClass = 'serviceContent';
                                             }
                                             ?>
-                                            <div class="<?php echo $rcCustSatisfyClass ?>">
+                                            <div class="<?php echo $rcCustSatisfyClass ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php if ($isMarketingRole) { ?> title="Disabled for Marketing role" <?php } ?>>
                                                 <span>Client Feedback
                                                     <?php if (isset($rcServiceinfo['rc_customer_review']) && !empty($rcServiceinfo['rc_customer_review']) && $rcServiceinfo['rc_customer_review'] == "NONC" && isset($rcServiceinfo['certificate_print']) && !empty($rcServiceinfo['certificate_print'])) { ?>
                                                         <!--                                                    <a class="" title="No Client Feedback Flag" style="padding: 1px 5px;">
@@ -9105,49 +9689,55 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                                                             </a>-->
                                                         *(No Client Feedback)<?php } ?>
                                                 </span>
-                                                <div style="float: right" class="image-preview form-inline">
-                                                    <?php if (isset($rcServiceinfo['certificate_print']) && !empty($rcServiceinfo['certificate_print']) && empty($rcServiceinfo['rc_customer_review'])) { ?>
-                                                        <span class="image-preview-input" style="padding-right: 15px">
-                                                            <input type="checkbox" class="no_feedback_file" name="no_feedback_file"
-                                                                data-svctype="RC"
-                                                                data-service="<?php echo $rcServiceinfo['rc_id'] ?>">
-                                                        </span>
-                                                    <?php } ?>
-                                                    <?php if (isset($rcServiceinfo['rc_customer_review']) && !empty($rcServiceinfo['rc_customer_review']) && $rcServiceinfo['rc_customer_review'] == "NONC" && isset($rcServiceinfo['certificate_print']) && !empty($rcServiceinfo['certificate_print'])) { ?>
-                                                        <span class="image-preview-input" style="padding-right: 15px">
-                                                            <input type="checkbox" class="no_feedback_file" name="no_feedback_file"
-                                                                data-svctype="RC"
-                                                                data-service="<?php echo $rcServiceinfo['rc_id'] ?>" checked>
-                                                        </span>
-                                                    <?php } ?>
-                                                    <?php if (isset($rcServiceinfo['rc_customer_review']) && !empty($rcServiceinfo['rc_customer_review']) && isset($rcServiceinfo['certificate_print']) && !empty($rcServiceinfo['certificate_print']) && $rcServiceinfo['rc_customer_review'] <> "NONC") { ?>
-                                                        <span class="image-preview-input" style="padding-right: 15px">
-                                                            <input type="checkbox" class="no_feedback_file" name="no_feedback_file"
-                                                                data-svctype="RC"
-                                                                data-service="<?php echo $rcServiceinfo['rc_id'] ?>">
-                                                        </span>
-                                                    <?php } ?>
-                                                    <?php if (isset($rcServiceinfo['certificate_print']) && !empty($rcServiceinfo['certificate_print'])) { ?>
-                                                        <span class=" image-preview-input  fa fa-upload"
-                                                            style="padding-right: 15px">
-                                                            <input type="file"
-                                                                accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
-                                                                data-id="<?php echo $_GET['customerid'] ?>"
-                                                                data-service="<?php echo $rcServiceinfo['rc_id'] ?>"
-                                                                service-type="RC" data-column="rc_customer_review"
-                                                                name="input-customer-review-rc"
-                                                                class="customerReviewRc input-customer-review-rc<?php echo $rcServiceinfo['rc_id'] ?>" />
-                                                        </span>
-                                                    <?php } ?>
-                                                    <?php if (isset($rcServiceinfo['rc_customer_review']) && !empty($rcServiceinfo['rc_customer_review']) && $rcServiceinfo['rc_customer_review'] != "NONC") { ?>
-                                                        <span style="padding-right: 5px">
-                                                            <a href="<?php echo $rcServiceinfo['rc_customer_review'] ?>" data-id=""
-                                                                download class="customerReviewFileDownload">
-                                                                <i class="fa fa-download"></i>
-                                                            </a>
-                                                        </span>
-                                                    <?php } ?>
-                                                </div>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <div style="float: right" class="image-preview form-inline">
+                                                        <?php if (isset($rcServiceinfo['certificate_print']) && !empty($rcServiceinfo['certificate_print']) && empty($rcServiceinfo['rc_customer_review'])) { ?>
+                                                            <span class="image-preview-input" style="padding-right: 15px">
+                                                                <input type="checkbox" class="no_feedback_file" name="no_feedback_file"
+                                                                    data-svctype="RC"
+                                                                    data-service="<?php echo $rcServiceinfo['rc_id'] ?>">
+                                                            </span>
+                                                        <?php } ?>
+                                                        <?php if (isset($rcServiceinfo['rc_customer_review']) && !empty($rcServiceinfo['rc_customer_review']) && $rcServiceinfo['rc_customer_review'] == "NONC" && isset($rcServiceinfo['certificate_print']) && !empty($rcServiceinfo['certificate_print'])) { ?>
+                                                            <span class="image-preview-input" style="padding-right: 15px">
+                                                                <input type="checkbox" class="no_feedback_file" name="no_feedback_file"
+                                                                    data-svctype="RC"
+                                                                    data-service="<?php echo $rcServiceinfo['rc_id'] ?>" checked>
+                                                            </span>
+                                                        <?php } ?>
+                                                        <?php if (isset($rcServiceinfo['rc_customer_review']) && !empty($rcServiceinfo['rc_customer_review']) && isset($rcServiceinfo['certificate_print']) && !empty($rcServiceinfo['certificate_print']) && $rcServiceinfo['rc_customer_review'] <> "NONC") { ?>
+                                                            <span class="image-preview-input" style="padding-right: 15px">
+                                                                <input type="checkbox" class="no_feedback_file" name="no_feedback_file"
+                                                                    data-svctype="RC"
+                                                                    data-service="<?php echo $rcServiceinfo['rc_id'] ?>">
+                                                            </span>
+                                                        <?php } ?>
+                                                        <?php if (isset($rcServiceinfo['certificate_print']) && !empty($rcServiceinfo['certificate_print'])) { ?>
+                                                            <span class=" image-preview-input  fa fa-upload"
+                                                                style="padding-right: 15px">
+                                                                <input type="file"
+                                                                    accept=".gif,.jpg,.jpeg,.png,.doc,.docx,.pdf,.xls,.xlsx, application/x-rar-compressed, application/zip, application/x-zip, application/octet-stream, application/x-zip-compressed"
+                                                                    data-id="<?php echo $_GET['customerid'] ?>"
+                                                                    data-service="<?php echo $rcServiceinfo['rc_id'] ?>"
+                                                                    service-type="RC" data-column="rc_customer_review"
+                                                                    name="input-customer-review-rc"
+                                                                    class="customerReviewRc input-customer-review-rc<?php echo $rcServiceinfo['rc_id'] ?>" />
+                                                            </span>
+                                                        <?php } ?>
+                                                        <?php if (isset($rcServiceinfo['rc_customer_review']) && !empty($rcServiceinfo['rc_customer_review']) && $rcServiceinfo['rc_customer_review'] != "NONC") { ?>
+                                                            <span style="padding-right: 5px">
+                                                                <a href="<?php echo $rcServiceinfo['rc_customer_review'] ?>" data-id=""
+                                                                    download class="customerReviewFileDownload">
+                                                                    <i class="fa fa-download"></i>
+                                                                </a>
+                                                            </span>
+                                                        <?php } ?>
+                                                    </div>
+                                                <?php } ?>
                                             </div>
                                         </div>
                                     </div>
@@ -9164,34 +9754,40 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $rcReReportClass = 'serviceContent';
                                             }
                                             ?>
-                                            <div class="<?php echo $rcReReportClass ?>">
+                                            <div class="<?php echo $rcReReportClass ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php if ($isMarketingRole) { ?> title="Disabled for Marketing role" <?php } ?>>
                                                 <span>Review Report - Review of feedback</span>
-                                                <?php if (isset($rcServiceinfo['rc_customer_review']) && !empty($rcServiceinfo['rc_customer_review']) && empty($rcServiceinfo['survey_id'])) { ?>
-                                                    <a class="createCustomerSurvey pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $rcServiceinfo['rc_id'] ?>" 
-                                                        data-id="<?php echo $rcServiceinfo['rc_id'] ?>" data-svc="RC"
-                                                        data-row-id="" data-row-count="" title="Add Review of feedback"
-                                                        style="padding: 1px 5px;">
-                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
-                                                    </a>
-                                                <?php } ?>
-                                                <?php if (isset($rcServiceinfo['survey_id']) && !empty($rcServiceinfo['survey_id'])) { ?>
-                                                    <a class="editCustomerSurvey pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $rcServiceinfo['rc_id'] ?>"
-                                                        data-id="<?php echo $rcServiceinfo['rc_id'] ?>" data-svc="RC"
-                                                        data-row-id="<?php echo $rcServiceinfo['survey_id'] ?>" data-row-count=""
-                                                        title="Update Review of feedback" style="padding: 1px 5px;">
-                                                        <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
-                                                    </a>
-                                                    <a class="downloadRCCustomersatiSfaction pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-caservice-id="<?php echo $rcServiceinfo['rc_id'] ?>"
-                                                        data-surveyid="<?php echo $rcServiceinfo['survey_id'] ?>"
-                                                        title="Download  Review of feedback" style="padding: 1px 5px;">
-                                                        <i class="fa fa-download fa-lg " style="padding: 3px"></i>
-                                                    </a>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <?php if (isset($rcServiceinfo['rc_customer_review']) && !empty($rcServiceinfo['rc_customer_review']) && empty($rcServiceinfo['survey_id'])) { ?>
+                                                        <a class="createCustomerSurvey pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-service="<?php echo $rcServiceinfo['rc_id'] ?>" 
+                                                            data-id="<?php echo $rcServiceinfo['rc_id'] ?>" data-svc="RC"
+                                                            data-row-id="" data-row-count="" title="Add Review of feedback"
+                                                            style="padding: 1px 5px;">
+                                                            <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                        </a>
+                                                    <?php } ?>
+                                                    <?php if (isset($rcServiceinfo['survey_id']) && !empty($rcServiceinfo['survey_id'])) { ?>
+                                                        <a class="editCustomerSurvey pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-service="<?php echo $rcServiceinfo['rc_id'] ?>"
+                                                            data-id="<?php echo $rcServiceinfo['rc_id'] ?>" data-svc="RC"
+                                                            data-row-id="<?php echo $rcServiceinfo['survey_id'] ?>" data-row-count=""
+                                                            title="Update Review of feedback" style="padding: 1px 5px;">
+                                                            <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                        </a>
+                                                        <a class="downloadRCCustomersatiSfaction pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-caservice-id="<?php echo $rcServiceinfo['rc_id'] ?>"
+                                                            data-surveyid="<?php echo $rcServiceinfo['survey_id'] ?>"
+                                                            title="Download  Review of feedback" style="padding: 1px 5px;">
+                                                            <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                        </a>
+                                                    <?php } ?>
                                                 <?php } ?>
                                             </div>
                                         </div>
@@ -9207,30 +9803,36 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $rcCF1Class = 'serviceContent';
                                             }
                                             ?>
-                                            <div class="<?php echo $rcCF1Class ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>CONTROL FORMAT -1 (To be filled by AITF-MCL)</span>
-                                                <?php if (empty($rcServiceinfo['control_id'])) { ?>
-                                                    <a class="createControlFormat1 pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $rcServiceinfo['rc_id'] ?>"
-                                                        title="Add control format 1" style="padding: 1px 5px;">
-                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
-                                                    </a>
-                                                <?php } ?>
-                                                <?php if (isset($rcServiceinfo['control_id']) && !empty($rcServiceinfo['control_id'])) { ?>
-                                                    <a class="editControlFormat1 pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $rcServiceinfo['rc_id'] ?>"
-                                                        data-row-id="<?php echo $rcServiceinfo['control_id'] ?>"
-                                                        title="Add control format 1" style="padding: 1px 5px;">
-                                                        <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
-                                                    </a>
-                                                    <a class="downloadRCControlFormat1 pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-caservice-id="<?php echo $rcServiceinfo['rc_id'] ?>"
-                                                        data-cfi-id="<?php echo $rcServiceinfo['control_id'] ?>"
-                                                        title="Download  control format 1" style="padding: 1px 5px;">
-                                                        <i class="fa fa-download fa-lg " style="padding: 3px"></i>
-                                                    </a>
+                                            <div class="<?php echo $rcCF1Class ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ($isMarketingRole ? 'title="Disabled for Marketing role"' : ""); ?>> <span>CONTROL FORMAT -1 (To be filled by AITF-MCL)</span>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <?php if (empty($rcServiceinfo['control_id'])) { ?>
+                                                        <a class="createControlFormat1 pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-service="<?php echo $rcServiceinfo['rc_id'] ?>"
+                                                            title="Add control format 1" style="padding: 1px 5px;">
+                                                            <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                        </a>
+                                                    <?php } ?>
+                                                    <?php if (isset($rcServiceinfo['control_id']) && !empty($rcServiceinfo['control_id'])) { ?>
+                                                        <a class="editControlFormat1 pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-service="<?php echo $rcServiceinfo['rc_id'] ?>"
+                                                            data-row-id="<?php echo $rcServiceinfo['control_id'] ?>"
+                                                            title="Add control format 1" style="padding: 1px 5px;">
+                                                            <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                        </a>
+                                                        <a class="downloadRCControlFormat1 pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-caservice-id="<?php echo $rcServiceinfo['rc_id'] ?>"
+                                                            data-cfi-id="<?php echo $rcServiceinfo['control_id'] ?>"
+                                                            title="Download  control format 1" style="padding: 1px 5px;">
+                                                            <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                        </a>
+                                                    <?php } ?>
                                                 <?php } ?>
                                             </div>
                                         </div>
@@ -9248,31 +9850,37 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 $rcCF2Class = 'serviceContent';
                                             }
                                             ?>
-                                            <div class="<?php echo $rcCF2Class ?><?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>CONTROL FORMAT -2 (SHC Comments while meeting)</span>
-                                                <?php if (empty($rcServiceinfo['control2_id'])) { ?>
-                                                    <a class="createControlFormat2 pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $rcServiceinfo['rc_id'] ?>"
-                                                        data-id="<?php echo $rcServiceinfo['service'] ?>" data-row-count=""
-                                                        title="Add control format 2" style="padding: 1px 5px;">
-                                                        <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
-                                                    </a>
-                                                <?php } ?>
-                                                <?php if (isset($rcServiceinfo['control2_id']) && !empty($rcServiceinfo['control2_id'])) { ?>
-                                                    <a class="editControlFormat2 pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-service="<?php echo $rcServiceinfo['rc_id'] ?>"
-                                                        data-notification="<?php echo $rcServiceinfo['control2_id'] ?>"
-                                                        title="Update control format 2" style="padding: 1px 5px;">
-                                                        <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
-                                                    </a>
-                                                    <a class="downloadRCControlFormat2 pull-right"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-caservice-id="<?php echo $rcServiceinfo['rc_id'] ?>"
-                                                        data-cf-id="<?php echo $rcServiceinfo['control2_id'] ?>"
-                                                        title="Download  control format 2" style="padding: 1px 5px;">
-                                                        <i class="fa fa-download fa-lg " style="padding: 3px"></i>
-                                                    </a>
+                                            <div class="<?php echo $rcCF2Class ?><?php echo $isMarketingRole ? ' ca-stage1-auditplan-disabled' : ''; ?>" <?php if ($isMarketingRole) { ?> title="Disabled for Marketing role" <?php } ?>> <span>CONTROL FORMAT -2 (SHC Comments while meeting)</span>
+                                                <?php if ($isMarketingRole) { ?>
+                                                    <span class="ca-stage1-disabled-icon pull-right" title="Disabled for Marketing role">
+                                                        <i class="fa fa-lock"></i>
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <?php if (empty($rcServiceinfo['control2_id'])) { ?>
+                                                        <a class="createControlFormat2 pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-service="<?php echo $rcServiceinfo['rc_id'] ?>"
+                                                            data-id="<?php echo $rcServiceinfo['service'] ?>" data-row-count=""
+                                                            title="Add control format 2" style="padding: 1px 5px;">
+                                                            <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                        </a>
+                                                    <?php } ?>
+                                                    <?php if (isset($rcServiceinfo['control2_id']) && !empty($rcServiceinfo['control2_id'])) { ?>
+                                                        <a class="editControlFormat2 pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-service="<?php echo $rcServiceinfo['rc_id'] ?>"
+                                                            data-notification="<?php echo $rcServiceinfo['control2_id'] ?>"
+                                                            title="Update control format 2" style="padding: 1px 5px;">
+                                                            <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
+                                                        </a>
+                                                        <a class="downloadRCControlFormat2 pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-caservice-id="<?php echo $rcServiceinfo['rc_id'] ?>"
+                                                            data-cf-id="<?php echo $rcServiceinfo['control2_id'] ?>"
+                                                            title="Download  control format 2" style="padding: 1px 5px;">
+                                                            <i class="fa fa-download fa-lg " style="padding: 3px"></i>
+                                                        </a>
+                                                    <?php } ?>
                                                 <?php } ?>
                                             </div>
                                         </div>
@@ -10398,8 +11006,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                             <div class="serviceContentwaiting"><span>Release - Notification for Stage - I audit</span>
                                 <a class="createAuditNotification pull-right"
                                     data-customer="<?php echo $_GET['customerid'] ?>"
-                                    data-service="<?php echo $crservice['cr_id'] ?>"
-                                    data-service1="<?php echo $caservice['ca_id'] ?>" data-svc="CA" data-row-count=""
+                                    data-service="<?php echo !empty($crservice['cr_id']) ? $crservice['cr_id'] : '' ?>"
+                                    data-service1="" data-svc="CA" data-type="CA" data-row-count=""
                                     title="Add Audit Notification" style="padding: 1px 5px;">
                                     <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
                                 </a>
@@ -10470,7 +11078,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     </div>
                     <div class="row">
                         <div class="col-sm-6">
-                            <div class="serviceContent<?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>CONTROL FORMAT -2 (SHC Comments while meeting) </span>
+                            <div class="serviceContent"> <span>CONTROL FORMAT -2 (SHC Comments while meeting) </span>
                             </div>
                         </div>
                     </div>
@@ -10717,8 +11325,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                             <div class="serviceContentwaiting"><span>Release - Audit Notification</span>
                                 <a class="createAuditNotification pull-right"
                                     data-customer="<?php echo $_GET['customerid'] ?>"
-                                    data-service="<?php echo $crservice['cr_id'] ?>" data-svc="RC"
-                                    data-type="service-type-rc" data-row-id="" title="Add Release - Audit Notification"
+                                    data-service="<?php echo !empty($crservice['cr_id']) ? $crservice['cr_id'] : '' ?>" data-svc="RC"
+                                    data-type="RC" data-row-id="" title="Add Release - Audit Notification"
                                     style="padding: 1px 5px;">
                                     <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
                                 </a>
@@ -10775,7 +11383,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                             <div class="serviceContent<?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>CONTROL FORMAT -1 (To be filled by AITF-MCL)</span></div>
                         </div>
                         <div class="col-sm-6">
-                            <div class="serviceContent<?php echo isset($isAuditor) && $isAuditor ? " auditor-disabled" : ""; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ""; ?>> <span>CONTROL FORMAT -2 (SHC Comments while meeting)</span>
+                            <div class="serviceContent"> <span>CONTROL FORMAT -2 (SHC Comments while meeting)</span>
                             </div>
                         </div>
                     </div>
@@ -10804,7 +11412,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                             <div class="serviceContentwaiting"><span>Release - Audit Notification</span>
                                 <a class=" createAuditNotification pull-right"
                                     data-customer="<?php echo $_GET['customerid'] ?>"
-                                    data-service="<?php echo $crservice['cr_id'] ?>" data-svc="SP" data-row-count=""
+                                    data-service="<?php echo !empty($crservice['cr_id']) ? $crservice['cr_id'] : '' ?>" data-svc="SP" data-type="SP" data-row-count=""
                                     title="Add Audit Notification" style="padding: 1px 5px;">
                                     <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
                                 </a>
@@ -10866,7 +11474,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                             <div class="serviceContentwaiting"><span>Release - Audit Notification</span>
                                 <a class=" createAuditNotification pull-right"
                                     data-customer="<?php echo $_GET['customerid'] ?>"
-                                    data-service="<?php echo $crservice['cr_id'] ?>" data-svc="TA" data-row-count=""
+                                    data-service="<?php echo !empty($crservice['cr_id']) ? $crservice['cr_id'] : '' ?>" data-svc="TA" data-type="TA" data-row-count=""
                                     title="Add Audit Notification" style="padding: 1px 5px;">
                                     <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
                                 </a>
@@ -10909,7 +11517,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                             <div class="serviceContentwaiting"><span>Notification </span>
                                 <a class=" createAuditNotification pull-right"
                                     data-customer="<?php echo $_GET['customerid'] ?>"
-                                    data-service="<?php echo $crservice['cr_id'] ?>" data-svc="PTR" data-row-count=""
+                                    data-service="<?php echo !empty($crservice['cr_id']) ? $crservice['cr_id'] : '' ?>" data-svc="PTR" data-type="PTR" data-row-count=""
                                     title="Add Audit Notification" style="padding: 1px 5px;">
                                     <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
                                 </a>

@@ -6,9 +6,25 @@
     include 'dbConnect.php';
     date_default_timezone_set('Asia/Kolkata');
 
+    $invRole = trim($_SESSION['role'] ?? '');
+    $isMarketingHead = in_array($invRole, array('Marketing Head', 'Marketing Executive'), true)
+        || strtolower(str_replace(' ', '', $invRole)) === 'marketinghead'
+        || (isset($_SESSION['username']) && strtolower(trim($_SESSION['username'])) === 'marketingh');
+    $isOfficeStaffA = in_array($invRole, array('Office Staff-A'), true)
+        || strtolower(str_replace(array(' ', '-'), '', $invRole)) === 'officestaffa';
+    $isRestrictedRole = $isMarketingHead || $isOfficeStaffA;
+
+    if (!aitf_has_access("Client Analysis")) {
+        echo "<script>window.location.href='homePage.php';</script>";
+        exit;
+    }
+
     $ststus = "YES";
-//    $customerList = "SELECT * FROM customer_info where is_deleted <> 'YES' ORDER BY unique_id";
-    $customerList = "SELECT ci.* , ac.certification_date FROM customer_info ci left join allotment_count ac on ci.id = ac.client_id where is_deleted <> 'YES' ORDER BY ac.certification_date desc";
+    $extraCustomerFilter = "";
+    if ($isRestrictedRole) {
+        $extraCustomerFilter = " AND (ci.audit_status IS NULL OR (LOWER(ci.audit_status) NOT LIKE '%active%' AND LOWER(ci.audit_status) NOT LIKE '%withdraw%'))";
+    }
+    $customerList = "SELECT ci.* , ac.certification_date FROM customer_info ci left join allotment_count ac on ci.id = ac.client_id where is_deleted <> 'YES'" . $extraCustomerFilter . " ORDER BY ac.certification_date desc";
     $statement = $db->prepare($customerList);
     $statement->execute();
     $listOfCustomer = $statement->fetchAll();
@@ -80,16 +96,90 @@
             $paymentMap[$row['customer_id']] = $row['balancesum'];
         }
     }
-
-//    $allCustomers = "SELECT ci.id, customer_name, unique_id, audit_status, address, contact, email_id, scope, aif_nace, svc.service_id, service_type, service_status, svcdt.action, due_date, sent_date, svcdt.comment FROM customer_info ci left join service svc on ci.id = svc.customer_id left join ca_service_dates svcdt on svc.service_id = svcdt.service_id where is_deleted <> :status ";
-//    $statement = $db->prepare($allCustomers);
-//    $statement->bindParam(":status", $ststus);
-//    $statement->execute();
-//    $listOfCustomers = $statement->fetchAll();
     ?>
     <style>
         .custom-float-label-control {
             margin-bottom: 0em;
+        }
+
+        /* ===== Modern DataTable Footer (Showing entries + Pagination) ===== */
+        .dt-bottom-row {
+            margin: 0 !important;
+            padding: 12px 18px !important;
+            border-top: 1px solid #e2e8f0;
+            background: #ffffff;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            flex-wrap: wrap !important;
+            gap: 10px;
+        }
+        .dataTables_wrapper .dataTables_info {
+            padding: 0 !important;
+            margin: 0 !important;
+            font-size: 13px !important;
+            font-weight: 600 !important;
+            color: #475569 !important;
+            line-height: 32px;
+            display: block !important;
+        }
+        .dataTables_wrapper .dataTables_paginate {
+            padding: 0 !important;
+            margin: 0 !important;
+            text-align: right !important;
+        }
+        .dataTables_wrapper .dataTables_paginate ul.pagination {
+            margin: 0 !important;
+            white-space: nowrap;
+        }
+        .dataTables_wrapper .dataTables_paginate .pagination > li > a,
+        .dataTables_wrapper .dataTables_paginate .pagination > li > span {
+            color: #163c6e;
+            border-color: #e2e8f0;
+            font-size: 12.5px;
+            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: 6px;
+            margin: 0 2px;
+        }
+        .dataTables_wrapper .dataTables_paginate .pagination > .active > a,
+        .dataTables_wrapper .dataTables_paginate .pagination > .active > span {
+            background: linear-gradient(135deg, #163c6e 0%, #1e4b8a 100%) !important;
+            border-color: #163c6e !important;
+            color: #ffffff !important;
+            box-shadow: 0 2px 6px rgba(22, 60, 110, 0.25);
+        }
+        .dataTables_wrapper .dataTables_paginate .pagination > .disabled > a,
+        .dataTables_wrapper .dataTables_paginate .pagination > .disabled > span {
+            color: #94a3b8 !important;
+            border-color: #eef2f6 !important;
+            background-color: #f8fafc !important;
+        }
+
+        html.theme-dark .dt-bottom-row {
+            border-top-color: #334155 !important;
+            background: #111827 !important;
+        }
+        html.theme-dark .dataTables_wrapper .dataTables_info {
+            color: #94a3b8 !important;
+        }
+        html.theme-dark .dataTables_wrapper .dataTables_paginate .pagination > li > a,
+        html.theme-dark .dataTables_wrapper .dataTables_paginate .pagination > li > span {
+            background-color: #1f2937 !important;
+            border-color: #374151 !important;
+            color: #e5e7eb !important;
+        }
+        html.theme-dark .dataTables_wrapper .dataTables_paginate .pagination > .active > a,
+        html.theme-dark .dataTables_wrapper .dataTables_paginate .pagination > .active > span {
+            background: #3b82f6 !important;
+            border-color: #3b82f6 !important;
+            color: #ffffff !important;
+        }
+        html.theme-dark .dataTables_wrapper .dataTables_paginate .pagination > .disabled > a,
+        html.theme-dark .dataTables_wrapper .dataTables_paginate .pagination > .disabled > span {
+            background-color: #111827 !important;
+            border-color: #374151 !important;
+            color: #64748b !important;
         }
     </style>
 
@@ -170,6 +260,12 @@
                                 <?php
                                 $count = 0;
                                 foreach ($listOfCustomer as $customer) {
+                                    if ($isRestrictedRole) {
+                                        $cStatus = strtolower(trim($customer['audit_status'] ?? ''));
+                                        if (strpos($cStatus, 'active') !== false || strpos($cStatus, 'withdraw') !== false) {
+                                            continue;
+                                        }
+                                    }
                                     $count = $count + 1;
                                     $serviceInfo = isset($serviceMap[$customer['id']]) ? $serviceMap[$customer['id']] : array();
                                     $sid = isset($serviceNonSpMap[$customer['id']]) ? $serviceNonSpMap[$customer['id']] : null;
@@ -241,6 +337,10 @@
         return document.getElementById(el);
     }
 
+    var isMarketingHead = <?php echo $isMarketingHead ? 'true' : 'false'; ?>;
+    var isOfficeStaffA = <?php echo $isOfficeStaffA ? 'true' : 'false'; ?>;
+    var isRestrictedRole = <?php echo $isRestrictedRole ? 'true' : 'false'; ?>;
+
     function compareMinDates(filterDate, rowDate) {
         var filterDateSplit = filterDate.split(".");
         var rowDateSplit = rowDate.split(".");
@@ -285,45 +385,54 @@
     }
 
     $.fn.DataTable.ext.search.push(
-            function (settings, data, dataIndex) {
-                var serviceType = $(".service-type").val();
-                var fromDate = $(".filterFromDate").val();
-                var toDate = $(".filterToDate").val();
-                var isServiceType = false;
-                var isfromDate = false;
-                var isToDate = false;
-                //            alert(serviceType);
-                if (serviceType == "" && fromDate == "" && toDate == "") {
-                    return true;
+        function (settings, data, dataIndex) {
+            var tableId = settings.nTable.id;
+            if (tableId !== 'client-analysis-list') {
+                return true;
+            }
+
+            if (isRestrictedRole) {
+                var statusStr = (data[5] || "").replace(/<[^>]*>/g, "").toLowerCase().trim();
+                if (statusStr.indexOf('active') !== -1 || statusStr.indexOf('withdraw') !== -1) {
+                    return false;
                 }
-                if (serviceType != "") {
-                    var servieTypeStr = data[6] || ""; // use data for the age column
-//                    alert(servieTypeStr);
-                    if (servieTypeStr.toUpperCase().trim() == serviceType.toUpperCase().trim()) {
-                        //                alert("test");
-                        isServiceType = true;
-                    }
-                } else {
+            }
+
+            var serviceType = ($(".service-type").val() || "").trim();
+            var fromDate = ($(".filterFromDate").val() || "").trim();
+            var toDate = ($(".filterToDate").val() || "").trim();
+            var isServiceType = false;
+            var isfromDate = false;
+            var isToDate = false;
+
+            if (serviceType == "" && fromDate == "" && toDate == "") {
+                return true;
+            }
+            if (serviceType != "") {
+                var servieTypeStr = (data[10] || "").replace(/<[^>]*>/g, "").trim();
+                if (servieTypeStr.toUpperCase() == serviceType.toUpperCase()) {
                     isServiceType = true;
                 }
-                var dateValue = data[5] || "";
-                var dateSplit = dateValue.split("~");
-                //            alert(dateSplit[1]);
-                //            alert(fromDate);
-                if (fromDate != "") {
-//                      alert(dateValue);
-                    isfromDate = compareMinDates(fromDate, dateSplit[1]);
-                } else {
-                    isfromDate = true;
-                }
-                if (toDate != "") {
-                    isToDate = compareMaxDates(toDate, dateSplit[1]);
-                } else {
-                    isToDate = true;
-                }
-                finalResult = (isServiceType && isfromDate && isToDate);
-                return finalResult;
+            } else {
+                isServiceType = true;
             }
+            var dateValue = data[6] || "";
+            var dateSplit = dateValue.split("~");
+            var rowDate = (dateSplit.length > 1 ? dateSplit[1] : dateSplit[0]).replace(/<[^>]*>/g, "").trim();
+
+            if (fromDate != "") {
+                isfromDate = compareMinDates(fromDate, rowDate);
+            } else {
+                isfromDate = true;
+            }
+            if (toDate != "") {
+                isToDate = compareMaxDates(toDate, rowDate);
+            } else {
+                isToDate = true;
+            }
+            finalResult = (isServiceType && isfromDate && isToDate);
+            return finalResult;
+        }
     );
 
     $(document).ready(function () {
@@ -432,13 +541,15 @@
         "deferRender": true,
         "ordering": false,
         "lengthChange": false,
+        "info": true,
+        "dom": "tr<'row dt-bottom-row'<'col-sm-6 col-xs-12'i><'col-sm-6 col-xs-12'p>>",
         "columnDefs": [
             {
-                "width": "1%",
+                "width": "8%",
                 "targets": 0
             },
             {
-                "width": "15%",
+                "width": "16%",
                 "targets": 1
             },
             {
@@ -446,7 +557,7 @@
                 "targets": 2
             },
             {
-                "width": "12%",
+                "width": "10%",
                 "targets": 3
             },
             {
@@ -454,17 +565,49 @@
                 "targets": 4
             },
             {
-                "width": "10%",
+                "width": "8%",
                 "targets": 5
             },
             {
                 "width": "10%",
                 "targets": 6
             },
-        ]
+            {
+                "width": "10%",
+                "targets": 7
+            },
+            {
+                "width": "8%",
+                "targets": 8
+            },
+            {
+                "width": "8%",
+                "targets": 9
+            },
+            {
+                "width": "8%",
+                "targets": 10
+            },
+            {
+                "width": "8%",
+                "targets": 11
+            }
+        ],
+        "language": {
+            "emptyTable": "No data available in table",
+            "zeroRecords": "No matching records found",
+            "info": "Showing _START_ to _END_ of _TOTAL_ entries",
+            "infoEmpty": "Showing 0 to 0 of 0 entries",
+            "infoFiltered": "(filtered from _MAX_ total entries)",
+            "paginate": {
+                "first": "First",
+                "last": "Last",
+                "next": "Next",
+                "previous": "Previous"
+            }
+        }
     });
     table.columns.adjust().draw();
-    });
 
     $('.service-type, .filterFromDate, .filterToDate').change(function () {
         var fromDate = $(".filterFromDate").val();

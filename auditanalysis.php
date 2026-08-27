@@ -6,6 +6,19 @@
     include 'dbConnect.php';
     date_default_timezone_set('Asia/Kolkata');
 
+    $invRole = trim($_SESSION['role'] ?? '');
+    $isMarketingHead = in_array($invRole, array('Marketing Head', 'Marketing Executive'), true)
+        || strtolower(str_replace(' ', '', $invRole)) === 'marketinghead'
+        || (isset($_SESSION['username']) && strtolower(trim($_SESSION['username'])) === 'marketingh');
+    $isOfficeStaffA = in_array($invRole, array('Office Staff-A'), true)
+        || strtolower(str_replace(array(' ', '-'), '', $invRole)) === 'officestaffa';
+    $isRestrictedRole = $isMarketingHead || $isOfficeStaffA;
+
+    if (!aitf_has_access("Cert Issue List")) {
+        echo "<script>window.location.href='homePage.php';</script>";
+        exit;
+    }
+
 //    $sql = "SELECT ci.id, customer_name, address, contact, email_id, scope, aif_nace, svc.service_id, service_type  FROM customer_info ci join service svc on ci.id = svc.customer_id WHERE is_deleted <> 'Y'";
 //    $sql = "SELECT distinct ca.aggrement_no, svc.service_id, ci.id, customer_name, address, contact_person, contact, email_id, scope, aif_nace, service_type, aggrement_date  FROM customer_info ci join service svc on ci.id = svc.customer_id right join certification_aggrement ca on ci.id = ca.customer_id WHERE ci.is_deleted <> 'Y' ORDER BY ca.aggrement_date DESC";
 //    $sql = "SELECT ci.id, customer_name, address, contact_person, contact, email_id, scope, aif_nace, svc.service_id, service_type  FROM customer_info ci join  service svc on ci.id = svc.customer_id WHERE ci.is_deleted <> 'Y'";
@@ -113,10 +126,13 @@
                         </select>
                     </div>
                     <div class="col-sm-3 float-label-control custom-float-label-control">
-                        <input type="text" class="filterFromDate" id="filterFromDate" name="filterFromDate" placeholder="CDC Issued From" value="">
+                        <input type="text" class="form-control" id="certClientSearch" name="certClientSearch" placeholder="Search Client / Cert No..." autocomplete="off">
                     </div>
-                    <div class="col-sm-3 form-group float-label-control custom-float-label-control">
-                        <input type="text" class="filterToDate" id="filterToDate" name="filterToDate" placeholder="CDC Issued To" value="">
+                    <div class="col-sm-2 float-label-control custom-float-label-control">
+                        <input type="text" class="filterFromDate form-control" id="filterFromDate" name="filterFromDate" placeholder="CDC Issued From" value="" autocomplete="off">
+                    </div>
+                    <div class="col-sm-2 form-group float-label-control custom-float-label-control">
+                        <input type="text" class="filterToDate form-control" id="filterToDate" name="filterToDate" placeholder="CDC Issued To" value="" autocomplete="off">
                     </div>
                 </div>
                 <div class="row clearfix" style="padding-top:10px;">
@@ -239,23 +255,38 @@
             </div>
         </div>
     </div>
-    <script type="text/javascript">
+     <script type="text/javascript">
+        function debounce(callback, delay) {
+            var timer;
+            return function () {
+                var context = this;
+                var args = arguments;
+                clearTimeout(timer);
+                timer = setTimeout(function () {
+                    callback.apply(context, args);
+                }, delay);
+            };
+        }
+
+        function normalizeSearchText(val) {
+            return (val || "").toString().toLowerCase().replace(/\s+/g, " ").trim();
+        }
+
+        var isMarketingHead = <?php echo $isMarketingHead ? 'true' : 'false'; ?>;
+        var isOfficeStaffA = <?php echo $isOfficeStaffA ? 'true' : 'false'; ?>;
+        var isRestrictedRole = <?php echo $isRestrictedRole ? 'true' : 'false'; ?>;
 
         function compareMinDates(filterDate, rowDate) {
             var filterDateSplit = filterDate.split(".");
             var rowDateSplit = rowDate.split(".");
-            if (filterDateSplit[2] < rowDateSplit[2]) {
-                return true;
-            } else if (filterDateSplit[2] == rowDateSplit[2]) {
-                if (filterDateSplit[1] < rowDateSplit[1]) {
+            if (filterDateSplit.length === 3 && rowDateSplit.length === 3) {
+                if (parseInt(filterDateSplit[2], 10) < parseInt(rowDateSplit[2], 10)) {
                     return true;
-                } else if (filterDateSplit[1] == rowDateSplit[1]) {
-                    if (filterDateSplit[0] < rowDateSplit[0]) {
+                } else if (filterDateSplit[2] === rowDateSplit[2]) {
+                    if (parseInt(filterDateSplit[1], 10) < parseInt(rowDateSplit[1], 10)) {
                         return true;
-                    } else if (filterDateSplit[0] == rowDateSplit[0]) {
-                        return true;
-                    } else {
-                        return false;
+                    } else if (filterDateSplit[1] === rowDateSplit[1]) {
+                        return parseInt(filterDateSplit[0], 10) <= parseInt(rowDateSplit[0], 10);
                     }
                 }
             }
@@ -265,19 +296,14 @@
         function compareMaxDates(filterDate, rowDate) {
             var filterDateSplit = filterDate.split(".");
             var rowDateSplit = rowDate.split(".");
-            //year comparison
-            if (filterDateSplit[2] > rowDateSplit[2]) {
-                return true;
-            } else if (filterDateSplit[2] == rowDateSplit[2]) {
-                if (filterDateSplit[1] > rowDateSplit[1]) {
+            if (filterDateSplit.length === 3 && rowDateSplit.length === 3) {
+                if (parseInt(filterDateSplit[2], 10) > parseInt(rowDateSplit[2], 10)) {
                     return true;
-                } else if (filterDateSplit[1] == rowDateSplit[1]) {
-                    if (filterDateSplit[0] > rowDateSplit[0]) {
+                } else if (filterDateSplit[2] === rowDateSplit[2]) {
+                    if (parseInt(filterDateSplit[1], 10) > parseInt(rowDateSplit[1], 10)) {
                         return true;
-                    } else if (filterDateSplit[0] == rowDateSplit[0]) {
-                        return true;
-                    } else {
-                        return false;
+                    } else if (filterDateSplit[1] === rowDateSplit[1]) {
+                        return parseInt(filterDateSplit[0], 10) >= parseInt(rowDateSplit[0], 10);
                     }
                 }
             }
@@ -285,45 +311,87 @@
         }
 
         $.fn.DataTable.ext.search.push(
-                function (settings, data, dataIndex) {
-                    var serviceType = $(".service-type").val();
-                    var fromDate = $(".filterFromDate").val();
-                    var toDate = $(".filterToDate").val();
-                    var isServiceType = false;
-                    var isfromDate = false;
-                    var isToDate = false;
-                    //            alert(serviceType);
-                    if (serviceType == "" && fromDate == "" && toDate == "") {
-                        return true;
-                    }
-                    if (serviceType != "") {
-                        var servieTypeStr = data[2] || ""; // use data for the age column
-//                    alert(servieTypeStr);
-                        if (servieTypeStr.toUpperCase().trim() == serviceType.toUpperCase().trim()) {
-                            //                alert("test");
-                            isServiceType = true;
-                        }
-                    } else {
-                        isServiceType = true;
-                    }
-                    var dateValue = data[4] || "";
-                    var dateSplit = dateValue.split("~");
-                    //            alert(dateSplit[1]);
-                    //            alert(fromDate);
-                    if (fromDate != "") {
-//                      alert(dateValue);
-                        isfromDate = compareMinDates(fromDate, dateSplit[1]);
-                    } else {
-                        isfromDate = true;
-                    }
-                    if (toDate != "") {
-                        isToDate = compareMaxDates(toDate, dateSplit[1]);
-                    } else {
-                        isToDate = true;
-                    }
-                    finalResult = (isServiceType && isfromDate && isToDate);
-                    return finalResult;
+            function (settings, data, dataIndex) {
+                var tableId = settings.nTable.id;
+                if (tableId !== 'tab_certificate_issue_list') {
+                    return true;
                 }
+
+                var serviceType = ($(".service-type").val() || "").trim();
+                var fromDate = ($(".filterFromDate").val() || "").trim();
+                var toDate = ($(".filterToDate").val() || "").trim();
+                var clientSearch = ($("#certClientSearch").val() || "").trim();
+
+                var certNo = normalizeSearchText(data[0] || "");
+                var servieTypeStr = (data[2] || "").replace(/<[^>]*>/g, "").trim();
+                var dateValue = data[4] || "";
+                var dateSplit = dateValue.split("~");
+                var rowDate = (dateSplit.length > 1 ? dateSplit[1] : (dateSplit[0] || "")).replace(/<[^>]*>/g, "").trim();
+                var rowClient = normalizeSearchText(data[5] || "");
+
+                // 1. Service Type filter
+                if (serviceType !== "") {
+                    if (servieTypeStr.toUpperCase() !== serviceType.toUpperCase()) {
+                        return false;
+                    }
+                }
+
+                // 2. Client Search (search by client name, address, or cert no):
+                var searchVal = normalizeSearchText(clientSearch);
+                var isCurrentOrRecent = false;
+                if (rowDate !== "") {
+                    var parts = rowDate.split(".");
+                    if (parts.length === 3) {
+                        var day = parseInt(parts[0], 10);
+                        var month = parseInt(parts[1], 10) - 1;
+                        var year = parseInt(parts[2], 10);
+                        var issueDate = new Date(year, month, day);
+                        var now = new Date();
+                        var firstDayOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
+                        if (issueDate >= firstDayOfPrevMonth) {
+                            isCurrentOrRecent = true;
+                        }
+                    }
+                }
+
+                // 2. Client Search (search by client name, address, or cert no):
+                // When search has text, show all matching records.
+                // When search is empty, restrict view to current month + past 1 month for restricted roles.
+                if (clientSearch !== "") {
+                    var isMatch = (rowClient.indexOf(searchVal) !== -1 || certNo.indexOf(searchVal) !== -1);
+                    if (!isMatch) {
+                        return false;
+                    }
+                    // For restricted roles: past records (older than 1 month) are ONLY unlocked when full client name/cert no is typed
+                    if (isRestrictedRole && !isCurrentOrRecent) {
+                        var isExactMatch = (rowClient === searchVal || certNo === searchVal);
+                        if (!isExactMatch) {
+                            return false;
+                        }
+                    }
+                } else {
+                    // When search is empty:
+                    if (isRestrictedRole) {
+                        if (!isCurrentOrRecent) {
+                            return false;
+                        }
+                    }
+                }
+
+                // 3. Custom Date Range Filters (From Date / To Date)
+                if (fromDate !== "" || toDate !== "") {
+                    if (rowDate === "") {
+                        return false;
+                    }
+                    var isfromDate = (fromDate !== "") ? compareMinDates(fromDate, rowDate) : true;
+                    var isToDate = (toDate !== "") ? compareMaxDates(toDate, rowDate) : true;
+                    if (!(isfromDate && isToDate)) {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
         );
 
         $('.service-type,.filterFromDate, .filterToDate').change(function () {
@@ -335,73 +403,53 @@
                     $(".filterToDate").val("");
                 }
             }
-            //            alert("t");
             table.draw();
         });
 
         var table = $('#tab_certificate_issue_list').DataTable({
-//            "scrollY": "450px",
             "sScrollX": "100%",
             "scrollY": '70vh',
             "scrollCollapse": true,
-            "paging": false,
+            "paging": true,
+            "pageLength": 50,
             "ordering": true,
-            "lengthChange": false,
-//            "pageLength": 10,
-            "paging": false,
-            "dom": 'Bfrtip',
-            "buttons": [
-                'excel'
-            ],
-//            "aaSorting": [[0, 'desc']],
             "order": [[0, "desc"]],
+            "lengthChange": false,
+            "dom": "tr<'row dt-bottom-row'<'col-sm-6 col-xs-12'i><'col-sm-6 col-xs-12'p>>",
             "columnDefs": [
-                {
-                    "width": "1%",
-                    "targets": 0
-                },
-                {
-                    "width": "1%",
-                    "targets": 1
-                },
-                {
-                    "width": "1%",
-                    "targets": 2
-                },
-                {
-                    "width": "1%",
-                    "targets": 3
-                },
-                {
-                    "width": "5%",
-                    "targets": 4
-                },
-                {
-                    "width": "5%",
-                    "targets": 5
-                },
-                {
-                    "width": "3%",
-                    "targets": 6
-                },
-                {
-                    "width": "1%",
-                    "targets": 7
-                },
-                {
-                    "width": "5%",
-                    "targets": 8
-                },
-                {
-                    "width": "5%",
-                    "targets": 9
-                },
-            ]
-                    //        "paging":false
+                { "width": "8%", "targets": 0 },
+                { "width": "5%", "targets": 1 },
+                { "width": "7%", "targets": 2 },
+                { "width": "8%", "targets": 3 },
+                { "width": "8%", "targets": 4 },
+                { "width": "18%", "targets": 5 },
+                { "width": "8%", "targets": 6 },
+                { "width": "8%", "targets": 7 },
+                { "width": "15%", "targets": 8 },
+                { "width": "15%", "targets": 9 },
+            ],
+            "language": {
+                "emptyTable": "No certificate records available in table",
+                "zeroRecords": "No client found or incorrect spelling, check the spelling of client",
+                "info": "Showing _START_ to _END_ of _TOTAL_ entries",
+                "infoEmpty": "Showing 0 to 0 of 0 entries",
+                "infoFiltered": "(filtered from _MAX_ total entries)",
+                "paginate": {
+                    "first": "First",
+                    "last": "Last",
+                    "next": "Next",
+                    "previous": "Previous"
+                }
+            }
         });
         table.columns.adjust().draw();
 
         $(document).ready(function () {
+            var debouncedCertSearch = debounce(function () {
+                table.draw();
+            }, 200);
+
+            $('#certClientSearch').on('input keyup change', debouncedCertSearch);
 
             $('#filterFromDate').datepicker({
                 minDate: '-100Y',
@@ -409,11 +457,10 @@
                 changeYear: true,
                 changeMonth: true,
                 yearRange: "-20:+100",
-                dateFormat: 'dd.mm.yy'
-            });
-
-            $("#filterFromDate").keydown(function (e) {
-                //            e.preventDefault();
+                dateFormat: 'dd.mm.yy',
+                onSelect: function () {
+                    table.draw();
+                }
             });
 
             $('#filterToDate').datepicker({
@@ -422,19 +469,15 @@
                 changeYear: true,
                 changeMonth: true,
                 yearRange: "-20:+100",
-                dateFormat: 'dd.mm.yy'
-            });
-
-            $("#filterToDate").keydown(function (e) {
-                //            e.preventDefault();
+                dateFormat: 'dd.mm.yy',
+                onSelect: function () {
+                    table.draw();
+                }
             });
 
             $('.customerAccount').click(function () {
                 var customerID = $(this).attr('data-id');
-//            alert(customerID);
-                // open popup
-//            localStorage['visited'] = customerID;
-                var url = 'customerAccount.php'
+                var url = 'customerAccount.php';
                 var form = $('<form action="' + url + '" method="get">' +
                         '<input type="hidden" name="customerid" value="' + customerID + '" />' +
                         '</form>');
@@ -448,53 +491,5 @@
                 $(".container").toggleClass("active");
                 table.draw();
             });
-
-//            var table = $('#tab_certificate_issue_list').DataTable({
-////            "scrollY": "450px",
-//                "scrollCollapse": true,
-//                "lengthChange": false,
-////            "pageLength": 10,
-//                paging: false,
-//                "columnDefs": [
-//                    {
-//                        "width": "1%",
-//                        "targets": 0
-//                    },
-//                    {
-//                        "width": "15%",
-//                        "targets": 1
-//                    },
-//                    {
-//                        "width": "10%",
-//                        "targets": 2
-//                    },
-//                    {
-//                        "width": "12%",
-//                        "targets": 3
-//                    },
-//                    {
-//                        "width": "10%",
-//                        "targets": 4
-//                    },
-//                    {
-//                        "width": "10%",
-//                        "targets": 5
-//                    },
-//                    {
-//                        "width": "10%",
-//                        "targets": 6
-//                    },
-//                    {
-//                        "width": "1%",
-//                        "targets": 8
-//                    },
-//                    {
-//                        "width": "25%",
-//                        "targets": 9
-//                    },
-//                ]
-//                        //        "paging":         false
-//            });
-
         });
     </script>

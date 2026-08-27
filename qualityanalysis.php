@@ -6,6 +6,19 @@
     include 'dbConnect.php';
     date_default_timezone_set('Asia/Kolkata');
 
+    $invRole = trim($_SESSION['role'] ?? '');
+    $isMarketingHead = in_array($invRole, array('Marketing Head', 'Marketing Executive'), true)
+        || strtolower(str_replace(' ', '', $invRole)) === 'marketinghead'
+        || (isset($_SESSION['username']) && strtolower(trim($_SESSION['username'])) === 'marketingh');
+    $isOfficeStaffA = in_array($invRole, array('Office Staff-A'), true)
+        || strtolower(str_replace(array(' ', '-'), '', $invRole)) === 'officestaffa';
+    $isRestrictedRole = $isMarketingHead || $isOfficeStaffA;
+
+    if (!aitf_has_access("Audit Performance")) {
+        echo "<script>window.location.href='homePage.php';</script>";
+        exit;
+    }
+
     $sql = "SELECT ci.id, customer_name, address, contact, email_id, scope, aif_nace, svc.service_id, service_type, svc.audit_date FROM customer_info ci join service svc on ci.id = svc.customer_id WHERE is_deleted <> 'Y' ORDER BY svc.audit_date DESC";
     $statement = $db->prepare($sql);
     $statement->execute();
@@ -309,14 +322,17 @@
                         </select>
                     </div>
                     <div class="col-sm-2 float-label-control custom-float-label-control">
-                        <input type="text" class="form-control filterFromDate" id="filterFromDate" name="filterFromDate" placeholder="Audit Date From" value="">
+                        <input type="text" class="form-control" id="perfClientSearch" name="perfClientSearch" placeholder="Search Client..." autocomplete="off">
                     </div>
                     <div class="col-sm-2 float-label-control custom-float-label-control">
-                        <input type="text" class="form-control filterToDate" id="filterToDate" name="filterToDate" placeholder="Audit Date To" value="">
+                        <input type="text" class="form-control filterFromDate" id="filterFromDate" name="filterFromDate" placeholder="Audit Date From" value="" autocomplete="off">
                     </div>
-                    <div class="col-sm-3 float-label-control custom-float-label-control">
+                    <div class="col-sm-1 float-label-control custom-float-label-control">
+                        <input type="text" class="form-control filterToDate" id="filterToDate" name="filterToDate" placeholder="Audit Date To" value="" autocomplete="off">
+                    </div>
+                    <div class="col-sm-2 float-label-control custom-float-label-control">
                         <button type="button" class="btn btn-success downloadQualityReport" style="width:100%;">
-                            <i class="fa fa-cloud-download" style="font-size: 15px;"></i> Download Report
+                            <i class="fa fa-cloud-download" style="font-size: 15px;"></i> Report
                         </button>
                     </div>
                 </div>
@@ -448,22 +464,37 @@
 </div>
 
     <script type="text/javascript">
+        function debounce(callback, delay) {
+            var timer;
+            return function () {
+                var context = this;
+                var args = arguments;
+                clearTimeout(timer);
+                timer = setTimeout(function () {
+                    callback.apply(context, args);
+                }, delay);
+            };
+        }
+
+        function normalizeSearchText(val) {
+            return (val || "").toString().toLowerCase().replace(/\s+/g, " ").trim();
+        }
+
+        var isMarketingHead = <?php echo $isMarketingHead ? 'true' : 'false'; ?>;
+        var isOfficeStaffA = <?php echo $isOfficeStaffA ? 'true' : 'false'; ?>;
+        var isRestrictedRole = <?php echo $isRestrictedRole ? 'true' : 'false'; ?>;
 
         function compareMinDates(filterDate, rowDate) {
             var filterDateSplit = filterDate.split(".");
             var rowDateSplit = rowDate.split(".");
-            if (filterDateSplit[2] < rowDateSplit[2]) {
-                return true;
-            } else if (filterDateSplit[2] == rowDateSplit[2]) {
-                if (filterDateSplit[1] < rowDateSplit[1]) {
+            if (filterDateSplit.length === 3 && rowDateSplit.length === 3) {
+                if (parseInt(filterDateSplit[2], 10) < parseInt(rowDateSplit[2], 10)) {
                     return true;
-                } else if (filterDateSplit[1] == rowDateSplit[1]) {
-                    if (filterDateSplit[0] < rowDateSplit[0]) {
+                } else if (filterDateSplit[2] === rowDateSplit[2]) {
+                    if (parseInt(filterDateSplit[1], 10) < parseInt(rowDateSplit[1], 10)) {
                         return true;
-                    } else if (filterDateSplit[0] == rowDateSplit[0]) {
-                        return true;
-                    } else {
-                        return false;
+                    } else if (filterDateSplit[1] === rowDateSplit[1]) {
+                        return parseInt(filterDateSplit[0], 10) <= parseInt(rowDateSplit[0], 10);
                     }
                 }
             }
@@ -473,19 +504,14 @@
         function compareMaxDates(filterDate, rowDate) {
             var filterDateSplit = filterDate.split(".");
             var rowDateSplit = rowDate.split(".");
-            //year comparison
-            if (filterDateSplit[2] > rowDateSplit[2]) {
-                return true;
-            } else if (filterDateSplit[2] == rowDateSplit[2]) {
-                if (filterDateSplit[1] > rowDateSplit[1]) {
+            if (filterDateSplit.length === 3 && rowDateSplit.length === 3) {
+                if (parseInt(filterDateSplit[2], 10) > parseInt(rowDateSplit[2], 10)) {
                     return true;
-                } else if (filterDateSplit[1] == rowDateSplit[1]) {
-                    if (filterDateSplit[0] > rowDateSplit[0]) {
+                } else if (filterDateSplit[2] === rowDateSplit[2]) {
+                    if (parseInt(filterDateSplit[1], 10) > parseInt(rowDateSplit[1], 10)) {
                         return true;
-                    } else if (filterDateSplit[0] == rowDateSplit[0]) {
-                        return true;
-                    } else {
-                        return false;
+                    } else if (filterDateSplit[1] === rowDateSplit[1]) {
+                        return parseInt(filterDateSplit[0], 10) >= parseInt(rowDateSplit[0], 10);
                     }
                 }
             }
@@ -493,53 +519,102 @@
         }
 
         $.fn.DataTable.ext.search.push(
-                function (settings, data, dataIndex) {
-                    var serviceType = $(".service-type").val();
-                    var auditorFilter = $(".auditor-filter").val();
-                    var fromDate = $(".filterFromDate").val();
-                    var toDate = $(".filterToDate").val();
-                    var isServiceType = false;
-                    var isAuditor = false;
-                    var isfromDate = false;
-                    var isToDate = false;
-                    if (serviceType == "" && auditorFilter == "" && fromDate == "" && toDate == "") {
-                        return true;
-                    }
-                    if (serviceType != "") {
-                        var servieTypeStr = data[1] || "";
-                        if (servieTypeStr.toUpperCase().trim() == serviceType.toUpperCase().trim()) {
-                            isServiceType = true;
-                        }
-                    } else {
-                        isServiceType = true;
-                    }
-                    // Auditor filter: column 5 (0-indexed)
-                    if (auditorFilter != "") {
-                        var auditorStr = data[5] || "";
-                        if (auditorStr.toUpperCase().trim().indexOf(auditorFilter.toUpperCase().trim()) !== -1) {
-                            isAuditor = true;
-                        }
-                    } else {
-                        isAuditor = true;
-                    }
-                    var dateValue = data[2] || "";
-                    var dateSplit = dateValue.split("~");
-                    if (fromDate != "") {
-                        isfromDate = compareMinDates(fromDate, dateSplit[1]);
-                    } else {
-                        isfromDate = true;
-                    }
-                    if (toDate != "") {
-                        isToDate = compareMaxDates(toDate, dateSplit[1]);
-                    } else {
-                        isToDate = true;
-                    }
-                    finalResult = (isServiceType && isAuditor && isfromDate && isToDate);
-                    return finalResult;
+            function (settings, data, dataIndex) {
+                var tableId = settings.nTable.id;
+                if (tableId !== 'tab_customer_list') {
+                    return true;
                 }
+
+                var serviceType = ($(".service-type").val() || "").trim();
+                var auditorFilter = ($(".auditor-filter").val() || "").trim();
+                var fromDate = ($(".filterFromDate").val() || "").trim();
+                var toDate = ($(".filterToDate").val() || "").trim();
+                var clientSearch = ($("#perfClientSearch").val() || "").trim();
+
+                var rowClient = normalizeSearchText(data[0] || "");
+                var servieTypeStr = (data[1] || "").replace(/<[^>]*>/g, "").trim();
+                var dateValue = data[2] || "";
+                var dateSplit = dateValue.split("~");
+                var rowDate = (dateSplit.length > 1 ? dateSplit[1] : (dateSplit[0] || "")).replace(/<[^>]*>/g, "").trim();
+                var auditorStr = (data[5] || "").replace(/<[^>]*>/g, "").trim();
+
+                // 1. Service Type filter
+                if (serviceType !== "") {
+                    if (servieTypeStr.toUpperCase() !== serviceType.toUpperCase()) {
+                        return false;
+                    }
+                }
+
+                // 2. Auditor filter
+                if (auditorFilter !== "") {
+                    if (auditorStr.toUpperCase().indexOf(auditorFilter.toUpperCase()) === -1) {
+                        return false;
+                    }
+                }
+
+                var searchVal = normalizeSearchText(clientSearch);
+                var isCurrentOrRecent = false;
+                if (rowDate !== "") {
+                    var parts = rowDate.split(".");
+                    if (parts.length === 3) {
+                        var day = parseInt(parts[0], 10);
+                        var month = parseInt(parts[1], 10) - 1;
+                        var year = parseInt(parts[2], 10);
+                        var auditDate = new Date(year, month, day);
+                        var now = new Date();
+                        var firstDayOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
+                        if (auditDate >= firstDayOfPrevMonth) {
+                            isCurrentOrRecent = true;
+                        }
+                    }
+                }
+
+                // 3. Client Search (search by client name):
+                // When search has text, show all matching records.
+                // When search is empty, restrict view to current month + past 1 month for restricted roles.
+                if (clientSearch !== "") {
+                    var isMatch = (rowClient.indexOf(searchVal) !== -1);
+                    if (!isMatch) {
+                        return false;
+                    }
+                    // For restricted roles: past records (older than 1 month) are ONLY unlocked when full client name is typed
+                    if (isRestrictedRole && !isCurrentOrRecent) {
+                        var isExactMatch = (rowClient === searchVal);
+                        if (!isExactMatch) {
+                            return false;
+                        }
+                    }
+                } else {
+                    // When search is empty:
+                    if (isRestrictedRole) {
+                        if (!isCurrentOrRecent) {
+                            return false;
+                        }
+                    }
+                }
+
+                // 4. Custom Date Range Filters (From Date / To Date)
+                if (fromDate !== "" || toDate !== "") {
+                    if (rowDate === "") {
+                        return false;
+                    }
+                    var isfromDate = (fromDate !== "") ? compareMinDates(fromDate, rowDate) : true;
+                    var isToDate = (toDate !== "") ? compareMaxDates(toDate, rowDate) : true;
+                    if (!(isfromDate && isToDate)) {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
         );
 
         $(document).ready(function () {
+            var debouncedPerfSearch = debounce(function () {
+                table.draw();
+            }, 200);
+
+            $('#perfClientSearch').on('input keyup change', debouncedPerfSearch);
 
             $('#filterFromDate').datepicker({
                 minDate: '-100Y',
@@ -547,11 +622,10 @@
                 changeYear: true,
                 changeMonth: true,
                 yearRange: "-20:+100",
-                dateFormat: 'dd.mm.yy'
-            });
-
-            $("#filterFromDate").keydown(function (e) {
-                //            e.preventDefault();
+                dateFormat: 'dd.mm.yy',
+                onSelect: function () {
+                    table.draw();
+                }
             });
 
             $('#filterToDate').datepicker({
@@ -560,21 +634,15 @@
                 changeYear: true,
                 changeMonth: true,
                 yearRange: "-20:+100",
-                dateFormat: 'dd.mm.yy'
+                dateFormat: 'dd.mm.yy',
+                onSelect: function () {
+                    table.draw();
+                }
             });
-
-            $("#filterToDate").keydown(function (e) {
-                //            e.preventDefault();
-            });
-
-
 
             $('.customerAccount').click(function () {
                 var customerID = $(this).attr('data-id');
-//            alert(customerID);
-                // open popup
-//            localStorage['visited'] = customerID;
-                var url = 'customerAccount.php'
+                var url = 'customerAccount.php';
                 var form = $('<form action="' + url + '" method="get">' +
                         '<input type="hidden" name="customerid" value="' + customerID + '" />' +
                         '</form>');
@@ -598,6 +666,20 @@
                 "ordering": false,
                 "lengthChange": false,
                 "deferRender": true,
+                "dom": "tr<'row dt-bottom-row'<'col-sm-6 col-xs-12'i><'col-sm-6 col-xs-12'p>>",
+                "language": {
+                    "emptyTable": "No quality analysis records available in table",
+                    "zeroRecords": "No client found or incorrect spelling, check the spelling of client",
+                    "info": "Showing _START_ to _END_ of _TOTAL_ entries",
+                    "infoEmpty": "Showing 0 to 0 of 0 entries",
+                    "infoFiltered": "(filtered from _MAX_ total entries)",
+                    "paginate": {
+                        "first": "First",
+                        "last": "Last",
+                        "next": "Next",
+                        "previous": "Previous"
+                    }
+                },
                 "columnDefs": [
                     {
                         orderable: false,
@@ -607,15 +689,7 @@
             });
             table.columns.adjust().draw();
 
-            $('.service-type, .auditor-filter, .filterFromDate, .filterToDate').change(function () {
-                var fromDate = $(".filterFromDate").val();
-                var toDate = $(".filterToDate").val();
-                if (fromDate != "" && toDate != "") {
-                    if (!compareMinDates(fromDate, toDate)) {
-                        alert("To Date can't be after From Date");
-                        $(".filterToDate").val("");
-                    }
-                }
+            $('.service-type, .auditor-filter').change(function () {
                 table.draw();
             });
 
@@ -623,6 +697,7 @@
             $('.downloadQualityReport').click(function () {
                 var serviceType = $('.service-type').val();
                 var auditorFilter = $('.auditor-filter').val();
+                var clientSearch = $('#perfClientSearch').val();
                 var fromDate = $('.filterFromDate').val();
                 var toDate = $('.filterToDate').val();
                 var url = 'exportQualityAnalysisExcel.php';
@@ -632,6 +707,7 @@
                 }).css('display', 'none');
                 $('<input>', { type: 'hidden', name: 'serviceType', value: serviceType || '' }).appendTo($form);
                 $('<input>', { type: 'hidden', name: 'auditorFilter', value: auditorFilter || '' }).appendTo($form);
+                $('<input>', { type: 'hidden', name: 'clientSearch', value: clientSearch || '' }).appendTo($form);
                 $('<input>', { type: 'hidden', name: 'fromDate', value: fromDate || '' }).appendTo($form);
                 $('<input>', { type: 'hidden', name: 'toDate', value: toDate || '' }).appendTo($form);
                 $('body').append($form);

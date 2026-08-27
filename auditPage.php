@@ -14,6 +14,14 @@
     $auditDateConflictVisible = aitfCustomerFeatureIsEnabled($db, 'audit_date_conflict_visible');
     $auditMemberConflictVisible = aitfCustomerFeatureIsEnabled($db, 'audit_member_conflict_visible');
 
+    $invRole = trim($_SESSION['role'] ?? '');
+    $isMarketingHead = in_array($invRole, array('Marketing Head', 'Marketing Executive'), true)
+        || strtolower(str_replace(' ', '', $invRole)) === 'marketinghead'
+        || (isset($_SESSION['username']) && strtolower(trim($_SESSION['username'])) === 'marketingh');
+    $isOfficeStaff = in_array($invRole, array('Office Staff-A', 'Office Staff-B'), true)
+        || in_array(strtolower(str_replace(array(' ', '-'), '', $invRole)), array('officestaffa', 'officestaffb'), true);
+    $isRestrictedRole = $isMarketingHead || $isOfficeStaff;
+
     //    $marketingInfo = "SELECT distinct ci.id, customer_name, unique_id, audit_status, address, contact, email_id, scope, aif_nace, comment, certification_stage_date, add_to, cas.ca_id, service_ca_status, cas.customer_id, saia.sai_id, saia.customer_id,saia.service_sai_status, saiis.saii_id, saiis.customer_id, saiis.service_saii_ststus, rcs.rc_id, rcs.rc_customer, rcs.service_rc_status, sps.sp_id, sps.sp_customer, sps.service_sp_status FROM customer_info ci left join service_type_ca cas on ci.id = cas.customer_id left join service_type_sai saia on ci.id = saia.customer_id left join service_type_saii saiis on ci.id = saiis.customer_id left join service_type_rc rcs on ci.id = rcs.rc_customer left join service_type_sp sps on ci.id = sps.sp_customer WHERE ((cas.service_ca_status = 'Marketing' and cas.ca_id = (select max(tmp.ca_id) from service_type_ca tmp where tmp.customer_id = ci.id)) or (saia.service_sai_status = 'Marketing' and saia.sai_id = (select max(tmp1.sai_id) from service_type_sai tmp1 where tmp1.customer_id = ci.id) ) or (saiis.service_saii_ststus = 'Marketing' and saiis.saii_id = (select max(tmp2.saii_id) from service_type_saii tmp2 where tmp2.customer_id = ci.id)) or (rcs.service_rc_status = 'Marketing' and rcs.rc_id = (select max(tmp3.rc_id) from service_type_rc tmp3 where tmp3.rc_customer = ci.id) ) or (sps.service_sp_status = 'Marketing' and sps.sp_id = (select max(tmp4.sp_id) from service_type_sp tmp4 where tmp4.sp_customer = ci.id)) )";
     $marketingInfo = "SELECT ci.id, customer_name, unique_id, audit_status, address, contact, email_id, scope, aif_nace, next_service, svc.service_id, service_type, service_status, audit_date FROM customer_info ci left join service svc on ci.id = svc.customer_id where svc.audit_date is not null ORDER BY audit_date DESC";
     $statement = $db->prepare($marketingInfo);
@@ -531,6 +539,86 @@
             font-size: 12px;
             margin-top: 2px;
         }
+
+        /* ===== Modern DataTable Footer (Showing entries + Pagination) ===== */
+        .dt-bottom-row {
+            margin: 0 !important;
+            padding: 12px 18px !important;
+            border-top: 1px solid #e2e8f0;
+            background: #ffffff;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            flex-wrap: wrap !important;
+            gap: 10px;
+        }
+        .dataTables_wrapper .dataTables_info {
+            padding: 0 !important;
+            margin: 0 !important;
+            font-size: 13px !important;
+            font-weight: 600 !important;
+            color: #475569 !important;
+            line-height: 32px;
+            display: block !important;
+        }
+        .dataTables_wrapper .dataTables_paginate {
+            padding: 0 !important;
+            margin: 0 !important;
+            text-align: right !important;
+        }
+        .dataTables_wrapper .dataTables_paginate ul.pagination {
+            margin: 0 !important;
+            white-space: nowrap;
+        }
+        .dataTables_wrapper .dataTables_paginate .pagination > li > a,
+        .dataTables_wrapper .dataTables_paginate .pagination > li > span {
+            color: #163c6e;
+            border-color: #e2e8f0;
+            font-size: 12.5px;
+            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: 6px;
+            margin: 0 2px;
+        }
+        .dataTables_wrapper .dataTables_paginate .pagination > .active > a,
+        .dataTables_wrapper .dataTables_paginate .pagination > .active > span {
+            background: linear-gradient(135deg, #163c6e 0%, #1e4b8a 100%) !important;
+            border-color: #163c6e !important;
+            color: #ffffff !important;
+            box-shadow: 0 2px 6px rgba(22, 60, 110, 0.25);
+        }
+        .dataTables_wrapper .dataTables_paginate .pagination > .disabled > a,
+        .dataTables_wrapper .dataTables_paginate .pagination > .disabled > span {
+            color: #94a3b8 !important;
+            border-color: #eef2f6 !important;
+            background-color: #f8fafc !important;
+        }
+
+        html.theme-dark .dt-bottom-row {
+            border-top-color: #334155 !important;
+            background: #111827 !important;
+        }
+        html.theme-dark .dataTables_wrapper .dataTables_info {
+            color: #94a3b8 !important;
+        }
+        html.theme-dark .dataTables_wrapper .dataTables_paginate .pagination > li > a,
+        html.theme-dark .dataTables_wrapper .dataTables_paginate .pagination > li > span {
+            background-color: #1f2937 !important;
+            border-color: #374151 !important;
+            color: #e5e7eb !important;
+        }
+        html.theme-dark .dataTables_wrapper .dataTables_paginate .pagination > .active > a,
+        html.theme-dark .dataTables_wrapper .dataTables_paginate .pagination > .active > span {
+            background: #3b82f6 !important;
+            border-color: #3b82f6 !important;
+            color: #ffffff !important;
+        }
+        html.theme-dark .dataTables_wrapper .dataTables_paginate .pagination > .disabled > a,
+        html.theme-dark .dataTables_wrapper .dataTables_paginate .pagination > .disabled > span {
+            background-color: #111827 !important;
+            border-color: #374151 !important;
+            color: #64748b !important;
+        }
     </style>
 
     <div id="page-content-wrapper">
@@ -541,7 +629,7 @@
                     <div class="col-sm-12 main_content" style="">
                         <div class="row" style="padding-top:10px;">
 
-                            <div class="col-sm-3 float-label-control custom-float-label-control">
+                            <div class="col-sm-2 float-label-control custom-float-label-control">
                                 <select name="service-type" class="form-control service-type" id="service-type">
                                     <option value="">Select Service Type</option>
                                     <option value="ST-1">ST-1</option>
@@ -557,15 +645,7 @@
 
                                 </select>
                             </div>
-                            <div class="col-sm-3 float-label-control custom-float-label-control">
-                                <input type="text" class="filterFromDate" id="filterFromDate" name="filterFromDate"
-                                    placeholder="Audit Date From" value="">
-                            </div>
-                            <div class="col-sm-3 form-group float-label-control custom-float-label-control">
-                                <input type="text" class="filterToDate" id="filterToDate" name="filterToDate"
-                                    placeholder="Audit Date To" value="">
-                            </div>
-                            <div class="col-sm-3 float-label-control custom-float-label-control">
+                            <div class="col-sm-2 float-label-control custom-float-label-control">
                                 <select name="auditors" class="form-control auditor-filter" id="auditor-filter">
                                     <option value="">Select Auditor</option>
                                     <?php foreach ($auditorsList as $auditor) { ?>
@@ -575,6 +655,18 @@
                                         </option>
                                     <?php } ?>
                                 </select>
+                            </div>
+                            <div class="col-sm-2 float-label-control custom-float-label-control">
+                                <input type="text" class="filterFromDate form-control" id="filterFromDate" name="filterFromDate"
+                                    placeholder="Audit Date From" value="" autocomplete="off">
+                            </div>
+                            <div class="col-sm-2 form-group float-label-control custom-float-label-control">
+                                <input type="text" class="filterToDate form-control" id="filterToDate" name="filterToDate"
+                                    placeholder="Audit Date To" value="" autocomplete="off">
+                            </div>
+                            <div class="col-sm-4 float-label-control custom-float-label-control">
+                                <input type="text" class="form-control auditClientSearch" id="auditClientSearch"
+                                    placeholder="Search by client name or unique ID" autocomplete="off">
                             </div>
                         </div>
                     </div>
@@ -1056,6 +1148,50 @@
 <?php } ?>
 
 <script type="text/javascript">
+    function debounce(callback, delay) {
+        var debounceTimer;
+        return function () {
+            var context = this;
+            var args = arguments;
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(function () {
+                callback.apply(context, args);
+            }, delay);
+        };
+    }
+
+    function normalizeSearchText(str) {
+        if (!str) return "";
+        return str.replace(/<[^>]*>/g, "")
+                  .replace(/&amp;/g, '&')
+                  .replace(/\s+/g, ' ')
+                  .trim()
+                  .toLowerCase();
+    }
+
+    function parseAuditRowDate(dateStr) {
+        if (!dateStr) return null;
+        dateStr = dateStr.replace(/<[^>]*>/g, "").trim();
+        if (!dateStr || dateStr === '0000-00-00') return null;
+
+        var parts = dateStr.split(/[.\-\/]/);
+        if (parts.length === 3) {
+            if (parts[0].length === 4) {
+                // YYYY-MM-DD
+                return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+            } else if (parts[2].length === 4) {
+                // DD-MM-YYYY or DD.MM.YYYY
+                return new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
+            }
+        }
+        var d = new Date(dateStr);
+        return isNaN(d.getTime()) ? null : d;
+    }
+
+    var isMarketingHead = <?php echo $isMarketingHead ? 'true' : 'false'; ?>;
+    var isOfficeStaff = <?php echo $isOfficeStaff ? 'true' : 'false'; ?>;
+    var isRestrictedRole = <?php echo $isRestrictedRole ? 'true' : 'false'; ?>;
+
     $('#filterFromDate').datepicker({
         minDate: '-100Y',
         maxDate: '+100Y',
@@ -1129,52 +1265,83 @@
 
     $.fn.DataTable.ext.search.push(
         function (settings, data, dataIndex) {
-            var serviceType = $(".service-type").val();
-            var auditor = $(".auditor-filter").val();
-            var fromDate = $(".filterFromDate").val();
-            var toDate = $(".filterToDate").val();
-            var isServiceType = false;
-            var isAuditor = false;
-            var isfromDate = false;
-            var isToDate = false;
-            //            alert(serviceType);
-            if (serviceType == "" && auditor == "" && fromDate == "" && toDate == "") {
+            var tableId = settings.nTable.id;
+            if (tableId !== 'tab_customer_list') {
                 return true;
             }
-            if (serviceType != "") {
-                var servieTypeStr = data[2] || ""; // use data for the age column
-                //                    alert(servieTypeStr);
-                if (servieTypeStr.toUpperCase().trim() == serviceType.toUpperCase().trim()) {
-                    //                alert("test");
-                    isServiceType = true;
-                }
-            } else {
-                isServiceType = true;
-            }
-            if (auditor != "") {
-                var auditorStr = data[4] || "";
-                isAuditor = auditorStr.toUpperCase().indexOf(auditor.toUpperCase()) !== -1;
-            } else {
-                isAuditor = true;
-            }
+
+            var serviceType = ($(".service-type").val() || "").trim();
+            var auditor = ($(".auditor-filter").val() || "").trim();
+            var fromDate = ($(".filterFromDate").val() || "").trim();
+            var toDate = ($(".filterToDate").val() || "").trim();
+            var clientSearch = ($("#auditClientSearch").val() || "").trim();
+
+            var rowUniqueId = normalizeSearchText(data[0] || "");
+            var rowClient = normalizeSearchText(data[1] || "");
+            var servieTypeStr = (data[2] || "").replace(/<[^>]*>/g, "").trim();
+            var auditorStr = (data[4] || "").replace(/<[^>]*>/g, "").trim();
+
             var dateValue = data[5] || "";
             var dateSplit = dateValue.split("~");
-            var rowDate = dateSplit.length > 1 ? dateSplit[1] : dateValue;
-            //            alert(dateSplit[1]);
-            //            alert(fromDate);
-            if (fromDate != "") {
-                //                      alert(dateValue);
-                isfromDate = compareMinDates(fromDate, rowDate);
-            } else {
-                isfromDate = true;
+            var rowDateStr = (dateSplit.length > 0 ? dateSplit[0] : dateValue).replace(/<[^>]*>/g, "").trim();
+            var rowDateObj = parseAuditRowDate(rowDateStr);
+
+            // 1. Service Type filter
+            if (serviceType !== "") {
+                if (servieTypeStr.toUpperCase() !== serviceType.toUpperCase()) {
+                    return false;
+                }
             }
-            if (toDate != "") {
-                isToDate = compareMaxDates(toDate, rowDate);
-            } else {
-                isToDate = true;
+
+            // 2. Auditor filter
+            if (auditor !== "") {
+                if (auditorStr.toUpperCase().indexOf(auditor.toUpperCase()) === -1) {
+                    return false;
+                }
             }
-            finalResult = (isServiceType && isAuditor && isfromDate && isToDate);
-            return finalResult;
+
+            var searchVal = normalizeSearchText(clientSearch);
+            var now = new Date();
+            var firstDayOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
+            var isCurrentOrRecent = (rowDateObj && rowDateObj >= firstDayOfPrevMonth);
+
+            // 3. Client Search (search by client name or unique ID):
+            // When client search has text, show all matching records.
+            // When client search is empty, restrict view to current month + past 1 month (for marketing & office staff roles).
+            if (clientSearch !== "") {
+                var isMatch = (rowClient.indexOf(searchVal) !== -1 || rowUniqueId.indexOf(searchVal) !== -1);
+                if (!isMatch) {
+                    return false;
+                }
+                // For restricted roles: past records (older than 1 month) are ONLY unlocked when full client name/unique ID is typed
+                if (isRestrictedRole && !isCurrentOrRecent) {
+                    var isExactMatch = (rowClient === searchVal || rowUniqueId === searchVal);
+                    if (!isExactMatch) {
+                        return false;
+                    }
+                }
+            } else {
+                // When client search is empty:
+                if (isRestrictedRole) {
+                    if (!isCurrentOrRecent) {
+                        return false;
+                    }
+                }
+            }
+
+            // 4. Explicit From Date and To Date range filters
+            if (fromDate !== "" || toDate !== "") {
+                if (!rowDateStr) {
+                    return false;
+                }
+                var isfromDate = (fromDate !== "") ? compareMinDates(fromDate, rowDateStr) : true;
+                var isToDate = (toDate !== "") ? compareMaxDates(toDate, rowDateStr) : true;
+                if (!(isfromDate && isToDate)) {
+                    return false;
+                }
+            }
+
+            return true;
         }
     );
 
@@ -1208,6 +1375,12 @@
                 mContainer.css('right', '-430px').attr('aria-hidden', 'true');
             }
         });
+
+        var debouncedAuditSearch = debounce(function () {
+            table.draw();
+        }, 200);
+
+        $('#auditClientSearch').on('input keyup change', debouncedAuditSearch);
 
         $('.customerAccount').click(function () {
             var customerID = $(this).attr('data-id');
@@ -1243,22 +1416,22 @@
     });
 
     var table = $('#tab_customer_list').DataTable({
-        //            "scrollY": "450px",
         "sScrollX": "100%",
         "scrollY": '70vh',
         "scrollCollapse": true,
-        "paging": false,
+        "paging": true,
         "ordering": false,
         "lengthChange": false,
-        //            "pageLength": 10,
-        "paging": false,
+        "pageLength": 50,
+        "info": true,
+        "dom": "tr<'row dt-bottom-row'<'col-sm-6 col-xs-12'i><'col-sm-6 col-xs-12'p>>",
         "columnDefs": [
             {
-                "width": "15%",
+                "width": "12%",
                 "targets": 0
             },
             {
-                "width": "15%",
+                "width": "20%",
                 "targets": 1
             },
             {
@@ -1270,15 +1443,31 @@
                 "targets": 3
             },
             {
-                "width": "15%",
+                "width": "16%",
                 "targets": 4
             },
             {
                 "width": "15%",
                 "targets": 5
             },
-        ]
-        //        "paging":         false
+            {
+                "width": "15%",
+                "targets": 6
+            }
+        ],
+        "language": {
+            "emptyTable": "No data available in table",
+            "zeroRecords": "No client found or incorrect spelling, check the spelling of client",
+            "info": "Showing _START_ to _END_ of _TOTAL_ entries",
+            "infoEmpty": "Showing 0 to 0 of 0 entries",
+            "infoFiltered": "(filtered from _MAX_ total entries)",
+            "paginate": {
+                "first": "First",
+                "last": "Last",
+                "next": "Next",
+                "previous": "Previous"
+            }
+        }
     });
     table.columns.adjust().draw();
 

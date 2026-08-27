@@ -802,10 +802,21 @@ foreach ($auditors as $name) {
 
         $customerid = "";
         $('.createAuditNotification').click(function () {
-            $('.audit-noti-service').val($(this).attr('data-service1'));
-            $('.audit-noti-service1').val($(this).attr('data-service'));
+            $('.audit-noti-service').val($(this).attr('data-service1') || '');
+            $('.audit-noti-service1').val($(this).attr('data-service') || '');
             $('.audit-noti-customer').val($(this).attr('data-customer'));
-            $(".audit-service-type").val($(this).attr("data-type"));
+            
+            var rawSvcType = $(this).attr("data-type") || $(this).attr("data-svc") || "";
+            if (rawSvcType === 'service-type-sai') rawSvcType = 'SA-I';
+            else if (rawSvcType === 'service-type-saii') rawSvcType = 'SA-II';
+            else if (rawSvcType === 'service-type-rc') rawSvcType = 'RC';
+            else if (rawSvcType === 'service-type-ca') rawSvcType = 'CA';
+            else if (rawSvcType === 'service-type-sp') rawSvcType = 'SP';
+            else if (rawSvcType === 'service-type-ta') rawSvcType = 'TA';
+            else if (rawSvcType === 'service-type-ptr') rawSvcType = 'PTR';
+            
+            $(".audit-service-type").val(rawSvcType);
+            $("#audti-service-type").val(rawSvcType);
             $customerid = $(this).attr('data-customer');
 
             $.ajax({
@@ -865,10 +876,21 @@ foreach ($auditors as $name) {
 
         $('.editAuditNotification').click(function () {
             $('.audit-noti-id-edit').val($(this).attr('data-notification'));
-            $('.audit-noti-service').val($(this).attr('data-service1'));
-            $('.audit-noti-service1').val($(this).attr('data-service'));
+            $('.audit-noti-service').val($(this).attr('data-service1') || $(this).attr('data-service') || '');
+            $('.audit-noti-service1').val($(this).attr('data-service') || '');
             $('.audit-noti-customer').val($(this).attr('data-customer'));
-            $(".audit-service-type").val($(this).attr("data-type"));
+            
+            var rawSvcType = $(this).attr("data-type") || $(this).attr("data-svc") || "";
+            if (rawSvcType === 'service-type-sai') rawSvcType = 'SA-I';
+            else if (rawSvcType === 'service-type-saii') rawSvcType = 'SA-II';
+            else if (rawSvcType === 'service-type-rc') rawSvcType = 'RC';
+            else if (rawSvcType === 'service-type-ca') rawSvcType = 'CA';
+            else if (rawSvcType === 'service-type-sp') rawSvcType = 'SP';
+            else if (rawSvcType === 'service-type-ta') rawSvcType = 'TA';
+            else if (rawSvcType === 'service-type-ptr') rawSvcType = 'PTR';
+            
+            $(".audit-service-type").val(rawSvcType);
+            $("#audti-service-type").val(rawSvcType);
             $customerid = $(this).attr('data-customer');
             $.ajax({
                 url: "contractDetails.php",
