@@ -21,622 +21,47 @@ $successApplicant = isset($_GET['success']) && $_GET['success'] == '1' ? trim($_
     <?php if ($turnstileReady): ?>
         <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <?php endif; ?>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <title>Careers - AITF Management Certification</title>
+    <title>Careers & Opportunities - AITF Management Certification</title>
     <style>
+        :root {
+            --c-primary: #1d4ed8;
+            --c-primary-hover: #1e40af;
+            --c-primary-light: #eff6ff;
+            --c-primary-subtle: #dbeafe;
+            --c-accent: #0284c7;
+            --c-dark: #091322;
+            --c-dark-surface: #0f1f38;
+            --c-text-heading: #0f172a;
+            --c-text-body: #334155;
+            --c-text-muted: #64748b;
+            --c-border: #e2e8f0;
+            --c-border-hover: #cbd5e1;
+            --c-bg-page: #f8fafc;
+            --c-bg-card: #ffffff;
+            --c-radius: 16px;
+            --c-radius-sm: 10px;
+            --c-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
+            --c-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.06), 0 4px 6px -2px rgba(15, 23, 42, 0.02);
+            --c-shadow-hover: 0 20px 35px -5px rgba(15, 23, 42, 0.10), 0 8px 12px -4px rgba(15, 23, 42, 0.03);
+            --c-transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
         * {
             box-sizing: border-box;
         }
 
         body {
             margin: 0;
-            font-family: 'Inter', Arial, sans-serif;
-            background: #f5f8fc;
-            color: #0f172a;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--c-bg-page);
+            color: var(--c-text-body);
             line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
         }
 
-        .career-page {
-            overflow: hidden;
-            background: #f5f8fc;
-        }
-
-        .career-hero {
-            min-height: 720px;
-            padding: 185px 20px 90px;
-            background:
-                radial-gradient(circle at 15% 18%, rgba(96, 165, 250, .35), transparent 28%),
-                radial-gradient(circle at 86% 16%, rgba(45, 212, 191, .26), transparent 26%),
-                linear-gradient(135deg, #071120 0%, #10223d 45%, #0f3b73 100%);
-            color: #fff;
-            position: relative;
-        }
-
-        .career-hero:before {
-            content: "";
-            position: absolute;
-            inset: 0;
-            background-image: linear-gradient(rgba(255, 255, 255, .06) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, .06) 1px, transparent 1px);
-            background-size: 44px 44px;
-            mask-image: linear-gradient(180deg, rgba(0, 0, 0, .75), transparent 88%);
-        }
-
-        .career-container {
-            width: min(1180px, calc(100% - 32px));
-            margin: 0 auto;
-            position: relative;
-            z-index: 1;
-        }
-
-        .hero-grid {
-            display: grid;
-            grid-template-columns: minmax(0, 1.05fr) minmax(360px, .8fr);
-            gap: 34px;
-            align-items: center;
-        }
-
-        .eyebrow {
-            display: inline-flex;
-            align-items: center;
-            gap: 9px;
-            padding: 9px 14px;
-            border: 1px solid rgba(255, 255, 255, .2);
-            border-radius: 999px;
-            background: rgba(255, 255, 255, .09);
-            color: #dbeafe;
-            font-weight: 800;
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: .12em;
-            backdrop-filter: blur(12px);
-        }
-
-        .career-hero h1 {
-            margin: 24px 0 18px;
-            font-size: clamp(42px, 6vw, 78px);
-            line-height: .96;
-            letter-spacing: -3px;
-            font-weight: 900;
-        }
-
-        .career-hero p {
-            margin: 0;
-            max-width: 690px;
-            color: rgba(226, 232, 240, .9);
-            font-size: 18px;
-        }
-
-        .hero-actions {
-            display: flex;
-            gap: 14px;
-            flex-wrap: wrap;
-            margin-top: 34px;
-        }
-
-        .career-btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            border: 0;
-            border-radius: 999px;
-            padding: 14px 22px;
-            font-weight: 900;
-            text-decoration: none;
-            transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
-            cursor: pointer;
-        }
-
-        .career-btn.primary {
-            background: linear-gradient(135deg, #60a5fa, #2563eb);
-            color: #fff;
-            box-shadow: 0 22px 42px rgba(37, 99, 235, .32);
-        }
-
-        .career-btn.secondary {
-            background: rgba(255, 255, 255, .11);
-            color: #fff;
-            border: 1px solid rgba(255, 255, 255, .18);
-        }
-
-        .career-btn:hover {
-            transform: translateY(-2px);
-            text-decoration: none;
-        }
-
-        .hero-card {
-            background: rgba(255, 255, 255, .1);
-            border: 1px solid rgba(255, 255, 255, .18);
-            border-radius: 32px;
-            padding: 28px;
-            backdrop-filter: blur(18px);
-            box-shadow: 0 30px 80px rgba(0, 0, 0, .28);
-        }
-
-        .hero-card h3 {
-            margin: 0 0 16px;
-            color: #fff;
-            font-size: 24px;
-            font-weight: 900;
-        }
-
-        .hero-stat-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 14px;
-        }
-
-        .hero-stat {
-            border-radius: 22px;
-            padding: 18px;
-            background: rgba(255, 255, 255, .12);
-            border: 1px solid rgba(255, 255, 255, .14);
-        }
-
-        .hero-stat strong {
-            display: block;
-            font-size: 28px;
-            color: #fff;
-            line-height: 1;
-        }
-
-        .hero-stat span {
-            color: #cbd5e1;
-            font-size: 13px;
-            font-weight: 700;
-        }
-
-        .section {
-            padding: 96px 0;
-        }
-
-        .section-title {
-            text-align: center;
-            max-width: 760px;
-            margin: 0 auto 46px;
-        }
-
-        .section-title .tag {
-            color: #2563eb;
-            text-transform: uppercase;
-            letter-spacing: .12em;
-            font-weight: 900;
-            font-size: 12px;
-        }
-
-        .section-title h2 {
-            margin: 10px 0 12px;
-            font-size: clamp(32px, 4vw, 50px);
-            line-height: 1.08;
-            letter-spacing: -1.8px;
-            font-weight: 900;
-        }
-
-        .section-title p {
-            color: #64748b;
-            font-size: 16px;
-            margin: 0;
-        }
-
-        .why-grid,
-        .love-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 22px;
-        }
-
-        .career-clean-section {
-            position: relative;
-            overflow: hidden;
-            background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
-        }
-
-        .career-clean-section.alt {
-            background: linear-gradient(180deg, #f2f7ff 0%, #ffffff 100%);
-        }
-
-        .career-clean-section:before {
-            content: "";
-            position: absolute;
-            width: 360px;
-            height: 360px;
-            border-radius: 50%;
-            background: rgba(37, 99, 235, .08);
-            top: -140px;
-            right: -120px;
-        }
-
-        .career-section-header {
-            max-width: 880px;
-            margin: 0 auto 42px;
-            text-align: center;
-        }
-
-        .career-section-kicker {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 9px 14px;
-            border-radius: 999px;
-            background: #eaf2ff;
-            color: #1d4ed8;
-            font-size: 12px;
-            font-weight: 900;
-            letter-spacing: .12em;
-            text-transform: uppercase;
-        }
-
-        .career-section-header h2 {
-            margin: 16px 0 14px;
-            color: #0f172a;
-            font-size: clamp(32px, 4.2vw, 50px);
-            line-height: 1.12;
-            letter-spacing: -1.4px;
-            font-weight: 900;
-        }
-
-        .career-section-header p {
-            margin: 0 auto;
-            max-width: 760px;
-            color: #475569;
-            font-size: 17px;
-            line-height: 1.8;
-            font-weight: 500;
-        }
-
-        .feature-card {
-            background: #fff;
-            border: 1px solid #e2e8f0;
-            border-radius: 26px;
-            padding: 30px;
-            box-shadow: 0 20px 52px rgba(15, 23, 42, .08);
-            transition: transform .2s ease, box-shadow .2s ease;
-            min-height: 235px;
-        }
-
-        .feature-card:hover {
-            transform: translateY(-6px);
-            box-shadow: 0 28px 70px rgba(15, 23, 42, .12);
-        }
-
-        .feature-icon {
-            width: 54px;
-            height: 54px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 18px;
-            background: linear-gradient(135deg, #dbeafe, #eff6ff);
-            color: #2563eb;
-            font-size: 23px;
-            margin-bottom: 20px;
-        }
-
-        .feature-card h3 {
-            margin: 0 0 10px;
-            font-size: 20px;
-            font-weight: 900;
-            color: #0f172a;
-        }
-
-        .feature-card p {
-            margin: 0;
-            color: #64748b;
-            font-size: 15px;
-        }
-
-        .impact-section {
-            background: linear-gradient(135deg, #0f172a, #17325f);
-            color: #fff;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .impact-section:before {
-            content: "";
-            position: absolute;
-            width: 480px;
-            height: 480px;
-            border-radius: 50%;
-            background: rgba(96, 165, 250, .22);
-            right: -180px;
-            top: -150px;
-            filter: blur(8px);
-        }
-
-        .impact-card {
-            position: relative;
-            z-index: 1;
-            display: grid;
-            grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
-            gap: 34px;
-            align-items: center;
-            background: rgba(255, 255, 255, .08);
-            border: 1px solid rgba(255, 255, 255, .13);
-            border-radius: 34px;
-            padding: 42px;
-            backdrop-filter: blur(12px);
-        }
-
-        .impact-card h2 {
-            margin: 0 0 14px;
-            font-size: clamp(34px, 4vw, 54px);
-            font-weight: 900;
-            letter-spacing: -1.5px;
-        }
-
-        .impact-card p {
-            margin: 0;
-            color: #cbd5e1;
-            font-size: 16px;
-        }
-
-        .impact-list {
-            display: grid;
-            gap: 14px;
-        }
-
-        .impact-list div {
-            background: rgba(255, 255, 255, .1);
-            border: 1px solid rgba(255, 255, 255, .12);
-            border-radius: 18px;
-            padding: 15px 18px;
-            color: #e2e8f0;
-            font-weight: 750;
-        }
-
-        .director-wrap {
-            display: grid;
-            grid-template-columns: 320px 1fr;
-            gap: 28px;
-            align-items: stretch;
-        }
-
-        .director-card {
-            border-radius: 30px;
-            background: linear-gradient(160deg, #2563eb, #0f172a);
-            color: #fff;
-            padding: 34px;
-            box-shadow: 0 26px 70px rgba(37, 99, 235, .22);
-        }
-
-        .director-avatar {
-            width: 92px;
-            height: 92px;
-            border-radius: 26px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: rgba(255, 255, 255, .14);
-            border: 1px solid rgba(255, 255, 255, .2);
-            font-size: 40px;
-            margin-bottom: 20px;
-        }
-
-        .director-card h3 {
-            margin: 0;
-            font-size: 26px;
-            font-weight: 900;
-        }
-
-        .director-card span {
-            color: #bfdbfe;
-            font-weight: 800;
-        }
-
-        .director-message {
-            background: #fff;
-            border: 1px solid #e2e8f0;
-            border-radius: 30px;
-            padding: 34px;
-            box-shadow: 0 20px 52px rgba(15, 23, 42, .08);
-            position: relative;
-        }
-
-        .director-message:before {
-            content: "“";
-            position: absolute;
-            right: 26px;
-            top: -22px;
-            font-size: 110px;
-            color: #dbeafe;
-            font-family: Georgia, serif;
-            line-height: 1;
-        }
-
-        .director-message p {
-            position: relative;
-            margin: 0 0 16px;
-            color: #334155;
-            font-size: 17px;
-        }
-
-        .apply-section {
-            padding-top: 30px;
-        }
-
-        .apply-grid {
-            display: grid;
-            grid-template-columns: minmax(0, .85fr) minmax(360px, 1fr);
-            gap: 28px;
-            align-items: start;
-        }
-
-        .apply-info {
-            background: #0f172a;
-            color: #fff;
-            border-radius: 32px;
-            padding: 36px;
-            position: sticky;
-            top: 110px;
-            box-shadow: 0 24px 72px rgba(15, 23, 42, .18);
-        }
-
-        .apply-info h2 {
-            margin: 0 0 12px;
-            font-size: 34px;
-            font-weight: 900;
-            letter-spacing: -1px;
-        }
-
-        .apply-info p {
-            color: #cbd5e1;
-            margin: 0 0 22px;
-        }
-
-        .role-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 9px;
-            margin: 8px 8px 0 0;
-            padding: 10px 14px;
-            border-radius: 999px;
-            background: rgba(255, 255, 255, .1);
-            border: 1px solid rgba(255, 255, 255, .14);
-            color: #e2e8f0;
-            font-weight: 800;
-        }
-
-        .career-form-card {
-            background: #fff;
-            border: 1px solid #e2e8f0;
-            border-radius: 32px;
-            padding: 34px;
-            box-shadow: 0 22px 60px rgba(15, 23, 42, .1);
-        }
-
-        .form-alert {
-            border-radius: 16px;
-            padding: 14px 16px;
-            margin-bottom: 18px;
-            background: #fef2f2;
-            color: #991b1b;
-            border: 1px solid #fecaca;
-            font-weight: 700;
-        }
-
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-        }
-
-        .field {
-            margin-bottom: 18px;
-        }
-
-        .field label {
-            display: block;
-            font-weight: 900;
-            color: #1e293b;
-            margin-bottom: 8px;
-            font-size: 13px;
-            text-transform: uppercase;
-            letter-spacing: .04em;
-        }
-
-        .field input,
-        .field select,
-        .field textarea {
-            width: 100%;
-            border: 1px solid #dbe3ef;
-            border-radius: 16px;
-            padding: 14px 15px;
-            font: inherit;
-            color: #0f172a;
-            background: #f8fafc;
-            outline: none;
-            transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
-        }
-
-        .field textarea {
-            min-height: 112px;
-            resize: vertical;
-        }
-
-        .field input:focus,
-        .field select:focus,
-        .field textarea:focus {
-            border-color: #2563eb;
-            background: #fff;
-            box-shadow: 0 0 0 4px rgba(37, 99, 235, .11);
-        }
-
-        .captcha-box {
-            margin: 4px 0 20px;
-            padding: 14px;
-            border-radius: 18px;
-            border: 1px dashed #cbd5e1;
-            background: #f8fafc;
-        }
-
-        .submit-btn {
-            width: 100%;
-            border: 0;
-            border-radius: 18px;
-            padding: 16px 22px;
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
-            color: #fff;
-            font-weight: 900;
-            font-size: 16px;
-            box-shadow: 0 18px 34px rgba(37, 99, 235, .24);
-            cursor: pointer;
-            transition: transform .2s ease, box-shadow .2s ease;
-        }
-
-        .submit-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 24px 42px rgba(37, 99, 235, .30);
-        }
-
-        @media (max-width: 980px) {
-
-            .hero-grid,
-            .impact-card,
-            .director-wrap,
-            .apply-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .why-grid,
-            .love-grid {
-                grid-template-columns: 1fr 1fr;
-            }
-
-            .apply-info {
-                position: static;
-            }
-        }
-
-        @media (max-width: 640px) {
-            .career-hero {
-                padding-top: 150px;
-            }
-
-            .why-grid,
-            .love-grid,
-            .form-row {
-                grid-template-columns: 1fr;
-            }
-
-            .career-form-card,
-            .apply-info,
-            .impact-card,
-            .director-card,
-            .director-message {
-                padding: 24px;
-                border-radius: 24px;
-            }
-        }
-    </style>
-</head>
-
-<body id="home" data-spy="scroll" data-target="#navbar-wd" data-offset="98">
-    <?php include './headerSource.php'; ?>
-
-    <style>
+        /* Transparent Top Navigation Integration */
         #home .top-header:not(.scrolled) {
             --nav-bg: transparent;
             --nav-text: #f1f5f9;
@@ -660,702 +85,1317 @@ $successApplicant = isset($_GET['success']) && $_GET['success'] == '1' ? trim($_
             background-color: #f1f5f9 !important;
         }
 
-        .career-page {
-            --career-ink: #132033;
-            --career-muted: #526173;
-            --career-primary: #2563eb;
-            --career-primary-dark: #123f8f;
-            --career-accent: #38bdf8;
-            --career-soft: #eef6ff;
-            --career-card-shadow: 0 24px 70px rgba(15, 23, 42, .10);
-            background:
-                radial-gradient(circle at 8% 14%, rgba(59, 130, 246, .10), transparent 28%),
-                radial-gradient(circle at 92% 34%, rgba(20, 184, 166, .10), transparent 30%),
-                linear-gradient(180deg, #f8fbff 0%, #eef5ff 48%, #ffffff 100%) !important;
-            color: var(--career-ink) !important;
-            font-family: 'Inter', Arial, sans-serif !important;
+        /* Page Container */
+        .career-wrap {
+            width: 100%;
+            overflow-x: hidden;
         }
 
-        .career-page .career-hero {
-            min-height: auto !important;
-            padding: 168px 20px 104px !important;
+        .career-container {
+            width: min(1200px, calc(100% - 40px));
+            margin: 0 auto;
+            position: relative;
+        }
+
+        /* Section Commons */
+        .career-section {
+            padding: 76px 0;
+            position: relative;
+        }
+
+        .career-section.alt-bg {
+            background-color: #ffffff;
+        }
+
+        .career-section-header {
+            max-width: 680px;
+            margin: 0 auto 48px;
+            text-align: center;
+        }
+
+        .career-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 6px 14px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+        }
+
+        .career-pill.light {
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            color: #e0f2fe;
+            backdrop-filter: blur(8px);
+        }
+
+        .career-pill.primary {
+            background: var(--c-primary-light);
+            border: 1px solid var(--c-primary-subtle);
+            color: var(--c-primary);
+        }
+
+        .career-section-header h2 {
+            margin: 0 0 12px;
+            font-size: clamp(28px, 3.4vw, 40px);
+            font-weight: 800;
+            color: var(--c-text-heading);
+            letter-spacing: -0.025em;
+            line-height: 1.2;
+        }
+
+        .career-section-header p {
+            margin: 0;
+            color: var(--c-text-muted);
+            font-size: 16px;
+            line-height: 1.65;
+        }
+
+        /* 1. HERO SECTION */
+        .career-hero {
+            padding: 154px 0 76px;
             background:
-                linear-gradient(115deg, rgba(6, 17, 38, .96) 0%, rgba(16, 45, 91, .94) 52%, rgba(19, 103, 140, .90) 100%),
-                radial-gradient(circle at 80% 15%, rgba(96, 165, 250, .42), transparent 32%) !important;
+                radial-gradient(circle at 18% 22%, rgba(59, 130, 246, 0.28), transparent 38%),
+                radial-gradient(circle at 85% 15%, rgba(14, 165, 233, 0.22), transparent 32%),
+                linear-gradient(140deg, #091322 0%, #0f2244 55%, #15325c 100%);
+            color: #ffffff;
+            position: relative;
             isolation: isolate;
         }
 
-        .career-page .career-hero:before {
-            opacity: .45;
-            mask-image: linear-gradient(180deg, #000 0%, transparent 95%) !important;
-        }
-
-        .career-page .career-hero:after {
+        .career-hero::before {
             content: "";
             position: absolute;
-            inset: auto -12% -170px -12%;
-            height: 260px;
-            background: #f8fbff;
-            border-radius: 50% 50% 0 0;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+            background-size: 36px 36px;
+            mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.8) 0%, transparent 92%);
+            -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.8) 0%, transparent 92%);
+            pointer-events: none;
             z-index: 0;
         }
 
-        .career-page .hero-grid {
-            grid-template-columns: minmax(0, 1.05fr) minmax(340px, .82fr) !important;
-            gap: clamp(28px, 5vw, 58px) !important;
-        }
-
-        .career-page .eyebrow {
-            background: rgba(255, 255, 255, .14) !important;
-            border: 1px solid rgba(255, 255, 255, .26) !important;
-            color: #eff6ff !important;
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18), 0 14px 32px rgba(0, 0, 0, .12);
-        }
-
-        .career-page .career-hero h1,
-        .career-page .impact-card h2,
-        .career-page .apply-info h2 {
-            color: #ffffff !important;
-            text-shadow: 0 16px 42px rgba(0, 0, 0, .34);
-        }
-
-        .career-page .career-hero h1 {
-            max-width: 820px;
-            font-size: clamp(46px, 6.4vw, 86px) !important;
-            line-height: .98 !important;
-            letter-spacing: -3.2px !important;
-            margin-bottom: 22px !important;
-        }
-
-        .career-page .career-hero p {
-            color: #f1f5f9 !important;
-            font-size: clamp(18px, 1.5vw, 22px) !important;
-            line-height: 1.85 !important;
-            max-width: 760px !important;
-            text-shadow: 0 4px 16px rgba(0, 0, 0, .3);
-            font-weight: 500;
-        }
-
-        .career-page .career-btn {
-            min-height: 52px;
-            box-shadow: 0 18px 40px rgba(0, 0, 0, .18);
-        }
-
-        .career-page .career-btn.primary {
-            background: linear-gradient(135deg, #38bdf8, #2563eb 58%, #1d4ed8) !important;
-        }
-
-        .career-page .career-btn.secondary {
-            background: rgba(255, 255, 255, .16) !important;
-            color: #ffffff !important;
-        }
-
-        .career-page .hero-card {
-            background: linear-gradient(180deg, rgba(255, 255, 255, .20), rgba(255, 255, 255, .10)) !important;
-            border: 1px solid rgba(255, 255, 255, .28) !important;
-            box-shadow: 0 34px 90px rgba(1, 10, 26, .34) !important;
+        .hero-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+            gap: 44px;
+            align-items: center;
             position: relative;
-            overflow: hidden;
+            z-index: 1;
         }
 
-        .career-page .hero-card:before {
-            content: "";
-            position: absolute;
-            inset: 0;
-            background: radial-gradient(circle at 20% 0%, rgba(255, 255, 255, .26), transparent 36%);
-            pointer-events: none;
+        .hero-content h1 {
+            margin: 0 0 16px;
+            font-size: clamp(32px, 4.2vw, 50px);
+            font-weight: 800;
+            line-height: 1.14;
+            letter-spacing: -0.03em;
+            color: #ffffff;
         }
 
-        .career-page .hero-card h3,
-        .career-page .hero-stat strong {
-            color: #ffffff !important;
-            position: relative;
+        .hero-content h1 span {
+            background: linear-gradient(135deg, #60a5fa 0%, #38bdf8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
-        .career-page .hero-stat {
-            background: rgba(255, 255, 255, .17) !important;
-            border: 1px solid rgba(255, 255, 255, .20) !important;
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18);
-            position: relative;
+        .hero-content p {
+            margin: 0 0 28px;
+            font-size: 17px;
+            line-height: 1.7;
+            color: #cbd5e1;
+            max-width: 580px;
         }
 
-        .career-page .hero-stat span {
-            color: #dbeafe !important;
-        }
-
-        .career-page .section {
-            padding: 92px 0 !important;
-        }
-
-        .career-page .section-title h2,
-        .career-page .feature-card h3,
-        .career-page .director-card h3,
-        .career-page .career-form-card h3 {
-            color: var(--career-ink) !important;
-        }
-
-        .career-page .section-title p,
-        .career-page .feature-card p,
-        .career-page .director-message p {
-            color: #475569 !important;
-            line-height: 1.8 !important;
-            font-size: 16px !important;
-            font-weight: 500;
-        }
-
-        .career-page .feature-card p {
-            font-size: 15.5px !important;
-        }
-
-        .career-page .feature-card,
-        .career-page .director-message,
-        .career-page .career-form-card {
-            background: rgba(255, 255, 255, .94) !important;
-            border: 1px solid rgba(148, 163, 184, .24) !important;
-            box-shadow: var(--career-card-shadow) !important;
-        }
-
-        .career-page .feature-card {
-            position: relative;
-            overflow: hidden;
-        }
-
-        .career-page .feature-card:before {
-            content: "";
-            position: absolute;
-            inset: 0 0 auto;
-            height: 5px;
-            background: linear-gradient(90deg, var(--career-primary), var(--career-accent));
-        }
-
-        .career-page .feature-icon {
-            background: linear-gradient(135deg, #e0f2fe, #dbeafe) !important;
-            color: var(--career-primary) !important;
-            box-shadow: 0 14px 28px rgba(37, 99, 235, .14);
-        }
-
-        .career-page .impact-section {
-            background: linear-gradient(180deg, #f8fbff 0%, #eaf2ff 100%) !important;
-            color: #ffffff !important;
-            padding-top: 20px !important;
-        }
-
-        .career-page .impact-card {
-            background:
-                linear-gradient(135deg, rgba(12, 27, 52, .96), rgba(24, 67, 130, .92)),
-                radial-gradient(circle at 86% 0%, rgba(56, 189, 248, .28), transparent 34%) !important;
-            border: 1px solid rgba(255, 255, 255, .18) !important;
-            box-shadow: 0 30px 90px rgba(15, 23, 42, .20) !important;
-        }
-
-        .career-page .impact-card p,
-        .career-page .impact-list div {
-            color: #f1f5f9 !important;
-            font-size: 17px !important;
-            font-weight: 500 !important;
-            line-height: 1.8 !important;
-        }
-
-        .career-page .impact-card h2 {
-            font-size: clamp(38px, 4.5vw, 56px) !important;
-        }
-
-        .career-page .impact-list div {
-            background: rgba(255, 255, 255, .14) !important;
-            border: 1px solid rgba(255, 255, 255, .18) !important;
-            font-size: 16px;
-        }
-
-        .career-page .impact-list i {
-            color: #86efac;
-            margin-right: 8px;
-        }
-
-        .career-page .director-card {
-            background:
-                linear-gradient(145deg, rgba(37, 99, 235, .96), rgba(15, 23, 42, .98)),
-                radial-gradient(circle at 0% 0%, rgba(56, 189, 248, .35), transparent 34%) !important;
-        }
-
-        .career-page .director-card h3 {
-            color: #ffffff !important;
-        }
-
-        .career-page .apply-section {
-            background: linear-gradient(180deg, #ffffff 0%, #eef5ff 100%) !important;
-            padding-top: 78px !important;
-        }
-
-        .career-page .apply-info {
-            background:
-                linear-gradient(145deg, rgba(15, 23, 42, .98), rgba(30, 64, 175, .94)),
-                radial-gradient(circle at 100% 0%, rgba(56, 189, 248, .25), transparent 32%) !important;
-            border: 1px solid rgba(255, 255, 255, .12);
-        }
-
-        .career-page .apply-info p,
-        .career-page .role-pill {
-            color: #dbeafe !important;
-        }
-
-        .career-page .career-form-card {
-            position: relative;
-            overflow: hidden;
-        }
-
-        .career-page .career-form-card:before {
-            content: "";
-            position: absolute;
-            inset: 0 0 auto;
-            height: 7px;
-            background: linear-gradient(90deg, #2563eb, #38bdf8, #14b8a6);
-        }
-
-        .career-page .form-heading {
+        .hero-cta-group {
             display: flex;
-            gap: 16px;
-            align-items: flex-start;
-            margin-bottom: 24px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid #e2e8f0;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
         }
 
-        .career-page .form-heading-icon {
-            width: 54px;
-            height: 54px;
-            border-radius: 18px;
+        .btn-modern {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, #2563eb, #38bdf8);
+            gap: 9px;
+            padding: 12px 24px;
+            border-radius: 9999px;
+            font-size: 15px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            transition: var(--c-transition);
+            border: 1px solid transparent;
+            line-height: 1.4;
+        }
+
+        .btn-modern:hover {
+            text-decoration: none;
+            transform: translateY(-2px);
+        }
+
+        .btn-modern.primary {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
             color: #ffffff;
-            box-shadow: 0 16px 30px rgba(37, 99, 235, .24);
-            flex: 0 0 auto;
-            font-size: 22px;
+            box-shadow: 0 10px 24px -4px rgba(37, 99, 235, 0.45);
         }
 
-        .career-page .form-heading h3 {
-            margin: 0 0 4px;
-            font-size: 24px;
-            font-weight: 900;
-            letter-spacing: -.4px;
+        .btn-modern.primary:hover {
+            box-shadow: 0 14px 28px -2px rgba(37, 99, 235, 0.55);
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: #ffffff;
         }
 
-        .career-page .form-heading p {
+        .btn-modern.glass {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-modern.glass:hover {
+            background: rgba(255, 255, 255, 0.16);
+            border-color: rgba(255, 255, 255, 0.35);
+            color: #ffffff;
+        }
+
+        /* Hero Quick Overview Card */
+        .hero-feature-card {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: var(--c-radius);
+            padding: 26px;
+            backdrop-filter: blur(14px);
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.25);
+        }
+
+        .hero-feature-card h3 {
+            margin: 0 0 18px;
+            font-size: 18px;
+            font-weight: 700;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .hero-feature-card h3 i {
+            color: #38bdf8;
+            font-size: 16px;
+        }
+
+        .hero-feature-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .hero-feature-item {
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(255, 255, 255, 0.10);
+            border-radius: var(--c-radius-sm);
+            padding: 14px;
+            transition: var(--c-transition);
+        }
+
+        .hero-feature-item:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.20);
+        }
+
+        .hero-feature-item i {
+            font-size: 18px;
+            color: #60a5fa;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .hero-feature-item strong {
+            display: block;
+            font-size: 14px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 3px;
+        }
+
+        .hero-feature-item span {
+            display: block;
+            font-size: 12px;
+            color: #94a3b8;
+            line-height: 1.4;
+        }
+
+        /* 2. WHY JOIN AITF */
+        .values-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 22px;
+        }
+
+        .value-card {
+            background: var(--c-bg-card);
+            border: 1px solid var(--c-border);
+            border-radius: var(--c-radius);
+            padding: 28px 24px;
+            box-shadow: var(--c-shadow-sm);
+            transition: var(--c-transition);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .value-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--c-shadow-hover);
+            border-color: #cbd5e1;
+        }
+
+        .value-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: var(--c-primary-light);
+            color: var(--c-primary);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            margin-bottom: 18px;
+            transition: var(--c-transition);
+        }
+
+        .value-card:hover .value-icon {
+            background: var(--c-primary);
+            color: #ffffff;
+        }
+
+        .value-card h3 {
+            margin: 0 0 10px;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--c-text-heading);
+            letter-spacing: -0.01em;
+        }
+
+        .value-card p {
             margin: 0;
-            color: var(--career-muted);
+            font-size: 14.5px;
+            color: var(--c-text-muted);
+            line-height: 1.65;
         }
 
-        .career-page .field label {
-            color: #24324a !important;
+        /* 3. APPLICATION FORM SECTION ("APPLY FOR JOB") */
+        .apply-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 0.82fr) minmax(360px, 1.18fr);
+            gap: 36px;
+            align-items: start;
         }
 
-        .career-page .field input,
-        .career-page .field select,
-        .career-page .field textarea {
-            background: #ffffff !important;
-            border-color: #cbd8e8 !important;
-            box-shadow: 0 1px 0 rgba(15, 23, 42, .03);
+        .apply-sidebar {
+            background: #ffffff;
+            border: 1px solid var(--c-border);
+            border-radius: var(--c-radius);
+            padding: 32px 28px;
+            box-shadow: var(--c-shadow-sm);
         }
 
-        .career-page .field input:focus,
-        .career-page .field select:focus,
-        .career-page .field textarea:focus {
-            border-color: var(--career-primary) !important;
-            box-shadow: 0 0 0 4px rgba(37, 99, 235, .13) !important;
+        .apply-sidebar h3 {
+            margin: 0 0 10px;
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--c-text-heading);
+            letter-spacing: -0.02em;
         }
 
-        .career-page .submit-btn {
-            background: linear-gradient(135deg, #1d4ed8, #2563eb 55%, #38bdf8) !important;
-            min-height: 56px;
-            letter-spacing: .01em;
+        .apply-sidebar p {
+            margin: 0 0 24px;
+            font-size: 14.5px;
+            color: var(--c-text-muted);
+            line-height: 1.6;
         }
 
-        .career-success-overlay {
-            position: fixed;
-            inset: 0;
-            z-index: 5000;
+        .process-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            margin-bottom: 28px;
+        }
+
+        .step-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+        }
+
+        .step-num {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--c-primary-light);
+            color: var(--c-primary);
+            font-size: 12px;
+            font-weight: 800;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 22px;
-            background: rgba(15, 23, 42, .62);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            animation: careerFadeIn .22s ease both;
+            flex-shrink: 0;
+            margin-top: 2px;
         }
 
-        .career-success-card {
-            width: min(560px, 100%);
+        .step-text strong {
+            display: block;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--c-text-heading);
+            margin-bottom: 2px;
+        }
+
+        .step-text span {
+            display: block;
+            font-size: 13px;
+            color: var(--c-text-muted);
+            line-height: 1.45;
+        }
+
+        .apply-help-card {
+            background: #f8fafc;
+            border: 1px dashed var(--c-border);
+            border-radius: var(--c-radius-sm);
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .apply-help-card i {
+            font-size: 20px;
+            color: var(--c-primary);
+        }
+
+        .apply-help-card div {
+            font-size: 13px;
+            color: var(--c-text-muted);
+            line-height: 1.4;
+        }
+
+        .apply-help-card a {
+            color: var(--c-primary);
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .apply-form-card {
+            background: #ffffff;
+            border: 1px solid var(--c-border);
+            border-radius: var(--c-radius);
+            padding: 34px 32px;
+            box-shadow: var(--c-shadow);
+        }
+
+        .form-heading {
+            margin-bottom: 24px;
+            padding-bottom: 18px;
+            border-bottom: 1px solid var(--c-border);
+        }
+
+        .form-heading h3 {
+            margin: 0 0 4px;
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--c-text-heading);
+        }
+
+        .form-heading p {
+            margin: 0;
+            font-size: 14px;
+            color: var(--c-text-muted);
+        }
+
+        .form-alert {
+            border-radius: var(--c-radius-sm);
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            background: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 6px;
+        }
+
+        .form-label span.req {
+            color: #ef4444;
+        }
+
+        .form-label span.opt {
+            font-weight: 500;
+            color: #94a3b8;
+            font-size: 12px;
+        }
+
+        .input-wrap {
+            position: relative;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            font-size: 14px;
+            pointer-events: none;
+        }
+
+        .form-input,
+        .form-select,
+        .form-textarea {
+            width: 100%;
+            border: 1px solid var(--c-border);
+            border-radius: var(--c-radius-sm);
+            padding: 11px 14px;
+            font-family: inherit;
+            font-size: 14.5px;
+            color: var(--c-text-heading);
+            background: #ffffff;
+            outline: none;
+            transition: var(--c-transition);
+        }
+
+        .input-wrap .form-input,
+        .input-wrap .form-select {
+            padding-left: 38px;
+        }
+
+        .form-input:focus,
+        .form-select:focus,
+        .form-textarea:focus {
+            border-color: var(--c-primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        }
+
+        .form-textarea {
+            min-height: 85px;
+            resize: vertical;
+        }
+
+        /* Qualification Radio Grid */
+        .qualification-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .qualification-pill {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            border: 1px solid var(--c-border);
+            border-radius: var(--c-radius-sm);
+            background: #f8fafc;
+            cursor: pointer;
+            font-size: 13.5px;
+            font-weight: 600;
+            color: var(--c-text-body);
+            transition: var(--c-transition);
+            user-select: none;
+        }
+
+        .qualification-pill:hover {
+            border-color: var(--c-primary);
+            background: var(--c-primary-light);
+        }
+
+        .qualification-pill input[type="radio"] {
+            margin: 0;
+            accent-color: var(--c-primary);
+            cursor: pointer;
+        }
+
+        .qualification-pill.active {
+            border-color: var(--c-primary);
+            background: var(--c-primary-light);
+            color: var(--c-primary);
+            font-weight: 700;
+        }
+
+        .other-qualification-input {
+            margin-top: 8px;
+            display: none;
+        }
+
+        .other-qualification-input.show {
+            display: block;
+        }
+
+        /* Email & OTP Verification Layout */
+        .email-otp-box {
+            background: #f8fafc;
+            border: 1px solid var(--c-border);
+            border-radius: var(--c-radius-sm);
+            padding: 16px;
+            margin-bottom: 18px;
+        }
+
+        .email-input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .email-input-group .input-wrap {
+            flex: 1;
+        }
+
+        .btn-send-otp {
+            padding: 10px 18px;
+            border: 1px solid var(--c-primary);
+            border-radius: var(--c-radius-sm);
+            background: var(--c-primary-light);
+            color: var(--c-primary);
+            font-size: 13.5px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: var(--c-transition);
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-send-otp:hover:not(:disabled) {
+            background: var(--c-primary);
+            color: #ffffff;
+        }
+
+        .btn-send-otp:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            border-color: #cbd5e1;
+            color: #64748b;
+            background: #f1f5f9;
+        }
+
+        .otp-verify-row {
+            display: none;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px dashed var(--c-border);
+        }
+
+        .otp-verify-row.show {
+            display: block;
+        }
+
+        .otp-inputs-flex {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .otp-code-input {
+            max-width: 180px;
+            letter-spacing: 4px;
+            font-size: 16px;
+            font-weight: 800;
+            text-align: center;
+        }
+
+        .btn-verify-otp {
+            padding: 10px 18px;
+            border: 0;
+            border-radius: var(--c-radius-sm);
+            background: #16a34a;
+            color: #ffffff;
+            font-size: 13.5px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: var(--c-transition);
+            white-space: nowrap;
+        }
+
+        .btn-verify-otp:hover {
+            background: #15803d;
+        }
+
+        .otp-status-msg {
+            font-size: 13px;
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .otp-status-msg.success {
+            color: #16a34a;
+            font-weight: 600;
+        }
+
+        .otp-status-msg.error {
+            color: #dc2626;
+            font-weight: 600;
+        }
+
+        .otp-status-msg.info {
+            color: var(--c-primary);
+            font-weight: 500;
+        }
+
+        .verified-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 9999px;
+            background: #dcfce7;
+            color: #166534;
+            font-size: 12px;
+            font-weight: 700;
+            margin-top: 8px;
+        }
+
+        /* File Upload Custom Widget */
+        .file-dropzone {
+            border: 1.5px dashed var(--c-border);
+            border-radius: var(--c-radius-sm);
+            padding: 18px;
+            background: #f8fafc;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--c-transition);
+            position: relative;
+        }
+
+        .file-dropzone:hover,
+        .file-dropzone.dragover {
+            border-color: var(--c-primary);
+            background: var(--c-primary-light);
+        }
+
+        .file-dropzone input[type="file"] {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+            z-index: 2;
+        }
+
+        .file-dropzone-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            pointer-events: none;
+        }
+
+        .file-dropzone-icon {
+            font-size: 24px;
+            color: var(--c-primary);
+            margin-bottom: 2px;
+        }
+
+        .file-dropzone-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--c-text-heading);
+        }
+
+        .file-dropzone-hint {
+            font-size: 12px;
+            color: var(--c-text-muted);
+        }
+
+        .file-selected-badge {
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin-top: 8px;
+            font-size: 13px;
+            color: #166534;
+            font-weight: 600;
+        }
+
+        .file-selected-badge.active {
+            display: flex;
+        }
+
+        .file-selected-badge i {
+            color: #16a34a;
+            margin-right: 6px;
+        }
+
+        /* Captcha Wrap */
+        .captcha-wrap {
+            margin: 16px 0;
+            display: flex;
+            justify-content: flex-start;
+        }
+
+        /* Submit Button */
+        .btn-submit {
+            width: 100%;
+            border: 0;
+            border-radius: var(--c-radius-sm);
+            padding: 13px 20px;
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: #ffffff;
+            font-family: inherit;
+            font-size: 15.5px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: var(--c-transition);
+            box-shadow: 0 8px 20px -2px rgba(37, 99, 235, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-submit:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px -2px rgba(37, 99, 235, 0.45);
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        /* 4. LEADERSHIP NOTE */
+        .director-quote-box {
+            background: linear-gradient(135deg, #091322 0%, #0f2244 100%);
+            border-radius: var(--c-radius);
+            padding: 36px 40px;
+            color: #ffffff;
+            box-shadow: var(--c-shadow);
             position: relative;
             overflow: hidden;
-            border-radius: 34px;
-            padding: 42px;
-            text-align: center;
-            background:
-                linear-gradient(180deg, rgba(255, 255, 255, .98), rgba(239, 246, 255, .98)),
-                radial-gradient(circle at 50% 0%, rgba(56, 189, 248, .20), transparent 36%);
-            border: 1px solid rgba(255, 255, 255, .72);
-            box-shadow: 0 34px 110px rgba(0, 0, 0, .35);
-            animation: careerPopIn .28s ease both;
         }
 
-        .career-success-card:before {
-            content: "";
+        .director-quote-box::before {
+            content: "“";
             position: absolute;
-            inset: 0 0 auto;
-            height: 8px;
-            background: linear-gradient(90deg, #22c55e, #38bdf8, #2563eb);
+            right: 28px;
+            bottom: -32px;
+            font-size: 130px;
+            font-family: Georgia, serif;
+            color: rgba(255, 255, 255, 0.05);
+            line-height: 1;
+            pointer-events: none;
         }
 
-        .career-success-icon {
-            width: 76px;
-            height: 76px;
-            margin: 0 auto 20px;
+        .director-quote-inner {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 28px;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .director-badge-circle {
+            width: 72px;
+            height: 72px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, #2563eb 0%, #38bdf8 100%);
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 24px;
+            font-size: 28px;
             color: #ffffff;
-            font-size: 34px;
-            background: linear-gradient(135deg, #22c55e, #16a34a);
-            box-shadow: 0 20px 42px rgba(34, 197, 94, .28);
+            box-shadow: 0 10px 20px rgba(37, 99, 235, 0.35);
         }
 
-        .career-success-kicker {
-            margin: 0 0 8px;
-            color: #2563eb;
-            font-size: 12px;
-            font-weight: 900;
-            letter-spacing: .14em;
-            text-transform: uppercase;
-        }
-
-        .career-success-card h2 {
+        .director-quote-content p {
             margin: 0 0 12px;
-            color: #0f172a !important;
-            font-size: clamp(28px, 4vw, 40px);
-            line-height: 1.1;
-            font-weight: 900;
-            letter-spacing: -1px;
-        }
-
-        .career-success-card p:not(.career-success-kicker) {
-            margin: 0 auto 26px;
-            color: #475569;
             font-size: 16px;
-            line-height: 1.75;
-            max-width: 440px;
+            line-height: 1.7;
+            color: #e2e8f0;
+            font-style: italic;
         }
 
-        .career-success-close {
+        .director-quote-author {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .director-quote-author strong {
+            font-size: 15px;
+            color: #ffffff;
+        }
+
+        .director-quote-author span {
+            font-size: 13px;
+            color: #93c5fd;
+        }
+
+        /* 5. SUCCESS POPUP OVERLAY */
+        .career-modal-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: rgba(15, 23, 42, 0.65);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        .career-modal-card {
+            background: #ffffff;
+            border-radius: var(--c-radius);
+            max-width: 480px;
+            width: 100%;
+            padding: 36px 30px;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.25);
+            border: 1px solid var(--c-border);
+            animation: modalScaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .career-modal-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: #dcfce7;
+            color: #16a34a;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            margin-bottom: 18px;
+        }
+
+        .career-modal-card h2 {
+            margin: 0 0 10px;
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--c-text-heading);
+        }
+
+        .career-modal-card p {
+            margin: 0 0 24px;
+            font-size: 14.5px;
+            color: var(--c-text-muted);
+            line-height: 1.6;
+        }
+
+        .career-modal-close {
             position: absolute;
             top: 14px;
             right: 14px;
-            width: 40px;
-            height: 40px;
-            border: 0;
+            width: 32px;
+            height: 32px;
             border-radius: 50%;
-            background: #eaf2ff;
-            color: #334155;
-            font-size: 24px;
-            line-height: 1;
-            cursor: pointer;
-        }
-
-        .career-success-btn {
             border: 0;
-            border-radius: 999px;
-            padding: 13px 24px;
-            color: #ffffff;
-            font-weight: 900;
-            background: linear-gradient(135deg, #2563eb, #38bdf8);
-            box-shadow: 0 16px 34px rgba(37, 99, 235, .25);
+            background: #f1f5f9;
+            color: #64748b;
+            font-size: 18px;
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--c-transition);
         }
 
-        .career-success-overlay.is-hiding {
-            animation: careerFadeOut .2s ease both;
+        .career-modal-close:hover {
+            background: #e2e8f0;
+            color: #0f172a;
         }
 
-        @keyframes careerFadeIn {
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes modalScaleUp {
             from {
                 opacity: 0;
+                transform: scale(0.94) translateY(10px);
             }
-
             to {
                 opacity: 1;
+                transform: scale(1) translateY(0);
             }
         }
 
-        @keyframes careerFadeOut {
-            from {
-                opacity: 1;
+        /* 6. RESPONSIVE BREAKPOINTS */
+        @media (max-width: 991px) {
+            .hero-layout,
+            .apply-layout {
+                grid-template-columns: 1fr;
+                gap: 34px;
             }
 
-            to {
-                opacity: 0;
-            }
-        }
-
-        @keyframes careerPopIn {
-            from {
-                opacity: 0;
-                transform: translateY(18px) scale(.96);
+            .career-hero {
+                padding: 135px 0 60px;
             }
 
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-        }
-
-        @media (max-width: 980px) {
-            .career-page .career-hero {
-                padding-top: 142px !important;
+            .career-section {
+                padding: 60px 0;
             }
 
-            .career-page .hero-grid {
-                grid-template-columns: 1fr !important;
-            }
-
-            .career-page .career-hero h1 {
-                letter-spacing: -2px !important;
+            .director-quote-inner {
+                grid-template-columns: 1fr;
+                text-align: center;
+                justify-items: center;
             }
         }
 
         @media (max-width: 640px) {
-            .career-page .career-hero {
-                padding: 126px 16px 78px !important;
+            .career-hero {
+                padding: 120px 0 50px;
             }
 
-            .career-page .career-container {
-                width: min(100% - 24px, 1180px) !important;
+            .career-container {
+                width: calc(100% - 28px);
             }
 
-            .career-page .career-hero h1 {
-                font-size: clamp(38px, 12vw, 54px) !important;
-                letter-spacing: -1.4px !important;
+            .form-grid-2,
+            .hero-feature-grid,
+            .email-input-group {
+                grid-template-columns: 1fr;
+                flex-direction: column;
             }
 
-            .career-page .hero-actions {
-                gap: 10px !important;
+            .apply-form-card {
+                padding: 24px 18px;
             }
 
-            .career-page .career-btn {
+            .hero-cta-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .btn-modern {
                 width: 100%;
             }
 
-            .career-success-card {
-                padding: 34px 22px 28px;
-                border-radius: 26px;
+            .director-quote-box {
+                padding: 26px 20px;
             }
         }
     </style>
+</head>
 
-    <div class="career-page">
+<body id="home" data-spy="scroll" data-target="#navbar-wd" data-offset="98">
+    <?php include './headerSource.php'; ?>
+
+    <div class="career-wrap">
         <?php if ($successApplicant !== ''): ?>
             <?php $safeApplicantName = htmlspecialchars($successApplicant, ENT_QUOTES, 'UTF-8'); ?>
-            <div class="career-success-overlay" id="careerSuccessMessage" role="dialog" aria-modal="true"
-                aria-labelledby="careerSuccessTitle">
-                <div class="career-success-card">
-                    <button class="career-success-close" type="button" data-career-success-close
-                        aria-label="Close message">&times;</button>
-                    <div class="career-success-icon"><i class="fa-solid fa-check"></i></div>
-                    <p class="career-success-kicker">Application submitted</p>
-                    <h2 id="careerSuccessTitle">Thank you, <?php echo $safeApplicantName; ?>!</h2>
-                    <p>We have received your job application. Our hiring team will review it, and if your expertise matches
-                        our requirement, we will contact you shortly.</p>
-                    <button class="career-success-btn" type="button" data-career-success-close>Continue</button>
+            <div class="career-modal-backdrop" id="careerSuccessModal" role="dialog" aria-modal="true" aria-labelledby="careerSuccessTitle">
+                <div class="career-modal-card">
+                    <button class="career-modal-close" type="button" data-modal-close aria-label="Close dialog">&times;</button>
+                    <div class="career-modal-icon"><i class="fa-solid fa-circle-check"></i></div>
+                    <h2 id="careerSuccessTitle">Application Received</h2>
+                    <p>Thank you, <strong><?php echo $safeApplicantName; ?></strong>. We have received your profile. Our assessment and technical onboarding team will review your credentials and get in touch shortly.</p>
+                    <button class="btn-modern primary" type="button" data-modal-close style="width: 100%;">Done</button>
                 </div>
             </div>
         <?php endif; ?>
 
+        <!-- HERO SECTION -->
         <section class="career-hero">
-            <div class="career-container hero-grid">
-                <div>
-                    <span class="eyebrow"><i class="fa-solid fa-briefcase"></i> Careers at AITF</span>
-                    <h1>Build a career that raises standards.</h1>
-                    <p>Join a purpose-driven team helping organizations improve quality, compliance, safety and
-                        performance through professional assessment and certification services.</p>
-                    <div class="hero-actions">
-                        <a class="career-btn primary" href="#apply-now"><i class="fa-solid fa-paper-plane"></i> Apply
-                            Now</a>
-                        <a class="career-btn secondary" href="#why-work"><i class="fa-solid fa-circle-info"></i> Why
-                            Work With Us?</a>
+            <div class="career-container hero-layout">
+                <div class="hero-content">
+                    <span class="career-pill light"><i class="fa-solid fa-briefcase"></i> Careers at AITF</span>
+                    <h1>Shape the Future of <span>Quality & Assessment</span></h1>
+                    <p>Join a accredited certification and assessment body. Work alongside experienced lead auditors and technical experts conducting independent assessments and evaluations across national and international standards.</p>
+                    <div class="hero-cta-group">
+                        <a class="btn-modern primary" href="#apply-for-job"><i class="fa-solid fa-paper-plane"></i> Apply for Job</a>
+                        <a class="btn-modern glass" href="#why-aitf"><i class="fa-solid fa-circle-info"></i> Why Work With Us</a>
                     </div>
                 </div>
-                <div class="hero-card">
-                    <h3>Grow with meaningful work</h3>
-                    <div class="hero-stat-grid">
-                        <div class="hero-stat"><strong>Audit</strong><span>Professional assignments</span></div>
-                        <div class="hero-stat"><strong>Learn</strong><span>Continuous improvement</span></div>
-                        <div class="hero-stat"><strong>Impact</strong><span>Real client outcomes</span></div>
-                        <div class="hero-stat"><strong>Lead</strong><span>Future-ready expertise</span></div>
+
+                <div class="hero-feature-card">
+                    <h3><i class="fa-solid fa-compass"></i> Why Build Your Career Here</h3>
+                    <div class="hero-feature-grid">
+                        <div class="hero-feature-item">
+                            <i class="fa-solid fa-graduation-cap"></i>
+                            <strong>Training</strong>
+                            <span>Continuous technical training to grow your auditing skills</span>
+                        </div>
+                        <div class="hero-feature-item">
+                            <i class="fa-solid fa-user-tie"></i>
+                            <strong>Qualified Auditors</strong>
+                            <span>Work alongside experienced & qualified auditors</span>
+                        </div>
+                        <div class="hero-feature-item">
+                            <i class="fa-solid fa-globe"></i>
+                            <strong>Global Standards</strong>
+                            <span>Assessments on ISO 9001, 14001, 45001 </span>
+                        </div>
+                        <div class="hero-feature-item">
+                            <i class="fa-solid fa-shield-halved"></i>
+                            <strong>Societal Value</strong>
+                            <span>Contribute to society by establishing compliance & safety</span>
+                        </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <section class="section career-clean-section" id="why-work">
+        <!-- VALUE PILLARS SECTION -->
+        <section class="career-section alt-bg" id="why-aitf">
             <div class="career-container">
                 <div class="career-section-header">
-                    <span class="career-section-kicker"><i class="fa-solid fa-circle-check"></i> Why Work With
-                        Us?</span>
-                    <h2>A clear path to learn, grow and create meaningful impact.</h2>
-                    <p>AITF gives professionals a practical platform to build technical expertise, work with diverse
-                        industries and contribute to reliable certification outcomes.</p>
+                    <span class="career-pill primary"><i class="fa-solid fa-sparkles"></i> Professional Environment</span>
+                    <h2>Build Your Auditing Career with AITF</h2>
+                    <p>Gain structured training, work alongside qualified lead auditors, and assess international standards to establish compliance and safety for society.</p>
                 </div>
-                <div class="why-grid">
-                    <div class="feature-card">
-                        <div class="feature-icon"><i class="fa-solid fa-chart-line"></i></div>
-                        <h3>Career Growth</h3>
-                        <p>Develop assessment, auditing and client-handling skills through real assignments, senior
-                            guidance and continuous learning.</p>
+
+                <div class="values-grid">
+                    <div class="value-card">
+                        <div class="value-icon"><i class="fa-solid fa-graduation-cap"></i></div>
+                        <h3>Auditor Training & Skill Development</h3>
+                        <p>Receive comprehensive and structured training programs to continuously develop your auditing competence and advance your career in management system assessments.</p>
                     </div>
-                    <div class="feature-card">
-                        <div class="feature-icon"><i class="fa-solid fa-handshake"></i></div>
-                        <h3>Supportive Team</h3>
-                        <p>Work with a collaborative team that values fairness, knowledge sharing, disciplined execution
-                            and professional integrity.</p>
+
+                    <div class="value-card">
+                        <div class="value-icon"><i class="fa-solid fa-user-tie"></i></div>
+                        <h3>Work with Qualified Lead Auditors</h3>
+                        <p>Get the opportunity to work alongside highly qualified lead auditors and learn practical, on-field assessment and evaluation methodologies.</p>
                     </div>
-                    <div class="feature-card">
-                        <div class="feature-icon"><i class="fa-solid fa-shield-halved"></i></div>
-                        <h3>Trusted Work</h3>
-                        <p>Contribute to transparent, impartial and value-added assessments for organizations across
-                            different sectors.</p>
+
+                    <div class="value-card">
+                        <div class="value-icon"><i class="fa-solid fa-globe"></i></div>
+                        <h3>Internationally Recognized Standards</h3>
+                        <p>Perform impartial assessments across global ISO frameworks including ISO 9001, ISO 14001, ISO 45001.</p>
+                    </div>
+
+                    <div class="value-card">
+                        <div class="value-icon"><i class="fa-solid fa-shield-halved"></i></div>
+                        <h3>Contribute to Society & Compliance</h3>
+                        <p>Make a meaningful impact by assessing organizations and establishing safety, environmental, and quality compliance benchmarks for society.</p>
                     </div>
                 </div>
             </div>
         </section>
 
-        <section class="section impact-section">
-            <div class="career-container impact-card">
-                <div>
-                    <span class="eyebrow"><i class="fa-solid fa-bolt"></i> Ready to make an impact?</span>
-                    <h2>Your expertise can improve businesses.</h2>
-                    <p>Every audit, review and client interaction is an opportunity to achieve organizations toward
-                        stronger systems, safer workplaces and better outcomes.</p>
-                </div>
-                <div class="impact-list">
-                    <div><i class="fa-solid fa-check"></i> Value added assessments to improve the management system
-                        performance.</div>
-                    <div><i class="fa-solid fa-check"></i> Build confidence through accredited assessment.</div>
-                    <div><i class="fa-solid fa-check"></i> Be part of a team committed to continual improvement.</div>
-                </div>
-            </div>
-        </section>
+        <!-- DIRECT APPLICATION FORM SECTION ("APPLY FOR JOB") -->
+        <section class="career-section" id="apply-for-job">
+            <div class="career-container apply-layout">
+                <!-- Sidebar Guidelines -->
+                <div class="apply-sidebar">
+                    <span class="career-pill primary"><i class="fa-solid fa-file-signature"></i> Career Portal</span>
+                    <h3>Apply for Job</h3>
+                    <p>Join our team of qualified auditors and technical assessors. Submit your application below with verified contact details.</p>
 
-        <section class="section career-clean-section alt">
-            <div class="career-container">
-                <div class="career-section-header">
-                    <span class="career-section-kicker"><i class="fa-solid fa-heart"></i> Why You'll Love Working
-                        Here</span>
-                    <h2>Professional environment, practical learning and meaningful responsibility.</h2>
-                    <p>You will work in a focused environment where learning is practical, responsibilities are clear
-                        and every contribution supports better client outcomes.</p>
-                </div>
-                <div class="love-grid">
-                    <div class="feature-card">
-                        <div class="feature-icon"><i class="fa-solid fa-graduation-cap"></i></div>
-                        <h3>Learning Culture</h3>
-                        <p>Stay updated with standards, processes and industry best practices while applying them in
-                            day-to-day work.</p>
+                    <div class="process-steps">
+                        <div class="step-item">
+                            <div class="step-num">1</div>
+                            <div class="step-text">
+                                <strong>Basic Info & Qualification</strong>
+                                <span>Fill your contact info and select your educational background.</span>
+                            </div>
+                        </div>
+                        <div class="step-item">
+                            <div class="step-num">2</div>
+                            <div class="step-text">
+                                <strong>Attach Resume (PDF)</strong>
+                                <span>Upload your updated CV / Resume showing your credentials.</span>
+                            </div>
+                        </div>
+                        <div class="step-item">
+                            <div class="step-num">3</div>
+                            <div class="step-text">
+                                <strong>Email OTP Verification</strong>
+                                <span>Verify your email with a 6-digit code to validate your submission.</span>
+                            </div>
+                        </div>
+                        <div class="step-item">
+                            <div class="step-num">4</div>
+                            <div class="step-text">
+                                <strong>Evaluation & Onboarding</strong>
+                                <span>Our technical committee reviews your profile for scheduling.</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="feature-card">
-                        <div class="feature-icon"><i class="fa-solid fa-compass"></i></div>
-                        <h3>Clear Purpose</h3>
-                        <p>Work on assignments that support organizational excellence, stronger systems and continual
-                            improvement.</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon"><i class="fa-solid fa-people-group"></i></div>
-                        <h3>Respect & Ownership</h3>
-                        <p>Take responsibility with confidence in a respectful team culture that encourages disciplined
-                            decision-making.</p>
-                    </div>
-                </div>
-            </div>
-        </section>
 
-        <section class="section" style="background: #ffffff;">
-            <div class="career-container director-wrap">
-                <div class="director-card">
-                    <div class="director-avatar"><i class="fa-solid fa-user-tie"></i></div>
-                    <h3>Message from our Managing Director</h3>
-                    <span>AITF Management Certification</span>
-                </div>
-                <div class="director-message">
-                    <p style="color: #1e293b; font-size: 17px; line-height: 1.8; font-weight: 500;">At AITF, we believe
-                        that great organizations are built by people who are curious, disciplined and committed to doing
-                        the right thing. If you have the passion to learn and the courage to take responsibility, this
-                        is a place where your work will matter.</p>
-                    <p style="color: #1e293b; font-size: 17px; line-height: 1.8; font-weight: 500;">We welcome
-                        professionals who want to grow with integrity, serve clients with excellence and contribute to a
-                        stronger culture of quality and compliance. Your knowledge can create real impact, and we are
-                        ready to support your journey.</p>
-                    <p style="color: #0f172a; font-size: 17px; line-height: 1.8; font-weight: 500;"><strong
-                            style="color: #0f172a;">Come prepared to learn, contribute and lead. Together, we can build
-                            trust and raise standards.</strong></p>
-                </div>
-            </div>
-        </section>
-
-        <section class="section apply-section" id="apply-now">
-            <div class="career-container apply-grid">
-                <div class="apply-info">
-                    <h2>Apply for open roles</h2>
-                    <p>Share your details and our hiring team will review your application. If your expertise matches
-                        our requirement, we will contact you shortly.</p>
-                    <div>
-                        <span class="role-pill"><i class="fa-solid fa-clipboard-check"></i> Auditor</span>
-                        <span class="role-pill"><i class="fa-solid fa-person-chalkboard"></i> Facilitator</span>
-                    </div>
-                </div>
-                <div class="career-form-card">
-                    <div class="form-heading">
-                        <span class="form-heading-icon"><i class="fa-solid fa-file-signature"></i></span>
+                    <div class="apply-help-card">
+                        <i class="fa-solid fa-circle-question"></i>
                         <div>
-                            <h3>Start your application</h3>
-                            <p>Fill in your details below. We’ll review your profile and get back to you for suitable
-                                roles.</p>
+                            Need assistance with your application?<br>
+                            Email us at <a href="mailto:certification@aitf.co.in">certification@aitf.co.in</a>
                         </div>
                     </div>
+                </div>
+
+                <!-- Form Card -->
+                <div class="apply-form-card">
+                    <div class="form-heading">
+                        <h3>Apply for Job</h3>
+                        <p>Please enter your information accurately. All fields marked with * are required.</p>
+                    </div>
+
                     <?php if ($errorMessage !== ''): ?>
-                        <div class="form-alert"><?php echo htmlspecialchars($errorMessage, ENT_QUOTES, 'UTF-8'); ?></div>
+                        <div class="form-alert">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                            <span><?php echo htmlspecialchars($errorMessage, ENT_QUOTES, 'UTF-8'); ?></span>
+                        </div>
                     <?php endif; ?>
-                    <form id="careerApplicationForm" action="submitJobApplication.php" method="post" autocomplete="on">
-                        <div class="field">
-                            <label for="applicant_name">Applicant Name</label>
-                            <input type="text" id="applicant_name" name="applicant_name"
-                                placeholder="Enter your full name" required>
-                        </div>
-                        <div class="form-row">
-                            <div class="field">
-                                <label for="email">Mail ID</label>
-                                <input type="email" id="email" name="email" placeholder="name@example.com" required>
+
+                    <form id="careerApplicationForm" action="submitJobApplication.php" method="post" enctype="multipart/form-data" autocomplete="on">
+                        <!-- Full Name & Mobile Number -->
+                        <div class="form-grid-2">
+                            <div class="form-group">
+                                <label class="form-label" for="applicant_name">Full Name <span class="req">*</span></label>
+                                <div class="input-wrap">
+                                    <i class="fa-solid fa-user input-icon"></i>
+                                    <input type="text" class="form-input" id="applicant_name" name="applicant_name" placeholder="e.g. Rahul Sharma" required>
+                                </div>
                             </div>
-                            <div class="field">
-                                <label for="contact_no">Contact No.</label>
-                                <input type="tel" id="contact_no" name="contact_no" placeholder="10 digit mobile number"
-                                    required>
+                            <div class="form-group">
+                                <label class="form-label" for="contact_no">Mobile Number <span class="req">*</span></label>
+                                <div class="input-wrap">
+                                    <i class="fa-solid fa-phone input-icon"></i>
+                                    <input type="tel" class="form-input" id="contact_no" name="contact_no" placeholder="10-digit mobile number" required>
+                                </div>
                             </div>
-                        </div>
-                        <div class="field">
-                            <label for="apply_for">Attach Your CV Here</label>
-                            <input type="file" id="cv_file" name="cv_file" accept=".pdf,.doc,.docx" required
-                                style="padding: 18px 15px;">
-                        </div>
-                        <div class="field">
-                            <label for="message">Short Message <span
-                                    style="color:#64748b; text-transform:none; font-weight:600; font-size: 12px;">(optional)</span></label>
-                            <textarea id="message" name="message"
-                                placeholder="Tell us briefly about your expertise or experience"
-                                style="font-size: 15px;"></textarea>
                         </div>
 
+                        <!-- Qualification Selection -->
+                        <div class="form-group">
+                            <label class="form-label">Highest Qualification <span class="req">*</span></label>
+                            <div class="qualification-grid">
+                                <label class="qualification-pill" id="qualPillGrad">
+                                    <input type="radio" name="qualification" value="Graduate" required onchange="handleQualificationChange(this)">
+                                    <span>Graduate</span>
+                                </label>
+                                <label class="qualification-pill" id="qualPillPG">
+                                    <input type="radio" name="qualification" value="Post Graduate" onchange="handleQualificationChange(this)">
+                                    <span>Post Graduate</span>
+                                </label>
+                                <label class="qualification-pill" id="qualPillDip">
+                                    <input type="radio" name="qualification" value="Diploma" onchange="handleQualificationChange(this)">
+                                    <span>Diploma</span>
+                                </label>
+                                <label class="qualification-pill" id="qualPillOther">
+                                    <input type="radio" name="qualification" value="Any other relevant" onchange="handleQualificationChange(this)">
+                                    <span>Any other relevant</span>
+                                </label>
+                            </div>
+                            <div class="other-qualification-input" id="otherQualBox">
+                                <input type="text" class="form-input" id="qualification_other" name="qualification_other" placeholder="Please specify your degree / certification...">
+                            </div>
+                        </div>
+
+                        <!-- Role / Area of Interest -->
+                        <div class="form-group">
+                            <label class="form-label" for="apply_for">Applying For Position <span class="req">*</span></label>
+                            <div class="input-wrap">
+                                <i class="fa-solid fa-briefcase input-icon"></i>
+                                <select class="form-select" id="apply_for" name="apply_for" required>
+                                    <option value="" disabled selected>Select Position...</option>
+                                    <option value="Auditor">Auditor / Lead Auditor</option>
+                                    <option value="Facilitator">Technical Facilitator / Trainer</option>
+                                    <option value="Quality Assessor">Quality Assessor / Technical Reviewer</option>
+                                    <option value="General Application">General Assessment / Empanelment</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Resume Upload Custom Widget -->
+                        <div class="form-group">
+                            <label class="form-label" for="resume_file">Attach Your CV <span class="req">*</span></label>
+                            <div class="file-dropzone" id="fileDropzone">
+                                <input type="file" id="resume_file" name="resume" accept=".pdf" required onchange="handleFileSelect(this)">
+                                <div class="file-dropzone-content" id="dropzonePrompt">
+                                    <i class="fa-solid fa-cloud-arrow-up file-dropzone-icon"></i>
+                                    <span class="file-dropzone-title">Click to upload or drag & drop CV</span>
+                                    <span class="file-dropzone-hint">PDF format only (Maximum file size: 5MB)</span>
+                                </div>
+                            </div>
+                            <div class="file-selected-badge" id="fileSelectedBadge">
+                                <div><i class="fa-solid fa-file-pdf"></i> <span id="fileNameDisplay">file.pdf</span></div>
+                                <span id="fileSizeDisplay" style="color: #64748b; font-size: 12px;"></span>
+                            </div>
+                        </div>
+
+                        <!-- Short Message / Experience -->
+                        <div class="form-group">
+                            <label class="form-label" for="message">Short Message / Key Competencies <span class="opt">(Optional)</span></label>
+                            <textarea class="form-textarea" id="message" name="message" placeholder="Briefly mention your standard qualifications (e.g. Lead Auditor ISO 9001), total years of experience, or industry sectors..."></textarea>
+                        </div>
+
+                        <!-- Email & OTP Verification Box -->
+                        <div class="email-otp-box">
+                            <label class="form-label" for="email">Email Address (Verification Required) <span class="req">*</span></label>
+                            <div class="email-input-group">
+                                <div class="input-wrap">
+                                    <i class="fa-solid fa-envelope input-icon"></i>
+                                    <input type="email" class="form-input" id="email" name="email" placeholder="name@example.com" required oninput="handleEmailInput()">
+                                </div>
+                                <button class="btn-send-otp" id="btnSendOtp" type="button" onclick="sendEmailOtp()">
+                                    <i class="fa-solid fa-key"></i> <span id="btnOtpText">Send OTP</span>
+                                </button>
+                            </div>
+
+                            <!-- OTP Enter Row -->
+                            <div class="otp-verify-row" id="otpVerifyRow">
+                                <label class="form-label" for="email_otp">Enter 6-Digit OTP received on email <span class="req">*</span></label>
+                                <div class="otp-inputs-flex">
+                                    <input type="text" class="form-input otp-code-input" id="email_otp" name="email_otp" maxlength="6" placeholder="------" autocomplete="one-time-code">
+                                    <button class="btn-verify-otp" id="btnVerifyOtp" type="button" onclick="verifyEmailOtp()">Verify OTP</button>
+                                </div>
+                                <div id="otpCountdownText" style="font-size: 12px; color: #64748b; margin-top: 6px;"></div>
+                            </div>
+
+                            <div id="otpFeedbackMsg" class="otp-status-msg" style="display: none;"></div>
+
+                            <div id="emailVerifiedBadge" class="verified-badge" style="display: none;">
+                                <i class="fa-solid fa-circle-check"></i> Email Verified Successfully
+                            </div>
+                        </div>
+
+                        <!-- Captcha -->
                         <?php if ($turnstileReady): ?>
-                            <div class="captcha-box">
+                            <div class="captcha-wrap">
                                 <div class="cf-turnstile"
                                     data-sitekey="<?php echo htmlspecialchars($turnstileConfig['site_key'], ENT_QUOTES, 'UTF-8'); ?>"
                                     data-callback="enableSubmitBtn"
@@ -1364,10 +1404,32 @@ $successApplicant = isset($_GET['success']) && $_GET['success'] == '1' ? trim($_
                             </div>
                         <?php endif; ?>
 
-                        <button class="submit-btn" id="submitBtn" type="submit" <?php if ($turnstileReady): ?>disabled<?php endif; ?>
-                            style="<?php if ($turnstileReady): ?>opacity: 0.5; cursor: not-allowed;<?php endif; ?>"><i
-                                class="fa-solid fa-paper-plane"></i> Submit Application</button>
+                        <!-- Submit Button (Disabled until OTP verified) -->
+                        <button class="btn-submit" id="submitBtn" type="submit" disabled style="opacity: 0.6; cursor: not-allowed;">
+                            <i class="fa-solid fa-paper-plane"></i> Submit Job Application
+                        </button>
+                        <div id="submitNotice" style="font-size: 12px; color: #64748b; text-align: center; margin-top: 8px;">
+                            <i class="fa-solid fa-shield-halved"></i> Please verify your email with OTP to enable submission.
+                        </div>
                     </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- LEADERSHIP MESSAGE SECTION -->
+        <section class="career-section alt-bg" style="padding-top: 20px; padding-bottom: 50px;">
+            <div class="career-container">
+                <div class="director-quote-box">
+                    <div class="director-quote-inner">
+                        <div class="director-badge-circle"><i class="fa-solid fa-user-tie"></i></div>
+                        <div class="director-quote-content">
+                            <p>"At AITF, we believe that credible certifications are built by auditors and assessors who are impartial, disciplined, and committed to professional integrity. If you bring the dedication to evaluate organisations and uphold standard requirements, you will find here a platform that values your technical expertise."</p>
+                            <div class="director-quote-author">
+                                <strong>Managing Director</strong>
+                                <span>AITF Management Certification</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -1375,40 +1437,36 @@ $successApplicant = isset($_GET['success']) && $_GET['success'] == '1' ? trim($_
 
     <?php include './footerSource.php'; ?>
 
+    <!-- Modal Success Script -->
     <?php if ($successApplicant !== ''): ?>
         <script>
             document.addEventListener('DOMContentLoaded', function () {
-                var successMessage = document.getElementById('careerSuccessMessage');
-                var closeButtons = document.querySelectorAll('[data-career-success-close]');
+                var modal = document.getElementById('careerSuccessModal');
+                var closeBtns = document.querySelectorAll('[data-modal-close]');
 
-                function closeSuccessMessage() {
-                    if (!successMessage) {
-                        return;
-                    }
-                    successMessage.classList.add('is-hiding');
-                    window.setTimeout(function () {
-                        if (successMessage && successMessage.parentNode) {
-                            successMessage.parentNode.removeChild(successMessage);
+                function closeModal() {
+                    if (!modal) return;
+                    modal.style.opacity = '0';
+                    modal.style.transition = 'opacity 0.2s ease';
+                    setTimeout(function () {
+                        if (modal && modal.parentNode) {
+                            modal.parentNode.removeChild(modal);
                         }
                     }, 200);
                 }
 
-                closeButtons.forEach(function (button) {
-                    button.addEventListener('click', closeSuccessMessage);
+                closeBtns.forEach(function (btn) {
+                    btn.addEventListener('click', closeModal);
                 });
 
-                if (successMessage) {
-                    successMessage.addEventListener('click', function (event) {
-                        if (event.target === successMessage) {
-                            closeSuccessMessage();
-                        }
+                if (modal) {
+                    modal.addEventListener('click', function (e) {
+                        if (e.target === modal) closeModal();
                     });
                 }
 
-                document.addEventListener('keydown', function (event) {
-                    if (event.key === 'Escape') {
-                        closeSuccessMessage();
-                    }
+                document.addEventListener('keydown', function (e) {
+                    if (e.key === 'Escape') closeModal();
                 });
 
                 if (window.history && window.history.replaceState) {
@@ -1419,24 +1477,226 @@ $successApplicant = isset($_GET['success']) && $_GET['success'] == '1' ? trim($_
     <?php endif; ?>
 
     <script>
-        // Enable submit button after captcha verification
-        function enableSubmitBtn() {
-            var submitBtn = document.getElementById('submitBtn');
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.style.opacity = '1';
-                submitBtn.style.cursor = 'pointer';
+        var isEmailVerified = false;
+        var otpTimerInterval = null;
+        var verifiedEmailAddress = '';
+
+        // Qualification Radio Pills
+        function handleQualificationChange(radio) {
+            var pills = document.querySelectorAll('.qualification-pill');
+            pills.forEach(function (pill) {
+                pill.classList.remove('active');
+            });
+            if (radio && radio.parentElement) {
+                radio.parentElement.classList.add('active');
+            }
+
+            var otherBox = document.getElementById('otherQualBox');
+            var otherInput = document.getElementById('qualification_other');
+            if (radio.value === 'Any other relevant') {
+                otherBox.classList.add('show');
+                if (otherInput) otherInput.focus();
+            } else {
+                otherBox.classList.remove('show');
             }
         }
 
-        function disableSubmitBtn() {
-            var submitBtn = document.getElementById('submitBtn');
-            if (submitBtn) {
-                submitBtn.disabled = true;
-                submitBtn.style.opacity = '0.5';
-                submitBtn.style.cursor = 'not-allowed';
+        // File upload feedback
+        function handleFileSelect(input) {
+            var badge = document.getElementById('fileSelectedBadge');
+            var nameDisplay = document.getElementById('fileNameDisplay');
+            var sizeDisplay = document.getElementById('fileSizeDisplay');
+            var dropzone = document.getElementById('fileDropzone');
+
+            if (input.files && input.files[0]) {
+                var file = input.files[0];
+                if (!file.name.toLowerCase().endsWith('.pdf')) {
+                    alert('Please select a PDF format resume.');
+                    input.value = '';
+                    if (badge) badge.classList.remove('active');
+                    return;
+                }
+                var sizeKb = Math.round(file.size / 1024);
+                var sizeText = sizeKb > 1024 ? (sizeKb / 1024).toFixed(1) + ' MB' : sizeKb + ' KB';
+
+                if (nameDisplay) nameDisplay.textContent = file.name;
+                if (sizeDisplay) sizeDisplay.textContent = '(' + sizeText + ')';
+                if (badge) badge.classList.add('active');
+                if (dropzone) dropzone.style.borderColor = '#16a34a';
+            } else {
+                if (badge) badge.classList.remove('active');
+                if (dropzone) dropzone.style.borderColor = '';
             }
         }
+
+        // Email input change reset
+        function handleEmailInput() {
+            var emailInput = document.getElementById('email');
+            if (isEmailVerified && emailInput.value.trim().toLowerCase() !== verifiedEmailAddress) {
+                isEmailVerified = false;
+                document.getElementById('emailVerifiedBadge').style.display = 'none';
+                document.getElementById('otpVerifyRow').classList.remove('show');
+                document.getElementById('btnSendOtp').disabled = false;
+                document.getElementById('btnOtpText').textContent = 'Send OTP';
+                updateSubmitButtonState();
+            }
+        }
+
+        // Send OTP
+        function sendEmailOtp() {
+            var emailInput = document.getElementById('email');
+            var email = emailInput ? emailInput.value.trim() : '';
+            var btnSend = document.getElementById('btnSendOtp');
+            var feedback = document.getElementById('otpFeedbackMsg');
+            var otpRow = document.getElementById('otpVerifyRow');
+
+            if (!email || email.indexOf('@') === -1 || email.indexOf('.') === -1) {
+                showFeedback('Please enter a valid email address first.', 'error');
+                if (emailInput) emailInput.focus();
+                return;
+            }
+
+            btnSend.disabled = true;
+            btnSend.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending...';
+            showFeedback('Sending verification OTP to ' + email + '...', 'info');
+
+            var formData = new FormData();
+            formData.append('action', 'send_otp');
+            formData.append('email', email);
+
+            fetch('sendCareerOtp.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+                if (data.status === 'ok') {
+                    showFeedback(data.message, 'success');
+                    otpRow.classList.add('show');
+                    document.getElementById('email_otp').focus();
+                    startOtpCountdown(60);
+                } else {
+                    showFeedback(data.message || 'Error sending OTP. Please try again.', 'error');
+                    btnSend.disabled = false;
+                    btnSend.innerHTML = '<i class="fa-solid fa-key"></i> Resend OTP';
+                }
+            })
+            .catch(function (err) {
+                showFeedback('Network error. Please try again.', 'error');
+                btnSend.disabled = false;
+                btnSend.innerHTML = '<i class="fa-solid fa-key"></i> Send OTP';
+            });
+        }
+
+        // Verify OTP
+        function verifyEmailOtp() {
+            var email = document.getElementById('email').value.trim();
+            var otpInput = document.getElementById('email_otp');
+            var otp = otpInput ? otpInput.value.trim() : '';
+            var btnVerify = document.getElementById('btnVerifyOtp');
+
+            if (!otp || otp.length < 4) {
+                showFeedback('Please enter the 6-digit OTP code received on email.', 'error');
+                if (otpInput) otpInput.focus();
+                return;
+            }
+
+            btnVerify.disabled = true;
+            btnVerify.textContent = 'Verifying...';
+
+            var formData = new FormData();
+            formData.append('action', 'verify_otp');
+            formData.append('email', email);
+            formData.append('otp', otp);
+
+            fetch('sendCareerOtp.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+                btnVerify.disabled = false;
+                btnVerify.textContent = 'Verify OTP';
+
+                if (data.status === 'ok') {
+                    isEmailVerified = true;
+                    verifiedEmailAddress = email.toLowerCase();
+                    showFeedback('Email address verified successfully!', 'success');
+                    document.getElementById('otpVerifyRow').classList.remove('show');
+                    document.getElementById('emailVerifiedBadge').style.display = 'inline-flex';
+                    document.getElementById('btnSendOtp').style.display = 'none';
+                    if (otpTimerInterval) clearInterval(otpTimerInterval);
+                    document.getElementById('otpCountdownText').textContent = '';
+                    updateSubmitButtonState();
+                } else {
+                    showFeedback(data.message || 'Invalid verification code.', 'error');
+                }
+            })
+            .catch(function (err) {
+                btnVerify.disabled = false;
+                btnVerify.textContent = 'Verify OTP';
+                showFeedback('Verification error. Please try again.', 'error');
+            });
+        }
+
+        function showFeedback(msg, type) {
+            var fb = document.getElementById('otpFeedbackMsg');
+            if (!fb) return;
+            fb.style.display = 'flex';
+            fb.className = 'otp-status-msg ' + type;
+            var icon = type === 'success' ? '<i class="fa-solid fa-circle-check"></i>' : (type === 'error' ? '<i class="fa-solid fa-triangle-exclamation"></i>' : '<i class="fa-solid fa-info-circle"></i>');
+            fb.innerHTML = icon + ' ' + msg;
+        }
+
+        function startOtpCountdown(seconds) {
+            var countdownText = document.getElementById('otpCountdownText');
+            var btnSend = document.getElementById('btnSendOtp');
+            var remaining = seconds;
+
+            if (otpTimerInterval) clearInterval(otpTimerInterval);
+
+            btnSend.disabled = true;
+            btnSend.innerHTML = '<i class="fa-solid fa-clock"></i> Wait ' + remaining + 's';
+
+            otpTimerInterval = setInterval(function () {
+                remaining--;
+                if (remaining > 0) {
+                    btnSend.innerHTML = '<i class="fa-solid fa-clock"></i> Wait ' + remaining + 's';
+                    countdownText.textContent = 'You can request a new code in ' + remaining + ' seconds.';
+                } else {
+                    clearInterval(otpTimerInterval);
+                    btnSend.disabled = false;
+                    btnSend.innerHTML = '<i class="fa-solid fa-rotate-right"></i> Resend OTP';
+                    countdownText.textContent = '';
+                }
+            }, 1000);
+        }
+
+        function updateSubmitButtonState() {
+            var submitBtn = document.getElementById('submitBtn');
+            var notice = document.getElementById('submitNotice');
+            if (isEmailVerified) {
+                submitBtn.disabled = false;
+                submitBtn.style.opacity = '1';
+                submitBtn.style.cursor = 'pointer';
+                if (notice) notice.innerHTML = '<span style="color:#16a34a; font-weight:600;"><i class="fa-solid fa-check"></i> Verified. You can now submit your application.</span>';
+            } else {
+                submitBtn.disabled = true;
+                submitBtn.style.opacity = '0.6';
+                submitBtn.style.cursor = 'not-allowed';
+                if (notice) notice.innerHTML = '<i class="fa-solid fa-shield-halved"></i> Please verify your email with OTP to enable submission.';
+            }
+        }
+
+        // Form submission safety check
+        document.getElementById('careerApplicationForm').addEventListener('submit', function (e) {
+            if (!isEmailVerified) {
+                e.preventDefault();
+                alert('Please verify your email address using the OTP before submitting.');
+                document.getElementById('email').focus();
+            }
+        });
     </script>
+</body>
 
 </html>

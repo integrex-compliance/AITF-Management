@@ -746,15 +746,8 @@ $pageIdentifier = "Information Updation Form";
     <div class="info-update-wrapper" style="margin-top: 100px; margin-bottom: 50px;">
         <div class="info-update-card">
             <div class="info-update-header">
-                <div style="display:flex; align-items:center; gap:14px; justify-content:center; flex-wrap:wrap;">
-                    <div style="flex:0 0 auto;">
-                        <img src="images/aitf.jpg" alt="AITF" style="height:58px; width:auto; display:block;">
-                    </div>
-                    <div style="flex:1 1 520px; min-width: 260px;">
-                        <h3 style="margin:0;">AITF MANAGEMENT CERTIFICATION LIMITED</h3>
-                        <p style="margin:6px 0 0 0; text-decoration: underline;">INFORMATION UPDATION FORM</p>
-                    </div>
-                </div>
+                <h3 style="margin: 0 0 6px 0;">AITF MANAGEMENT CERTIFICATION LIMITED</h3>
+                <p style="margin: 0 0 14px 0; text-decoration: underline; font-weight: 700;">INFORMATION UPDATION FORM</p>
                 <table class="doc-meta">
                     <tr>
                         <td style="width:25%;">Form No. F 7.31</td>

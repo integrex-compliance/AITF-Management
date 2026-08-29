@@ -2,6 +2,11 @@
 include 'dbConnect.php';
 date_default_timezone_set('Asia/Kolkata');
 
+require_once __DIR__ . '/include/session_helper.php';
+aitf_start_session();
+
+require_once __DIR__ . '/include/job_mailer_helper.php';
+
 $turnstileHelperPath = __DIR__ . '/include/turnstile_helper.php';
 if (file_exists($turnstileHelperPath)) {
     require_once $turnstileHelperPath;
@@ -24,6 +29,7 @@ function ensureJobApplicationsTable($db)
         full_name VARCHAR(255) NOT NULL,
         email VARCHAR(255) NOT NULL,
         contact_no VARCHAR(20) NOT NULL,
+        qualification VARCHAR(255) NULL,
         apply_for VARCHAR(80) NULL,
         message TEXT,
         resume_path VARCHAR(500),
@@ -33,7 +39,8 @@ function ensureJobApplicationsTable($db)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8");
 
     $alterStatements = [
-        "ALTER TABLE job_applications ADD COLUMN apply_for VARCHAR(80) NULL AFTER contact_no",
+        "ALTER TABLE job_applications ADD COLUMN qualification VARCHAR(255) NULL AFTER contact_no",
+        "ALTER TABLE job_applications ADD COLUMN apply_for VARCHAR(80) NULL AFTER qualification",
         "ALTER TABLE job_applications ADD COLUMN message TEXT NULL",
         "ALTER TABLE job_applications ADD COLUMN resume_path VARCHAR(500) NULL",
         "ALTER TABLE job_applications ADD COLUMN resume_original_name VARCHAR(255) NULL",
@@ -74,10 +81,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
 
     if ($_POST['action'] === 'delete' && isset($_POST['job_id'])) {
-        if (!isset($_SESSION)) {
-            require_once __DIR__ . '/include/session_helper.php';
-            aitf_start_session();
-        }
         $isTopMgmt = (isset($_SESSION['role']) && trim($_SESSION['role']) === 'Top Mgmt') || (function_exists('aitf_is_top_management_role') && aitf_is_top_management_role());
         if (!$isTopMgmt) {
             echo json_encode(['status' => 'error', 'message' => 'You are not allowed to perform this action. Only Top Management can delete the form.']);
@@ -121,24 +124,56 @@ $fullName = trim($_POST['applicant_name'] ?? ($_POST['full_name'] ?? ''));
 $email = trim($_POST['email'] ?? '');
 $contactNoRaw = trim($_POST['contact_no'] ?? '');
 $contactNo = preg_replace('/\D+/', '', $contactNoRaw);
+$qualificationRaw = trim($_POST['qualification'] ?? '');
+$qualificationOther = trim($_POST['qualification_other'] ?? '');
+$qualification = $qualificationRaw;
+if (($qualificationRaw === 'Other' || $qualificationRaw === 'Any other relevant' || $qualificationRaw === 'Any other relevant qualification') && $qualificationOther !== '') {
+    $qualification = 'Other: ' . $qualificationOther;
+}
+
 $applyFor = trim($_POST['apply_for'] ?? '');
 $message = trim($_POST['message'] ?? '');
-$allowedRoles = ['Auditor', 'Facilitator'];
+$allowedRoles = ['Auditor', 'Facilitator', 'Lead Auditor', 'Quality Assessor', 'Management Representative', 'General Application', 'Other'];
 
 if ($fullName === '') {
     redirectCareerWithError('Applicant name is required.');
 }
 
 if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    redirectCareerWithError('A valid mail ID is required.');
+    redirectCareerWithError('A valid email address is required.');
 }
 
 if ($contactNo === '' || !preg_match('/^[0-9]{10,15}$/', $contactNo)) {
     redirectCareerWithError('A valid contact number with 10 to 15 digits is required.');
 }
 
-if (!in_array($applyFor, $allowedRoles, true)) {
-    redirectCareerWithError('Please select Auditor or Facilitator in Apply For.');
+if ($qualification === '') {
+    redirectCareerWithError('Please select your qualification.');
+}
+
+if ($applyFor === '' || !in_array($applyFor, $allowedRoles, true)) {
+    $applyFor = 'General Application';
+}
+
+// Check Email OTP Verification
+$emailLower = strtolower($email);
+$isOtpVerified = (isset($_SESSION['career_otp_verified']) && $_SESSION['career_otp_verified'] === true && isset($_SESSION['career_verified_email']) && $_SESSION['career_verified_email'] === $emailLower);
+
+// Fallback: If user typed OTP into the input field and hit submit directly
+$submittedOtp = trim($_POST['email_otp'] ?? '');
+if (!$isOtpVerified && $submittedOtp !== '') {
+    $sessionOtp = $_SESSION['career_otp'] ?? '';
+    $sessionEmail = $_SESSION['career_otp_email'] ?? '';
+    $sessionTime = $_SESSION['career_otp_time'] ?? 0;
+    if ($sessionOtp !== '' && $sessionOtp === $submittedOtp && $sessionEmail === $emailLower && (time() - $sessionTime <= 600)) {
+        $isOtpVerified = true;
+        $_SESSION['career_otp_verified'] = true;
+        $_SESSION['career_verified_email'] = $emailLower;
+    }
+}
+
+if (!$isOtpVerified) {
+    redirectCareerWithError('Please verify your email address with the OTP before submitting the application.');
 }
 
 $turnstileToken = trim($_POST['cf-turnstile-response'] ?? '');
@@ -149,10 +184,12 @@ if (function_exists('aitf_verify_turnstile') && !aitf_verify_turnstile($turnstil
 
 $resumePath = '';
 $resumeOriginalName = '';
-if (isset($_FILES['resume']) && $_FILES['resume']['error'] === UPLOAD_ERR_OK) {
-    $fileTmpPath = $_FILES['resume']['tmp_name'];
-    $fileOriginalName = $_FILES['resume']['name'];
-    $fileSize = $_FILES['resume']['size'];
+$uploadedResume = isset($_FILES['resume']) && $_FILES['resume']['error'] !== UPLOAD_ERR_NO_FILE ? $_FILES['resume'] : (isset($_FILES['cv_file']) && $_FILES['cv_file']['error'] !== UPLOAD_ERR_NO_FILE ? $_FILES['cv_file'] : null);
+
+if ($uploadedResume && $uploadedResume['error'] === UPLOAD_ERR_OK) {
+    $fileTmpPath = $uploadedResume['tmp_name'];
+    $fileOriginalName = $uploadedResume['name'];
+    $fileSize = $uploadedResume['size'];
     $fileExtension = strtolower(pathinfo($fileOriginalName, PATHINFO_EXTENSION));
     $fileMimeType = function_exists('mime_content_type') ? mime_content_type($fileTmpPath) : '';
 
@@ -176,124 +213,35 @@ if (isset($_FILES['resume']) && $_FILES['resume']['error'] === UPLOAD_ERR_OK) {
     if (!move_uploaded_file($fileTmpPath, $resumePath)) {
         redirectCareerWithError('Failed to upload resume. Please try again.');
     }
-} elseif (isset($_FILES['resume']) && $_FILES['resume']['error'] !== UPLOAD_ERR_NO_FILE) {
+} elseif ($uploadedResume && $uploadedResume['error'] !== UPLOAD_ERR_NO_FILE) {
     redirectCareerWithError('Resume upload error. Please try again.');
 }
 
 try {
-    $stmt = $db->prepare("INSERT INTO job_applications (full_name, email, contact_no, apply_for, message, resume_path, resume_original_name) VALUES (?, ?, ?, ?, ?, ?, ?)");
-    $stmt->execute([$fullName, $email, $contactNo, $applyFor, $message, $resumePath, $resumeOriginalName]);
+    $stmt = $db->prepare("INSERT INTO job_applications (full_name, email, contact_no, qualification, apply_for, message, resume_path, resume_original_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt->execute([$fullName, $email, $contactNo, $qualification, $applyFor, $message, $resumePath, $resumeOriginalName]);
 } catch (Exception $e) {
     error_log('Job application insert error: ' . $e->getMessage());
     redirectCareerWithError('Failed to save your application. Please try again later.');
 }
 
-function loadJobMailer()
-{
-    if (class_exists('PHPMailer')) {
-        return true;
-    }
-
-    $candidates = [
-        __DIR__ . '/PHPMailer/PHPMailerAutoload.php',
-        __DIR__ . '/phpmailer/PHPMailerAutoload.php',
-        __DIR__ . '/PHPMailerAutoload.php'
-    ];
-
-    foreach ($candidates as $path) {
-        if (file_exists($path)) {
-            require_once $path;
-            return class_exists('PHPMailer');
-        }
-    }
-
-    return false;
-}
-
-function jobMailAttempts()
-{
-    require_once __DIR__ . '/include/env_helper.php';
-    $mailConfig = aitf_get_mail_config();
-
-    return [
-        ['host' => 'localhost', 'port' => 25, 'secure' => '', 'autotls' => false, 'auth' => false, 'username' => '', 'password' => ''],
-        ['host' => 'relay-hosting.secureserver.net', 'port' => 25, 'secure' => '', 'autotls' => false, 'auth' => false, 'username' => '', 'password' => ''],
-        [
-            'host' => $mailConfig['host'],
-            'port' => $mailConfig['port'],
-            'secure' => $mailConfig['secure'],
-            'autotls' => $mailConfig['secure'] === 'tls',
-            'auth' => ($mailConfig['username'] ?? '') !== '' && ($mailConfig['password'] ?? '') !== '',
-            'username' => $mailConfig['username'] ?? '',
-            'password' => $mailConfig['password'] ?? ''
-        ]
-    ];
-}
-
-function configureJobMailer(PHPMailer $mail, array $config)
-{
-    $mail->isSMTP();
-    $mail->SMTPDebug = 0;
-    $mail->Debugoutput = 'error_log';
-    $mail->Host = $config['host'];
-    $mail->Hostname = $config['host'];
-    $mail->Port = $config['port'];
-    $mail->SMTPAuth = $config['auth'];
-    $mail->SMTPSecure = $config['secure'] ?: false;
-    $mail->SMTPAutoTLS = $config['autotls'];
-    if ($config['auth']) {
-        $mail->Username = $config['username'];
-        $mail->Password = $config['password'];
-    }
-    $mail->CharSet = 'UTF-8';
-    $mail->Timeout = 8;
-    $mail->SMTPOptions = [
-        'ssl' => [
-            'verify_peer' => false,
-            'verify_peer_name' => false,
-            'allow_self_signed' => true
-        ]
-    ];
-}
-
-function sendJobMail(callable $buildMail)
-{
-    if (!loadJobMailer()) {
-        error_log('PHPMailer autoload not found for job application mail.');
-        return false;
-    }
-
-    foreach (jobMailAttempts() as $attempt) {
-        try {
-            $mail = new PHPMailer;
-            configureJobMailer($mail, $attempt);
-            $buildMail($mail);
-            if ($mail->send()) {
-                return true;
-            }
-            error_log('Job mail SMTP fail: [' . $attempt['host'] . ':' . $attempt['port'] . '] ' . $mail->ErrorInfo);
-            $mail->smtpClose();
-        } catch (Exception $e) {
-            error_log('Job mail exception: ' . $e->getMessage());
-        }
-    }
-
-    return false;
-}
+// Reset session verification after successful insert
+unset($_SESSION['career_otp'], $_SESSION['career_otp_email'], $_SESSION['career_otp_time'], $_SESSION['career_otp_verified'], $_SESSION['career_verified_email']);
 
 $submissionDate = date('d M Y, h:i A');
 $adminBody = '<h3>New Job Application Received</h3>'
-    . '<p>A new career application has been submitted from the AITF website.</p>'
+    . '<p>A new career application has been submitted on the AITF portal with verified email.</p>'
     . '<table border="1" cellpadding="8" cellspacing="0" style="border-collapse:collapse;font-family:Arial,sans-serif;font-size:13px;">'
     . '<tr><th align="left">Applicant Name</th><td>' . htmlspecialchars($fullName, ENT_QUOTES, 'UTF-8') . '</td></tr>'
-    . '<tr><th align="left">Mail ID</th><td><a href="mailto:' . htmlspecialchars($email, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars($email, ENT_QUOTES, 'UTF-8') . '</a></td></tr>'
+    . '<tr><th align="left">Email Address</th><td><a href="mailto:' . htmlspecialchars($email, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars($email, ENT_QUOTES, 'UTF-8') . '</a> (Verified ✓)</td></tr>'
     . '<tr><th align="left">Contact No.</th><td>' . htmlspecialchars($contactNo, ENT_QUOTES, 'UTF-8') . '</td></tr>'
+    . '<tr><th align="left">Qualification</th><td>' . htmlspecialchars($qualification, ENT_QUOTES, 'UTF-8') . '</td></tr>'
     . '<tr><th align="left">Apply For</th><td>' . htmlspecialchars($applyFor, ENT_QUOTES, 'UTF-8') . '</td></tr>'
     . '<tr><th align="left">Message</th><td>' . ($message !== '' ? nl2br(htmlspecialchars($message, ENT_QUOTES, 'UTF-8')) : '<em>No message provided</em>') . '</td></tr>'
     . '<tr><th align="left">Submitted On</th><td>' . htmlspecialchars($submissionDate, ENT_QUOTES, 'UTF-8') . '</td></tr>'
     . '</table>';
 
-sendJobMail(function (PHPMailer $mail) use ($fullName, $email, $contactNo, $applyFor, $message, $resumePath, $resumeOriginalName, $adminBody) {
+sendJobMail(function (PHPMailer $mail) use ($fullName, $email, $contactNo, $qualification, $applyFor, $message, $resumePath, $resumeOriginalName, $adminBody) {
     $mail->setFrom('certification@aitf.co.in', 'AITF Careers');
     $mail->Sender = 'certification@aitf.co.in';
     $mail->addCustomHeader('Return-Path', 'certification@aitf.co.in');
@@ -302,18 +250,22 @@ sendJobMail(function (PHPMailer $mail) use ($fullName, $email, $contactNo, $appl
     $mail->Subject = 'New Job Application Received - ' . $fullName . ' (' . $applyFor . ')';
     $mail->isHTML(true);
     $mail->Body = $adminBody;
-    $mail->AltBody = "New Job Application Received\nApplicant Name: $fullName\nMail ID: $email\nContact No.: $contactNo\nApply For: $applyFor\nMessage: $message";
+    $mail->AltBody = "New Job Application Received\nApplicant Name: $fullName\nEmail: $email (Verified)\nContact No.: $contactNo\nQualification: $qualification\nApply For: $applyFor\nMessage: $message";
 
     if ($resumePath !== '' && file_exists($resumePath)) {
         $mail->addAttachment($resumePath, $resumeOriginalName ?: basename($resumePath));
     }
 });
 
-$clientBody = '<p style="font-family:Arial,sans-serif;font-size:14px;">Dear ' . htmlspecialchars($fullName, ENT_QUOTES, 'UTF-8') . ',</p>'
-    . '<p style="font-family:Arial,sans-serif;font-size:14px;">Thank you for your job application at AITF.</p>'
-    . '<p style="font-family:Arial,sans-serif;font-size:14px;">We have received your application for <strong>' . htmlspecialchars($applyFor, ENT_QUOTES, 'UTF-8') . '</strong>. Our hiring team will review your profile and if your expertise matches our requirement, we will contact you shortly.</p>'
-    . '<p style="font-family:Arial,sans-serif;font-size:14px;">We appreciate your interest in joining our team and contributing to meaningful work in assessment and certification.</p>'
-    . '<p style="font-family:Arial,sans-serif;font-size:14px;">Warm regards,<br><strong>AITF Team</strong><br>Careers Desk<br><a href="mailto:certification@aitf.co.in">certification@aitf.co.in</a></p>';
+$clientBody = '<div style="font-family:Arial,sans-serif;max-width:580px;margin:0 auto;padding:24px;border:1px solid #e2e8f0;border-radius:12px;background:#ffffff;">'
+    . '<h2 style="color:#0f172a;margin-top:0;">Application Received Successfully</h2>'
+    . '<p style="font-size:15px;color:#334155;">Dear ' . htmlspecialchars($fullName, ENT_QUOTES, 'UTF-8') . ',</p>'
+    . '<p style="font-size:14px;color:#334155;line-height:1.6;">Thank you for submitting your job application to <strong>AITF Management Certification</strong>.</p>'
+    . '<p style="font-size:14px;color:#334155;line-height:1.6;">We have received your application for <strong>' . htmlspecialchars($applyFor, ENT_QUOTES, 'UTF-8') . '</strong> with qualification <strong>' . htmlspecialchars($qualification, ENT_QUOTES, 'UTF-8') . '</strong>. Our assessment and technical evaluation team will review your profile against our standard requirements and reach out to you shortly.</p>'
+    . '<p style="font-size:14px;color:#334155;line-height:1.6;">We value your commitment to raising quality and compliance standards.</p>'
+    . '<hr style="border:none;border-top:1px solid #f1f5f9;margin:20px 0;">'
+    . '<p style="font-size:13px;color:#64748b;margin-bottom:0;">Warm regards,<br><strong style="color:#0f172a;">AITF Assessment & Certification Team</strong><br><a href="mailto:certification@aitf.co.in" style="color:#2563eb;">certification@aitf.co.in</a></p>'
+    . '</div>';
 
 sendJobMail(function (PHPMailer $mail) use ($fullName, $email, $applyFor, $clientBody) {
     $mail->setFrom('certification@aitf.co.in', 'AITF Careers');
@@ -323,7 +275,7 @@ sendJobMail(function (PHPMailer $mail) use ($fullName, $email, $applyFor, $clien
     $mail->Subject = 'Thank you for your job application - AITF';
     $mail->isHTML(true);
     $mail->Body = $clientBody;
-    $mail->AltBody = "Dear $fullName,\n\nThank you for your job application at AITF. We have received your application for $applyFor. Our hiring team will review your profile and if your expertise matches our requirement, we will contact you shortly.\n\nWarm regards,\nAITF Team\nCareers Desk\ncertification@aitf.co.in";
+    $mail->AltBody = "Dear $fullName,\n\nThank you for your job application at AITF for $applyFor. Our assessment team will review your profile and contact you shortly.\n\nWarm regards,\nAITF Team\ncertification@aitf.co.in";
 });
 
 header('Location: career.php?success=1&applicant=' . urlencode($fullName));

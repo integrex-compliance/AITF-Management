@@ -8,7 +8,7 @@ function aitf_has_access($module) {
     $role = $_SESSION['role'] ?? '';
     
     // Top Mgmt has access to everything
-    if (trim($role) === 'Top Mgmt') {
+    if (in_array(trim($role), ['Top Mgmt', 'Director', 'Main Admin'], true)) {
         return true;
     }
     

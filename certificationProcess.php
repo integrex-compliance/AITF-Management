@@ -1,7 +1,7 @@
 <?php
 $pageTitle = "ISO Certification Process | AITF";
 $pageDescription = "Understand the comprehensive ISO certification process at AITF. Explore our structured approach to Quality Management and Environmental Management certification.";
-$canonicalUrl = "https://www.aitf.co.in/certificationProcess.php";
+$canonicalUrl = "https://www.aitf.co.in/certification-process";
 ?>
 <!DOCTYPE html>
 <html lang="en">

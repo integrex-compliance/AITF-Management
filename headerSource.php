@@ -193,7 +193,7 @@
         background: transparent !important;
         border: none !important;
         border-radius: 0 !important;
-        padding: 0 1rem !important;
+        padding: 0 1.5rem !important;
         margin: 0 !important;
         width: 100% !important;
         max-width: 100% !important;
@@ -207,7 +207,7 @@
     }
 
     .navbar .container-fluid {
-        padding: 0 10px 0 5px !important;
+        padding: 0 10px !important;
         margin: 0 !important;
         max-width: 100% !important;
         width: 100% !important;
@@ -219,6 +219,12 @@
         height: 100% !important;
     }
 
+    #navbar-wd,
+    .top-header #navbar-wd {
+        padding-right: 0 !important;
+        margin-right: 0 !important;
+    }
+
     .nav-primary {
         display: flex;
         align-items: center;
@@ -226,12 +232,12 @@
         flex-grow: 1;
         white-space: nowrap;
         padding: 0;
-        margin: 0 10px 0 0;
+        margin: 0;
         width: auto;
         height: 100% !important;
         overflow: visible !important;
         scrollbar-width: none;
-        gap: 2px;
+        gap: 8px;
     }
 
     .nav-primary::-webkit-scrollbar {
@@ -239,7 +245,7 @@
     }
 
     .nav-primary>div {
-        margin: 0 1px;
+        margin: 0;
         flex-shrink: 0;
         min-width: auto;
     }
@@ -249,8 +255,8 @@
     }
 
     .nav-primary .nav-link {
-        padding: 0.4rem 0.55rem !important;
-        font-size: 0.8rem !important;
+        padding: 0.45rem 0.75rem !important;
+        font-size: 0.86rem !important;
         white-space: nowrap;
         border-radius: 6px;
         font-weight: 500;
@@ -443,15 +449,108 @@
         text-transform: uppercase;
     }
 
-    @media (max-width: 1200px) {
+    @media (min-width: 1600px) {
+        .navbar {
+            padding: 0 2rem !important;
+        }
+
+        .navbar-brand {
+            margin-right: 25px !important;
+        }
+
         .nav-primary {
-            gap: 1.5rem;
+            gap: 12px !important;
+        }
+
+        .nav-primary .nav-link {
+            padding: 0.5rem 0.95rem !important;
+            font-size: 0.92rem !important;
+        }
+
+        .header-nav .nav-link.login-btn {
+            padding: 9px 20px 9px 36px !important;
+            font-size: 0.88rem !important;
+            margin-left: 10px !important;
         }
     }
 
-    @media (max-width: 992px) {
+    @media (min-width: 1366px) and (max-width: 1599px) {
+        .navbar {
+            padding: 0 1.5rem !important;
+        }
+
+        .navbar-brand {
+            margin-right: 20px !important;
+        }
+
         .nav-primary {
-            gap: 1rem;
+            gap: 8px !important;
+        }
+
+        .nav-primary .nav-link {
+            padding: 0.45rem 0.8rem !important;
+            font-size: 0.88rem !important;
+        }
+
+        .header-nav .nav-link.login-btn {
+            padding: 8px 16px 8px 32px !important;
+            font-size: 0.84rem !important;
+            margin-left: 6px !important;
+        }
+    }
+
+    @media (min-width: 1200px) and (max-width: 1365px) {
+        .navbar {
+            padding: 0 1rem !important;
+        }
+
+        .navbar-brand {
+            margin-right: 15px !important;
+        }
+
+        .nav-primary {
+            gap: 4px !important;
+        }
+
+        .nav-primary .nav-link {
+            padding: 0.42rem 0.6rem !important;
+            font-size: 0.82rem !important;
+        }
+
+        .header-nav .nav-link.login-btn {
+            padding: 7px 15px 7px 30px !important;
+            font-size: 0.8rem !important;
+            margin-left: 4px !important;
+        }
+    }
+
+    @media (min-width: 992px) and (max-width: 1199px) {
+        .navbar {
+            padding: 0 0.5rem !important;
+        }
+
+        .navbar-brand {
+            margin-right: 8px !important;
+        }
+
+        .navbar-brand img {
+            max-height: 75px !important;
+            height: 75px !important;
+        }
+
+        .nav-primary {
+            gap: 2px !important;
+        }
+
+        .nav-primary .nav-link {
+            padding: 0.35rem 0.42rem !important;
+            font-size: 0.76rem !important;
+        }
+
+        .header-nav .nav-link.login-btn {
+            padding: 6px 12px 6px 26px !important;
+            font-size: 0.74rem !important;
+            margin: 0 2px !important;
         }
     }
 
@@ -1157,13 +1256,13 @@
                                         <h3 class="dropdown-section-title">Policies</h3>
                                     </div>
                                     <div class="dropdown-links-list" style="display:none;">
-                                        <a href="policy.php#organisation-policy"
+                                        <a href="policy#organisation-policy"
                                             style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
                                                 class="link-line"></span>ORGANISATION POLICY</a>
-                                        <a href="policy.php#impartiality"
+                                        <a href="policy#impartiality"
                                             style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
                                                 class="link-line"></span>IMPARTIALITY</a>
-                                        <a href="policy.php#independence"
+                                        <a href="policy#independence"
                                             style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
                                                 class="link-line"></span>INDEPENDENCE</a>
                                     </div>
@@ -1186,13 +1285,13 @@
                                         <h3 class="dropdown-section-title">Certification Process</h3>
                                     </div>
                                     <div class="dropdown-links-list" style="display:none;">
-                                        <a href="certificationProcess.php"
+                                        <a href="certification-process"
                                             style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
                                                 class="link-line"></span>Certification Process</a>
-                                        <a href="criteria.php"
+                                        <a href="criteria"
                                             style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
                                                 class="link-line"></span>Criteria</a>
-                                        <a href="application.php"
+                                        <a href="application-form"
                                             style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
                                                 class="link-line"></span>Application Form</a>
                                     </div>
@@ -1222,7 +1321,7 @@
                                         <h3 class="dropdown-section-title">Expected Outcome</h3>
                                     </div>
                                     <div class="dropdown-links-list" style="display:none;">
-                                        <a href="expectedOutcome.php"
+                                        <a href="expected-outcome"
                                             style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
                                                 class="link-line"></span>Benefits of Certification</a>
                                     </div>
@@ -1245,10 +1344,10 @@
                                         <h3 class="dropdown-section-title">Complaints & Appeals</h3>
                                     </div>
                                     <div class="dropdown-links-list" style="display:none;">
-                                        <a href="complaintsAppeals.php"
+                                        <a href="complaints-appeals"
                                             style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
                                                 class="link-line"></span>Complaints & Appeals</a>
-                                        <a href="impartiality.php"
+                                        <a href="impartiality"
                                             style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
                                                 class="link-line"></span>Impartiality</a>
                                     </div>
@@ -1329,19 +1428,19 @@
                                         <h3 class="dropdown-section-title">Internal Auditor Training</h3>
                                     </div>
                                     <div class="dropdown-links-list" style="display:none;">
-                                        <a href="qms_iso_9001_04.php"
+                                        <a href="qms_iso_9001_04"
                                             style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
                                                 class="link-line"></span>QMS ISO 9001:2015</a>
-                                        <a href="ems_iso_9001_04.php"
+                                        <a href="ems_iso_9001_04"
                                             style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
                                                 class="link-line"></span>EMS ISO 14001:2015</a>
-                                        <a href="ohsms_iso_45001_04.php"
+                                        <a href="ohsms_iso_45001_04"
                                             style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
                                                 class="link-line"></span>OHSMS ISO 45001:2018</a>
-                                        <a href="bcms_iso_22301_04.php"
+                                        <a href="bcms_iso_22301_04"
                                             style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
                                                 class="link-line"></span>BCMS ISO 22301:2012</a>
-                                        <a href="isms_iso_27001_04.php"
+                                        <a href="isms_iso_27001_04"
                                             style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
                                                 class="link-line"></span>ISMS ISO 27001:2013</a>
                                     </div>
@@ -1373,8 +1472,8 @@
                         </div>
                     </div>
 
-                    <div><a class="nav-link" href="validation.php">Certificate validation</a></div>
-                    <div><a class="nav-link" href="application.php#online-application-form">Application Form</a></div>
+                    <div><a class="nav-link" href="certificate-validation">Certificate validation</a></div>
+                    <div><a class="nav-link" href="application-form#online-application-form">Application Form</a></div>
                     <div class="dropdown">
                         <a class="nav-link" href="#">Download</a>
                         <div class="dropdown-content dropdown-modern-grid">
@@ -1395,7 +1494,7 @@
                                     <div class="dropdown-section-content">
                                         <h3 class="dropdown-section-title"
                                             style="color: #3b82f6 !important; line-height: 1.2;">
-                                            Application Form
+                                             Application Form
                                             <span class="sub-label-app">(for New Certification & Recertification)</span>
                                         </h3>
                                     </div>
@@ -1404,7 +1503,7 @@
                                             download="Audit_Application_Form.pdf"
                                             style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
                                                 class="link-line"></span>Audit Application Form</a>
-                                        <a href="application.php#online-application-form"
+                                        <a href="application-form#online-application-form"
                                             style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
                                                 class="link-line"></span>Application Form (Online)</a>
                                     </div>
@@ -1427,10 +1526,10 @@
                                         <h3 class="dropdown-section-title">Certification</h3>
                                     </div>
                                     <div class="dropdown-links-list" style="display:none;">
-                                        <a href="certificationGuideline.php"
+                                        <a href="certification-guidelines"
                                             style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
                                                 class="link-line"></span>Certification Guideline</a>
-                                        <a href="auditorGuideline.php"
+                                        <a href="auditor-guidelines"
                                             style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
                                                 class="link-line"></span>Auditor Guideline</a>
                                     </div>
@@ -1460,10 +1559,10 @@
                                         <h3 class="dropdown-section-title">Guidelines</h3>
                                     </div>
                                     <div class="dropdown-links-list" style="display:none;">
-                                        <a href="useOfLogo.php"
+                                        <a href="logo-usage-guidelines"
                                             style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
                                                 class="link-line"></span>Logo Usage Guidelines</a>
-                                        <a href="transitionGuideline.php"
+                                        <a href="transition-guidelines"
                                             style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
                                                 class="link-line"></span>Transition Guidelines</a>
                                     </div>
@@ -1489,19 +1588,19 @@
                                         </h3>
                                     </div>
                                     <div class="dropdown-links-list" style="display:none;">
-                                        <a href="ncClosure.php"
+                                        <a href="nc-closure"
                                             style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
                                                 class="link-line"></span>NC Report & Closure</a>
-                                        <a href="infoUpdationForm.php"
+                                        <a href="infoUpdationForm"
                                             style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
                                                 class="link-line"></span>Information Update Form (PDF)</a>
-                                        <a href="info_updation_form.php"
+                                        <a href="info_updation_form"
                                             style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
                                                 class="link-line"></span>Information Update Form (Fill Online)</a>
-                                        <a href="fill_nc_closing_form.php"
+                                        <a href="fill_nc_closing_form"
                                             style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
                                                 class="link-line"></span>Fill NC Closing Form (Online)</a>
-                                        <a href="circuler.php"
+                                        <a href="circulars"
                                             style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
                                                 class="link-line"></span>Circulars</a>
                                     </div>
@@ -1511,9 +1610,10 @@
                     </div>
 
 
-                    <div><a class="nav-link" href="aboutus.php">About Us</a></div>
-                    <div><a class="nav-link" href="contactUS.php">Contact Us</a></div>
-                    <div><a class="nav-link login-btn" href="login.php"> Login</a></div>
+                    <div><a class="nav-link" href="news">News</a></div>
+                    <div><a class="nav-link" href="about-us">About Us</a></div>
+                    <div><a class="nav-link" href="contact-us">Contact Us</a></div>
+                    <div><a class="nav-link login-btn" href="login"> Login</a></div>
                 </div>
             </div>
     </nav>
@@ -1547,16 +1647,16 @@
                             </button>
                         </li>
                         <li>
-                            <a class="mobile-nav-item" href="validation.php">
+                            <a class="mobile-nav-item" href="certificate-validation">
                                 <span>Certificate Validation</span>
                             </a>
                         </li>
                         <li>
-                            <a class="mobile-nav-item" href="application.php#online-application-form">
+                            <a class="mobile-nav-item" href="application-form#online-application-form">
                                 <div style="display: flex; flex-direction: column;">
                                     <span>Application Form</span>
                                     <span class="sub-label-app" style="margin-top: 2px !important;">(new certification &
-                                        recertification)</span>
+                                         recertification)</span>
                                 </div>
                             </a>
                         </li>
@@ -1567,17 +1667,22 @@
                             </button>
                         </li>
                         <li>
-                            <a class="mobile-nav-item" href="aboutus.php">
+                            <a class="mobile-nav-item" href="news">
+                                <span>News</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="mobile-nav-item" href="about-us">
                                 <span>About Us</span>
                             </a>
                         </li>
                         <li>
-                            <a class="mobile-nav-item" href="contactUS.php">
+                            <a class="mobile-nav-item" href="contact-us">
                                 <span>Contact Us</span>
                             </a>
                         </li>
                         <li>
-                            <a class="mobile-nav-item mobile-login-btn" href="login.php">
+                            <a class="mobile-nav-item mobile-login-btn" href="login">
                                 <span>Login</span>
                             </a>
                         </li>
@@ -1592,13 +1697,13 @@
                         <div class="mobile-nav-title">Certification</div>
                     </div>
                     <ul class="mobile-nav-list">
-                        <li><a class="mobile-nav-item" href="certificationProcess.php">Certification Process</a></li>
-                        <li><a class="mobile-nav-item" href="aboutISO.php">About ISO</a></li>
-                        <li><a class="mobile-nav-item" href="expectedOutcome.php">Expected Outcome</a></li>
-                        <li><a class="mobile-nav-item" href="criteria.php">Criteria</a></li>
-                        <li><a class="mobile-nav-item" href="complaintsAppeals.php">Complaints &amp; Appeals</a></li>
-                        <li><a class="mobile-nav-item" href="impartiality.php">Impartiality</a></li>
-                        <li><a class="mobile-nav-item" href="application.php">Application Form</a></li>
+                        <li><a class="mobile-nav-item" href="certification-process">Certification Process</a></li>
+                        <li><a class="mobile-nav-item" href="aboutISO">About ISO</a></li>
+                        <li><a class="mobile-nav-item" href="expected-outcome">Expected Outcome</a></li>
+                        <li><a class="mobile-nav-item" href="criteria">Criteria</a></li>
+                        <li><a class="mobile-nav-item" href="complaints-appeals">Complaints &amp; Appeals</a></li>
+                        <li><a class="mobile-nav-item" href="impartiality">Impartiality</a></li>
+                        <li><a class="mobile-nav-item" href="application-form">Application Form</a></li>
                     </ul>
                 </section>
 
@@ -1615,20 +1720,20 @@
                                 style="display:block; opacity:0.7; cursor:not-allowed; pointer-events:none;">Comming
                                 soon</span></li>
                         <li class="mobile-nav-section-label">Awareness Training</li>
-                        <li><a class="mobile-nav-item" href="qms_iso_9001_03.php">QMS ISO 9001:2015</a></li>
-                        <li><a class="mobile-nav-item" href="ems_iso_9001_03.php">EMS ISO 14001:2015</a></li>
-                        <li><a class="mobile-nav-item" href="ohsms_iso_45001_03.php">OHSMS ISO 45001:2018</a></li>
-                        <li><a class="mobile-nav-item" href="bcms_iso_22301_03.php">BCMS ISO 22301:2012</a></li>
-                        <li><a class="mobile-nav-item" href="isms_iso_27001_03.php">ISMS ISO 27001:2013</a></li>
+                        <li><a class="mobile-nav-item" href="qms_iso_9001_03">QMS ISO 9001:2015</a></li>
+                        <li><a class="mobile-nav-item" href="ems_iso_9001_03">EMS ISO 14001:2015</a></li>
+                        <li><a class="mobile-nav-item" href="ohsms_iso_45001_03">OHSMS ISO 45001:2018</a></li>
+                        <li><a class="mobile-nav-item" href="bcms_iso_22301_03">BCMS ISO 22301:2012</a></li>
+                        <li><a class="mobile-nav-item" href="isms_iso_27001_03">ISMS ISO 27001:2013</a></li>
                         <li class="mobile-nav-section-label">Internal &amp; Lead Auditor</li>
-                        <li><a class="mobile-nav-item" href="qms_iso_9001_04.php">QMS ISO 9001:2015</a></li>
-                        <li><a class="mobile-nav-item" href="ems_iso_9001_04.php">EMS ISO 14001:2015</a></li>
-                        <li><a class="mobile-nav-item" href="ohsms_iso_45001_04.php">OHSMS ISO 45001:2018</a></li>
-                        <li><a class="mobile-nav-item" href="bcms_iso_22301_04.php">BCMS ISO 22301:2012</a></li>
-                        <li><a class="mobile-nav-item" href="isms_iso_27001_04.php">ISMS ISO 27001:2013</a></li>
-                        <li><a class="mobile-nav-item" href="integrated_mgmgt_system.php">Integrated Management
+                        <li><a class="mobile-nav-item" href="qms_iso_9001_04">QMS ISO 9001:2015</a></li>
+                        <li><a class="mobile-nav-item" href="ems_iso_9001_04">EMS ISO 14001:2015</a></li>
+                        <li><a class="mobile-nav-item" href="ohsms_iso_45001_04">OHSMS ISO 45001:2018</a></li>
+                        <li><a class="mobile-nav-item" href="bcms_iso_22301_04">BCMS ISO 22301:2012</a></li>
+                        <li><a class="mobile-nav-item" href="isms_iso_27001_04">ISMS ISO 27001:2013</a></li>
+                        <li><a class="mobile-nav-item" href="integrated_mgmgt_system">Integrated Management
                                 Systems</a></li>
-                        <li><a class="mobile-nav-item" href="md_qms_iso.php">MD-QMS ISO 13485:2016</a></li>
+                        <li><a class="mobile-nav-item" href="md_qms_iso">MD-QMS ISO 13485:2016</a></li>
                     </ul>
                 </section>
 
@@ -1642,7 +1747,7 @@
                     <ul class="mobile-nav-list">
                         <li class="mobile-nav-section-label">Application &amp; Certification</li>
                         <li>
-                            <a class="mobile-nav-item" href="application.php">
+                            <a class="mobile-nav-item" href="application-form">
                                 <div style="display: flex; flex-direction: column;">
                                     <span>Application Form</span>
                                     <span class="sub-label-app" style="margin-top: 2px !important;">(new certification &
@@ -1650,12 +1755,12 @@
                                 </div>
                             </a>
                         </li>
-                        <li><a class="mobile-nav-item" href="certificationGuideline.php">Certification Guideline</a>
+                        <li><a class="mobile-nav-item" href="certification-guidelines">Certification Guideline</a>
                         </li>
-                        <li><a class="mobile-nav-item" href="auditorGuideline.php">Auditor Guideline</a></li>
+                        <li><a class="mobile-nav-item" href="auditor-guidelines">Auditor Guideline</a></li>
                         <li class="mobile-nav-section-label">Guidelines</li>
-                        <li><a class="mobile-nav-item" href="useOfLogo.php">Logo Usage Guidelines</a></li>
-                        <li><a class="mobile-nav-item" href="transitionGuideline.php">Transition Guidelines</a></li>
+                        <li><a class="mobile-nav-item" href="logo-usage-guidelines">Logo Usage Guidelines</a></li>
+                        <li><a class="mobile-nav-item" href="transition-guidelines">Transition Guidelines</a></li>
                         <li class="mobile-nav-section-label">
                             <div style="display: flex; flex-direction: column;">
                                 <span>Reports &amp; Updates</span>
@@ -1664,12 +1769,12 @@
                                     Audit)</span>
                             </div>
                         </li>
-                        <li><a class="mobile-nav-item" href="ncClosure.php">NC Report &amp; Closure</a></li>
-                        <li><a class="mobile-nav-item" href="infoUpdationForm.php">Information Update Form (PDF)</a>
+                        <li><a class="mobile-nav-item" href="nc-closure">NC Report &amp; Closure</a></li>
+                        <li><a class="mobile-nav-item" href="infoUpdationForm">Information Update Form (PDF)</a>
                         </li>
-                        <li><a class="mobile-nav-item" href="info_updation_form.php">Information Update Form (Fill
+                        <li><a class="mobile-nav-item" href="info_updation_form">Information Update Form (Fill
                                 Online)</a></li>
-                        <li><a class="mobile-nav-item" href="circuler.php">Circulars</a></li>
+                        <li><a class="mobile-nav-item" href="circulars">Circulars</a></li>
                     </ul>
                 </section>
             </div>

@@ -460,7 +460,7 @@ a.navbar-brand:hover img {
 }
 
 .top-header #navbar-wd {
-    padding-right: 100px;
+    padding-right: 0;
 }
 
 @media (max-width: 991.98px) {
@@ -1003,7 +1003,7 @@ a.navbar-brand:hover img {
 }
 
 .top-header #navbar-wd {
-    padding-right: 100px;
+    padding-right: 0;
 }
 
 .search-btn {

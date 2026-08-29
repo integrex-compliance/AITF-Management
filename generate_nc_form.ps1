@@ -349,12 +349,14 @@ if (['REQUEST_METHOD'] === 'POST' && isset(['submit_nc_form'])) {
                             <input type="date" name="corrective_action_date" class="form-control" value="<?php echo htmlspecialchars(['corrective_action_date'] ?? ''); ?>" required>
                         </div>
                     </div>
-                    <p style="font-size: 14px; color: #4b5563; font-style: italic;">*Note- Auditee organisation shall provide proposed correction and corrective action with root cause analysis if nonconformance/s identified during audit. Please refer form F 7.24 – for non-conformance details.</p>
+                    <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-left: 4px solid #0284c7; padding: 12px 16px; border-radius: 6px; margin-top: 15px;">
+                        <p style="font-size: 13.5px; color: #0284c7; font-weight: 500; margin: 0; line-height: 1.5;">*Note: Auditee organization shall provide a plan for correction and corrective action with root cause analysis for the Minor and MAJOR Nonconformance identified during audit. However, Submission of evidence of the implementation is compulsory for the MAJOR NC.</p>
+                    </div>
                 </div>
 
                 <div class="nc-form-section">
-                    <h4><i class="fa fa-search"></i> AUDITEE ORGANIZATION'S ROOT CAUSE ANALYSIS, PROPOSED CORRECTION, CORRECTIVE ACTION*</h4>
-                    <p style="font-size: 13px; color: #6b7280; margin-top: -15px; margin-bottom: 20px;">(ATTACH ADDITIONAL SHEET, IF SPACE BELOW IS NOT SUFFICIENT)</p>
+                    <h4 style="margin-bottom: 4px;"><i class="fa fa-search"></i> *ROOT CAUSE ANALYSIS, PLAN FOR CORRECTION AND CORRECTIVE ACTION (Submission by Auditee Organization)</h4>
+                    <p style="font-size: 13px; color: #374151; font-weight: 600; margin-bottom: 18px;">Please refer to Form F 7.24 – for non-conformance issued.</p>
                     <div class="form-group">
                         <label>Root-cause: <span style="color:red">*</span></label>
                         <textarea name="root_cause" class="form-control" required><?php echo htmlspecialchars(['root_cause'] ?? ''); ?></textarea>

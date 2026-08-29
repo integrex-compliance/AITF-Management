@@ -42,7 +42,7 @@ if (!function_exists('aitf_is_top_management_role')) {
     function aitf_is_top_management_role($role = null)
     {
         $role = $role === null ? ($_SESSION['role'] ?? '') : $role;
-        return trim((string)$role) === 'Top Mgmt';
+        return in_array(trim((string)$role), array('Top Mgmt', 'Director', 'Main Admin'), true);
     }
 }
 

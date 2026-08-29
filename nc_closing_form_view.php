@@ -431,6 +431,41 @@ textarea.form-control {
                         <?php endif; ?>
                     </div>
 
+                    <?php if (!empty($submission['attachment1']) || !empty($submission['attachment2'])): ?>
+                        <div class="minimal-section">
+                            <h3 class="minimal-section-title"><i class="fa fa-paperclip"></i> Supporting Attachments</h3>
+                            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                                <?php if (!empty($submission['attachment1'])): ?>
+                                    <?php 
+                                    $att1 = htmlspecialchars($submission['attachment1'], ENT_QUOTES, 'UTF-8');
+                                    $ext1 = strtoupper(pathinfo($att1, PATHINFO_EXTENSION));
+                                    ?>
+                                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 18px; display: inline-flex; align-items: center; gap: 12px; min-width: 220px;">
+                                        <i class="fa fa-file-text-o" style="font-size: 24px; color: #0284c7;"></i>
+                                        <div>
+                                            <div style="font-weight: 700; font-size: 14px; color: #1e293b;">Attachment 1 (<?php echo $ext1; ?>)</div>
+                                            <a href="<?php echo $att1; ?>" target="_blank" download style="font-size: 13px; color: #2563eb; text-decoration: underline; font-weight: 600;"><i class="fa fa-download"></i> View / Download</a>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php if (!empty($submission['attachment2'])): ?>
+                                    <?php 
+                                    $att2 = htmlspecialchars($submission['attachment2'], ENT_QUOTES, 'UTF-8');
+                                    $ext2 = strtoupper(pathinfo($att2, PATHINFO_EXTENSION));
+                                    ?>
+                                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 18px; display: inline-flex; align-items: center; gap: 12px; min-width: 220px;">
+                                        <i class="fa fa-file-text-o" style="font-size: 24px; color: #0284c7;"></i>
+                                        <div>
+                                            <div style="font-weight: 700; font-size: 14px; color: #1e293b;">Attachment 2 (<?php echo $ext2; ?>)</div>
+                                            <a href="<?php echo $att2; ?>" target="_blank" download style="font-size: 13px; color: #2563eb; text-decoration: underline; font-weight: 600;"><i class="fa fa-download"></i> View / Download</a>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+
                     <div class="minimal-section" style="border: 2px solid #0284c7;">
                         <h3 class="minimal-section-title" style="color: #0284c7;">For Verification by AITF Assessor</h3>
                         <form method="post">

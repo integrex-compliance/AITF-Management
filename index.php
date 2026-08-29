@@ -4707,7 +4707,7 @@ session_start();
             <div class="quick-link-card-title"><i class="fa fa-download"></i> Information Updation Form</div>
             <div class="quick-link-card-desc">Information Updation form.pdf</div>
         </a>
-        <a href="text/NC_Closure.pdf" download class="quick-link-card">
+        <a href="guidelines/F 7.24 Annex-A NC closer report (II+III).pdf" download class="quick-link-card">
             <div class="quick-link-card-title"><i class="fa fa-download"></i> NC Closing Form</div>
             <div class="quick-link-card-desc">NC Closure Report PDF</div>
         </a>

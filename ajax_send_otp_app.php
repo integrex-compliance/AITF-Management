@@ -23,13 +23,22 @@ if (empty($org_name) || empty($contact_person)) {
     exit;
 }
 
-// Generate 6-digit OTP
-$otp = sprintf("%06d", mt_rand(100000, 999999));
+// Rate limiting: 60 seconds cooldown between OTP requests
+if (isset($_SESSION['application_otp_last_sent']) && (time() - $_SESSION['application_otp_last_sent']) < 60) {
+    $remaining = 60 - (time() - $_SESSION['application_otp_last_sent']);
+    echo json_encode(['success' => false, 'message' => "Please wait {$remaining} seconds before requesting a new OTP."]);
+    exit;
+}
 
-// Store in session
+// Generate cryptographically secure 6-digit OTP
+$otp = sprintf("%06d", random_int(100000, 999999));
+
+// Store in session (never sent back in JSON or HTML)
 $_SESSION['application_otp'] = $otp;
 $_SESSION['application_otp_time'] = time();
 $_SESSION['application_otp_email'] = $email;
+$_SESSION['application_otp_last_sent'] = time();
+$_SESSION['application_otp_attempts'] = 0;
 
 // Send email
 try {

@@ -738,9 +738,16 @@ if ($cdcInfo['next_audit_type'] == 'SA-II') {
 // add a page
 $pdf->AddPage();
 
+// Check if digital signature template is requested
+$isDigitallySigned = (isset($_POST['is_digitally_signed']) && (int)$_POST['is_digitally_signed'] === 1);
+$signReason = isset($_POST['signing_reason']) && !empty($_POST['signing_reason']) ? htmlspecialchars(trim(urldecode($_POST['signing_reason']))) : 'Authorized ISO Certificate Issuance';
+$signLocation = isset($_POST['signing_location']) && !empty($_POST['signing_location']) ? htmlspecialchars(trim(urldecode($_POST['signing_location']))) : 'New Delhi, India';
+$signerName = isset($_POST['signatory_name']) && !empty($_POST['signatory_name']) ? htmlspecialchars(trim(urldecode($_POST['signatory_name']))) : 'Managing Director';
+$signDateTime = date('Y.m.d H:i:s') . ' +05\'30\'';
+
 // Set certificate background using provided JPG/PNG/PDF (prefer images for reliability)
-// Only apply background when explicitly requested (e.g., mail flow sets use_bg=1)
-$useBg = isset($_POST['use_bg']) && (int)$_POST['use_bg'] === 1;
+// Apply background only when explicitly requested
+$useBg = (isset($_POST['use_bg']) && (int)$_POST['use_bg'] === 1);
 $certBgJpg = __DIR__ . '/aitfImages/cert.jpg';
 $certBgPng = __DIR__ . '/aitfImages/cert_bg.png'; // optional pre-converted asset
 $certBgPdf = __DIR__ . '/aitfImages/cert bg.pdf';
@@ -867,12 +874,68 @@ $html = '<br><br><br><br><p  style="text-align: center; text-justify: inter-word
         . '<font size="18" text-align: center;><b>Certificate No : ' . $certificateNumber . '</b></font><br><br>'
         . $reviewSt. '<br><font size="11" text-align: center;>' . $saII
         . '<br><font size="10" text-align: center;>Note: This certificate will reissue after each audit for next due and continuity of compliance
-</font><br>'
-        . '<br><p  style="text-align: justify; text-justify: inter-word;"><font size="12" text-align: center;><b> For and on behalf of A.I.T.F.</b></font><br><br><br><br>'
+</font><br>';
+if ($isDigitallySigned) {
+    // Render official Class-3 DSC Digital Signature Stamp
+    $signBox = '<table border="1" cellspacing="0" cellpadding="3" width="100%" style="border-color: #1e3c72; background-color: #f0f7ff;">
+        <tr>
+            <td align="center" style="font-family: helvetica; color: #1e3c72; line-height: 1.2;">
+                <font size="8"><b>&#10004; DIGITALLY SIGNED</b></font><br>
+                <font size="7"><b>Signatory:</b> ' . $signerName . '<br>
+                <b>Org:</b> A.I.T.F. Management Certification Limited<br>
+                <b>Date:</b> ' . $signDateTime . '<br>
+                <b>Reason:</b> ' . $signReason . '<br>
+                <b>Location:</b> ' . $signLocation . '<br>
+                <b>Auth:</b> Class 3 DSC (CCA India / IT Act 2000)</font>
+            </td>
+        </tr>
+    </table>';
+
+    $signatureBlock = '<br><table border="0" cellspacing="0" cellpadding="0" width="100%">
+        <tr>
+            <td width="28%"></td>
+            <td width="44%" align="center">
+                <font size="11"><b>For and on behalf of A.I.T.F.</b></font><br><br>'
+                . $signBox . '<br>'
+                . '<font size="10">Managing Director</font><br>'
+                . '<font size="9">Revision No: ' . $certificateRevNo . '<br>Date: ' . ($certificateRevDate ? date('d.m.Y', strtotime($certificateRevDate)) : '') . '</font>
+            </td>
+            <td width="28%"></td>
+        </tr>
+    </table>';
+} else {
+    $signatureBlock = '<br><p  style="text-align: justify; text-justify: inter-word;"><font size="12" text-align: center;><b> For and on behalf of A.I.T.F.</b></font><br><br><br><br>'
         . '<br><font size="10" text-align: center;>  Managing Director</font><br>'
         . '<font size="10" text-align: center;>  Revision No: ' . $certificateRevNo . '<br>  Date: ' . ($certificateRevDate ? date('d.m.Y', strtotime($certificateRevDate)) : '') . '</font><br><br></p>';
+}
+
+$html .= $signatureBlock;
+
 // output the HTML content
 $pdf->writeHTML($html, true, false, true, false, '');
+
+// If digitally signed, draw verification QR code at bottom-left corner
+if ($isDigitallySigned && !empty($certificateNumber)) {
+    $qrData = 'https://aitf.co.in/verify_certificate.php?cert=' . rawurlencode($certificateNumber);
+    $qrStyle = array(
+        'border' => 0,
+        'vpadding' => 'auto',
+        'hpadding' => 'auto',
+        'fgcolor' => array(30, 60, 114),
+        'bgcolor' => false,
+        'module_width' => 1,
+        'module_height' => 1
+    );
+    try {
+        $pdf->write2DBarcode($qrData, 'QRCODE,L', 15, 255, 20, 20, $qrStyle, 'N');
+        $pdf->SetXY(12, 275);
+        $pdf->SetFont('helvetica', '', 6);
+        $pdf->SetTextColor(100, 116, 139);
+        $pdf->Cell(26, 4, 'Scan to Verify', 0, 0, 'C');
+    } catch (Exception $qrEx) {
+        // Barcode optional fallback
+    }
+}
 
 //Close and output PDF document
 if (ob_get_length()) {
@@ -880,4 +943,28 @@ if (ob_get_length()) {
 } else {
     @ob_end_clean();
 }
-$pdf->Output('Certificate.pdf', 'I');
+
+$outFileName = 'Certificate.pdf';
+if (!empty($certificateNumber)) {
+    $cleanCert = preg_replace('/[^A-Za-z0-9_-]+/', '_', $certificateNumber);
+    $outFileName = 'Certificate_' . $cleanCert . ($isDigitallySigned ? '_DigitallySigned.pdf' : '.pdf');
+}
+
+if (isset($_POST['output_base64']) && (int)$_POST['output_base64'] === 1) {
+    header('Content-Type: application/json; charset=utf-8');
+    $pdfString = $pdf->Output('', 'S');
+    require_once __DIR__ . '/include/dsc_audit_helper.php';
+    $docId = !empty($certify_id) ? $certify_id : (!empty($customer_id) ? $customer_id : $certificateNumber);
+    $ticket = aitf_create_signing_ticket($db, $docId, $certificateNumber, $pdfString);
+
+    echo json_encode(array(
+        'success' => true,
+        'certificate_number' => $certificateNumber,
+        'filename' => $outFileName,
+        'pdf_base64' => base64_encode($pdfString),
+        'signing_ticket' => $ticket
+    ));
+    exit;
+}
+
+$pdf->Output($outFileName, 'I');

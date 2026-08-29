@@ -516,10 +516,10 @@
                         
                         <!-- Action Buttons -->
                         <div class="action-buttons d-flex justify-content-center flex-wrap gap-3 mb-4">
-                            <a href="text/NC_Closure.pdf" target="_blank" class="btn btn-lg btn-view">
+                            <a href="guidelines/F 7.24 Annex-A NC closer report (II+III).pdf" target="_blank" class="btn btn-lg btn-view">
                                 <i class="fas fa-external-link-alt me-2"></i>View in New Tab
                             </a>
-                            <a href="text/NC_Closure.pdf" download class="btn btn-lg btn-download">
+                            <a href="guidelines/F 7.24 Annex-A NC closer report (II+III).pdf" download class="btn btn-lg btn-download">
                                 <i class="fas fa-file-download me-2"></i>Download PDF
                             </a>
                         </div>

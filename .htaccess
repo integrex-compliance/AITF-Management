@@ -14,8 +14,95 @@ RewriteCond %{HTTP_HOST} aitf\.co\.in [NC]
 RewriteCond %{SERVER_PORT} 80
 RewriteRule ^(.*)$ https://aitf.co.in/$1 [R,L]
 
-# Keep legacy/protected login redirects and invalid browser URLs on the login selection page.
-RewriteRule ^login/?$ loginRedirect.php?reason=login_required [L,NC,QSA]
+# Dynamically determine base path (works on both local /public_html/ and live /)
+RewriteCond %{REQUEST_URI}::$1 ^(.*?/)(.*)::\2$
+RewriteRule ^(.*)$ - [E=BASE:%1]
+
+# ----------------------------------------------------
+# 1. 301 Redirect Legacy / Old URLs to Modern Hyphenated Slugs
+# ----------------------------------------------------
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,}\s/+(?:public_html/)?aboutus(?:\.php)?[\s\?] [NC]
+RewriteRule ^ %{ENV:BASE}about-us [R=301,L]
+
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,}\s/+(?:public_html/)?contactUS(?:\.php)?[\s\?] [NC]
+RewriteRule ^ %{ENV:BASE}contact-us [R=301,L]
+
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,}\s/+(?:public_html/)?certificationProcess(?:\.php)?[\s\?] [NC]
+RewriteRule ^ %{ENV:BASE}certification-process [R=301,L]
+
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,}\s/+(?:public_html/)?expectedOutcome(?:\.php)?[\s\?] [NC]
+RewriteRule ^ %{ENV:BASE}expected-outcome [R=301,L]
+
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,}\s/+(?:public_html/)?complaintsAppeals(?:\.php)?[\s\?] [NC]
+RewriteRule ^ %{ENV:BASE}complaints-appeals [R=301,L]
+
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,}\s/+(?:public_html/)?certificationGuideline(?:\.php)?[\s\?] [NC]
+RewriteRule ^ %{ENV:BASE}certification-guidelines [R=301,L]
+
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,}\s/+(?:public_html/)?auditorGuideline(?:\.php)?[\s\?] [NC]
+RewriteRule ^ %{ENV:BASE}auditor-guidelines [R=301,L]
+
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,}\s/+(?:public_html/)?useOfLogo(?:\.php)?[\s\?] [NC]
+RewriteRule ^ %{ENV:BASE}logo-usage-guidelines [R=301,L]
+
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,}\s/+(?:public_html/)?transitionGuideline(?:\.php)?[\s\?] [NC]
+RewriteRule ^ %{ENV:BASE}transition-guidelines [R=301,L]
+
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,}\s/+(?:public_html/)?ncClosure(?:\.php)?[\s\?] [NC]
+RewriteRule ^ %{ENV:BASE}nc-closure [R=301,L]
+
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,}\s/+(?:public_html/)?validation\.php[\s\?] [NC]
+RewriteRule ^ %{ENV:BASE}certificate-validation [R=301,L]
+
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,}\s/+(?:public_html/)?application\.php[\s\?] [NC]
+RewriteRule ^ %{ENV:BASE}application-form [R=301,L]
+
+# ----------------------------------------------------
+# 2. Modern Friendly Route Mappings
+# ----------------------------------------------------
+RewriteRule ^about-us/?$ aboutus.php [NC,L,QSA]
+RewriteRule ^about/?$ aboutus.php [NC,L,QSA]
+RewriteRule ^contact-us/?$ contactUS.php [NC,L,QSA]
+RewriteRule ^contact/?$ contactUS.php [NC,L,QSA]
+RewriteRule ^certification-process/?$ certificationProcess.php [NC,L,QSA]
+RewriteRule ^expected-outcomes?/?$ expectedOutcome.php [NC,L,QSA]
+RewriteRule ^complaints-(and-)?appeals/?$ complaintsAppeals.php [NC,L,QSA]
+RewriteRule ^impartiality/?$ impartiality.php [NC,L,QSA]
+RewriteRule ^certificate-validation/?$ validation.php [NC,L,QSA]
+RewriteRule ^validation/?$ validation.php [NC,L,QSA]
+RewriteRule ^application-form/?$ application.php [NC,L,QSA]
+RewriteRule ^application/?$ application.php [NC,L,QSA]
+RewriteRule ^certification-guidelines?/?$ certificationGuideline.php [NC,L,QSA]
+RewriteRule ^auditor-guidelines?/?$ auditorGuideline.php [NC,L,QSA]
+RewriteRule ^logo-usage-guidelines?/?$ useOfLogo.php [NC,L,QSA]
+RewriteRule ^use-of-logo/?$ useOfLogo.php [NC,L,QSA]
+RewriteRule ^transition-guidelines?/?$ transitionGuideline.php [NC,L,QSA]
+RewriteRule ^nc-closure/?$ ncClosure.php [NC,L,QSA]
+RewriteRule ^nc-report-and-closure/?$ ncClosure.php [NC,L,QSA]
+RewriteRule ^terms-and-conditions/?$ policy.php [NC,L,QSA]
+RewriteRule ^terms-conditions/?$ policy.php [NC,L,QSA]
+RewriteRule ^terms/?$ policy.php [NC,L,QSA]
+RewriteRule ^services?/?$ service.php [NC,L,QSA]
+RewriteRule ^careers?/?$ career.php [NC,L,QSA]
+RewriteRule ^faqs?/?$ faq.php [NC,L,QSA]
+RewriteRule ^circulars?/?$ circuler.php [NC,L,QSA]
+RewriteRule ^policy/?$ policy.php [NC,L,QSA]
+RewriteRule ^news/?$ news.php [NC,L,QSA]
+RewriteRule ^login/?$ login.php [NC,L,QSA]
+
+
+
+# ----------------------------------------------------
+# 4. Internal Rewrite: /page -> /page.php if page.php exists
+# ----------------------------------------------------
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME}.php -f
+RewriteRule ^(.*)$ $1.php [L,QSA]
+
+# ----------------------------------------------------
+# 5. Fallback for non-existent routes (404 handling)
+# ----------------------------------------------------
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{HTTP_ACCEPT} text/html [NC]

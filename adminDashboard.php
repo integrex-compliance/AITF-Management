@@ -815,33 +815,36 @@
 
     <style>
         /* ==========================================================
-           ADMIN DASHBOARD — MODERN EXECUTIVE STYLING & TYPOGRAPHY
+           ADMIN DASHBOARD — MODERN EXECUTIVE SAAS DESIGN SYSTEM
            ========================================================== */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+        html, body, #wrapper, #page-content-wrapper, .admin-dash-wrap {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+            background-color: #f8fafc !important;
+            color: #0f172a !important;
+            -webkit-font-smoothing: antialiased !important;
+        }
+
         .admin-dash-wrap {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background:
-                radial-gradient(circle at 12% 8%, rgba(13, 77, 139, 0.08), transparent 30%),
-                radial-gradient(circle at 92% 18%, rgba(16, 185, 129, 0.06), transparent 28%),
-                linear-gradient(180deg, #f0f4f8 0%, #f8fafc 40%, #f1f5f9 100%);
             min-height: 100vh;
             padding-bottom: 48px;
-            color: #1e293b;
         }
 
         .admin-dashboard {
-            max-width: 1340px;
-            margin: 0 auto;
-            padding: 24px 20px 60px;
+            max-width: 1540px !important;
+            margin: 0 auto !important;
+            padding: 10px 18px 60px 18px !important;
         }
 
-        /* Top Title Bar */
+        /* Top Bar */
         .dash-top-bar {
             display: flex;
             align-items: center;
             justify-content: space-between;
             flex-wrap: wrap;
             gap: 12px;
-            margin-bottom: 14px;
+            margin-bottom: 12px;
         }
 
         .dash-section-title {
@@ -850,12 +853,12 @@
             gap: 10px;
             margin: 0;
             padding: 8px 18px;
-            font-size: 18px;
+            font-size: 17px;
             font-weight: 800;
             color: #ffffff;
-            background: linear-gradient(135deg, #0d4d8b 0%, #083b6a 100%);
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(13, 77, 139, 0.2);
+            background: linear-gradient(135deg, #0d4d8b 0%, #1e40af 100%);
+            border-radius: 9px;
+            box-shadow: 0 4px 12px rgba(13, 77, 139, 0.22);
             letter-spacing: -0.2px;
         }
 
@@ -869,7 +872,7 @@
             font-size: 11px;
             font-weight: 800;
             vertical-align: middle;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
             letter-spacing: 0.3px;
         }
 
@@ -884,7 +887,7 @@
             font-weight: 700;
             font-size: 12px;
             border: 1px solid #a7f3d0;
-            box-shadow: 0 2px 6px rgba(16, 185, 129, 0.12);
+            box-shadow: 0 1px 3px rgba(16, 185, 129, 0.1);
         }
 
         .live-pulse span {
@@ -905,18 +908,64 @@
             }
         }
 
+        /* Module Switcher Pills */
+        .dash-module-nav {
+            display: flex;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            gap: 8px;
+            margin-bottom: 12px;
+            padding-bottom: 4px;
+            scrollbar-width: thin;
+        }
+
+        .dash-module-tab {
+            flex: 0 0 auto;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            height: 36px;
+            padding: 0 16px;
+            border-radius: 20px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            color: #475569;
+            font-size: 12.5px;
+            font-weight: 600;
+            text-decoration: none !important;
+            transition: all 0.15s ease;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+            cursor: pointer;
+        }
+
+        .dash-module-tab:hover {
+            background: #f1f5f9;
+            color: #0d4d8b;
+            border-color: #cbd5e1;
+            transform: translateY(-1px);
+        }
+
+        .dash-module-tab.active {
+            background: linear-gradient(135deg, #0d4d8b 0%, #1e40af 100%) !important;
+            color: #ffffff !important;
+            border-color: #0d4d8b !important;
+            box-shadow: 0 2px 8px rgba(13, 77, 139, 0.25) !important;
+            font-weight: 700 !important;
+        }
+
         /* Filter Panel */
         .dash-filter {
-            margin: 0 0 20px 0;
+            margin: 0 0 16px 0;
             display: grid;
             grid-template-columns: repeat(8, minmax(0, 1fr));
             gap: 10px;
             align-items: flex-end;
-            padding: 16px 20px;
+            padding: 14px 18px;
             background: #ffffff;
             border: 1px solid #e2e8f0;
             border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+            box-shadow: 0 1px 4px rgba(15, 23, 42, 0.03);
         }
 
         .dash-filter-item {
@@ -932,7 +981,7 @@
             font-size: 11px !important;
             text-transform: uppercase !important;
             font-weight: 700 !important;
-            margin: 0 0 6px 0 !important;
+            margin: 0 0 5px 0 !important;
             padding: 0 !important;
             height: 16px !important;
             line-height: 16px !important;
@@ -947,23 +996,33 @@
             height: 38px !important;
             min-height: 38px !important;
             max-height: 38px !important;
-            border: 1px solid #cbd5e1 !important;
+            border: 1.5px solid #cbd5e1 !important;
             border-radius: 8px !important;
             box-shadow: none !important;
-            color: #1e293b !important;
-            background: #ffffff !important;
+            color: #0f172a !important;
+            background: #f8fafc !important;
             font-weight: 500 !important;
-            font-size: 12px !important;
-            padding: 0 8px !important;
-            line-height: 36px !important;
+            font-size: 12.5px !important;
+            padding: 0 10px !important;
             box-sizing: border-box !important;
             margin: 0 !important;
-            vertical-align: middle !important;
-            transition: border-color .18s ease, box-shadow .18s ease;
+            transition: all 0.15s ease !important;
+        }
+
+        .dash-filter select.form-control {
+            padding-right: 28px !important;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+            background-repeat: no-repeat !important;
+            background-position: right 8px center !important;
+            background-size: 9px !important;
+            appearance: none !important;
+            -webkit-appearance: none !important;
+            cursor: pointer !important;
         }
 
         .dash-filter .form-control:focus {
             border-color: #0d4d8b !important;
+            background-color: #ffffff !important;
             outline: none !important;
             box-shadow: 0 0 0 3px rgba(13, 77, 139, 0.12) !important;
         }
@@ -973,16 +1032,15 @@
             height: 38px !important;
             min-height: 38px !important;
             max-height: 38px !important;
-            line-height: 38px !important;
             border-radius: 8px !important;
             border: 0 !important;
-            background: linear-gradient(135deg, #0d4d8b 0%, #083b6a 100%) !important;
+            background: linear-gradient(135deg, #0d4d8b 0%, #1e40af 100%) !important;
             color: #ffffff !important;
             font-weight: 700 !important;
-            font-size: 12px !important;
+            font-size: 12.5px !important;
             padding: 0 12px !important;
-            box-shadow: 0 2px 6px rgba(13, 77, 139, 0.25) !important;
-            transition: all 0.2s ease;
+            box-shadow: 0 2px 6px rgba(13, 77, 139, 0.2) !important;
+            transition: all 0.15s ease;
             cursor: pointer !important;
             white-space: nowrap !important;
             display: inline-flex !important;
@@ -994,8 +1052,8 @@
         }
 
         .dash-btn:hover {
-            background: linear-gradient(135deg, #11599e 0%, #0a467e 100%) !important;
-            box-shadow: 0 4px 12px rgba(13, 77, 139, 0.35) !important;
+            background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%) !important;
+            box-shadow: 0 4px 12px rgba(13, 77, 139, 0.28) !important;
             transform: translateY(-1px);
             color: #ffffff !important;
         }
@@ -1004,19 +1062,19 @@
         .dash-card-grid {
             display: grid;
             grid-template-columns: repeat(4, minmax(190px, 1fr));
-            gap: 16px;
-            margin-top: 18px;
+            gap: 14px;
+            margin-top: 14px;
         }
 
         .dash-card {
             background: #ffffff;
             border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 16px 18px 20px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+            border-radius: 14px;
+            padding: 16px 18px 16px;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
             position: relative;
             overflow: hidden;
-            min-height: 120px;
+            min-height: 115px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -1025,40 +1083,55 @@
 
         .dash-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.07);
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.07);
             border-color: #cbd5e1;
         }
 
-        .dash-card:before {
+        .dash-card::before {
             content: "";
             position: absolute;
             left: 0;
             top: 0;
-            width: 4px;
-            height: 100%;
-            background: #0d4d8b;
+            right: 0;
+            height: 3.5px;
+            background: linear-gradient(90deg, #0d4d8b 0%, #2563eb 100%);
         }
 
-        .dash-card:nth-child(2):before {
-            background: #10b981;
+        .dash-card:nth-child(2)::before {
+            background: linear-gradient(90deg, #059669 0%, #10b981 100%);
         }
 
-        .dash-card:nth-child(3):before {
-            background: #f59e0b;
+        .dash-card:nth-child(3)::before {
+            background: linear-gradient(90deg, #d97706 0%, #f59e0b 100%);
         }
 
-        .dash-card:nth-child(4):before {
-            background: #8b5cf6;
+        .dash-card:nth-child(4)::before {
+            background: linear-gradient(90deg, #7c3aed 0%, #8b5cf6 100%);
         }
 
         .dash-card .icon {
             position: absolute;
-            right: 16px;
-            top: 16px;
-            color: #94a3b8;
-            font-size: 20px;
+            right: 14px;
+            top: 14px;
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            background: #eff6ff;
+            color: #2563eb;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             z-index: 1;
-            opacity: 0.65;
+            transition: all 0.2s ease;
+        }
+
+        .dash-card:nth-child(2) .icon { background: #ecfdf5; color: #059669; }
+        .dash-card:nth-child(3) .icon { background: #fff7ed; color: #ea580c; }
+        .dash-card:nth-child(4) .icon { background: #f5f3ff; color: #7c3aed; }
+
+        .dash-card:hover .icon {
+            transform: scale(1.08);
         }
 
         .dash-card .label {
@@ -1072,7 +1145,7 @@
             letter-spacing: 0.5px;
             background: transparent;
             margin-bottom: 4px;
-            padding-right: 28px;
+            padding-right: 38px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -1080,14 +1153,14 @@
 
         .dash-card .value {
             color: #0f172a !important;
-            font-size: 18px !important;
+            font-size: 22px !important;
             font-weight: 800 !important;
             margin: 2px 0 4px !important;
             white-space: nowrap !important;
             word-break: keep-all !important;
             overflow: hidden !important;
             text-overflow: ellipsis !important;
-            line-height: 1.25 !important;
+            line-height: 1.2 !important;
             letter-spacing: -0.3px !important;
             display: block !important;
         }
@@ -1107,12 +1180,12 @@
             position: absolute;
             left: 16px;
             right: 16px;
-            bottom: 4px;
-            height: 4px;
+            bottom: 3px;
+            height: 3px;
             display: flex;
             align-items: flex-end;
             gap: 3px;
-            opacity: 0.35;
+            opacity: 0.3;
             pointer-events: none;
         }
 
@@ -1123,33 +1196,28 @@
             background: #cbd5e1;
         }
 
-        .dash-spark span:nth-child(2n) {
-            background: #93c5fd;
-        }
-
-        .dash-spark span:nth-child(3n) {
-            background: #fdba74;
-        }
+        .dash-spark span:nth-child(2n) { background: #93c5fd; }
+        .dash-spark span:nth-child(3n) { background: #fdba74; }
 
         /* Insight Strip */
         .insight-strip {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 14px;
-            margin-top: 16px;
+            margin-top: 14px;
         }
 
         .insight-box {
             background: #ffffff;
             border: 1px solid #e2e8f0;
-            border-radius: 10px;
-            padding: 16px 18px 16px 54px;
+            border-radius: 12px;
+            padding: 14px 16px 14px 48px;
             color: #475569;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+            box-shadow: 0 1px 4px rgba(15, 23, 42, 0.03);
             line-height: 1.45;
             position: relative;
             overflow: hidden;
-            min-height: 96px;
+            min-height: 80px;
             font-weight: 500;
             font-size: 12.5px;
         }
@@ -1157,40 +1225,39 @@
         .insight-box:before {
             content: "";
             position: absolute;
-            left: 16px;
-            top: 16px;
-            width: 26px;
-            height: 26px;
-            border-radius: 8px;
-            background: linear-gradient(135deg, #0d4d8b, #083b6a);
+            left: 14px;
+            top: 14px;
+            width: 22px;
+            height: 22px;
+            border-radius: 6px;
+            background: linear-gradient(135deg, #0d4d8b, #1e40af);
             box-shadow: 0 2px 6px rgba(13, 77, 139, 0.25);
         }
 
         .insight-box:after {
             content: "";
             position: absolute;
-            left: 24px;
-            top: 24px;
-            width: 10px;
-            height: 10px;
+            left: 21px;
+            top: 21px;
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
             background: #ffffff;
-            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
         }
 
         .insight-box:nth-child(2):before {
-            background: linear-gradient(135deg, #10b981, #059669);
+            background: linear-gradient(135deg, #059669, #10b981);
         }
 
         .insight-box:nth-child(3):before {
-            background: linear-gradient(135deg, #f59e0b, #d97706);
+            background: linear-gradient(135deg, #d97706, #f59e0b);
         }
 
         .insight-box strong {
             display: block;
             color: #0f172a;
-            font-size: 14px;
-            margin-bottom: 4px;
+            font-size: 13.5px;
+            margin-bottom: 3px;
             font-weight: 700;
         }
 
@@ -1202,23 +1269,23 @@
         .dash-section-grid {
             display: grid;
             grid-template-columns: minmax(0, 1.55fr) minmax(330px, 1fr);
-            gap: 16px;
-            margin-top: 16px;
+            gap: 14px;
+            margin-top: 14px;
         }
 
         .dash-panel {
             background: #ffffff;
             border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+            border-radius: 14px;
+            padding: 18px 20px;
+            box-shadow: 0 1px 4px rgba(15, 23, 42, 0.03);
             overflow: hidden;
         }
 
         .dash-panel h3 {
-            margin: 0 0 16px;
+            margin: 0 0 14px;
             color: #0f172a;
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 800;
             display: flex;
             align-items: center;
@@ -1237,7 +1304,7 @@
 
         .dash-chart {
             width: 100%;
-            height: 300px;
+            height: 280px;
             display: block;
         }
 
@@ -1250,12 +1317,13 @@
         }
 
         .dash-table th {
-            color: #ffffff !important;
+            color: #475569 !important;
             text-transform: uppercase;
             font-size: 11px;
             border: none;
+            border-bottom: 2px solid #e2e8f0;
             padding: 10px 12px;
-            background: #0f2744;
+            background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%) !important;
             font-weight: 700;
             letter-spacing: 0.5px;
             position: sticky;
@@ -1264,17 +1332,17 @@
         }
 
         .dash-table th:first-child {
-            border-radius: 8px 0 0 0;
+            border-radius: 6px 0 0 0;
         }
 
         .dash-table th:last-child {
-            border-radius: 0 8px 0 0;
+            border-radius: 0 6px 0 0;
         }
 
         .dash-table td {
             color: #334155;
             border-bottom: 1px solid #f1f5f9;
-            padding: 10px 12px;
+            padding: 9px 12px;
             vertical-align: middle;
             font-weight: 500;
         }
@@ -1290,14 +1358,14 @@
         }
 
         .dash-table tr.clickable-row:hover td {
-            background: #f8fafc;
+            background: #f1f5f9;
             color: #0f172a;
         }
 
         .dash-pill {
             display: inline-block;
             border-radius: 20px;
-            padding: 2px 10px;
+            padding: 2px 9px;
             background: #e0f2fe;
             color: #0369a1;
             font-weight: 700;
@@ -1310,7 +1378,7 @@
         .letter-rank-list {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 9px;
             max-height: 320px;
             overflow-y: auto;
             padding-right: 4px;
@@ -1319,7 +1387,7 @@
         .letter-rank-item {
             border: 1px solid #e2e8f0;
             border-radius: 8px;
-            padding: 10px 12px;
+            padding: 9px 12px;
             background: #f8fafc;
         }
 
@@ -1331,13 +1399,6 @@
             color: #0f172a;
             font-weight: 700;
             font-size: 12px;
-        }
-
-        .letter-rank-title {
-            min-width: 0;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
         }
 
         .letter-rank-count {
@@ -1352,11 +1413,11 @@
         }
 
         .letter-rank-track {
-            height: 6px;
+            height: 5px;
             border-radius: 10px;
             background: #e2e8f0;
             overflow: hidden;
-            margin: 8px 0 6px;
+            margin: 7px 0 5px;
         }
 
         .letter-rank-fill {
@@ -1365,107 +1426,107 @@
             background: linear-gradient(90deg, #0d4d8b, #10b981);
         }
 
-        .letter-rank-meta {
-            display: flex;
-            justify-content: space-between;
-            color: #64748b;
-            font-size: 11px;
-            font-weight: 600;
-        }
-
-        .letter-rank-empty {
-            color: #64748b;
-            font-weight: 600;
-            padding: 20px 0;
-            text-align: center;
-        }
-
-        .trend-summary {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-bottom: 14px;
-        }
-
-        .trend-chip {
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            background: #f8fafc;
-            padding: 8px 12px;
-            min-width: 0;
-        }
-
         .trend-chip span {
             display: block;
             color: #64748b;
-            font-size: 10px;
-            font-weight: 700;
-            text-transform: uppercase;
-            margin-bottom: 3px;
-            letter-spacing: 0.3px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            font-size: 11px;
+            font-weight: 600;
+            margin-bottom: 2px;
         }
 
         .trend-chip strong {
             display: block;
             color: #0f172a;
-            font-size: 12.5px;
-            font-weight: 800;
+            font-size: 13px;
+            font-weight: 700;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            line-height: 1.3;
+        }
+
+        .trend-chip.up {
+            border-color: #a7f3d0;
+            background: #ecfdf5;
         }
 
         .trend-chip.up strong {
-            color: #059669;
+            color: #047857;
+        }
+
+        .trend-chip.down {
+            border-color: #fecaca;
+            background: #fef2f2;
         }
 
         .trend-chip.down strong {
             color: #dc2626;
         }
 
-        .trend-chip.flat strong {
-            color: #0d4d8b;
+        /* Modals */
+        .modal-content {
+            border-radius: 14px !important;
+            border: 1px solid #e2e8f0 !important;
+            box-shadow: 0 20px 50px rgba(15, 23, 42, 0.2) !important;
+            overflow: hidden !important;
         }
 
-        .hidden-dashboard {
-            display: none;
+        .modal-header {
+            background: linear-gradient(135deg, #0d4d8b 0%, #1e40af 100%) !important;
+            color: #ffffff !important;
+            padding: 14px 20px !important;
+            border: none !important;
         }
 
-        /* ==========================================================
-           PREMIUM DARK MODE — adminDashboard.php
-           ========================================================== */
+        .modal-header h4 {
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            font-size: 16px !important;
+            margin: 0 !important;
+        }
+
+        .modal-header .close {
+            color: #ffffff !important;
+            opacity: 0.85 !important;
+            font-size: 24px !important;
+            line-height: 1 !important;
+        }
+
+        .modal-header .close:hover {
+            opacity: 1 !important;
+        }
+
+        /* =====================================================================
+           DARK MODE SUPPORT
+           ===================================================================== */
+        html.theme-dark,
+        html.theme-dark body,
+        html.theme-dark #wrapper,
+        html.theme-dark #page-content-wrapper,
         html.theme-dark .admin-dash-wrap {
-            background: #0a0e14;
-            color: #dbe3f0;
+            background-color: #0a0e14 !important;
+            color: #dbe3f0 !important;
         }
 
-        html.theme-dark .dash-hero {
-            background: #111722;
-            border-color: #232c3d;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+        html.theme-dark .dash-module-tab {
+            background: #111722 !important;
+            border-color: #232c3d !important;
+            color: #93a1b8 !important;
         }
 
-        html.theme-dark .dash-title {
-            color: #f1f5f9;
+        html.theme-dark .dash-module-tab:hover {
+            background: #161d2b !important;
+            color: #ffffff !important;
         }
 
-        html.theme-dark .dash-subtitle {
-            color: #94a3b8;
-        }
-
-        html.theme-dark .live-pulse {
-            background: rgba(16, 185, 129, 0.15);
-            border-color: rgba(16, 185, 129, 0.3);
-            color: #6ee7b7;
+        html.theme-dark .dash-module-tab.active {
+            background: #1e3a5f !important;
+            border-color: #2e5a8f !important;
+            color: #ffffff !important;
         }
 
         html.theme-dark .dash-filter {
-            background: #161d2b;
-            border-color: #232c3d;
+            background: #111722 !important;
+            border-color: #232c3d !important;
         }
 
         html.theme-dark .dash-filter label {
@@ -1473,123 +1534,109 @@
         }
 
         html.theme-dark .dash-filter .form-control {
-            background-color: #111722 !important;
+            background-color: #161d2b !important;
             border-color: #2e3a4f !important;
             color: #dbe3f0 !important;
         }
 
         html.theme-dark .dash-card {
-            background: #111722;
-            border-color: #232c3d;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+            background: #111722 !important;
+            border-color: #232c3d !important;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
         }
 
         html.theme-dark .dash-card:hover {
-            border-color: #2e3a4f;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+            border-color: #2e3a4f !important;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45) !important;
         }
 
         html.theme-dark .dash-card .value {
-            color: #f1f5f9;
+            color: #f1f5f9 !important;
         }
 
         html.theme-dark .dash-card .label,
         html.theme-dark .dash-card .meta {
-            color: #94a3b8;
+            color: #93a1b8 !important;
+        }
+
+        html.theme-dark .dash-card .icon {
+            background: #161d2b !important;
+            color: #60a5fa !important;
         }
 
         html.theme-dark .insight-box {
-            background: #111722;
-            border-color: #232c3d;
-            color: #cbd5e1;
+            background: #111722 !important;
+            border-color: #232c3d !important;
+            color: #cbd5e1 !important;
         }
 
         html.theme-dark .insight-box strong {
-            color: #f1f5f9;
+            color: #f1f5f9 !important;
         }
 
         html.theme-dark .dash-panel {
-            background: #111722;
-            border-color: #232c3d;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+            background: #111722 !important;
+            border-color: #232c3d !important;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
         }
 
         html.theme-dark .dash-panel h3 {
-            color: #f1f5f9;
+            color: #f1f5f9 !important;
         }
 
         html.theme-dark .dash-table th {
-            background: #090e17 !important;
+            background: #161d2b !important;
+            border-bottom-color: #2e3a4f !important;
+            color: #dbe3f0 !important;
         }
 
         html.theme-dark .dash-table td {
-            color: #cbd5e1;
-            border-bottom-color: #1e293b;
+            color: #cbd5e1 !important;
+            border-bottom-color: #232c3d !important;
         }
 
         html.theme-dark .dash-table tr.clickable-row:hover td {
-            background: #161d2b;
-            color: #f1f5f9;
+            background: #161d2b !important;
+            color: #f1f5f9 !important;
         }
 
         html.theme-dark .dash-pill {
-            background: rgba(56, 189, 248, 0.15);
-            border-color: rgba(56, 189, 248, 0.3);
-            color: #7dd3fc;
+            background: rgba(56, 189, 248, 0.15) !important;
+            border-color: rgba(56, 189, 248, 0.3) !important;
+            color: #7dd3fc !important;
         }
 
         html.theme-dark .trend-chip {
-            background: #161d2b;
-            border-color: #232c3d;
+            background: #161d2b !important;
+            border-color: #232c3d !important;
         }
 
         html.theme-dark .trend-chip strong {
-            color: #f1f5f9;
+            color: #f1f5f9 !important;
         }
 
         html.theme-dark .letter-rank-item {
-            background: #161d2b;
-            border-color: #232c3d;
+            background: #161d2b !important;
+            border-color: #232c3d !important;
         }
 
         html.theme-dark .letter-rank-head {
-            color: #f1f5f9;
+            color: #f1f5f9 !important;
         }
 
         html.theme-dark .letter-rank-track {
-            background: #1e293b;
+            background: #1e293b !important;
         }
 
-        /* Modal Dark Mode */
         html.theme-dark .modal-content {
             background: #111722 !important;
             color: #dbe3f0 !important;
             border: 1px solid #232c3d !important;
         }
 
-        html.theme-dark .modal-body,
-        html.theme-dark .modal-footer {
-            background: #111722 !important;
-            border-color: #232c3d !important;
-            color: #dbe3f0 !important;
-        }
-
-        html.theme-dark .modal-body table thead,
-        html.theme-dark .modal-body table tfoot {
-            background: #090e17 !important;
-            border-color: #232c3d !important;
-        }
-
         html.theme-dark .modal-body table td {
             color: #cbd5e1 !important;
             border-bottom-color: #1e293b !important;
-        }
-
-        html.theme-dark .modal-body .btn-default,
-        html.theme-dark .modal-footer .btn-default {
-            background: #161d2b !important;
-            border-color: #2e3a4f !important;
-            color: #dbe3f0 !important;
         }
 
         /* Responsive Breakpoints */
@@ -1610,17 +1657,13 @@
 
         @media (max-width: 640px) {
             .admin-dashboard {
-                padding: 16px 10px 40px;
+                padding: 10px 8px 40px !important;
             }
 
             .dash-filter,
             .dash-card-grid,
             .trend-summary {
                 grid-template-columns: 1fr;
-            }
-
-            .dash-title {
-                font-size: 22px;
             }
 
             .dash-chart {
@@ -1639,6 +1682,25 @@
                     </h2>
                     <div class="live-pulse"><span></span> Real time Values</div>
                 </div>
+
+                <div class="dash-module-nav">
+                    <a href="adminDashboard.php?dashboard_type=business" class="dash-module-tab <?php echo $dashboardType === 'business' ? 'active' : ''; ?>">
+                        <i class="fa fa-line-chart"></i> Business Insights
+                    </a>
+                    <a href="adminDashboard.php?dashboard_type=invoice" class="dash-module-tab <?php echo $dashboardType === 'invoice' ? 'active' : ''; ?>">
+                        <i class="fa fa-file-text-o"></i> Invoices
+                    </a>
+                    <a href="adminDashboard.php?dashboard_type=letters" class="dash-module-tab <?php echo $dashboardType === 'letters' ? 'active' : ''; ?>">
+                        <i class="fa fa-envelope-o"></i> Due Letters
+                    </a>
+                    <a href="adminDashboard.php?dashboard_type=payments" class="dash-module-tab <?php echo $dashboardType === 'payments' ? 'active' : ''; ?>">
+                        <i class="fa fa-money"></i> Payments
+                    </a>
+                    <a href="adminDashboard.php?dashboard_type=clients" class="dash-module-tab <?php echo $dashboardType === 'clients' ? 'active' : ''; ?>">
+                        <i class="fa fa-building-o"></i> Clients
+                    </a>
+                </div>
+
                 <form class="dash-filter" method="get" action="adminDashboard.php">
                     <div class="dash-filter-item">
                         <label>Dashboard</label>
@@ -1721,7 +1783,7 @@
                 <div
                     class="dash-section-grid <?php echo ($dashboardType === 'business' || $dashboardType === 'invoice') ? '' : 'hidden-dashboard'; ?>">
                     <div class="dash-panel">
-                        <h3>Invoice Trend</h3>
+                        <h3><i class="fa fa-line-chart" style="color: #0d4d8b; font-size: 14px;"></i> Monthly Invoice Trend</h3>
                         <div class="trend-summary">
                             <div class="trend-chip">
                                 <span>First Month</span>
@@ -1741,11 +1803,11 @@
                                     <?php echo dashMoney(abs($invoiceTrendDiff)); ?></strong>
                             </div>
                         </div>
-                        <canvas id="invoiceTrendChart" class="dash-chart"></canvas>
+                        <div id="invoiceTrendChart" class="dash-chart" style="min-height: 290px;"></div>
                     </div>
                     <div class="dash-panel">
-                        <h3>Invoice Split</h3>
-                        <canvas id="invoiceTypeChart" class="dash-chart"></canvas>
+                        <h3><i class="fa fa-pie-chart" style="color: #f59e0b; font-size: 14px;"></i> Invoice Type Split</h3>
+                        <div id="invoiceTypeChart" class="dash-chart" style="min-height: 290px;"></div>
                     </div>
                 </div>
 
@@ -1754,12 +1816,12 @@
                 <div
                     class="dash-section-grid <?php echo ($dashboardType === 'business' || $dashboardType === 'payments' || $dashboardType === 'clients') ? '' : 'hidden-dashboard'; ?>">
                     <div class="dash-panel">
-                        <h3>Pending Payment by Service</h3>
-                        <canvas id="paymentChart" class="dash-chart"></canvas>
+                        <h3><i class="fa fa-bar-chart" style="color: #10b981; font-size: 14px;"></i> Pending Payment by Service</h3>
+                        <div id="paymentChart" class="dash-chart" style="min-height: 290px;"></div>
                     </div>
                     <div class="dash-panel">
-                        <h3>Client Status Dots</h3>
-                        <canvas id="clientDotChart" class="dash-chart"></canvas>
+                        <h3><i class="fa fa-users" style="color: #8b5cf6; font-size: 14px;"></i> Client Status Distribution</h3>
+                        <div id="clientDotChart" class="dash-chart" style="min-height: 290px;"></div>
                     </div>
                 </div>
 
@@ -2125,29 +2187,10 @@
     </form>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 <script>
     var dashData = <?php echo json_encode($chartData); ?>;
-
-    function setupCanvas(id) {
-        var canvas = document.getElementById(id);
-        if (!canvas) return null;
-        var rect = canvas.getBoundingClientRect();
-        var scale = window.devicePixelRatio || 1;
-        canvas.width = rect.width * scale;
-        canvas.height = rect.height * scale;
-        var ctx = canvas.getContext('2d');
-        ctx.scale(scale, scale);
-        return { canvas: canvas, ctx: ctx, width: rect.width, height: rect.height };
-    }
-
-    function compactLabel(value, maxLength) {
-        value = String(value || '');
-        maxLength = maxLength || 10;
-        if (value.length <= maxLength) {
-            return value;
-        }
-        return value.substring(0, maxLength - 1) + '.';
-    }
+    var chartInstances = {};
 
     function compactNumber(value) {
         value = Number(value) || 0;
@@ -2163,197 +2206,394 @@
         return Math.round(value);
     }
 
-    function drawAxisLabel(ctx, text, x, y, maxWidth) {
-        text = compactLabel(text, Math.max(5, Math.floor(maxWidth / 7)));
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.rotate(-Math.PI / 5);
-        ctx.textAlign = 'right';
-        ctx.fillText(text, 0, 0);
-        ctx.restore();
-    }
-
-    function drawBars(id, rows, key, color) {
-        var c = setupCanvas(id);
-        if (!c) return;
-        var ctx = c.ctx, w = c.width, h = c.height, leftPad = 34, topPad = 24, rightPad = 16, bottomPad = 56;
-        ctx.clearRect(0, 0, w, h);
-        rows = rows || [];
-        var max = Math.max.apply(null, rows.map(function (r) { return parseFloat(r[key] || 0); }).concat([1]));
-        var plotW = w - leftPad - rightPad;
-        var plotH = h - topPad - bottomPad;
-        var gap = rows.length > 8 ? 8 : 12;
-        var barW = Math.max(14, Math.min(42, (plotW / Math.max(rows.length, 1)) - gap));
-        ctx.strokeStyle = '#e2e8f0';
-        ctx.beginPath();
-        ctx.moveTo(leftPad, topPad);
-        ctx.lineTo(leftPad, h - bottomPad);
-        ctx.lineTo(w - rightPad, h - bottomPad);
-        ctx.stroke();
-        rows.forEach(function (row, i) {
-            var slotW = plotW / Math.max(rows.length, 1);
-            var x = leftPad + i * slotW + (slotW - barW) / 2;
-            var val = parseFloat(row[key] || 0);
-            var bh = plotH * val / max;
-            var y = h - bottomPad - bh;
-            ctx.fillStyle = color;
-            ctx.fillRect(x, y, barW, bh);
-            ctx.fillStyle = '#64748b';
-            ctx.font = '11px Inter, Segoe UI, sans-serif';
-            drawAxisLabel(ctx, row.label || '', x + barW / 2, h - 28, slotW - 4);
-            ctx.fillStyle = '#0f172a';
-            ctx.font = '700 11px Inter, Segoe UI, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText(compactNumber(val), x + barW / 2, Math.max(14, y - 7));
-            ctx.textAlign = 'left';
-        });
-    }
-
-    function drawInvoiceTrend(id, rows) {
-        var c = setupCanvas(id);
-        if (!c) return;
-        var ctx = c.ctx, w = c.width, h = c.height, leftPad = 54, topPad = 32, rightPad = 24, bottomPad = 56;
-        rows = rows || [];
-        var maxAmount = Math.max.apply(null, rows.map(function (r) { return parseFloat(r.amount || 0); }).concat([1]));
-        var maxCount = Math.max.apply(null, rows.map(function (r) { return parseFloat(r.total || 0); }).concat([1]));
-        ctx.clearRect(0, 0, w, h);
-        var plotW = w - leftPad - rightPad;
-        var plotH = h - topPad - bottomPad;
-
-        // Top-right Legend (completely separated from bottom axis labels)
-        var legX = Math.max(leftPad, w - rightPad - 230);
-        ctx.fillStyle = '#0d4d8b';
-        ctx.fillRect(legX, 10, 12, 8);
-        ctx.fillStyle = '#64748b';
-        ctx.font = '600 11px Inter, -apple-system, sans-serif';
-        ctx.textAlign = 'left';
-        ctx.fillText('Amount (Bars)', legX + 16, 18);
-
-        ctx.beginPath();
-        ctx.arc(legX + 118, 14, 4, 0, Math.PI * 2);
-        ctx.fillStyle = '#f59e0b';
-        ctx.fill();
-        ctx.fillStyle = '#64748b';
-        ctx.fillText('Count (Line)', legX + 128, 18);
-
-        for (var g = 0; g < 4; g++) {
-            var gy = topPad + g * (plotH / 3);
-            ctx.strokeStyle = '#f1f5f9';
-            ctx.beginPath();
-            ctx.moveTo(leftPad, gy);
-            ctx.lineTo(w - rightPad, gy);
-            ctx.stroke();
-            var gridValue = maxAmount - (maxAmount * g / 3);
-            ctx.fillStyle = '#94a3b8';
-            ctx.font = '10px Inter, Segoe UI, sans-serif';
-            ctx.textAlign = 'right';
-            ctx.fillText(compactNumber(gridValue), leftPad - 8, gy + 3);
+    function initApexCharts() {
+        if (typeof ApexCharts === 'undefined') {
+            setTimeout(initApexCharts, 120);
+            return;
         }
-        var slotW = plotW / Math.max(rows.length, 1);
-        var barW = Math.max(16, Math.min(34, slotW * .44));
-        rows.forEach(function (row, i) {
-            var val = parseFloat(row.amount || 0);
-            var x = leftPad + i * slotW + (slotW - barW) / 2;
-            var bh = plotH * val / maxAmount;
-            var y = h - bottomPad - bh;
-            var gradient = ctx.createLinearGradient(0, y, 0, h - bottomPad);
-            gradient.addColorStop(0, 'rgba(13, 77, 139, 0.85)');
-            gradient.addColorStop(1, 'rgba(13, 77, 139, 0.15)');
-            ctx.fillStyle = gradient;
-            ctx.fillRect(x, y, barW, bh);
-        });
-        ctx.strokeStyle = '#0d4d8b';
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        rows.forEach(function (row, i) {
-            var x = leftPad + i * slotW + slotW / 2;
-            var y = h - bottomPad - (plotH * parseFloat(row.total || 0) / maxCount);
-            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-        });
-        ctx.stroke();
-        rows.forEach(function (row, i) {
-            var amount = parseFloat(row.amount || 0);
-            var count = parseFloat(row.total || 0);
-            var x = leftPad + i * slotW + slotW / 2;
-            var y = h - bottomPad - (plotH * count / maxCount);
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.arc(x, y, 5, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.strokeStyle = '#f59e0b';
-            ctx.lineWidth = 2.5;
-            ctx.stroke();
-            ctx.fillStyle = '#0f172a';
-            ctx.font = '800 10px Inter, Segoe UI, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText(compactNumber(amount), x, Math.max(topPad + 12, h - bottomPad - (plotH * amount / maxAmount) - 7));
-            ctx.fillStyle = '#64748b';
-            ctx.font = '11px Inter, Segoe UI, sans-serif';
-            drawAxisLabel(ctx, row.label || '', x, h - 28, 58);
-        });
-    }
 
-    function drawDonut(id, rows) {
-        var c = setupCanvas(id);
-        if (!c) return;
-        var ctx = c.ctx, w = c.width, h = c.height;
-        rows = rows || [];
-        var colors = ['#155e95', '#1f9d68', '#ef7b45', '#9b6bdf', '#d14f62'];
-        var total = rows.reduce(function (sum, r) { return sum + parseFloat(r.total || 0); }, 0) || 1;
-        var cx = w / 2, cy = h / 2 - 8, radius = Math.min(w, h) / 3, start = -Math.PI / 2;
-        rows.forEach(function (row, i) {
-            var part = (parseFloat(row.total || 0) / total) * Math.PI * 2;
-            ctx.beginPath();
-            ctx.arc(cx, cy, radius, start, start + part);
-            ctx.lineWidth = 28;
-            ctx.strokeStyle = colors[i % colors.length];
-            ctx.stroke();
-            start += part;
-        });
-        ctx.fillStyle = '#12263f';
-        ctx.font = '800 22px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(Math.round(total), cx, cy + 7);
-        ctx.textAlign = 'left';
-        rows.forEach(function (row, i) {
-            ctx.fillStyle = colors[i % colors.length];
-            ctx.fillRect(14, h - 54 + i * 17, 10, 10);
-            ctx.fillStyle = '#566881';
-            ctx.font = '12px Arial';
-            ctx.fillText((row.label || '') + ' ' + (row.total || 0), 30, h - 45 + i * 17);
-        });
-    }
+        var isDark = $('html').hasClass('theme-dark');
+        var fontFam = 'Inter, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif';
+        var gridColor = isDark ? '#232c3d' : '#f1f5f9';
+        var labelColor = isDark ? '#94a3b8' : '#64748b';
+        var titleColor = isDark ? '#dbe3f0' : '#0f172a';
 
-    function drawDots(id, rows) {
-        var c = setupCanvas(id);
-        if (!c) return;
-        var ctx = c.ctx, w = c.width, h = c.height;
-        ctx.clearRect(0, 0, w, h);
-        rows = rows || [];
-        var max = Math.max.apply(null, rows.map(function (r) { return parseFloat(r.total || 0); }).concat([1]));
-        rows.forEach(function (row, i) {
-            var count = Math.min(24, Math.max(1, Math.ceil((parseFloat(row.total || 0) / max) * 24)));
-            var y = 34 + i * 30;
-            ctx.fillStyle = '#566881';
-            ctx.font = '12px Arial';
-            ctx.fillText(String(row.label || '').substring(0, 18), 12, y + 4);
-            for (var d = 0; d < count; d++) {
-                ctx.beginPath();
-                ctx.arc(150 + d * 12, y, 4, 0, Math.PI * 2);
-                ctx.fillStyle = d % 3 === 0 ? '#ef7b45' : '#155e95';
-                ctx.fill();
-            }
-            ctx.fillStyle = '#12263f';
-            ctx.font = '800 12px Arial';
-            ctx.fillText(row.total || 0, w - 36, y + 4);
-        });
-    }
+        // 1. Pending Payment by Service
+        var payEl = document.querySelector('#paymentChart');
+        if (payEl) {
+            if (chartInstances['paymentChart']) { chartInstances['paymentChart'].destroy(); }
+            var payRows = dashData.paymentServices || [];
+            var payCategories = payRows.map(function(r) { return r.label || 'Other'; });
+            var payAmounts = payRows.map(function(r) { return parseFloat(r.amount || 0); });
 
-    function drawAllCharts() {
-        drawInvoiceTrend('invoiceTrendChart', dashData.invoiceTrend);
-        drawDonut('invoiceTypeChart', dashData.invoiceTypes);
-        drawBars('paymentChart', dashData.paymentServices, 'amount', '#1f9d68');
-        drawDots('clientDotChart', dashData.clientStatuses);
+            var payOptions = {
+                series: [{
+                    name: 'Pending Amount',
+                    data: payAmounts
+                }],
+                chart: {
+                    type: 'bar',
+                    height: 290,
+                    toolbar: { show: false },
+                    fontFamily: fontFam,
+                    background: 'transparent'
+                },
+                plotOptions: {
+                    bar: {
+                        borderRadius: 6,
+                        columnWidth: '46%',
+                        distributed: true,
+                        dataLabels: {
+                            position: 'top'
+                        }
+                    }
+                },
+                colors: ['#0d4d8b', '#10b981', '#059669', '#3b82f6', '#6366f1', '#8b5cf6', '#d97706', '#ea580c'],
+                dataLabels: {
+                    enabled: true,
+                    formatter: function(val) {
+                        return '₹' + compactNumber(val);
+                    },
+                    offsetY: -22,
+                    style: {
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        colors: [titleColor]
+                    }
+                },
+                legend: { show: false },
+                xaxis: {
+                    categories: payCategories,
+                    labels: {
+                        rotate: -25,
+                        rotateAlways: true,
+                        style: {
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            colors: labelColor
+                        },
+                        trim: true,
+                        maxHeight: 65
+                    },
+                    axisBorder: { show: false },
+                    axisTicks: { show: false }
+                },
+                yaxis: {
+                    labels: {
+                        formatter: function(val) {
+                            return '₹' + compactNumber(val);
+                        },
+                        style: {
+                            colors: labelColor,
+                            fontSize: '11px'
+                        }
+                    }
+                },
+                grid: {
+                    borderColor: gridColor,
+                    strokeDashArray: 4
+                },
+                tooltip: {
+                    theme: isDark ? 'dark' : 'light',
+                    y: {
+                        formatter: function(val) {
+                            return 'Rs. ' + Number(val).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                        }
+                    }
+                }
+            };
+            chartInstances['paymentChart'] = new ApexCharts(payEl, payOptions);
+            chartInstances['paymentChart'].render();
+        }
+
+        // 2. Client Status Distribution
+        var clientEl = document.querySelector('#clientDotChart');
+        if (clientEl) {
+            if (chartInstances['clientDotChart']) { chartInstances['clientDotChart'].destroy(); }
+            var clientRows = dashData.clientStatuses || [];
+            var statusCats = clientRows.map(function(r) { return r.label || ''; });
+            var statusCounts = clientRows.map(function(r) { return parseInt(r.total || 0); });
+            var statusColorsMap = {
+                'Active': '#10b981',
+                'Withdrawn': '#ef4444',
+                'Expired': '#f59e0b',
+                'Application canceled': '#64748b',
+                'Application cancel': '#64748b',
+                'Inprocess': '#3b82f6',
+                'In-process': '#3b82f6',
+                'Suspended': '#d97706',
+                'Awaiting Review': '#8b5cf6',
+                'Contract-Review': '#6366f1'
+            };
+            var customColors = statusCats.map(function(c) { return statusColorsMap[c] || '#0d4d8b'; });
+
+            var clientOptions = {
+                series: [{
+                    name: 'Total Clients',
+                    data: statusCounts
+                }],
+                chart: {
+                    type: 'bar',
+                    height: 290,
+                    toolbar: { show: false },
+                    fontFamily: fontFam,
+                    background: 'transparent'
+                },
+                plotOptions: {
+                    bar: {
+                        borderRadius: 6,
+                        horizontal: true,
+                        barHeight: '56%',
+                        distributed: true,
+                        dataLabels: {
+                            position: 'right'
+                        }
+                    }
+                },
+                colors: customColors,
+                dataLabels: {
+                    enabled: true,
+                    formatter: function(val) {
+                        return val + ' Clients';
+                    },
+                    offsetX: 10,
+                    style: {
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        colors: [titleColor]
+                    }
+                },
+                legend: { show: false },
+                xaxis: {
+                    labels: {
+                        style: {
+                            colors: labelColor,
+                            fontSize: '11px'
+                        }
+                    },
+                    axisBorder: { show: false },
+                    axisTicks: { show: false }
+                },
+                yaxis: {
+                    categories: statusCats,
+                    labels: {
+                        style: {
+                            colors: isDark ? '#dbe3f0' : '#334155',
+                            fontSize: '12px',
+                            fontWeight: 600
+                        }
+                    }
+                },
+                grid: {
+                    borderColor: gridColor,
+                    strokeDashArray: 4
+                },
+                tooltip: {
+                    theme: isDark ? 'dark' : 'light',
+                    y: {
+                        formatter: function(val) {
+                            return val + ' Registered Clients';
+                        }
+                    }
+                }
+            };
+            chartInstances['clientDotChart'] = new ApexCharts(clientEl, clientOptions);
+            chartInstances['clientDotChart'].render();
+        }
+
+        // 3. Invoice Trend (Revenue & Count)
+        var trendEl = document.querySelector('#invoiceTrendChart');
+        if (trendEl) {
+            if (chartInstances['invoiceTrendChart']) { chartInstances['invoiceTrendChart'].destroy(); }
+            var trendRows = dashData.invoiceTrend || [];
+            var trendMonths = trendRows.map(function(r) { return r.label || ''; });
+            var trendAmounts = trendRows.map(function(r) { return parseFloat(r.amount || 0); });
+            var trendCounts = trendRows.map(function(r) { return parseInt(r.total || 0); });
+
+            var trendOptions = {
+                series: [
+                    {
+                        name: 'Invoice Revenue',
+                        type: 'area',
+                        data: trendAmounts
+                    },
+                    {
+                        name: 'Invoice Count',
+                        type: 'line',
+                        data: trendCounts
+                    }
+                ],
+                chart: {
+                    height: 290,
+                    type: 'line',
+                    toolbar: { show: false },
+                    fontFamily: fontFam,
+                    background: 'transparent'
+                },
+                stroke: {
+                    curve: 'smooth',
+                    width: [3, 2.5]
+                },
+                colors: ['#0d4d8b', '#f59e0b'],
+                fill: {
+                    type: ['gradient', 'solid'],
+                    gradient: {
+                        shade: 'light',
+                        type: 'vertical',
+                        shadeIntensity: 0.5,
+                        gradientToColors: ['#3b82f6'],
+                        inverseColors: false,
+                        opacityFrom: 0.5,
+                        opacityTo: 0.05,
+                        stops: [0, 90, 100]
+                    }
+                },
+                markers: {
+                    size: [0, 5],
+                    strokeColors: '#ffffff',
+                    strokeWidth: 2,
+                    hover: { size: 7 }
+                },
+                xaxis: {
+                    categories: trendMonths,
+                    labels: {
+                        style: {
+                            colors: labelColor,
+                            fontSize: '11px',
+                            fontWeight: 600
+                        }
+                    },
+                    axisBorder: { show: false },
+                    axisTicks: { show: false }
+                },
+                yaxis: [
+                    {
+                        title: {
+                            text: 'Revenue (₹)',
+                            style: { color: labelColor, fontSize: '11px', fontWeight: 600 }
+                        },
+                        labels: {
+                            formatter: function(val) {
+                                return '₹' + compactNumber(val);
+                            },
+                            style: { colors: labelColor, fontSize: '11px' }
+                        }
+                    },
+                    {
+                        opposite: true,
+                        title: {
+                            text: 'Invoices',
+                            style: { color: '#f59e0b', fontSize: '11px', fontWeight: 600 }
+                        },
+                        labels: {
+                            formatter: function(val) {
+                                return Math.round(val);
+                            },
+                            style: { colors: '#f59e0b', fontSize: '11px' }
+                        }
+                    }
+                ],
+                grid: {
+                    borderColor: gridColor,
+                    strokeDashArray: 4
+                },
+                legend: {
+                    position: 'top',
+                    horizontalAlign: 'right',
+                    labels: { colors: isDark ? '#dbe3f0' : '#475569' },
+                    markers: { radius: 12 }
+                },
+                tooltip: {
+                    theme: isDark ? 'dark' : 'light',
+                    shared: true,
+                    intersect: false,
+                    y: {
+                        formatter: function(y, opt) {
+                            if (opt.seriesIndex === 0) {
+                                return 'Rs. ' + Number(y).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                            }
+                            return y + ' Invoices';
+                        }
+                    }
+                }
+            };
+            chartInstances['invoiceTrendChart'] = new ApexCharts(trendEl, trendOptions);
+            chartInstances['invoiceTrendChart'].render();
+        }
+
+        // 4. Invoice Type Split (Donut)
+        var donutEl = document.querySelector('#invoiceTypeChart');
+        if (donutEl) {
+            if (chartInstances['invoiceTypeChart']) { chartInstances['invoiceTypeChart'].destroy(); }
+            var typeRows = dashData.invoiceTypes || [];
+            var typeLabels = typeRows.map(function(r) { return r.label || ''; });
+            var typeCounts = typeRows.map(function(r) { return parseInt(r.total || 0); });
+
+            var donutOptions = {
+                series: typeCounts,
+                labels: typeLabels,
+                chart: {
+                    type: 'donut',
+                    height: 290,
+                    fontFamily: fontFam,
+                    background: 'transparent'
+                },
+                colors: ['#0d4d8b', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'],
+                stroke: {
+                    show: true,
+                    colors: [isDark ? '#111722' : '#ffffff'],
+                    width: 3
+                },
+                plotOptions: {
+                    pie: {
+                        donut: {
+                            size: '72%',
+                            labels: {
+                                show: true,
+                                name: {
+                                    show: true,
+                                    fontSize: '13px',
+                                    fontWeight: 600,
+                                    color: labelColor
+                                },
+                                value: {
+                                    show: true,
+                                    fontSize: '22px',
+                                    fontWeight: 800,
+                                    color: titleColor,
+                                    formatter: function(val) { return val; }
+                                },
+                                total: {
+                                    show: true,
+                                    label: 'Total',
+                                    fontSize: '12px',
+                                    fontWeight: 600,
+                                    color: labelColor,
+                                    formatter: function(w) {
+                                        return w.globals.seriesTotals.reduce(function(a, b) { return a + b; }, 0);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                legend: {
+                    position: 'bottom',
+                    labels: { colors: isDark ? '#dbe3f0' : '#475569' },
+                    markers: { radius: 12 }
+                },
+                tooltip: {
+                    theme: isDark ? 'dark' : 'light',
+                    y: {
+                        formatter: function(val) {
+                            return val + ' Invoices';
+                        }
+                    }
+                }
+            };
+            chartInstances['invoiceTypeChart'] = new ApexCharts(donutEl, donutOptions);
+            chartInstances['invoiceTypeChart'].render();
+        }
     }
 
     function formatCounter(value, format) {
@@ -2386,9 +2626,12 @@
     }
 
     $(document).ready(function () {
-        drawAllCharts();
+        initApexCharts();
         animateCounters();
-        $(window).on('resize', drawAllCharts);
+
+        $('#themeToggle').on('click', function() {
+            setTimeout(initApexCharts, 100);
+        });
 
         $('#totalClientsCard').on('click', function () {
             $('#clientsModal').modal('show');
@@ -2429,7 +2672,7 @@
             e.preventDefault();
             $("#wrapper").toggleClass("active");
             $(".container").toggleClass("active");
-            setTimeout(drawAllCharts, 250);
+            setTimeout(initApexCharts, 250);
         });
     });
 </script>

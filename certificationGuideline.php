@@ -1,7 +1,7 @@
 <?php
 $pageTitle = "Certification Guideline | AITF";
 $pageDescription = "View the certification guidelines for AITF Management Certification.";
-$canonicalUrl = "https://www.aitf.co.in/certificationGuideline.php";
+$canonicalUrl = "https://www.aitf.co.in/certification-guidelines";
 ?>
 <!DOCTYPE html>
 <html lang="en">

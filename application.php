@@ -1,7 +1,7 @@
 <?php
 $pageTitle = "Online ISO Certification Application | AITF";
 $pageDescription = "Submit your online ISO certification application with AITF. Start your quality management and environmental management certification process here.";
-$canonicalUrl = "https://www.aitf.co.in/application.php";
+$canonicalUrl = "https://www.aitf.co.in/application-form";
 require_once './dbConnect.php';
 require_once __DIR__ . '/include/env_helper.php';
 $indiaTz = new DateTimeZone('Asia/Kolkata');
@@ -216,6 +216,10 @@ if (isset($db)) {
             $error_message = 'Please enter a valid email address.';
         } elseif (!isset($_SESSION['application_email_verified']) || $_SESSION['application_email_verified'] !== $email) {
             $error_message = 'Please verify your email address using OTP before submitting.';
+        } elseif (empty($_POST['declaration_confirmed'])) {
+            $error_message = 'Please confirm the declaration before submitting.';
+        } elseif (empty($_FILES['sign_image']['name']) && empty($_FILES['sign_image']['tmp_name'])) {
+            $error_message = 'Please upload your signature with company stamp.';
         } elseif (function_exists('aitf_verify_turnstile') && !aitf_verify_turnstile($turnstileToken, $error_message)) {
             if ($error_message === '') {
                 $error_message = 'Captcha verification failed. Please try again.';
@@ -745,16 +749,130 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
 
         .form-card {
             background: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: 16px;
-            padding: 32px;
+            border: 1px solid #e2e8f0;
+            border-radius: 20px;
+            padding: 42px 48px;
             margin: 16px 0 24px;
             max-width: 100%;
             width: 100%;
-            transition: none;
             position: relative;
-            overflow: visible;
-            box-shadow: 0 10px 32px rgba(15, 23, 42, 0.08);
+            box-shadow: 0 20px 50px -12px rgba(15, 23, 42, 0.12);
+        }
+
+        .nc-form-header {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 26px 28px;
+            margin-bottom: 35px;
+            text-align: center;
+            box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.8);
+        }
+
+        .nc-header-badge {
+            display: inline-block;
+            background: #e0f2fe;
+            color: #0369a1;
+            font-weight: 700;
+            font-size: 12px;
+            letter-spacing: 1px;
+            padding: 5px 14px;
+            border-radius: 20px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .nc-form-header h3 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: -0.3px;
+        }
+
+        .nc-form-header p {
+            margin: 6px 0 0 0;
+            font-size: 13.5px;
+            font-weight: 600;
+            color: #64748b;
+        }
+
+        .nc-form-section {
+            border: 1.5px solid #e2e8f0;
+            padding: 28px 30px 22px;
+            margin-bottom: 28px;
+            border-radius: 16px;
+            background: #ffffff;
+            box-shadow: 0 4px 18px -4px rgba(15, 23, 42, 0.03);
+            transition: all 0.25s ease;
+        }
+
+        .nc-form-section:hover {
+            box-shadow: 0 8px 25px -4px rgba(15, 23, 42, 0.06);
+            border-color: #cbd5e1;
+        }
+
+        .nc-form-section h4 {
+            margin-top: 0;
+            color: #0f172a;
+            font-size: 16.5px;
+            font-weight: 700;
+            border-bottom: 1.5px solid #f1f5f9;
+            padding-bottom: 14px;
+            margin-bottom: 22px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            letter-spacing: -0.2px;
+            line-height: 1.4;
+        }
+
+        .nc-section-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: #eff6ff;
+            color: #2563eb;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            flex-shrink: 0;
+        }
+
+        .btn-submit-main {
+            background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+            color: #ffffff;
+            border: none;
+            padding: 16px 48px;
+            font-size: 17px;
+            font-weight: 700;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.4);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            letter-spacing: 0.2px;
+        }
+
+        .btn-submit-main:hover:not(:disabled) {
+            background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 16px 32px -6px rgba(37, 99, 235, 0.5);
+            color: #ffffff;
+        }
+
+        .btn-submit-main:disabled,
+        .btn-submit-main[disabled] {
+            background: #94a3b8 !important;
+            opacity: 0.65 !important;
+            cursor: not-allowed !important;
+            box-shadow: none !important;
+            transform: none !important;
+            pointer-events: none !important;
         }
 
         /* 3D Button with Hover Effect */
@@ -1552,6 +1670,79 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
             margin-right: 6px !important;
         }
 
+        .app-tab-panel {
+            display: none;
+        }
+
+        .app-tab-panel.active {
+            display: block;
+        }
+
+        .app-tab-bar {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 20px 0;
+            gap: 12px;
+            list-style: none;
+            position: relative;
+            z-index: 10;
+        }
+
+        .app-tab-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 14px 28px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 0.92rem;
+            font-weight: 600;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            cursor: pointer;
+            background: #ffffff;
+            color: #64748b;
+            transition: all 0.25s ease;
+            outline: none;
+            white-space: nowrap;
+            flex: 1;
+            max-width: 320px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        }
+
+        .app-tab-btn:hover {
+            border-color: #cbd5e1;
+            color: #1e3a8a;
+            background: #f8fafc;
+        }
+
+        .app-tab-btn.active {
+            border-color: #2563eb !important;
+            background: linear-gradient(135deg, #eff6ff, #f0f4ff) !important;
+            color: #1e3a8a !important;
+            font-weight: 700 !important;
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.15), 0 0 0 1px rgba(37, 99, 235, 0.06) !important;
+        }
+
+        .app-tab-btn.active i {
+            color: #2563eb !important;
+        }
+
+        .tab-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            font-size: 0.58rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            border-radius: 999px;
+            background: #2563eb;
+            color: #fff;
+            line-height: 1.4;
+        }
+
         @media (max-width: 768px) {
             .app-tab-bar {
                 max-width: 100% !important;
@@ -1625,19 +1816,15 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
     <!-- Tab Navigation Bar -->
     <div style="background: #f8fafc; padding: 0; position: relative; z-index: 10; border-bottom: 1px solid #e2e8f0;">
         <div class="container" style="max-width: 1140px; margin: 0 auto; padding: 0 15px;">
-            <div class="app-tab-bar" id="appTabBar"
-                style="display: flex; justify-content: center; align-items: center; max-width: 700px; margin: 0 auto; padding: 20px 0; gap: 12px; list-style: none; position: relative; z-index: 10;">
-                <button class="app-tab-btn active" data-tab="download-tab" type="button"
-                    style="display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 14px 28px; font-family: Poppins, sans-serif; font-size: 0.88rem; font-weight: 700; border: 2px solid #2563eb; border-radius: 12px; cursor: pointer; background: linear-gradient(135deg, #eff6ff, #f0f4ff); color: #1e3a8a; transition: all 0.25s ease; outline: none; white-space: nowrap; flex: 1; max-width: 320px; box-shadow: 0 4px 16px rgba(37,99,235,0.15), 0 0 0 1px rgba(37,99,235,0.06);">
-                    <i class="fa fa-download" style="color: #2563eb; font-size: 1.05rem;"></i>
+            <div class="app-tab-bar" id="appTabBar">
+                <button class="app-tab-btn active" data-tab="download-tab" type="button">
+                    <i class="fa fa-download"></i>
                     Download &amp; Submit
-                    <span class="tab-badge"
-                        style="display: inline-block; padding: 2px 8px; font-size: 0.58rem; font-weight: 700; text-transform: uppercase; border-radius: 999px; background: #2563eb; color: #fff; line-height: 1.4;">Recommended</span>
+                    <span class="tab-badge">PDF</span>
                 </button>
-                <button class="app-tab-btn" data-tab="online-tab" type="button"
-                    style="display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 14px 28px; font-family: Poppins, sans-serif; font-size: 0.88rem; font-weight: 600; border: 2px solid #e2e8f0; border-radius: 12px; cursor: pointer; background: #ffffff; color: #64748b; transition: all 0.25s ease; outline: none; white-space: nowrap; flex: 1; max-width: 320px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
-                    <i class="fa fa-pencil-square-o" style="font-size: 1.05rem;"></i>
-                    Fill Online
+                <button class="app-tab-btn" data-tab="online-tab" type="button">
+                    <i class="fa fa-pencil-square-o"></i>
+                    Fill Online Form
                 </button>
             </div>
         </div>
@@ -1695,7 +1882,7 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                                 <strong>Note:</strong> After filling out the form, please email the scanned copy to <a
                                     href="mailto:certification@aitf.co.in"
                                     style="color:#92400e; font-weight:600;">certification@aitf.co.in</a> along with
-                                supporting documents. Our team will review and get back to you within 2-3 business days.
+                                    supporting documents. Our team will review and get back to you within 2-3 business days.
                             </div>
                         </div>
                     </div>
@@ -1710,800 +1897,615 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
             <div class="container">
                 <div class="row justify-content-center">
                     <div class="col-lg-10">
-                        <div class="form-card" style="background: rgba(255, 255, 255, 0.98); color: #1f2933;">
+                        <div class="nc-form-card" style="background: #ffffff; color: #1f2933;">
+                            <!-- Form Header Banner -->
+                            <div class="nc-form-header">
+                                <span class="nc-header-badge">Online Audit Application Form</span>
+                                <h3 style="margin: 4px 0 6px 0; font-size: 24px; font-weight: 800; color: #0f172a; letter-spacing: -0.3px;">AITF MANAGEMENT CERTIFICATION LIMITED</h3>
+                                <p style="margin: 0; font-size: 13.5px; font-weight: 600; color: #64748b;">Audit Application for QMS, EMS &amp; OHSMS</p>
+                            </div>
+
                             <?php if (!empty($success_message)) { ?>
-                                <div class="alert alert-success"
-                                    style="border-radius: 8px; padding: 12px 16px; margin-bottom: 20px;">
-                                    <?php echo htmlspecialchars($success_message, ENT_QUOTES, 'UTF-8'); ?>
+                                <div class="alert alert-success" style="border-radius: 12px; padding: 16px 20px; margin-bottom: 25px; font-size: 15px; font-weight: 500; display: flex; align-items: center; gap: 10px; background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534;">
+                                    <i class="fa fa-check-circle" style="font-size: 20px; color: #16a34a;"></i>
+                                    <span><?php echo htmlspecialchars($success_message, ENT_QUOTES, 'UTF-8'); ?></span>
                                 </div>
                             <?php } elseif (!empty($error_message)) { ?>
-                                <div class="alert alert-danger"
-                                    style="border-radius: 8px; padding: 12px 16px; margin-bottom: 20px;">
-                                    <?php echo htmlspecialchars($error_message, ENT_QUOTES, 'UTF-8'); ?>
+                                <div class="alert alert-danger" style="border-radius: 12px; padding: 16px 20px; margin-bottom: 25px; font-size: 15px; font-weight: 500; display: flex; align-items: center; gap: 10px; background: #fef2f2; border: 1px solid #fecaca; color: #991b1b;">
+                                    <i class="fa fa-exclamation-triangle" style="font-size: 20px; color: #dc2626;"></i>
+                                    <span><?php echo htmlspecialchars($error_message, ENT_QUOTES, 'UTF-8'); ?></span>
                                 </div>
                             <?php } ?>
-                            <form method="post" action="" enctype="multipart/form-data"
-                                id="online-application-form-main">
+
+                            <form method="post" action="" enctype="multipart/form-data" id="online-application-form-main">
                                 <input type="hidden" name="public_audit_application" value="1">
-                                <div class="row">
-                                    <div class="col-md-12">
-                                        <h4 style="margin-bottom: 20px; font-weight: 700;">1. Data of Organisation
-                                            Applying for Certification</h4>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label>Organization name <span class="required-label">*</span></label>
-                                            <input type="text" name="org_name" class="form-control" required
-                                                value="<?php echo isset($_POST['org_name']) ? htmlspecialchars($_POST['org_name'], ENT_QUOTES, 'UTF-8') : ''; ?>">
+                                
+                                <!-- 1. Data of Organisation Applying for Certification -->
+                                <div class="nc-form-section">
+                                    <h4>
+                                        <span class="nc-section-icon"><i class="fa fa-building"></i></span>
+                                        1. DATA OF ORGANISATION APPLYING FOR CERTIFICATION
+                                    </h4>
+                                    <div class="row">
+                                        <div class="col-md-6 form-group">
+                                            <label>Organization name <span class="required-label" style="color:#ef4444;">*</span></label>
+                                            <input type="text" name="org_name" class="form-control" placeholder="Enter full organization name" required value="<?php echo isset($_POST['org_name']) ? htmlspecialchars($_POST['org_name'], ENT_QUOTES, 'UTF-8') : ''; ?>">
                                         </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label>Contact person with designation <span
-                                                    class="required-label">*</span></label>
-                                            <input type="text" name="contact_person" class="form-control" required
-                                                value="<?php echo isset($_POST['contact_person']) ? htmlspecialchars($_POST['contact_person'], ENT_QUOTES, 'UTF-8') : ''; ?>">
+                                        <div class="col-md-6 form-group">
+                                            <label>Contact person with designation <span class="required-label" style="color:#ef4444;">*</span></label>
+                                            <input type="text" name="contact_person" class="form-control" placeholder="Contact person full name" required value="<?php echo isset($_POST['contact_person']) ? htmlspecialchars($_POST['contact_person'], ENT_QUOTES, 'UTF-8') : ''; ?>">
                                         </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
+                                        <div class="col-md-6 form-group">
                                             <label>Designation</label>
-                                            <input type="text" name="contact_designation" class="form-control"
-                                                value="<?php echo isset($_POST['contact_designation']) ? htmlspecialchars($_POST['contact_designation'], ENT_QUOTES, 'UTF-8') : ''; ?>">
+                                            <input type="text" name="contact_designation" class="form-control" placeholder="e.g. Quality Manager / Director" value="<?php echo isset($_POST['contact_designation']) ? htmlspecialchars($_POST['contact_designation'], ENT_QUOTES, 'UTF-8') : ''; ?>">
+                                        </div>
+                                        <div class="col-md-6 form-group">
+                                            <label>Telephone / Mobile <span class="required-label" style="color:#ef4444;">*</span></label>
+                                            <input type="text" name="phone" class="form-control" placeholder="e.g. +91 9876543210" required value="<?php echo isset($_POST['phone']) ? htmlspecialchars($_POST['phone'], ENT_QUOTES, 'UTF-8') : ''; ?>">
+                                        </div>
+                                        <div class="col-md-6 form-group">
+                                            <label>Web-site <span class="required-label" style="color:#ef4444;">*</span></label>
+                                            <input type="text" name="website" class="form-control" placeholder="https://www.example.com" required value="<?php echo isset($_POST['website']) ? htmlspecialchars($_POST['website'], ENT_QUOTES, 'UTF-8') : ''; ?>">
+                                        </div>
+                                        <div class="col-md-6 form-group">
+                                            <label>GSTIN Number <span class="required-label" style="color:#ef4444;">*</span></label>
+                                            <input type="text" name="gstin" class="form-control" placeholder="GSTIN number" required value="<?php echo isset($_POST['gstin']) ? htmlspecialchars($_POST['gstin'], ENT_QUOTES, 'UTF-8') : ''; ?>">
+                                        </div>
+                                        <div class="col-md-6 form-group">
+                                            <label>Address of site to be audited <span class="required-label" style="color:#ef4444;">*</span></label>
+                                            <textarea name="site_address" class="form-control" rows="2" placeholder="Full physical site address to be audited" required><?php echo isset($_POST['site_address']) ? htmlspecialchars($_POST['site_address'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+                                        </div>
+                                        <div class="col-md-6 form-group">
+                                            <label>Office address <span class="required-label" style="color:#ef4444;">*</span></label>
+                                            <textarea name="office_address" class="form-control" rows="2" placeholder="Registered / Head office address" required><?php echo isset($_POST['office_address']) ? htmlspecialchars($_POST['office_address'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
                                         </div>
                                     </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label>Address of site to be audited <span
-                                                    class="required-label">*</span></label>
-                                            <textarea name="site_address" class="form-control" rows="2"
-                                                required><?php echo isset($_POST['site_address']) ? htmlspecialchars($_POST['site_address'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label>Office address <span class="required-label">*</span></label>
-                                            <textarea name="office_address" class="form-control" rows="2"
-                                                required><?php echo isset($_POST['office_address']) ? htmlspecialchars($_POST['office_address'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label>Telephone / Mobile <span class="required-label">*</span></label>
-                                            <input type="text" name="phone" class="form-control" required
-                                                value="<?php echo isset($_POST['phone']) ? htmlspecialchars($_POST['phone'], ENT_QUOTES, 'UTF-8') : ''; ?>">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label>Web-site <span class="required-label">*</span></label>
-                                            <input type="text" name="website" class="form-control" required
-                                                value="<?php echo isset($_POST['website']) ? htmlspecialchars($_POST['website'], ENT_QUOTES, 'UTF-8') : ''; ?>">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label>GSTIN Number <span class="required-label">*</span></label>
-                                            <input type="text" name="gstin" class="form-control" required
-                                                value="<?php echo isset($_POST['gstin']) ? htmlspecialchars($_POST['gstin'], ENT_QUOTES, 'UTF-8') : ''; ?>">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-12" style="margin-top: 15px;">
-                                        <h4 style="margin-bottom: 15px; font-weight: 700;">2. Company Structure</h4>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
+                                </div>
+
+                                <!-- 2. Company Structure -->
+                                <div class="nc-form-section">
+                                    <h4>
+                                        <span class="nc-section-icon"><i class="fa fa-sitemap"></i></span>
+                                        2. COMPANY STRUCTURE
+                                    </h4>
+                                    <div class="row">
+                                        <div class="col-md-6 form-group">
                                             <label>Legal status</label>
                                             <select name="legal_status" class="form-control">
-                                                <option value="">Select</option>
-                                                <option value="Proprietary" <?php echo (isset($_POST['legal_status']) && $_POST['legal_status'] === 'Proprietary') ? 'selected' : ''; ?>>
-                                                    Proprietary</option>
-                                                <option value="Partnership" <?php echo (isset($_POST['legal_status']) && $_POST['legal_status'] === 'Partnership') ? 'selected' : ''; ?>>
-                                                    Partnership</option>
-                                                <option value="Pvt. Ltd." <?php echo (isset($_POST['legal_status']) && $_POST['legal_status'] === 'Pvt. Ltd.') ? 'selected' : ''; ?>>Pvt.
-                                                    Ltd.</option>
-                                                <option value="Limited" <?php echo (isset($_POST['legal_status']) && $_POST['legal_status'] === 'Limited') ? 'selected' : ''; ?>>Limited
-                                                </option>
-                                                <option value="Trust" <?php echo (isset($_POST['legal_status']) && $_POST['legal_status'] === 'Trust') ? 'selected' : ''; ?>>Trust
-                                                </option>
-                                                <option value="Other" <?php echo (isset($_POST['legal_status']) && $_POST['legal_status'] === 'Other') ? 'selected' : ''; ?>>Other
-                                                </option>
+                                                <option value="">Select Legal Status</option>
+                                                <option value="Proprietary" <?php echo (isset($_POST['legal_status']) && $_POST['legal_status'] === 'Proprietary') ? 'selected' : ''; ?>>Proprietary</option>
+                                                <option value="Partnership" <?php echo (isset($_POST['legal_status']) && $_POST['legal_status'] === 'Partnership') ? 'selected' : ''; ?>>Partnership</option>
+                                                <option value="Pvt. Ltd." <?php echo (isset($_POST['legal_status']) && $_POST['legal_status'] === 'Pvt. Ltd.') ? 'selected' : ''; ?>>Pvt. Ltd.</option>
+                                                <option value="Limited" <?php echo (isset($_POST['legal_status']) && $_POST['legal_status'] === 'Limited') ? 'selected' : ''; ?>>Limited</option>
+                                                <option value="Trust" <?php echo (isset($_POST['legal_status']) && $_POST['legal_status'] === 'Trust') ? 'selected' : ''; ?>>Trust</option>
+                                                <option value="Other" <?php echo (isset($_POST['legal_status']) && $_POST['legal_status'] === 'Other') ? 'selected' : ''; ?>>Other</option>
                                             </select>
                                         </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
+                                        <div class="col-md-6 form-group">
                                             <label>Branch offices / group companies</label>
-                                            <div>
-                                                <label style="margin-right:15px;"><input type="radio"
-                                                        name="branch_offices" value="Yes" <?php echo (isset($_POST['branch_offices']) && $_POST['branch_offices'] === 'Yes') ? 'checked' : ''; ?>>
-                                                    Yes</label>
-                                                <label><input type="radio" name="branch_offices" value="No" <?php echo (isset($_POST['branch_offices']) && $_POST['branch_offices'] === 'No') ? 'checked' : ''; ?>>
-                                                    No</label>
+                                            <div style="margin-bottom: 8px;">
+                                                <label style="margin-right:20px; font-weight: 500; cursor: pointer;"><input type="radio" name="branch_offices" value="Yes" <?php echo (isset($_POST['branch_offices']) && $_POST['branch_offices'] === 'Yes') ? 'checked' : ''; ?>> Yes</label>
+                                                <label style="font-weight: 500; cursor: pointer;"><input type="radio" name="branch_offices" value="No" <?php echo (isset($_POST['branch_offices']) && $_POST['branch_offices'] === 'No') ? 'checked' : ''; ?>> No</label>
                                             </div>
-                                            <textarea name="branch_details" class="form-control" rows="2"
-                                                placeholder="If yes, please specify sites / branches."><?php echo isset($_POST['branch_details']) ? htmlspecialchars($_POST['branch_details'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+                                            <textarea name="branch_details" class="form-control" rows="2" placeholder="If yes, please specify sites / branches."><?php echo isset($_POST['branch_details']) ? htmlspecialchars($_POST['branch_details'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+                                        </div>
+                                        <div class="col-md-12 form-group" style="margin-bottom: 0;">
+                                            <label>Any legal (statutory and regulatory) obligations applicable to your product / service?</label>
+                                            <div style="margin-bottom: 8px;">
+                                                <label style="margin-right:20px; font-weight: 500; cursor: pointer;"><input type="radio" name="legal_obligations_applicable" value="Yes" <?php echo (isset($_POST['legal_obligations_applicable']) && $_POST['legal_obligations_applicable'] === 'Yes') ? 'checked' : ''; ?>> Yes</label>
+                                                <label style="font-weight: 500; cursor: pointer;"><input type="radio" name="legal_obligations_applicable" value="No" <?php echo (isset($_POST['legal_obligations_applicable']) && $_POST['legal_obligations_applicable'] === 'No') ? 'checked' : ''; ?>> No</label>
+                                            </div>
+                                            <textarea name="legal_obligations" class="form-control" rows="2" placeholder="If yes, please specify."><?php echo isset($_POST['legal_obligations']) ? htmlspecialchars($_POST['legal_obligations'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
                                         </div>
                                     </div>
-                                    <div class="col-md-12">
-                                        <div class="form-group">
-                                            <label>Any legal (statutory and regulatory) obligations applicable to your
-                                                product / service?</label>
-                                            <div>
-                                                <label style="margin-right:15px;"><input type="radio"
-                                                        name="legal_obligations_applicable" value="Yes" <?php echo (isset($_POST['legal_obligations_applicable']) && $_POST['legal_obligations_applicable'] === 'Yes') ? 'checked' : ''; ?>> Yes</label>
-                                                <label><input type="radio" name="legal_obligations_applicable"
-                                                        value="No" <?php echo (isset($_POST['legal_obligations_applicable']) && $_POST['legal_obligations_applicable'] === 'No') ? 'checked' : ''; ?>> No</label>
-                                            </div>
-                                            <textarea name="legal_obligations" class="form-control" rows="2"
-                                                placeholder="If yes, please specify."><?php echo isset($_POST['legal_obligations']) ? htmlspecialchars($_POST['legal_obligations'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-12" style="margin-top: 15px;">
-                                        <h4 style="margin-bottom: 15px; font-weight: 700;">3. Certification Requirement
-                                        </h4>
-                                    </div>
-                                    <div class="col-md-12">
-                                        <div class="form-group">
+                                </div>
+
+                                <!-- 3. Certification Requirement -->
+                                <div class="nc-form-section">
+                                    <h4>
+                                        <span class="nc-section-icon"><i class="fa fa-certificate"></i></span>
+                                        3. CERTIFICATION REQUIREMENT
+                                    </h4>
+                                    <div class="row">
+                                        <div class="col-md-12 form-group">
                                             <label>Type of certification requested</label>
                                             <div class="row">
-                                                <div class="col-md-6">
-                                                    <label><input type="checkbox" name="certification_type[]"
-                                                            value="First Certification" <?php echo (isset($_POST['certification_type']) && is_array($_POST['certification_type']) && in_array('First Certification', $_POST['certification_type'])) ? 'checked' : ''; ?>> First Certification</label>
+                                                <div class="col-md-4 col-sm-6" style="margin-bottom: 8px;">
+                                                    <label style="font-weight: normal; cursor: pointer;"><input type="checkbox" name="certification_type[]" value="First Certification" <?php echo (isset($_POST['certification_type']) && is_array($_POST['certification_type']) && in_array('First Certification', $_POST['certification_type'])) ? 'checked' : ''; ?>> First Certification</label>
                                                 </div>
-                                                <div class="col-md-6">
-                                                    <label><input type="checkbox" name="certification_type[]"
-                                                            value="Recertification" <?php echo (isset($_POST['certification_type']) && is_array($_POST['certification_type']) && in_array('Recertification', $_POST['certification_type'])) ? 'checked' : ''; ?>> Recertification</label>
+                                                <div class="col-md-4 col-sm-6" style="margin-bottom: 8px;">
+                                                    <label style="font-weight: normal; cursor: pointer;"><input type="checkbox" name="certification_type[]" value="Recertification" <?php echo (isset($_POST['certification_type']) && is_array($_POST['certification_type']) && in_array('Recertification', $_POST['certification_type'])) ? 'checked' : ''; ?>> Recertification</label>
                                                 </div>
-                                                <div class="col-md-6">
-                                                    <label><input type="checkbox" name="certification_type[]"
-                                                            value="Extension - Scope" <?php echo (isset($_POST['certification_type']) && is_array($_POST['certification_type']) && in_array('Extension - Scope', $_POST['certification_type'])) ? 'checked' : ''; ?>> Extension (Scope)</label>
+                                                <div class="col-md-4 col-sm-6" style="margin-bottom: 8px;">
+                                                    <label style="font-weight: normal; cursor: pointer;"><input type="checkbox" name="certification_type[]" value="Extension - Scope" <?php echo (isset($_POST['certification_type']) && is_array($_POST['certification_type']) && in_array('Extension - Scope', $_POST['certification_type'])) ? 'checked' : ''; ?>> Extension (Scope)</label>
                                                 </div>
-                                                <div class="col-md-6">
-                                                    <label><input type="checkbox" name="certification_type[]"
-                                                            value="Extension - Site" <?php echo (isset($_POST['certification_type']) && is_array($_POST['certification_type']) && in_array('Extension - Site', $_POST['certification_type'])) ? 'checked' : ''; ?>> Extension (Site)</label>
+                                                <div class="col-md-4 col-sm-6" style="margin-bottom: 8px;">
+                                                    <label style="font-weight: normal; cursor: pointer;"><input type="checkbox" name="certification_type[]" value="Extension - Site" <?php echo (isset($_POST['certification_type']) && is_array($_POST['certification_type']) && in_array('Extension - Site', $_POST['certification_type'])) ? 'checked' : ''; ?>> Extension (Site)</label>
                                                 </div>
-                                                <div class="col-md-6">
-                                                    <label><input type="checkbox" name="certification_type[]"
-                                                            value="Transfer of Certificate (Change of CB)" <?php echo (isset($_POST['certification_type']) && is_array($_POST['certification_type']) && in_array('Transfer of Certificate (Change of CB)', $_POST['certification_type'])) ? 'checked' : ''; ?>>
-                                                        Transfer of Certificate (Change of CB)</label>
+                                                <div class="col-md-8 col-sm-12" style="margin-bottom: 8px;">
+                                                    <label style="font-weight: normal; cursor: pointer;"><input type="checkbox" name="certification_type[]" value="Transfer of Certificate (Change of CB)" <?php echo (isset($_POST['certification_type']) && is_array($_POST['certification_type']) && in_array('Transfer of Certificate (Change of CB)', $_POST['certification_type'])) ? 'checked' : ''; ?>> Transfer of Certificate (Change of CB)</label>
                                                 </div>
-                                                <div class="col-md-6">
-                                                    <input type="text" name="certification_type_other"
-                                                        class="form-control" placeholder="Other (please specify)"
-                                                        value="<?php echo isset($_POST['certification_type_other']) ? htmlspecialchars($_POST['certification_type_other'], ENT_QUOTES, 'UTF-8') : ''; ?>">
+                                                <div class="col-md-12" style="margin-top: 4px;">
+                                                    <input type="text" name="certification_type_other" class="form-control" placeholder="Other certification type (please specify if applicable)" value="<?php echo isset($_POST['certification_type_other']) ? htmlspecialchars($_POST['certification_type_other'], ENT_QUOTES, 'UTF-8') : ''; ?>">
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                    <?php
-                                    $isoOptions = ['ISO 9001', 'ISO 14001', 'ISO 45001', 'ISO 27001'];
-                                    $accrOptions = ['NABCB', 'SELF'];
-                                    $stdInput = isset($_POST['standard_applied']) && is_array($_POST['standard_applied']) ? $_POST['standard_applied'] : [''];
-                                    $accInput = isset($_POST['accreditation_requirement']) && is_array($_POST['accreditation_requirement']) ? $_POST['accreditation_requirement'] : [''];
-                                    $rowCount = max(count($stdInput), count($accInput), 1);
-                                    ?>
-                                    <div class="col-md-12">
-                                        <div class="form-group">
-                                            <label style="display:flex; align-items:center; gap:8px;">
-                                                <span>Standards & Accreditation</span>
-                                                <button type="button" class="btn btn-sm btn-success"
-                                                    id="add-standard-row"><i class="fa fa-plus"></i> Add</button>
+
+                                        <?php
+                                        $isoOptions = ['ISO 9001', 'ISO 14001', 'ISO 45001', 'ISO 27001'];
+                                        $accrOptions = ['NABCB', 'SELF'];
+                                        $stdInput = isset($_POST['standard_applied']) && is_array($_POST['standard_applied']) ? $_POST['standard_applied'] : [''];
+                                        $accInput = isset($_POST['accreditation_requirement']) && is_array($_POST['accreditation_requirement']) ? $_POST['accreditation_requirement'] : [''];
+                                        $rowCount = max(count($stdInput), count($accInput), 1);
+                                        ?>
+                                        <div class="col-md-12 form-group">
+                                            <label style="display:flex; align-items:center; justify-content: space-between;">
+                                                <span>Standards &amp; Accreditation</span>
+                                                <button type="button" class="btn btn-sm btn-primary" id="add-standard-row" style="border-radius: 8px; font-weight: 600; padding: 5px 14px;"><i class="fa fa-plus"></i> Add Standard</button>
                                             </label>
                                             <div id="standard-rows">
                                                 <?php for ($i = 0; $i < $rowCount; $i++):
                                                     $stdVal = isset($stdInput[$i]) ? $stdInput[$i] : '';
                                                     $accVal = isset($accInput[$i]) ? $accInput[$i] : '';
                                                     ?>
-                                                    <div class="row align-items-end standard-row"
-                                                        style="margin-bottom:10px;">
+                                                    <div class="row align-items-end standard-row" style="margin-bottom:12px;">
                                                         <div class="col-md-6">
-                                                            <label>Standard applied for</label>
+                                                            <label style="font-size: 13px; color: #64748b;">Standard applied for</label>
                                                             <select name="standard_applied[]" class="form-control">
-                                                                <option value="">Select</option>
+                                                                <option value="">Select Standard</option>
                                                                 <?php foreach ($isoOptions as $opt):
                                                                     $sel = ($stdVal === $opt) ? 'selected' : '';
                                                                     ?>
-                                                                    <option
-                                                                        value="<?php echo htmlspecialchars($opt, ENT_QUOTES, 'UTF-8'); ?>"
-                                                                        <?php echo $sel; ?>>
-                                                                        <?php echo htmlspecialchars($opt, ENT_QUOTES, 'UTF-8'); ?>
-                                                                    </option>
+                                                                    <option value="<?php echo htmlspecialchars($opt, ENT_QUOTES, 'UTF-8'); ?>" <?php echo $sel; ?>><?php echo htmlspecialchars($opt, ENT_QUOTES, 'UTF-8'); ?></option>
                                                                 <?php endforeach; ?>
                                                             </select>
                                                         </div>
                                                         <div class="col-md-6">
-                                                            <label>Accreditation requirement</label>
+                                                            <label style="font-size: 13px; color: #64748b;">Accreditation requirement</label>
                                                             <select name="accreditation_requirement[]" class="form-control">
-                                                                <option value="">Select</option>
+                                                                <option value="">Select Accreditation</option>
                                                                 <?php foreach ($accrOptions as $opt):
                                                                     $sel = ($accVal === $opt) ? 'selected' : '';
                                                                     ?>
-                                                                    <option
-                                                                        value="<?php echo htmlspecialchars($opt, ENT_QUOTES, 'UTF-8'); ?>"
-                                                                        <?php echo $sel; ?>>
-                                                                        <?php echo htmlspecialchars($opt, ENT_QUOTES, 'UTF-8'); ?>
-                                                                    </option>
+                                                                    <option value="<?php echo htmlspecialchars($opt, ENT_QUOTES, 'UTF-8'); ?>" <?php echo $sel; ?>><?php echo htmlspecialchars($opt, ENT_QUOTES, 'UTF-8'); ?></option>
                                                                 <?php endforeach; ?>
                                                             </select>
                                                         </div>
                                                     </div>
                                                 <?php endfor; ?>
                                             </div>
-                                            <small style="color:#6b7280;">Use Add to include multiple ISO
-                                                Standards.</small>
+                                            <small style="color:#64748b; display: block; margin-top: 4px;"><i class="fa fa-info-circle"></i> Use Add Standard to include multiple ISO Standards.</small>
+                                        </div>
+
+                                        <div class="col-md-12 form-group" style="margin-bottom: 0;">
+                                            <label>Please mention your requirement regarding Scope / Activity to be certified</label>
+                                            <textarea name="scope_requirement" class="form-control" rows="3" placeholder="Describe the activities, operations, and products/services to be covered in the scope of certification..."><?php echo isset($_POST['scope_requirement']) ? htmlspecialchars($_POST['scope_requirement'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
                                         </div>
                                     </div>
-                                    <div class="col-md-12">
-                                        <div class="form-group">
-                                            <label>Please mention your requirement regarding Scope / Activity to be
-                                                certified</label>
-                                            <textarea name="scope_requirement" class="form-control"
-                                                rows="3"><?php echo isset($_POST['scope_requirement']) ? htmlspecialchars($_POST['scope_requirement'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-12" style="margin-top: 15px;">
-                                        <h4 style="margin-bottom: 15px; font-weight: 700;">4. Multisite Information</h4>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
+                                </div>
+
+                                <!-- 4. Multisite Information -->
+                                <div class="nc-form-section">
+                                    <h4>
+                                        <span class="nc-section-icon"><i class="fa fa-map-marker"></i></span>
+                                        4. MULTISITE INFORMATION
+                                    </h4>
+                                    <div class="row">
+                                        <div class="col-md-6 form-group">
                                             <label>Is your organisation having multisite?</label>
-                                            <div>
-                                                <label style="margin-right:15px;"><input type="radio" name="multisite"
-                                                        value="Yes" <?php echo (isset($_POST['multisite']) && $_POST['multisite'] === 'Yes') ? 'checked' : ''; ?>> Yes</label>
-                                                <label><input type="radio" name="multisite" value="No" <?php echo (isset($_POST['multisite']) && $_POST['multisite'] === 'No') ? 'checked' : ''; ?>> No</label>
+                                            <div style="margin-bottom: 8px;">
+                                                <label style="margin-right:20px; font-weight: 500; cursor: pointer;"><input type="radio" name="multisite" value="Yes" <?php echo (isset($_POST['multisite']) && $_POST['multisite'] === 'Yes') ? 'checked' : ''; ?>> Yes</label>
+                                                <label style="font-weight: 500; cursor: pointer;"><input type="radio" name="multisite" value="No" <?php echo (isset($_POST['multisite']) && $_POST['multisite'] === 'No') ? 'checked' : ''; ?>> No</label>
                                             </div>
                                         </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
+                                        <div class="col-md-6 form-group">
                                             <label>If yes, what functions are performed centrally?</label>
-                                            <textarea name="multisite_functions" class="form-control" rows="2"
-                                                placeholder="e.g. Marketing, Purchasing, HR, Top Management, etc."><?php echo isset($_POST['multisite_functions']) ? htmlspecialchars($_POST['multisite_functions'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+                                            <textarea name="multisite_functions" class="form-control" rows="2" placeholder="e.g. Marketing, Purchasing, HR, Top Management, etc."><?php echo isset($_POST['multisite_functions']) ? htmlspecialchars($_POST['multisite_functions'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
                                         </div>
-                                    </div>
-                                    <div class="col-md-12">
-                                        <div class="form-group">
+                                        <div class="col-md-12 form-group" style="margin-bottom: 0;">
                                             <label>List all sites to be covered (with address and key processes)</label>
-                                            <textarea name="multisite_sites" class="form-control" rows="3"
-                                                placeholder="Site 1: Address, Processes / Operations&#10;Site 2: Address, Processes / Operations&#10;..."><?php echo isset($_POST['multisite_sites']) ? htmlspecialchars($_POST['multisite_sites'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+                                            <textarea name="multisite_sites" class="form-control" rows="3" placeholder="Site 1: Address, Processes / Operations&#10;Site 2: Address, Processes / Operations&#10;..."><?php echo isset($_POST['multisite_sites']) ? htmlspecialchars($_POST['multisite_sites'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
                                         </div>
                                     </div>
-                                    <div class="col-md-12" style="margin-top: 15px;">
-                                        <h4 style="margin-bottom: 15px; font-weight: 700;">5. Employee Structure</h4>
+                                </div>
+
+                                <!-- 5. Employee Structure -->
+                                <div class="nc-form-section">
+                                    <h4>
+                                        <span class="nc-section-icon"><i class="fa fa-users"></i></span>
+                                        5. EMPLOYEE STRUCTURE
+                                    </h4>
+                                    <p style="font-size: 13.5px; color: #64748b; margin-top: -10px; margin-bottom: 18px;">
+                                        Please provide approximate number of employees by department and shift.
+                                    </p>
+                                    <div class="table-responsive" style="margin-bottom: 16px; border: 1.5px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+                                        <table class="table table-bordered employee-structure-table" id="employee-structure-table" style="margin-bottom: 0; background: #fff;">
+                                            <thead style="background: #f8fafc; color: #334155; font-size: 13px;">
+                                                <tr>
+                                                    <th rowspan="2" style="vertical-align: middle; min-width: 180px;">Department</th>
+                                                    <th colspan="2" style="text-align: center; border-bottom: 1px solid #e2e8f0;">General shift</th>
+                                                    <th colspan="2" style="text-align: center; border-bottom: 1px solid #e2e8f0;">Shift I</th>
+                                                    <th colspan="2" style="text-align: center; border-bottom: 1px solid #e2e8f0;">Shift II</th>
+                                                    <th colspan="2" style="text-align: center; border-bottom: 1px solid #e2e8f0;">Shift III</th>
+                                                </tr>
+                                                <tr>
+                                                    <th style="text-align: center;">Permanent</th>
+                                                    <th style="text-align: center;">Contract</th>
+                                                    <th style="text-align: center;">Per.</th>
+                                                    <th style="text-align: center;">Contract</th>
+                                                    <th style="text-align: center;">Per.</th>
+                                                    <th style="text-align: center;">Contract</th>
+                                                    <th style="text-align: center;">Per.</th>
+                                                    <th style="text-align: center;">Contract</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr data-dept-label="Top management / Administrative staff">
+                                                    <td style="font-weight: 500; font-size: 13px;">Top management, Administrative staff (Marketing, HR, Purchase, Design, etc.)</td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="General shift - Permanent" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="General shift - Contract" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="Shift I - Permanent" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="Shift I - Contract" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="Shift II - Permanent" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="Shift II - Contract" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="Shift III - Permanent" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="Shift III - Contract" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                </tr>
+                                                <tr data-dept-label="Management / Supervisory staff">
+                                                    <td style="font-weight: 500; font-size: 13px;">Management and Supervisory staff</td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="General shift - Permanent" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="General shift - Contract" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="Shift I - Permanent" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="Shift I - Contract" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="Shift II - Permanent" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="Shift II - Contract" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="Shift III - Permanent" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="Shift III - Contract" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                </tr>
+                                                <tr data-dept-label="Operators">
+                                                    <td style="font-weight: 500; font-size: 13px;">Operators</td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="General shift - Permanent" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="General shift - Contract" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="Shift I - Permanent" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="Shift I - Contract" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="Shift II - Permanent" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="Shift II - Contract" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="Shift III - Permanent" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="Shift III - Contract" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                </tr>
+                                                <tr data-dept-label="Helpers">
+                                                    <td style="font-weight: 500; font-size: 13px;">Helpers</td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="General shift - Permanent" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="General shift - Contract" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="Shift I - Permanent" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="Shift I - Contract" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="Shift II - Permanent" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="Shift II - Contract" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="Shift III - Permanent" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="Shift III - Contract" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                </tr>
+                                                <tr data-dept-label="Others (if any)">
+                                                    <td style="font-weight: 500; font-size: 13px;">Others (if any)</td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="General shift - Permanent" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="General shift - Contract" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="Shift I - Permanent" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="Shift I - Contract" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="Shift II - Permanent" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="Shift II - Contract" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="Shift III - Permanent" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                    <td><input type="number" min="0" class="form-control emp-input" data-label="Shift III - Contract" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
                                     </div>
-                                    <div class="col-md-12">
-                                        <div class="employee-structure-wrapper">
-                                            <p style="font-size: 0.9rem; color: #4b5563; margin-bottom: 8px;">
-                                                Please provide approximate number of employees by department and shift,
-                                                similar to the official form.
-                                            </p>
-                                            <div class="table-responsive">
-                                                <table class="table table-bordered employee-structure-table"
-                                                    id="employee-structure-table">
-                                                    <thead>
-                                                        <tr>
-                                                            <th rowspan="2"
-                                                                style="vertical-align: middle; min-width: 180px;">
-                                                                Department</th>
-                                                            <th colspan="2" style="text-align: center;">General shift
-                                                            </th>
-                                                            <th colspan="2" style="text-align: center;">Shift I</th>
-                                                            <th colspan="2" style="text-align: center;">Shift II</th>
-                                                            <th colspan="2" style="text-align: center;">Shift III</th>
-                                                        </tr>
-                                                        <tr>
-                                                            <th style="text-align: center;">Permanent</th>
-                                                            <th style="text-align: center;">Contract</th>
-                                                            <th style="text-align: center;">Per.</th>
-                                                            <th style="text-align: center;">Contract</th>
-                                                            <th style="text-align: center;">Per.</th>
-                                                            <th style="text-align: center;">Contract</th>
-                                                            <th style="text-align: center;">Per.</th>
-                                                            <th style="text-align: center;">Contract</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        <tr data-dept-label="Top management / Administrative staff">
-                                                            <td>Top management, Administrative staff (Marketing, HR,
-                                                                Purchase, Design, etc.)</td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="General shift - Permanent"></td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="General shift - Contract"></td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="Shift I - Permanent"></td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="Shift I - Contract"></td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="Shift II - Permanent"></td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="Shift II - Contract"></td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="Shift III - Permanent"></td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="Shift III - Contract"></td>
-                                                        </tr>
-                                                        <tr data-dept-label="Management / Supervisory staff">
-                                                            <td>Management and Supervisory staff</td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="General shift - Permanent"></td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="General shift - Contract"></td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="Shift I - Permanent"></td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="Shift I - Contract"></td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="Shift II - Permanent"></td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="Shift II - Contract"></td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="Shift III - Permanent"></td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="Shift III - Contract"></td>
-                                                        </tr>
-                                                        <tr data-dept-label="Operators">
-                                                            <td>Operators</td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="General shift - Permanent"></td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="General shift - Contract"></td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="Shift I - Permanent"></td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="Shift I - Contract"></td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="Shift II - Permanent"></td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="Shift II - Contract"></td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="Shift III - Permanent"></td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="Shift III - Contract"></td>
-                                                        </tr>
-                                                        <tr data-dept-label="Helpers">
-                                                            <td>Helpers</td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="General shift - Permanent"></td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="General shift - Contract"></td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="Shift I - Permanent"></td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="Shift I - Contract"></td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="Shift II - Permanent"></td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="Shift II - Contract"></td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="Shift III - Permanent"></td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="Shift III - Contract"></td>
-                                                        </tr>
-                                                        <tr data-dept-label="Others (if any)">
-                                                            <td>Others (if any)</td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="General shift - Permanent"></td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="General shift - Contract"></td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="Shift I - Permanent"></td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="Shift I - Contract"></td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="Shift II - Permanent"></td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="Shift II - Contract"></td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="Shift III - Permanent"></td>
-                                                            <td><input type="number" min="0"
-                                                                    class="form-control emp-input"
-                                                                    data-label="Shift III - Contract"></td>
-                                                        </tr>
-                                                    </tbody>
-                                                </table>
+                                    <textarea name="employee_structure" id="employee_structure_field" style="display:none;"><?php echo isset($_POST['employee_structure']) ? htmlspecialchars($_POST['employee_structure'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+
+                                    <div class="row">
+                                        <div class="col-md-6 form-group">
+                                            <label>Onsite installation work / operational yards / temporary sites?</label>
+                                            <div style="margin-bottom: 8px;">
+                                                <label style="margin-right:20px; font-weight: 500; cursor: pointer;"><input type="radio" name="onsite_installation" value="Yes" <?php echo (isset($_POST['onsite_installation']) && $_POST['onsite_installation'] === 'Yes') ? 'checked' : ''; ?>> Yes</label>
+                                                <label style="font-weight: 500; cursor: pointer;"><input type="radio" name="onsite_installation" value="No" <?php echo (isset($_POST['onsite_installation']) && $_POST['onsite_installation'] === 'No') ? 'checked' : ''; ?>> No</label>
                                             </div>
-                                            <small style="font-size: 0.8rem; color: #6b7280;">You may provide
-                                                approximate values. Detailed annexures can be attached separately if
-                                                required.</small>
-                                            <textarea name="employee_structure" id="employee_structure_field"
-                                                style="display:none;"><?php echo isset($_POST['employee_structure']) ? htmlspecialchars($_POST['employee_structure'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+                                            <textarea name="onsite_details" class="form-control" rows="2" placeholder="If yes, please explain."><?php echo isset($_POST['onsite_details']) ? htmlspecialchars($_POST['onsite_details'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
                                         </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label>Onsite installation work / operational yards / temporary
-                                                sites?</label>
-                                            <div>
-                                                <label style="margin-right:15px;"><input type="radio"
-                                                        name="onsite_installation" value="Yes" <?php echo (isset($_POST['onsite_installation']) && $_POST['onsite_installation'] === 'Yes') ? 'checked' : ''; ?>>
-                                                    Yes</label>
-                                                <label><input type="radio" name="onsite_installation" value="No" <?php echo (isset($_POST['onsite_installation']) && $_POST['onsite_installation'] === 'No') ? 'checked' : ''; ?>>
-                                                    No</label>
-                                            </div>
-                                            <textarea name="onsite_details" class="form-control" rows="2"
-                                                placeholder="If yes, please explain."><?php echo isset($_POST['onsite_details']) ? htmlspecialchars($_POST['onsite_details'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
+                                        <div class="col-md-6 form-group">
                                             <label>Any part time personnel?</label>
-                                            <div>
-                                                <label style="margin-right:15px;"><input type="radio"
-                                                        name="part_time_personnel" value="Yes" <?php echo (isset($_POST['part_time_personnel']) && $_POST['part_time_personnel'] === 'Yes') ? 'checked' : ''; ?>>
-                                                    Yes</label>
-                                                <label><input type="radio" name="part_time_personnel" value="No" <?php echo (isset($_POST['part_time_personnel']) && $_POST['part_time_personnel'] === 'No') ? 'checked' : ''; ?>>
-                                                    No</label>
+                                            <div style="margin-bottom: 8px;">
+                                                <label style="margin-right:20px; font-weight: 500; cursor: pointer;"><input type="radio" name="part_time_personnel" value="Yes" <?php echo (isset($_POST['part_time_personnel']) && $_POST['part_time_personnel'] === 'Yes') ? 'checked' : ''; ?>> Yes</label>
+                                                <label style="font-weight: 500; cursor: pointer;"><input type="radio" name="part_time_personnel" value="No" <?php echo (isset($_POST['part_time_personnel']) && $_POST['part_time_personnel'] === 'No') ? 'checked' : ''; ?>> No</label>
                                             </div>
-                                            <input type="text" name="part_time_count" class="form-control"
-                                                placeholder="If yes, number of personnel"
-                                                value="<?php echo isset($_POST['part_time_count']) ? htmlspecialchars($_POST['part_time_count'], ENT_QUOTES, 'UTF-8') : ''; ?>">
+                                            <input type="text" name="part_time_count" class="form-control" placeholder="If yes, number of personnel" value="<?php echo isset($_POST['part_time_count']) ? htmlspecialchars($_POST['part_time_count'], ENT_QUOTES, 'UTF-8') : ''; ?>">
                                         </div>
-                                    </div>
-                                    <div class="col-md-12">
-                                        <div class="form-group">
+                                        <div class="col-md-12 form-group" style="margin-bottom: 0;">
                                             <label>Are there any employees excluded from audit scope?</label>
-                                            <div>
-                                                <label style="margin-right:15px;"><input type="radio"
-                                                        name="employees_excluded" value="Yes" <?php echo (isset($_POST['employees_excluded']) && $_POST['employees_excluded'] === 'Yes') ? 'checked' : ''; ?>>
-                                                    Yes</label>
-                                                <label><input type="radio" name="employees_excluded" value="No" <?php echo (isset($_POST['employees_excluded']) && $_POST['employees_excluded'] === 'No') ? 'checked' : ''; ?>>
-                                                    No</label>
+                                            <div style="margin-bottom: 8px;">
+                                                <label style="margin-right:20px; font-weight: 500; cursor: pointer;"><input type="radio" name="employees_excluded" value="Yes" <?php echo (isset($_POST['employees_excluded']) && $_POST['employees_excluded'] === 'Yes') ? 'checked' : ''; ?>> Yes</label>
+                                                <label style="font-weight: 500; cursor: pointer;"><input type="radio" name="employees_excluded" value="No" <?php echo (isset($_POST['employees_excluded']) && $_POST['employees_excluded'] === 'No') ? 'checked' : ''; ?>> No</label>
                                             </div>
-                                            <textarea name="employees_excluded_details" class="form-control" rows="2"
-                                                placeholder="If yes, please explain."><?php echo isset($_POST['employees_excluded_details']) ? htmlspecialchars($_POST['employees_excluded_details'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+                                            <textarea name="employees_excluded_details" class="form-control" rows="2" placeholder="If yes, please explain."><?php echo isset($_POST['employees_excluded_details']) ? htmlspecialchars($_POST['employees_excluded_details'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
                                         </div>
                                     </div>
-                                    <div class="col-md-12" style="margin-top: 15px;">
-                                        <h4 style="margin-bottom: 15px; font-weight: 700;">6. Describe your organisation
-                                        </h4>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
+                                </div>
+
+                                <!-- 6. Describe your organisation -->
+                                <div class="nc-form-section">
+                                    <h4>
+                                        <span class="nc-section-icon"><i class="fa fa-industry"></i></span>
+                                        6. DESCRIBE YOUR ORGANISATION
+                                    </h4>
+                                    <div class="row">
+                                        <div class="col-md-6 form-group">
                                             <label>Organisation type</label>
-                                            <div>
-                                                <label style="margin-right:15px;"><input type="radio" name="org_type"
-                                                        value="Manufacturer" <?php echo (isset($_POST['org_type']) && $_POST['org_type'] === 'Manufacturer') ? 'checked' : ''; ?>>
-                                                    Manufacturer</label>
-                                                <label><input type="radio" name="org_type" value="Service provider"
-                                                        <?php echo (isset($_POST['org_type']) && $_POST['org_type'] === 'Service provider') ? 'checked' : ''; ?>>
-                                                    Service provider</label>
+                                            <div style="margin-bottom: 8px;">
+                                                <label style="margin-right:20px; font-weight: 500; cursor: pointer;"><input type="radio" name="org_type" value="Manufacturer" <?php echo (isset($_POST['org_type']) && $_POST['org_type'] === 'Manufacturer') ? 'checked' : ''; ?>> Manufacturer</label>
+                                                <label style="font-weight: 500; cursor: pointer;"><input type="radio" name="org_type" value="Service provider" <?php echo (isset($_POST['org_type']) && $_POST['org_type'] === 'Service provider') ? 'checked' : ''; ?>> Service provider</label>
                                             </div>
                                         </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
+                                        <div class="col-md-6 form-group">
                                             <label>Major customers</label>
-                                            <textarea name="major_customers" class="form-control"
-                                                rows="2"><?php echo isset($_POST['major_customers']) ? htmlspecialchars($_POST['major_customers'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+                                            <textarea name="major_customers" class="form-control" rows="2" placeholder="List major customers or client industries..."><?php echo isset($_POST['major_customers']) ? htmlspecialchars($_POST['major_customers'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
                                         </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
+                                        <div class="col-md-6 form-group">
                                             <label>Main products</label>
-                                            <textarea name="main_products" class="form-control"
-                                                rows="2"><?php echo isset($_POST['main_products']) ? htmlspecialchars($_POST['main_products'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+                                            <textarea name="main_products" class="form-control" rows="2" placeholder="Main products or services offered..."><?php echo isset($_POST['main_products']) ? htmlspecialchars($_POST['main_products'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
                                         </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
+                                        <div class="col-md-6 form-group">
                                             <label>Main raw materials used or processed</label>
-                                            <textarea name="raw_materials" class="form-control"
-                                                rows="2"><?php echo isset($_POST['raw_materials']) ? htmlspecialchars($_POST['raw_materials'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+                                            <textarea name="raw_materials" class="form-control" rows="2" placeholder="Main raw materials / inputs..."><?php echo isset($_POST['raw_materials']) ? htmlspecialchars($_POST['raw_materials'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
                                         </div>
-                                    </div>
-                                    <div class="col-md-12">
-                                        <div class="form-group">
-                                            <label>Operations involved in the service / manufacturing of your
-                                                product</label>
-                                            <textarea name="operations" class="form-control"
-                                                rows="3"><?php echo isset($_POST['operations']) ? htmlspecialchars($_POST['operations'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+                                        <div class="col-md-12 form-group">
+                                            <label>Operations involved in the service / manufacturing of your product</label>
+                                            <textarea name="operations" class="form-control" rows="2" placeholder="Briefly describe operational workflow / stages..."><?php echo isset($_POST['operations']) ? htmlspecialchars($_POST['operations'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
                                         </div>
-                                    </div>
-                                    <div class="col-md-12">
-                                        <div class="form-group">
-                                            <label>Processes provided by external sources related to the product /
-                                                service</label>
-                                            <textarea name="external_processes" class="form-control"
-                                                rows="3"><?php echo isset($_POST['external_processes']) ? htmlspecialchars($_POST['external_processes'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+                                        <div class="col-md-12 form-group">
+                                            <label>Processes provided by external sources related to the product / service</label>
+                                            <textarea name="external_processes" class="form-control" rows="2" placeholder="Outsourced or third-party processes..."><?php echo isset($_POST['external_processes']) ? htmlspecialchars($_POST['external_processes'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
                                         </div>
-                                    </div>
-                                    <div class="col-md-12">
-                                        <div class="form-group">
-                                            <label>Who designs the products / services that you provide to your
-                                                customers?</label>
+                                        <div class="col-md-12 form-group" style="margin-bottom: 0;">
+                                            <label>Who designs the products / services that you provide to your customers?</label>
                                             <select name="design_responsibility" class="form-control">
-                                                <option value="">Select</option>
-                                                <option value="We manufacture as per customer designs" <?php echo (isset($_POST['design_responsibility']) && $_POST['design_responsibility'] === 'We manufacture as per customer designs') ? 'selected' : ''; ?>>We manufacture the product as per
-                                                    customers provided designs and specification.</option>
+                                                <option value="">Select Design Responsibility</option>
+                                                <option value="We manufacture as per customer designs" <?php echo (isset($_POST['design_responsibility']) && $_POST['design_responsibility'] === 'We manufacture as per customer designs') ? 'selected' : ''; ?>>We manufacture the product as per customers provided designs and specification.</option>
                                                 <option value="We design our own products" <?php echo (isset($_POST['design_responsibility']) && $_POST['design_responsibility'] === 'We design our own products') ? 'selected' : ''; ?>>We design our own products.</option>
-                                                <option value="Design at another site" <?php echo (isset($_POST['design_responsibility']) && $_POST['design_responsibility'] === 'Design at another site') ? 'selected' : ''; ?>>We design products at another site and produce
-                                                    at the site to be certified.</option>
-                                                <option value="Outsourced design" <?php echo (isset($_POST['design_responsibility']) && $_POST['design_responsibility'] === 'Outsourced design') ? 'selected' : ''; ?>>We outsource design activities to external providers /
-                                                    subcontractors.</option>
-                                                <option value="Distributor of other company products" <?php echo (isset($_POST['design_responsibility']) && $_POST['design_responsibility'] === 'Distributor of other company products') ? 'selected' : ''; ?>>We are a distributor of products
-                                                    that are designed and manufactured by another company.</option>
+                                                <option value="Design at another site" <?php echo (isset($_POST['design_responsibility']) && $_POST['design_responsibility'] === 'Design at another site') ? 'selected' : ''; ?>>We design products at another site and produce at the site to be certified.</option>
+                                                <option value="Outsourced design" <?php echo (isset($_POST['design_responsibility']) && $_POST['design_responsibility'] === 'Outsourced design') ? 'selected' : ''; ?>>We outsource design activities to external providers / subcontractors.</option>
+                                                <option value="Distributor of other company products" <?php echo (isset($_POST['design_responsibility']) && $_POST['design_responsibility'] === 'Distributor of other company products') ? 'selected' : ''; ?>>We are a distributor of products that are designed and manufactured by another company.</option>
                                             </select>
                                         </div>
                                     </div>
-                                    <div class="col-md-12" style="margin-top: 15px;">
-                                        <h4 style="margin-bottom: 15px; font-weight: 700;">7. Other information</h4>
-                                    </div>
-                                    <div class="col-md-12">
-                                        <div class="other-certificates-wrapper">
-                                            <div class="form-group" style="margin-bottom: 10px;">
-                                                <label style="display:block; margin-bottom:6px;">Does the company have
-                                                    any other valid certificate(s)?</label>
-                                                <label style="margin-right:15px; font-weight: 500;"><input type="radio"
-                                                        name="other_certificates_flag" value="Yes"> Yes</label>
-                                                <label style="font-weight: 500;"><input type="radio"
-                                                        name="other_certificates_flag" value="No" checked> No</label>
-                                            </div>
-                                            <div id="other-certificates-details" style="display:none; margin-top: 8px;">
-                                                <p style="font-size: 0.9rem; color: #4b5563; margin-bottom: 6px;">If
-                                                    yes, please list below:</p>
-                                                <div class="table-responsive">
-                                                    <table class="table table-bordered other-cert-table"
-                                                        id="other-certificates-table">
-                                                        <thead>
-                                                            <tr>
-                                                                <th style="width: 40px;">Sr.</th>
-                                                                <th>Certification body</th>
-                                                                <th>Accreditation</th>
-                                                                <th>Validity until</th>
-                                                                <th>Certificate(s) number</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            <tr>
-                                                                <td class="text-center">1.</td>
-                                                                <td><input type="text" class="form-control cert-body">
-                                                                </td>
-                                                                <td><input type="text" class="form-control cert-accred">
-                                                                </td>
-                                                                <td><input type="text" class="form-control cert-valid">
-                                                                </td>
-                                                                <td><input type="text" class="form-control cert-number">
-                                                                </td>
-                                                            </tr>
-                                                            <tr>
-                                                                <td class="text-center">2.</td>
-                                                                <td><input type="text" class="form-control cert-body">
-                                                                </td>
-                                                                <td><input type="text" class="form-control cert-accred">
-                                                                </td>
-                                                                <td><input type="text" class="form-control cert-valid">
-                                                                </td>
-                                                                <td><input type="text" class="form-control cert-number">
-                                                                </td>
-                                                            </tr>
-                                                        </tbody>
-                                                    </table>
+                                </div>
+
+                                <!-- 7. Other information -->
+                                <div class="nc-form-section">
+                                    <h4>
+                                        <span class="nc-section-icon"><i class="fa fa-info-circle"></i></span>
+                                        7. OTHER INFORMATION
+                                    </h4>
+                                    <div class="row">
+                                        <div class="col-md-12 form-group">
+                                            <div class="other-certificates-wrapper">
+                                                <label style="display:block; margin-bottom:6px;">Does the company have any other valid certificate(s)?</label>
+                                                <div style="margin-bottom: 10px;">
+                                                    <label style="margin-right:20px; font-weight: 500; cursor: pointer;"><input type="radio" name="other_certificates_flag" value="Yes"> Yes</label>
+                                                    <label style="font-weight: 500; cursor: pointer;"><input type="radio" name="other_certificates_flag" value="No" checked> No</label>
                                                 </div>
-                                                <button type="button" class="btn btn-default btn-sm add-row-btn"
-                                                    id="add-certificate-row"><i class="fa fa-plus"></i> Add another
-                                                    certificate</button>
-                                            </div>
-                                            <textarea name="other_certificates" id="other_certificates_field"
-                                                style="display:none;"><?php echo isset($_POST['other_certificates']) ? htmlspecialchars($_POST['other_certificates'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label>Date of system implementation</label>
-                                            <input type="text" name="system_implementation_date" class="form-control"
-                                                placeholder="dd-mm-yyyy"
-                                                value="<?php echo isset($_POST['system_implementation_date']) ? htmlspecialchars($_POST['system_implementation_date'], ENT_QUOTES, 'UTF-8') : ''; ?>">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label>Proposed month-year to conduct the audit</label>
-                                            <input type="text" name="proposed_audit_month" class="form-control"
-                                                placeholder="MM-YYYY"
-                                                value="<?php echo isset($_POST['proposed_audit_month']) ? htmlspecialchars($_POST['proposed_audit_month'], ENT_QUOTES, 'UTF-8') : ''; ?>">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-12">
-                                        <div class="form-group">
-                                            <label>Have any management system consultancy services been taken?</label>
-                                            <div>
-                                                <label style="margin-right:15px;"><input type="radio"
-                                                        name="consultancy_services_taken" value="Yes" <?php echo (isset($_POST['consultancy_services_taken']) && $_POST['consultancy_services_taken'] === 'Yes') ? 'checked' : ''; ?>> Yes</label>
-                                                <label><input type="radio" name="consultancy_services_taken" value="No"
-                                                        <?php echo (isset($_POST['consultancy_services_taken']) && $_POST['consultancy_services_taken'] === 'No') ? 'checked' : ''; ?>> No</label>
-                                            </div>
-                                            <textarea name="consultancy_details" class="form-control" rows="2"
-                                                placeholder="If yes, by whom and period of services."><?php echo isset($_POST['consultancy_details']) ? htmlspecialchars($_POST['consultancy_details'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-12" style="margin-top: 20px;">
-                                        <div class="row">
-                                            <div class="col-md-7">
-                                                <div class="note-box">
-                                                    <p style="font-weight: 600; margin-bottom: 6px;">Note –</p>
-                                                    <ul
-                                                        style="padding-left: 18px; margin: 0; font-size: 0.9rem; color: #4b5563;">
-                                                        <li style="margin-bottom: 4px;">Initial audit will be conducted
-                                                            in two stages. Stage 2 audit date(s) will be finalised on
-                                                            assessment of Stage 1 audit.</li>
-                                                        <li>If available, please attach process flow diagram,
-                                                            organisation brochure and any customer specific
-                                                            requirements.</li>
-                                                    </ul>
+                                                <div id="other-certificates-details" style="display:none; margin-top: 10px;">
+                                                    <p style="font-size: 13.5px; color: #4b5563; margin-bottom: 8px;">If yes, please list below:</p>
+                                                    <div class="table-responsive" style="margin-bottom: 10px; border: 1.5px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+                                                        <table class="table table-bordered other-cert-table" id="other-certificates-table" style="margin-bottom: 0; background: #fff;">
+                                                            <thead style="background: #f8fafc; font-size: 13px;">
+                                                                <tr>
+                                                                    <th style="width: 40px; text-align: center;">Sr.</th>
+                                                                    <th>Certification body</th>
+                                                                    <th>Accreditation</th>
+                                                                    <th>Validity until</th>
+                                                                    <th>Certificate(s) number</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                <tr>
+                                                                    <td class="text-center" style="vertical-align: middle; font-weight: 600;">1.</td>
+                                                                    <td><input type="text" class="form-control cert-body" placeholder="CB Name"></td>
+                                                                    <td><input type="text" class="form-control cert-accred" placeholder="Accreditation body"></td>
+                                                                    <td><input type="text" class="form-control cert-valid" placeholder="dd-mm-yyyy"></td>
+                                                                    <td><input type="text" class="form-control cert-number" placeholder="Certificate No."></td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <td class="text-center" style="vertical-align: middle; font-weight: 600;">2.</td>
+                                                                    <td><input type="text" class="form-control cert-body" placeholder="CB Name"></td>
+                                                                    <td><input type="text" class="form-control cert-accred" placeholder="Accreditation body"></td>
+                                                                    <td><input type="text" class="form-control cert-valid" placeholder="dd-mm-yyyy"></td>
+                                                                    <td><input type="text" class="form-control cert-number" placeholder="Certificate No."></td>
+                                                                </tr>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                    <button type="button" class="btn btn-outline-primary btn-sm add-row-btn" id="add-certificate-row" style="border-radius: 8px; font-weight: 600; padding: 6px 14px;"><i class="fa fa-plus"></i> Add another certificate</button>
                                                 </div>
-                                                <div class="optional-attachments">
-                                                    <div class="optional-attachments-title"><i
-                                                            class="fa fa-paperclip"></i> Optional supporting attachments
-                                                    </div>
-                                                    <p class="optional-attachments-hint">Upload only if available.
-                                                        Allowed formats: PNG, JPG, JPEG. Each file can be up to 5
-                                                        MB.</p>
-                                                    <div class="attachment-upload-item">
-                                                        <label for="process-flow-attachment">Process flow
-                                                            diagram</label>
-                                                        <input type="file" name="process_flow_attachment"
-                                                            id="process-flow-attachment"
-                                                            accept=".png,.jpg,.jpeg,image/png,image/jpeg">
-                                                    </div>
-                                                    <div class="attachment-upload-item">
-                                                        <label for="organisation-brochure-attachment">Organisation
-                                                            brochure</label>
-                                                        <input type="file" name="organisation_brochure_attachment"
-                                                            id="organisation-brochure-attachment"
-                                                            accept=".png,.jpg,.jpeg,image/png,image/jpeg">
-                                                    </div>
-                                                    <div class="attachment-upload-item">
-                                                        <label for="customer-requirements-attachment">Customer specific
-                                                            requirements</label>
-                                                        <input type="file" name="customer_requirements_attachment"
-                                                            id="customer-requirements-attachment"
-                                                            accept=".png,.jpg,.jpeg,image/png,image/jpeg">
-                                                    </div>
-                                                </div>
+                                                <textarea name="other_certificates" id="other_certificates_field" style="display:none;"><?php echo isset($_POST['other_certificates']) ? htmlspecialchars($_POST['other_certificates'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
                                             </div>
-                                            <div class="col-md-5">
-                                                <div class="signature-info-box">
-                                                    <div class="form-group" style="margin-bottom: 10px;">
-                                                        <label>Name</label>
-                                                        <input type="text" name="sign_name" class="form-control"
-                                                            required
-                                                            value="<?php echo isset($_POST['sign_name']) ? htmlspecialchars($_POST['sign_name'], ENT_QUOTES, 'UTF-8') : ''; ?>">
-                                                    </div>
-                                                    <div class="form-group" style="margin-bottom: 10px;">
-                                                        <label>Designation <span class="required-label">*</span></label>
-                                                        <input type="text" name="sign_designation" class="form-control"
-                                                            required
-                                                            value="<?php echo isset($_POST['sign_designation']) ? htmlspecialchars($_POST['sign_designation'], ENT_QUOTES, 'UTF-8') : ''; ?>">
-                                                    </div>
-                                                    <div class="form-group" style="margin-bottom: 0;">
-                                                        <label>Date <span class="required-label">*</span></label>
-                                                        <input type="text" name="sign_date" class="form-control"
-                                                            placeholder="dd-mm-yyyy" required
-                                                            value="<?php echo isset($_POST['sign_date']) ? htmlspecialchars($_POST['sign_date'], ENT_QUOTES, 'UTF-8') : ''; ?>">
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-12">
-                                        <div class="declaration-box">
-                                            <div class="form-group" style="margin-bottom: 10px;">
-                                                <label
-                                                    style="display:flex; align-items:flex-start; gap:8px; font-weight: 500;">
-                                                    <input type="checkbox" name="declaration_confirmed" value="1"
-                                                        required style="margin-top: 4px;" <?php echo isset($_POST['declaration_confirmed']) ? 'checked' : ''; ?>>
-                                                    <span style="font-size: 0.9rem; color: #111827;">I hereby declare
-                                                        that the information provided above is true, correct and
-                                                        complete and that we agree to abide by the applicable
-                                                        certification requirements of A.I.T.F. Management Certification
-                                                        Limited. <span class="required-label">*</span></span>
-                                                </label>
-                                            </div>
-                                            <div class="signature-upload">
-                                                <div class="signature-upload-input">
-                                                    <label style="font-weight: 600; font-size: 0.9rem;">Sign with duly
-                                                        stamped (upload image) <span
-                                                            class="required-label">*</span></label>
-                                                    <input type="file" name="sign_image"
-                                                        accept=".jpg,.jpeg,.png,image/jpeg,image/png"
-                                                        class="form-control" id="sign-image-input" required>
-                                                    <small style="font-size: 0.8rem; color: #6b7280;">Accepted formats:
-                                                        JPG, PNG. Max size approx. 2 MB.</small>
-                                                </div>
-                                                <div class="signature-preview" id="sign-image-preview">
-                                                    <span style="font-size: 0.8rem; color: #9ca3af;">Signature preview
-                                                        will appear here.</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-12" id="submit-area">
-                                        <!-- Email Verification Section -->
-                                        <div class="info-update-section" id="email-verification-section" style="text-align: center; margin-top: 30px; margin-bottom: 20px; border: 2px solid #111827; padding: 30px; border-radius: 12px; background: #ffffff;">
-                                            <h4 style="color: #111827; font-size: 22px; font-weight: 700; border-bottom: 2px solid #111827; padding-bottom: 15px; margin-bottom: 25px;"><i class="fa fa-shield"></i> Email Verification</h4>
-                                            <p style="margin-bottom: 15px; color: #dc3545; font-weight: 600; font-size: 15px;">Organisation requested to mention their registered mail id.</p>
-                                            <div style="display: flex; justify-content: center; align-items: center; flex-direction: column; gap: 15px;">
-                                                <div style="display: flex; align-items: flex-end; gap: 15px; justify-content: center; flex-wrap: wrap;" id="send-otp-container">
-                                                    <div style="text-align: left; width: 100%; max-width: 300px;">
-                                                        <label style="font-weight: 600; margin-bottom: 5px; display: block; color: #111827;">Email <span style="color: red;">*</span></label>
-                                                        <input type="email" name="email" class="form-control"
-                                                            value="<?php echo htmlspecialchars($_POST['email'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
-                                                            style="width: 100%; margin-bottom: 0;"
-                                                            required>
-                                                    </div>
-                                                    <button type="button" id="btn-send-otp" class="submit-btn" style="padding: 12px 25px; font-size: 16px; background: #0056b3; width: auto; margin-top: 0; box-shadow: none;">
-                                                        <i class="fa fa-envelope"></i> Send OTP
-                                                    </button>
-                                                </div>
-                                                <div id="otp-message" style="font-size: 14px; font-weight: bold; margin-top: 5px;"></div>
-                                                <div id="otp-input-section" style="display: none; align-items: center; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                                                    <input type="text" id="otp_code" class="form-control" placeholder="Enter 6-digit OTP" style="width: 150px; text-align: center; letter-spacing: 2px; font-weight: bold; margin-bottom: 0;">
-                                                    <button type="button" id="btn-verify-otp" class="submit-btn" style="padding: 12px 25px; font-size: 16px; background: #198754; margin: 0; width: auto; box-shadow: none;">
-                                                        Verify OTP
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <input type="hidden" name="is_email_verified" id="is_email_verified" value="0">
                                         </div>
 
-                                        <div class="captcha-wrap">
-                                            <?php if ($turnstileReady): ?>
-                                                <div class="cf-turnstile"
-                                                    data-sitekey="<?php echo htmlspecialchars($turnstileConfig['site_key'], ENT_QUOTES, 'UTF-8'); ?>"
-                                                    data-callback="applicationCaptchaSolved"
-                                                    data-expired-callback="applicationCaptchaExpired"
-                                                    data-error-callback="applicationCaptchaExpired"></div>
-                                            <?php else: ?>
-                                                <div class="captcha-help">Captcha widget will appear after Cloudflare Turnstile
-                                                    keys are added in the `.env` file.</div>
-                                            <?php endif; ?>
+                                        <div class="col-md-6 form-group">
+                                            <label>Date of system implementation</label>
+                                            <input type="text" name="system_implementation_date" class="form-control" placeholder="dd-mm-yyyy" value="<?php echo isset($_POST['system_implementation_date']) ? htmlspecialchars($_POST['system_implementation_date'], ENT_QUOTES, 'UTF-8') : ''; ?>">
                                         </div>
-                                        <div id="application-captcha-status" class="captcha-status">Please complete the
-                                            captcha to enable the submit button.</div>
-                                        <div id="required-warning" class="required-warning">Important fields are
-                                            missing.</div>
-                                        <button type="submit" id="main-submit-btn" class="submit-btn" disabled style="background-color: #6b7280; cursor: not-allowed; opacity: 0.7;"><i class="fa fa-lock"></i> Please verify your mail</button>
+                                        <div class="col-md-6 form-group">
+                                            <label>Proposed month-year to conduct the audit</label>
+                                            <input type="text" name="proposed_audit_month" class="form-control" placeholder="MM-YYYY" value="<?php echo isset($_POST['proposed_audit_month']) ? htmlspecialchars($_POST['proposed_audit_month'], ENT_QUOTES, 'UTF-8') : ''; ?>">
+                                        </div>
+                                        <div class="col-md-12 form-group" style="margin-bottom: 0;">
+                                            <label>Have any management system consultancy services been taken?</label>
+                                            <div style="margin-bottom: 8px;">
+                                                <label style="margin-right:20px; font-weight: 500; cursor: pointer;"><input type="radio" name="consultancy_services_taken" value="Yes" <?php echo (isset($_POST['consultancy_services_taken']) && $_POST['consultancy_services_taken'] === 'Yes') ? 'checked' : ''; ?>> Yes</label>
+                                                <label style="font-weight: 500; cursor: pointer;"><input type="radio" name="consultancy_services_taken" value="No" <?php echo (isset($_POST['consultancy_services_taken']) && $_POST['consultancy_services_taken'] === 'No') ? 'checked' : ''; ?>> No</label>
+                                            </div>
+                                            <textarea name="consultancy_details" class="form-control" rows="2" placeholder="If yes, by whom and period of services."><?php echo isset($_POST['consultancy_details']) ? htmlspecialchars($_POST['consultancy_details'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 8. Optional Supporting Attachments -->
+                                <div class="nc-form-section">
+                                    <h4>
+                                        <span class="nc-section-icon"><i class="fa fa-paperclip"></i></span>
+                                        8. OPTIONAL SUPPORTING ATTACHMENTS
+                                    </h4>
+                                    <p style="font-size: 13.5px; color: #64748b; margin-top: -10px; margin-bottom: 18px;">
+                                        Upload only if available. Allowed formats: PNG, JPG, JPEG (Max 5 MB each).
+                                    </p>
+                                    <div class="row">
+                                        <div class="col-md-4 form-group">
+                                            <label>Process flow diagram <span style="color:#64748b; font-weight:normal; font-size:12.5px;">(Optional)</span></label>
+                                            <div style="background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 12px; padding: 12px 14px;">
+                                                <input type="file" name="process_flow_attachment" id="process-flow-attachment" accept=".png,.jpg,.jpeg,image/png,image/jpeg" style="font-size: 13px; width: 100%;">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 form-group">
+                                            <label>Organisation brochure <span style="color:#64748b; font-weight:normal; font-size:12.5px;">(Optional)</span></label>
+                                            <div style="background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 12px; padding: 12px 14px;">
+                                                <input type="file" name="organisation_brochure_attachment" id="organisation-brochure-attachment" accept=".png,.jpg,.jpeg,image/png,image/jpeg" style="font-size: 13px; width: 100%;">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 form-group">
+                                            <label>Customer specific requirements <span style="color:#64748b; font-weight:normal; font-size:12.5px;">(Optional)</span></label>
+                                            <div style="background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 12px; padding: 12px 14px;">
+                                                <input type="file" name="customer_requirements_attachment" id="customer-requirements-attachment" accept=".png,.jpg,.jpeg,image/png,image/jpeg" style="font-size: 13px; width: 100%;">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 9. Authorized Person, Declaration & Signature -->
+                                <div class="nc-form-section">
+                                    <h4>
+                                        <span class="nc-section-icon"><i class="fa fa-pencil-square-o"></i></span>
+                                        9. AUTHORIZED PERSON, DECLARATION &amp; SIGNATURE
+                                    </h4>
+                                    <div class="row">
+                                        <div class="col-md-4 form-group">
+                                            <label>Name <span class="required-label" style="color:#ef4444;">*</span></label>
+                                            <input type="text" name="sign_name" class="form-control" required placeholder="Authorized person's full name" value="<?php echo isset($_POST['sign_name']) ? htmlspecialchars($_POST['sign_name'], ENT_QUOTES, 'UTF-8') : ''; ?>">
+                                        </div>
+                                        <div class="col-md-4 form-group">
+                                            <label>Designation <span class="required-label" style="color:#ef4444;">*</span></label>
+                                            <input type="text" name="sign_designation" class="form-control" required placeholder="e.g. Director / CEO" value="<?php echo isset($_POST['sign_designation']) ? htmlspecialchars($_POST['sign_designation'], ENT_QUOTES, 'UTF-8') : ''; ?>">
+                                        </div>
+                                        <div class="col-md-4 form-group">
+                                            <label>Date <span class="required-label" style="color:#ef4444;">*</span></label>
+                                            <input type="text" name="sign_date" class="form-control" placeholder="dd-mm-yyyy" required value="<?php echo isset($_POST['sign_date']) ? htmlspecialchars($_POST['sign_date'], ENT_QUOTES, 'UTF-8') : ''; ?>">
+                                        </div>
+
+                                        <div class="col-md-12 form-group" style="margin-top: 6px;">
+                                            <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 16px 20px;">
+                                                <label style="display:flex; align-items:flex-start; gap:10px; font-weight: 500; margin-bottom: 0; cursor: pointer;">
+                                                    <input type="checkbox" name="declaration_confirmed" value="1" required style="margin-top: 4px; width: 18px; height: 18px; accent-color: #2563eb;" <?php echo isset($_POST['declaration_confirmed']) ? 'checked' : ''; ?>>
+                                                    <span style="font-size: 13.5px; color: #1e293b; line-height: 1.6;">
+                                                        I hereby declare that the information provided above is true, correct and complete and that we agree to abide by the applicable certification requirements of <strong>A.I.T.F. Management Certification Limited</strong>. <span class="required-label" style="color:#ef4444;">*</span>
+                                                    </span>
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-12 form-group" style="margin-bottom: 0;">
+                                            <label>Signature with Company's Stamp <span class="required-label" style="color:#ef4444;">*</span></label>
+                                            <div class="row align-items-center">
+                                                <div class="col-md-7">
+                                                    <div style="background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 12px; padding: 14px 18px;">
+                                                        <input type="file" name="sign_image" accept=".jpg,.jpeg,.png,image/jpeg,image/png" class="form-control-file" id="sign-image-input" required style="font-size: 14px; color: #475569; width: 100%;">
+                                                        <div style="color: #0369a1; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; padding: 6px 10px; margin-top: 8px; font-size: 12.5px; font-weight: 500; display: flex; align-items: center; gap: 6px;">
+                                                            <i class="fa fa-info-circle" style="color: #0284c7; flex-shrink: 0;"></i>
+                                                            <span>*Note: Only signature with company's duly stamp will be accepted. (JPG, PNG &bull; Max 2MB)</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-5">
+                                                    <div class="signature-preview" id="sign-image-preview" style="min-height: 90px; border: 1.5px dashed #cbd5e1; border-radius: 12px; background: #ffffff; display: flex; align-items: center; justify-content: center; padding: 8px; color: #94a3b8; font-size: 13px;">
+                                                        <span><i class="fa fa-image"></i> Signature preview will appear here</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 10. Organisation Mail ID & Email Verification Section -->
+                                <div class="nc-form-section" id="email-verification-section" style="border: 1.5px solid #0284c7; background: #f0f9ff; border-radius: 16px; padding: 28px 32px;">
+                                    <h4 style="color: #0369a1; border-bottom: 2px solid #bae6fd; padding-bottom: 12px; margin-bottom: 18px;">
+                                        <span class="nc-section-icon" style="background: #0284c7; color: #fff;"><i class="fa fa-shield"></i></span>
+                                        10. ORGANISATION MAIL ID &amp; EMAIL VERIFICATION
+                                    </h4>
+                                    <p style="font-size: 14px; color: #0369a1; margin-bottom: 20px; font-weight: 500;">
+                                        Please provide your registered Organisation Mail ID. You must verify it with a One-Time Password (OTP) before submitting this application.
+                                    </p>
+                                    
+                                    <div style="max-width: 580px;">
+                                        <!-- Email Input & Send OTP Button -->
+                                        <div class="form-group" id="send-otp-container" style="margin-bottom: 14px;">
+                                            <label style="font-weight: 600; color: #0f172a; font-size: 14px;">Organisation Mail ID <span style="color:#ef4444;">*</span></label>
+                                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                                <input type="email" name="email" id="app_email" class="form-control" placeholder="name@company.com" value="<?php echo htmlspecialchars($_POST['email'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" style="flex: 1; min-width: 240px; background: #fff;" required>
+                                                <button type="button" id="btn-send-otp" class="btn" style="background: #0284c7; color: #fff; font-weight: 600; padding: 10px 22px; border-radius: 10px; border: none; white-space: nowrap; transition: all 0.2s;">
+                                                    <i class="fa fa-envelope"></i> Send OTP
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <!-- OTP Status Message -->
+                                        <div id="otp-message" style="font-size: 13.5px; font-weight: 600; margin-bottom: 14px; display: none;"></div>
+
+                                        <!-- Countdown Timer -->
+                                        <div id="app_otp_countdown" style="font-size: 13px; color: #0284c7; margin-bottom: 12px; font-weight: 500; display: none;"></div>
+
+                                        <!-- OTP Input & Verify Section -->
+                                        <div id="otp-input-section" style="display: none; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 16px 20px; margin-bottom: 14px;">
+                                            <label style="font-weight: 600; color: #0f172a; font-size: 13.5px; margin-bottom: 6px;">Enter 6-Digit OTP received on email <span style="color:#ef4444;">*</span></label>
+                                            <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                                                <input type="text" id="otp_code" class="form-control" placeholder="• • • • • •" maxlength="6" style="width: 150px; text-align: center; letter-spacing: 4px; font-size: 18px; font-weight: 700;">
+                                                <button type="button" id="btn-verify-otp" class="btn" style="background: #16a34a; color: #fff; font-weight: 600; padding: 10px 22px; border-radius: 10px; border: none; white-space: nowrap;">
+                                                    <i class="fa fa-check"></i> Verify OTP
+                                                </button>
+                                                <button type="button" id="btn-resend-otp" style="background: none; border: none; color: #0284c7; font-size: 13px; cursor: pointer; text-decoration: underline; font-weight: 600; display: none;">Resend OTP</button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Verified Badge -->
+                                        <div id="app_verified_badge" style="display: none; background: #ecfdf5; border: 1.5px solid #a7f3d0; color: #065f46; border-radius: 10px; padding: 12px 18px; font-weight: 600; font-size: 14px; align-items: center; justify-content: space-between;">
+                                            <div style="display: flex; align-items: center; gap: 10px;">
+                                                <i class="fa fa-check-circle" style="font-size: 20px; color: #10b981;"></i>
+                                                <span id="app_verified_text">Organisation Mail ID Verified</span>
+                                            </div>
+                                            <button type="button" id="btn_app_change_email" style="background: none; border: none; color: #047857; text-decoration: underline; font-size: 12.5px; cursor: pointer; font-weight: 600;">Change Email</button>
+                                        </div>
+                                        
+                                        <input type="hidden" name="is_email_verified" id="is_email_verified" value="<?php echo (!empty($_SESSION['application_email_verified']) && !empty($_POST['email']) && $_SESSION['application_email_verified'] === $_POST['email']) ? '1' : '0'; ?>">
+                                    </div>
+                                </div>
+
+                                <!-- Cloudflare Turnstile Captcha -->
+                                <div class="captcha-wrap" style="display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 30px 0 10px; border: none; background: transparent;">
+                                    <?php if ($turnstileReady): ?>
+                                        <div class="cf-turnstile"
+                                            data-sitekey="<?php echo htmlspecialchars($turnstileConfig['site_key'], ENT_QUOTES, 'UTF-8'); ?>"
+                                            data-callback="applicationCaptchaSolved"
+                                            data-expired-callback="applicationCaptchaExpired"
+                                            data-error-callback="applicationCaptchaExpired"></div>
+                                    <?php endif; ?>
+                                    <div id="application-captcha-status" class="captcha-status" style="font-size: 13px; color: #64748b; margin-top: 6px;"></div>
+                                </div>
+
+                                <div class="text-center" style="margin-top: 35px; margin-bottom: 15px;">
+                                    <div id="required-warning" class="required-warning" style="margin-bottom: 12px;">Please fill all required fields marked with *</div>
+                                    <button type="submit" id="main-submit-btn" class="btn-submit-main" <?php echo (empty($_SESSION['application_email_verified']) || empty($_POST['email']) || $_SESSION['application_email_verified'] !== $_POST['email']) ? 'disabled' : ''; ?>>
+                                        <i class="fa fa-paper-plane"></i> Submit Application Form
+                                    </button>
+                                    <div id="app_submit_hint" style="margin-top: 12px; font-size: 13.5px; font-weight: 500; color: #64748b;">
+                                        <?php if (!empty($_SESSION['application_email_verified']) && !empty($_POST['email']) && $_SESSION['application_email_verified'] === $_POST['email']): ?>
+                                            <span style="color: #16a34a;"><i class="fa fa-check-circle"></i> Email verified! You can now submit the application.</span>
+                                        <?php else: ?>
+                                            <span style="color: #64748b;"><i class="fa fa-lock"></i> Submit button will be enabled once your Organisation Mail ID is verified with OTP above.</span>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                             </form>
@@ -2512,8 +2514,9 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                 </div>
             </div>
         </div>
-        <style>
-            /* Ensure body and html take full width */
+    </div>
+    <style>
+        /* Ensure body and html take full width */
             html,
             body {
                 width: 100%;
@@ -3059,9 +3062,21 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                 }
                 if (submitBtn) {
                     var captchaMissing = !isApplicationCaptchaComplete();
-                    submitBtn.disabled = missing || captchaMissing;
+                    var isEmailVerified = document.getElementById('is_email_verified') && document.getElementById('is_email_verified').value === '1';
+                    var cannotSubmit = missing || captchaMissing || !isEmailVerified;
+                    submitBtn.disabled = cannotSubmit;
                     submitBtn.dataset.missing = missing ? '1' : '0';
                     submitBtn.dataset.captchaMissing = captchaMissing ? '1' : '0';
+                    submitBtn.dataset.emailNotVerified = !isEmailVerified ? '1' : '0';
+
+                    var hint = document.getElementById('app_submit_hint');
+                    if (hint) {
+                        if (isEmailVerified) {
+                            hint.innerHTML = '<span style="color: #16a34a;"><i class="fa fa-check-circle"></i> Email verified! You can now submit the application.</span>';
+                        } else {
+                            hint.innerHTML = '<span style="color: #64748b;"><i class="fa fa-lock"></i> Submit button will be enabled once your Organisation Mail ID is verified with OTP above.</span>';
+                        }
+                    }
                 }
                 if (requiredWarning) {
                     requiredWarning.style.display = 'none';
@@ -3108,7 +3123,7 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
 
             form.addEventListener('submit', function (e) {
                 if (document.getElementById('is_email_verified') && document.getElementById('is_email_verified').value !== '1') {
-                    alert('Please verify your email with OTP before submitting.');
+                    alert('Please verify your Organisation Mail ID with OTP before submitting.');
                     e.preventDefault();
                     return false;
                 }
@@ -3122,7 +3137,9 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                 validateRequiredFields();
                 if (submitBtn && submitBtn.disabled) {
                     e.preventDefault();
-                    if (submitBtn.dataset.missing === '1') {
+                    if (submitBtn.dataset.emailNotVerified === '1') {
+                        alert('Please verify your Organisation Mail ID with OTP before submitting.');
+                    } else if (submitBtn.dataset.missing === '1') {
                         alert('Please fill all required fields before submitting.');
                     } else if (submitBtn.dataset.captchaMissing === '1') {
                         alert('Please complete the captcha before submitting.');
@@ -3174,31 +3191,51 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
             });
 
             // Email Verification Logic
-            $('#btn-send-otp').click(function() {
-                var email = $('input[name="email"]').val();
-                var orgName = $('input[name="org_name"]').val();
-                var contactPerson = $('input[name="contact_person"]').val();
+            var appCountdownInterval = null;
+
+            function startAppCountdown(seconds) {
+                clearInterval(appCountdownInterval);
+                var remaining = seconds;
+                $('#app_otp_countdown').show().text('You can request a new OTP in ' + remaining + ' seconds');
+                $('#btn-send-otp, #btn-resend-otp').prop('disabled', true);
+
+                appCountdownInterval = setInterval(function() {
+                    remaining--;
+                    if (remaining <= 0) {
+                        clearInterval(appCountdownInterval);
+                        $('#app_otp_countdown').hide();
+                        $('#btn-send-otp, #btn-resend-otp').prop('disabled', false);
+                        $('#btn-resend-otp').show();
+                    } else {
+                        $('#app_otp_countdown').text('You can request a new OTP in ' + remaining + ' seconds');
+                    }
+                }, 1000);
+            }
+
+            function sendAppOtp() {
+                var email = $('#app_email').val().trim();
+                var orgName = $('input[name="org_name"]').val().trim();
+                var contactPerson = $('input[name="contact_person"]').val().trim();
                 var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
                 if (!email || !emailRegex.test(email)) {
-                    alert('Please enter a valid email address first.');
-                    $('input[name="email"]').focus();
+                    alert('Please enter a valid Organisation Mail ID first.');
+                    $('#app_email').focus();
                     return;
                 }
                 if (!orgName) {
-                    alert('Please enter the Name of the Applicant Organization first.');
+                    alert('Please enter the Organization Name first.');
                     $('input[name="org_name"]').focus();
                     return;
                 }
                 if (!contactPerson) {
-                    alert('Please enter the Contact Person Name first.');
+                    alert('Please enter the Contact Person with Designation first.');
                     $('input[name="contact_person"]').focus();
                     return;
                 }
 
-                var $btn = $(this);
-                $btn.html('<i class="fa fa-spinner fa-spin"></i> Sending...').prop('disabled', true);
-                $('#otp-message').css('color', '#6b7280').text('Sending OTP...');
+                $('#btn-send-otp').html('<i class="fa fa-spinner fa-spin"></i> Sending...').prop('disabled', true);
+                $('#otp-message').show().css('color', '#0284c7').html('<i class="fa fa-spinner fa-spin"></i> Sending OTP to <strong>' + $('<div>').text(email).html() + '</strong>...');
 
                 $.ajax({
                     url: 'ajax_send_otp_app.php',
@@ -3211,34 +3248,42 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                     dataType: 'json',
                     success: function(response) {
                         if (response.success) {
-                            $('#otp-message').css('color', '#16a34a').text(response.message);
+                            $('#otp-message').css('color', '#16a34a').html('<i class="fa fa-check-circle"></i> ' + response.message);
                             $('#send-otp-container').hide();
-                            $('#otp-input-section').css('display', 'flex');
-                            $('input[name="email"]').prop('readonly', true);
+                            $('#otp-input-section').show();
+                            $('#app_email').prop('readonly', true);
+                            $('#otp_code').val('').focus();
+                            startAppCountdown(60);
                         } else {
-                            $btn.html('<i class="fa fa-envelope"></i> Send OTP').prop('disabled', false);
-                            $('#otp-message').css('color', '#dc3545').text(response.message);
+                            $('#btn-send-otp').html('<i class="fa fa-envelope"></i> Send OTP').prop('disabled', false);
+                            $('#otp-message').css('color', '#dc2626').html('<i class="fa fa-exclamation-circle"></i> ' + response.message);
                         }
                     },
                     error: function() {
-                        $btn.html('<i class="fa fa-envelope"></i> Send OTP').prop('disabled', false);
-                        $('#otp-message').css('color', '#dc3545').text('An error occurred. Please try again.');
+                        $('#btn-send-otp').html('<i class="fa fa-envelope"></i> Send OTP').prop('disabled', false);
+                        $('#otp-message').css('color', '#dc2626').html('<i class="fa fa-exclamation-circle"></i> An error occurred. Please try again.');
                     }
                 });
+            }
+
+            $('#btn-send-otp, #btn-resend-otp').click(function(e) {
+                e.preventDefault();
+                sendAppOtp();
             });
 
             $('#btn-verify-otp').click(function() {
-                var otp = $('#otp_code').val();
-                var email = $('input[name="email"]').val();
+                var otp = $('#otp_code').val().trim();
+                var email = $('#app_email').val().trim();
 
                 if (!otp || otp.length !== 6) {
-                    alert('Please enter a valid 6-digit OTP.');
+                    alert('Please enter the 6-digit OTP received in your email.');
+                    $('#otp_code').focus();
                     return;
                 }
 
                 var $btn = $(this);
                 $btn.html('<i class="fa fa-spinner fa-spin"></i> Verifying...').prop('disabled', true);
-                $('#otp-message').css('color', '#6b7280').text('Verifying OTP...');
+                $('#otp-message').show().css('color', '#0284c7').text('Verifying OTP...');
 
                 $.ajax({
                     url: 'ajax_verify_otp_app.php',
@@ -3250,26 +3295,50 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                     dataType: 'json',
                     success: function(response) {
                         if (response.success) {
-                            $('#otp-message').css('color', '#16a34a').html('<i class="fa fa-check-circle"></i> ' + response.message);
+                            clearInterval(appCountdownInterval);
+                            $('#app_otp_countdown').hide();
                             $('#otp-input-section').hide();
-                            $('#is_email_verified').val('1');
-                            $('#main-submit-btn').prop('disabled', false)
-                                .css({'background-color': '#111827', 'cursor': 'pointer', 'opacity': '1'})
-                                .html('Submit Application');
+                            $('#otp-message').hide();
+                            $('#send-otp-container').hide();
                             
-                            // Re-run validation to clear missing states
+                            $('#app_verified_text').text('Verified: ' + email);
+                            $('#app_verified_badge').css('display', 'flex');
+                            $('#is_email_verified').val('1');
+
                             validateRequiredFields();
                         } else {
-                            $btn.html('Verify OTP').prop('disabled', false);
-                            $('#otp-message').css('color', '#dc3545').text(response.message);
+                            $btn.html('<i class="fa fa-check"></i> Verify OTP').prop('disabled', false);
+                            $('#otp-message').css('color', '#dc2626').html('<i class="fa fa-times-circle"></i> ' + response.message);
                         }
                     },
                     error: function() {
-                        $btn.html('Verify OTP').prop('disabled', false);
-                        $('#otp-message').css('color', '#dc3545').text('An error occurred. Please try again.');
+                        $btn.html('<i class="fa fa-check"></i> Verify OTP').prop('disabled', false);
+                        $('#otp-message').css('color', '#dc2626').html('<i class="fa fa-times-circle"></i> Verification failed. Please try again.');
                     }
                 });
             });
+
+            $('#btn_app_change_email').click(function(e) {
+                e.preventDefault();
+                $('#app_verified_badge').hide();
+                $('#send-otp-container').show();
+                $('#otp-input-section').hide();
+                $('#otp-message').hide();
+                $('#app_email').prop('readonly', false).focus();
+                $('#is_email_verified').val('0');
+                $('#btn-send-otp').html('<i class="fa fa-envelope"></i> Send OTP').prop('disabled', false);
+                validateRequiredFields();
+            });
+
+            // If page loaded with verified email in session
+            if ($('#is_email_verified').val() === '1') {
+                var currentEmail = $('#app_email').val();
+                if (currentEmail) {
+                    $('#send-otp-container').hide();
+                    $('#app_verified_text').text('Verified: ' + currentEmail);
+                    $('#app_verified_badge').css('display', 'flex');
+                }
+            }
         })();
     </script>
 
@@ -3279,66 +3348,58 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
             var tabBtns = document.querySelectorAll('.app-tab-btn');
             var tabPanels = document.querySelectorAll('.app-tab-panel');
 
-            function activateTab(btn) {
-                var targetTab = btn.getAttribute('data-tab');
-
-                // Deactivate all buttons - reset inline styles
+            window.activateAppTab = function(targetTab, shouldScroll) {
                 tabBtns.forEach(function (b) {
-                    b.classList.remove('active');
-                    b.style.color = '#94a3b8';
-                    b.style.borderBottom = '3px solid transparent';
-                    b.style.fontWeight = '600';
-                    var icon = b.querySelector('i');
-                    if (icon) icon.style.color = '#94a3b8';
-                });
-
-                // Deactivate all panels
-                tabPanels.forEach(function (p) {
-                    p.classList.remove('active');
-                    p.style.display = 'none';
-                });
-
-                // Activate selected button with inline styles
-                btn.classList.add('active');
-                btn.style.color = '#1e3a8a';
-                btn.style.borderBottom = '3px solid #2563eb';
-                btn.style.fontWeight = '700';
-                var activeIcon = btn.querySelector('i');
-                if (activeIcon) activeIcon.style.color = '#2563eb';
-
-                // Activate selected panel
-                var targetPanel = document.getElementById(targetTab);
-                if (targetPanel) {
-                    targetPanel.classList.add('active');
-                    targetPanel.style.display = 'block';
-                }
-
-                // Smooth scroll based on which tab was selected
-                if (targetTab === 'online-tab') {
-                    var tabBar = document.getElementById('appTabBar');
-                    if (tabBar) {
-                        setTimeout(function () {
-                            tabBar.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        }, 50);
+                    if (b.getAttribute('data-tab') === targetTab) {
+                        b.classList.add('active');
+                    } else {
+                        b.classList.remove('active');
                     }
-                } else if (targetTab === 'download-tab') {
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                });
+
+                tabPanels.forEach(function (p) {
+                    if (p.id === targetTab) {
+                        p.classList.add('active');
+                        p.style.display = 'block';
+                    } else {
+                        p.classList.remove('active');
+                        p.style.display = 'none';
+                    }
+                });
+
+                if (shouldScroll) {
+                    if (targetTab === 'online-tab') {
+                        var el = document.getElementById('online-application-form');
+                        if (el) {
+                            setTimeout(function () {
+                                el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }, 50);
+                        }
+                    } else if (targetTab === 'download-tab') {
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }
                 }
-            }
+            };
 
             tabBtns.forEach(function (btn) {
                 btn.addEventListener('click', function (e) {
                     e.preventDefault();
                     e.stopPropagation();
-                    activateTab(this);
+                    var targetTab = this.getAttribute('data-tab');
+                    window.activateAppTab(targetTab, true);
                 });
             });
 
-            // If URL has hash #online-application-form, auto-switch to online tab
-            if (window.location.hash === '#online-application-form') {
-                var onlineBtn = document.querySelector('[data-tab="online-tab"]');
-                if (onlineBtn) activateTab(onlineBtn);
+            function checkUrlHash() {
+                var hash = window.location.hash;
+                var search = window.location.search;
+                if (hash === '#online-application-form' || hash === '#online-tab' || search.indexOf('tab=online') !== -1 || <?php echo (!empty($success_message) || !empty($error_message)) ? 'true' : 'false'; ?>) {
+                    window.activateAppTab('online-tab', true);
+                }
             }
+
+            checkUrlHash();
+            window.addEventListener('hashchange', checkUrlHash);
         })();
     </script>
 </body>

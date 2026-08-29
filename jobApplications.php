@@ -390,6 +390,7 @@ include 'header.php';
                                 <th>Applicant Name</th>
                                 <th>Email</th>
                                 <th>Contact No</th>
+                                <th>Qualification</th>
                                 <th>Apply For</th>
                                 <th>Message</th>
                                 <th>Resume</th>
@@ -418,6 +419,7 @@ include 'header.php';
                                     </a>
                                 </td>
                                 <td><?php echo htmlspecialchars($app['contact_no'] ?? ''); ?></td>
+                                <td><span style="font-weight:600; color:#1e293b;"><?php echo htmlspecialchars($app['qualification'] ?? '—'); ?></span></td>
                                 <td><?php echo htmlspecialchars($app['apply_for'] ?? '-'); ?></td>
                                 <td>
                                     <div class="job-msg-truncated" title="<?php echo $msgFull; ?>">

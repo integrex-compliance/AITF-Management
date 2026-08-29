@@ -426,10 +426,6 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
             <li><a href="intimationLetter.php" class="animate <?php echo $adddueClass ?>"><span>INTIMATION DUE</span><i
                         class="sub_icon fa fa-envelope-o"></i></a></li>
         <?php } ?>
-        <?php if (aitf_has_access("Intimation Due")) { ?>
-            <li><a href="sentintimation.php" class="animate <?php echo $addsentClass ?>"><span>INTIMATION SENT</span><i
-                        class="sub_icon fa fa-envelope"></i></a></li>
-        <?php } ?>
         <?php if (aitf_has_access("Mailbox")) { ?>
             <li><a href="inbox.php" target="_blank"
                     class="animate <?php echo isset($addInboxClass) ? $addInboxClass : ''; ?>"><span>MAIL-BOX</span><i

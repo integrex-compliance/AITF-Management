@@ -6650,6 +6650,14 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                             data-crr="<?php echo $caservice['crr_id'] ?>" data-row-count=""
                                                             title="Certificate Print" style="padding: 1px 5px;">
                                                             <i class="fa fa-download fa-lg" style="padding: 3px"></i></a>
+                                                        <a class="download-dsc-certificate-print pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-service="<?php echo $caservice['ca_id'] ?>"
+                                                            data-id="<?php echo $caservice['service'] ?>"
+                                                            data-certificate="<?php echo !empty($caservice['certificate_id']) ? $caservice['certificate_id'] : '' ?>"
+                                                            data-crr="<?php echo $caservice['crr_id'] ?>" data-row-count=""
+                                                            title="Print with Digital Signature" style="padding: 1px 5px; margin-right: 2px;">
+                                                            <i class="fa fa-pencil-square-o fa-lg" style="padding: 3px; color: #fff;"></i></a>
                                                     <?php } ?>
                                                 <?php } ?>
                                             </div>
@@ -7739,7 +7747,17 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                             data-crr="<?php echo $saiService['crr_id'] ?>" data-row-count=""
                                                             title="Certificate Print" style="padding: 1px 5px;">
                                                             <i class="fa fa-download fa-lg" style="padding: 3px"></i>
-                                                        </a> <?php } ?>
+                                                        </a>
+                                                        <a class="download-dsc-certificate-print pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-service="<?php echo $saiService['sai_id'] ?>"
+                                                            data-id="<?php echo $saiService['service'] ?>"
+                                                            data-certificate="<?php echo !empty($saiService['certificate_id']) ? $saiService['certificate_id'] : '' ?>"
+                                                            data-crr="<?php echo $saiService['crr_id'] ?>" data-row-count=""
+                                                            title="Print with Digital Signature" style="padding: 1px 5px; margin-right: 2px;">
+                                                            <i class="fa fa-pencil-square-o fa-lg" style="padding: 3px; color: #fff;"></i>
+                                                        </a>
+                                                    <?php } ?>
                                                 <?php } ?>
                                             </div>
                                         </div>
@@ -8751,6 +8769,15 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                             title="Certificate Print" style="padding: 1px 5px;">
                                                             <i class="fa fa-download fa-lg" style="padding: 3px"></i>
                                                         </a>
+                                                        <a class="download-dsc-certificate-print pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-service="<?php echo $saiiService['saii_id'] ?>"
+                                                            data-id="<?php echo $saiiService['service'] ?>"
+                                                            data-certificate="<?php echo !empty($saiiService['certificate_id']) ? $saiiService['certificate_id'] : '' ?>"
+                                                            data-crr="<?php echo $saiiService['crr_id'] ?>" data-row-count=""
+                                                            title="Print with Digital Signature" style="padding: 1px 5px; margin-right: 2px;">
+                                                            <i class="fa fa-pencil-square-o fa-lg" style="padding: 3px; color: #fff;"></i>
+                                                        </a>
                                                     <?php } ?>
                                                 <?php } ?>
                                             </div>
@@ -9616,6 +9643,15 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                             title="Certificate Print" style="padding: 1px 5px;">
                                                             <i class="fa fa-download fa-lg" style="padding: 3px"></i>
                                                         </a>
+                                                        <a class="download-dsc-certificate-print pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-service="<?php echo $rcServiceinfo['rc_id'] ?>"
+                                                            data-id="<?php echo $rcServiceinfo['service'] ?>"
+                                                            data-certificate="<?php echo !empty($rcServiceinfo['certificate_id']) ? $rcServiceinfo['certificate_id'] : '' ?>"
+                                                            data-crr="<?php echo $rcServiceinfo['crr_id'] ?>" data-row-count=""
+                                                            title="Print with Digital Signature" style="padding: 1px 5px; margin-right: 2px;">
+                                                            <i class="fa fa-pencil-square-o fa-lg" style="padding: 3px; color: #fff;"></i>
+                                                        </a>
                                                     <?php } ?>
                                                 <?php } ?>
                                             </div>
@@ -10468,6 +10504,15 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                         data-crr="<?php echo $spservices['crr_id'] ?>" data-row-count=""
                                                         title="Certificate Print" style="padding: 1px 5px;">
                                                         <i class="fa fa-download fa-lg" style="padding: 3px"></i>
+                                                    </a>
+                                                    <a class="download-dsc-certificate-print pull-right"
+                                                        data-customer="<?php echo $_GET['customerid'] ?>"
+                                                        data-service="<?php echo $spservices['sp_id'] ?>"
+                                                        data-id="<?php echo $spservices['service'] ?>"
+                                                        data-certificate="<?php echo !empty($spservices['certificate_id']) ? $spservices['certificate_id'] : '' ?>"
+                                                        data-crr="<?php echo $spservices['crr_id'] ?>" data-row-count=""
+                                                        title="Print with Digital Signature" style="padding: 1px 5px; margin-right: 2px;">
+                                                        <i class="fa fa-pencil-square-o fa-lg" style="padding: 3px; color: #fff;"></i>
                                                     </a>
                                                 <?php } ?>
                                             </div>

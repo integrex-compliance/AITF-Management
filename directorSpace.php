@@ -4,6 +4,7 @@ $pageIdentifier = "Director Space";
 include_once './header.php';
 include_once './dbConnect.php';
 require_once __DIR__ . '/include/rbac_helper.php';
+require_once __DIR__ . '/include/news_helper.php';
 
 date_default_timezone_set('Asia/Kolkata');
 
@@ -13,8 +14,9 @@ if (!Utitlity::checkForDirector()) {
 }
 
 aitf_ensure_rbac_schema($db);
+aitf_ensure_news_schema($db);
 
-// Ensure the employment_records table exists
+// Ensure required tables exist
 try {
     $db->exec("CREATE TABLE IF NOT EXISTS employment_records (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -27,8 +29,34 @@ try {
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8");
+
+    $db->exec("CREATE TABLE IF NOT EXISTS user_permissions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        feature VARCHAR(50) NOT NULL,
+        is_allowed TINYINT(1) NOT NULL DEFAULT 0,
+        UNIQUE KEY user_feature_unique (user_id, feature)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8");
+
+    $db->exec("CREATE TABLE IF NOT EXISTS user_messages (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        sender_id INT NOT NULL,
+        receiver_id INT NOT NULL,
+        message TEXT,
+        attachment VARCHAR(255) NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        is_read TINYINT(1) DEFAULT 0
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    $db->exec("CREATE TABLE IF NOT EXISTS user_daily_screen_time (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT,
+        record_date DATE,
+        total_seconds INT DEFAULT 0,
+        UNIQUE KEY user_date (user_id, record_date)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8");
 } catch (Exception $e) {
-    error_log('employment_records schema error: ' . $e->getMessage());
+    error_log('DirectorSpace table creation error: ' . $e->getMessage());
 }
 
 $notice = trim((string)($_SESSION['director_notice'] ?? ''));
@@ -36,38 +64,87 @@ unset($_SESSION['director_notice']);
 
 $roles = aitf_allowed_roles();
 
-$empRecordsStmt = $db->prepare("SELECT * FROM employment_records ORDER BY created_at DESC");
-$empRecordsStmt->execute();
-$empRecords = $empRecordsStmt->fetchAll(PDO::FETCH_ASSOC);
+$empRecords = [];
+try {
+    $empRecordsStmt = $db->prepare("SELECT * FROM employment_records ORDER BY created_at DESC");
+    $empRecordsStmt->execute();
+    $empRecords = $empRecordsStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+} catch (Exception $e) {
+    error_log('empRecords query error: ' . $e->getMessage());
+}
 
-$usersStmt = $db->prepare("SELECT user_id, user_name, email_id, role, contact_no, e_id, account_status
-                           FROM user
-                           WHERE is_deleted = '0'
-                           ORDER BY user_id DESC
-                           LIMIT 80");
-$usersStmt->execute();
-$employees = $usersStmt->fetchAll(PDO::FETCH_ASSOC);
+$employees = [];
+try {
+    $usersStmt = $db->prepare("SELECT user_id, user_name, email_id, role, contact_no, e_id, account_status
+                               FROM user
+                               WHERE is_deleted = '0'
+                               ORDER BY user_id DESC
+                               LIMIT 80");
+    $usersStmt->execute();
+    $employees = $usersStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+} catch (Exception $e) {
+    error_log('employees query error: ' . $e->getMessage());
+}
 
-$totalUsersStmt = $db->prepare("SELECT COUNT(*) FROM user WHERE is_deleted = '0'");
-$totalUsersStmt->execute();
-$totalUsers = (int)$totalUsersStmt->fetchColumn();
+$totalUsers = 0;
+try {
+    $totalUsersStmt = $db->prepare("SELECT COUNT(*) FROM user WHERE is_deleted = '0'");
+    $totalUsersStmt->execute();
+    $totalUsers = (int)$totalUsersStmt->fetchColumn();
+} catch (Exception $e) {
+    error_log('totalUsers query error: ' . $e->getMessage());
+}
 
-$activeUsersStmt = $db->prepare("SELECT activity_id, user_name, email_id, role, e_id, login_at, last_seen_at
-                                 FROM user_login_activity
-                                 WHERE logout_at IS NULL
-                                   AND role != 'Director'
-                                   AND last_seen_at >= DATE_SUB(NOW(), INTERVAL 15 SECOND)
-                                 ORDER BY last_seen_at DESC");
-$activeUsersStmt->execute();
-$activeUsers = $activeUsersStmt->fetchAll(PDO::FETCH_ASSOC);
+$activeUsers = [];
+try {
+    $activeUsersStmt = $db->prepare("SELECT activity_id, user_name, email_id, role, e_id, login_at, last_seen_at
+                                     FROM user_login_activity
+                                     WHERE logout_at IS NULL
+                                       AND role != 'Director'
+                                       AND last_seen_at >= DATE_SUB(NOW(), INTERVAL 15 SECOND)
+                                     ORDER BY last_seen_at DESC");
+    $activeUsersStmt->execute();
+    $activeUsers = $activeUsersStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+} catch (Exception $e) {
+    error_log('activeUsers query error: ' . $e->getMessage());
+}
 
-$todayActivityStmt = $db->prepare("SELECT user_name, email_id, role, e_id, login_at, logout_at, last_seen_at
-                                   FROM user_login_activity
-                                   WHERE DATE(login_at) = CURDATE()
-                                   ORDER BY login_at DESC");
-$todayActivityStmt->execute();
-$todayActivities = $todayActivityStmt->fetchAll(PDO::FETCH_ASSOC);
-$todayLoginCount = count($todayActivities);
+$todayActivities = [];
+$todayLoginCount = 0;
+try {
+    $todayActivityStmt = $db->prepare("SELECT user_name, email_id, role, e_id, login_at, logout_at, last_seen_at
+                                       FROM user_login_activity
+                                       WHERE DATE(login_at) = CURDATE()
+                                       ORDER BY login_at DESC");
+    $todayActivityStmt->execute();
+    $todayActivities = $todayActivityStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    $todayLoginCount = count($todayActivities);
+} catch (Exception $e) {
+    error_log('todayActivity query error: ' . $e->getMessage());
+}
+
+// News & Subscribers data for Director
+$allNews = [];
+try {
+    $allNewsStmt = $db->query("SELECT * FROM news_articles ORDER BY created_at DESC");
+    $allNews = $allNewsStmt ? ($allNewsStmt->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
+} catch (Exception $e) {
+    error_log('allNews query error: ' . $e->getMessage());
+}
+
+$allSubscribers = [];
+$verifiedSubscribersCount = 0;
+try {
+    $subscribersStmt = $db->query("SELECT * FROM news_subscribers ORDER BY subscribed_at DESC");
+    $allSubscribers = $subscribersStmt ? ($subscribersStmt->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
+    foreach ($allSubscribers as $sub) {
+        if (($sub['status'] ?? '') === 'verified') {
+            $verifiedSubscribersCount++;
+        }
+    }
+} catch (Exception $e) {
+    error_log('allSubscribers query error: ' . $e->getMessage());
+}
 ?>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <div id="page-content-wrapper">
@@ -233,6 +310,9 @@ $todayLoginCount = count($todayActivities);
                     </button>
                     <button class="dir-tab-btn" data-target="tab-software">
                         <i class="fa fa-desktop"></i> Add to Software
+                    </button>
+                    <button class="dir-tab-btn" data-target="tab-news">
+                        <i class="fa fa-newspaper-o"></i> Post News &amp; Circulars
                     </button>
                     <button class="dir-tab-btn" data-target="tab-permissions">
                         <i class="fa fa-lock"></i> Permissions
@@ -526,9 +606,251 @@ $todayLoginCount = count($todayActivities);
                         </div>
                     </div>
                 </div> <!-- End Main Grid -->
-                </div> <!-- End Tab 1 -->
+                </div> <!-- End Tab Software -->
 
-                <!-- Tab 2: Permissions -->
+                <!-- Tab: News & Announcements Management -->
+                <div id="tab-news" class="dir-tab-pane">
+                    <div class="dashboard-grid">
+                        <!-- Left Column: Post News Form -->
+                        <div class="dashboard-col-left">
+                            <div class="premium-card">
+                                <div class="card-header">
+                                    <h2 id="newsFormTitle"><i class="fa fa-pencil-square-o text-primary"></i> Post News / Circular</h2>
+                                    <p>Publish guidelines, process changes, or official circulars to the website and notify subscribers.</p>
+                                </div>
+                                <div class="card-body">
+                                    <form action="directorNewsAction.php" method="post" enctype="multipart/form-data" class="premium-form" id="newsPostForm">
+                                        <input type="hidden" name="action" id="news_form_action" value="add">
+                                        <input type="hidden" name="news_id" id="news_form_id" value="">
+
+                                        <div class="form-group">
+                                            <label>Headline / Title <span class="text-danger">*</span></label>
+                                            <input type="text" name="title" id="news_title" required placeholder="e.g. Updated Guidelines for ISO Surveillance Audits">
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label>Category / Type <span class="text-danger">*</span></label>
+                                            <select name="category" id="news_category" required>
+                                                <option value="Process Change">Process Change</option>
+                                                <option value="Guideline Change">Guideline Change</option>
+                                                <option value="Circular">Official Circular</option>
+                                                <option value="Policy Update">Policy Update</option>
+                                                <option value="ISO Standards">ISO Standards Update</option>
+                                                <option value="General Announcement">General Announcement</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label>Author / Department</label>
+                                            <input type="text" name="author" id="news_author" value="Managing Director / AITF" placeholder="e.g. Director Office">
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label>Short Summary / Snippet</label>
+                                            <textarea name="summary" id="news_summary" rows="2" placeholder="Brief 1-2 sentence overview for the card snippet..."></textarea>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label>Full Content / Article Details <span class="text-danger">*</span></label>
+                                            <textarea name="content" id="news_content" rows="6" required placeholder="Detailed explanation, process clauses, guidelines, and instructions (HTML paragraphs and lists supported)..."></textarea>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label><i class="fa fa-image"></i> Featured Image (Optional)</label>
+                                            <input type="file" name="news_image" id="news_image" accept=".jpg,.jpeg,.png,.webp,.gif">
+                                            <div id="current_image_preview" style="margin-top: 6px; font-size: 12px; color: #64748b; display: none;"></div>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label><i class="fa fa-file-pdf-o text-danger"></i> Attach Document / Circular PDF (Optional)</label>
+                                            <input type="file" name="news_document" id="news_document" accept=".pdf,.doc,.docx,.xls,.xlsx">
+                                            <div id="current_doc_preview" style="margin-top: 6px; font-size: 12px; color: #64748b; display: none;"></div>
+                                        </div>
+
+                                        <div class="form-group" style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 12px 16px; border-radius: 8px; margin-top: 15px;">
+                                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin: 0; font-weight: 600; color: #1e40af;">
+                                                <input type="checkbox" name="send_broadcast" id="news_send_broadcast" value="1" style="width: 18px; height: 18px; margin: 0;">
+                                                <span><i class="fa fa-send"></i> Send automatic email notification to all <?php echo $verifiedSubscribersCount; ?> verified subscribers</span>
+                                            </label>
+                                            <p style="margin: 4px 0 0 28px; font-size: 11px; color: #3b82f6;">All subscribers will receive this update directly in their inbox with the article link and attached document.</p>
+                                        </div>
+
+                                        <div style="display: flex; gap: 10px; margin-top: 20px;">
+                                            <button type="submit" class="btn-primary" id="news_submit_btn" style="flex: 1;">
+                                                <i class="fa fa-paper-plane mr-1"></i> Publish News &amp; Updates
+                                            </button>
+                                            <button type="button" class="btn-action deactivate" id="news_cancel_btn" style="display:none; padding: 10px 18px; border-radius: 8px;" onclick="cancelNewsEdit()">
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Column: News List & Subscribers -->
+                        <div class="dashboard-col-right">
+                            <!-- News List Card -->
+                            <div class="premium-card" style="margin-bottom: 24px;">
+                                <div class="card-header flex-between">
+                                    <div>
+                                        <h2>Published News &amp; Updates</h2>
+                                        <p>Manage existing circulars, guidelines, and articles (<?php echo count($allNews); ?> Total)</p>
+                                    </div>
+                                    <a href="news.php" target="_blank" class="btn-action activate" style="text-decoration:none; padding: 6px 14px;">
+                                        <i class="fa fa-external-link"></i> View Public Page
+                                    </a>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="premium-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Headline &amp; Category</th>
+                                                    <th>Date</th>
+                                                    <th>Attachment</th>
+                                                    <th>Views</th>
+                                                    <th class="text-right">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php foreach ($allNews as $newsItem) { 
+                                                    $created = date('d M Y', strtotime($newsItem['created_at']));
+                                                ?>
+                                                    <tr>
+                                                        <td>
+                                                            <div style="font-weight: 600; color: #0f172a; font-size: 14px; max-width: 320px; line-height: 1.35; margin-bottom: 4px;">
+                                                                <a href="news_detail.php?id=<?php echo $newsItem['id']; ?>" target="_blank" style="color:inherit; text-decoration:none;">
+                                                                    <?php echo htmlspecialchars($newsItem['title']); ?>
+                                                                </a>
+                                                            </div>
+                                                            <span class="badge-role" style="font-size: 11px;"><?php echo htmlspecialchars($newsItem['category']); ?></span>
+                                                        </td>
+                                                        <td style="font-size: 12px; color: #64748b; white-space: nowrap;">
+                                                            <?php echo $created; ?>
+                                                        </td>
+                                                        <td>
+                                                            <?php if (!empty($newsItem['document_path'])) { ?>
+                                                                <a href="<?php echo htmlspecialchars($newsItem['document_path']); ?>" target="_blank" style="font-size: 12px; color: #2563eb; text-decoration: underline;" title="<?php echo htmlspecialchars($newsItem['document_name'] ?: 'Document'); ?>">
+                                                                    <i class="fa fa-file-pdf-o text-danger"></i> PDF
+                                                                </a>
+                                                            <?php } else { ?>
+                                                                <span style="color: #94a3b8; font-size: 12px;">None</span>
+                                                            <?php } ?>
+                                                        </td>
+                                                        <td style="font-weight: 600; font-size: 13px; color: #053c6d;">
+                                                            <?php echo (int)$newsItem['views_count']; ?>
+                                                        </td>
+                                                        <td>
+                                                            <div class="action-buttons text-right" style="display:flex; justify-content:flex-end; gap:6px;">
+                                                                <button type="button" class="btn-action activate" style="padding: 4px 10px; font-size: 12px;" onclick='editNewsRecord(<?php echo json_encode([
+                                                                    "id" => (int)$newsItem["id"],
+                                                                    "title" => $newsItem["title"],
+                                                                    "category" => $newsItem["category"],
+                                                                    "author" => $newsItem["author"],
+                                                                    "summary" => $newsItem["summary"],
+                                                                    "content" => $newsItem["content"],
+                                                                    "image_path" => $newsItem["image_path"],
+                                                                    "document_name" => $newsItem["document_name"]
+                                                                ]); ?>)'>
+                                                                    <i class="fa fa-pencil"></i> Edit
+                                                                </button>
+                                                                
+                                                                <!-- Broadcast Button -->
+                                                                <form action="directorNewsAction.php" method="post" style="margin:0;" onsubmit="return confirm('Send email notification for this article to all <?php echo $verifiedSubscribersCount; ?> subscribers?');">
+                                                                    <input type="hidden" name="action" value="broadcast">
+                                                                    <input type="hidden" name="news_id" value="<?php echo (int)$newsItem['id']; ?>">
+                                                                    <button type="submit" class="btn-action" style="background:#2563eb; color:white; border-color:#1d4ed8; padding: 4px 8px; font-size: 12px;" title="Email to all subscribers">
+                                                                        <i class="fa fa-envelope"></i> Send Email
+                                                                    </button>
+                                                                </form>
+
+                                                                <!-- Delete Button -->
+                                                                <form action="directorNewsAction.php" method="post" style="margin:0;" onsubmit="return confirm('Are you sure you want to permanently delete this news article?');">
+                                                                    <input type="hidden" name="action" value="delete">
+                                                                    <input type="hidden" name="news_id" value="<?php echo (int)$newsItem['id']; ?>">
+                                                                    <button type="submit" class="btn-action delete" style="padding: 4px 8px; font-size: 12px;">
+                                                                        <i class="fa fa-trash"></i>
+                                                                    </button>
+                                                                </form>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                <?php } ?>
+                                                <?php if (empty($allNews)) { ?>
+                                                    <tr>
+                                                        <td colspan="5" class="text-center py-8 text-gray-500">No news articles published yet.</td>
+                                                    </tr>
+                                                <?php } ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Verified Subscribers List Card -->
+                            <div class="premium-card">
+                                <div class="card-header flex-between">
+                                    <div>
+                                        <h2><i class="fa fa-users text-success"></i> Newsletter Subscribers</h2>
+                                        <p>Users subscribed to real-time process updates (<?php echo $verifiedSubscribersCount; ?> Verified)</p>
+                                    </div>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive" style="max-height: 320px; overflow-y: auto;">
+                                        <table class="premium-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Email</th>
+                                                    <th>Status</th>
+                                                    <th>Subscribed Date</th>
+                                                    <th class="text-right">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php foreach ($allSubscribers as $sub) { 
+                                                    $isVerified = ($sub['status'] === 'verified');
+                                                ?>
+                                                    <tr>
+                                                        <td style="font-weight: 500; font-size: 13px; color: #1e293b;">
+                                                            <i class="fa fa-envelope-o text-muted mr-1"></i> <?php echo htmlspecialchars($sub['email']); ?>
+                                                        </td>
+                                                        <td>
+                                                            <span class="badge-status <?php echo $isVerified ? 'status-active' : 'status-inactive'; ?>">
+                                                                <?php echo ucfirst($sub['status']); ?>
+                                                            </span>
+                                                        </td>
+                                                        <td style="font-size: 12px; color: #64748b;">
+                                                            <?php echo date('d M Y, h:i A', strtotime($sub['subscribed_at'])); ?>
+                                                        </td>
+                                                        <td>
+                                                            <div class="action-buttons text-right" style="display:flex; justify-content:flex-end;">
+                                                                <form action="directorNewsAction.php" method="post" style="margin:0;" onsubmit="return confirm('Remove subscriber <?php echo htmlspecialchars($sub['email']); ?>?');">
+                                                                    <input type="hidden" name="action" value="delete_subscriber">
+                                                                    <input type="hidden" name="subscriber_id" value="<?php echo (int)$sub['id']; ?>">
+                                                                    <button type="submit" class="btn-action delete" style="padding: 3px 8px; font-size: 11px;">
+                                                                        <i class="fa fa-trash"></i>
+                                                                    </button>
+                                                                </form>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                <?php } ?>
+                                                <?php if (empty($allSubscribers)) { ?>
+                                                    <tr>
+                                                        <td colspan="4" class="text-center py-6 text-gray-500">No subscribers registered yet.</td>
+                                                    </tr>
+                                                <?php } ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div> <!-- End Tab News -->
+
+                <!-- Tab: Permissions -->
                 <div id="tab-permissions" class="dir-tab-pane">
                     <div class="premium-card">
                         <div class="card-header">
@@ -1767,13 +2089,61 @@ $todayLoginCount = count($todayActivities);
         document.getElementById('hrForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
-    // Cancel Edit HR Record
-    function cancelHrEdit() {
-        document.getElementById('hrForm').reset();
-        document.getElementById('hr_emp_id').value = '';
-        document.getElementById('hr_submit_btn').textContent = 'Save Employment Record';
-        document.getElementById('hr_cancel_btn').style.display = 'none';
+    // Edit News Record functionality
+    function editNewsRecord(record) {
+        document.getElementById('news_form_action').value = 'edit';
+        document.getElementById('news_form_id').value = record.id;
+        document.getElementById('news_title').value = record.title;
+        document.getElementById('news_category').value = record.category;
+        document.getElementById('news_author').value = record.author || '';
+        document.getElementById('news_summary').value = record.summary || '';
+        document.getElementById('news_content').value = record.content || '';
+        
+        if (record.image_path) {
+            document.getElementById('current_image_preview').style.display = 'block';
+            document.getElementById('current_image_preview').innerHTML = '<i class="fa fa-info-circle"></i> Current Image: ' + record.image_path;
+        } else {
+            document.getElementById('current_image_preview').style.display = 'none';
+        }
+
+        if (record.document_name) {
+            document.getElementById('current_doc_preview').style.display = 'block';
+            document.getElementById('current_doc_preview').innerHTML = '<i class="fa fa-info-circle"></i> Current Document: ' + record.document_name;
+        } else {
+            document.getElementById('current_doc_preview').style.display = 'none';
+        }
+
+        document.getElementById('newsFormTitle').innerHTML = '<i class="fa fa-pencil text-warning"></i> Edit News / Announcement';
+        document.getElementById('news_submit_btn').innerHTML = '<i class="fa fa-check mr-1"></i> Update News Article';
+        document.getElementById('news_cancel_btn').style.display = 'block';
+        
+        // Scroll to form
+        document.getElementById('newsPostForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+
+    // Cancel Edit News Record
+    function cancelNewsEdit() {
+        document.getElementById('newsPostForm').reset();
+        document.getElementById('news_form_action').value = 'add';
+        document.getElementById('news_form_id').value = '';
+        document.getElementById('current_image_preview').style.display = 'none';
+        document.getElementById('current_doc_preview').style.display = 'none';
+        document.getElementById('newsFormTitle').innerHTML = '<i class="fa fa-pencil-square-o text-primary"></i> Post News / Circular';
+        document.getElementById('news_submit_btn').innerHTML = '<i class="fa fa-paper-plane mr-1"></i> Publish News &amp; Updates';
+        document.getElementById('news_cancel_btn').style.display = 'none';
+    }
+
+    // Auto-switch to tab if passed in URL (?tab=news)
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const tabParam = urlParams.get('tab');
+        if (tabParam) {
+            const targetBtn = document.querySelector('.dir-tab-btn[data-target="tab-' + tabParam + '"]');
+            if (targetBtn) {
+                targetBtn.click();
+            }
+        }
+    });
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -2016,14 +2386,16 @@ function loadPermissions(user) {
 });
 
 // Search filter
-document.getElementById('permUserSearch').addEventListener('input', function(e) {
-    const term = e.target.value.toLowerCase();
-    document.querySelectorAll('.perm-user-item').forEach(li => {
-        const name = li.dataset.name.toLowerCase();
-        li.style.display = name.includes(term) ? 'flex' : 'none';
+const permSearchEl = document.getElementById('permUserSearch');
+if (permSearchEl) {
+    permSearchEl.addEventListener('input', function(e) {
+        const term = e.target.value.toLowerCase();
+        document.querySelectorAll('.perm-user-item').forEach(li => {
+            const name = (li.dataset.name || '').toLowerCase();
+            li.style.display = name.includes(term) ? 'flex' : 'none';
+        });
     });
-});
-});
+}
 </script>
 
 <!-- Message Modal -->

@@ -11,12 +11,12 @@ $mail = new PHPMailer(true);
 class AITFServiceEmailSender {
 
     function sendEmail($toEmails, $toName, $body, $subject) {
-        //function sendEmail($toEmails, $toName , $body, $subject,$ismultiple){		
         $mail = new PHPMailer(true);
+        $mailConfig = aitf_get_mail_config([
+            'from_name' => aitf_env('MAIL_FROM_NAME', 'AITF Service')
+        ]);
 
-        //Send mail using gmail
         if (true) {
-            global $mailConfig;
             $mail->IsSMTP(); // telling the class to use SMTP
             $mail->SMTPAuth = ($mailConfig['username'] ?? '') !== '' && ($mailConfig['password'] ?? '') !== ''; // enable SMTP authentication
             $mail->SMTPSecure = $mailConfig['secure']; // sets the prefix to the servier
@@ -26,32 +26,27 @@ class AITFServiceEmailSender {
             $mail->Password = $mailConfig['password']; // GMAIL password
         }
 
-
-        
-
         $mail->AddAddress($toEmails, $toName);
-        $mail->From = $mailConfig['from_email'];
-        $mail->FromName = $mailConfig['from_name'];
-        $mail->Subject = $subject; //"Please join Puzzleme; this is really challanging";
-        $mail->Body = $body; //
+        $mail->From = $mailConfig['from_email'] ?: $mailConfig['username'];
+        $mail->FromName = $mailConfig['from_name'] ?: 'AITF Management Certification';
+        $mail->Subject = $subject;
+        $mail->Body = $body;
         $mail->IsHTML(true);
 
         try {
             $mail->Send();
-// 			echo "Success!";
         } catch (Exception $e) {
-// 			echo "Fail - " . $mail->ErrorInfo;
             throw new Exception($mail->ErrorInfo);
         }
     }
 
     function sendAttachEmail($toEmails, $toName, $body, $subject, $attachment) {
-        //function sendEmail($toEmails, $toName , $body, $subject,$ismultiple){		
         $mail = new PHPMailer(true);
+        $mailConfig = aitf_get_mail_config([
+            'from_name' => aitf_env('MAIL_FROM_NAME', 'AITF Service')
+        ]);
 
-        //Send mail using gmail
         if (true) {
-            global $mailConfig;
             $mail->IsSMTP(); // telling the class to use SMTP
             $mail->SMTPAuth = ($mailConfig['username'] ?? '') !== '' && ($mailConfig['password'] ?? '') !== ''; // enable SMTP authentication
             $mail->SMTPSecure = $mailConfig['secure']; // sets the prefix to the servier
@@ -60,33 +55,33 @@ class AITFServiceEmailSender {
             $mail->Username = $mailConfig['username']; // GMAIL username
             $mail->Password = $mailConfig['password']; // GMAIL password
         }
-               
 
         $mail->AddAddress($toEmails, $toName);
-        $mail->From = $mailConfig['username']; // Use configured email
-        $mail->FromName = 'AITF Certification Services';
-        $mail->Subject = $subject; //"Please join Puzzleme; this is really challanging";
-        $mail->Body = $body; //
+        $mail->From = $mailConfig['from_email'] ?: $mailConfig['username'];
+        $mail->FromName = $mailConfig['from_name'] ?: 'AITF Certification Services';
+        $mail->Subject = $subject;
+        $mail->Body = $body;
         $file_to_attach = $attachment;
-        $mail->AddAttachment($file_to_attach, '');
+        if (!empty($file_to_attach) && file_exists($file_to_attach)) {
+            $mail->AddAttachment($file_to_attach, '');
+        }
 
         $mail->IsHTML(true);
 
         try {
             $mail->Send();
-// 			echo "Success!";
         } catch (Exception $e) {
-// 			echo "Fail - " . $mail->ErrorInfo;
             throw new Exception($mail->ErrorInfo);
         }
     }
 
     function sendMultipleAttachmentsEmail($toEmails, $toName, $body, $subject, $attachments) {
         $mail = new PHPMailer(true);
+        $mailConfig = aitf_get_mail_config([
+            'from_name' => aitf_env('MAIL_FROM_NAME', 'AITF Service')
+        ]);
 
-        //Send mail using gmail
         if (true) {
-            global $mailConfig;
             $mail->IsSMTP(); // telling the class to use SMTP
             $mail->SMTPAuth = ($mailConfig['username'] ?? '') !== '' && ($mailConfig['password'] ?? '') !== ''; // enable SMTP authentication
             $mail->SMTPSecure = $mailConfig['secure']; // sets the prefix to the servier
@@ -95,11 +90,10 @@ class AITFServiceEmailSender {
             $mail->Username = $mailConfig['username']; // GMAIL username
             $mail->Password = $mailConfig['password']; // GMAIL password
         }
-               
 
         $mail->AddAddress($toEmails, $toName);
-        $mail->From = $mailConfig['username']; // Use configured email
-        $mail->FromName = 'AITF Certification Services';
+        $mail->From = $mailConfig['from_email'] ?: $mailConfig['username'];
+        $mail->FromName = $mailConfig['from_name'] ?: 'AITF Certification Services';
         $mail->Subject = $subject;
         $mail->Body = $body;
         

@@ -14,6 +14,6 @@ if (
     $basePath = $relativePath !== '' ? '/' . $relativePath : '';
 }
 
-header('Location: ' . $basePath . '/login.php?reason=' . urlencode($reason));
+header('Location: ' . $basePath . '/login?reason=' . urlencode($reason));
 exit;
 

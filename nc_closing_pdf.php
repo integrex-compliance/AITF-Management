@@ -53,14 +53,25 @@ $pdf->AddPage();
 $logoImgHtml = file_exists($logoPath) ? '<img src="'.$logoPath.'" style="height:45px; width:auto;">' : '<b>AITF</b>';
 
 $sigImgHtml = '<br><br>_______________';
-if (!empty($submission['signature_image_path'])) {
-    $abs_sig_path = __DIR__ . '/' . $submission['signature_image_path'];
+$sigFileCandidate = $submission['signature_image'] ?? $submission['signature_image_path'] ?? '';
+if (!empty($sigFileCandidate)) {
+    $abs_sig_path = __DIR__ . '/' . $sigFileCandidate;
     $abs_sig_path_fwd = str_replace('\\', '/', $abs_sig_path);
     if (file_exists($abs_sig_path) || file_exists($abs_sig_path_fwd)) {
         $sigImgHtml = '<img src="' . $abs_sig_path . '" style="height: 60px; width: auto;">';
-    } else {
-        $sigImgHtml = 'Debug: File not found at ' . $abs_sig_path;
     }
+}
+
+$attList = [];
+if (!empty($submission['attachment1'])) {
+    $attList[] = 'Attachment 1 (' . strtoupper(pathinfo($submission['attachment1'], PATHINFO_EXTENSION)) . ')';
+}
+if (!empty($submission['attachment2'])) {
+    $attList[] = 'Attachment 2 (' . strtoupper(pathinfo($submission['attachment2'], PATHINFO_EXTENSION)) . ')';
+}
+$attHtml = '';
+if (!empty($attList)) {
+    $attHtml = '<tr><td style="font-size: 8pt; background-color: #f8fafc; padding: 4px;"><b>Supporting Attachments Uploaded:</b> ' . implode(', ', $attList) . '</td></tr>';
 }
 
 // Helper for checkboxes
@@ -106,14 +117,15 @@ $html = '
     </tr>
 </table>
 
-<div style="font-size: 8pt; margin-top: 2px; margin-bottom: 2px;">
-    *Note- Auditee organisation shall provide proposed correction and corrective action with root cause analysis if nonconformance/s identified during audit. Please refer form F 7.24 – for non-conformance details.
+<div style="font-size: 8pt; margin-top: 3px; margin-bottom: 3px; color: #0056b3;">
+    *Note: Auditee organization shall provide a plan for correction and corrective action with root cause analysis for the Minor and MAJOR Nonconformance identified during audit. However, Submission of evidence of the implementation is compulsory for the MAJOR NC.
 </div>
 
 <table border="1" cellpadding="5" cellspacing="0" width="100%">
     <tr style="background-color: #e2e2e2;">
         <td align="center">
-            <b>AUDITEE ORGANIZATION\'S ROOT CAUSE ANALYSIS, PROPOSED CORRECTION, CORRECTIVE ACTION*</b>
+            <b>*ROOT CAUSE ANALYSIS, PLAN FOR CORRECTION AND CORRECTIVE ACTION (Submission by Auditee Organization)</b><br>
+            <span style="font-size: 7.5pt; font-weight: normal;">Please refer to Form F 7.24 – for non-conformance issued.</span>
         </td>
     </tr>
     <tr>
@@ -156,6 +168,7 @@ $html = '
             </table>
         </td>
     </tr>
+    ' . $attHtml . '
     <tr>
         <td align="center">
             FOR VERIFICATION BY AITF ASSESSOR

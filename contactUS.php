@@ -184,7 +184,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 $pageTitle = "Contact Us | AITF Management Certification";
 $pageDescription = "Get in touch with AITF for ISO certification. We provide independent and impartial certification services for Quality Management and Environmental Management Systems.";
-$canonicalUrl = "https://www.aitf.co.in/contactUS.php";
+$canonicalUrl = "https://www.aitf.co.in/contact-us";
 ?>
 <!DOCTYPE html>
 <html lang="en">

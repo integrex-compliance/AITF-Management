@@ -185,1154 +185,858 @@ if (in_array(trim($hp_role), array('Office Staff-A', 'Office Staff-B'), true)) {
 
     ?>
 
-
-
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-
-        #page-content-wrapper,
-        #page-content-wrapper * {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        }
-
-        /* Keep FontAwesome glyphs working; the wildcard above otherwise forces Inter on <i> icons */
-        #page-content-wrapper .fa {
-            font-family: 'FontAwesome' !important;
-        }
-
-        .custom-float-label-control {
-            margin-bottom: 0em;
-        }
-
-        .invoice-section-title {
-            display: inline-block;
-            margin: 0 0 18px;
-            padding: 0;
-            font-size: 22px;
-            font-weight: 800;
-            letter-spacing: -0.3px;
-            color: #0f172a;
-            background: transparent;
-            border: none;
-        }
-
-        /* ===== Status Tabs ===== */
-        .hp-tabs-nav {
-            --hp-tab-border: #d6dbe6;
-            --hp-tab-bg: #ffffff;
-            --hp-tab-idle: #fafbfc;
-            position: relative;
-            display: flex;
-            align-items: flex-end;
-            gap: 0;
-            margin: 4px 0 18px;
-            padding: 8px 0 0;
-            overflow-x: auto;
-            overflow-y: visible;
-            border-bottom: 1px solid var(--hp-tab-border);
-            scrollbar-width: thin;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        .hp-tabs-nav::-webkit-scrollbar {
-            height: 6px;
-        }
-
-        .hp-tabs-nav::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 999px;
-        }
-
-        .hp-tab {
-            position: relative;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            min-height: 42px;
-            min-width: max-content;
-            border: 1px solid var(--hp-tab-border);
-            border-right-width: 0;
-            border-bottom: 0;
-            background: var(--hp-tab-idle);
-            color: #475569;
-            font-size: 12px;
-            font-weight: 800;
-            letter-spacing: 0;
-            line-height: 1;
-            padding: 11px 18px 10px;
-            border-radius: 0;
-            cursor: pointer;
-            outline: none;
-            white-space: nowrap;
-            isolation: isolate;
-            box-shadow: inset 0 -1px 0 var(--hp-tab-border);
-            transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
-        }
-
-        .hp-tab:first-child {
-            border-top-left-radius: 2px;
-        }
-
-        .hp-tab:last-child {
-            border-right-width: 1px;
-            border-top-right-radius: 2px;
-        }
-
-        .hp-tab:hover {
-            background: #ffffff;
-            color: #0f172a;
-            box-shadow: inset 0 -1px 0 var(--hp-tab-border), 0 -2px 7px rgba(15, 23, 42, 0.04);
-            z-index: 2;
-        }
-
-        .hp-tab .hp-dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: currentColor;
-            flex: 0 0 auto;
-            transition: transform 0.22s ease, background-color 0.22s ease;
-        }
-
-        .hp-tab .hp-count {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 22px;
-            height: 20px;
-            padding: 0 7px;
-            font-size: 11px;
-            font-weight: 700;
-            line-height: 1;
-            border-radius: 999px;
-            background: #eef2f7;
-            color: #475569;
-            transition: color 0.22s ease, background-color 0.22s ease, transform 0.22s ease;
-        }
-
-        .hp-tab.active {
-            margin-bottom: -1px;
-            min-height: 48px;
-            color: #111827;
-            border: 1px solid var(--hp-tab-border);
-            border-bottom-color: var(--hp-tab-bg);
-            background: var(--hp-tab-bg);
-            border-radius: 15px 15px 0 0;
-            box-shadow: 0 -3px 8px rgba(15, 23, 42, 0.06);
-            transform: none;
-            z-index: 5;
-            animation: hpTabFloat 0.22s ease both;
-        }
-
-        .hp-tab.active::before,
-        .hp-tab.active::after {
-            content: "";
-            position: absolute;
-            bottom: -1px;
-            width: 14px;
-            height: 14px;
-            background: transparent;
-            pointer-events: none;
-            z-index: -1;
-        }
-
-        .hp-tab.active::before {
-            left: -14px;
-            border-bottom-right-radius: 14px;
-            box-shadow: 6px 6px 0 var(--hp-tab-bg);
-        }
-
-        .hp-tab.active::after {
-            right: -14px;
-            border-bottom-left-radius: 14px;
-            box-shadow: -6px 6px 0 var(--hp-tab-bg);
-        }
-
-        .hp-tab.active .hp-count {
-            background: #111827;
-            color: #ffffff;
-            transform: scale(1.02);
-        }
-
-        .hp-tab.active .hp-dot {
-            transform: scale(1.14);
-        }
-
-        @keyframes hpTabFloat {
-            from {
-                box-shadow: 0 0 0 rgba(15, 23, 42, 0);
-            }
-
-            to {
-                box-shadow: 0 -3px 8px rgba(15, 23, 42, 0.06);
-            }
-        }
-
-        /* idle dot colors per theme */
-        .hp-tab.hp-c-all {
-            color: #0d4d8b;
-        }
-
-        .hp-tab.hp-c-green {
-            color: #059669;
-        }
-
-        .hp-tab.hp-c-yellow {
-            color: #ca8a04;
-        }
-
-        .hp-tab.hp-c-amber {
-            color: #d97706;
-        }
-
-        .hp-tab.hp-c-orange {
-            color: #ea580c;
-        }
-
-        .hp-tab.hp-c-red {
-            color: #dc2626;
-        }
-
-        .hp-tab.hp-c-grey {
-            color: #475569;
-        }
-
-        .hp-tab.hp-c-slate {
-            color: #64748b;
-        }
-
-        .hp-tab.hp-c-blue {
-            color: #2563eb;
-        }
-
-        .hp-tab.hp-c-purple {
-            color: #7c3aed;
-        }
-
-        /* ===== Status Badge (in table) ===== */
-        #page-content-wrapper .hp-badge {
-            display: inline-block !important;
-            padding: 4px 11px !important;
-            border-radius: 999px !important;
-            font-size: 12px !important;
-            font-weight: 700 !important;
-            line-height: 1.4 !important;
-            white-space: nowrap !important;
-        }
-
-        #page-content-wrapper .hp-badge::before {
-            content: "";
-            display: inline-block;
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: currentColor;
-            margin-right: 6px;
-            vertical-align: middle;
-        }
-
-        #page-content-wrapper .hp-c-green.hp-badge {
-            color: #047857 !important;
-            background: #d1fae5 !important;
-        }
-
-        #page-content-wrapper .hp-c-yellow.hp-badge {
-            color: #a16207 !important;
-            background: #fef9c3 !important;
-        }
-
-        #page-content-wrapper .hp-c-amber.hp-badge {
-            color: #b45309 !important;
-            background: #fef3c7 !important;
-        }
-
-        #page-content-wrapper .hp-c-orange.hp-badge {
-            color: #c2410c !important;
-            background: #ffedd5 !important;
-        }
-
-        #page-content-wrapper .hp-c-red.hp-badge {
-            color: #b91c1c !important;
-            background: #fee2e2 !important;
-        }
-
-        #page-content-wrapper .hp-c-grey.hp-badge {
-            color: #475569 !important;
-            background: #e2e8f0 !important;
-        }
-
-        #page-content-wrapper .hp-c-slate.hp-badge {
-            color: #64748b !important;
-            background: #f1f5f9 !important;
-        }
-
-        #page-content-wrapper .hp-c-blue.hp-badge {
-            color: #1d4ed8 !important;
-            background: #dbeafe !important;
-        }
-
-        #page-content-wrapper .hp-c-purple.hp-badge {
-            color: #6d28d9 !important;
-            background: #ede9fe !important;
-        }
-
-        /* ===== Filter panel (modernized) ===== */
-        .invoice-filter-panel {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            align-items: center;
-            margin: 0 0 20px;
-            padding: 14px 16px;
-            background: #ffffff;
-            border: 1px solid #eef1f6;
-            border-radius: 14px;
-            box-shadow: 0 4px 24px rgba(15, 23, 42, 0.06);
-        }
-
-        .invoice-filter-item {
-            flex: 1;
-            min-width: 150px;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-        }
-
-        .search-item {
-            flex: 1.5;
-            min-width: 250px;
-        }
-
-        .search-item i {
-            position: absolute;
-            left: 14px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #94a3b8;
-            z-index: 1;
-            font-size: 14px;
-        }
-
-        .search-item input {
-            padding-left: 38px !important;
-        }
-
-        .invoice-filter-item input,
-        .invoice-filter-item select {
-            width: 100%;
-            height: 42px;
-            padding: 8px 14px;
-            border: 1px solid #d8dee9;
-            border-radius: 10px;
-            box-sizing: border-box;
-            font-size: 14px;
-            background-color: #fff;
-            color: #0f172a;
-            transition: all 0.2s;
-        }
-
-        .invoice-filter-item input::placeholder {
-            color: #94a3b8;
-        }
-
-        .invoice-filter-item select option {
-            color: #0f172a;
-            background-color: #fff;
-        }
-
-        .invoice-filter-item input:focus,
-        .invoice-filter-item select:focus {
-            border-color: #0d4d8b;
-            outline: none;
-            box-shadow: 0 0 0 4px rgba(13, 77, 139, 0.12);
-            background-color: #fff;
-        }
-
-        .btn-report-export {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            height: 42px;
-            margin: 0;
-            padding: 0 22px;
-            box-sizing: border-box;
-            font-size: 14px;
-            font-weight: 600;
-            letter-spacing: 0.2px;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            text-transform: none;
-            border: 1px solid transparent;
-            white-space: nowrap;
-        }
-
-        .btn-solid-primary {
-            background: linear-gradient(135deg, #0d4d8b 0%, #1468b3 100%);
-            color: #ffffff;
-            box-shadow: 0 4px 12px rgba(13, 77, 139, 0.25);
-        }
-
-        .btn-solid-primary:hover {
-            box-shadow: 0 8px 20px rgba(13, 77, 139, 0.32);
-            transform: translateY(-1px);
-        }
-
-        .btn-solid-primary:active {
-            transform: translateY(0);
-        }
-
-        /* ===== Modern table ===== */
-        .table-responsive {
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: 0 4px 24px rgba(15, 23, 42, 0.06);
-            border: 1px solid #eef1f6;
-            background: #ffffff;
-        }
-
-        #tab_customer_list {
-            margin-bottom: 0 !important;
-            border-collapse: separate !important;
-            border-spacing: 0;
-            border: 0 !important;
-        }
-
-        #tab_customer_list small {
-            font-size: 13.5px !important;
-            font-weight: 500;
-            color: #334155;
-        }
-
-        #tab_customer_list thead th {
-            background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%) !important;
-            border-top: 0 !important;
-            border-left: 0 !important;
-            border-right: 1px solid #e2e8f0 !important;
-            border-bottom: 2px solid #cbd5e1 !important;
-            padding: 12px 10px !important;
-            height: 44px !important;
-            line-height: 1 !important;
-            vertical-align: middle !important;
-            white-space: nowrap !important;
-            position: sticky;
-            top: 0;
-            z-index: 2;
-            box-sizing: border-box !important;
-        }
-
-        #tab_customer_list thead th:last-child {
-            border-right: 0 !important;
-        }
-
-        #tab_customer_list thead th small,
-        #tab_customer_list thead th a,
-        #tab_customer_list thead th span {
-            color: #0f172a !important;
-            text-decoration: none !important;
-            font-weight: 700 !important;
-            font-size: 11.5px !important;
-            text-transform: uppercase !important;
-            letter-spacing: 0.6px !important;
-            white-space: nowrap !important;
-            display: inline-block !important;
-            line-height: 1.2 !important;
-            vertical-align: middle !important;
-        }
-
-        #tab_customer_list tbody td {
-            padding: 10px 12px !important;
-            border-top: 0 !important;
-            border-left: 0 !important;
-            border-right: 1px solid #eef2f6 !important;
-            border-bottom: 1px solid #eef2f6 !important;
-            vertical-align: middle !important;
-        }
-
-        #tab_customer_list tbody td:last-child {
-            border-right: 0 !important;
-        }
-
-        #tab_customer_list tbody tr {
-            transition: background 0.15s ease;
-        }
-
-        #tab_customer_list tbody tr:hover {
-            background-color: #f1f5f9 !important;
-        }
-
-        .table-striped tbody tr:nth-of-type(odd) {
-            background-color: #fcfdff;
-        }
-
-        .customerAccount {
-            cursor: pointer;
-        }
-
-        /* Column Alignments */
-        #tab_customer_list th:nth-child(1), #tab_customer_list td:nth-child(1),
-        #tab_customer_list th:nth-child(2), #tab_customer_list td:nth-child(2),
-        #tab_customer_list th:nth-child(3), #tab_customer_list td:nth-child(3),
-        #tab_customer_list th:nth-child(6), #tab_customer_list td:nth-child(6),
-        #tab_customer_list th:nth-child(7), #tab_customer_list td:nth-child(7),
-        #tab_customer_list th:nth-child(8), #tab_customer_list td:nth-child(8) {
-            text-align: center !important;
-        }
-
-        /* Hand (Handler) Column & Dropdown */
-        #tab_customer_list th:nth-child(9),
-        #tab_customer_list td:nth-child(9) {
-            min-width: 140px !important;
-            width: 150px !important;
-            text-align: center !important;
-            vertical-align: middle !important;
-        }
-
-        #tab_customer_list .float-label-control {
-            margin-bottom: 0 !important;
-        }
-
-        #tab_customer_list select.setHandler {
-            width: 100% !important;
-            height: 40px !important;
-            min-height: 40px !important;
-            line-height: 1.4 !important;
-            padding: 6px 26px 6px 12px !important;
-            border: 1px solid #cbd5e1 !important;
-            border-radius: 8px !important;
-            background-color: #ffffff !important;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
-            background-repeat: no-repeat !important;
-            background-position: right 10px center !important;
-            background-size: 12px !important;
-            appearance: none !important;
-            -webkit-appearance: none !important;
-            -moz-appearance: none !important;
-            font-size: 13px !important;
-            font-weight: 600 !important;
-            color: #0f172a !important;
-            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
-            cursor: pointer !important;
-            transition: all 0.2s ease !important;
-            box-sizing: border-box !important;
-        }
-
-        #tab_customer_list select.setHandler:focus {
-            border-color: #0d4d8b !important;
-            box-shadow: 0 0 0 3px rgba(13, 77, 139, 0.12) !important;
-            outline: none !important;
-            background-color: #ffffff !important;
-        }
-
-        /* Comments Column & Textarea */
-        #tab_customer_list th:nth-child(10),
-        #tab_customer_list td:nth-child(10) {
-            min-width: 320px !important;
-            max-width: 460px !important;
-            width: 360px !important;
-            vertical-align: middle !important;
-        }
-
-        #tab_customer_list textarea.saveChanges {
-            width: 100% !important;
-            min-height: 70px !important;
-            height: auto !important;
-            border: 1px solid #cbd5e1 !important;
-            border-radius: 8px !important;
-            padding: 8px 12px !important;
-            font-size: 13px !important;
-            line-height: 1.45 !important;
-            color: #0f172a !important;
-            background: #ffffff !important;
-            resize: vertical !important;
-            box-sizing: border-box !important;
-            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
-            transition: all 0.2s ease !important;
-        }
-
-        #tab_customer_list textarea.saveChanges:focus {
-            background: #ffffff !important;
-            border-color: #0d4d8b !important;
-            box-shadow: 0 0 0 3px rgba(13, 77, 139, 0.12) !important;
-            outline: none !important;
-        }
-
-        html.theme-dark #tab_customer_list select.setHandler {
-            background-color: var(--hpd-surface-2) !important;
-            border-color: var(--hpd-border-2) !important;
-            color: var(--hpd-text) !important;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
-        }
-
-        html.theme-dark #tab_customer_list select.setHandler:focus {
-            background-color: var(--hpd-surface) !important;
-            border-color: var(--hpd-accent) !important;
-            box-shadow: 0 0 0 3px rgba(77, 163, 255, 0.2) !important;
-        }
-
-        html.theme-dark #tab_customer_list textarea.saveChanges {
-            background: var(--hpd-surface-2) !important;
-            border-color: var(--hpd-border-2) !important;
-            color: var(--hpd-text) !important;
-        }
-
-        html.theme-dark #tab_customer_list textarea.saveChanges:focus {
-            background: var(--hpd-surface) !important;
-            border-color: var(--hpd-accent) !important;
-            box-shadow: 0 0 0 3px rgba(77, 163, 255, 0.2) !important;
-        }
-
-        #tab_customer_list_filter {
-            display: none;
-        }
-
-        /* Datepicker above sticky headers */
-        .ui-datepicker {
-            z-index: 100000 !important;
-        }
-
-        @media (max-width: 992px) {
-            .hp-tab {
-                padding-left: 15px;
-                padding-right: 15px;
-            }
-        }
-
-        @media (max-width: 768px) {
-
-            .invoice-filter-item,
-            .search-item {
-                min-width: 100%;
-            }
-
-            .hp-tabs-nav {
-                margin-bottom: 16px;
-                padding-top: 7px;
-            }
-
-            .hp-tab {
-                min-height: 40px;
-                font-size: 11px;
-                padding: 10px 13px 9px;
-            }
-
-            .hp-tab.active {
-                min-height: 45px;
-                border-radius: 13px 13px 0 0;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .hp-tabs-nav {
-                padding-top: 6px;
-            }
-
-            .hp-tab {
-                gap: 6px;
-                padding-left: 12px;
-                padding-right: 12px;
-            }
-
-            .hp-tab .hp-count {
-                min-width: 20px;
-                height: 18px;
-                padding: 0 6px;
-                font-size: 10px;
-            }
-        }
-
-        /* =====================================================================
-           PREMIUM DARK MODE  —  homePage.php
-           Palette: deep charcoal surfaces (not pure black), soft slate text
-           (not harsh white), and jewel-toned status accents.
-           ===================================================================== */
-        html.theme-dark {
-            --hpd-bg: #0a0e14;
-            /* page canvas — deep near-black       */
-            --hpd-surface: #111722;
-            /* cards / panels / table              */
-            --hpd-surface-2: #161d2b;
-            /* raised: header row, hover, inputs   */
-            --hpd-border: #232c3d;
-            /* hairline dividers                   */
-            --hpd-border-2: #2e3a4f;
-            /* stronger borders / input outline    */
-            --hpd-text: #dbe3f0;
-            /* primary text — soft, easy on eyes   */
-            --hpd-text-dim: #93a1b8;
-            /* secondary / muted                   */
-            --hpd-text-faint: #6b7890;
-            /* placeholders, icons                 */
-            --hpd-accent: #4a9eff;
-            /* brand blue, brightened for dark     */
-        }
-
-        html.theme-dark #page-content-wrapper {
-            background: var(--hpd-bg);
-            color: var(--hpd-text);
-        }
-
-        html.theme-dark .page-content.inset {
-            background: var(--hpd-bg);
-        }
-
-        /* Section title */
-        html.theme-dark .invoice-section-title {
-            color: #f2f6fc;
-        }
-
-        /* ---- Status Tabs ---- */
-        html.theme-dark .hp-tabs-nav {
-            --hp-tab-border: #232c3d;
-            --hp-tab-bg: var(--hpd-surface);
-            --hp-tab-idle: #0e131c;
-            border-bottom-color: var(--hpd-border);
-        }
-
-        html.theme-dark .hp-tabs-nav::-webkit-scrollbar-thumb {
-            background: #2e3a4f;
-        }
-
-        html.theme-dark .hp-tab {
-            color: var(--hpd-text-dim);
-        }
-
-        html.theme-dark .hp-tab:hover {
-            background: var(--hpd-surface-2);
-            color: #ffffff;
-            box-shadow: inset 0 -1px 0 var(--hp-tab-border), 0 -2px 9px rgba(0, 0, 0, 0.45);
-        }
-
-        html.theme-dark .hp-tab .hp-count {
-            background: #1c2534;
-            color: #b8c4d8;
-        }
-
-        html.theme-dark .hp-tab.active {
-            color: #ffffff;
-            background: var(--hpd-surface);
-            box-shadow: 0 -3px 10px rgba(0, 0, 0, 0.5);
-        }
-
-        html.theme-dark .hp-tab.active .hp-count {
-            background: var(--hpd-accent);
-            color: #061020;
-        }
-
-        /* idle dot colors — brightened so they glow on dark */
-        html.theme-dark .hp-tab.hp-c-all {
-            color: #5aa9ff;
-        }
-
-        html.theme-dark .hp-tab.hp-c-green {
-            color: #34d399;
-        }
-
-        html.theme-dark .hp-tab.hp-c-yellow {
-            color: #facc15;
-        }
-
-        html.theme-dark .hp-tab.hp-c-amber {
-            color: #fbbf24;
-        }
-
-        html.theme-dark .hp-tab.hp-c-orange {
-            color: #fb923c;
-        }
-
-        html.theme-dark .hp-tab.hp-c-red {
-            color: #f87171;
-        }
-
-        html.theme-dark .hp-tab.hp-c-grey {
-            color: #94a3b8;
-        }
-
-        html.theme-dark .hp-tab.hp-c-slate {
-            color: #94a3b8;
-        }
-
-        html.theme-dark .hp-tab.hp-c-blue {
-            color: #60a5fa;
-        }
-
-        html.theme-dark .hp-tab.hp-c-purple {
-            color: #a78bfa;
-        }
-
-        /* ---- Status badges (soft translucent fills, luminous text) ---- */
-        html.theme-dark #page-content-wrapper .hp-c-green.hp-badge {
-            color: #6ee7b7 !important;
-            background: rgba(16, 185, 129, 0.15) !important;
-        }
-
-        html.theme-dark #page-content-wrapper .hp-c-yellow.hp-badge {
-            color: #fde68a !important;
-            background: rgba(202, 138, 4, 0.16) !important;
-        }
-
-        html.theme-dark #page-content-wrapper .hp-c-amber.hp-badge {
-            color: #fcd34d !important;
-            background: rgba(217, 119, 6, 0.16) !important;
-        }
-
-        html.theme-dark #page-content-wrapper .hp-c-orange.hp-badge {
-            color: #fdba74 !important;
-            background: rgba(234, 88, 12, 0.16) !important;
-        }
-
-        html.theme-dark #page-content-wrapper .hp-c-red.hp-badge {
-            color: #fca5a5 !important;
-            background: rgba(220, 38, 38, 0.16) !important;
-        }
-
-        html.theme-dark #page-content-wrapper .hp-c-grey.hp-badge {
-            color: #cbd5e1 !important;
-            background: rgba(148, 163, 184, 0.14) !important;
-        }
-
-        html.theme-dark #page-content-wrapper .hp-c-slate.hp-badge {
-            color: #cbd5e1 !important;
-            background: rgba(100, 116, 139, 0.16) !important;
-        }
-
-        html.theme-dark #page-content-wrapper .hp-c-blue.hp-badge {
-            color: #93c5fd !important;
-            background: rgba(37, 99, 235, 0.16) !important;
-        }
-
-        html.theme-dark #page-content-wrapper .hp-c-purple.hp-badge {
-            color: #c4b5fd !important;
-            background: rgba(124, 58, 237, 0.16) !important;
-        }
-
-        /* ---- Filter panel ---- */
-        html.theme-dark .invoice-filter-panel {
-            background: var(--hpd-surface);
-            border-color: var(--hpd-border);
-            box-shadow: 0 6px 26px rgba(0, 0, 0, 0.45);
-        }
-
-        html.theme-dark .search-item i {
-            color: var(--hpd-text-faint);
-        }
-
-        html.theme-dark .invoice-filter-item input,
-        html.theme-dark .invoice-filter-item select {
-            background-color: var(--hpd-surface-2);
-            border-color: var(--hpd-border-2);
-            color: var(--hpd-text);
-        }
-
-        html.theme-dark .invoice-filter-item input::placeholder {
-            color: var(--hpd-text-faint);
-        }
-
-        html.theme-dark .invoice-filter-item select option {
-            color: var(--hpd-text);
-            background-color: var(--hpd-surface-2);
-        }
-
-        html.theme-dark .invoice-filter-item input:focus,
-        html.theme-dark .invoice-filter-item select:focus {
-            border-color: var(--hpd-accent);
-            box-shadow: 0 0 0 4px rgba(74, 158, 255, 0.18);
-            background-color: var(--hpd-surface-2);
-        }
-
-        html.theme-dark .btn-solid-primary {
-            background: linear-gradient(135deg, #1d63b0 0%, #2f81d6 100%);
-            box-shadow: 0 4px 14px rgba(20, 104, 179, 0.4);
-        }
-
-        html.theme-dark .btn-solid-primary:hover {
-            box-shadow: 0 8px 22px rgba(20, 104, 179, 0.5);
-        }
-
-        /* ---- Data table ---- */
-        html.theme-dark .table-responsive {
-            background: var(--hpd-surface);
-            border-color: var(--hpd-border);
-            box-shadow: 0 6px 26px rgba(0, 0, 0, 0.45);
-        }
-
-        html.theme-dark #tab_customer_list thead th {
-            background: linear-gradient(180deg, #161d2b 0%, #121926 100%) !important;
-            border-bottom: 1px solid var(--hpd-border-2) !important;
-        }
-
-        html.theme-dark #tab_customer_list thead th small,
-        html.theme-dark #tab_customer_list thead th a {
-            color: #aeb9cc !important;
-        }
-
-        html.theme-dark #tab_customer_list small {
-            color: var(--hpd-text-dim) !important;
-        }
-
-        html.theme-dark #tab_customer_list tbody td {
-            border-bottom: 1px solid var(--hpd-border) !important;
-            color: var(--hpd-text);
-        }
-
-        html.theme-dark #tab_customer_list tbody tr:hover {
-            background-color: var(--hpd-surface-2) !important;
-        }
-
-        html.theme-dark .table-striped tbody tr:nth-of-type(odd) {
-            background-color: rgba(255, 255, 255, 0.018);
-        }
-
-        html.theme-dark #tab_customer_list a {
-            color: #cdd6e5;
-        }
-
-        html.theme-dark #tab_customer_list textarea {
-            background-color: var(--hpd-surface-2);
-            border-color: var(--hpd-border-2);
-            color: var(--hpd-text);
-        }
-
-        html.theme-dark #tab_customer_list textarea::placeholder {
-            color: var(--hpd-text-faint);
-        }
-
-        html.theme-dark #tab_customer_list .setHandler {
-            background-color: var(--hpd-surface-2);
-            border-color: var(--hpd-border-2);
-            color: var(--hpd-text);
-        }
-    </style>
+<style>
+    /* =====================================================================
+       MASTER CREATOR STYLE PARITY — CLEAN SAAS DESIGN SYSTEM
+       ===================================================================== */
+    html, body, #wrapper, #page-content-wrapper, .page-content, .page-content.inset {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+        background-color: #f8fafc !important;
+        color: #0f172a !important;
+        -webkit-font-smoothing: antialiased !important;
+    }
+
+    #page-content-wrapper .fa {
+        font-family: 'FontAwesome' !important;
+    }
+
+    .master-creator-container {
+        max-width: 100% !important;
+        margin: 0 auto !important;
+        padding: 6px 16px 20px 16px !important;
+    }
+
+    /* =====================================================================
+       STATUS TABS (CLEAN SINGLE-LINE PILLS WITH SMOOTH HORIZONTAL SCROLL)
+       ===================================================================== */
+    .hp-tabs-nav {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        gap: 8px !important;
+        margin: 0 0 12px 0 !important;
+        padding: 4px 2px 8px 2px !important;
+        border-bottom: none !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        scrollbar-width: thin !important;
+        scrollbar-color: #cbd5e1 transparent !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+
+    .hp-tabs-nav::-webkit-scrollbar {
+        height: 4px !important;
+    }
+
+    .hp-tabs-nav::-webkit-scrollbar-track {
+        background: transparent !important;
+    }
+
+    .hp-tabs-nav::-webkit-scrollbar-thumb {
+        background-color: #cbd5e1 !important;
+        border-radius: 10px !important;
+    }
+
+    .hp-tabs-nav::-webkit-scrollbar-thumb:hover {
+        background-color: #94a3b8 !important;
+    }
+
+    .hp-tab {
+        flex: 0 0 auto !important;
+        white-space: nowrap !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 7px !important;
+        height: 34px !important;
+        padding: 0 13px !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 20px !important;
+        background: #ffffff !important;
+        color: #475569 !important;
+        font-size: 12px !important;
+        font-weight: 600 !important;
+        line-height: 1 !important;
+        cursor: pointer !important;
+        outline: none !important;
+        transition: all 0.15s ease !important;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03) !important;
+    }
+
+    .hp-tab:hover {
+        background: #f1f5f9 !important;
+        color: #0d4d8b !important;
+        border-color: #cbd5e1 !important;
+    }
+
+    .hp-tab .hp-dot {
+        width: 7px !important;
+        height: 7px !important;
+        border-radius: 50% !important;
+        background: currentColor !important;
+        flex: 0 0 auto !important;
+    }
+
+    .hp-tab .hp-count {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        min-width: 18px !important;
+        height: 18px !important;
+        padding: 0 6px !important;
+        font-size: 10.5px !important;
+        font-weight: 700 !important;
+        line-height: 1 !important;
+        border-radius: 999px !important;
+        background: #f1f5f9 !important;
+        color: #475569 !important;
+        transition: all 0.15s ease !important;
+    }
+
+    .hp-tab.active {
+        background: linear-gradient(135deg, #0d4d8b 0%, #1e40af 100%) !important;
+        border-color: #0d4d8b !important;
+        color: #ffffff !important;
+        box-shadow: 0 2px 8px rgba(13, 77, 139, 0.25) !important;
+        font-weight: 700 !important;
+    }
+
+    .hp-tab.active .hp-dot {
+        background: #ffffff !important;
+    }
+
+    .hp-tab.active .hp-count {
+        background: rgba(255, 255, 255, 0.22) !important;
+        color: #ffffff !important;
+    }
+
+    /* Tab colors */
+    .hp-tab.hp-c-all { color: #0d4d8b; }
+    .hp-tab.hp-c-green { color: #059669; }
+    .hp-tab.hp-c-yellow { color: #d97706; }
+    .hp-tab.hp-c-amber { color: #d97706; }
+    .hp-tab.hp-c-orange { color: #ea580c; }
+    .hp-tab.hp-c-red { color: #dc2626; }
+    .hp-tab.hp-c-grey { color: #475569; }
+    .hp-tab.hp-c-slate { color: #64748b; }
+    .hp-tab.hp-c-blue { color: #2563eb; }
+    .hp-tab.hp-c-purple { color: #7c3aed; }
+
+    /* =====================================================================
+       FILTER PANEL (PROPER ALIGNMENT & PROPORTIONS)
+       ===================================================================== */
+    .invoice-filter-panel {
+        display: flex !important;
+        align-items: center !important;
+        gap: 10px !important;
+        flex-wrap: wrap !important;
+        margin: 0 0 12px 0 !important;
+        padding: 10px 14px !important;
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 10px !important;
+        box-shadow: 0 1px 4px rgba(15, 23, 42, 0.03) !important;
+    }
+
+    .invoice-filter-item {
+        position: relative !important;
+    }
+
+    .invoice-filter-item.search-item {
+        flex: 1 1 220px !important;
+        min-width: 180px !important;
+    }
+
+    .invoice-filter-item.search-item i {
+        position: absolute !important;
+        left: 12px !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        color: #94a3b8 !important;
+        font-size: 13px !important;
+        pointer-events: none !important;
+    }
+
+    .invoice-filter-item.search-item input {
+        padding-left: 34px !important;
+    }
+
+    .invoice-filter-item.select-item {
+        flex: 0 1 190px !important;
+        min-width: 170px !important;
+    }
+
+    .invoice-filter-item.date-item {
+        flex: 0 1 135px !important;
+        min-width: 115px !important;
+    }
+
+    .invoice-filter-item.btn-item {
+        flex: 0 0 auto !important;
+    }
+
+    .invoice-filter-item input,
+    .invoice-filter-item select {
+        width: 100% !important;
+        height: 38px !important;
+        padding: 6px 12px !important;
+        border: 1.5px solid #cbd5e1 !important;
+        border-radius: 7px !important;
+        box-sizing: border-box !important;
+        font-size: 13px !important;
+        font-weight: 500 !important;
+        background-color: #f8fafc !important;
+        color: #0f172a !important;
+        transition: all 0.15s ease !important;
+    }
+
+    .invoice-filter-item select {
+        padding-right: 32px !important;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+        background-repeat: no-repeat !important;
+        background-position: right 10px center !important;
+        background-size: 11px !important;
+        appearance: none !important;
+        -webkit-appearance: none !important;
+        -moz-appearance: none !important;
+        cursor: pointer !important;
+    }
+
+    .invoice-filter-item input::placeholder {
+        color: #94a3b8 !important;
+    }
+
+    .invoice-filter-item input:focus,
+    .invoice-filter-item select:focus {
+        border-color: #0d4d8b !important;
+        background-color: #ffffff !important;
+        outline: none !important;
+        box-shadow: 0 0 0 3px rgba(13, 77, 139, 0.12) !important;
+    }
+
+    .btn-report-export {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 7px !important;
+        height: 38px !important;
+        margin: 0 !important;
+        padding: 0 18px !important;
+        box-sizing: border-box !important;
+        font-size: 12.5px !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.2px !important;
+        border-radius: 7px !important;
+        cursor: pointer !important;
+        transition: all 0.15s ease !important;
+        border: none !important;
+        white-space: nowrap !important;
+    }
+
+    .btn-solid-primary {
+        background: linear-gradient(135deg, #0d4d8b 0%, #1e40af 100%) !important;
+        color: #ffffff !important;
+        box-shadow: 0 2px 6px rgba(13, 77, 139, 0.2) !important;
+    }
+
+    .btn-solid-primary:hover {
+        background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%) !important;
+        box-shadow: 0 4px 12px rgba(13, 77, 139, 0.28) !important;
+        transform: translateY(-1px) !important;
+        color: #ffffff !important;
+    }
+
+    /* =====================================================================
+       TABLE OVERHAUL (STRIPPING ALL UGLY BORDERS & NATURAL FIT)
+       ===================================================================== */
+    .table-responsive {
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 10px !important;
+        box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04) !important;
+        padding: 0 !important;
+        margin-bottom: 20px !important;
+        overflow-x: auto !important;
+    }
+
+    #tab_customer_list {
+        border: none !important;
+        border-collapse: separate !important;
+        border-spacing: 0 !important;
+        background: #ffffff !important;
+        margin: 0 !important;
+        width: 100% !important;
+    }
+
+    #tab_customer_list th,
+    #tab_customer_list td {
+        border-left: none !important;
+        border-right: none !important;
+    }
+
+    #tab_customer_list thead th {
+        background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%) !important;
+        border-top: none !important;
+        border-bottom: 2px solid #e2e8f0 !important;
+        padding: 10px 12px !important;
+        height: 42px !important;
+        color: #475569 !important;
+        font-size: 11px !important;
+        font-weight: 700 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.6px !important;
+        box-sizing: border-box !important;
+        white-space: nowrap !important;
+    }
+
+    #tab_customer_list thead th small,
+    #tab_customer_list thead th a {
+        color: #475569 !important;
+        font-size: 11px !important;
+        font-weight: 700 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.6px !important;
+    }
+
+    #tab_customer_list tbody tr {
+        background-color: #ffffff !important;
+        transition: background 0.15s ease !important;
+    }
+
+    #tab_customer_list tbody tr:nth-of-type(even) {
+        background-color: #fbfcfd !important;
+    }
+
+    #tab_customer_list tbody tr:hover {
+        background-color: #f1f5f9 !important;
+    }
+
+    #tab_customer_list tbody td {
+        padding: 9px 12px !important;
+        border-top: none !important;
+        border-bottom: 1px solid #f1f5f9 !important;
+        font-size: 12.5px !important;
+        font-weight: 500 !important;
+        color: #334155 !important;
+        vertical-align: middle !important;
+    }
+
+    #tab_customer_list small {
+        font-size: 12.5px !important;
+        font-weight: 500 !important;
+        color: #334155 !important;
+    }
+
+    .customerAccount a {
+        color: #0d4d8b !important;
+        font-weight: 700 !important;
+        font-size: 12.5px !important;
+        text-decoration: none !important;
+    }
+
+    .customerAccount a:hover {
+        color: #2563eb !important;
+        text-decoration: underline !important;
+    }
+
+    /* Badges */
+    #page-content-wrapper .hp-badge {
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 5px !important;
+        padding: 3px 9px !important;
+        border-radius: 12px !important;
+        font-size: 11px !important;
+        font-weight: 700 !important;
+        line-height: 1.2 !important;
+        white-space: nowrap !important;
+    }
+
+    #page-content-wrapper .hp-badge::before {
+        content: "" !important;
+        display: inline-block !important;
+        width: 6px !important;
+        height: 6px !important;
+        border-radius: 50% !important;
+        background: currentColor !important;
+    }
+
+    #page-content-wrapper .hp-c-green.hp-badge { color: #047857 !important; background: #ecfdf5 !important; }
+    #page-content-wrapper .hp-c-yellow.hp-badge { color: #b45309 !important; background: #fef3c7 !important; }
+    #page-content-wrapper .hp-c-amber.hp-badge { color: #b45309 !important; background: #fef3c7 !important; }
+    #page-content-wrapper .hp-c-orange.hp-badge { color: #c2410c !important; background: #fff7ed !important; }
+    #page-content-wrapper .hp-c-red.hp-badge { color: #b91c1c !important; background: #fee2e2 !important; }
+    #page-content-wrapper .hp-c-grey.hp-badge { color: #475569 !important; background: #f1f5f9 !important; }
+    #page-content-wrapper .hp-c-slate.hp-badge { color: #64748b !important; background: #f1f5f9 !important; }
+    #page-content-wrapper .hp-c-blue.hp-badge { color: #1d4ed8 !important; background: #eff6ff !important; }
+    #page-content-wrapper .hp-c-purple.hp-badge { color: #6d28d9 !important; background: #f5f3ff !important; }
+
+    /* Handler select inside table */
+    #tab_customer_list select.setHandler {
+        width: 100% !important;
+        min-width: 130px !important;
+        height: 34px !important;
+        padding: 4px 22px 4px 8px !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 6px !important;
+        background-color: #ffffff !important;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+        background-repeat: no-repeat !important;
+        background-position: right 8px center !important;
+        background-size: 9px !important;
+        appearance: none !important;
+        -webkit-appearance: none !important;
+        font-size: 12px !important;
+        font-weight: 600 !important;
+        color: #0f172a !important;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+        cursor: pointer !important;
+        box-sizing: border-box !important;
+    }
+
+    #tab_customer_list select.setHandler:focus {
+        border-color: #0d4d8b !important;
+        box-shadow: 0 0 0 3px rgba(13, 77, 139, 0.12) !important;
+        outline: none !important;
+    }
+
+    /* Comments textarea inside table */
+    #tab_customer_list textarea.saveChanges {
+        width: 100% !important;
+        min-width: 200px !important;
+        min-height: 48px !important;
+        height: 48px !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 6px !important;
+        padding: 5px 8px !important;
+        font-size: 12px !important;
+        line-height: 1.35 !important;
+        color: #0f172a !important;
+        background: #ffffff !important;
+        resize: vertical !important;
+        box-sizing: border-box !important;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+        transition: all 0.15s ease !important;
+    }
+
+    #tab_customer_list textarea.saveChanges:focus {
+        background: #ffffff !important;
+        border-color: #0d4d8b !important;
+        box-shadow: 0 0 0 3px rgba(13, 77, 139, 0.12) !important;
+        outline: none !important;
+    }
+
+    /* DataTables Footer Bar (Info & Pagination tightly attached beneath table) */
+    .dataTables_wrapper > .row:last-child {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        padding: 10px 14px !important;
+        margin: 0 !important;
+        background: #ffffff !important;
+        border-top: 1px solid #e2e8f0 !important;
+    }
+
+    .dataTables_wrapper .dataTables_info {
+        padding: 0 !important;
+        font-size: 12.5px !important;
+        font-weight: 600 !important;
+        color: #64748b !important;
+    }
+
+    .dataTables_wrapper .dataTables_paginate {
+        padding: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 3px !important;
+    }
+
+    .dataTables_wrapper .dataTables_paginate .paginate_button {
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 6px !important;
+        background: #ffffff !important;
+        color: #475569 !important;
+        font-size: 12px !important;
+        font-weight: 600 !important;
+        padding: 4px 10px !important;
+        transition: all 0.15s ease !important;
+        cursor: pointer !important;
+    }
+
+    .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+        background: #f1f5f9 !important;
+        color: #0f172a !important;
+        border-color: #cbd5e1 !important;
+    }
+
+    .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+        background: #0d4d8b !important;
+        color: #ffffff !important;
+        border-color: #0d4d8b !important;
+    }
+
+    #tab_customer_list_filter {
+        display: none !important;
+    }
+
+    .ui-datepicker {
+        z-index: 100000 !important;
+    }
+
+    /* =====================================================================
+       DARK MODE SUPPORT
+       ===================================================================== */
+    html.theme-dark,
+    html.theme-dark body,
+    html.theme-dark #wrapper,
+    html.theme-dark #page-content-wrapper,
+    html.theme-dark .page-content,
+    html.theme-dark .page-content.inset {
+        background-color: #0a0e14 !important;
+        color: #dbe3f0 !important;
+    }
+
+    html.theme-dark .hp-tabs-nav {
+        scrollbar-color: #2e3a4f transparent !important;
+    }
+
+    html.theme-dark .hp-tabs-nav::-webkit-scrollbar-thumb {
+        background-color: #2e3a4f !important;
+    }
+
+    html.theme-dark .hp-tabs-nav::-webkit-scrollbar-thumb:hover {
+        background-color: #475569 !important;
+    }
+
+    html.theme-dark .hp-tab {
+        background: #111722 !important;
+        border-color: #232c3d !important;
+        color: #93a1b8 !important;
+    }
+
+    html.theme-dark .hp-tab:hover {
+        background: #161d2b !important;
+        color: #ffffff !important;
+    }
+
+    html.theme-dark .hp-tab .hp-count {
+        background: #161d2b !important;
+        color: #93a1b8 !important;
+    }
+
+    html.theme-dark .hp-tab.active {
+        background: #1e3a5f !important;
+        border-color: #2e5a8f !important;
+        color: #ffffff !important;
+    }
+
+    html.theme-dark .hp-tab.active .hp-count {
+        background: #4a9eff !important;
+        color: #061020 !important;
+    }
+
+    html.theme-dark .invoice-filter-panel {
+        background: #111722 !important;
+        border-color: #232c3d !important;
+    }
+
+    html.theme-dark .invoice-filter-item input,
+    html.theme-dark .invoice-filter-item select {
+        background-color: #161d2b !important;
+        border-color: #2e3a4f !important;
+        color: #dbe3f0 !important;
+    }
+
+    html.theme-dark .table-responsive {
+        background: #111722 !important;
+        border-color: #232c3d !important;
+    }
+
+    html.theme-dark #tab_customer_list thead th {
+        background: #161d2b !important;
+        border-bottom-color: #2e3a4f !important;
+        color: #dbe3f0 !important;
+    }
+
+    html.theme-dark #tab_customer_list tbody tr {
+        background-color: #111722 !important;
+    }
+
+    html.theme-dark #tab_customer_list tbody tr:nth-of-type(even) {
+        background-color: #131a26 !important;
+    }
+
+    html.theme-dark #tab_customer_list tbody tr:hover {
+        background-color: #1a2334 !important;
+    }
+
+    html.theme-dark #tab_customer_list tbody td {
+        border-bottom-color: #232c3d !important;
+        color: #dbe3f0 !important;
+    }
+
+    html.theme-dark .customerAccount a {
+        color: #60a5fa !important;
+    }
+
+    html.theme-dark #tab_customer_list select.setHandler {
+        background-color: #161d2b !important;
+        border-color: #2e3a4f !important;
+        color: #dbe3f0 !important;
+    }
+
+    html.theme-dark #tab_customer_list textarea.saveChanges {
+        background-color: #161d2b !important;
+        border-color: #2e3a4f !important;
+        color: #dbe3f0 !important;
+    }
+
+    html.theme-dark .dataTables_wrapper > .row:last-child {
+        background: #111722 !important;
+        border-top-color: #232c3d !important;
+    }
+
+    html.theme-dark .dataTables_wrapper .dataTables_info {
+        color: #93a1b8 !important;
+    }
+
+    html.theme-dark .dataTables_wrapper .dataTables_paginate .paginate_button {
+        background: #161d2b !important;
+        border-color: #232c3d !important;
+        color: #dbe3f0 !important;
+    }
+
+    html.theme-dark .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+        background: #4a9eff !important;
+        color: #061020 !important;
+        border-color: #4a9eff !important;
+    }
+</style>
 
     <div id="page-content-wrapper">
         <div class="page-content inset">
-            <div class="container" <div class="row">
-                <div class="col-sm-12">
-                    <h5 class="invoice-section-title">Client Management & Reports </h5>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-sm-12 main_content">
-                    <nav class="hp-tabs-nav" role="tablist" aria-label="Client Status Tabs">
-                        <button type="button" class="hp-tab hp-c-all active" data-status="" role="tab"
-                            aria-selected="true">
-                            <span class="hp-dot"></span> All Clients
-                        </button>
-                        <?php foreach ($tabStatuses as $st) {
-                            $c = isset($statusColorMap[$st]) ? $statusColorMap[$st] : 'slate'; ?>
-                            <button type="button" class="hp-tab hp-c-<?php echo $c ?>"
-                                data-status="<?php echo htmlspecialchars($st, ENT_QUOTES) ?>" role="tab"
-                                aria-selected="false">
-                                <span class="hp-dot"></span> <?php echo htmlspecialchars($st) ?>
+            <div class="container-fluid master-creator-container" style="max-width: 100%; padding: 8px 18px 20px 18px;">
+                <div class="row" style="margin-bottom: 8px;">
+                    <div class="col-sm-12 main_content" style="padding: 0 6px;">
+                        <nav class="hp-tabs-nav" role="tablist" aria-label="Client Status Tabs">
+                            <button type="button" class="hp-tab hp-c-all active" data-status="" role="tab"
+                                aria-selected="true">
+                                <span class="hp-dot"></span> All Clients <span class="hp-count"><?php echo $totalClients; ?></span>
                             </button>
-                        <?php } ?>
-                    </nav>
+                            <?php foreach ($tabStatuses as $st) {
+                                $c = isset($statusColorMap[$st]) ? $statusColorMap[$st] : 'slate'; 
+                                $cnt = isset($statusCounts[$st]) ? $statusCounts[$st] : 0; ?>
+                                <button type="button" class="hp-tab hp-c-<?php echo $c ?>"
+                                    data-status="<?php echo htmlspecialchars($st, ENT_QUOTES) ?>" role="tab"
+                                    aria-selected="false">
+                                    <span class="hp-dot"></span> <?php echo htmlspecialchars($st) ?> <span class="hp-count"><?php echo $cnt; ?></span>
+                                </button>
+                            <?php } ?>
+                        </nav>
+                    </div>
                 </div>
-            </div>
-            <div class="row">
-                <div class="col-sm-12 main_content" style="">
-                    <div class="invoice-filter-panel">
-                        <div class="invoice-filter-item search-item">
-                            <i class="fa fa-search"></i>
-                            <input type="text" id="clientSearch" placeholder="Search by Client Name...">
-                        </div>
-                        <div class="invoice-filter-item">
-                            <select name="service-type" class="service-type" id="service-type">
-                                <option value="">Select Service Type</option>
-                                <?php foreach ($servicesTypes as $service) { ?>
-                                    <option value="<?php echo $service['service_type'] ?>">
-                                        <?php echo $service['service_type'] ?>
-                                    </option>
-                                <?php } ?>
-                            </select>
-                        </div>
-                        <div class="invoice-filter-item">
-                            <input type="text" class="filterFromDate" id="filterFromDate" name="filterFromDate"
-                                placeholder="Due From Date" value="">
-                        </div>
-                        <div class="invoice-filter-item">
-                            <input type="text" class="filterToDate" id="filterToDate" name="filterToDate"
-                                placeholder="Due To Date" value="">
-                        </div>
-                        <div class="invoice-filter-item" style="flex: 0 0 160px;">
-                            <button type="button" class="btn-report-export btn-solid-primary downloadHomeReport"
-                                style="width: 100%;">
-                                <i class="fa fa-cloud-download" style="font-size: 15px;"></i> Download
-                            </button>
+
+                <div class="row" style="margin-bottom: 12px;">
+                    <div class="col-sm-12 main_content" style="padding: 0 6px;">
+                        <div class="invoice-filter-panel">
+                            <div class="invoice-filter-item search-item">
+                                <i class="fa fa-search"></i>
+                                <input type="text" id="clientSearch" placeholder="Search by Client Name...">
+                            </div>
+                            <div class="invoice-filter-item select-item">
+                                <select name="service-type" class="service-type" id="service-type">
+                                    <option value="">Select Service Type</option>
+                                    <?php foreach ($servicesTypes as $service) { ?>
+                                        <option value="<?php echo $service['service_type'] ?>">
+                                            <?php echo $service['service_type'] ?>
+                                        </option>
+                                    <?php } ?>
+                                </select>
+                            </div>
+                            <div class="invoice-filter-item date-item">
+                                <input type="text" class="filterFromDate" id="filterFromDate" name="filterFromDate"
+                                    placeholder="Due From Date" value="">
+                            </div>
+                            <div class="invoice-filter-item date-item">
+                                <input type="text" class="filterToDate" id="filterToDate" name="filterToDate"
+                                    placeholder="Due To Date" value="">
+                            </div>
+                            <div class="invoice-filter-item btn-item">
+                                <button type="button" class="btn-report-export btn-solid-primary downloadHomeReport">
+                                    <i class="fa fa-cloud-download"></i> Download
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="row clearfix">
-                <div class="col-sm-12 main_content table-responsive">
-                    <table class="table table-hover table-sortable table-striped" id="tab_customer_list" width="100%">
-                        <thead>
-                            <tr>
-                                <th style="text-align: center;"><small>#</small></th>
-                                <th style="text-align: center;"><small>Unique ID</small></th>
-                                <th style="text-align: center;"><small>Agreement Date</small></th>
-                                <th style="text-align: left;"><small>Client Name</small></th>
-                                <th style="text-align: left;"><small>Contact Person</small></th>
-                                <th style="text-align: center;"><small>Status</small></th>
-                                <th style="text-align: center;"><small>Next Due Date</small></th>
-                                <th style="text-align: center;"><small>Next Service</small></th>
-                                <th style="text-align: center;"><small>Handler</small></th>
-                                <th style="text-align: left;"><small>Comments</small></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php
-                            $count = 0;
-                            foreach ($listOfCustomer as $customer) {
-                                $count = $count + 1;
-                                // Latest service for this customer
-                                $serviceInfo = isset($serviceMap[$customer['id']]) ? $serviceMap[$customer['id']] : array();
-
-                                // Due dates from pre-fetched map
-                                $dueInfo = $dueInfoex = $sentInfo = array();
-                                $sid = isset($serviceNonSpMap[$customer['id']]) ? $serviceNonSpMap[$customer['id']] : null;
-                                if ($sid && isset($dueMap[$sid])) {
-                                    $dueInfo['due_date'] = isset($dueMap[$sid]['Suspension Letter']) ? $dueMap[$sid]['Suspension Letter'] : (isset($dueMap[$sid]['Suspend Letter']) ? $dueMap[$sid]['Suspend Letter'] : null);
-                                    $dueInfoex['due_date'] = isset($dueMap[$sid]['Expire Letter']) ? $dueMap[$sid]['Expire Letter'] : null;
-                                    $sentInfo['due_date'] = isset($dueMap[$sid]['Withdrawal Letter']) ? $dueMap[$sid]['Withdrawal Letter'] : (isset($dueMap[$sid]['Withdraw Letter']) ? $dueMap[$sid]['Withdraw Letter'] : null);
-                                }
-
-                                // Payment due from map
-                                $payInfo = array('payment_due' => isset($paymentMap[$customer['id']]) ? $paymentMap[$customer['id']] : null);
-
-                                // Derived status + color for badge / tab filtering
-                                $normStatus = hpDerivedStatus($customer, $serviceMap);
-                                $statusColor = isset($statusColorMap[$normStatus]) ? $statusColorMap[$normStatus] : 'slate';
-                                ?>
-                                <tr id='addr<?php echo $customer['id'] ?>'
-                                    data-status="<?php echo htmlspecialchars($normStatus, ENT_QUOTES) ?>">
-                                    <td data-name="name">
-                                        <small><?php echo $count ?></small>
-                                    </td>
-                                    <td class="customerAccount" data-id="<?php echo $customer['id'] ?>" data-name="sel">
-                                        <small><?php if (isset($customer['unique_id']))
-                                            echo $customer['unique_id'] ?></small>
-                                    </td>
-                                    <td class="customerAccount" data-id="<?php echo $customer['id'] ?>" data-name="mail">
-                                        <small><a><?php echo $customer['certification_date'] ?></a></small>
-                                    </td>
-                                    <td class="customerAccount" data-id="<?php echo $customer['id'] ?>" data-name="mail">
-                                        <small><a style="font-weight: 600; color: #0d4d8b;"><?php echo $customer['customer_name'] ?></a></small>
-                                    </td>
-                                    <td class="customerAccount" data-id="<?php echo $customer['id'] ?>" data-name="desc">
-                                        <small><?php echo $customer['contact_person'] ?></small>
-                                    </td>
-                                    <td class="customerAccount" data-id="<?php echo $customer['id'] ?>" data-name="desc">
-                                        <small><span
-                                                class="hp-badge hp-c-<?php echo $statusColor ?>"><?php echo htmlspecialchars($normStatus); ?><?php if ($normStatus === "In-process" && !empty($serviceInfo["service_type"]))
-                                                          echo ' (' . htmlspecialchars($serviceInfo["service_type"]) . ')'; ?></span></small>
-                                    </td>
-                                    <td class="customerAccount" data-id="<?php echo $customer['id'] ?>" data-name="sel">
-                                        <small><span><?php if (isset($dueInfo["due_date"]) && !empty($dueInfo["due_date"])) {
-                                            echo simpleDateConversion($dueInfo["due_date"]);
-                                        } else {
-                                            echo simpleDateConversion($dueInfoex["due_date"]);
-                                        } ?>~</span><?php if (isset($dueInfo["due_date"]) && !empty($dueInfo["due_date"])) {
-                                             echo simpleDateConversion($dueInfo["due_date"]);
-                                         } else {
-                                             echo simpleDateConversion($dueInfoex["due_date"]);
-                                         } ?></small>
-                                    </td>
-                                    <td class="customerAccount" data-id="<?php echo $customer['id'] ?>" data-name="sel">
-                                        <small><?php echo $customer['next_service']; ?></small>
-                                    </td>
-                                    <td data-name="sel">
-                                        <div class="float-label-control">
-                                            <select class="form-control setHandler" data-id="<?php echo $customer['id'] ?>"
-                                                name="setHandler" style="color: black">
-                                                <?php
-                                                if (isset($customer["handler"]) && !empty($customer["handler"]) && isset($handlerMap[$customer["handler"]])) {
-                                                    ?>
-                                                    <option value="<?php echo $customer["handler"]; ?>">
-                                                        <?php echo $handlerMap[$customer["handler"]]; ?></option> <?php } else {
-                                                    ?>
-                                                    <option value="">Hand</option> <?php }
-                                                ?>
-                                                <?php foreach ($allUsers as $users) { ?>
-                                                    <option value="<?php echo $users["id"] ?>">
-                                                        <?php echo $users["handler_name"] ?></option>
-                                                <?php } ?>
-                                            </select>
-                                        </div>
-                                    </td>
-                                    <td data-name="sel">
-                                        <div class="table-edit-control">
-                                            <!--<small><?php echo $customer['comment'] ?></small>-->
-                                            <textarea rows="3" class="saveChanges" data-row="<?php echo $customer['id'] ?>"
-                                                data-column="comment" name="payComments" value=""
-                                                placeholder=""><?php if (isset($customer['comment']))
-                                                    echo $customer['comment'] ?></textarea>
-                                        </div>
-                                    </td>
+                <div class="row clearfix">
+                    <div class="col-sm-12 main_content table-responsive" style="padding: 0 6px;">
+                        <table class="table table-hover" id="tab_customer_list" width="100%">
+                            <thead>
+                                <tr>
+                                    <th style="text-align: center;"><small>#</small></th>
+                                    <th style="text-align: center;"><small>Unique ID</small></th>
+                                    <th style="text-align: center;"><small>Agreement Date</small></th>
+                                    <th style="text-align: left;"><small>Client Name</small></th>
+                                    <th style="text-align: left;"><small>Contact Person</small></th>
+                                    <th style="text-align: center;"><small>Status</small></th>
+                                    <th style="text-align: center;"><small>Next Due Date</small></th>
+                                    <th style="text-align: center;"><small>Next Service</small></th>
+                                    <th style="text-align: center;"><small>Handler</small></th>
+                                    <th style="text-align: left;"><small>Comments</small></th>
                                 </tr>
-                            <?php } ?>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                <?php
+                                $count = 0;
+                                foreach ($listOfCustomer as $customer) {
+                                    $count = $count + 1;
+                                    // Latest service for this customer
+                                    $serviceInfo = isset($serviceMap[$customer['id']]) ? $serviceMap[$customer['id']] : array();
+
+                                    // Due dates from pre-fetched map
+                                    $dueInfo = $dueInfoex = $sentInfo = array();
+                                    $sid = isset($serviceNonSpMap[$customer['id']]) ? $serviceNonSpMap[$customer['id']] : null;
+                                    if ($sid && isset($dueMap[$sid])) {
+                                        $dueInfo['due_date'] = isset($dueMap[$sid]['Suspension Letter']) ? $dueMap[$sid]['Suspension Letter'] : (isset($dueMap[$sid]['Suspend Letter']) ? $dueMap[$sid]['Suspend Letter'] : null);
+                                        $dueInfoex['due_date'] = isset($dueMap[$sid]['Expire Letter']) ? $dueMap[$sid]['Expire Letter'] : null;
+                                        $sentInfo['due_date'] = isset($dueMap[$sid]['Withdrawal Letter']) ? $dueMap[$sid]['Withdrawal Letter'] : (isset($dueMap[$sid]['Withdraw Letter']) ? $dueMap[$sid]['Withdraw Letter'] : null);
+                                    }
+
+                                    // Payment due from map
+                                    $payInfo = array('payment_due' => isset($paymentMap[$customer['id']]) ? $paymentMap[$customer['id']] : null);
+
+                                    // Derived status + color for badge / tab filtering
+                                    $normStatus = hpDerivedStatus($customer, $serviceMap);
+                                    $statusColor = isset($statusColorMap[$normStatus]) ? $statusColorMap[$normStatus] : 'slate';
+                                    ?>
+                                    <tr id='addr<?php echo $customer['id'] ?>'
+                                        data-status="<?php echo htmlspecialchars($normStatus, ENT_QUOTES) ?>">
+                                        <td data-name="name">
+                                            <small><?php echo $count ?></small>
+                                        </td>
+                                        <td class="customerAccount" data-id="<?php echo $customer['id'] ?>" data-name="sel">
+                                            <small><?php if (isset($customer['unique_id']))
+                                                echo $customer['unique_id'] ?></small>
+                                        </td>
+                                        <td class="customerAccount" data-id="<?php echo $customer['id'] ?>" data-name="mail">
+                                            <small><a><?php echo $customer['certification_date'] ?></a></small>
+                                        </td>
+                                        <td class="customerAccount" data-id="<?php echo $customer['id'] ?>" data-name="mail">
+                                            <small><a style="font-weight: 600; color: #0d4d8b;"><?php echo $customer['customer_name'] ?></a></small>
+                                        </td>
+                                        <td class="customerAccount" data-id="<?php echo $customer['id'] ?>" data-name="desc">
+                                            <small><?php echo $customer['contact_person'] ?></small>
+                                        </td>
+                                        <td class="customerAccount" data-id="<?php echo $customer['id'] ?>" data-name="desc">
+                                            <small><span
+                                                    class="hp-badge hp-c-<?php echo $statusColor ?>"><?php echo htmlspecialchars($normStatus); ?><?php if ($normStatus === "In-process" && !empty($serviceInfo["service_type"]))
+                                                              echo ' (' . htmlspecialchars($serviceInfo["service_type"]) . ')'; ?></span></small>
+                                        </td>
+                                        <td class="customerAccount" data-id="<?php echo $customer['id'] ?>" data-name="sel">
+                                            <small><span><?php if (isset($dueInfo["due_date"]) && !empty($dueInfo["due_date"])) {
+                                                echo simpleDateConversion($dueInfo["due_date"]);
+                                            } else {
+                                                echo simpleDateConversion($dueInfoex["due_date"]);
+                                            } ?>~</span><?php if (isset($dueInfo["due_date"]) && !empty($dueInfo["due_date"])) {
+                                                 echo simpleDateConversion($dueInfo["due_date"]);
+                                             } else {
+                                                 echo simpleDateConversion($dueInfoex["due_date"]);
+                                             } ?></small>
+                                        </td>
+                                        <td class="customerAccount" data-id="<?php echo $customer['id'] ?>" data-name="sel">
+                                            <small><?php echo $customer['next_service']; ?></small>
+                                        </td>
+                                        <td data-name="sel">
+                                            <div class="float-label-control">
+                                                <select class="form-control setHandler" data-id="<?php echo $customer['id'] ?>"
+                                                    name="setHandler" style="color: black">
+                                                    <?php
+                                                    if (isset($customer["handler"]) && !empty($customer["handler"]) && isset($handlerMap[$customer["handler"]])) {
+                                                        ?>
+                                                        <option value="<?php echo $customer["handler"]; ?>">
+                                                            <?php echo $handlerMap[$customer["handler"]]; ?></option> <?php } else {
+                                                        ?>
+                                                        <option value="">Hand</option> <?php }
+                                                    ?>
+                                                    <?php foreach ($allUsers as $users) { ?>
+                                                        <option value="<?php echo $users["id"] ?>">
+                                                            <?php echo $users["handler_name"] ?></option>
+                                                    <?php } ?>
+                                                </select>
+                                            </div>
+                                        </td>
+                                        <td data-name="sel">
+                                            <div class="table-edit-control">
+                                                <!--<small><?php echo $customer['comment'] ?></small>-->
+                                                <textarea rows="3" class="saveChanges" data-row="<?php echo $customer['id'] ?>"
+                                                    data-column="comment" name="payComments" value=""
+                                                    placeholder=""><?php if (isset($customer['comment']))
+                                                        echo $customer['comment'] ?></textarea>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <?php } ?>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
-</div>
 
 <!-- Report chooser: Step 1 pick format (PDF/Excel), Step 2 pick action (download / email) -->
-<div id="report-format-chooser" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.45); z-index:99999;">
-    <div style="max-width:440px; margin:10% auto; background:#fff; border-radius:10px; box-shadow:0 10px 40px rgba(0,0,0,0.3); overflow:hidden;">
-        <div style="background:#0d4d8b; color:#fff; padding:14px 18px; font-size:15px; font-weight:600;">
-            <i class="fa fa-cloud-download" style="margin-right:8px;"></i> Download Report
+<div id="report-format-chooser" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.6); backdrop-filter:blur(3px); z-index:99999;">
+    <div style="max-width:460px; margin:8% auto; background:#ffffff; border-radius:14px; box-shadow:0 20px 50px rgba(15,23,42,0.25); overflow:hidden; border:1px solid #e2e8f0;">
+        <div style="background:linear-gradient(135deg, #0d4d8b 0%, #1e40af 100%); color:#fff; padding:16px 20px; font-size:15px; font-weight:700; display:flex; align-items:center; justify-content:space-between;">
+            <span><i class="fa fa-cloud-download" style="margin-right:8px;"></i> Export Client Report</span>
+            <button type="button" class="report-format-cancel" style="background:none; border:none; color:#fff; font-size:20px; cursor:pointer; opacity:0.85; line-height:1;">&times;</button>
         </div>
 
         <!-- STEP 1: format -->
-        <div class="report-step report-step-format" style="padding:22px 18px; text-align:center;">
-            <p style="font-size:13px; color:#333; margin:0 0 18px;">Which format would you like?</p>
-            <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
-                <button type="button" class="btn btn-danger report-format-pdf" style="min-width:130px;">
-                    <i class="fa fa-file-pdf-o"></i> PDF
+        <div class="report-step report-step-format" style="padding:24px 20px; text-align:center;">
+            <p style="font-size:14px; color:#334155; font-weight:600; margin:0 0 20px;">Choose your preferred report format:</p>
+            <div style="display:flex; gap:14px; justify-content:center; flex-wrap:wrap;">
+                <button type="button" class="btn report-format-pdf" style="min-width:140px; padding:12px 18px; border-radius:10px; background:#fef2f2; border:1.5px solid #fca5a5; color:#dc2626; font-weight:700; transition:all 0.15s ease;">
+                    <i class="fa fa-file-pdf-o" style="font-size:18px; display:block; margin-bottom:4px;"></i> PDF Document
                 </button>
-                <button type="button" class="btn btn-success report-format-excel" style="min-width:130px;">
-                    <i class="fa fa-file-excel-o"></i> Excel
+                <button type="button" class="btn report-format-excel" style="min-width:140px; padding:12px 18px; border-radius:10px; background:#f0fdf4; border:1.5px solid #86efac; color:#16a34a; font-weight:700; transition:all 0.15s ease;">
+                    <i class="fa fa-file-excel-o" style="font-size:18px; display:block; margin-bottom:4px;"></i> Excel Spreadsheet
                 </button>
             </div>
-            <div style="margin-top:18px;">
-                <button type="button" class="btn btn-default btn-sm report-format-cancel">Cancel</button>
+            <div style="margin-top:22px;">
+                <button type="button" class="btn btn-default btn-sm report-format-cancel" style="border-radius:8px; padding:6px 16px; font-weight:600;">Cancel</button>
             </div>
         </div>
 
         <!-- STEP 2: action (download or email) -->
-        <div class="report-step report-step-action" style="display:none; padding:22px 18px; text-align:center;">
-            <p style="font-size:13px; color:#333; margin:0 0 4px;">Selected format: <strong class="report-format-label">Excel</strong></p>
-            <p style="font-size:12px; color:#777; margin:0 0 18px;">How would you like to receive it?</p>
+        <div class="report-step report-step-action" style="display:none; padding:24px 20px; text-align:center;">
+            <p style="font-size:13.5px; color:#334155; margin:0 0 6px;">Selected format: <strong class="report-format-label" style="color:#0d4d8b;">Excel</strong></p>
+            <p style="font-size:12.5px; color:#64748b; margin:0 0 20px;">How would you like to receive your file?</p>
             <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
-                <button type="button" class="btn btn-primary report-action-download" style="min-width:150px;">
-                    <i class="fa fa-download"></i> Download Report
+                <button type="button" class="btn report-action-download" style="min-width:150px; padding:10px 16px; border-radius:8px; background:linear-gradient(135deg, #0d4d8b 0%, #1e40af 100%); color:#fff; font-weight:700; border:none; box-shadow:0 2px 8px rgba(13,77,139,0.2);">
+                    <i class="fa fa-download"></i> Direct Download
                 </button>
-                <button type="button" class="btn btn-warning report-action-email" style="min-width:150px;">
-                    <i class="fa fa-envelope"></i> Get Report on Email
+                <button type="button" class="btn report-action-email" style="min-width:150px; padding:10px 16px; border-radius:8px; background:linear-gradient(135deg, #d97706 0%, #f59e0b 100%); color:#fff; font-weight:700; border:none; box-shadow:0 2px 8px rgba(217,119,6,0.2);">
+                    <i class="fa fa-envelope"></i> Send via Email
                 </button>
             </div>
 
             <!-- Email sub-form -->
-            <div class="report-email-box" style="display:none; margin-top:18px; text-align:left;">
-                <label style="font-size:12px; font-weight:600; color:#333;">Enter email address</label>
-                <input type="email" class="report-email-input form-control" placeholder="name@example.com"
-                       style="margin-top:6px;" autocomplete="off">
+            <div class="report-email-box" style="display:none; margin-top:20px; text-align:left; background:#f8fafc; padding:14px; border-radius:10px; border:1px solid #e2e8f0;">
+                <label style="font-size:12.5px; font-weight:700; color:#1e293b; margin-bottom:6px; display:block;">Recipient Email Address <span style="color:#ef4444;">*</span></label>
+                <input type="email" class="report-email-input form-control" placeholder="client@example.com"
+                       style="height:38px; border-radius:8px; border:1px solid #cbd5e1; font-size:13px;" autocomplete="off">
                 <div class="report-email-msg" style="font-size:12px; margin-top:8px; min-height:16px;"></div>
-                <button type="button" class="btn btn-success report-email-send" style="width:100%; margin-top:6px;">
-                    <i class="fa fa-paper-plane"></i> Get Report
+                <button type="button" class="btn btn-success report-email-send" style="width:100%; margin-top:8px; height:38px; border-radius:8px; font-weight:700; background:#10b981; border:none;">
+                    <i class="fa fa-paper-plane"></i> Send Report Now
                 </button>
             </div>
 
-            <div style="margin-top:18px;">
-                <button type="button" class="btn btn-default btn-sm report-step-back">Back</button>
-                <button type="button" class="btn btn-default btn-sm report-format-cancel">Cancel</button>
+            <div style="margin-top:22px; display:flex; justify-content:center; gap:8px;">
+                <button type="button" class="btn btn-default btn-sm report-step-back" style="border-radius:8px; padding:6px 14px; font-weight:600;"><i class="fa fa-arrow-left"></i> Back</button>
+                <button type="button" class="btn btn-default btn-sm report-format-cancel" style="border-radius:8px; padding:6px 14px; font-weight:600;">Cancel</button>
             </div>
         </div>
     </div>
@@ -1729,28 +1433,31 @@ if (in_array(trim($hp_role), array('Office Staff-A', 'Office Staff-B'), true)) {
     });
 
     var table = $('#tab_customer_list').DataTable({
-        "sScrollX": "100%",
-        "scrollY": '70vh',
-        "scrollCollapse": true,
         "paging": true,
         "pageLength": 50,
         "deferRender": true,
         "ordering": false,
         "lengthChange": false,
+        "autoWidth": false,
         "columnDefs": [
-            { "width": "40px", "targets": 0, "className": "text-center" },
-            { "width": "110px", "targets": 1, "className": "text-center" },
-            { "width": "100px", "targets": 2, "className": "text-center" },
-            { "width": "220px", "targets": 3 },
-            { "width": "140px", "targets": 4 },
-            { "width": "130px", "targets": 5, "className": "text-center" },
-            { "width": "110px", "targets": 6, "className": "text-center" },
-            { "width": "95px", "targets": 7, "className": "text-center" },
-            { "width": "145px", "targets": 8, "className": "text-center" },
-            { "width": "360px", "targets": 9 }
+            { "width": "35px", "targets": 0, "className": "text-center" },
+            { "width": "90px", "targets": 1, "className": "text-center" },
+            { "width": "95px", "targets": 2, "className": "text-center" },
+            { "width": "180px", "targets": 3 },
+            { "width": "130px", "targets": 4 },
+            { "width": "120px", "targets": 5, "className": "text-center" },
+            { "width": "105px", "targets": 6, "className": "text-center" },
+            { "width": "90px", "targets": 7, "className": "text-center" },
+            { "width": "140px", "targets": 8, "className": "text-center" },
+            { "width": "220px", "targets": 9 }
         ]
     });
     table.columns.adjust().draw();
+
+    // Client-side quick search by Client Name
+    $('#clientSearch').on('keyup', function () {
+        table.column(3).search(this.value).draw();
+    });
 
     $('.service-type, .filterFromDate, .filterToDate').change(function () {
         var fromDate = $(".filterFromDate").val();
@@ -1761,7 +1468,6 @@ if (in_array(trim($hp_role), array('Office Staff-A', 'Office Staff-B'), true)) {
                 $(".filterToDate").val("");
             }
         }
-        //            alert("t");
         table.draw();
     });
 </script>

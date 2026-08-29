@@ -286,11 +286,11 @@
                     <div class="footer_blog">
                         <h3>COMPANY</h3>
                         <ul class="footer-links">
-                            <li><a href="career.php">Careers</a></li>
-                            <li><a href="policy.php">Policies</a></li>
+                            <li><a href="career">Careers</a></li>
+                            <li><a href="policy">Policies</a></li>
 
-                            <li><a href="faq.php">FAQs</a></li>
-                            <li><a href="contactUS.php">Contact Us</a></li>
+                            <li><a href="faq">FAQs</a></li>
+                            <li><a href="contact-us">Contact Us</a></li>
                         </ul>
                     </div>
                 </div>
@@ -300,12 +300,12 @@
                     <div class="footer_blog">
                         <h3>RESOURCES</h3>
                         <ul class="footer-links">
-                            <li><a href="application.php">Application Form</a></li>
+                            <li><a href="application-form">Application Form</a></li>
 
-                            <li><a href="service.php">Services</a></li>
-                            <li><a href="terms-conditions.php">Terms & Conditions</a></li>
+                            <li><a href="service">Services</a></li>
+                            <li><a href="terms-conditions">Terms & Conditions</a></li>
 
-                            <li><a href="circuler.php">Circulars</a></li>
+                            <li><a href="circulars">Circulars</a></li>
                         </ul>
                     </div>
                 </div>
@@ -315,10 +315,10 @@
                     <div class="footer_blog">
                         <h3>Guidelines</h3>
                         <ul class="footer-links">
-                            <li><a href="certificationGuideline.php">Certification Guidelines</a></li>
-                            <li><a href="auditorGuideline.php">Auditor Guidelines</a></li>
-                            <li><a href="useOfLogo.php">Logo Usage Guidelines</a></li>
-                            <li><a href="transitionGuideline.php">Transition Guidelines</a></li>
+                            <li><a href="certification-guidelines">Certification Guidelines</a></li>
+                            <li><a href="auditor-guidelines">Auditor Guidelines</a></li>
+                            <li><a href="logo-usage-guidelines">Logo Usage Guidelines</a></li>
+                            <li><a href="transition-guidelines">Transition Guidelines</a></li>
 
                         </ul>
                     </div>

@@ -27,14 +27,26 @@ if ($_SESSION['application_otp_email'] !== $email) {
 
 // Check expiration (10 minutes = 600 seconds)
 if (time() - $_SESSION['application_otp_time'] > 600) {
+    unset($_SESSION['application_otp'], $_SESSION['application_otp_time'], $_SESSION['application_otp_email'], $_SESSION['application_otp_attempts']);
     echo json_encode(['success' => false, 'message' => 'OTP has expired (valid for 10 minutes). Please request a new one.']);
     exit;
 }
 
-if ($entered_otp === $_SESSION['application_otp']) {
+// Track and limit verification attempts (Max 5 attempts to prevent brute force)
+$_SESSION['application_otp_attempts'] = ($_SESSION['application_otp_attempts'] ?? 0) + 1;
+if ($_SESSION['application_otp_attempts'] > 5) {
+    unset($_SESSION['application_otp'], $_SESSION['application_otp_time'], $_SESSION['application_otp_email'], $_SESSION['application_otp_attempts']);
+    echo json_encode(['success' => false, 'message' => 'Too many failed attempts. This OTP has been invalidated for security. Please request a new OTP.']);
+    exit;
+}
+
+if (hash_equals((string)$_SESSION['application_otp'], (string)$entered_otp)) {
     // Mark as verified
     $_SESSION['application_email_verified'] = $email;
+    // Clear OTP from session so it cannot be re-used
+    unset($_SESSION['application_otp'], $_SESSION['application_otp_time'], $_SESSION['application_otp_email'], $_SESSION['application_otp_attempts']);
     echo json_encode(['success' => true, 'message' => 'Email verified successfully!']);
 } else {
-    echo json_encode(['success' => false, 'message' => 'Invalid OTP. Please try again.']);
+    $remaining_attempts = 5 - $_SESSION['application_otp_attempts'];
+    echo json_encode(['success' => false, 'message' => "Invalid OTP. Please try again. ({$remaining_attempts} attempts remaining)"]);
 }
