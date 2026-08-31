@@ -70,19 +70,35 @@
         display: flex;
         align-items: center;
         flex-shrink: 0;
-        padding: 0 26px 0 70px;
+        padding: 0 20px;
     }
 
     .aitf-public-announcement-item {
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        padding: 0 24px;
-        font-size: 14px;
+        padding: 0 22px;
+        font-size: 13.5px;
         font-weight: 700;
-        letter-spacing: 0.35px;
+        letter-spacing: 0.4px;
         text-transform: uppercase;
         white-space: nowrap;
+        color: #ffffff;
+    }
+
+    .announcement-badge-nabcb {
+        display: inline-block;
+        background: linear-gradient(135deg, #ffd700 0%, #ff9800 100%);
+        color: #053c6d;
+        font-size: 11px;
+        font-weight: 900;
+        padding: 1.5px 7px;
+        border-radius: 4px;
+        letter-spacing: 0.8px;
+        margin-right: 4px;
+        line-height: 1.3;
+        vertical-align: middle;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
     }
 
     .aitf-public-announcement-item i {
@@ -128,7 +144,7 @@
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
         height: var(--nav-height);
-        transition: background 0.4s ease, box-shadow 0.4s ease, border-color 0.4s ease;
+        transition: background 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
     }
 
     .top-header+* {
@@ -140,15 +156,21 @@
         --nav-text: #f1f5f9;
         --nav-hover-text: #ffffff;
         --nav-hover-bg: rgba(255, 255, 255, 0.12);
-
+        background: transparent !important;
         border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
-        box-shadow: none;
+        box-shadow: none !important;
         backdrop-filter: none !important;
         -webkit-backdrop-filter: none !important;
     }
 
-    .top-header.scrolled {
+    .top-header.scrolled,
+    #home .top-header.scrolled {
+        --nav-bg: #ffffff;
+        --nav-text: #1e293b;
+        --nav-hover-text: #2563eb;
+        background: #ffffff !important;
         border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
     }
 
     .top-header.scrolled .navbar a:not(.login-btn),
@@ -1200,7 +1222,7 @@
 <div class="aitf-public-announcement-banner">
     <div class="aitf-public-announcement-track">
         <div class="aitf-public-announcement-group">
-            <div class="aitf-public-announcement-item">ACCREDITED CERTIFICATION BODY</div>
+            <div class="aitf-public-announcement-item"><span class="announcement-badge-nabcb">NABCB</span> ACCREDITED CERTIFICATION BODY</div>
             <div class="aitf-public-announcement-divider"></div>
             <div class="aitf-public-announcement-item"><i class="fa fa-balance-scale"></i> IMPARTIAL ASSESSMENT</div>
             <div class="aitf-public-announcement-divider"></div>
@@ -1210,7 +1232,7 @@
             <div class="aitf-public-announcement-divider"></div>
         </div>
         <div class="aitf-public-announcement-group">
-            <div class="aitf-public-announcement-item">ACCREDITED CERTIFICATION BODY</div>
+            <div class="aitf-public-announcement-item"><span class="announcement-badge-nabcb">NABCB</span> ACCREDITED CERTIFICATION BODY</div>
             <div class="aitf-public-announcement-divider"></div>
             <div class="aitf-public-announcement-item"><i class="fa fa-balance-scale"></i> IMPARTIAL ASSESSMENT</div>
             <div class="aitf-public-announcement-divider"></div>
@@ -1784,59 +1806,29 @@
 <!-- End header -->
 
 <script type="text/javascript">
-    $(document).ready(function () {
-        // Smooth navbar background based on scroll position
-        var header = document.querySelector('.top-header');
-        var scrollThreshold = 80;
-        var ticking = false;
-
+    (function () {
         function updateNavBg() {
+            var header = document.querySelector('.top-header');
             if (!header) return;
-            var scrollY = window.pageYOffset || document.documentElement.scrollTop;
-
-            // Toggle .scrolled class for text color changes
-            if (scrollY > 30) {
-                header.classList.add('scrolled');
+            var scrollY = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+            if (scrollY > 0) {
+                if (!header.classList.contains('scrolled')) {
+                    header.classList.add('scrolled');
+                }
             } else {
-                header.classList.remove('scrolled');
-            }
-
-            // Dynamic background opacity based on scroll position
-            if (document.body.id === 'home') {
-                var opacity = Math.min(scrollY / scrollThreshold, 1);
-                var r = Math.round(255);
-                var g = Math.round(255);
-                var b = Math.round(255);
-                header.style.background = 'rgba(' + r + ',' + g + ',' + b + ',' + opacity + ')';
-
-                // Dynamic box-shadow
-                if (opacity > 0.1) {
-                    header.style.boxShadow = '0 4px 20px rgba(0, 0, 0, ' + (0.08 * opacity) + ')';
-                } else {
-                    header.style.boxShadow = 'none';
-                }
-
-                // Dynamic border
-                if (opacity > 0.5) {
-                    header.style.borderBottom = '1px solid rgba(0, 0, 0, ' + (0.08 * opacity) + ')';
-                } else {
-                    header.style.borderBottom = '1px solid rgba(255, 255, 255, ' + (0.15 * (1 - opacity)) + ')';
+                if (header.classList.contains('scrolled')) {
+                    header.classList.remove('scrolled');
                 }
             }
-
-            ticking = false;
         }
 
-        window.addEventListener('scroll', function () {
-            if (!ticking) {
-                window.requestAnimationFrame(updateNavBg);
-                ticking = true;
-            }
-        });
-        // Run immediately to prevent delays
+        window.addEventListener('scroll', updateNavBg, { passive: true });
         updateNavBg();
-        document.addEventListener('DOMContentLoaded', updateNavBg);
-        window.addEventListener('load', updateNavBg);
+        document.addEventListener('DOMContentLoaded', updateNavBg, { passive: true });
+        window.addEventListener('load', updateNavBg, { passive: true });
+    })();
+
+    $(document).ready(function () {
 
         // Enhanced dropdown menu functionality - No transitions, instant show/hide
         var activeDropdown = null;

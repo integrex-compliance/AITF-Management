@@ -211,6 +211,65 @@
     </div>
 </div>
 
+<style>
+.dsc-compact-swal {
+    border-radius: 14px !important;
+    padding: 18px 16px 18px !important;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.22) !important;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    border: 1px solid #e2e8f0 !important;
+}
+.dsc-compact-swal .swal2-icon {
+    width: 44px !important;
+    height: 44px !important;
+    margin: 4px auto 10px !important;
+    border: 2.5px solid #2563eb !important;
+    color: #2563eb !important;
+}
+.dsc-compact-swal .swal2-icon .swal2-icon-content {
+    font-size: 24px !important;
+}
+.dsc-compact-swal .swal2-title {
+    padding: 0 !important;
+    margin: 0 !important;
+    line-height: 1.3 !important;
+}
+.dsc-compact-swal .swal2-html-container {
+    margin: 8px 0 0 !important;
+}
+.dsc-compact-btn {
+    border-radius: 6px !important;
+    font-weight: 600 !important;
+    font-size: 13px !important;
+    padding: 7px 24px !important;
+    background: #1e3c72 !important;
+    border: none !important;
+    box-shadow: 0 2px 8px rgba(30, 60, 114, 0.3) !important;
+    outline: none !important;
+}
+.dsc-compact-btn:hover {
+    background: #2a5298 !important;
+}
+</style>
+
+<!-- Fallback Compact Modal for DSC Under Construction -->
+<div class="modal fade" id="dscUnderConstructionModal" tabindex="-1" role="dialog" aria-labelledby="dscUnderConstructionLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 330px; margin: 120px auto;">
+        <div class="modal-content" style="border-radius: 14px; box-shadow: 0 15px 35px rgba(0,0,0,0.25); border: 1px solid #e2e8f0; overflow: hidden; background: #ffffff; text-align: center; padding: 20px 18px 18px;">
+            <div style="width: 44px; height: 44px; border-radius: 50%; background: #ebf5ff; border: 2.5px solid #2563eb; color: #2563eb; display: inline-flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 10px;">
+                <i class="fa fa-info"></i>
+            </div>
+            <h4 style="font-size: 16px; font-weight: 700; color: #1e3c72; margin: 0 0 6px;">Digital Signature</h4>
+            <p style="font-size: 13px; color: #475569; line-height: 1.5; margin: 0 0 14px;">
+                <strong style="color: #0f172a;">Coming Soon!</strong><br>This feature is currently under construction.
+            </p>
+            <button type="button" class="btn btn-primary btn-sm btn-block" data-dismiss="modal" style="background: #1e3c72; border: none; border-radius: 6px; font-weight: 600; font-size: 13px; padding: 7px 18px;">
+                OK
+            </button>
+        </div>
+    </div>
+</div>
+
 <script type="text/javascript" >
     $(function () {
         $('#certifyRegistrationDate').datepicker({
@@ -602,16 +661,40 @@
             $('#dscTokenPin').val('');
         });
 
-        function resetSignButton() {
-            $('#btnExecuteDscSign').prop('disabled', false).html('<i class="fa fa-pencil-square-o" style="margin-right: 5px;"></i> Sign & Download Certificate');
+        function showDscUnderConstructionDialog() {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: '<span style="font-size: 16px; font-weight: 700; color: #1e3c72;">Digital Signature</span>',
+                    html: '<div style="font-size: 13px; color: #475569; margin-top: 4px; line-height: 1.5;"><strong style="color: #0f172a;">Coming Soon!</strong><br>This feature is currently under construction.</div>',
+                    icon: 'info',
+                    iconColor: '#2563eb',
+                    width: '320px',
+                    padding: '16px 14px 18px',
+                    showCloseButton: true,
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#1e3c72',
+                    customClass: {
+                        popup: 'dsc-compact-swal',
+                        confirmButton: 'dsc-compact-btn'
+                    }
+                });
+            } else {
+                $('#dscUnderConstructionModal').modal('show');
+            }
         }
 
-        $('.download-dsc-certificate-print').click(function () {
+        $('.download-dsc-certificate-print').click(function (e) {
+            e.preventDefault();
+            showDscUnderConstructionDialog();
+        });
+
+        // Preserved for future full launch:
+        function openRealDscCertificateModal(btnElement) {
             var context = {
-                certify_id: $(this).attr('data-certificate') || '',
-                service: $(this).attr('data-service') || '',
-                customer: $(this).attr('data-customer') || '',
-                crr_id: $(this).attr('data-crr') || $(this).attr('data-notification') || '',
+                certify_id: $(btnElement).attr('data-certificate') || '',
+                service: $(btnElement).attr('data-service') || '',
+                customer: $(btnElement).attr('data-customer') || '',
+                crr_id: $(btnElement).attr('data-crr') || $(btnElement).attr('data-notification') || '',
                 iso_index: '',
                 iso_label: ''
             };
@@ -691,7 +774,7 @@
             }
 
             $('#dscCertificateModal').modal('show');
-        });
+        }
 
         $('#dscIsoSelect').change(function () {
             var selectedOption = $(this).find('option:selected');

@@ -11,7 +11,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
 
     <!-- Mobile Metas -->
-    <meta name="viewport" content="width=device-width, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <!-- Site Metas -->
     <title><?php echo isset($pageTitle) ? htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8') : 'AITF - Assessment &amp; Institute for Technical Forum'; ?></title>
@@ -74,7 +74,6 @@
     <script src="js/outer/jquery.magnific-popup.min.js" defer></script>
     <script src="js/outer/jquery.pogo-slider.min.js" defer></script>
     <script src="js/outer/slider-index.js" defer></script>
-    <script src="js/outer/smoothscroll.js" defer></script>
     <script src="js/outer/form-validator.min.js" defer></script>
     <script src="js/outer/contact-form-script.js" defer></script>
     <script src="js/outer/isotope.min.js" defer></script>

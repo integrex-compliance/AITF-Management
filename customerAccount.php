@@ -6656,8 +6656,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                             data-id="<?php echo $caservice['service'] ?>"
                                                             data-certificate="<?php echo !empty($caservice['certificate_id']) ? $caservice['certificate_id'] : '' ?>"
                                                             data-crr="<?php echo $caservice['crr_id'] ?>" data-row-count=""
-                                                            title="Print with Digital Signature" style="padding: 1px 5px; margin-right: 2px;">
-                                                            <i class="fa fa-pencil-square-o fa-lg" style="padding: 3px; color: #fff;"></i></a>
+                                                            title="Digital Signature (Coming Soon)" style="padding: 1px 5px; margin-right: 2px;">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle; padding: 1px;"><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 18.5 3 20l1.5-4L16.5 3.5z"></path><path d="M15 5l4 4"></path><path d="M2 21c3-1 6-1 9 0 3 1 6 1 9 0"></path></svg></a>
                                                     <?php } ?>
                                                 <?php } ?>
                                             </div>
@@ -7754,8 +7754,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                             data-id="<?php echo $saiService['service'] ?>"
                                                             data-certificate="<?php echo !empty($saiService['certificate_id']) ? $saiService['certificate_id'] : '' ?>"
                                                             data-crr="<?php echo $saiService['crr_id'] ?>" data-row-count=""
-                                                            title="Print with Digital Signature" style="padding: 1px 5px; margin-right: 2px;">
-                                                            <i class="fa fa-pencil-square-o fa-lg" style="padding: 3px; color: #fff;"></i>
+                                                            title="Digital Signature (Coming Soon)" style="padding: 1px 5px; margin-right: 2px;">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle; padding: 1px;"><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 18.5 3 20l1.5-4L16.5 3.5z"></path><path d="M15 5l4 4"></path><path d="M2 21c3-1 6-1 9 0 3 1 6 1 9 0"></path></svg>
                                                         </a>
                                                     <?php } ?>
                                                 <?php } ?>
@@ -8775,8 +8775,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                             data-id="<?php echo $saiiService['service'] ?>"
                                                             data-certificate="<?php echo !empty($saiiService['certificate_id']) ? $saiiService['certificate_id'] : '' ?>"
                                                             data-crr="<?php echo $saiiService['crr_id'] ?>" data-row-count=""
-                                                            title="Print with Digital Signature" style="padding: 1px 5px; margin-right: 2px;">
-                                                            <i class="fa fa-pencil-square-o fa-lg" style="padding: 3px; color: #fff;"></i>
+                                                            title="Digital Signature (Coming Soon)" style="padding: 1px 5px; margin-right: 2px;">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle; padding: 1px;"><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 18.5 3 20l1.5-4L16.5 3.5z"></path><path d="M15 5l4 4"></path><path d="M2 21c3-1 6-1 9 0 3 1 6 1 9 0"></path></svg>
                                                         </a>
                                                     <?php } ?>
                                                 <?php } ?>
@@ -9649,8 +9649,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                             data-id="<?php echo $rcServiceinfo['service'] ?>"
                                                             data-certificate="<?php echo !empty($rcServiceinfo['certificate_id']) ? $rcServiceinfo['certificate_id'] : '' ?>"
                                                             data-crr="<?php echo $rcServiceinfo['crr_id'] ?>" data-row-count=""
-                                                            title="Print with Digital Signature" style="padding: 1px 5px; margin-right: 2px;">
-                                                            <i class="fa fa-pencil-square-o fa-lg" style="padding: 3px; color: #fff;"></i>
+                                                            title="Digital Signature (Coming Soon)" style="padding: 1px 5px; margin-right: 2px;">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle; padding: 1px;"><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 18.5 3 20l1.5-4L16.5 3.5z"></path><path d="M15 5l4 4"></path><path d="M2 21c3-1 6-1 9 0 3 1 6 1 9 0"></path></svg>
                                                         </a>
                                                     <?php } ?>
                                                 <?php } ?>
@@ -10511,8 +10511,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                         data-id="<?php echo $spservices['service'] ?>"
                                                         data-certificate="<?php echo !empty($spservices['certificate_id']) ? $spservices['certificate_id'] : '' ?>"
                                                         data-crr="<?php echo $spservices['crr_id'] ?>" data-row-count=""
-                                                        title="Print with Digital Signature" style="padding: 1px 5px; margin-right: 2px;">
-                                                        <i class="fa fa-pencil-square-o fa-lg" style="padding: 3px; color: #fff;"></i>
+                                                        title="Digital Signature (Coming Soon)" style="padding: 1px 5px; margin-right: 2px;">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle; padding: 1px;"><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 18.5 3 20l1.5-4L16.5 3.5z"></path><path d="M15 5l4 4"></path><path d="M2 21c3-1 6-1 9 0 3 1 6 1 9 0"></path></svg>
                                                     </a>
                                                 <?php } ?>
                                             </div>

@@ -14,6 +14,12 @@ session_start();
     <link rel="stylesheet" href="/perfect-learn/css/methodology-styles.css">
 
     <style>
+        html, body {
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
         /* Box Navigation */
         /* Modern Navigation Container */
         .box-nav-container {
@@ -603,18 +609,8 @@ session_start();
             height: 100%;
             object-fit: cover;
             object-position: center 85%;
-            filter: grayscale(3%) brightness(1.0) contrast(1.05);
-            animation: heroImgKenBurns 25s ease-in-out infinite alternate;
-        }
-
-        @keyframes heroImgKenBurns {
-            0% {
-                transform: scale(1) translate(0, 0);
-            }
-
-            100% {
-                transform: scale(1.04) translate(-0.5%, -0.5%);
-            }
+            transform: translateZ(0);
+            backface-visibility: hidden;
         }
 
         .hero-bg-overlay {
@@ -746,27 +742,42 @@ session_start();
         .hero-label {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            font-size: 12px;
-            font-weight: 700;
+            gap: 10px;
+            font-size: 13px;
+            font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: 1.8px;
-            color: #60a5fa;
-            margin-bottom: 18px;
-            padding: 5px 12px;
-            background: rgba(59, 130, 246, 0.1);
-            border: 1px solid rgba(59, 130, 246, 0.2);
+            letter-spacing: 1.5px;
+            color: #ffffff;
+            margin-bottom: 20px;
+            padding: 7px 18px 7px 14px;
+            background: linear-gradient(135deg, rgba(30, 64, 175, 0.88) 0%, rgba(15, 23, 42, 0.95) 100%);
+            border: 1.5px solid #38bdf8;
             border-radius: 50px;
+            box-shadow: 0 0 22px rgba(56, 189, 248, 0.45), 0 4px 15px rgba(0, 0, 0, 0.4);
             animation: fadeInDown 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
         }
 
         .hero-label::before {
             content: '';
-            width: 8px;
-            height: 8px;
-            background: #3b82f6;
+            width: 9px;
+            height: 9px;
+            background: #38bdf8;
             border-radius: 50%;
-            box-shadow: 0 0 10px #3b82f6;
+            box-shadow: 0 0 10px #38bdf8, 0 0 20px #38bdf8;
+            animation: pulseBadgeDot 2s infinite ease-in-out;
+        }
+
+        @keyframes pulseBadgeDot {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+                box-shadow: 0 0 8px #38bdf8;
+            }
+            50% {
+                transform: scale(1.3);
+                opacity: 0.75;
+                box-shadow: 0 0 18px #38bdf8;
+            }
         }
 
         .hero-main-title {
@@ -1269,7 +1280,7 @@ session_start();
         /* Responsive Design */
         @media (max-width: 1200px) {
             .hero-main-title {
-                font-size: 46px;
+                font-size: clamp(34px, 3.8vw, 48px);
             }
 
             .ecosystem-container {
@@ -1279,59 +1290,171 @@ session_start();
 
         @media (max-width: 991px) {
             .modern-hero-section {
-                padding: 90px 0 50px;
+                padding: 145px 0 40px !important;
+                min-height: auto !important;
             }
 
             .hero-container {
                 flex-direction: column;
                 text-align: center;
-                gap: 20px;
+                gap: 16px;
             }
 
             .hero-text-content {
                 max-width: 100%;
-                order: 2;
-            }
-
-            .hero-visual-content {
-                min-height: 380px;
-                order: 1;
-            }
-
-            .hero-btns {
-                justify-content: center;
-            }
-
-            .hero-sub-title {
-                margin-left: auto;
-                margin-right: auto;
-            }
-
-            .ecosystem-container {
-                transform: scale(0.70);
-            }
-        }
-
-        @media (max-width: 576px) {
-            .hero-main-title {
-                font-size: 34px;
-            }
-
-            .hero-sub-title {
-                font-size: 14px;
-            }
-
-            .hero-btns {
+                order: 1 !important;
+                display: flex;
                 flex-direction: column;
+                align-items: center;
+                padding: 0 10px;
+            }
+
+            .hero-label {
+                margin: 0 auto 14px;
+                font-size: 12px;
+                padding: 6px 16px 6px 12px;
+                letter-spacing: 1.2px;
+            }
+
+            .hero-main-title {
+                font-size: clamp(23px, 5.5vw, 34px);
+                line-height: 1.2;
+                margin-bottom: 12px;
+                letter-spacing: -0.4px;
+            }
+
+            .hero-main-title span {
+                font-size: clamp(20px, 5vw, 30px);
+                margin-top: 4px;
+            }
+
+            .hero-sub-title {
+                margin: 0 auto 18px;
+                text-align: center;
+                border-left: none;
+                border-top: 3px solid #3b82f6;
+                border-radius: 14px;
+                font-size: 13.5px;
+                line-height: 1.6;
+                padding: 10px 15px;
+                max-width: 520px;
+            }
+
+            .hero-btns {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 10px;
+                width: 100%;
             }
 
             .hero-btn {
+                padding: 11px 18px;
+                font-size: 13px;
+            }
+
+            .hero-visual-content {
+                min-height: 220px;
+                order: 2 !important;
                 width: 100%;
+                display: flex;
                 justify-content: center;
+                align-items: center;
+                overflow: hidden;
+                margin-top: 15px;
             }
 
             .ecosystem-container {
                 transform: scale(0.55);
+                margin: 0 auto;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .modern-hero-section {
+                padding: 135px 0 30px !important;
+            }
+
+            .hero-container {
+                gap: 12px;
+            }
+
+            .hero-label {
+                font-size: 11px;
+                letter-spacing: 1px;
+                padding: 5px 14px 5px 10px;
+                margin-bottom: 10px;
+            }
+
+            .hero-main-title {
+                font-size: clamp(20px, 5.8vw, 25px);
+                line-height: 1.22;
+                letter-spacing: -0.3px;
+                margin-bottom: 8px;
+            }
+
+            .hero-main-title span {
+                font-size: clamp(18px, 5.2vw, 23px);
+                margin-top: 3px;
+            }
+
+            .hero-sub-title {
+                font-size: 12.5px;
+                padding: 8px 12px;
+                line-height: 1.5;
+                margin-bottom: 14px;
+            }
+
+            .hero-btns {
+                flex-direction: column !important;
+                align-items: center;
+                width: 100%;
+                gap: 8px !important;
+            }
+
+            .hero-btn {
+                width: 100% !important;
+                max-width: 300px;
+                justify-content: center;
+                padding: 10px 15px;
+                font-size: 12.5px;
+            }
+
+            .hero-btn-primary {
+                padding: 11px 16px;
+                font-size: 13px;
+                box-shadow: 0 6px 18px rgba(37, 99, 235, 0.4);
+            }
+
+            .hero-visual-content {
+                min-height: 180px;
+                margin-top: 10px;
+            }
+
+            .ecosystem-container {
+                transform: scale(0.44);
+            }
+        }
+
+        @media (max-width: 380px) {
+            .modern-hero-section {
+                padding: 128px 0 25px !important;
+            }
+
+            .hero-main-title {
+                font-size: 19px;
+            }
+
+            .hero-main-title span {
+                font-size: 17px;
+            }
+
+            .hero-visual-content {
+                min-height: 160px;
+            }
+
+            .ecosystem-container {
+                transform: scale(0.36);
             }
         }
 
@@ -1527,43 +1650,125 @@ session_start();
 
         /* Mobile Styles - Keep Vertical on Small Screens */
         @media (max-width: 991px) {
-            .milestones-track {
-                flex-direction: column;
-                min-width: 100%;
-                gap: 50px;
+            .aitf-journey-section {
+                padding: 50px 0 35px !important;
             }
 
-            .timeline-spine,
+            .journey-container {
+                padding: 0 15px !important;
+                overflow: hidden;
+            }
+
+            .journey-header {
+                margin-bottom: 25px !important;
+            }
+
+            .journey-title {
+                font-size: clamp(24px, 5.5vw, 34px) !important;
+                margin-bottom: 15px !important;
+            }
+
+            .legacy-highlight {
+                margin-bottom: 25px !important;
+            }
+
+            .legacy-number {
+                font-size: clamp(60px, 15vw, 85px) !important;
+            }
+
+            .legacy-plus {
+                font-size: clamp(40px, 10vw, 55px) !important;
+            }
+
+            .legacy-text {
+                font-size: 13px !important;
+                letter-spacing: 3px !important;
+            }
+
+            .milestones-track {
+                flex-direction: column !important;
+                min-width: 100% !important;
+                width: 100% !important;
+                gap: 24px !important;
+            }
+
+            .horizontal-timeline-wrapper {
+                padding: 10px 0 25px !important;
+                margin: 5px 0 !important;
+                overflow: hidden !important;
+            }
+
+            .timeline-spine {
+                left: 18px !important;
+                width: 3px !important;
+                max-width: 3px !important;
+                height: 100% !important;
+                transform: none !important;
+                top: 0 !important;
+                bottom: auto !important;
+                background: #e2e8f0 !important;
+            }
+
             .timeline-spine-progress {
-                left: 30px;
-                width: 4px;
-                height: 100%;
-                transform: none;
-                top: 0;
-                bottom: auto;
+                left: 18px !important;
+                width: 3px !important;
+                max-width: 3px !important;
+                transform: none !important;
+                top: 0 !important;
+                bottom: auto !important;
+                background: #b8860b !important;
             }
 
             .milestone-item {
-                width: 100%;
-                padding: 0 0 0 80px !important;
-                text-align: left;
+                width: 100% !important;
+                padding: 0 0 0 42px !important;
+                text-align: left !important;
+                box-sizing: border-box !important;
             }
 
             .milestone-dot-wrapper {
-                top: 50%;
-                bottom: auto;
-                left: 30px;
-                transform: translate(-50%, -50%);
+                top: 26px !important;
+                bottom: auto !important;
+                left: 18px !important;
+                transform: translate(-50%, -50%) !important;
+            }
+
+            .milestone-dot {
+                width: 18px !important;
+                height: 18px !important;
+                border: 3px solid #e2e8f0 !important;
             }
 
             .milestone-connector {
-                display: none;
+                display: none !important;
             }
 
-            .milestone-card {
-                text-align: left;
-                opacity: 1;
-                transform: none;
+            .milestone-card,
+            .nabcb-highlight-card {
+                width: 100% !important;
+                max-width: 100% !important;
+                text-align: left !important;
+                opacity: 1 !important;
+                transform: none !important;
+                padding: 18px 16px !important;
+                border-radius: 14px !important;
+                box-sizing: border-box !important;
+                box-shadow: 0 4px 18px rgba(0, 0, 0, 0.05) !important;
+            }
+
+            .milestone-year {
+                font-size: 20px !important;
+                margin-bottom: 5px !important;
+            }
+
+            .milestone-card h4 {
+                font-size: 15px !important;
+                margin-bottom: 6px !important;
+            }
+
+            .milestone-card p {
+                font-size: 13px !important;
+                line-height: 1.55 !important;
             }
         }
     </style>
@@ -1571,7 +1776,7 @@ session_start();
     <div class="modern-hero-section">
         <div class="hero-intro-curtain"></div>
         <div class="hero-bg-image">
-            <img src="aitfImages/hero image aitf.png" alt="AITF Hero Background">
+            <img src="aitfImages/hero_image_aitf.webp" alt="AITF Hero Background" fetchpriority="high" decoding="async">
         </div>
         <div class="hero-bg-overlay"></div>
         <div class="hero-glow-1"></div>
@@ -1580,13 +1785,16 @@ session_start();
                 <div class="hero-text-content">
                     <div class="hero-label">NABCB Accredited Certification Body</div>
                     <h1 class="hero-main-title">
-                        <span class="sr-only" style="position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap;">AITF - </span>Your Trusted Partner In<span>Management System Assessment</span>
+                        <span class="sr-only" style="position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap;">AITF - </span>Trusted and Authentic Registrar For<span>Management System Certifications</span>
                     </h1>
                     <p class="hero-sub-title">
                         Empowering organizations through accredited, authentic, impartial and ethical certification
                         services for management system standards.
                     </p>
-                    <div class="hero-btns" style="display:flex; flex-wrap:wrap; justify-content:center; gap:10px;">
+                    <div class="hero-btns">
+                        <a href="application.php#online-application-form" class="hero-btn hero-btn-primary">
+                            <i class="fas fa-edit"></i> Apply Online for ISO Certification
+                        </a>
                         <a href="aboutus.php" class="hero-btn hero-btn-secondary">
                             <i class="fas fa-info-circle"></i> About AITF
                         </a>
@@ -1595,9 +1803,6 @@ session_start();
                         </a>
                         <a href="certificationProcess.php" class="hero-btn hero-btn-secondary">
                             <i class="fas fa-certificate"></i> Certification Process
-                        </a>
-                        <a href="application.php#online-application-form" class="hero-btn hero-btn-primary">
-                            <i class="fas fa-edit"></i> Apply Online for ISO Certification
                         </a>
                     </div>
                 </div>
@@ -1621,19 +1826,19 @@ session_start();
                         <!-- Center Hub -->
                         <div class="center-node-wrapper">
                             <div class="center-node">
-                                <img src="aitfImages/services.png" alt="Our Services">
+                                <img src="aitfImages/services.webp" alt="Our Services" width="90" height="90" decoding="async">
                             </div>
                         </div>
 
                         <!-- ISO Standards Nodes -->
                         <div class="iso-standard iso-9001">
-                            <img src="aitfImages/qmscircle.png" alt="QMS Icon">
+                            <img src="aitfImages/qmscircle.webp" alt="QMS Icon" width="90" height="90" decoding="async">
                         </div>
                         <div class="iso-standard iso-14001">
-                            <img src="aitfImages/emscircle.png" alt="EMS Icon">
+                            <img src="aitfImages/emscircle.webp" alt="EMS Icon" width="90" height="90" decoding="async">
                         </div>
                         <div class="iso-standard iso-45001">
-                            <img src="aitfImages/ohsms circle.png" alt="OHSMS Icon">
+                            <img src="aitfImages/ohsms_circle.webp" alt="OHSMS Icon" width="90" height="90" decoding="async">
                         </div>
 
                         <!-- Active Connection Lines -->
@@ -1732,7 +1937,7 @@ session_start();
                         <span class="summary-icon"><i class="fa fa-handshake"></i></span>
                         <div>
                             <span class="summary-kicker">management System journey</span>
-                            <h3>From first trust to long-term client relationships</h3>
+                            <h3>Building Trust Through Assessment</h3>
                         </div>
                     </div>
                     <div class="summary-progress-line">
@@ -2109,7 +2314,7 @@ session_start();
                             style="position: relative; z-index: 2; border-radius: 40px; padding: 15px; background: white; box-shadow: 0 40px 100px rgba(10, 25, 47, 0.15); transition: all 0.5s cubic-bezier(0.165, 0.84, 0.44, 1);">
                             <div class="img-inner-wrapper"
                                 style="border-radius: 28px; overflow: hidden; position: relative;">
-                                <img src="aitfImages/commitment.png" alt="AITF commitment to excellence"
+                                <img src="aitfImages/commitment.webp" alt="AITF commitment to excellence" loading="lazy" decoding="async"
                                     style="width: 100%; height: auto; display: block; transition: transform 0.8s cubic-bezier(0.165, 0.84, 0.44, 1);">
                                 <div class="img-overlay"
                                     style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(10, 25, 47, 0.4) 0%, transparent 40%); opacity: 0; transition: opacity 0.5s ease;">
@@ -2148,6 +2353,45 @@ session_start();
             .main-img-container:hover .img-overlay {
                 opacity: 1;
             }
+
+            @media (max-width: 991px) {
+                .why-choose-aitf {
+                    padding: 55px 0 45px !important;
+                }
+
+                .why-title {
+                    font-size: clamp(26px, 5.5vw, 36px) !important;
+                    margin-bottom: 18px !important;
+                }
+
+                .why-text {
+                    font-size: 15.5px !important;
+                    line-height: 1.7 !important;
+                    margin-bottom: 25px !important;
+                    text-align: left !important;
+                }
+
+                .image-stack {
+                    padding: 15px 0 !important;
+                    margin-top: 20px;
+                }
+
+                .main-img-container {
+                    border-radius: 20px !important;
+                    padding: 10px !important;
+                }
+            }
+
+            @media (max-width: 575px) {
+                .feature-list {
+                    grid-template-columns: 1fr !important;
+                    gap: 12px !important;
+                }
+
+                .feature-item {
+                    padding: 12px 14px !important;
+                }
+            }
         </style>
     </section>
 
@@ -2168,7 +2412,7 @@ session_start();
                             style="position: relative; z-index: 2; border-radius: 40px; padding: 15px; background: white; box-shadow: 0 40px 100px rgba(16, 185, 129, 0.12); transition: all 0.5s cubic-bezier(0.165, 0.84, 0.44, 1);">
                             <div class="img-inner-wrapper"
                                 style="border-radius: 28px; overflow: hidden; position: relative;">
-                                <img src="aitfImages/coreprienciple.png" alt="AITF core principles"
+                                <img src="aitfImages/coreprienciple.webp" alt="AITF core principles" loading="lazy" decoding="async"
                                     style="width: 100%; height: auto; display: block; transition: transform 0.8s cubic-bezier(0.165, 0.84, 0.44, 1);">
                                 <div class="principle-overlay"
                                     style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(6, 78, 59, 0.3) 0%, transparent 40%); opacity: 0; transition: opacity 0.5s ease;">
@@ -2215,6 +2459,38 @@ session_start();
             .principle-img-container:hover .principle-overlay {
                 opacity: 1;
             }
+
+            @media (max-width: 991px) {
+                .core-principles {
+                    padding: 55px 0 45px !important;
+                }
+
+                .core-principles .col-lg-6[style*="padding-left"] {
+                    padding-left: 15px !important;
+                }
+
+                .principle-title {
+                    font-size: clamp(26px, 5.5vw, 36px) !important;
+                    margin-bottom: 18px !important;
+                }
+
+                .principle-text {
+                    font-size: 15.5px !important;
+                    line-height: 1.7 !important;
+                    margin-bottom: 25px !important;
+                    text-align: left !important;
+                }
+
+                .image-stack-left {
+                    padding: 15px 0 !important;
+                    margin-top: 20px;
+                }
+
+                .principle-img-container {
+                    border-radius: 20px !important;
+                    padding: 10px !important;
+                }
+            }
         </style>
     </section>
 
@@ -2234,7 +2510,7 @@ session_start();
                 <div class="col-lg-4 col-md-6 mb-4">
                     <div class="cert-service-card qms-card">
                         <div class="cert-service-image">
-                            <img src="aitfImages/qmsaudit.png" alt="QMS certification audit">
+                            <img src="aitfImages/qmsaudit.webp" alt="QMS certification audit" loading="lazy" decoding="async">
                         </div>
                         <div class="cert-service-content">
                             <span class="cert-standard-pill">ISO 9001</span>
@@ -2256,7 +2532,7 @@ session_start();
                 <div class="col-lg-4 col-md-6 mb-4">
                     <div class="cert-service-card ems-card">
                         <div class="cert-service-image">
-                            <img src="aitfImages/emsauditf.png" alt="EMS certification audit">
+                            <img src="aitfImages/emsauditf.webp" alt="EMS certification audit" loading="lazy" decoding="async">
                         </div>
                         <div class="cert-service-content">
                             <span class="cert-standard-pill">ISO 14001</span>
@@ -2278,7 +2554,7 @@ session_start();
                 <div class="col-lg-4 col-md-6 mb-4">
                     <div class="cert-service-card ohsms-card">
                         <div class="cert-service-image">
-                            <img src="aitfImages/ohsmsaudit.png" alt="OHSMS certification audit">
+                            <img src="aitfImages/ohsmsaudit.webp" alt="OHSMS certification audit" loading="lazy" decoding="async">
                         </div>
                         <div class="cert-service-content">
                             <span class="cert-standard-pill">ISO 45001</span>
@@ -2606,78 +2882,659 @@ session_start();
                     width: 100%;
                 }
             }
+        <style>
+            /* Modern Management Systems Interactive Showcase */
+            .management-slider-section {
+                padding: 90px 0 85px;
+                background: radial-gradient(circle at 50% 30%, #0d2847 0%, #06152b 60%, #030c18 100%);
+                position: relative;
+                overflow: hidden;
+            }
+
+            .management-slider-section::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-image: 
+                    radial-gradient(rgba(59, 130, 246, 0.08) 1px, transparent 1px);
+                background-size: 36px 36px;
+                pointer-events: none;
+                z-index: 1;
+            }
+
+            /* Slider Section Header */
+            .slider-section-heading {
+                text-align: center;
+                margin-bottom: 35px;
+                position: relative;
+                z-index: 2;
+            }
+
+            .slider-section-heading .section-kicker {
+                display: inline-block;
+                font-size: 12px;
+                font-weight: 800;
+                letter-spacing: 2px;
+                text-transform: uppercase;
+                color: #38bdf8;
+                background: rgba(56, 189, 248, 0.1);
+                border: 1px solid rgba(56, 189, 248, 0.25);
+                padding: 5px 16px;
+                border-radius: 50px;
+                margin-bottom: 12px;
+            }
+
+            .slider-section-heading h2 {
+                font-size: clamp(26px, 3.5vw, 40px);
+                font-weight: 800;
+                color: #ffffff;
+                letter-spacing: -0.5px;
+                margin: 0 0 10px;
+            }
+
+            .slider-section-heading h2 span {
+                background: linear-gradient(135deg, #38bdf8, #818cf8);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+            }
+
+            /* Standard Switcher Tabs (Pills) */
+            .slider-tabs-nav {
+                display: flex;
+                justify-content: center;
+                gap: 12px;
+                margin-bottom: 35px;
+                position: relative;
+                z-index: 3;
+                flex-wrap: wrap;
+            }
+
+            .slider-tab-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 10px 22px;
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                border-radius: 50px;
+                color: #94a3b8;
+                font-size: 13.5px;
+                font-weight: 700;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                backdrop-filter: blur(8px);
+            }
+
+            .slider-tab-btn i {
+                font-size: 14px;
+                transition: transform 0.3s ease;
+            }
+
+            .slider-tab-btn:hover {
+                color: #ffffff;
+                background: rgba(255, 255, 255, 0.1);
+                border-color: rgba(255, 255, 255, 0.25);
+                transform: translateY(-2px);
+            }
+
+            .slider-tab-btn.active {
+                background: linear-gradient(135deg, #2563eb, #1d4ed8);
+                color: #ffffff;
+                border-color: #60a5fa;
+                box-shadow: 0 8px 24px rgba(37, 99, 235, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            }
+
+            .slider-tab-btn.active i {
+                transform: scale(1.15);
+                color: #ffd700;
+            }
+
+            /* Slider Main Container */
+            .slider-container {
+                max-width: 1160px;
+                margin: 0 auto;
+                position: relative;
+                padding: 0 60px;
+                z-index: 2;
+            }
+
+            .slider-track {
+                position: relative;
+                min-height: 480px;
+            }
+
+            .slide {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                opacity: 0;
+                visibility: hidden;
+                transform: translateY(20px) scale(0.98);
+                transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.5s ease;
+                pointer-events: none;
+                z-index: 1;
+            }
+
+            .slide.active {
+                position: relative;
+                opacity: 1;
+                visibility: visible;
+                transform: translateY(0) scale(1);
+                pointer-events: auto;
+                z-index: 2;
+            }
+
+            /* 2-Column Slide Content Showcase */
+            .slide-showcase-card {
+                background: linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(30, 41, 59, 0.65) 100%);
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                border-radius: 28px;
+                padding: 45px 50px;
+                box-shadow: 0 30px 70px -15px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+                backdrop-filter: blur(20px);
+                -webkit-backdrop-filter: blur(20px);
+                display: grid;
+                grid-template-columns: 1.15fr 0.85fr;
+                gap: 40px;
+                align-items: center;
+                position: relative;
+                overflow: hidden;
+            }
+
+            /* Ambient Glow for specific cards */
+            .slide-showcase-card::after {
+                content: '';
+                position: absolute;
+                width: 320px;
+                height: 320px;
+                right: -60px;
+                top: -60px;
+                border-radius: 50%;
+                filter: blur(80px);
+                opacity: 0.25;
+                pointer-events: none;
+                z-index: 0;
+            }
+
+            .slide-qms .slide-showcase-card::after { background: #3b82f6; }
+            .slide-ems .slide-showcase-card::after { background: #10b981; }
+            .slide-ohsms .slide-showcase-card::after { background: #f59e0b; }
+
+            /* Slide Left Content */
+            .slide-info-pane {
+                position: relative;
+                z-index: 1;
+            }
+
+            .slide-badge-tag {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                font-size: 12px;
+                font-weight: 800;
+                letter-spacing: 1.2px;
+                text-transform: uppercase;
+                padding: 5px 14px;
+                border-radius: 50px;
+                margin-bottom: 16px;
+            }
+
+            .badge-qms {
+                color: #60a5fa;
+                background: rgba(37, 99, 235, 0.15);
+                border: 1px solid rgba(96, 165, 250, 0.3);
+            }
+
+            .badge-ems {
+                color: #34d399;
+                background: rgba(16, 185, 129, 0.15);
+                border: 1px solid rgba(52, 211, 153, 0.3);
+            }
+
+            .badge-ohsms {
+                color: #fbbf24;
+                background: rgba(245, 158, 11, 0.15);
+                border: 1px solid rgba(251, 191, 36, 0.3);
+            }
+
+            .slide-info-pane h3 {
+                font-size: clamp(22px, 2.4vw, 32px);
+                font-weight: 800;
+                color: #ffffff;
+                margin: 0 0 14px;
+                line-height: 1.25;
+                letter-spacing: -0.3px;
+            }
+
+            .slide-info-pane .slide-desc {
+                font-size: 15px;
+                line-height: 1.65;
+                color: #cbd5e1;
+                margin-bottom: 22px;
+            }
+
+            /* Benefit Chips */
+            .slide-benefits-list {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                margin-bottom: 28px;
+            }
+
+            .benefit-chip {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                font-size: 14px;
+                font-weight: 600;
+                color: #e2e8f0;
+            }
+
+            .benefit-chip i {
+                font-size: 14px;
+                flex-shrink: 0;
+            }
+
+            .slide-qms .benefit-chip i { color: #38bdf8; }
+            .slide-ems .benefit-chip i { color: #34d399; }
+            .slide-ohsms .benefit-chip i { color: #fbbf24; }
+
+            /* Slide Action Buttons */
+            .slide-actions {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                flex-wrap: wrap;
+            }
+
+            .slide-primary-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 10px;
+                padding: 13px 28px;
+                border-radius: 50px;
+                font-size: 13.5px;
+                font-weight: 800;
+                text-transform: uppercase;
+                letter-spacing: 0.8px;
+                color: #ffffff;
+                text-decoration: none;
+                transition: all 0.3s ease;
+                box-shadow: 0 10px 25px -5px rgba(245, 158, 11, 0.4);
+            }
+
+            .slide-qms .slide-primary-btn {
+                background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            }
+            .slide-ems .slide-primary-btn {
+                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.4);
+            }
+            .slide-ohsms .slide-primary-btn {
+                background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
+                box-shadow: 0 10px 25px -5px rgba(234, 88, 12, 0.4);
+            }
+
+            .slide-primary-btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 16px 32px -5px rgba(245, 158, 11, 0.6);
+                color: #ffffff;
+                text-decoration: none;
+            }
+
+            .slide-outline-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 12px 22px;
+                border-radius: 50px;
+                font-size: 13.5px;
+                font-weight: 700;
+                color: #94a3b8;
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                text-decoration: none;
+                transition: all 0.3s ease;
+            }
+
+            .slide-outline-btn:hover {
+                color: #ffffff;
+                background: rgba(255, 255, 255, 0.12);
+                border-color: rgba(255, 255, 255, 0.3);
+                text-decoration: none;
+                transform: translateY(-2px);
+            }
+
+            /* Right Artwork Pane */
+            .slide-visual-pane {
+                position: relative;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 1;
+            }
+
+            .visual-badge-wrap {
+                position: relative;
+                width: 280px;
+                height: 280px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .visual-badge-img {
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+                filter: drop-shadow(0 20px 30px rgba(0, 0, 0, 0.5));
+                transition: transform 0.5s ease;
+            }
+
+            .slide-showcase-card:hover .visual-badge-img {
+                transform: scale(1.04);
+            }
+
+            .floating-trust-tag {
+                position: absolute;
+                bottom: 5px;
+                background: rgba(15, 23, 42, 0.9);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+                backdrop-filter: blur(10px);
+                padding: 6px 16px;
+                border-radius: 50px;
+                font-size: 12px;
+                font-weight: 700;
+                color: #f8fafc;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                white-space: nowrap;
+            }
+
+            .floating-trust-tag i {
+                color: #38bdf8;
+                font-size: 12px;
+            }
+
+            /* Arrow Navigation */
+            .slider-arrow {
+                position: absolute;
+                top: 50%;
+                transform: translateY(-50%);
+                width: 48px;
+                height: 48px;
+                border-radius: 50%;
+                background: rgba(15, 23, 42, 0.75);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                color: #ffffff;
+                font-size: 16px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                backdrop-filter: blur(10px);
+                z-index: 10;
+            }
+
+            .slider-arrow:hover {
+                background: #2563eb;
+                border-color: #60a5fa;
+                color: #ffffff;
+                box-shadow: 0 0 20px rgba(37, 99, 235, 0.6);
+                transform: translateY(-50%) scale(1.1);
+            }
+
+            .prev-arrow {
+                left: 0;
+            }
+
+            .next-arrow {
+                right: 0;
+            }
+
+            .slider-nav {
+                display: flex;
+                justify-content: center;
+                gap: 10px;
+                margin-top: 25px;
+            }
+
+            .slider-dot {
+                width: 12px;
+                height: 12px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.2);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+
+            .slider-dot.active {
+                background: #38bdf8;
+                width: 32px;
+                border-radius: 20px;
+                box-shadow: 0 0 12px #38bdf8;
+            }
+
+            /* Mobile Responsiveness */
+            @media (max-width: 991px) {
+                .slide-showcase-card {
+                    grid-template-columns: 1fr;
+                    padding: 36px 30px;
+                    gap: 30px;
+                    text-align: center;
+                }
+
+                .slide-benefits-list {
+                    align-items: center;
+                }
+
+                .slide-actions {
+                    justify-content: center;
+                }
+
+                .visual-badge-wrap {
+                    width: 220px;
+                    height: 220px;
+                    margin: 0 auto;
+                }
+
+                .slider-container {
+                    padding: 0 45px;
+                }
+            }
+
+            @media (max-width: 576px) {
+                .management-slider-section {
+                    padding: 60px 0 50px;
+                }
+
+                .slider-container {
+                    padding: 0 10px;
+                }
+
+                .slide-showcase-card {
+                    padding: 26px 18px;
+                    border-radius: 20px;
+                }
+
+                .slider-tabs-nav {
+                    gap: 8px;
+                }
+
+                .slider-tab-btn {
+                    padding: 7px 14px;
+                    font-size: 11.5px;
+                }
+
+                .slider-arrow {
+                    display: none;
+                }
+
+                .slide-info-pane h3 {
+                    font-size: 21px;
+                }
+
+                .slide-info-pane .slide-desc {
+                    font-size: 13.5px;
+                }
+
+                .benefit-chip {
+                    font-size: 12.5px;
+                }
+
+                .slide-primary-btn, .slide-outline-btn {
+                    width: 100%;
+                    justify-content: center;
+                    padding: 11px 20px;
+                    font-size: 12.5px;
+                }
+            }
         </style>
     </section>
 
-    <!-- Premium Management Systems Slider Section -->
+    <!-- Premium Management Systems Interactive Slider Section -->
     <div class="section management-slider-section" style="position: relative; z-index: 10;">
-        <div class="slider-container" style="position: relative;">
+        <div class="container" style="position: relative; z-index: 3;">
+            <div class="slider-section-heading">
+                <span class="section-kicker">✦ Accredited Certifications ✦</span>
+                <h2>Management System <span>Certifications</span></h2>
+                <p style="color: #cbd5e1; font-size: 15.5px; margin: 0 auto; max-width: 650px; line-height: 1.6;">
+                    AITF provides accredited ISO certification in <strong style="color: #38bdf8;">QMS (ISO 9001)</strong>, <strong style="color: #34d399;">EMS (ISO 14001)</strong>, and <strong style="color: #fbbf24;">OHSMS (ISO 45001)</strong>.
+                </p>
+            </div>
+
+            <!-- Standard Switcher Tabs -->
+            <div class="slider-tabs-nav">
+                <button type="button" class="slider-tab-btn active" data-slide="0">
+                    <i class="fa fa-award"></i> <span>ISO 9001:2015 (QMS)</span>
+                </button>
+                <button type="button" class="slider-tab-btn" data-slide="1">
+                    <i class="fa fa-leaf"></i> <span>ISO 14001:2015 (EMS)</span>
+                </button>
+                <button type="button" class="slider-tab-btn" data-slide="2">
+                    <i class="fa fa-shield"></i> <span>ISO 45001:2018 (OHSMS)</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="slider-container">
             <button class="slider-arrow prev-arrow" aria-label="Previous slide">
-                <span class="fa fa-angles-left"></span>
+                <i class="fa fa-chevron-left"></i>
             </button>
 
             <div class="slider-track">
                 <!-- Slide 1 - Quality Management System -->
-                <div class="slide active">
-                    <div class="slide-content">
-                        <div class="slide-icon">
-                            <i class="fa fa-award"></i>
+                <div class="slide slide-qms active">
+                    <div class="slide-showcase-card">
+                        <div class="slide-info-pane">
+                            <span class="slide-badge-tag badge-qms"><i class="fa fa-certificate"></i> ISO 9001:2015 Standard</span>
+                            <h3>QUALITY MANAGEMENT SYSTEM</h3>
+                            <p class="slide-desc">Ensures consistent product and service quality by meeting customer and statutory requirements through structured ISO 9001 processes.</p>
+                            
+                            <div class="slide-benefits-list">
+                                <div class="benefit-chip"><i class="fa fa-check-circle"></i> High Customer Satisfaction &amp; Retention</div>
+                                <div class="benefit-chip"><i class="fa fa-check-circle"></i> Process Efficiency &amp; Cost Reduction</div>
+                                <div class="benefit-chip"><i class="fa fa-check-circle"></i> Internationally Recognized Credibility</div>
+                            </div>
+
+                            <div class="slide-actions">
+                                <a href="contactUs.php" class="slide-primary-btn">Apply Online <i class="fa fa-arrow-right"></i></a>
+                                <a href="qms_iso_9001_01.php" class="slide-outline-btn">Standard Details <i class="fa fa-arrow-right"></i></a>
+                            </div>
                         </div>
-                        <h3>QUALITY MANAGEMENT SYSTEM</h3>
-                        <p class="slide-description">Ensures consistent product and service quality by meeting customer
-                            and regulatory requirements through ISO 9001 standards.</p>
-                        <a href="contactUs.php" class="slider-btn">APPLY NOW <i class="fa fa-arrow-right"></i></a>
+
+                        <div class="slide-visual-pane">
+                            <div class="visual-badge-wrap">
+                                <img src="aitfImages/qmscircle.webp" alt="ISO 9001 QMS Certification" class="visual-badge-img" loading="lazy">
+                                <div class="floating-trust-tag"><i class="fa fa-shield"></i> NABCB Accredited QMS</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Slide 2 - Environmental Management System -->
-                <div class="slide">
-                    <div class="slide-content">
-                        <div class="slide-icon">
-                            <i class="fa fa-leaf"></i>
+                <div class="slide slide-ems">
+                    <div class="slide-showcase-card">
+                        <div class="slide-info-pane">
+                            <span class="slide-badge-tag badge-ems"><i class="fa fa-leaf"></i> ISO 14001:2015 Standard</span>
+                            <h3>ENVIRONMENTAL MANAGEMENT SYSTEM</h3>
+                            <p class="slide-desc">Empowers organizations to minimize environmental footprint, ensure full legal compliance, and drive corporate sustainability under ISO 14001.</p>
+                            
+                            <div class="slide-benefits-list">
+                                <div class="benefit-chip"><i class="fa fa-check-circle"></i> Statutory &amp; Regulatory Environmental Compliance</div>
+                                <div class="benefit-chip"><i class="fa fa-check-circle"></i> Waste Reduction &amp; Resource Conservation</div>
+                                <div class="benefit-chip"><i class="fa fa-check-circle"></i> Elevated Green Credentials &amp; ESG Value</div>
+                            </div>
+
+                            <div class="slide-actions">
+                                <a href="contactUs.php" class="slide-primary-btn">Apply Online <i class="fa fa-arrow-right"></i></a>
+                                <a href="ems_iso_9001_02.php" class="slide-outline-btn">Standard Details <i class="fa fa-arrow-right"></i></a>
+                            </div>
                         </div>
-                        <h3>ENVIRONMENTAL MANAGEMENT SYSTEM</h3>
-                        <p class="slide-description">Helps organizations minimize environmental impact, comply with
-                            laws, and improve sustainability under ISO 14001.</p>
-                        <a href="contactUs.php" class="slider-btn">APPLY NOW <i class="fa fa-arrow-right"></i></a>
+
+                        <div class="slide-visual-pane">
+                            <div class="visual-badge-wrap">
+                                <img src="aitfImages/emscircle.webp" alt="ISO 14001 EMS Certification" class="visual-badge-img" loading="lazy">
+                                <div class="floating-trust-tag"><i class="fa fa-leaf"></i> NABCB Accredited EMS</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Slide 3 - Safety Management System -->
-                <div class="slide">
-                    <div class="slide-content">
-                        <div class="slide-icon">
-                            <i class="fa fa-shield-halved"></i>
+                <!-- Slide 3 - Occupational Health & Safety Management System -->
+                <div class="slide slide-ohsms">
+                    <div class="slide-showcase-card">
+                        <div class="slide-info-pane">
+                            <span class="slide-badge-tag badge-ohsms"><i class="fa fa-shield"></i> ISO 45001:2018 Standard</span>
+                            <h3>OCCUPATIONAL HEALTH &amp; SAFETY (OHSMS)</h3>
+                            <p class="slide-desc">Builds a proactive occupational health and safety culture to systematically eliminate workplace hazards and protect employee well-being.</p>
+                            
+                            <div class="slide-benefits-list">
+                                <div class="benefit-chip"><i class="fa fa-check-circle"></i> Workplace Hazard Identification &amp; Control</div>
+                                <div class="benefit-chip"><i class="fa fa-check-circle"></i> Reduction in Accidents &amp; Downtime</div>
+                                <div class="benefit-chip"><i class="fa fa-check-circle"></i> Robust Safety Culture &amp; Legal Protection</div>
+                            </div>
+
+                            <div class="slide-actions">
+                                <a href="contactUs.php" class="slide-primary-btn">Apply Online <i class="fa fa-arrow-right"></i></a>
+                                <a href="ohsms_iso_45001.php" class="slide-outline-btn">Standard Details <i class="fa fa-arrow-right"></i></a>
+                            </div>
                         </div>
-                        <h3>OCCUPATIONAL HEALTH &amp; SAFETY MANAGEMENT SYSTEM (OHSMS)</h3>
-                        <p class="slide-description">Builds a robust OH&S framework to reduce risks, protect employee
-                            well-being, and drive continual improvement under ISO 45001.</p>
-                        <a href="contactUs.php" class="slider-btn">APPLY NOW <i class="fa fa-arrow-right"></i></a>
+
+                        <div class="slide-visual-pane">
+                            <div class="visual-badge-wrap">
+                                <img src="aitfImages/ohsms_circle.webp" alt="ISO 45001 OHSMS Certification" class="visual-badge-img" loading="lazy">
+                                <div class="floating-trust-tag"><i class="fa fa-shield"></i> NABCB Accredited OHSMS</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
             </div>
 
             <button class="slider-arrow next-arrow" aria-label="Next slide">
-                <span class="fa fa-angles-right"></span>
+                <i class="fa fa-chevron-right"></i>
             </button>
 
             <div class="slider-nav">
-                <span class="slider-dot" data-slide="0"></span>
+                <span class="slider-dot active" data-slide="0"></span>
                 <span class="slider-dot" data-slide="1"></span>
                 <span class="slider-dot" data-slide="2"></span>
             </div>
-
-            <!-- Box Navigation Controls Removed -->
         </div>
-        <div class="slider-glow"></div>
     </div>
     <!-- end section -->
 
     <!-- NABCB Accredited ISO Certification Section -->
-    <div class="section layout_padding nabcb-section"
-        style="position: relative; padding: 60px 0 !important; background: linear-gradient(135deg, #0a192f 0%, #172a45 100%);">
-        <div class="nabcb-particles" id="nabcb-particles"></div>
+    <div class="section layout_padding nabcb-section">
         <div class="container" style="position: relative; z-index: 2;">
             <div class="row">
                 <div class="col-md-12 text-center">
@@ -2693,62 +3550,33 @@ session_start();
                 </div>
             </div>
 
-            <div class="row">
-                <div class="col-md-10 col-md-offset-1">
-                    <div class="info-card">
-                        <div class="info-card-inner">
-                            <div class="info-card-front">
-                                <div class="icon-wrapper">
-                                    <i class="fa fa-award"></i>
-                                </div>
-                                <h3>NABCB Accreditation</h3>
-                                <p>India's Premier Accreditation Body</p>
-                                <div class="hover-indicator">
-                                    <span>Hover to Learn More</span>
-                                    <i class="fa fa-arrow-down"></i>
-                                </div>
-                            </div>
-                            <div class="info-card-back">
-                                <p>The National Accreditation Board for Certification Bodies (NABCB) is a key entity in
-                                    India's quality infrastructure, serving as a constituent board of the Quality
-                                    Council of India (QCI).</p>
-                            </div>
-                        </div>
+            <!-- 3 NABCB Feature Cards -->
+            <div class="nabcb-cards-grid">
+                <div class="nabcb-feature-card">
+                    <div class="icon-wrapper">
+                        <i class="fa fa-award"></i>
                     </div>
+                    <h3>NABCB Accreditation</h3>
+                    <div class="card-subtitle">India's Premier Accreditation Body</div>
+                    <p class="card-body-text">The National Accreditation Board for Certification Bodies (NABCB) is a key entity in India's quality infrastructure, serving as a constituent board of the Quality Council of India (QCI).</p>
+                </div>
 
-                    <div class="info-card">
-                        <div class="info-card-inner">
-                            <div class="info-card-front">
-                                <div class="icon-wrapper">
-                                    <i class="fa fa-globe"></i>
-                                </div>
-                                <h3>International Recognition</h3>
-                                <p>Globally Accepted Certifications</p>
-                            </div>
-                            <div class="info-card-back">
-                                <p>A certificate issued by an AITF that is accredited by NABCB and issued with the NABCB
-                                    & IAF MLA mark is accepted in all economies, as the accreditation body is an IAF MLA
-                                    signatory.</p>
-                            </div>
-                        </div>
+                <div class="nabcb-feature-card">
+                    <div class="icon-wrapper">
+                        <i class="fa fa-globe"></i>
                     </div>
+                    <h3>International Recognition</h3>
+                    <div class="card-subtitle">Globally Accepted Certifications</div>
+                    <p class="card-body-text">A certificate issued by an AITF that is accredited by NABCB and issued with the NABCB &amp; IAF MLA mark is accepted in all economies, as the accreditation body is an IAF MLA signatory.</p>
+                </div>
 
-                    <div class="info-card">
-                        <div class="info-card-inner">
-                            <div class="info-card-front">
-                                <div class="icon-wrapper">
-                                    <i class="fa fa-check-circle"></i>
-                                </div>
-                                <h3>Quality Assurance</h3>
-                                <p>Trusted Certification Process</p>
-                            </div>
-                            <div class="info-card-back">
-                                <p>NABCB assesses the competence and impartiality of CABs (AITF) based on international
-                                    standards and its own criteria, ensuring that the certificates and reports issued
-                                    are reliable and trustworthy.</p>
-                            </div>
-                        </div>
+                <div class="nabcb-feature-card">
+                    <div class="icon-wrapper">
+                        <i class="fa fa-check-circle"></i>
                     </div>
+                    <h3>Quality Assurance</h3>
+                    <div class="card-subtitle">Trusted Certification Process</div>
+                    <p class="card-body-text">NABCB assesses the competence and impartiality of CABs (AITF) based on international standards and its own criteria, ensuring that the certificates and reports issued are reliable and trustworthy.</p>
                 </div>
             </div>
 
@@ -2759,10 +3587,10 @@ session_start();
                         <div class="certificate-showcase-grid">
                             <div class="certificate-item">
                                 <div class="certificate-img-container">
-                                    <img src="images/certificate_1.png" alt="ISO 9001:2015 Certification"
-                                        class="certificate-thumb">
+                                    <img src="images/certificate_1.webp" alt="ISO 9001:2015 Certification"
+                                        class="certificate-thumb" loading="lazy" decoding="async">
                                     <div class="certificate-hover">
-                                        <a href="images/certificate_1.png" class="view-cert-btn"
+                                        <a href="images/certificate_1.webp" class="view-cert-btn"
                                             data-lightbox="cert-gallery" data-title="ISO 9001:2015 Certification">
                                             <i class="fa fa-search-plus"></i>
                                             <span>View</span>
@@ -2775,10 +3603,10 @@ session_start();
 
                             <div class="certificate-item">
                                 <div class="certificate-img-container">
-                                    <img src="images/ally_cert 3.png" alt="ISO 14001:2015 Certification"
-                                        class="certificate-thumb">
+                                    <img src="images/ally_cert_3.webp" alt="ISO 14001:2015 Certification"
+                                        class="certificate-thumb" loading="lazy" decoding="async">
                                     <div class="certificate-hover">
-                                        <a href="images/certificate_2.png" class="view-cert-btn"
+                                        <a href="images/ally_cert_3.webp" class="view-cert-btn"
                                             data-lightbox="cert-gallery" data-title="ISO 14001:2015 Certification">
                                             <i class="fa fa-search-plus"></i>
                                             <span>View</span>
@@ -2791,10 +3619,10 @@ session_start();
 
                             <div class="certificate-item">
                                 <div class="certificate-img-container">
-                                    <img src="images/certificate_3.png" alt="ISO 45001:2018 Certification"
-                                        class="certificate-thumb">
+                                    <img src="images/certificate_3.webp" alt="ISO 45001:2018 Certification"
+                                        class="certificate-thumb" loading="lazy" decoding="async">
                                     <div class="certificate-hover">
-                                        <a href="images/certificate_3.png" class="view-cert-btn"
+                                        <a href="images/certificate_3.webp" class="view-cert-btn"
                                             data-lightbox="cert-gallery" data-title="ISO 45001:2018 Certification">
                                             <i class="fa fa-search-plus"></i>
                                             <span>View</span>
@@ -2809,29 +3637,10 @@ session_start();
                 </div>
             </div>
         </div>
-
-        <div class="floating-shapes">
-            <div class="shape shape-1"></div>
-            <div class="shape shape-2"></div>
-            <div class="shape shape-3"></div>
-        </div>
     </div>
 
 
     <style>
-        /* NABCB Section - Larger Certification Text */
-        .certificate-item h4 {
-            font-size: 24px !important;
-            font-weight: 700;
-            margin: 15px 0 5px;
-        }
-
-        .certificate-item p {
-            font-size: 20px !important;
-            font-weight: 500;
-            color: #e0e0e0;
-        }
-
         /* AITF Intro Section Styling */
         .aitf-intro {
             font-family: 'Montserrat', 'Poppins', sans-serif;
@@ -2894,12 +3703,12 @@ session_start();
             }
         }
 
-        /* NABCB Section Styling */
+        /* NABCB Section Styling - Ultra Clean, Luxury & High-Impact Glassmorphism */
         .nabcb-section {
             position: relative;
-            background: linear-gradient(135deg, #0a192f 0%, #172a45 100%);
+            background: radial-gradient(circle at 50% 15%, #0d2847 0%, #081a33 50%, #030c18 100%) !important;
             color: #fff;
-            padding: 60px 0 !important;
+            padding: 85px 0 80px !important;
             margin: 0;
             overflow: hidden;
             z-index: 1;
@@ -2914,180 +3723,187 @@ session_start();
             left: 0;
             right: 0;
             bottom: 0;
-            background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxkZWZzPjxwYXR0ZXJuIGlkPSJwYXR0ZXJuIiB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgcGF0dGVyblRyYW5zZm9ybT0icm90YXRlKDQ1KSI+PHJlY3Qgd2lkdGg9IjUwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMDMpIi8+PC9wYXR0ZXNuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI3BhdHRlcm4pIi8+PC9zdmc+');
-            z-index: -1;
-            opacity: 0.3;
+            background-image: 
+                radial-gradient(rgba(56, 189, 248, 0.08) 1px, transparent 1px);
+            background-size: 32px 32px;
+            z-index: 0;
+            pointer-events: none;
         }
 
         .section-header {
-            margin-bottom: 60px;
+            margin-bottom: 45px;
             position: relative;
             z-index: 2;
         }
 
         .section-tag {
-            display: inline-block;
-            background: rgba(0, 173, 239, 0.2);
-            color: #00adef;
-            padding: 8px 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(56, 189, 248, 0.12);
+            color: #38bdf8;
+            padding: 6px 18px;
             border-radius: 50px;
-            font-size: 14px;
-            font-weight: 600;
-            letter-spacing: 1px;
-            margin-bottom: 20px;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 1.5px;
+            margin-bottom: 15px;
             text-transform: uppercase;
-            border: 1px solid rgba(0, 173, 239, 0.3);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         }
 
         .section-title {
-            font-size: 42px;
+            font-size: clamp(28px, 4vw, 42px);
             font-weight: 800;
-            margin-bottom: 20px;
-            background: linear-gradient(90deg, #fff, #64f0ff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 0 0 30px rgba(100, 240, 255, 0.3);
+            margin-bottom: 15px;
+            color: #ffffff;
+            letter-spacing: -0.5px;
+            text-shadow: none;
             position: relative;
         }
 
         .section-title .highlight {
-            color: #ffd700;
-            -webkit-text-fill-color: #ffd700;
+            background: linear-gradient(135deg, #ffd700 0%, #f59e0b 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
         .title-divider {
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 25px auto 40px;
-            max-width: 400px;
+            gap: 12px;
+            margin: 15px auto 35px;
+            max-width: 220px;
         }
 
         .divider-line {
-            height: 2px;
-            background: linear-gradient(90deg, transparent, rgba(0, 173, 239, 0.5), transparent);
+            height: 1.5px;
+            background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.6), transparent);
             flex: 1;
         }
 
         .divider-icon {
-            color: #00adef;
-            margin: 0 15px;
-            font-size: 20px;
-            opacity: 0.7;
+            color: #f59e0b;
+            font-size: 14px;
         }
 
-        /* Info Cards */
-        .info-card {
-            perspective: 1000px;
-            margin-bottom: 30px;
-            height: 220px;
-        }
-
-        .info-card-inner {
+        /* 3 NABCB Feature Cards Grid */
+        .nabcb-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            margin-bottom: 55px;
             position: relative;
-            width: 100%;
-            height: 100%;
-            text-align: center;
-            transition: transform 0.8s;
-            transform-style: preserve-3d;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            border-radius: 15px;
+            z-index: 2;
         }
 
-        .info-card:hover .info-card-inner {
-            transform: rotateY(180deg);
-        }
-
-        .info-card-front,
-        .info-card-back {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            -webkit-backface-visibility: hidden;
-            backface-visibility: hidden;
-            border-radius: 15px;
-            padding: 30px;
+        .nabcb-feature-card {
+            background: linear-gradient(145deg, rgba(15, 23, 42, 0.85) 0%, rgba(30, 41, 59, 0.65) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 22px;
+            padding: 34px 26px;
             display: flex;
             flex-direction: column;
-            justify-content: center;
             align-items: center;
-        }
-
-        .info-card-front {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .info-card-back {
-            background: linear-gradient(135deg, #00adef 0%, #0077b6 100%);
-            color: white;
-            transform: rotateY(180deg);
-            justify-content: center;
             text-align: center;
-            padding: 25px;
-            font-size: 15px;
-            line-height: 1.6;
+            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            transition: all 0.35s ease;
+            position: relative;
+            overflow: hidden;
         }
 
-        .icon-wrapper {
-            width: 70px;
-            height: 70px;
-            background: rgba(0, 173, 239, 0.1);
-            border-radius: 50%;
+        .nabcb-feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #38bdf8, #3b82f6);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .nabcb-feature-card:hover {
+            transform: translateY(-6px);
+            border-color: rgba(56, 189, 248, 0.4);
+            box-shadow: 0 25px 50px -10px rgba(0, 0, 0, 0.6), 0 0 25px rgba(56, 189, 248, 0.15);
+        }
+
+        .nabcb-feature-card:hover::before {
+            opacity: 1;
+        }
+
+        .nabcb-feature-card .icon-wrapper {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.2) 0%, rgba(56, 189, 248, 0.1) 100%);
+            border-radius: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
             margin-bottom: 20px;
-            border: 2px solid rgba(0, 173, 239, 0.3);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+            transition: all 0.3s ease;
         }
 
-        .icon-wrapper i {
-            font-size: 30px;
-            color: #00adef;
+        .nabcb-feature-card:hover .icon-wrapper {
+            transform: scale(1.08);
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.35) 0%, rgba(56, 189, 248, 0.2) 100%);
+            border-color: #38bdf8;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
         }
 
-        .info-card h3 {
+        .nabcb-feature-card .icon-wrapper i {
+            font-size: 26px;
+            color: #38bdf8;
+        }
+
+        .nabcb-feature-card h3 {
             font-size: 20px;
+            font-weight: 800;
+            margin: 0 0 6px;
+            color: #ffffff;
+            letter-spacing: -0.2px;
+        }
+
+        .nabcb-feature-card .card-subtitle {
+            color: #38bdf8;
+            font-size: 13.5px;
             font-weight: 700;
-            margin-bottom: 10px;
-            color: #fff;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
-        .info-card p {
-            color: #b3e0ff;
-            font-size: 14px;
+        .nabcb-feature-card .card-body-text {
+            color: #cbd5e1;
+            font-size: 14.5px;
+            line-height: 1.65;
             margin: 0;
-        }
-
-        .hover-indicator {
-            margin-top: 15px;
-            font-size: 12px;
-            color: rgba(255, 255, 255, 0.6);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .hover-indicator i {
-            margin-top: 5px;
-            animation: bounce 2s infinite;
+            font-weight: 400;
         }
 
         /* Certificate Showcase */
         .certificate-showcase {
-            margin-top: 60px;
+            margin-top: 20px;
             position: relative;
             z-index: 2;
         }
 
         .showcase-title {
-            font-size: 28px;
-            font-weight: 700;
-            margin-bottom: 40px;
-            color: #fff;
+            font-size: clamp(22px, 2.5vw, 30px);
+            font-weight: 800;
+            margin-bottom: 35px;
+            color: #ffffff;
             position: relative;
             display: inline-block;
+            letter-spacing: -0.3px;
         }
 
         .showcase-title::after {
@@ -3096,71 +3912,56 @@ session_start();
             bottom: -10px;
             left: 50%;
             transform: translateX(-50%);
-            width: 60px;
+            width: 50px;
             height: 3px;
-            background: linear-gradient(90deg, #00adef, #00f2fe);
+            background: linear-gradient(90deg, #38bdf8, #f59e0b);
             border-radius: 2px;
         }
 
         .certificate-showcase-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 40px;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 28px;
             margin: 0 auto;
-            max-width: 1300px;
-            padding: 30px 20px;
+            max-width: 1200px;
         }
 
         .certificate-item {
-            background: rgba(10, 25, 47, 0.7);
-            border-radius: 12px;
+            background: linear-gradient(145deg, rgba(15, 23, 42, 0.85) 0%, rgba(30, 41, 59, 0.65) 100%);
+            border-radius: 20px;
             overflow: hidden;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            border: 1px solid rgba(100, 255, 218, 0.1);
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
-            backdrop-filter: blur(8px);
-            position: relative;
-            z-index: 1;
-        }
-
-        .certificate-item::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, rgba(0, 242, 254, 0.1) 0%, rgba(79, 172, 254, 0.1) 100%);
-            z-index: -1;
-            opacity: 0;
-            transition: opacity 0.4s ease;
-        }
-
-        .certificate-item:hover::before {
-            opacity: 1;
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(10px);
+            padding: 16px 16px 22px;
+            text-align: center;
         }
 
         .certificate-item:hover {
-            transform: translateY(-8px) scale(1.02);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-            border-color: rgba(100, 255, 218, 0.3);
+            transform: translateY(-6px);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5), 0 0 20px rgba(56, 189, 248, 0.2);
+            border-color: rgba(56, 189, 248, 0.4);
         }
 
         .certificate-img-container {
             position: relative;
             overflow: hidden;
-            height: 280px;
-            background: #000;
+            height: 240px;
+            background: #ffffff;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
         }
 
         .certificate-thumb {
             width: 100%;
             height: 100%;
             object-fit: contain;
-            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-            background: #fff;
-            padding: 15px;
-            box-sizing: border-box;
+            transition: transform 0.4s ease;
         }
 
         .certificate-hover {
@@ -3169,13 +3970,14 @@ session_start();
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(10, 25, 47, 0.9);
+            background: rgba(15, 23, 42, 0.85);
             display: flex;
             align-items: center;
             justify-content: center;
             opacity: 0;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            backdrop-filter: blur(5px);
+            transition: opacity 0.3s ease;
+            backdrop-filter: blur(4px);
+            border-radius: 12px;
         }
 
         .certificate-item:hover .certificate-hover {
@@ -3189,82 +3991,72 @@ session_start();
         .view-cert-btn {
             display: inline-flex;
             align-items: center;
-            padding: 12px 30px;
-            background: transparent;
-            color: #64ffda;
-            border: 2px solid #64ffda;
-            border-radius: 4px;
+            gap: 8px;
+            padding: 10px 22px;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: #ffffff;
+            border-radius: 50px;
             text-decoration: none;
-            font-weight: 500;
-            font-size: 14px;
+            font-weight: 700;
+            font-size: 13px;
             text-transform: uppercase;
-            letter-spacing: 1.5px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-            z-index: 1;
-        }
-
-        .view-cert-btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 0;
-            height: 100%;
-            background: rgba(100, 255, 218, 0.1);
-            transition: width 0.3s ease;
-            z-index: -1;
-        }
-
-        .view-cert-btn:hover::before {
-            width: 100%;
-        }
-
-        .view-cert-btn i {
-            margin-right: 10px;
-            font-size: 16px;
-            transition: transform 0.3s ease;
+            letter-spacing: 0.8px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
         }
 
         .view-cert-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(100, 255, 218, 0.3);
-            color: #64ffda;
-        }
-
-        .view-cert-btn:hover i {
-            transform: scale(1.2);
+            color: #ffffff;
+            text-decoration: none;
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.6);
         }
 
         .certificate-item h4 {
-            color: #64ffda;
-            font-size: 20px;
-            font-weight: 600;
-            margin: 25px 25px 8px;
-            letter-spacing: 0.5px;
+            color: #ffffff;
+            font-size: 19px !important;
+            font-weight: 800;
+            margin: 18px 0 4px;
+            letter-spacing: -0.2px;
         }
 
         .certificate-item p {
-            color: #ccd6f6;
-            font-size: 15px;
-            margin: 0 25px 25px;
-            font-size: 28px;
+            color: #94a3b8;
+            font-size: 14px !important;
+            margin: 0;
+            font-weight: 500;
         }
 
-        .section-tag {
-            font-size: 12px;
-            padding: 6px 15px;
+        @media (max-width: 991px) {
+            .nabcb-section {
+                padding: 60px 0 !important;
+            }
+
+            .nabcb-cards-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                margin-bottom: 40px;
+            }
+
+            .certificate-showcase-grid {
+                grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+                gap: 22px;
+            }
         }
 
-        .certificate-badges {
-            flex-direction: column;
-            align-items: center;
-        }
+        @media (max-width: 575px) {
+            .section-tag {
+                font-size: 11.5px;
+                padding: 5px 14px;
+            }
 
-        .badge {
-            width: 180px;
-        }
+            .nabcb-feature-card {
+                padding: 26px 18px;
+            }
+
+            .certificate-img-container {
+                height: 200px;
+            }
         }
     </style>
 
@@ -3284,22 +4076,25 @@ session_start();
                 });
             });
 
-            // Add parallax effect to floating shapes
+            // Add lightweight parallax effect to floating shapes
             const shapes = document.querySelectorAll('.floating-shapes .shape');
-
-            document.addEventListener('mousemove', (e) => {
-                const x = e.clientX / window.innerWidth;
-                const y = e.clientY / window.innerHeight;
-
-                shapes.forEach((shape, index) => {
-                    const speed = (index + 1) * 0.5;
-                    const xMove = (x - 0.5) * 20 * speed;
-                    const yMove = (y - 0.5) * 20 * speed;
-
-                    shape.style.transform = `translate(${xMove}px, ${yMove}px) ${window.getComputedStyle(shape).transform.split(' ').slice(2).join(' ')}`;
-                });
-            });
-
+            if (shapes.length > 0) {
+                let ticking = false;
+                document.addEventListener('mousemove', (e) => {
+                    if (!ticking) {
+                        window.requestAnimationFrame(() => {
+                            const x = (e.clientX / window.innerWidth - 0.5) * 15;
+                            const y = (e.clientY / window.innerHeight - 0.5) * 15;
+                            shapes.forEach((shape, index) => {
+                                const speed = (index + 1) * 0.4;
+                                shape.style.transform = `translate3d(${x * speed}px, ${y * speed}px, 0)`;
+                            });
+                            ticking = false;
+                        });
+                        ticking = true;
+                    }
+                }, { passive: true });
+            }
         });
     </script>
     <!-- End NABCB Section -->
@@ -3413,6 +4208,15 @@ session_start();
                     });
                 });
 
+                // Add click events to standard tabs
+                const tabBtns = document.querySelectorAll('.slider-tab-btn');
+                tabBtns.forEach((tab, index) => {
+                    tab.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        goToSlide(index);
+                    });
+                });
+
                 // Add click events to box navigation items
                 const boxNavItems = document.querySelectorAll('.box-nav-item');
                 boxNavItems.forEach((item, index) => {
@@ -3424,25 +4228,29 @@ session_start();
 
                 // Pause on hover, resume on leave (desktop)
                 const sliderContainer = document.querySelector('.slider-container');
-                sliderContainer.addEventListener('mouseenter', pauseSlide);
-                sliderContainer.addEventListener('mouseleave', startAutoSlide);
+                if (sliderContainer) {
+                    sliderContainer.addEventListener('mouseenter', pauseSlide);
+                    sliderContainer.addEventListener('mouseleave', startAutoSlide);
+                }
 
                 // Enhanced touch events for mobile with better performance
                 let touchStartX = 0;
                 let touchEndX = 0;
                 let touchStartTime = 0;
 
-                sliderTrack.addEventListener('touchstart', (e) => {
-                    touchStartX = e.changedTouches[0].screenX;
-                    touchStartTime = Date.now();
-                    pauseSlide();
-                }, { passive: true });
+                if (sliderTrack) {
+                    sliderTrack.addEventListener('touchstart', (e) => {
+                        touchStartX = e.changedTouches[0].screenX;
+                        touchStartTime = Date.now();
+                        pauseSlide();
+                    }, { passive: true });
 
-                sliderTrack.addEventListener('touchend', (e) => {
-                    touchEndX = e.changedTouches[0].screenX;
-                    handleSwipe();
-                    startAutoSlide();
-                }, { passive: true });
+                    sliderTrack.addEventListener('touchend', (e) => {
+                        touchEndX = e.changedTouches[0].screenX;
+                        handleSwipe();
+                        startAutoSlide();
+                    }, { passive: true });
+                }
 
                 function handleSwipe() {
                     const swipeThreshold = 50;
@@ -3473,11 +4281,11 @@ session_start();
                 // Get all slides and navigation elements
                 const allSlides = document.querySelectorAll('.slide');
                 const allDots = document.querySelectorAll('.slider-dot');
+                const allTabs = document.querySelectorAll('.slider-tab-btn');
                 const boxNavItems = document.querySelectorAll('.box-nav-item');
 
                 // Validate slides exist
                 if (!allSlides || allSlides.length === 0) {
-                    console.error('No slides found');
                     return;
                 }
 
@@ -3486,31 +4294,20 @@ session_start();
                 newIndex = newIndex % totalSlides;
                 if (newIndex < 0) newIndex = totalSlides - 1;
 
-                // Always update for infinite scroll (remove the check that prevents same index)
-                console.log('Updating to slide:', newIndex, 'Total slides:', totalSlides);
-
-                // Clear all classes first to prevent blur issues
-                allSlides.forEach(slide => {
-                    slide.classList.remove('active', 'prev', 'next');
-                });
-
-                // Force immediate update without requestAnimationFrame for reliability
                 // Update current slide index
-                const oldSlide = currentSlide;
                 currentSlide = newIndex;
 
-                // Update slide classes for smooth 3D transitions
+                // Update slide classes
                 allSlides.forEach((slide, index) => {
-                    if (index === currentSlide) {
-                        slide.classList.add('active');
-                    } else if (index === (currentSlide - 1 + totalSlides) % totalSlides) {
-                        slide.classList.add('prev');
-                    } else if (index === (currentSlide + 1) % totalSlides) {
-                        slide.classList.add('next');
-                    }
+                    slide.classList.toggle('active', index === currentSlide);
                 });
 
-                // Update dots with smooth transitions
+                // Update standard tabs
+                allTabs.forEach((tab, index) => {
+                    tab.classList.toggle('active', index === newIndex);
+                });
+
+                // Update dots
                 allDots.forEach((dot, index) => {
                     dot.classList.toggle('active', index === newIndex);
                 });
@@ -3519,8 +4316,6 @@ session_start();
                 boxNavItems.forEach((item, index) => {
                     item.classList.toggle('active', index === newIndex);
                 });
-
-                console.log('Slide transition complete:', currentSlide);
             }
 
             // Next slide with robust boundary handling
@@ -4343,55 +5138,16 @@ session_start();
                         const progress = self.progress * 100;
                         const spine = document.querySelector('.timeline-spine-progress');
                         if (spine) {
-                            spine.style.width = progress + '%';
+                            if (window.innerWidth <= 991) {
+                                spine.style.height = progress + '%';
+                                spine.style.width = '3px';
+                            } else {
+                                spine.style.width = progress + '%';
+                                spine.style.height = '4px';
+                            }
                         }
                     }
                 });
-            }
-        });
-
-        // Animate welcome text characters
-        document.addEventListener('DOMContentLoaded', function () {
-            const chars = document.querySelectorAll('.welcome-3d-char');
-            chars.forEach((char, index) => {
-                const delay = Math.random() * 0.5;
-                char.style.animation = `float 3s ease-in-out ${delay}s infinite`;
-
-                char.addEventListener('mousemove', (e) => {
-                    const rect = char.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    const y = e.clientY - rect.top;
-                    const centerX = rect.width / 2;
-                    const centerY = rect.height / 2;
-                    const angleX = (y - centerY) * 0.05;
-                    const angleY = (centerX - x) * 0.05;
-                    char.style.transform = `rotateX(${angleX}deg) rotateY(${angleY}deg) translateZ(20px)`;
-                });
-
-                char.addEventListener('mouseleave', () => {
-                    char.style.transform = 'rotateX(0) rotateY(0) translateZ(0)';
-                });
-            });
-
-            const particlesContainer = document.querySelector('.welcome-3d-particles');
-            if (particlesContainer) {
-                for (let i = 0; i < 20; i++) {
-                    const particle = document.createElement('div');
-                    particle.className = 'floating-particle';
-                    particle.style.cssText = `
-                        position: absolute;
-                        width: ${Math.random() * 10 + 5}px;
-                        height: ${Math.random() * 10 + 5}px;
-                        background: rgba(255, 255, 255, ${Math.random() * 0.5 + 0.1});
-                        border-radius: 50%;
-                        left: ${Math.random() * 100}%;
-                        top: ${Math.random() * 100}%;
-                        animation: float ${Math.random() * 5 + 5}s ease-in-out infinite;
-                        animation-delay: ${Math.random() * 5}s;
-                        opacity: ${Math.random() * 0.5 + 0.1};
-                    `;
-                    particlesContainer.appendChild(particle);
-                }
             }
         });
 
@@ -4486,7 +5242,7 @@ session_start();
     letter-spacing: 0.5px;
     padding: 12px 10px;
     writing-mode: vertical-rl;
-    text-orientation: mixed;
+    transform: rotate(180deg);
     cursor: pointer;
     outline: none;
     transition: background 0.2s, padding-right 0.2s;
@@ -4531,7 +5287,7 @@ session_start();
     letter-spacing: 0.5px;
     padding: 12px 10px;
     writing-mode: vertical-rl;
-    text-orientation: mixed;
+    transform: rotate(180deg);
     cursor: pointer;
     outline: none;
     transition: background 0.2s, padding-left 0.2s;
@@ -4660,16 +5416,30 @@ session_start();
     font-size: 12px;
     color: #64748b;
 }
+
+@media (max-width: 768px) {
+    .quick-forms-panel, .quick-links-panel {
+        width: 88vw;
+        max-width: 320px;
+    }
+
+    .quick-forms-tab, .quick-links-tab {
+        padding: 8px 5px !important;
+        font-size: 9.5px !important;
+        top: auto !important;
+        bottom: 30px !important;
+    }
+}
 </style>
 
 <!-- Quick Forms (Right) -->
-<button type="button" class="quick-forms-tab" id="quickFormsTab" title="Quick Link (fill online-form)">
-    Quick Link (fill online-form)
+<button type="button" class="quick-forms-tab" id="quickFormsTab" title="Quick Link (Fill form online)">
+    Quick Link (Fill form online)
 </button>
 
 <div class="quick-forms-panel" id="quickFormsPanel" aria-hidden="true">
     <div class="quick-forms-panel-header">
-        <h4 class="quick-forms-panel-title">Quick Link (fill online-form)</h4>
+        <h4 class="quick-forms-panel-title">Quick Link (Fill form online)</h4>
         <button type="button" class="quick-forms-close" id="quickFormsClose" aria-label="Close">&times;</button>
     </div>
     <div class="quick-forms-panel-body">
@@ -4689,13 +5459,13 @@ session_start();
 </div>
 
 <!-- Quick Links (Left) -->
-<button type="button" class="quick-links-tab" id="quickLinksTab" title="Quick Link (Download form)">
-    Quick Link (Download form)
+<button type="button" class="quick-links-tab" id="quickLinksTab" title="Quick Link (Fill form offline)">
+    Quick Link (Fill form offline)
 </button>
 
 <div class="quick-links-panel" id="quickLinksPanel" aria-hidden="true">
     <div class="quick-links-panel-header">
-        <h4 class="quick-links-panel-title">Quick Link (Download form)</h4>
+        <h4 class="quick-links-panel-title">Quick Link (Fill form offline)</h4>
         <button type="button" class="quick-links-close" id="quickLinksClose" aria-label="Close">&times;</button>
     </div>
     <div class="quick-links-panel-body">

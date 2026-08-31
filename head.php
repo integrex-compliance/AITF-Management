@@ -25,6 +25,7 @@
 <script src="js/jquery.flexdatalist.js"></script>
 <script src="js/app.js"></script>
 <script type="text/javascript" src="./tinymce/tinymce.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>
