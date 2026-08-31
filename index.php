@@ -3414,13 +3414,13 @@ session_start();
             <!-- Standard Switcher Tabs -->
             <div class="slider-tabs-nav">
                 <button type="button" class="slider-tab-btn active" data-slide="0">
-                    <i class="fa fa-award"></i> <span>ISO 9001:2015 (QMS)</span>
+                    <i class="fa fa-award"></i> <span>ISO 9001 (QMS)</span>
                 </button>
                 <button type="button" class="slider-tab-btn" data-slide="1">
-                    <i class="fa fa-leaf"></i> <span>ISO 14001:2015 (EMS)</span>
+                    <i class="fa fa-leaf"></i> <span>ISO 14001 (EMS)</span>
                 </button>
                 <button type="button" class="slider-tab-btn" data-slide="2">
-                    <i class="fa fa-shield"></i> <span>ISO 45001:2018 (OHSMS)</span>
+                    <i class="fa fa-shield"></i> <span>ISO 45001 (OHSMS)</span>
                 </button>
             </div>
         </div>
@@ -3435,7 +3435,7 @@ session_start();
                 <div class="slide slide-qms active">
                     <div class="slide-showcase-card">
                         <div class="slide-info-pane">
-                            <span class="slide-badge-tag badge-qms"><i class="fa fa-certificate"></i> ISO 9001:2015 Standard</span>
+                            <span class="slide-badge-tag badge-qms"><i class="fa fa-certificate"></i> ISO 9001 Standard</span>
                             <h3>QUALITY MANAGEMENT SYSTEM</h3>
                             <p class="slide-desc">Ensures consistent product and service quality by meeting customer and statutory requirements through structured ISO 9001 processes.</p>
                             
@@ -3464,7 +3464,7 @@ session_start();
                 <div class="slide slide-ems">
                     <div class="slide-showcase-card">
                         <div class="slide-info-pane">
-                            <span class="slide-badge-tag badge-ems"><i class="fa fa-leaf"></i> ISO 14001:2015 Standard</span>
+                            <span class="slide-badge-tag badge-ems"><i class="fa fa-leaf"></i> ISO 14001 Standard</span>
                             <h3>ENVIRONMENTAL MANAGEMENT SYSTEM</h3>
                             <p class="slide-desc">Empowers organizations to minimize environmental footprint, ensure full legal compliance, and drive corporate sustainability under ISO 14001.</p>
                             
@@ -3493,7 +3493,7 @@ session_start();
                 <div class="slide slide-ohsms">
                     <div class="slide-showcase-card">
                         <div class="slide-info-pane">
-                            <span class="slide-badge-tag badge-ohsms"><i class="fa fa-shield"></i> ISO 45001:2018 Standard</span>
+                            <span class="slide-badge-tag badge-ohsms"><i class="fa fa-shield"></i> ISO 45001 Standard</span>
                             <h3>OCCUPATIONAL HEALTH &amp; SAFETY (OHSMS)</h3>
                             <p class="slide-desc">Builds a proactive occupational health and safety culture to systematically eliminate workplace hazards and protect employee well-being.</p>
                             
