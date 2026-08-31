@@ -23,8 +23,10 @@
     <?php endif; ?>
 
     <!-- Site Icons -->
-    <link rel="shortcut icon" href="aitfImages/aitfasset/updatedfavicon.png" type="image/png" />
-    <link rel="apple-touch-icon" href="aitfImages/aitfasset/updatedfavicon.png" />
+    <link rel="icon" type="image/png" href="aitfImages/aitfasset/updatedfavicon.png?v=2" />
+    <link rel="shortcut icon" href="aitfImages/aitfasset/updatedfavicon.png?v=2" type="image/png" />
+    <link rel="apple-touch-icon" href="aitfImages/aitfasset/updatedfavicon.png?v=2" />
+    <link rel="icon" type="image/x-icon" href="aitfImages/fav.ico" />
     
     <!-- Structured Data -->
     <script type="application/ld+json">

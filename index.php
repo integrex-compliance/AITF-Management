@@ -5242,7 +5242,6 @@ session_start();
     letter-spacing: 0.5px;
     padding: 12px 10px;
     writing-mode: vertical-rl;
-    transform: rotate(180deg);
     cursor: pointer;
     outline: none;
     transition: background 0.2s, padding-right 0.2s;
