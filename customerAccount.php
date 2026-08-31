@@ -3807,22 +3807,20 @@ if ($currentRole === 'client' || $currentRole === 'external') {
         }
         .service_details a i.fa-pencil-square,
         .service_details_201 a i.fa-pencil-square,
-        a i.fa-pencil-square,
-        a i.fa-edit {
+        .service_details a i.fa-edit,
+        .service_details_201 a i.fa-edit {
             color: #0d4d8b !important;
             font-size: 11px !important;
             transition: transform 0.15s ease, color 0.15s ease;
         }
         .service_details a i.fa-file-pdf-o,
-        .service_details_201 a i.fa-file-pdf-o,
-        a i.fa-file-pdf-o {
+        .service_details_201 a i.fa-file-pdf-o {
             color: #dc2626 !important;
             font-size: 11px !important;
             transition: transform 0.15s ease, color 0.15s ease;
         }
         .service_details a i.fa-envelope-o,
-        .service_details_201 a i.fa-envelope-o,
-        a i.fa-envelope-o {
+        .service_details_201 a i.fa-envelope-o {
             color: #059669 !important;
             font-size: 11px !important;
             transition: transform 0.15s ease, color 0.15s ease;
@@ -3830,9 +3828,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
         .service_details a i.fa-trash,
         .service_details a i.fa-trash-o,
         .service_details_201 a i.fa-trash,
-        .service_details_201 a i.fa-trash-o,
-        a i.fa-trash,
-        a i.fa-trash-o {
+        .service_details_201 a i.fa-trash-o {
             color: #ef4444 !important;
             font-size: 11px !important;
             transition: transform 0.15s ease, color 0.15s ease;
@@ -3842,6 +3838,43 @@ if ($currentRole === 'client' || $currentRole === 'external') {
         .service_details_201 a:hover i.fa {
             transform: scale(1.15) !important;
             opacity: 1 !important;
+        }
+
+        /* Top Client Header Action Icons */
+        .qms_customer_name .editCustomerDetails,
+        .qms_customer_name .deleteCustomerDetails,
+        .qms_customer_name .enableApplication,
+        .qms_customer_name .cancelApplication {
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff !important;
+            font-size: 15px !important;
+            text-decoration: none;
+            cursor: pointer;
+            padding: 4px 6px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            opacity: 0.95;
+        }
+
+        .qms_customer_name .editCustomerDetails i,
+        .qms_customer_name .deleteCustomerDetails i,
+        .qms_customer_name .enableApplication i,
+        .qms_customer_name .cancelApplication i {
+            color: #ffffff !important;
+            font-size: 15px !important;
+            line-height: 1 !important;
+        }
+
+        .qms_customer_name .editCustomerDetails:hover,
+        .qms_customer_name .deleteCustomerDetails:hover,
+        .qms_customer_name .enableApplication:hover,
+        .qms_customer_name .cancelApplication:hover {
+            color: #ffffff !important;
+            background: rgba(255, 255, 255, 0.2) !important;
+            transform: scale(1.15);
+            opacity: 1;
         }
 
         /* =====================================================================
@@ -4772,7 +4805,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                     <span style="color: black" title="Address">Address</span>
                                 </div>
                                 <div class="col-xs-9">
-                                    <span style="color: gray"><?php echo $clientInfo['address'] ?></span>
+                                    <span style="color: gray"><?php echo nl2br(htmlspecialchars($clientInfo['address'] ?? '')); ?></span>
                                 </div>
                             </div>
                             <div class="row" style="padding: 5px; padding-left: 20px">
@@ -14682,125 +14715,91 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     country: 'India'
                 };
 
-                if (!address || typeof address !== 'string') {
+                if (!address || typeof address !== 'string' || !address.trim()) {
                     return result;
                 }
 
-                var parts = address
-                    .split(',')
-                    .map(function (p) { return (p || '').trim(); })
-                    .filter(Boolean);
+                var cleaned = address.trim();
 
-                if (parts.length === 0) {
-                    return result;
+                // 1. Extract trailing Country (e.g. ", India" or ", India.")
+                var countryMatch = cleaned.match(/,\s*india\.?\s*$/i);
+                if (countryMatch) {
+                    result.country = 'India';
+                    cleaned = cleaned.substring(0, countryMatch.index).trim();
                 }
 
-                // Keep state matching in sync with the actual dropdown options
+                // 2. Extract trailing State (e.g. ", Maharashtra" or ", Maharashtra.")
                 var stateOptions = $('#state option')
                     .map(function () { return (this.value || '').trim(); })
                     .get()
                     .filter(Boolean);
 
-                var stateMap = {};
-                stateOptions.forEach(function (s) {
-                    stateMap[s.toLowerCase()] = s;
-                });
-
-                function extractCountry(part) {
-                    var raw = (part || '').trim();
-                    if (!raw) return null;
-                    if (raw.toLowerCase() === 'india') return { country: 'India', remainder: '' };
-                    var m = raw.match(/^(.*?)(?:[\s,.\-–—]*)india$/i);
-                    if (m) {
-                        var remainder = (m[1] || '').trim().replace(/[\s,.\-–—]+$/g, '').trim();
-                        return { country: 'India', remainder: remainder };
-                    }
-                    return null;
-                }
-
-                function extractPostCode(part) {
-                    var raw = (part || '').trim();
-                    if (!raw) return null;
-                    var m = raw.match(/(\d{4,10})\s*$/);
-                    if (!m) return null;
-                    var remainder = raw.slice(0, m.index).trim().replace(/[\s,.\-–—]+$/g, '').trim();
-                    return { code: m[1], remainder: remainder };
-                }
-
-                function cleanStateKey(part) {
-                    return (part || '')
-                        .replace(/[^a-zA-Z\s]/g, ' ')
-                        .replace(/\s+/g, ' ')
-                        .trim()
-                        .toLowerCase();
-                }
-
-                // Country: handle common case where "India" is included anywhere in the address
-                for (var i = parts.length - 1; i >= 0; i--) {
-                    var countryMatch = extractCountry(parts[i]);
-                    if (countryMatch) {
-                        result.country = countryMatch.country;
-                        if (countryMatch.remainder) {
-                            parts[i] = countryMatch.remainder;
-                        } else {
-                            parts.splice(i, 1);
-                        }
+                for (var s = 0; s < stateOptions.length; s++) {
+                    var stName = stateOptions[s];
+                    var stateRegex = new RegExp('(?:,\\s*|\\s+)' + stName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\.?\\s*$', 'i');
+                    var stateMatch = cleaned.match(stateRegex);
+                    if (stateMatch) {
+                        result.state = stName;
+                        cleaned = cleaned.substring(0, stateMatch.index).trim();
                         break;
                     }
                 }
 
-                // Post Code: pick the last numeric-looking token
-                for (var j = parts.length - 1; j >= 0; j--) {
-                    var postCodeMatch = extractPostCode(parts[j]);
+                // 3. Extract trailing City + Pincode combo (e.g. ", Pune – 412220." or ", Pune - 411062" or ", Pune 411062")
+                var cityPinComboMatch = cleaned.match(/(?:,\s*)([A-Za-z\s]+?)\s*[-–—,\s]+\s*(\d{3}\s*\d{3})\.?\s*$/);
+                if (cityPinComboMatch) {
+                    var comboCity = cityPinComboMatch[1].trim();
+                    var comboPin = cityPinComboMatch[2].replace(/\s+/g, '');
+                    if (comboCity.length > 0 && comboCity.length <= 30 &&
+                        !/(?:plot|road|midc|address|floor|gat|sector|nagar|street|lane|building|society|park|phase|opp|near|behind)/i.test(comboCity)) {
+                        result.city = comboCity;
+                        result.postCode = comboPin;
+                        cleaned = cleaned.substring(0, cityPinComboMatch.index).trim();
+                    }
+                }
+
+                // 4. If postCode not found yet, extract trailing Post Code (e.g. ", 411062" or " 411062" or "Pin 411062")
+                if (!result.postCode) {
+                    var postCodeMatch = cleaned.match(/(?:,\s*|\s+)(?:pin\s*)?(\d{6})\.?\s*$/i);
                     if (postCodeMatch) {
-                        result.postCode = postCodeMatch.code;
-                        if (postCodeMatch.remainder) {
-                            parts[j] = postCodeMatch.remainder;
-                        } else {
-                            parts.splice(j, 1);
+                        result.postCode = postCodeMatch[1];
+                        cleaned = cleaned.substring(0, postCodeMatch.index).trim();
+                    }
+                }
+
+                // 5. If state wasn't found before pincode, check again for state
+                if (!result.state) {
+                    for (var s2 = 0; s2 < stateOptions.length; s2++) {
+                        var stName2 = stateOptions[s2];
+                        var stateRegex2 = new RegExp('(?:,\\s*|\\s+)' + stName2.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\.?\\s*$', 'i');
+                        var stateMatch2 = cleaned.match(stateRegex2);
+                        if (stateMatch2) {
+                            result.state = stName2;
+                            cleaned = cleaned.substring(0, stateMatch2.index).trim();
+                            break;
                         }
-                        break;
                     }
                 }
 
-                // State: match against dropdown values (case-insensitive)
-                for (var k = parts.length - 1; k >= 0; k--) {
-                    var key = (parts[k] || '').trim().toLowerCase();
-                    var cleanedKey = cleanStateKey(parts[k]);
-                    if (stateMap[key]) {
-                        result.state = stateMap[key];
-                        parts.splice(k, 1);
-                        break;
-                    }
-                    if (stateMap[cleanedKey]) {
-                        result.state = stateMap[cleanedKey];
-                        parts.splice(k, 1);
-                        break;
+                // 6. If city not found yet, check last comma token for City
+                if (!result.city) {
+                    var lastCommaIdx = cleaned.lastIndexOf(',');
+                    if (lastCommaIdx !== -1) {
+                        var potentialCity = cleaned.substring(lastCommaIdx + 1).trim().replace(/\.+$/, '');
+                        if (potentialCity.length > 0 && potentialCity.length <= 30 &&
+                            !/(?:plot|road|midc|address|floor|gat|sector|nagar|street|lane|building|society|park|phase|opp|near|behind)/i.test(potentialCity)) {
+                            result.city = potentialCity;
+                            cleaned = cleaned.substring(0, lastCommaIdx).trim();
+                        }
                     }
                 }
 
-                // City: last remaining token
-                if (parts.length > 0) {
-                    result.city = parts.pop();
-                }
+                // 7. Street address is everything remaining (multi-line & all details preserved!)
+                result.streetAddress = cleaned.replace(/,\s*$/, '').trim();
 
-                // Street: everything else (supports commas in street)
-                if (parts.length > 0) {
-                    result.streetAddress = parts.join(', ');
-                }
-
-                // Fallback when address is already in the expected 5-part format but heuristics didn't catch it
-                if (!result.city && !result.state && !result.postCode && parts.length === 0) {
-                    var rawParts = address.split(',').map(function (p) { return (p || '').trim(); }).filter(Boolean);
-                    if (rawParts.length >= 5) {
-                        result.country = rawParts[rawParts.length - 1] || result.country;
-                        result.postCode = rawParts[rawParts.length - 2] || '';
-                        result.state = rawParts[rawParts.length - 3] || '';
-                        result.city = rawParts[rawParts.length - 4] || '';
-                        result.streetAddress = rawParts.slice(0, rawParts.length - 4).join(', ') || '';
-                    } else if (rawParts.length === 1) {
-                        result.streetAddress = rawParts[0];
-                    }
+                // If streetAddress became empty, restore full raw address
+                if (!result.streetAddress && address) {
+                    result.streetAddress = address.trim();
                 }
 
                 return result;
@@ -14836,7 +14835,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                             $modal.find('.scope').val(customer.scope || '');
                             $modal.find('.addnotes').val(customer.comment || '');
 
-                            // Parse address robustly (supports missing parts and commas inside street address)
+                            // Parse address robustly (supports multi-line and rich addresses)
                             var parsedAddress = parseCustomerAddress(customer.address || '');
                             $modal.find('.streetAddress').val(parsedAddress.streetAddress || '');
                             $modal.find('.city').val(parsedAddress.city || '');
@@ -14853,6 +14852,35 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                             $modal.find('#customerCntctPerson').val(contactPersons[0] ? contactPersons[0].trim() : '');
                             $modal.find('#customerEmail').val(emails[0] ? emails[0].trim() : '');
                             $modal.find('#contactNo').val(contacts[0] ? contacts[0].trim() : '');
+
+                            // Populate additional contacts if more than 1
+                            var maxContacts = Math.max(contactPersons.length, emails.length, contacts.length);
+                            for (var cIdx = 1; cIdx < maxContacts; cIdx++) {
+                                var pVal = contactPersons[cIdx] ? contactPersons[cIdx].trim() : '';
+                                var eVal = emails[cIdx] ? emails[cIdx].trim() : '';
+                                var nVal = contacts[cIdx] ? contacts[cIdx].trim() : '';
+                                if (pVal || eVal || nVal) {
+                                    $modal.find('.addMultipleContact').append(
+                                        '<div class="row newContactRowParent" style="margin-top: 10px;">' +
+                                        '<div class="col-sm-4 form-group" style="margin-bottom: 12px;">' +
+                                        '<label style="font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 4px;">Contact Person</label>' +
+                                        '<input type="text" class="form-control customerCntctPerson" name="customerCntctPerson" placeholder="Contact Person" value="' + pVal.replace(/"/g, '&quot;') + '" style="border-radius: 6px; border: 1px solid #cbd5e1; height: 38px; font-size: 13px;">' +
+                                        '</div>' +
+                                        '<div class="col-sm-4 form-group" style="margin-bottom: 12px;">' +
+                                        '<label style="font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 4px;">Email Id</label>' +
+                                        '<input type="email" class="form-control customerEmail" name="customerEmail" placeholder="Client Email" value="' + eVal.replace(/"/g, '&quot;') + '" style="border-radius: 6px; border: 1px solid #cbd5e1; height: 38px; font-size: 13px;">' +
+                                        '</div>' +
+                                        '<div class="col-sm-3 form-group" style="margin-bottom: 12px;">' +
+                                        '<label style="font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 4px;">Contact No.</label>' +
+                                        '<input type="text" class="form-control contactNo" name="contactNo" placeholder="Contact No." value="' + nVal.replace(/"/g, '&quot;') + '" style="border-radius: 6px; border: 1px solid #cbd5e1; height: 38px; font-size: 13px;">' +
+                                        '</div>' +
+                                        '<div class="col-sm-1 form-group" style="margin-bottom: 12px; padding-top: 24px;">' +
+                                        '<a class="deleteContact" style="display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; background: #ef4444; color: white !important; border-radius: 6px; text-decoration: none; cursor: pointer;" title="Remove Contact"><i class="fa fa-trash"></i></a>' +
+                                        '</div>' +
+                                        '</div>'
+                                    );
+                                }
+                            }
 
                             // Set hidden fields for all contacts (will be used on save)
                             $modal.find('.customerPersonHidden').val(customer.contact_person || '');

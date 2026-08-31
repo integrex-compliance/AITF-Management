@@ -9,24 +9,50 @@ session_start();
 include_once './dbConnect.php';
 date_default_timezone_set('Asia/Kolkata');
 
-// Concatenate address fields into a single string
-$addressParts = array();
-if (isset($_POST['streetAddress']) && !empty($_POST['streetAddress'])) {
-    $addressParts[] = trim($_POST['streetAddress']);
+// Concatenate address fields cleanly
+$streetAddress = isset($_POST['streetAddress']) ? trim($_POST['streetAddress']) : '';
+$city = isset($_POST['city']) ? trim($_POST['city']) : '';
+$state = isset($_POST['state']) ? trim($_POST['state']) : '';
+$postCode = isset($_POST['postCode']) ? trim($_POST['postCode']) : '';
+$country = isset($_POST['country']) ? trim($_POST['country']) : '';
+
+$addressSuffix = array();
+if (!empty($city)) {
+    $addressSuffix[] = $city;
 }
-if (isset($_POST['city']) && !empty($_POST['city'])) {
-    $addressParts[] = trim($_POST['city']);
+if (!empty($state)) {
+    $addressSuffix[] = $state;
 }
-if (isset($_POST['state']) && !empty($_POST['state'])) {
-    $addressParts[] = trim($_POST['state']);
+if (!empty($postCode)) {
+    $addressSuffix[] = $postCode;
 }
-if (isset($_POST['postCode']) && !empty($_POST['postCode'])) {
-    $addressParts[] = trim($_POST['postCode']);
+if (!empty($country)) {
+    $addressSuffix[] = $country;
 }
-if (isset($_POST['country']) && !empty($_POST['country'])) {
-    $addressParts[] = trim($_POST['country']);
+
+$suffixStr = implode(', ', $addressSuffix);
+
+if (!empty($streetAddress) && !empty($suffixStr)) {
+    $cleanStreet = rtrim($streetAddress, ", \t\n\r\0\x0B");
+    if (!empty($country)) {
+        $cleanStreet = preg_replace('/[,\s]+' . preg_quote($country, '/') . '\.?$/i', '', $cleanStreet);
+    }
+    if (!empty($postCode)) {
+        $cleanStreet = preg_replace('/[,\s]+(?:pin\s*)?' . preg_quote($postCode, '/') . '\.?$/i', '', $cleanStreet);
+    }
+    if (!empty($state)) {
+        $cleanStreet = preg_replace('/[,\s]+' . preg_quote($state, '/') . '\.?$/i', '', $cleanStreet);
+    }
+    if (!empty($city)) {
+        $cleanStreet = preg_replace('/[,\s]+' . preg_quote($city, '/') . '\.?$/i', '', $cleanStreet);
+    }
+    $cleanStreet = rtrim($cleanStreet, ", \t\n\r\0\x0B");
+    $fullAddress = !empty($cleanStreet) ? ($cleanStreet . ', ' . $suffixStr) : $suffixStr;
+} elseif (!empty($streetAddress)) {
+    $fullAddress = $streetAddress;
+} else {
+    $fullAddress = $suffixStr;
 }
-$fullAddress = implode(', ', $addressParts);
 
 if (isset($_POST['editCustomerId']) && !empty($_POST['editCustomerId'])) {
     try {

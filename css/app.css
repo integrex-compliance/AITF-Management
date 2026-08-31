@@ -1831,3 +1831,39 @@ html.theme-dark .navbar-toggle {
     border-color: #232c3d;
 }
 
+/* Customer Add / Edit Modal - Dark Mode */
+html.theme-dark #customerAdd .modal-content {
+    background: #111827 !important;
+    color: #f1f5f9 !important;
+    border: 1px solid #1f2937 !important;
+}
+html.theme-dark #customerAdd .modal-header {
+    background: #0a3a66 !important;
+}
+html.theme-dark #customerAdd label {
+    color: #94a3b8 !important;
+}
+html.theme-dark #customerAdd input.form-control,
+html.theme-dark #customerAdd select.form-control,
+html.theme-dark #customerAdd textarea.form-control {
+    background: #182235 !important;
+    color: #f1f5f9 !important;
+    border-color: #334155 !important;
+}
+html.theme-dark #customerAdd input.form-control:focus,
+html.theme-dark #customerAdd select.form-control:focus,
+html.theme-dark #customerAdd textarea.form-control:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
+}
+html.theme-dark #customerAdd .modal-footer {
+    background: #0b111b !important;
+    border-top-color: #1f2937 !important;
+}
+html.theme-dark #customerAdd .btn-default {
+    background: #1f2937 !important;
+    color: #94a3b8 !important;
+    border-color: #374151 !important;
+}
+
+

@@ -149,51 +149,69 @@ $csgttax = $taxationDetails["rate"];
 </div>
 
 <div class="modal fade" id="customerAdd" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal">
-                    <span aria-hidden="true">x</span><span class="sr-only">Close</span>
+    <div class="modal-dialog modal-lg" style="max-width: 780px;">
+        <div class="modal-content" style="border-radius: 12px; overflow: hidden; border: none; box-shadow: 0 15px 35px rgba(0,0,0,0.2);">
+            <div class="modal-header" style="background: linear-gradient(135deg, #0d4d8b 0%, #1e40af 100%); color: #ffffff; padding: 14px 20px;">
+                <button type="button" class="close" data-dismiss="modal" style="color: #ffffff; opacity: 0.9; font-size: 22px; margin-top: -2px;">
+                    <span aria-hidden="true">&times;</span><span class="sr-only">Close</span>
                 </button>
-                <h4 class="modal-title" id="myModalLabel">Client Information</h4>
+                <h4 class="modal-title" id="myModalLabel" style="color: #ffffff; font-weight: 700; font-size: 16px; margin: 0;">
+                    <i class="fa fa-building" style="margin-right: 8px;"></i> Client Information
+                </h4>
             </div>
             <form action="addCustomer.php" method="post">
-                <div class="modal-body">
+                <div class="modal-body" style="padding: 20px 24px 10px;">
+                    
+                    <!-- Section 1: Basic Information -->
+                    <div style="font-weight: 700; color: #0d4d8b; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; padding-bottom: 5px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 6px;">
+                        <i class="fa fa-info-circle"></i> Basic Details
+                    </div>
                     <div class="row">
-                        <div class="col-sm-12 form-group float-label-control">
-                            <label for="customerName">Client Name</label>
-                            <input type="text" class="customerName" id="customerName" name="customerName" placeholder="Client Name">
+                        <div class="col-sm-12 form-group" style="margin-bottom: 12px;">
+                            <label style="font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 4px;">Client / Company Name <span style="color: #dc2626;">*</span></label>
+                            <input type="text" class="form-control customerName" id="customerName" name="customerName" placeholder="Enter Client / Company Name" style="border-radius: 6px; border: 1px solid #cbd5e1; height: 38px; font-size: 13px;">
                         </div>
                     </div>
                     <div class="row">
-                        <div id="companyNameError" style="display: none">
+                        <div id="companyNameError" style="display: none; padding-left: 15px; margin-bottom: 8px;">
                             <small><span id="companyNameErrorMsg" style="color: #c9513c; font-style: italic;"></span></small>
                         </div>
                     </div>
                     <div class="row">
-                        <div class="col-sm-6 form-group float-label-control">
-                            <label for="addnotes">Comment</label>
-                            <textarea name="addnotes" rows="3" class="form-control form-group addnotes" id="addnotes" placeholder="Enter Comment"></textarea>
+                        <div class="col-sm-6 form-group" style="margin-bottom: 12px;">
+                            <label style="font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 4px;">GSTIN Number</label>                            
+                            <input type="text" class="form-control gstin_no" id="gstin_no" name="gstin_no" placeholder="Enter GSTIN Number" onkeypress="return AvoidSpace(event)" style="border-radius: 6px; border: 1px solid #cbd5e1; height: 38px; font-size: 13px;">                                                               
                         </div>
-                        <div class="col-sm-6 form-group float-label-control">
-                            <label for="country">Country</label>
-                            <input type="text" name="country" class="form-control country" id="country" placeholder="Country" value="India">
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-sm-12 form-group float-label-control">
-                            <label for="streetAddress">Street Address</label>
-                            <textarea name="streetAddress" rows="2" class="form-control form-group streetAddress" id="streetAddress" placeholder="Enter Street Address"></textarea>
+                        <div class="col-sm-6 form-group" style="margin-bottom: 12px;">
+                            <label style="font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 4px;">Scope of Certification</label>
+                            <input type="text" class="form-control scope" id="scope" name="scope" placeholder="Enter Scope" style="border-radius: 6px; border: 1px solid #cbd5e1; height: 38px; font-size: 13px;">
                         </div>
                     </div>
                     <div class="row">
-                        <div class="col-sm-6 form-group float-label-control">
-                            <label for="city">City</label>
-                            <input type="text" name="city" class="form-control city" id="city" placeholder="City">
+                        <div class="col-sm-12 form-group" style="margin-bottom: 12px;">
+                            <label style="font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 4px;">Comment / Notes</label>
+                            <textarea name="addnotes" rows="2" class="form-control addnotes" id="addnotes" placeholder="Enter Comment or Notes" style="border-radius: 6px; border: 1px solid #cbd5e1; min-height: 55px; resize: vertical; font-size: 13px;"></textarea>
                         </div>
-                        <div class="col-sm-6 form-group float-label-control">
-                            <label for="state">State</label>
-                            <select name="state" class="form-control state" id="state">
+                    </div>
+
+                    <!-- Section 2: Address Information -->
+                    <div style="font-weight: 700; color: #0d4d8b; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin: 16px 0 12px 0; padding-bottom: 5px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 6px;">
+                        <i class="fa fa-map-marker"></i> Address Details
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-12 form-group" style="margin-bottom: 12px;">
+                            <label style="font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 4px;">Street / Office & Site Address</label>
+                            <textarea name="streetAddress" rows="4" class="form-control streetAddress" id="streetAddress" placeholder="Enter Street Address / Office & Site Address (supports multiple lines for office & site addresses)" style="border-radius: 6px; border: 1px solid #cbd5e1; min-height: 90px; resize: vertical; font-size: 13px; line-height: 1.45;"></textarea>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-6 form-group" style="margin-bottom: 12px;">
+                            <label style="font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 4px;">City</label>
+                            <input type="text" name="city" class="form-control city" id="city" placeholder="City" style="border-radius: 6px; border: 1px solid #cbd5e1; height: 38px; font-size: 13px;">
+                        </div>
+                        <div class="col-sm-6 form-group" style="margin-bottom: 12px;">
+                            <label style="font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 4px;">State</label>
+                            <select name="state" class="form-control state" id="state" style="border-radius: 6px; border: 1px solid #cbd5e1; height: 38px; font-size: 13px;">
                                 <option value="">Select State</option>
                                 <option value="Andhra Pradesh">Andhra Pradesh</option>
                                 <option value="Arunachal Pradesh">Arunachal Pradesh</option>
@@ -235,57 +253,44 @@ $csgttax = $taxationDetails["rate"];
                         </div>
                     </div>
                     <div class="row">
-                        <div class="col-sm-6 form-group float-label-control">
-                            <label for="postCode">Post Code</label>
-                            <input type="text" name="postCode" class="form-control postCode" id="postCode" placeholder="Post Code">
+                        <div class="col-sm-6 form-group" style="margin-bottom: 12px;">
+                            <label style="font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 4px;">Post Code / Pin Code</label>
+                            <input type="text" name="postCode" class="form-control postCode" id="postCode" placeholder="Enter Post Code (e.g. 400063)" style="border-radius: 6px; border: 1px solid #cbd5e1; height: 38px; font-size: 13px;">
+                        </div>
+                        <div class="col-sm-6 form-group" style="margin-bottom: 12px;">
+                            <label style="font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 4px;">Country</label>
+                            <input type="text" name="country" class="form-control country" id="country" placeholder="Country" value="India" style="border-radius: 6px; border: 1px solid #cbd5e1; height: 38px; font-size: 13px;">
                         </div>
                     </div>
-                    <div class="row">
-                        <div class="col-sm-6 form-group float-label-control">
-                            <label for="gstin_no">GSTIN Number</label>                            
-                            <input type="text" class="gstin_no" id="gstin_no" name="gstin_no" placeholder="GSTIN Number" onkeypress="return AvoidSpace(event)">                                                               
-                    <!--<input type="text" class="auditStatus" id="auditStatus" name="auditStatus" placeholder="Audit Status">-->
-                        </div>
-                        <div class="col-sm-6 form-group float-label-control">
-                            <label for="scope">Scope</label>
-                            <input type="text" class="scope" id="scope" name="scope" placeholder="Scope">
-                        </div>
+
+                    <!-- Section 3: Contact Information -->
+                    <div style="font-weight: 700; color: #0d4d8b; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin: 16px 0 12px 0; padding-bottom: 5px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 6px;">
+                        <i class="fa fa-phone"></i> Contact Details
                     </div>
                     <div class="row">
-                        <div class="col-sm-4 form-group float-label-control">
-                            <div class="row form-group float-label-control">
-                                <label for="customerCntctPerson">Contact Person</label>
-                                <input type="text" class="customerCntctPerson" id="customerCntctPerson" name="customerCntctPerson" placeholder="Contact Person">
-                            </div>
-                            <div class="row form-group float-label-control">
-                                <div id="contactPersonError" style="display: ">
-                                    <small><span id="contactPersonErrorMsg" style="color: #c9513c; font-style: italic;"></span></small>
-                                </div>
+                        <div class="col-sm-4 form-group" style="margin-bottom: 12px;">
+                            <label style="font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 4px;">Contact Person</label>
+                            <input type="text" class="form-control customerCntctPerson" id="customerCntctPerson" name="customerCntctPerson" placeholder="Contact Person" style="border-radius: 6px; border: 1px solid #cbd5e1; height: 38px; font-size: 13px;">
+                            <div id="contactPersonError" style="display: none; margin-top: 4px;">
+                                <small><span id="contactPersonErrorMsg" style="color: #c9513c; font-style: italic;"></span></small>
                             </div>
                         </div>
-                        <div class="col-sm-4 form-group float-label-control">
-                            <div class="row form-group float-label-control">
-                                <label for="customerEmail">Email Id</label>
-                                <input type="email" class="customerEmail" id="customerEmail" name="customerEmail" placeholder="Client Email">
-                            </div>
-                            <div class="row form-group float-label-control">
-                                <div id="contactEmailError" style="display: ">
-                                    <small><span id="contactEmailErrorMsg" style="color: #c9513c; font-style: italic;"></span></small>
-                                </div>
+                        <div class="col-sm-4 form-group" style="margin-bottom: 12px;">
+                            <label style="font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 4px;">Email Id</label>
+                            <input type="email" class="form-control customerEmail" id="customerEmail" name="customerEmail" placeholder="Client Email" style="border-radius: 6px; border: 1px solid #cbd5e1; height: 38px; font-size: 13px;">
+                            <div id="contactEmailError" style="display: none; margin-top: 4px;">
+                                <small><span id="contactEmailErrorMsg" style="color: #c9513c; font-style: italic;"></span></small>
                             </div>
                         </div>
-                        <div class="col-sm-3 form-group float-label-control">
-                            <div class="row form-group float-label-control"><label for="contactNo">Contact No.</label>
-                                <input type="text" class="contactNo" id="contactNo" name="contactNo" placeholder="Contact No.">
-                            </div>
-                            <div class="row form-group float-label-control">
-                                <div id="contactNoError" style="display: none">
-                                    <small><span id="contactNoErrorMsg" style="color: #c9513c; font-style: italic;"></span></small>
-                                </div>
+                        <div class="col-sm-3 form-group" style="margin-bottom: 12px;">
+                            <label style="font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 4px;">Contact No.</label>
+                            <input type="text" class="form-control contactNo" id="contactNo" name="contactNo" placeholder="Contact No." style="border-radius: 6px; border: 1px solid #cbd5e1; height: 38px; font-size: 13px;">
+                            <div id="contactNoError" style="display: none; margin-top: 4px;">
+                                <small><span id="contactNoErrorMsg" style="color: #c9513c; font-style: italic;"></span></small>
                             </div>
                         </div>
-                        <div class="col-sm-1 form-group float-label-control">
-                            <a class="newContactNo" style="" title="Add Multiple Contact"><i class="fa fa-plus"></i></a>
+                        <div class="col-sm-1 form-group" style="margin-bottom: 12px; padding-top: 24px;">
+                            <a class="newContactNo" style="display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; background: #0d4d8b; color: white !important; border-radius: 6px; text-decoration: none; cursor: pointer;" title="Add Multiple Contact"><i class="fa fa-plus"></i></a>
                         </div>
                     </div>
                     <div class="addMultipleContact"></div>
@@ -294,8 +299,9 @@ $csgttax = $taxationDetails["rate"];
                 <input type="hidden" class="customerContactHidden" name="customerContactHidden" value=""> 
                 <input type="hidden" class="customerContactEmlHidden" name="customerContactEmlHidden" value=""> 
                 <input type="hidden" class="editCustomerId" name="editCustomerId" value="">
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-xs btn-info addCustomerToService">Save</button>
+                <div class="modal-footer" style="background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 14px 24px; display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button" class="btn btn-default" data-dismiss="modal" style="border-radius: 6px; font-weight: 600; padding: 7px 16px;">Cancel</button>
+                    <button type="submit" class="btn btn-info addCustomerToService" style="background: linear-gradient(135deg, #0d4d8b 0%, #1e40af 100%); border: none; border-radius: 6px; padding: 7px 22px; font-weight: 600; box-shadow: 0 2px 6px rgba(13,77,139,0.25);">Save Client</button>
                 </div>
             </form>
         </div>
@@ -2546,27 +2552,27 @@ $csgttax = $taxationDetails["rate"];
         });
 
         $('.newContactNo').click(function () {
-            $('.addMultipleContact').append('<div class="row newContactRowParent">\n\
-                                            <div class="col-sm-4 form-group float-label-control">\n\
-                                            <label>Contact Person</label>\n\
-                                            <input type="text" class="customerCntctPerson" id="customerCntctPerson" name="customerCntctPerson" placeholder="Contact Person" >\n\
-                                            <div id="contactPersonError" style="display: none">\n\
+            $('.addMultipleContact').append('<div class="row newContactRowParent" style="margin-top: 10px;">\n\
+                                            <div class="col-sm-4 form-group" style="margin-bottom: 12px;">\n\
+                                            <label style="font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 4px;">Contact Person</label>\n\
+                                            <input type="text" class="form-control customerCntctPerson" name="customerCntctPerson" placeholder="Contact Person" style="border-radius: 6px; border: 1px solid #cbd5e1; height: 38px; font-size: 13px;">\n\
+                                            <div id="contactPersonError" style="display: none; margin-top: 4px;">\n\
                                             <small><span id="contactPersonErrorMsg" style="color: #c9513c; font-style: italic;" ></span></small>\n\
                                             </div>\n\
                                             </div>\n\
-                                            <div class="col-sm-4 form-group float-label-control">\n\
-                                            <label>Client Email</label>\n\
-                                            <input type="email" class="customerEmail" id="customerEmail" name="customerEmail" placeholder="Client Email" >\n\
-                                            <div id="contactEmailError" style="display: none">\n\
+                                            <div class="col-sm-4 form-group" style="margin-bottom: 12px;">\n\
+                                            <label style="font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 4px;">Email Id</label>\n\
+                                            <input type="email" class="form-control customerEmail" name="customerEmail" placeholder="Client Email" style="border-radius: 6px; border: 1px solid #cbd5e1; height: 38px; font-size: 13px;">\n\
+                                            <div id="contactEmailError" style="display: none; margin-top: 4px;">\n\
                                             <small><span id="contactEmailErrorMsg" style="color: #c9513c; font-style: italic;" ></span></small>\n\
                                             </div>\n\
                                             </div>\n\
-                                            <div class="col-sm-3 form-group float-label-control">\n\
-                                            <label>Contact No.</label>\n\
-                                            <input type="text" class="contactNo" id="contactNo" name="contactNo" placeholder="Contact No." >\n\
+                                            <div class="col-sm-3 form-group" style="margin-bottom: 12px;">\n\
+                                            <label style="font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 4px;">Contact No.</label>\n\
+                                            <input type="text" class="form-control contactNo" name="contactNo" placeholder="Contact No." style="border-radius: 6px; border: 1px solid #cbd5e1; height: 38px; font-size: 13px;">\n\
                                             </div>\n\
-                                            <div class="col-sm-1 form-group float-label-control deleteNewContactParent">\n\
-                                            <a class="deleteContact" style="float: right;"><i class="fa fa-remove"></i></a>\n\
+                                            <div class="col-sm-1 form-group" style="margin-bottom: 12px; padding-top: 24px;">\n\
+                                            <a class="deleteContact" style="display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; background: #ef4444; color: white !important; border-radius: 6px; text-decoration: none; cursor: pointer;" title="Remove Contact"><i class="fa fa-trash"></i></a>\n\
                                             </div>\n\
                                             </div>');
         });
