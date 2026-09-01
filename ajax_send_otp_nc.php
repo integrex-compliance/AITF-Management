@@ -45,7 +45,7 @@ $_SESSION['nc_closing_otp_attempts'] = 0;
 // Send email
 try {
     $emailSender = new AITFServiceEmailSender();
-    $subject = "Email Verification – NC Closing Form | AITF";
+    $subject = "Email Verification - NC Closing Form | AITF";
     $body = "<p>Dear " . htmlspecialchars($recipientName) . ",</p>
              <p>Greetings from AITF.</p>
              <p>Your One-Time Password (OTP) to verify your email address for the <b>Nonconformance Closer Report</b> submitted on behalf of <b>" . htmlspecialchars($org_name) . "</b> is:</p>
@@ -60,3 +60,4 @@ try {
     error_log("NC OTP Email Error: " . $e->getMessage());
     echo json_encode(['success' => false, 'message' => 'Failed to send OTP email. Please try again later.']);
 }
+

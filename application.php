@@ -3246,6 +3246,7 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                         contact_person: contactPerson
                     },
                     dataType: 'json',
+                    timeout: 25000,
                     success: function(response) {
                         if (response.success) {
                             $('#otp-message').css('color', '#16a34a').html('<i class="fa fa-check-circle"></i> ' + response.message);
@@ -3259,9 +3260,13 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                             $('#otp-message').css('color', '#dc2626').html('<i class="fa fa-exclamation-circle"></i> ' + response.message);
                         }
                     },
-                    error: function() {
+                    error: function(xhr, status, error) {
                         $('#btn-send-otp').html('<i class="fa fa-envelope"></i> Send OTP').prop('disabled', false);
-                        $('#otp-message').css('color', '#dc2626').html('<i class="fa fa-exclamation-circle"></i> An error occurred. Please try again.');
+                        var errMsg = 'Unable to send OTP. Please check your connection and try again.';
+                        if (status === 'timeout') {
+                            errMsg = 'Connection timed out while sending OTP. Please try again.';
+                        }
+                        $('#otp-message').css('color', '#dc2626').html('<i class="fa fa-exclamation-circle"></i> ' + errMsg);
                     }
                 });
             }

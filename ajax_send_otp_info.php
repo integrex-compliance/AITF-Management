@@ -43,7 +43,7 @@ $_SESSION['info_updation_otp_attempts'] = 0;
 // Send email
 try {
     $emailSender = new AITFServiceEmailSender();
-    $subject = "Email Verification – Information Updation Form | AITF";
+    $subject = "Email Verification - Information Updation Form | AITF";
     $body = "<p>Dear {$contact_person},</p>
              <p>Greetings from AITF.</p>
              <p>Your One-Time Password (OTP) to verify your email address for the Information Updation Form submitted on behalf of {$org_name} is:</p>
@@ -59,3 +59,4 @@ try {
     error_log("OTP Email Error: " . $e->getMessage());
     echo json_encode(['success' => false, 'message' => 'Failed to send OTP email. Please try again later.']);
 }
+
