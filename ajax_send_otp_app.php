@@ -1,5 +1,8 @@
 <?php
-session_start();
+require_once __DIR__ . '/include/session_helper.php';
+aitf_start_session();
+require_once __DIR__ . '/dbConnect.php';
+require_once __DIR__ . '/include/otp_helper.php';
 require_once __DIR__ . '/testemail.php';
 
 header('Content-Type: application/json; charset=utf-8');
@@ -9,7 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-$email = filter_var(trim($_POST['email'] ?? ''), FILTER_SANITIZE_EMAIL);
+$email = strtolower(filter_var(trim($_POST['email'] ?? ''), FILTER_SANITIZE_EMAIL));
 $raw_contact = trim((string)($_POST['contact_person'] ?? ''));
 $raw_org = trim((string)($_POST['org_name'] ?? ''));
 
@@ -50,6 +53,11 @@ $_SESSION['application_otp_time'] = time();
 $_SESSION['application_otp_email'] = $email;
 $_SESSION['application_otp_last_sent'] = time();
 $_SESSION['application_otp_attempts'] = 0;
+
+// Also persist in database for high reliability on live servers
+if (isset($db) && $db) {
+    aitf_save_otp_record($db, $email, $otp);
+}
 
 // Send email
 try {
