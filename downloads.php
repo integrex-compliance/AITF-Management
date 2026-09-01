@@ -55,7 +55,7 @@ include 'headersource.php';
                     <ul>
                         <li><a href="application.php?msg=".urlencode("")>Application form</a></li>
                         <li style="margin-left: 15px;">
-                            <a href="info_updation_form.php" style="background: #16a34a; color: white; padding: 5px 12px; border-radius: 6px; font-weight: 600; display: inline-block;">
+                            <a href="info-updation" style="background: #16a34a; color: white; padding: 5px 12px; border-radius: 6px; font-weight: 600; display: inline-block;">
                                 <i class="fa fa-star" style="color: #fbbf24;"></i> Fill Info Update Form (Online)
                             </a>
                         </li>
@@ -96,7 +96,7 @@ include 'headersource.php';
                         <p style="color: #f0fdf4; margin: 0 0 12px 0; font-size: 14px; line-height: 1.5;">
                             Now you can fill and submit your information updation form online! No need to download PDF. Quick, easy, and instant submission.
                         </p>
-                        <a href="info_updation_form.php" style="display: inline-block; background: #ffffff; color: #16a34a; padding: 10px 25px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: all 0.3s ease;">
+                        <a href="info-updation" style="display: inline-block; background: #ffffff; color: #16a34a; padding: 10px 25px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: all 0.3s ease;">
                             <i class="fa fa-arrow-right"></i> Fill Form Online Now
                         </a>
                     </div>
@@ -117,7 +117,7 @@ include 'headersource.php';
                         <p style="color: #f0f9ff; margin: 0 0 12px 0; font-size: 14px; line-height: 1.5;">
                             Submit your Nonconformance Closer Report with root cause analysis and corrective actions directly through our online portal.
                         </p>
-                        <a href="fill_nc_closing_form.php" style="display: inline-block; background: #ffffff; color: #0284c7; padding: 10px 25px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: all 0.3s ease;">
+                        <a href="nc_closing" style="display: inline-block; background: #ffffff; color: #0284c7; padding: 10px 25px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: all 0.3s ease;">
                             <i class="fa fa-arrow-right"></i> Fill NC Closing Form Now
                         </a>
                     </div>

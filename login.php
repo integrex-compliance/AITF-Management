@@ -258,9 +258,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 
                 if (aitf_is_director_role()) { $redirectUrl = 'directorSpace.php'; }
                 elseif ($_SESSION['role'] === 'Auditor') {
-                    $audStmt = $db->prepare("SELECT auditors_id FROM auditors WHERE login_email = :email OR (auditor_number = :eid AND auditor_number != '') LIMIT 1");
+                    $audStmt = $db->prepare("SELECT auditors_id, is_reviewer FROM auditors WHERE login_email = :email OR (auditor_number = :eid AND auditor_number != '') LIMIT 1");
                     $audStmt->execute([':email' => $row['email_id'], ':eid' => $row['e_id']]);
-                    if ($audData = $audStmt->fetch(PDO::FETCH_ASSOC)) { $_SESSION['auditor_id'] = $audData['auditors_id']; }
+                    if ($audData = $audStmt->fetch(PDO::FETCH_ASSOC)) {
+                        $_SESSION['auditor_id'] = $audData['auditors_id'];
+                        $_SESSION['is_reviewer'] = !empty($audData['is_reviewer']) ? 1 : 0;
+                    }
                     $redirectUrl = 'auditorDashboard.php';
                 }
                 elseif (Utitlity::checkForUserConsultant()) { $redirectUrl = 'auditPlanning.php'; }
@@ -279,6 +282,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $_SESSION['id'] = $row['auditors_id'];
                 $_SESSION['role'] = 'Auditor';
                 $_SESSION['auditor_id'] = $row['auditors_id'];
+                $_SESSION['is_reviewer'] = !empty($row['is_reviewer']) ? 1 : 0;
                 $_SESSION['abbrevation'] = $row['abbrevation'] ?? '';
                 aitf_mark_session_authenticated();
                 aitf_record_login_activity($db, ['user_id'=>$row['auditors_id'], 'user_name'=>$row['auditor_name'], 'email_id'=>$row['login_email'], 'role'=>'Auditor', 'e_id'=>'AUDITOR']);

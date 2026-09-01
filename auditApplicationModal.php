@@ -37,6 +37,10 @@ $accreditation = "SELECT * FROM accreditation";
 $statement = $db->prepare($accreditation);
 $statement->execute();
 $accreditationList = $statement->fetchAll();
+
+// Reviewers (auditors configured as reviewers in Master Creator)
+require_once __DIR__ . '/include/reviewer_conflict_helper.php';
+$reviewersList = aitf_get_all_reviewers($db);
 ?>
 <script src="js/date-chronology-validation.js?v=2"></script>
 <script src="js/form-fancy-control.js"></script>
@@ -907,8 +911,20 @@ $accreditationList = $statement->fetchAll();
                         </div>
                         <div class="row" style="padding-top: 10px">
                             <div class="col-sm-6 form-group float-label-control">
-                                <label>Reviewer Name:</label>
-                                <input type="text" class="reviewer_name" id="reviewer_name" name="reviewer_name" placeholder="Reviewer Name" required>
+                                <label style="font-weight: 600;">Reviewer Name:</label>
+                                <select class="form-control reviewer_name" id="reviewer_name" name="reviewer_name" required style="border-radius: 4px; height: 38px; font-size: 13.5px; background: #fff;">
+                                    <option value="">-- Select Reviewer --</option>
+                                    <?php if (!empty($reviewersList)) {
+                                        foreach ($reviewersList as $rev) { ?>
+                                            <option value="<?php echo htmlspecialchars($rev['auditor_name'], ENT_QUOTES, 'UTF-8'); ?>" data-auditor-id="<?php echo (int)$rev['auditors_id']; ?>">
+                                                <?php echo htmlspecialchars($rev['auditor_name'], ENT_QUOTES, 'UTF-8'); ?>
+                                            </option>
+                                    <?php }
+                                    } ?>
+                                </select>
+                                <div id="revConflictError" style="display: none; margin-top: 4px;">
+                                    <small><span id="revConflictErrorMsg" style="color: #c9513c; font-style: italic; font-weight: bold;"></span></small>
+                                </div>
                             </div>
                             <div class="col-sm-6 form-group float-label-control">
                                 <div class="row">
@@ -1246,7 +1262,128 @@ $(document).on('change', '.nace-code', function() {
 //            alert($(this).val());
 //        });
 
+        var aitfAssignedAuditors = [];
+
+        function loadAssignedAuditorsForConflictCheck(customerId, serviceId) {
+            aitfAssignedAuditors = [];
+            if (!customerId && !serviceId) return;
+            $.ajax({
+                url: "checkReviewerConflict.php",
+                type: "GET",
+                dataType: "json",
+                data: {
+                    action: 'get_assigned_auditors',
+                    customerId: customerId,
+                    serviceId: serviceId
+                },
+                success: function(resp) {
+                    if (resp && resp.success && resp.auditors) {
+                        aitfAssignedAuditors = resp.auditors;
+                    }
+                }
+            });
+        }
+
+        function checkConflictBetweenReviewerAndAuditors(reviewerName) {
+            if (!reviewerName) return false;
+            var normRev = reviewerName.toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (!normRev) return false;
+            for (var i = 0; i < aitfAssignedAuditors.length; i++) {
+                var normAud = aitfAssignedAuditors[i].toLowerCase().replace(/[^a-z0-9]/g, '');
+                if (normAud === normRev ||
+                    (normAud.length >= 5 && normRev.length >= 5 && (normAud.indexOf(normRev) !== -1 || normRev.indexOf(normAud) !== -1))) {
+                    return aitfAssignedAuditors[i];
+                }
+            }
+            return false;
+        }
+
+        function showReviewerConflictDialogue(conflictingAuditor, reviewerName) {
+            var nameToDisplay = conflictingAuditor || reviewerName || "This user";
+            var msg = nameToDisplay + " is already assigned as an Auditor for this client, cannot set as Reviewer.\n\nPlease select another Reviewer.";
+            if (typeof Swal !== 'undefined' && Swal.fire) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Conflict Detected',
+                    html: '<div class="aitf-conflict-card">' +
+                              '<div class="aitf-conflict-card-title">' +
+                                  '<span class="aitf-conflict-card-name">' + nameToDisplay + '</span> is already assigned as Auditor of this client, cannot set as Reviewer.' +
+                              '</div>' +
+                              '<div class="aitf-conflict-card-sub">' +
+                                  'Please select another Reviewer.' +
+                              '</div>' +
+                          '</div>',
+                    confirmButtonText: 'OK, I Understood',
+                    confirmButtonColor: '#0F2742',
+                    customClass: {
+                        popup: 'aitf-conflict-swal',
+                        confirmButton: 'aitf-conflict-btn'
+                    }
+                });
+            } else {
+                alert(msg);
+            }
+            $('#revConflictErrorMsg').text(nameToDisplay + ' is already assigned as Auditor of this client, cannot set as Reviewer. Please select another Reviewer.');
+            $('#revConflictError').show();
+        }
+
+        $('#reviewer_name').on('change', function () {
+            var revVal = ($(this).val() || '').trim();
+            if (!revVal) {
+                $('#revConflictError').hide();
+                return;
+            }
+
+            // Quick client-side check
+            var conflictAuditor = checkConflictBetweenReviewerAndAuditors(revVal);
+            if (conflictAuditor) {
+                $('#reviewer_name').val('');
+                showReviewerConflictDialogue(conflictAuditor, revVal);
+                return;
+            }
+
+            // Server-side double check
+            var customerId = $('.customerId').val();
+            var serviceId = $('.serviceId').val() || $('.unisvcId').val();
+            if (customerId || serviceId) {
+                $.ajax({
+                    url: "checkReviewerConflict.php",
+                    type: "POST",
+                    dataType: "json",
+                    data: {
+                        customerId: customerId,
+                        serviceId: serviceId,
+                        reviewerName: revVal
+                    },
+                    success: function (resp) {
+                        if (resp && resp.conflict) {
+                            $('#reviewer_name').val('');
+                            showReviewerConflictDialogue(resp.auditor_name, revVal);
+                        } else {
+                            $('#revConflictError').hide();
+                        }
+                    }
+                });
+            }
+        });
+
 $('.addApplication').click(function (e) {
+    var reviewerVal = ($('#reviewer_name').val() || '').trim();
+    if (!reviewerVal) {
+        e.preventDefault();
+        alert('Please select a Reviewer Name.');
+        $('#reviewer_name').focus();
+        return false;
+    }
+
+    var conflictAuditor = checkConflictBetweenReviewerAndAuditors(reviewerVal);
+    if (conflictAuditor) {
+        e.preventDefault();
+        $('#reviewer_name').val('');
+        showReviewerConflictDialogue(conflictAuditor, reviewerVal);
+        return false;
+    }
+
     selectedSectors = $('.iaf_code').map(function() {
         return $(this).val();
     }).get();
@@ -1301,6 +1438,10 @@ $('.addApplication').click(function (e) {
                         submitBtn: '.addApplication'
                     });
 
+                    $('.reviewer_name').val('');
+                    $('#revConflictError').hide();
+                    loadAssignedAuditorsForConflictCheck($('.customerId').val(), $('.serviceId').val() || $('.unisvcId').val());
+
                     $('#auditApplication').modal('show');
                 },
                 error: function (data, status, err)
@@ -1325,6 +1466,10 @@ $('.addApplication').click(function (e) {
 //                    alert(data); 
                     $('.customerId').val(customerid);
                     $('.auditId').val(data[0]['audit_id']);
+                    $('.serviceId').val(data[0]['service_id'] || '');
+                    $('.unisvcId').val(data[0]['uni_svc_id'] || '');
+                    $('#revConflictError').hide();
+                    loadAssignedAuditorsForConflictCheck(customerid, data[0]['service_id'] || data[0]['uni_svc_id']);
                     $('.applicationfor[value = "' + data[0]["application_for"] + '"]').prop('checked', true);
                     var review_date;
                     if (data[0]['review_date'] == "" || data[0]['review_date'] == null)
@@ -1447,7 +1592,15 @@ if (data[0]['applicationfor4'] === 'Yes') {
                     $('.maintenanceCertification').val(data[0]['certification_maintenance']);
                     $('.maintenanceCertificationDesc').val(data[0]['maintenance_certification_desc']);
                     $('.allotmentAgreement').val(data[0]['aggrement_allotment']);
-                    $('.reviewer_name').val(data[0]["reviewer_name"]);
+                    var currentReviewer = (data[0]["reviewer_name"] || "").trim();
+                    if (currentReviewer) {
+                        if ($('.reviewer_name option[value="' + currentReviewer + '"]').length === 0) {
+                            $('.reviewer_name').append(new Option(currentReviewer, currentReviewer, true, true));
+                        }
+                        $('.reviewer_name').val(currentReviewer);
+                    } else {
+                        $('.reviewer_name').val("");
+                    }
                     $('.anyComment').val("");
                     var a = data[0]['certification'].split(',');
                     var b = data[0]['accereditation_requirement'].split(',');

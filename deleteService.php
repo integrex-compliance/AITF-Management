@@ -7,13 +7,35 @@
  */
 session_start();
 include_once './dbConnect.php';
+include_once './include/customer_recycle_helper.php';
 date_default_timezone_set('Asia/Kolkata');
 
+if (isset($_REQUEST['permanent_service_id']) && !empty($_REQUEST['permanent_service_id'])) {
+    try {
+        aitfPermanentlyDeleteService($db, $_REQUEST['permanent_service_id']);
+        echo 'success';
+        exit;
+    } catch (Exception $ex) {
+        echo $ex->getMessage();
+        exit;
+    }
+}
 
 // fetch using condition 
 
 if (isset($_GET['ca_service_id']) && !empty($_GET['ca_service_id']) && isset($_GET['ca_customer_id']) && !empty($_GET['ca_customer_id'])) {
     try {
+        if (!isset($_GET['permanent']) || $_GET['permanent'] != '1') {
+            $svcId = !empty($_GET['service_id']) ? $_GET['service_id'] : null;
+            if (!$svcId && !empty($_GET['ca_service_id'])) {
+                $st = $db->prepare("SELECT service FROM service_type_ca WHERE ca_id = :id");
+                $st->execute([':id' => $_GET['ca_service_id']]);
+                $svcId = $st->fetchColumn();
+            }
+            aitfSoftDeleteService($db, $svcId, $_GET['ca_customer_id'], 'CA');
+            echo 'success';
+            exit;
+        }
 
         $stage1AuditId = "SELECT audit_stage_id FROM stage_oneaudit_id WHERE ca_service_id = :service and ca_customer_id = :customer ";
         $statement = $db->prepare($stage1AuditId);
@@ -241,6 +263,17 @@ if (isset($_GET['ca_service_id']) && !empty($_GET['ca_service_id']) && isset($_G
     }
 } else if (isset($_GET["ptr_service_id"]) && !empty($_GET["ptr_service_id"]) && isset($_GET["ptr_customer_id"]) && !empty($_GET["ptr_customer_id"])) {
     try {
+        if (!isset($_GET['permanent']) || $_GET['permanent'] != '1') {
+            $svcId = !empty($_GET['service_id']) ? $_GET['service_id'] : null;
+            if (!$svcId && !empty($_GET['ptr_service_id'])) {
+                $st = $db->prepare("SELECT service FROM service_type_ptr WHERE prt_id = :id");
+                $st->execute([':id' => $_GET['ptr_service_id']]);
+                $svcId = $st->fetchColumn();
+            }
+            aitfSoftDeleteService($db, $svcId, $_GET['ptr_customer_id'], 'PTR');
+            echo 'success';
+            exit;
+        }
         $stage1AuditId = "SELECT audit_stage_id FROM stage_oneaudit_id WHERE ca_service_id = :service and ca_customer_id = :customer ";
         $statement = $db->prepare($stage1AuditId);
         $statement->bindParam(':service', $_GET['ptr_service_id']);
@@ -314,6 +347,17 @@ if (isset($_GET['ca_service_id']) && !empty($_GET['ca_service_id']) && isset($_G
     }
 } else if (isset($_GET["cr_service_id"]) && !empty($_GET["cr_service_id"]) && isset($_GET["cr_customer_id"]) && !empty($_GET["cr_customer_id"])) {
     try {
+        if (!isset($_GET['permanent']) || $_GET['permanent'] != '1') {
+            $svcId = !empty($_GET['service_id']) ? $_GET['service_id'] : null;
+            if (!$svcId && !empty($_GET['cr_service_id'])) {
+                $st = $db->prepare("SELECT service FROM service_type_cr WHERE cr_id = :id");
+                $st->execute([':id' => $_GET['cr_service_id']]);
+                $svcId = $st->fetchColumn();
+            }
+            aitfSoftDeleteService($db, $svcId, $_GET['cr_customer_id'], 'CR');
+            echo 'success';
+            exit;
+        }
         $auditApp = "SELECT audit_id FROM audit_application WHERE service_id = :service ";
         $statement = $db->prepare($auditApp);
         $statement->bindParam(':service', $_GET['cr_service_id']);
@@ -389,6 +433,17 @@ if (isset($_GET['ca_service_id']) && !empty($_GET['ca_service_id']) && isset($_G
     }
 } else if (isset($_GET['sai_service_id']) && !empty($_GET['sai_service_id']) && isset($_GET['sai_customer_id']) && !empty($_GET['sai_customer_id'])) {
     try {
+        if (!isset($_GET['permanent']) || $_GET['permanent'] != '1') {
+            $svcId = !empty($_GET['service_id']) ? $_GET['service_id'] : null;
+            if (!$svcId && !empty($_GET['sai_service_id'])) {
+                $st = $db->prepare("SELECT service FROM service_type_sai WHERE sai_id = :id");
+                $st->execute([':id' => $_GET['sai_service_id']]);
+                $svcId = $st->fetchColumn();
+            }
+            aitfSoftDeleteService($db, $svcId, $_GET['sai_customer_id'], 'SA-I');
+            echo 'success';
+            exit;
+        }
         $stage1AuditId = "SELECT audit_stage_id FROM stage_oneaudit_id WHERE ca_service_id = :service and ca_customer_id = :customer ";
         $statement = $db->prepare($stage1AuditId);
         $statement->bindParam(':service', $_GET['sai_service_id']);
@@ -541,6 +596,17 @@ if (isset($_GET['ca_service_id']) && !empty($_GET['ca_service_id']) && isset($_G
     }
 } else if (isset($_GET['saii_service_id']) && !empty($_GET['saii_service_id']) && isset($_GET['saii_customer_id']) && !empty($_GET['saii_customer_id'])) {
     try {
+        if (!isset($_GET['permanent']) || $_GET['permanent'] != '1') {
+            $svcId = !empty($_GET['service_id']) ? $_GET['service_id'] : null;
+            if (!$svcId && !empty($_GET['saii_service_id'])) {
+                $st = $db->prepare("SELECT service FROM service_type_saii WHERE saii_id = :id");
+                $st->execute([':id' => $_GET['saii_service_id']]);
+                $svcId = $st->fetchColumn();
+            }
+            aitfSoftDeleteService($db, $svcId, $_GET['saii_customer_id'], 'SA-II');
+            echo 'success';
+            exit;
+        }
         $stage1AuditId = "SELECT audit_stage_id FROM stage_oneaudit_id WHERE ca_service_id = :service and ca_customer_id = :customer ";
         $statement = $db->prepare($stage1AuditId);
         $statement->bindParam(':service', $_GET['saii_service_id']);
@@ -671,6 +737,17 @@ if (isset($_GET['ca_service_id']) && !empty($_GET['ca_service_id']) && isset($_G
     }
 } else if (isset($_GET['rc_service_id']) && !empty($_GET['rc_service_id']) && isset($_GET['rc_customer_id']) && !empty($_GET['rc_customer_id'])) {
     try {
+        if (!isset($_GET['permanent']) || $_GET['permanent'] != '1') {
+            $svcId = !empty($_GET['service_id']) ? $_GET['service_id'] : null;
+            if (!$svcId && !empty($_GET['rc_service_id'])) {
+                $st = $db->prepare("SELECT service FROM service_type_rc WHERE rc_id = :id");
+                $st->execute([':id' => $_GET['rc_service_id']]);
+                $svcId = $st->fetchColumn();
+            }
+            aitfSoftDeleteService($db, $svcId, $_GET['rc_customer_id'], 'RC');
+            echo 'success';
+            exit;
+        }
         $stage1AuditId = "SELECT audit_stage_id FROM stage_oneaudit_id WHERE ca_service_id = :service and ca_customer_id = :customer ";
         $statement = $db->prepare($stage1AuditId);
         $statement->bindParam(':service', $_GET['rc_service_id']);
@@ -840,6 +917,17 @@ if (isset($_GET['ca_service_id']) && !empty($_GET['ca_service_id']) && isset($_G
     }
 } else if (isset($_GET['sp_service_id']) && !empty($_GET['sp_service_id']) && isset($_GET['sp_customer_id']) && !empty($_GET['sp_customer_id'])) {
     try {
+        if (!isset($_GET['permanent']) || $_GET['permanent'] != '1') {
+            $svcId = !empty($_GET['service_id']) ? $_GET['service_id'] : null;
+            if (!$svcId && !empty($_GET['sp_service_id'])) {
+                $st = $db->prepare("SELECT service FROM service_type_sp WHERE sp_id = :id");
+                $st->execute([':id' => $_GET['sp_service_id']]);
+                $svcId = $st->fetchColumn();
+            }
+            aitfSoftDeleteService($db, $svcId, $_GET['sp_customer_id'], 'SP');
+            echo 'success';
+            exit;
+        }
         $stage1AuditId = "SELECT audit_stage_id FROM stage_oneaudit_id WHERE ca_service_id = :service and ca_customer_id = :customer ";
         $statement = $db->prepare($stage1AuditId);
         $statement->bindParam(':service', $_GET['sp_service_id']);
@@ -936,6 +1024,17 @@ if (isset($_GET['ca_service_id']) && !empty($_GET['ca_service_id']) && isset($_G
     }
 } else if (isset($_GET["ta_service_id"]) && !empty($_GET["ta_service_id"]) && isset($_GET["ta_customer_id"]) && !empty($_GET["ta_customer_id"])) {
     try {
+        if (!isset($_GET['permanent']) || $_GET['permanent'] != '1') {
+            $svcId = !empty($_GET['service_id']) ? $_GET['service_id'] : null;
+            if (!$svcId && !empty($_GET['ta_service_id'])) {
+                $st = $db->prepare("SELECT service_id FROM service_type_ta WHERE ta_id = :id");
+                $st->execute([':id' => $_GET['ta_service_id']]);
+                $svcId = $st->fetchColumn();
+            }
+            aitfSoftDeleteService($db, $svcId, $_GET['ta_customer_id'], 'TA');
+            echo 'success';
+            exit;
+        }
         $stage1AuditId = "SELECT audit_stage_id FROM stage_oneaudit_id WHERE ca_service_id = :service and ca_customer_id = :customer ";
         $statement = $db->prepare($stage1AuditId);
         $statement->bindParam(':service', $_GET['ta_service_id']);

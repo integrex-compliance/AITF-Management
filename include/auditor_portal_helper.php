@@ -9,7 +9,8 @@ if (!function_exists('aitf_ensure_auditor_portal_schema')) {
             "ALTER TABLE auditors ADD COLUMN login_key_hash VARCHAR(255) NULL",
             "ALTER TABLE auditors ADD COLUMN login_key_generated_at DATETIME NULL",
             "ALTER TABLE auditors ADD COLUMN login_enabled TINYINT(1) NOT NULL DEFAULT 0",
-            "ALTER TABLE auditors ADD COLUMN last_key_sent_at DATETIME NULL"
+            "ALTER TABLE auditors ADD COLUMN last_key_sent_at DATETIME NULL",
+            "ALTER TABLE auditors ADD COLUMN is_reviewer TINYINT(1) NOT NULL DEFAULT 0"
         );
 
         foreach ($statements as $sql) {

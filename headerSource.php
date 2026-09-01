@@ -1016,10 +1016,14 @@
     }
 
     /* Online Form Link Special Styling */
+    .dropdown-links-list a[href="info-updation"],
+    .dropdown-links-list a[href="info_updation_form"],
     .dropdown-links-list a[href="info_updation_form.php"] {
         animation: pulse-glow 2s infinite;
     }
 
+    .dropdown-links-list a[href="info-updation"]:hover,
+    .dropdown-links-list a[href="info_updation_form"]:hover,
     .dropdown-links-list a[href="info_updation_form.php"]:hover {
         background: linear-gradient(135deg, #15803d, #166534) !important;
         transform: scale(1.05);
@@ -1616,10 +1620,10 @@
                                         <a href="infoUpdationForm"
                                             style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
                                                 class="link-line"></span>Information Update Form (PDF)</a>
-                                        <a href="info_updation_form"
+                                        <a href="info-updation"
                                             style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
                                                 class="link-line"></span>Information Update Form (Fill Online)</a>
-                                        <a href="fill_nc_closing_form"
+                                        <a href="nc_closing"
                                             style="color:#1e293b !important; background:#f1f5f9 !important; font-weight:600 !important;"><span
                                                 class="link-line"></span>Fill NC Closing Form (Online)</a>
                                         <a href="circulars"
@@ -1794,8 +1798,9 @@
                         <li><a class="mobile-nav-item" href="nc-closure">NC Report &amp; Closure</a></li>
                         <li><a class="mobile-nav-item" href="infoUpdationForm">Information Update Form (PDF)</a>
                         </li>
-                        <li><a class="mobile-nav-item" href="info_updation_form">Information Update Form (Fill
+                        <li><a class="mobile-nav-item" href="info-updation">Information Update Form (Fill
                                 Online)</a></li>
+                        <li><a class="mobile-nav-item" href="nc_closing">Fill NC Closing Form (Online)</a></li>
                         <li><a class="mobile-nav-item" href="circulars">Circulars</a></li>
                     </ul>
                 </section>

@@ -185,6 +185,15 @@ $iafList = $statement->fetchAll();
                                     placeholder="Auditor Abbreviation">
                             </div>
                         </div>
+                        <div class="row">
+                            <div class="col-sm-12 form-group" style="padding-top: 5px;">
+                                <label style="cursor: pointer; font-weight: 500; display: flex; align-items: center; gap: 8px;">
+                                    <input type="checkbox" class="isReviewerCheckbox" id="isReviewerCheckbox" name="is_reviewer" value="1" style="width: 16px; height: 16px; margin: 0;">
+                                    <span style="font-weight: 600; color: #047857;"><i class="fa fa-check-circle"></i> Also Assign as Reviewer</span>
+                                </label>
+                                <small class="text-muted" style="display: block; margin-left: 24px;">This auditor will also be selectable in the Review Application reviewer list.</small>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <input type="hidden" name="auditor_id" class="auditor_id" id="auditor_id" value="">

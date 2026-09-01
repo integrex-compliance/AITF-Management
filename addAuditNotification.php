@@ -9,6 +9,7 @@
 session_start();
 include_once './dbConnect.php';
 include_once './include/cdc_audit_date_sync.php';
+require_once __DIR__ . '/include/reviewer_conflict_helper.php';
 date_default_timezone_set('Asia/Kolkata');
 
 function validateStage1IntimationDate($db, $serviceId, $intimationDateValue)
@@ -42,6 +43,18 @@ if (isset($_POST["audit-noti-id-edit"]) && !empty($_POST["audit-noti-id-edit"]))
 //        $contact = explode('~', $_POST['auditorContactHidden']);
         $work = explode('~', $_POST['auditorWorkHidden']);
         $acceptance = explode('~', $_POST['auditorAcceptanceHidden']);
+
+        foreach ($auditors as $audIdVal) {
+            $audIdVal = trim((string)$audIdVal);
+            if ($audIdVal !== '') {
+                $conflictCheck = aitf_check_auditor_appointed_as_reviewer($db, $customer, $service, $audIdVal);
+                if (!empty($conflictCheck['has_conflict'])) {
+                    $_SESSION['audit_app_conflict_error'] = ($conflictCheck['conflicting_name'] ?? 'This user') . " is Reviewer of this client, cannot set as Auditor. Please select another Auditor.";
+                    header("Location: customerAccount.php?customerid=" . urlencode($customer) . "&reviewer_conflict=1");
+                    exit;
+                }
+            }
+        }
 
         $auditorlist = "";
         foreach ($auditors as $auditor) {
@@ -326,6 +339,18 @@ if (isset($_POST["audit-noti-id-edit"]) && !empty($_POST["audit-noti-id-edit"]))
         $work = explode('~', $_POST['auditorWorkHidden']);
         $acceptance = explode('~', $_POST['auditorAcceptanceHidden']);
         $serviceid = "";
+
+        foreach ($auditors as $audIdVal) {
+            $audIdVal = trim((string)$audIdVal);
+            if ($audIdVal !== '') {
+                $conflictCheck = aitf_check_auditor_appointed_as_reviewer($db, $customer, $service, $audIdVal);
+                if (!empty($conflictCheck['has_conflict'])) {
+                    $_SESSION['audit_app_conflict_error'] = ($conflictCheck['conflicting_name'] ?? 'This user') . " is Reviewer of this client, cannot set as Auditor. Please select another Auditor.";
+                    header("Location: customerAccount.php?customerid=" . urlencode($customer) . "&reviewer_conflict=1");
+                    exit;
+                }
+            }
+        }
 
         $svcauditdate = "";
         $alldates = "";

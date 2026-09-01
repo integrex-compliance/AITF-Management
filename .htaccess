@@ -57,6 +57,14 @@ RewriteRule ^ %{ENV:BASE}certificate-validation [R=301,L]
 RewriteCond %{THE_REQUEST} ^[A-Z]{3,}\s/+(?:public_html/)?application\.php[\s\?] [NC]
 RewriteRule ^ %{ENV:BASE}application-form [R=301,L]
 
+RewriteCond %{REQUEST_METHOD} !POST
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,}\s/+(?:public_html/)?(?:fill_nc_closing_form|fill-nc-closing-form)(?:\.php)?[\s\?] [NC]
+RewriteRule ^ %{ENV:BASE}nc_closing [R=301,L]
+
+RewriteCond %{REQUEST_METHOD} !POST
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,}\s/+(?:public_html/)?(?:info_updation_form|info-updation-form|info_updation)(?:\.php)?[\s\?] [NC]
+RewriteRule ^ %{ENV:BASE}info-updation [R=301,L]
+
 # ----------------------------------------------------
 # 2. Modern Friendly Route Mappings
 # ----------------------------------------------------
@@ -79,6 +87,12 @@ RewriteRule ^use-of-logo/?$ useOfLogo.php [NC,L,QSA]
 RewriteRule ^transition-guidelines?/?$ transitionGuideline.php [NC,L,QSA]
 RewriteRule ^nc-closure/?$ ncClosure.php [NC,L,QSA]
 RewriteRule ^nc-report-and-closure/?$ ncClosure.php [NC,L,QSA]
+RewriteRule ^nc_closing/?$ fill_nc_closing_form.php [NC,L,QSA]
+RewriteRule ^nc-closing/?$ fill_nc_closing_form.php [NC,L,QSA]
+RewriteRule ^fill-nc-closing-form/?$ fill_nc_closing_form.php [NC,L,QSA]
+RewriteRule ^info-updation/?$ info_updation_form.php [NC,L,QSA]
+RewriteRule ^info_updation/?$ info_updation_form.php [NC,L,QSA]
+RewriteRule ^info-updation-form/?$ info_updation_form.php [NC,L,QSA]
 RewriteRule ^terms-and-conditions/?$ policy.php [NC,L,QSA]
 RewriteRule ^terms-conditions/?$ policy.php [NC,L,QSA]
 RewriteRule ^terms/?$ policy.php [NC,L,QSA]

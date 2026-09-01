@@ -64,7 +64,7 @@ if (in_array(trim($hp_role), array('Office Staff-A', 'Office Staff-B'), true)) {
         $inPlaceholders = implode(',', array_fill(0, count($customerIds), '?'));
 
         // Latest service per customer (any type)
-        $sqlLatestService = "SELECT s.* FROM service s INNER JOIN (SELECT customer_id, MAX(service_id) AS max_sid FROM service WHERE customer_id IN ($inPlaceholders) GROUP BY customer_id) t ON s.customer_id = t.customer_id AND s.service_id = t.max_sid";
+        $sqlLatestService = "SELECT s.* FROM service s INNER JOIN (SELECT customer_id, MAX(service_id) AS max_sid FROM service WHERE (is_deleted = 'NO' OR is_deleted IS NULL) AND customer_id IN ($inPlaceholders) GROUP BY customer_id) t ON s.customer_id = t.customer_id AND s.service_id = t.max_sid";
         $stmt = $db->prepare($sqlLatestService);
         $stmt->execute($customerIds);
         foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
@@ -72,7 +72,7 @@ if (in_array(trim($hp_role), array('Office Staff-A', 'Office Staff-B'), true)) {
         }
 
         // Latest non-SP service_id per customer for due dates
-        $sqlNonSpService = "SELECT s.customer_id, s.service_id FROM service s INNER JOIN (SELECT customer_id, MAX(service_id) AS max_sid FROM service WHERE service_type <> 'SP' AND customer_id IN ($inPlaceholders) GROUP BY customer_id) t ON s.customer_id = t.customer_id AND s.service_id = t.max_sid";
+        $sqlNonSpService = "SELECT s.customer_id, s.service_id FROM service s INNER JOIN (SELECT customer_id, MAX(service_id) AS max_sid FROM service WHERE (is_deleted = 'NO' OR is_deleted IS NULL) AND service_type <> 'SP' AND customer_id IN ($inPlaceholders) GROUP BY customer_id) t ON s.customer_id = t.customer_id AND s.service_id = t.max_sid";
         $stmt = $db->prepare($sqlNonSpService);
         $stmt->execute($customerIds);
         $serviceIdsForDates = array();

@@ -426,12 +426,89 @@ foreach ($category as $name) {
         $rowCB = 1;
     }
 
+    var aitfAppointedReviewersII = [];
+    var aitfAppointedReviewerAuditorIdsII = [];
+
+    function loadAppointedReviewersForAuditorCheckII(customerId, serviceId) {
+        aitfAppointedReviewersII = [];
+        aitfAppointedReviewerAuditorIdsII = [];
+        if (!customerId && !serviceId) return;
+        $.ajax({
+            url: "checkReviewerConflict.php",
+            type: "GET",
+            dataType: "json",
+            data: {
+                action: 'get_appointed_reviewers',
+                customerId: customerId,
+                serviceId: serviceId
+            },
+            success: function(resp) {
+                if (resp && resp.success) {
+                    aitfAppointedReviewersII = resp.reviewers || [];
+                    aitfAppointedReviewerAuditorIdsII = resp.auditor_ids || [];
+                }
+            }
+        });
+    }
+
+    function checkAuditorConflictWithReviewersII(auditorId, auditorName) {
+        if (!auditorId && !auditorName) return false;
+
+        if (auditorId && aitfAppointedReviewerAuditorIdsII.indexOf(parseInt(auditorId, 10)) !== -1) {
+            return auditorName || 'This auditor';
+        }
+
+        if (auditorName) {
+            var normAud = auditorName.toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (normAud) {
+                for (var i = 0; i < aitfAppointedReviewersII.length; i++) {
+                    var normRev = aitfAppointedReviewersII[i].toLowerCase().replace(/[^a-z0-9]/g, '');
+                    if (normAud === normRev || (normAud.length >= 5 && normRev.length >= 5 && (normAud.indexOf(normRev) !== -1 || normRev.indexOf(normAud) !== -1))) {
+                        return aitfAppointedReviewersII[i];
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    function showAuditorReviewerConflictDialogueII(auditorName, conflictingReviewer) {
+        var nameToDisplay = auditorName || conflictingReviewer || "This user";
+        var msg = nameToDisplay + " is Reviewer of this client, cannot set as Auditor.\n\nPlease select another Auditor.";
+        if (typeof Swal !== 'undefined' && Swal.fire) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Conflict Detected',
+                html: '<div class="aitf-conflict-card">' +
+                          '<div class="aitf-conflict-card-title">' +
+                              '<span class="aitf-conflict-card-name">' + nameToDisplay + '</span> is Reviewer of this client, cannot set as Auditor.' +
+                          '</div>' +
+                          '<div class="aitf-conflict-card-sub">' +
+                              'Please select another Auditor.' +
+                          '</div>' +
+                      '</div>',
+                confirmButtonText: 'OK, I Understood',
+                confirmButtonColor: '#0F2742',
+                customClass: {
+                    popup: 'aitf-conflict-swal',
+                    confirmButton: 'aitf-conflict-btn'
+                }
+            });
+        } else {
+            alert(msg);
+        }
+    }
+
     $(document).ready(function () {
         $('#auditNotificationII').on('shown.bs.modal', function () {
+            var cidII = $('.auditii-noti-customer').val() || $('.customerId').val();
+            var sidII = $('.auditii-noti-service').val() || $('.serviceId').val();
+            loadAppointedReviewersForAuditorCheckII(cidII, sidII);
+
             // Re-initialize chronology validator when modal opens
             DateChronologyValidator.init({
-                customerId: $('.auditii-noti-customer').val() || $('.customerId').val(),
-                typedServiceId: $('.auditii-noti-service').val() || $('.serviceId').val(),
+                customerId: cidII,
+                typedServiceId: sidII,
                 fields: {
                     'stage2_intimation_date': { input: '.intimationDateii', errorDiv: '#intimationDateiiError', errorMsg: '#intimationDateiiErrorMsg' },
                     'stage2_audit_date': { input: '.auditiiDates', errorDiv: '#auditiiDatesError', errorMsg: '#auditiiDatesErrorMsg' },
@@ -734,6 +811,30 @@ foreach ($category as $name) {
                 return;
             }
 
+            var hasAuditorConflictII = false;
+            var confAudNameII = '';
+            var confRevNameII = '';
+            $('.contractAuditorNameii').each(function () {
+                var audId = $(this).val();
+                var audName = $(this).find('option:selected').text().trim();
+                if (audId) {
+                    var conflictRev = checkAuditorConflictWithReviewersII(audId, audName);
+                    if (conflictRev) {
+                        hasAuditorConflictII = true;
+                        confAudNameII = audName;
+                        confRevNameII = conflictRev;
+                        $(this).val('');
+                        return false;
+                    }
+                }
+            });
+
+            if (hasAuditorConflictII) {
+                e.preventDefault();
+                showAuditorReviewerConflictDialogueII(confAudNameII, confRevNameII);
+                return false;
+            }
+
             var auditiiDatesArray = [];
             $('.auditiiDates').each(function () {
                 auditiiDatesArray.push($(this).val());
@@ -771,9 +872,42 @@ foreach ($category as $name) {
             $('.auditorAcceptanceHiddenii').val(auditorAcceptanceiiArray.join("~"));
         });
 
-        //        $('body').on("change", ".contractAuditorNameii", function () {
-        //            alert($(this).val());
-        //        });
+        $(document).on("change", ".contractAuditorNameii", function () {
+            var $select = $(this);
+            var auditorId = $select.val();
+            var auditorName = $select.find('option:selected').text().trim();
+            if (!auditorId) return;
+
+            var conflictReviewer = checkAuditorConflictWithReviewersII(auditorId, auditorName);
+            if (conflictReviewer) {
+                $select.val("");
+                showAuditorReviewerConflictDialogueII(auditorName, conflictReviewer);
+                return;
+            }
+
+            var cid = $('.auditii-noti-customer').val() || $('.customerId').val();
+            var sid = $('.auditii-noti-service').val() || $('.serviceId').val();
+            if (cid || sid) {
+                $.ajax({
+                    url: "checkReviewerConflict.php",
+                    type: "POST",
+                    dataType: "json",
+                    data: {
+                        action: 'check_auditor',
+                        customerId: cid,
+                        serviceId: sid,
+                        auditorId: auditorId,
+                        auditorName: auditorName
+                    },
+                    success: function (resp) {
+                        if (resp && resp.conflict) {
+                            $select.val("");
+                            showAuditorReviewerConflictDialogueII(auditorName, resp.conflicting_reviewer || auditorName);
+                        }
+                    }
+                });
+            }
+        });
 
         $(document.body).on('click', '.addAuditLinkii', function (e) {
             e.preventDefault();

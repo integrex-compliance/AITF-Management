@@ -227,18 +227,21 @@
                 <div class="row">
                     <div class="col-sm-6">
                         <div class="row" style="">
-                            <div class="col-xs-8  text-center btn  qms_complete_btn ">
-                                <span><i class="fa ">Auditors</i></span>
+                            <div class="col-xs-5  text-center btn  qms_complete_btn ">
+                                <span><i class="fa fa-users"></i> Auditors</span>
                             </div>
-                            <div class="col-xs-4  text-center btn qms_complete_btn addNewAuditors">
-                                <span><i class="fa fa-plus-square "> Add Auditors</i></span>
+                            <div class="col-xs-3  text-center btn qms_complete_btn addNewAuditors" style="padding-left:2px; padding-right:2px;">
+                                <span><i class="fa fa-plus-square"></i> Auditor</span>
+                            </div>
+                            <div class="col-xs-4  text-center btn qms_complete_btn addNewReviewer" style="background: linear-gradient(135deg, #059669, #10b981); border-color: #059669; color: #fff; padding-left:2px; padding-right:2px;">
+                                <span><i class="fa fa-user-plus"></i> Add Reviewer</span>
                             </div>
                         </div>
                         <div class="row" style="">
                             <div class="well" style="max-height: 200px; overflow: auto;">
                                 <ul class="list-group checked-list-box operateAuditors">
                                     <?php foreach ($auditorsList as $auditor) { ?>
-                                        <li class="list-group-item">
+                                        <li class="list-group-item" data-auditor-id="<?php echo (int)$auditor['auditors_id']; ?>">
                                             <a class="editAuditor" data-id="<?php echo $auditor['auditors_id'] ?>"
                                                 style="float: left"><i
                                                     class="fa fa-pencil-square"></i></a>&emsp;<?php echo $auditor['auditor_name'] ?>
@@ -253,6 +256,27 @@
                                                 style="float: right; margin-right: 8px;">
                                                 <i class="fa fa-key"></i> Generate Key
                                             </button>
+                                            <?php if (!empty($auditor['is_reviewer'])) { ?>
+                                                <button type="button"
+                                                    class="btn btn-xs btn-success toggleReviewerBtn"
+                                                    data-id="<?php echo (int)$auditor['auditors_id']; ?>"
+                                                    data-name="<?php echo htmlspecialchars($auditor['auditor_name'], ENT_QUOTES, 'UTF-8'); ?>"
+                                                    data-status="1"
+                                                    title="Designated as Reviewer. Click to toggle role"
+                                                    style="float: right; margin-right: 8px;">
+                                                    <i class="fa fa-check-circle"></i> Reviewer
+                                                </button>
+                                            <?php } else { ?>
+                                                <button type="button"
+                                                    class="btn btn-xs btn-default toggleReviewerBtn"
+                                                    data-id="<?php echo (int)$auditor['auditors_id']; ?>"
+                                                    data-name="<?php echo htmlspecialchars($auditor['auditor_name'], ENT_QUOTES, 'UTF-8'); ?>"
+                                                    data-status="0"
+                                                    title="Click to assign as Reviewer"
+                                                    style="float: right; margin-right: 8px; border: 1px dashed #10b981; color: #047857;">
+                                                    <i class="fa fa-plus"></i> Add Reviewer
+                                                </button>
+                                            <?php } ?>
                                             <?php if (!empty($auditor['login_enabled'])) { ?>
                                                 <span class="label label-success" style="float:right; margin-right:8px;">Portal Enabled</span>
                                             <?php } ?>
@@ -262,6 +286,40 @@
                             </div>
                         </div>
                         <div class="row newAuditors"></div>
+                    </div>
+
+                    <!-- Modal to Add / Assign Reviewer from Auditors -->
+                    <div class="modal fade" id="addReviewerModal" tabindex="-1" role="dialog" aria-labelledby="addReviewerModalLabel" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content" style="border-radius: 10px; overflow: hidden;">
+                                <div class="modal-header" style="background: linear-gradient(135deg, #059669, #10b981); color: #fff; padding: 16px 20px;">
+                                    <button type="button" class="close" data-dismiss="modal" style="color: #fff; opacity: 0.9;"><span>&times;</span></button>
+                                    <h4 class="modal-title" id="addReviewerModalLabel" style="font-weight: 600;"><i class="fa fa-user-plus"></i> Add / Assign Reviewer</h4>
+                                </div>
+                                <div class="modal-body" style="padding: 20px;">
+                                    <p style="color: #475569; font-size: 13.5px; margin-bottom: 15px;">
+                                        Select an auditor below to designate them as a <strong>Reviewer</strong>. The auditor will also remain an auditor, and their name will appear in the <strong>Review Application</strong> dropdown.
+                                    </p>
+                                    <div class="form-group">
+                                        <label style="font-weight: 600; color: #1e293b;">Select Auditor <span style="color: #dc2626;">*</span></label>
+                                        <select class="form-control selectAuditorForReviewer" id="selectAuditorForReviewer" style="border-radius: 6px; height: 42px; font-size: 14px;">
+                                            <option value="">-- Choose Auditor --</option>
+                                            <?php foreach ($auditorsList as $aud) { ?>
+                                                <option value="<?php echo (int)$aud['auditors_id']; ?>" data-is-reviewer="<?php echo !empty($aud['is_reviewer']) ? 1 : 0; ?>">
+                                                    <?php echo htmlspecialchars($aud['auditor_name'], ENT_QUOTES, 'UTF-8') . (!empty($aud['is_reviewer']) ? ' [Currently Reviewer]' : ''); ?>
+                                                </option>
+                                            <?php } ?>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="modal-footer" style="border-top: 1px solid #e2e8f0; padding: 14px 20px;">
+                                    <button type="button" class="btn btn-default" data-dismiss="modal" style="border-radius: 6px;">Cancel</button>
+                                    <button type="button" class="btn btn-success" id="confirmAssignReviewerBtn" style="border-radius: 6px; background: #059669; border-color: #059669; font-weight: 600;">
+                                        <i class="fa fa-check"></i> Set as Reviewer
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="col-sm-6">
                         <div class="row" style="">
@@ -1209,6 +1267,7 @@
                         $(".auditorEmail").val(data['auditor_email']);
                         $(".auditor_id").val(data['auditors_id']);
                         $(".auditorabbr").val(data['abbrevation']);
+                        $(".isReviewerCheckbox").prop("checked", data['is_reviewer'] == 1);
                         $("input").trigger("change");
                         $(".auditoradd").modal("show");
                         //                    alert(data);
@@ -1339,6 +1398,155 @@
                         $(this).remove();
                     });
                 });
+
+            /* --- Toggle Auditor Reviewer Role Handler --- */
+            $("body").on("click", ".toggleReviewerBtn", function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var btn = $(this);
+                var auditorId = btn.attr('data-id');
+                var auditorName = btn.attr('data-name');
+                var currentStatus = btn.attr('data-status');
+                var newStatus = (currentStatus == "1") ? 0 : 1;
+
+                var promptText = (newStatus === 1)
+                    ? 'Assign "' + auditorName + '" as Reviewer?'
+                    : 'Remove Reviewer role from "' + auditorName + '"?';
+
+                var doToggle = function() {
+                    btn.prop('disabled', true);
+                    $.ajax({
+                        url: 'toggleReviewerAction.php',
+                        type: 'POST',
+                        dataType: 'json',
+                        data: {
+                            auditor_id: auditorId,
+                            is_reviewer: newStatus
+                        },
+                        success: function (resp) {
+                            btn.prop('disabled', false);
+                            if (resp.success) {
+                                if (resp.is_reviewer == 1) {
+                                    btn.attr('data-status', '1')
+                                       .removeClass('btn-default')
+                                       .addClass('btn-success')
+                                       .css({'border': '', 'color': ''})
+                                       .attr('title', 'Designated as Reviewer. Click to toggle role')
+                                       .html('<i class="fa fa-check-circle"></i> Reviewer');
+                                } else {
+                                    btn.attr('data-status', '0')
+                                       .removeClass('btn-success')
+                                       .addClass('btn-default')
+                                       .css({'border': '1px dashed #10b981', 'color': '#047857'})
+                                       .attr('title', 'Click to assign as Reviewer')
+                                       .html('<i class="fa fa-plus"></i> Add Reviewer');
+                                }
+                                $('#selectAuditorForReviewer option[value="' + auditorId + '"]').text(
+                                    auditorName + (resp.is_reviewer == 1 ? ' [Currently Reviewer]' : '')
+                                );
+                                if (typeof Swal !== 'undefined' && Swal.fire) {
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: resp.is_reviewer == 1 ? 'Reviewer Assigned' : 'Reviewer Role Removed',
+                                        text: resp.message,
+                                        timer: 2000,
+                                        showConfirmButton: false
+                                    });
+                                } else {
+                                    alert(resp.message);
+                                }
+                            } else {
+                                alert(resp.message || 'Failed to update reviewer status.');
+                            }
+                        },
+                        error: function () {
+                            btn.prop('disabled', false);
+                            alert('Network or server error updating reviewer status.');
+                        }
+                    });
+                };
+
+                if (typeof Swal !== 'undefined' && Swal.fire) {
+                    Swal.fire({
+                        title: promptText,
+                        text: (newStatus === 1) ? 'This auditor will be selectable in the Review Application reviewer list.' : 'This auditor will no longer appear as a reviewer.',
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonColor: newStatus === 1 ? '#059669' : '#d33',
+                        cancelButtonColor: '#6c757d',
+                        confirmButtonText: newStatus === 1 ? 'Yes, Set as Reviewer' : 'Yes, Remove'
+                    }).then(function(result) {
+                        if (result.isConfirmed) {
+                            doToggle();
+                        }
+                    });
+                } else {
+                    if (confirm(promptText)) {
+                        doToggle();
+                    }
+                }
+            });
+
+            /* --- Add Reviewer Modal Trigger --- */
+            $('.addNewReviewer').click(function () {
+                $('#selectAuditorForReviewer').val('');
+                $('#addReviewerModal').modal('show');
+            });
+
+            $('#confirmAssignReviewerBtn').click(function () {
+                var auditorId = $('#selectAuditorForReviewer').val();
+                if (!auditorId) {
+                    alert('Please select an auditor first.');
+                    return;
+                }
+                var selectedOption = $('#selectAuditorForReviewer option:selected');
+                var auditorName = selectedOption.text().replace('[Currently Reviewer]', '').trim();
+
+                var btn = $(this);
+                btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Saving...');
+
+                $.ajax({
+                    url: 'toggleReviewerAction.php',
+                    type: 'POST',
+                    dataType: 'json',
+                    data: {
+                        auditor_id: auditorId,
+                        is_reviewer: 1
+                    },
+                    success: function (resp) {
+                        btn.prop('disabled', false).html('<i class="fa fa-check"></i> Set as Reviewer');
+                        $('#addReviewerModal').modal('hide');
+                        if (resp.success) {
+                            var rowBtn = $('.operateAuditors').find('.toggleReviewerBtn[data-id="' + auditorId + '"]');
+                            if (rowBtn.length) {
+                                rowBtn.attr('data-status', '1')
+                                      .removeClass('btn-default')
+                                      .addClass('btn-success')
+                                      .css({'border': '', 'color': ''})
+                                      .attr('title', 'Designated as Reviewer. Click to toggle role')
+                                      .html('<i class="fa fa-check-circle"></i> Reviewer');
+                            }
+                            $('#selectAuditorForReviewer option[value="' + auditorId + '"]').text(auditorName + ' [Currently Reviewer]');
+                            if (typeof Swal !== 'undefined' && Swal.fire) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Reviewer Assigned!',
+                                    text: resp.message,
+                                    confirmButtonColor: '#059669'
+                                });
+                            } else {
+                                alert(resp.message);
+                            }
+                        } else {
+                            alert(resp.message || 'Failed to assign reviewer.');
+                        }
+                    },
+                    error: function () {
+                        btn.prop('disabled', false).html('<i class="fa fa-check"></i> Set as Reviewer');
+                        alert('Server error while assigning reviewer.');
+                    }
+                });
+            });
 
             $("body").on("click", ".editStandards", function (e) {
                 $.ajax({
@@ -1597,6 +1805,7 @@
                 $(".auditorEmail").val("");
                 $(".auditor_id").val("");
                 $(".auditorabbr").val("");
+                $(".isReviewerCheckbox").prop("checked", false);
                 $(".auditoradd").modal("show");
                 //                $('.newAuditors').empty();
                 //                $('.newAuditors').append('<div class="col-sm-12"><div class="well" style="height: 100px;">\n\
@@ -1732,7 +1941,12 @@
                         $('.newAuditors').empty();
                         $('.operateAuditors').empty();
                         for (var i in data) {
-                            $('.operateAuditors').append('<li class="list-group-item"><a class="editAuditor" data-id="' + data[i]['auditors_id'] + '" style="float: left"><i class="fa fa-pencil-square"></i></a>&emsp;' + data[i]['auditor_name'] + '<a class="deleteAuditor" data-id="' + data[i]['auditors_id'] + '" style="float: right"><i class="fa fa-trash"></i></a></li>');
+                            var reviewerBtn = (data[i]['is_reviewer'] == 1)
+                                ? '<button type="button" class="btn btn-xs btn-success toggleReviewerBtn" data-id="' + data[i]['auditors_id'] + '" data-name="' + data[i]['auditor_name'] + '" data-status="1" style="float: right; margin-right: 8px;"><i class="fa fa-check-circle"></i> Reviewer</button>'
+                                : '<button type="button" class="btn btn-xs btn-default toggleReviewerBtn" data-id="' + data[i]['auditors_id'] + '" data-name="' + data[i]['auditor_name'] + '" data-status="0" style="float: right; margin-right: 8px; border: 1px dashed #10b981; color: #047857;"><i class="fa fa-plus"></i> Add Reviewer</button>';
+                            var portalKeyBtn = '<button type="button" class="btn btn-xs btn-primary generateAuditorKey" data-id="' + data[i]['auditors_id'] + '" data-name="' + data[i]['auditor_name'] + '" data-email="' + (data[i]['login_email'] || data[i]['auditor_email'] || '') + '" style="float: right; margin-right: 8px;"><i class="fa fa-key"></i> Generate Key</button>';
+                            var portalBadge = (data[i]['login_enabled'] == 1) ? '<span class="label label-success" style="float:right; margin-right:8px;">Portal Enabled</span>' : '';
+                            $('.operateAuditors').append('<li class="list-group-item" data-auditor-id="' + data[i]['auditors_id'] + '"><a class="editAuditor" data-id="' + data[i]['auditors_id'] + '" style="float: left"><i class="fa fa-pencil-square"></i></a>&emsp;' + data[i]['auditor_name'] + '<a class="deleteAuditor" data-id="' + data[i]['auditors_id'] + '" style="float: right"><i class="fa fa-trash"></i></a>' + portalKeyBtn + reviewerBtn + portalBadge + '</li>');
                         }
                     },
                     error: function (data, status, err) {
@@ -1904,7 +2118,12 @@
                             $('#delete-details').hide();
                             $('.operateAuditors').empty();
                             for (var i in data) {
-                                $('.operateAuditors').append('<li class="list-group-item"><a class="editAuditor" data-id="' + data[i]['auditors_id'] + '" style="float: left"><i class="fa fa-pencil-square"></i></a>&emsp;' + data[i]['auditor_name'] + '<a class="deleteAuditor" data-id="' + data[i]['auditors_id'] + '" style="float: right"><i class="fa fa-trash"></i></a></li>');
+                                var reviewerBtn = (data[i]['is_reviewer'] == 1)
+                                    ? '<button type="button" class="btn btn-xs btn-success toggleReviewerBtn" data-id="' + data[i]['auditors_id'] + '" data-name="' + data[i]['auditor_name'] + '" data-status="1" style="float: right; margin-right: 8px;"><i class="fa fa-check-circle"></i> Reviewer</button>'
+                                    : '<button type="button" class="btn btn-xs btn-default toggleReviewerBtn" data-id="' + data[i]['auditors_id'] + '" data-name="' + data[i]['auditor_name'] + '" data-status="0" style="float: right; margin-right: 8px; border: 1px dashed #10b981; color: #047857;"><i class="fa fa-plus"></i> Add Reviewer</button>';
+                                var portalKeyBtn = '<button type="button" class="btn btn-xs btn-primary generateAuditorKey" data-id="' + data[i]['auditors_id'] + '" data-name="' + data[i]['auditor_name'] + '" data-email="' + (data[i]['login_email'] || data[i]['auditor_email'] || '') + '" style="float: right; margin-right: 8px;"><i class="fa fa-key"></i> Generate Key</button>';
+                                var portalBadge = (data[i]['login_enabled'] == 1) ? '<span class="label label-success" style="float:right; margin-right:8px;">Portal Enabled</span>' : '';
+                                $('.operateAuditors').append('<li class="list-group-item" data-auditor-id="' + data[i]['auditors_id'] + '"><a class="editAuditor" data-id="' + data[i]['auditors_id'] + '" style="float: left"><i class="fa fa-pencil-square"></i></a>&emsp;' + data[i]['auditor_name'] + '<a class="deleteAuditor" data-id="' + data[i]['auditors_id'] + '" style="float: right"><i class="fa fa-trash"></i></a>' + portalKeyBtn + reviewerBtn + portalBadge + '</li>');
                             }
                         },
                         error: function (data, status, err) {

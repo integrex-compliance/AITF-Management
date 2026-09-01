@@ -72,6 +72,17 @@ if (strtoupper($_SERVER['REQUEST_METHOD']) == 'POST') {
         $_POST['applicationDate'] = $applicationDateObj->format('Y-m-d');
         $_POST['applicationRcvDate'] = $receivedDateObj->format('Y-m-d');
 
+        require_once __DIR__ . '/include/reviewer_conflict_helper.php';
+        $revConflict = aitf_check_auditor_reviewer_conflict(
+            $db,
+            $_POST['customerId'] ?? '',
+            $_POST['serviceId'] ?? ($_POST['unisvcId'] ?? ''),
+            $_POST['reviewer_name'] ?? ''
+        );
+        if ($revConflict['has_conflict']) {
+            redirectAuditApplicationError('Reviewer and Auditor cannot be the same!');
+        }
+
         if (isset($_POST['auditId']) && !empty($_POST['auditId'])) {
             try {
 

@@ -512,22 +512,144 @@ foreach ($auditors as $name) {
             $(this).parent("div.deleteCodeAuditorParent").parent('div.newCodeAuditorParent').remove();
         });
 
-        $('.addAssessment').click(function () {
-            //    var leadAuditorArray = [];
-            //            $('.assessmentLeadAuditor').each(function () {
-            //    leadAuditorArray.push($(this).val());
-            //    });
-            //            $('.leadAuditorHidden').val(leadAuditorArray.join(", "));
-            //            var leadAuditorChkArray = [];
-            //            $('.leadAuditor').each(function () {
-            //    if ($(this).prop('checked'))
-            //            $chkLead = $(this).val();
-            //            else
-            //            $chkLead = ""
-            //            leadAuditorChkArray.push($chkLead);
-            //    });
-            //            $('.leadAuditorChkHidden').val(leadAuditorChkArray.join(","));
-            //alert($('.leadAuditorChkHidden').val());
+        var aitfAppointedReviewersAP = [];
+
+        function loadAppointedReviewersForAssessmentPlan(customerId, serviceId) {
+            aitfAppointedReviewersAP = [];
+            if (!customerId && !serviceId) return;
+            $.ajax({
+                url: "checkReviewerConflict.php",
+                type: "GET",
+                dataType: "json",
+                data: {
+                    action: 'get_appointed_reviewers',
+                    customerId: customerId,
+                    serviceId: serviceId
+                },
+                success: function(resp) {
+                    if (resp && resp.success) {
+                        aitfAppointedReviewersAP = resp.reviewers || [];
+                    }
+                }
+            });
+        }
+
+        function checkAuditorConflictWithReviewersAP(auditorName) {
+            if (!auditorName) return false;
+            var normAud = auditorName.toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (!normAud) return false;
+            for (var i = 0; i < aitfAppointedReviewersAP.length; i++) {
+                var normRev = aitfAppointedReviewersAP[i].toLowerCase().replace(/[^a-z0-9]/g, '');
+                if (normAud === normRev || (normAud.length >= 5 && normRev.length >= 5 && (normAud.indexOf(normRev) !== -1 || normRev.indexOf(normAud) !== -1))) {
+                    return aitfAppointedReviewersAP[i];
+                }
+            }
+            return false;
+        }
+
+        function showAuditorConflictAP(auditorName, revName) {
+            var nameToDisplay = auditorName || revName || "This user";
+            var msg = nameToDisplay + " is Reviewer of this client, cannot set as Auditor.\n\nPlease select another Auditor.";
+            if (typeof Swal !== 'undefined' && Swal.fire) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Conflict Detected',
+                    html: '<div class="aitf-conflict-card">' +
+                              '<div class="aitf-conflict-card-title">' +
+                                  '<span class="aitf-conflict-card-name">' + nameToDisplay + '</span> is Reviewer of this client, cannot set as Auditor.' +
+                              '</div>' +
+                              '<div class="aitf-conflict-card-sub">' +
+                                  'Please select another Auditor.' +
+                              '</div>' +
+                          '</div>',
+                    confirmButtonText: 'OK, I Understood',
+                    confirmButtonColor: '#0F2742',
+                    customClass: {
+                        popup: 'aitf-conflict-swal',
+                        confirmButton: 'aitf-conflict-btn'
+                    }
+                });
+            } else {
+                alert(msg);
+            }
+        }
+
+        $('#assessmentPlanning').on('shown.bs.modal', function () {
+            loadAppointedReviewersForAssessmentPlan($('.assessmentUserId').val(), $('.assessmentServiceId').val());
+        });
+
+        $(document).on('change', '.assessmentLeadAuditor, .assessmentAuditors', function () {
+            var $select = $(this);
+            var audName = $select.val();
+            if (!audName) return;
+
+            var conflictRev = checkAuditorConflictWithReviewersAP(audName);
+            if (conflictRev) {
+                $select.val("");
+                showAuditorConflictAP(audName, conflictRev);
+                return;
+            }
+
+            var cid = $('.assessmentUserId').val();
+            var sid = $('.assessmentServiceId').val();
+            if (cid || sid) {
+                $.ajax({
+                    url: "checkReviewerConflict.php",
+                    type: "POST",
+                    dataType: "json",
+                    data: {
+                        action: 'check_auditor',
+                        customerId: cid,
+                        serviceId: sid,
+                        auditorName: audName
+                    },
+                    success: function (resp) {
+                        if (resp && resp.conflict) {
+                            $select.val("");
+                            showAuditorConflictAP(audName, resp.conflicting_reviewer || audName);
+                        }
+                    }
+                });
+            }
+        });
+
+        $('.addAssessment').click(function (e) {
+            var hasConflictAP = false;
+            var confAudName = '';
+            var confRevName = '';
+
+            var leadAud = $('.assessmentLeadAuditor').val();
+            if (leadAud) {
+                var cRev = checkAuditorConflictWithReviewersAP(leadAud);
+                if (cRev) {
+                    hasConflictAP = true;
+                    confAudName = leadAud;
+                    confRevName = cRev;
+                    $('.assessmentLeadAuditor').val('');
+                }
+            }
+
+            if (!hasConflictAP) {
+                $('.assessmentAuditors').each(function () {
+                    var aVal = $(this).val();
+                    if (aVal) {
+                        var cr = checkAuditorConflictWithReviewersAP(aVal);
+                        if (cr) {
+                            hasConflictAP = true;
+                            confAudName = aVal;
+                            confRevName = cr;
+                            $(this).val('');
+                            return false;
+                        }
+                    }
+                });
+            }
+
+            if (hasConflictAP) {
+                e.preventDefault();
+                showAuditorConflictAP(confAudName, confRevName);
+                return false;
+            }
 
             var AuditorArray = [];
             $('.assessmentAuditors').each(function () {
@@ -543,8 +665,6 @@ foreach ($auditors as $name) {
                 AuditorChkArray.push($chkAud);
             });
             $('.AuditorChkHidden').val(AuditorChkArray.join(","));
-            //            alert($('.AuditorChkHidden').val());
-            //            alert($('.AuditorHidden')).val();
         });
 
         $assessmentIafCode = "";

@@ -28,6 +28,94 @@
 <script src="js/app.js"></script>
 <script type="text/javascript" src="./tinymce/tinymce.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<style>
+/* AITF Conflict Dialogue & Alert Box Premium Styling */
+.aitf-conflict-swal {
+    border-radius: 18px !important;
+    padding: 26px 24px 22px !important;
+    box-shadow: 0 20px 45px rgba(15, 23, 42, 0.22), 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    border: 1px solid #fecdd3 !important;
+    max-width: 440px !important;
+    background: #ffffff !important;
+}
+.aitf-conflict-swal .swal2-icon.swal2-error {
+    width: 58px !important;
+    height: 58px !important;
+    margin: 2px auto 14px !important;
+    border: 3px solid #ef4444 !important;
+    color: #ef4444 !important;
+}
+.aitf-conflict-swal .swal2-icon.swal2-error [class^='swal2-x-mark-line'] {
+    background-color: #ef4444 !important;
+    height: 3.5px !important;
+    top: 25px !important;
+}
+.aitf-conflict-swal .swal2-title {
+    font-size: 20px !important;
+    font-weight: 700 !important;
+    color: #0f172a !important;
+    padding: 0 !important;
+    margin: 0 0 10px 0 !important;
+    letter-spacing: -0.3px !important;
+    line-height: 1.3 !important;
+}
+.aitf-conflict-swal .swal2-html-container {
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+}
+.aitf-conflict-card {
+    background: #fff1f2;
+    border: 1.5px solid #fecdd3;
+    border-radius: 12px;
+    padding: 16px 14px;
+    text-align: center;
+    margin: 6px 0 16px 0;
+    box-shadow: 0 2px 6px rgba(225, 29, 72, 0.04);
+}
+.aitf-conflict-card-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #9f1239;
+    line-height: 1.45;
+    margin-bottom: 8px;
+}
+.aitf-conflict-card-name {
+    color: #be123c;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    font-weight: 800;
+}
+.aitf-conflict-card-sub {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #475569;
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 7px 14px;
+    display: inline-block;
+    border: 1px dashed #cbd5e1;
+}
+.aitf-conflict-btn {
+    background-color: #0F2742 !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    font-size: 14px !important;
+    padding: 10px 30px !important;
+    border-radius: 8px !important;
+    letter-spacing: 0.3px !important;
+    box-shadow: 0 4px 12px rgba(15, 39, 66, 0.25) !important;
+    border: none !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+}
+.aitf-conflict-btn:hover {
+    background-color: #1a3c61 !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 6px 16px rgba(15, 39, 66, 0.35) !important;
+}
+</style>
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>

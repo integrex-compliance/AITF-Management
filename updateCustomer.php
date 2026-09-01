@@ -81,7 +81,7 @@ if (isset($_GET['id']) && !empty($_GET['id']) && isset($_GET['columnName'])) {
     }
 } else if(isset ($_POST['customerId']) && !empty ($_POST['customerId'])){
     try {
-        $deleteCustomer = "UPDATE `customer_info` SET is_deleted = 'YES' WHERE id = :id";
+        $deleteCustomer = "UPDATE `customer_info` SET is_deleted = 'YES', deleted_date = NOW() WHERE id = :id";
         $statement = $db->prepare($deleteCustomer);
         $statement->bindParam(':id', $_POST['customerId']);
         $statement->execute();

@@ -800,6 +800,79 @@ foreach ($auditors as $name) {
             }
         });
 
+        var aitfAppointedReviewers = [];
+        var aitfAppointedReviewerAuditorIds = [];
+
+        function loadAppointedReviewersForAuditorCheck(customerId, serviceId) {
+            aitfAppointedReviewers = [];
+            aitfAppointedReviewerAuditorIds = [];
+            if (!customerId && !serviceId) return;
+            $.ajax({
+                url: "checkReviewerConflict.php",
+                type: "GET",
+                dataType: "json",
+                data: {
+                    action: 'get_appointed_reviewers',
+                    customerId: customerId,
+                    serviceId: serviceId
+                },
+                success: function(resp) {
+                    if (resp && resp.success) {
+                        aitfAppointedReviewers = resp.reviewers || [];
+                        aitfAppointedReviewerAuditorIds = resp.auditor_ids || [];
+                    }
+                }
+            });
+        }
+
+        function checkAuditorConflictWithReviewers(auditorId, auditorName) {
+            if (!auditorId && !auditorName) return false;
+
+            if (auditorId && aitfAppointedReviewerAuditorIds.indexOf(parseInt(auditorId, 10)) !== -1) {
+                return auditorName || 'This auditor';
+            }
+
+            if (auditorName) {
+                var normAud = auditorName.toLowerCase().replace(/[^a-z0-9]/g, '');
+                if (normAud) {
+                    for (var i = 0; i < aitfAppointedReviewers.length; i++) {
+                        var normRev = aitfAppointedReviewers[i].toLowerCase().replace(/[^a-z0-9]/g, '');
+                        if (normAud === normRev || (normAud.length >= 5 && normRev.length >= 5 && (normAud.indexOf(normRev) !== -1 || normRev.indexOf(normAud) !== -1))) {
+                            return aitfAppointedReviewers[i];
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        function showAuditorReviewerConflictDialogue(auditorName, conflictingReviewer) {
+            var nameToDisplay = auditorName || conflictingReviewer || "This user";
+            var msg = nameToDisplay + " is Reviewer of this client, cannot set as Auditor.\n\nPlease select another Auditor.";
+            if (typeof Swal !== 'undefined' && Swal.fire) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Conflict Detected',
+                    html: '<div class="aitf-conflict-card">' +
+                              '<div class="aitf-conflict-card-title">' +
+                                  '<span class="aitf-conflict-card-name">' + nameToDisplay + '</span> is Reviewer of this client, cannot set as Auditor.' +
+                              '</div>' +
+                              '<div class="aitf-conflict-card-sub">' +
+                                  'Please select another Auditor.' +
+                              '</div>' +
+                          '</div>',
+                    confirmButtonText: 'OK, I Understood',
+                    confirmButtonColor: '#0F2742',
+                    customClass: {
+                        popup: 'aitf-conflict-swal',
+                        confirmButton: 'aitf-conflict-btn'
+                    }
+                });
+            } else {
+                alert(msg);
+            }
+        }
+
         $customerid = "";
         $('.createAuditNotification').click(function () {
             $('.audit-noti-service').val($(this).attr('data-service1') || '');
@@ -818,6 +891,8 @@ foreach ($auditors as $name) {
             $(".audit-service-type").val(rawSvcType);
             $("#audti-service-type").val(rawSvcType);
             $customerid = $(this).attr('data-customer');
+
+            loadAppointedReviewersForAuditorCheck($customerid, $(this).attr('data-service1') || $(this).attr('data-service'));
 
             $.ajax({
                 url: "getClientInfo.php",
@@ -847,29 +922,65 @@ foreach ($auditors as $name) {
             });
         });
 
-        $(".contractAuditorName").change(function () {
-            //            alert($(this).val());
+        $(document).on('change', ".contractAuditorName", function () {
+            var $select = $(this);
+            var auditorId = $select.val();
+            var auditorName = $select.find('option:selected').text().trim();
+            if (!auditorId) {
+                return;
+            }
+
+            // 1. Check if auditor is already appointed as reviewer for this client
+            var conflictReviewer = checkAuditorConflictWithReviewers(auditorId, auditorName);
+            if (conflictReviewer) {
+                $select.val("");
+                showAuditorReviewerConflictDialogue(auditorName, conflictReviewer);
+                return;
+            }
+
+            // Server-side check
+            var cid = $('.audit-noti-customer').val() || $customerid;
+            var sid = $('.audit-noti-service').val() || $('.audit-noti-service1').val();
+            if (cid || sid) {
+                $.ajax({
+                    url: "checkReviewerConflict.php",
+                    type: "POST",
+                    dataType: "json",
+                    data: {
+                        action: 'check_auditor',
+                        customerId: cid,
+                        serviceId: sid,
+                        auditorId: auditorId,
+                        auditorName: auditorName
+                    },
+                    success: function (resp) {
+                        if (resp && resp.conflict) {
+                            $select.val("");
+                            showAuditorReviewerConflictDialogue(auditorName, resp.conflicting_reviewer || auditorName);
+                        }
+                    }
+                });
+            }
+
+            // 2. Existing check for previous 2 services as lead auditor
             $.ajax({
                 url: "getNotificationInfo.php",
                 type: "GET",
                 dataType: "json",
                 data: {
                     customerid: $customerid,
-                    auditorid: $(this).val(),
+                    auditorid: auditorId,
                 },
                 success: function (data) {
-                    //                    alert(data);
                     if (data == '2') {
                         $("#auditor-details").show();
                         $('.confirm-ok').click(function () {
                             $('#auditor-details').hide();
                         });
-                        $(".contractAuditorName").val("");
+                        $select.val("");
                     }
                 },
-                error: function (data, status, err) {
-                    // Suppress debug alert; keep silent on error
-                }
+                error: function (data, status, err) {}
             });
         });
 
@@ -892,6 +1003,7 @@ foreach ($auditors as $name) {
             $(".audit-service-type").val(rawSvcType);
             $("#audti-service-type").val(rawSvcType);
             $customerid = $(this).attr('data-customer');
+            loadAppointedReviewersForAuditorCheck($customerid, $(this).attr('data-service1') || $(this).attr('data-service'));
             $.ajax({
                 url: "contractDetails.php",
                 type: "GET",
@@ -1169,6 +1281,30 @@ foreach ($auditors as $name) {
             if (validateStage1()) {
                 e.preventDefault();
                 return;
+            }
+
+            var hasAuditorConflict = false;
+            var confAudName = '';
+            var confRevName = '';
+            $('.contractAuditorName').each(function () {
+                var audId = $(this).val();
+                var audName = $(this).find('option:selected').text().trim();
+                if (audId) {
+                    var conflictRev = checkAuditorConflictWithReviewers(audId, audName);
+                    if (conflictRev) {
+                        hasAuditorConflict = true;
+                        confAudName = audName;
+                        confRevName = conflictRev;
+                        $(this).val('');
+                        return false;
+                    }
+                }
+            });
+
+            if (hasAuditorConflict) {
+                e.preventDefault();
+                showAuditorReviewerConflictDialogue(confAudName, confRevName);
+                return false;
             }
 
             var auditDateArray = [];

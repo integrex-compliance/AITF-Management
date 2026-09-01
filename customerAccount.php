@@ -662,6 +662,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                  LEFT JOIN service_type_saii saii ON saii.service = s.service_id
                  LEFT JOIN service_type_rc rc ON rc.service = s.service_id
                  WHERE s.customer_id = :customer_id
+                 AND (s.is_deleted = 'NO' OR s.is_deleted IS NULL)
                  AND s.service_type IN ('CA', 'SA-I', 'SA-II', 'RC')
                  ORDER BY s.service_id ASC",
                 array(':customer_id' => $customerId)
@@ -1291,7 +1292,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             $statement->execute();
             $caCertId = $statement->fetch();
 
-            $allRowCount = "SELECT * FROM service where customer_id = :id order by service_id asc";
+            $allRowCount = "SELECT * FROM service where customer_id = :id AND (is_deleted = 'NO' OR is_deleted IS NULL) order by service_id asc";
             $statement = $db->prepare($allRowCount);
             $statement->bindParam(':id', $_GET['customerid']);
             $statement->execute();
@@ -1303,7 +1304,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             $totalallCount = count($allcaCount);
 
             // $caRowCount = "SELECT count(*) as totalcarow FROM service_type_ca WHERE customer_id = :id";
-            $caRowCount = "SELECT * FROM service where service_type = 'CA' and customer_id = :id order by service_id desc limit 1";
+            $caRowCount = "SELECT * FROM service where service_type = 'CA' and customer_id = :id AND (is_deleted = 'NO' OR is_deleted IS NULL) order by service_id desc limit 1";
             $statement = $db->prepare($caRowCount);
             $statement->bindParam(':id', $_GET['customerid']);
             $statement->execute();
@@ -1319,7 +1320,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             $allSaiServices = $statement->fetchAll();
 
             // $saiRowCount = "SELECT count(*) as totalsairow FROM service_type_sai WHERE customer_id = :id";
-            $saiRowCount = "SELECT * FROM service where service_type = 'SA-I' and customer_id = :id order by service_id desc limit 1";
+            $saiRowCount = "SELECT * FROM service where service_type = 'SA-I' and customer_id = :id AND (is_deleted = 'NO' OR is_deleted IS NULL) order by service_id desc limit 1";
             $statement = $db->prepare($saiRowCount);
             $statement->bindParam(':id', $_GET['customerid']);
             $statement->execute();
@@ -1333,7 +1334,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             $allSaiiServices = $statement->fetchAll();
 
             // $saiiRowCount = "SELECT count(*) as totalsaiirow FROM service_type_saii WHERE customer_id = :id";
-            $saiiRowCount = "SELECT * FROM service where service_type = 'SA-II' and customer_id = :id order by service_id desc limit 1";
+            $saiiRowCount = "SELECT * FROM service where service_type = 'SA-II' and customer_id = :id AND (is_deleted = 'NO' OR is_deleted IS NULL) order by service_id desc limit 1";
             $statement = $db->prepare($saiiRowCount);
             $statement->bindParam(':id', $_GET['customerid']);
             $statement->execute();
@@ -1348,7 +1349,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             $allRcServices = $statement->fetchAll();
 
             // $rcRowCount = "SELECT count(*) as totalrcrow FROM service_type_rc WHERE rc_customer = :id";
-            $rcRowCount = "SELECT * FROM service where service_type = 'RC' and customer_id = :id order by service_id desc limit 1";
+            $rcRowCount = "SELECT * FROM service where service_type = 'RC' and customer_id = :id AND (is_deleted = 'NO' OR is_deleted IS NULL) order by service_id desc limit 1";
             $statement = $db->prepare($rcRowCount);
             $statement->bindParam(':id', $_GET['customerid']);
             $statement->execute();
@@ -1361,7 +1362,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             $allSpServices = $statement->fetchAll();
 
             // $spRowCount = "SELECT count(*) as totalsprow FROM service_type_sp WHERE sp_customer = :id";
-            $spRowCount = "SELECT * FROM service where service_type = 'SP' and customer_id = :id order by service_id desc limit 1";
+            $spRowCount = "SELECT * FROM service where service_type = 'SP' and customer_id = :id AND (is_deleted = 'NO' OR is_deleted IS NULL) order by service_id desc limit 1";
             $statement = $db->prepare($spRowCount);
             $statement->bindParam(':id', $_GET['customerid']);
             $statement->execute();
@@ -1439,7 +1440,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             $statement->execute();
             $invoiceTotal = $statement->fetch();
 
-            $getSAII = "SELECT COUNT(service_id) as service_id FROM service where customer_id = :id AND service_type = 'SA-II'";
+            $getSAII = "SELECT COUNT(service_id) as service_id FROM service where customer_id = :id AND service_type = 'SA-II' AND (is_deleted = 'NO' OR is_deleted IS NULL)";
             $statement = $db->prepare($getSAII);
             $statement->bindParam(":id", $_GET["customerid"]);
             $statement->execute();
@@ -4591,6 +4592,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
         <div class="page-content inset">
             <?php
             $isAuditor = false;
+            $isAuditorReviewer = false;
             $auditorAllowedServices = array();
             
             if (isset($_SESSION['role']) && $_SESSION['role'] === 'Auditor') {
@@ -4599,6 +4601,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 $auditorName = $_SESSION['username'] ?? '';
                 
                 require_once __DIR__ . '/include/auditor_portal_helper.php';
+                require_once __DIR__ . '/include/reviewer_conflict_helper.php';
+                $isAuditorReviewer = !empty($_SESSION['is_reviewer']) || aitf_is_auditor_reviewer($db, $auditorId);
                 $clientServices = aitf_fetch_auditor_client_services($db, $auditorId, $auditorName);
                 $cid = (int)($_GET['customerid'] ?? 0);
                 $auditorAllowedServiceIds = aitf_fetch_auditor_client_service_ids($db, $auditorId, $auditorName, $cid);
@@ -4610,7 +4614,43 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     exit;
                 }
             }
-            ?>
+
+            $auditAppConflictMsg = '';
+            if (!empty($_SESSION['audit_app_conflict_error'])) {
+                $auditAppConflictMsg = $_SESSION['audit_app_conflict_error'];
+                unset($_SESSION['audit_app_conflict_error']);
+            } elseif (isset($_GET['reviewer_conflict'])) {
+                $auditAppConflictMsg = 'Reviewer and Auditor cannot be the same!';
+            }
+            if (!empty($auditAppConflictMsg)): ?>
+            <script>
+            $(document).ready(function() {
+                var conflictMsg = <?php echo json_encode($auditAppConflictMsg); ?>;
+                if (typeof Swal !== 'undefined' && Swal.fire) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Conflict Detected',
+                        html: '<div class="aitf-conflict-card">' +
+                                  '<div class="aitf-conflict-card-title">' +
+                                      conflictMsg +
+                                  '</div>' +
+                                  '<div class="aitf-conflict-card-sub">' +
+                                      'Please select another person.' +
+                                  '</div>' +
+                              '</div>',
+                        confirmButtonText: 'OK, I Understood',
+                        confirmButtonColor: '#0F2742',
+                        customClass: {
+                            popup: 'aitf-conflict-swal',
+                            confirmButton: 'aitf-conflict-btn'
+                        }
+                    });
+                } else {
+                    alert(conflictMsg);
+                }
+            });
+            </script>
+            <?php endif; ?>
             
             <?php if ($isAuditor): ?>
             <style>
@@ -5649,7 +5689,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
         if (!is_array($allcaCount)) {
             $allcaCount = array();
         }
-        $crLookupSql = "SELECT crs.cr_id, crs.service FROM service_type_cr crs INNER JOIN service s ON crs.service = s.service_id WHERE s.customer_id = :cid ORDER BY crs.cr_id DESC LIMIT 1";
+        $crLookupSql = "SELECT crs.cr_id, crs.service FROM service_type_cr crs INNER JOIN service s ON crs.service = s.service_id WHERE s.customer_id = :cid AND (s.is_deleted = 'NO' OR s.is_deleted IS NULL) ORDER BY crs.cr_id DESC LIMIT 1";
         $crLookupStmt = $db->prepare($crLookupSql);
         $crLookupStmt->bindParam(':cid', $_GET['customerid']);
         $crLookupStmt->execute();
@@ -5722,7 +5762,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                     }
                                     ?>
                                     <div class="col-sm-6">
-                                        <div class="<?php echo $addClass ?><?php echo isset($isAuditor) && $isAuditor ? ' auditor-disabled' : ''; ?>" <?php echo isset($isAuditor) && $isAuditor ? 'title="Not Allowed"' : ''; ?>><span>Review - Application</span>
+                                        <?php $reviewAppDisabled = isset($isAuditor) && $isAuditor && empty($isAuditorReviewer); ?>
+                                        <div class="<?php echo $addClass ?><?php echo $reviewAppDisabled ? ' auditor-disabled' : ''; ?>" <?php echo $reviewAppDisabled ? 'title="Not Allowed"' : ''; ?>><span>Review - Application</span>
                                             <?php if (isset($crservice['audit_id']) && !empty($crservice['audit_id'])) { ?>
                                                 <a class="editAuditApp pull-right" data-page="customer"
                                                     data-customer="<?php echo $_GET['customerid'] ?>"
@@ -7153,7 +7194,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 }));
 
                 $saiSuspendDate = '';
-                $prevServiceQuery = "SELECT service_id FROM service WHERE customer_id = :id AND service_id < :currId ORDER BY service_id DESC LIMIT 1";
+                $prevServiceQuery = "SELECT service_id FROM service WHERE customer_id = :id AND service_id < :currId AND (is_deleted = 'NO' OR is_deleted IS NULL) ORDER BY service_id DESC LIMIT 1";
                 $prevStmt = $db->prepare($prevServiceQuery);
                 $prevStmt->bindParam(':id', $_GET['customerid']);
                 $prevStmt->bindParam(':currId', $saiService['service']);
@@ -8174,7 +8215,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 }));
 
                 $saiiSuspendDate = '';
-                $prevServiceQuery2 = "SELECT service_id FROM service WHERE customer_id = :id AND service_id < :currId ORDER BY service_id DESC LIMIT 1";
+                $prevServiceQuery2 = "SELECT service_id FROM service WHERE customer_id = :id AND service_id < :currId AND (is_deleted = 'NO' OR is_deleted IS NULL) ORDER BY service_id DESC LIMIT 1";
                 $prevStmt2 = $db->prepare($prevServiceQuery2);
                 $prevStmt2->bindParam(':id', $_GET['customerid']);
                 $prevStmt2->bindParam(':currId', $saiiService['service']);

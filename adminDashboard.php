@@ -448,7 +448,7 @@
     $allClientIds = array_values(array_unique(array_filter($allClientIds)));
     if (!empty($allClientIds)) {
         $servicePlaceholders = implode(',', array_fill(0, count($allClientIds), '?'));
-        $latestServiceRows = dashFetchAll($db, "SELECT s.customer_id, s.service_id, s.service_type FROM service s INNER JOIN (SELECT customer_id, MAX(service_id) AS max_sid FROM service WHERE customer_id IN ($servicePlaceholders) GROUP BY customer_id) t ON s.customer_id = t.customer_id AND s.service_id = t.max_sid", $allClientIds);
+        $latestServiceRows = dashFetchAll($db, "SELECT s.customer_id, s.service_id, s.service_type FROM service s INNER JOIN (SELECT customer_id, MAX(service_id) AS max_sid FROM service WHERE customer_id IN ($servicePlaceholders) AND (is_deleted = 'NO' OR is_deleted IS NULL) GROUP BY customer_id) t ON s.customer_id = t.customer_id AND s.service_id = t.max_sid", $allClientIds);
         foreach ($latestServiceRows as $serviceRow) {
             $latestServiceMap[(int) $serviceRow['customer_id']] = $serviceRow;
         }
@@ -578,10 +578,10 @@
     }
     $clientStatusMeta = implode(' | ', $statusMetaParts);
 
-    $clientServiceRows = dashFetchAll($db, "SELECT service_type label, COUNT(*) total FROM service GROUP BY service_type ORDER BY total DESC LIMIT 8");
+    $clientServiceRows = dashFetchAll($db, "SELECT service_type label, COUNT(*) total FROM service WHERE (is_deleted = 'NO' OR is_deleted IS NULL) GROUP BY service_type ORDER BY total DESC LIMIT 8");
     $applicationTotals = dashFetchOne($db, "SELECT COUNT(*) online_total, SUM(CASE WHEN read_flag = 0 THEN 1 ELSE 0 END) unread_total FROM online_audit_applications");
     $auditApplicationTotals = dashFetchOne($db, "SELECT COUNT(*) audit_total, SUM(CASE WHEN review_date IS NOT NULL THEN 1 ELSE 0 END) reviewed_total FROM audit_application");
-    $recentClients = dashFetchAll($db, "SELECT ci.*, (SELECT COUNT(*) FROM service svc WHERE svc.customer_id = ci.id) as service_count, (SELECT COALESCE(SUM(CASE WHEN " . dashAmountExpr('ps.balance') . " > 0 THEN " . dashAmountExpr('ps.balance') . " ELSE 0 END),0) FROM payment_system ps WHERE ps.customer_id = ci.id AND ps.service_type <> 'TDS') as pending_amount FROM (SELECT id, customer_name, unique_id, audit_status, next_service, contact_person, contact, email_id FROM customer_info WHERE is_deleted <> 'YES' ORDER BY id DESC LIMIT 10) ci ORDER BY ci.id DESC");
+    $recentClients = dashFetchAll($db, "SELECT ci.*, (SELECT COUNT(*) FROM service svc WHERE svc.customer_id = ci.id AND (svc.is_deleted = 'NO' OR svc.is_deleted IS NULL)) as service_count, (SELECT COALESCE(SUM(CASE WHEN " . dashAmountExpr('ps.balance') . " > 0 THEN " . dashAmountExpr('ps.balance') . " ELSE 0 END),0) FROM payment_system ps WHERE ps.customer_id = ci.id AND ps.service_type <> 'TDS') as pending_amount FROM (SELECT id, customer_name, unique_id, audit_status, next_service, contact_person, contact, email_id FROM customer_info WHERE is_deleted <> 'YES' ORDER BY id DESC LIMIT 10) ci ORDER BY ci.id DESC");
     foreach ($recentClients as $idx => $row) {
         $recentClients[$idx]['derived_status'] = dashDerivedClientStatus($row, $latestServiceMap);
     }
@@ -636,7 +636,7 @@
         ORDER BY sub.pending_amount DESC");
 
     $customerLookupRows = dashFetchAll($db, "SELECT id, unique_id, customer_name FROM customer_info");
-    $serviceLookupRows = dashFetchAll($db, "SELECT svc.service_id, ci.id as customer_id, ci.customer_name FROM service svc LEFT JOIN customer_info ci ON svc.customer_id = ci.id");
+    $serviceLookupRows = dashFetchAll($db, "SELECT svc.service_id, ci.id as customer_id, ci.customer_name FROM service svc LEFT JOIN customer_info ci ON svc.customer_id = ci.id WHERE (svc.is_deleted = 'NO' OR svc.is_deleted IS NULL)");
     $paymentAliasRows = dashFetchAll($db, "SELECT customer_ref, client_name, customer_id FROM payment_client_alias");
     $customerIdNameMap = array();
     $customerUniqueNameMap = array();

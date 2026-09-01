@@ -3,17 +3,103 @@
 
 session_start();
 include_once './dbConnect.php';
+include_once './include/customer_recycle_helper.php';
 date_default_timezone_set('Asia/Kolkata');
 
+$isAjax = isset($_REQUEST['is_ajax']) || (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
+
+// Restore service
+if (isset($_REQUEST['restoreServiceId']) || isset($_REQUEST['restore_service_id'])) {
+    $serviceId = !empty($_REQUEST['restoreServiceId']) ? $_REQUEST['restoreServiceId'] : $_REQUEST['restore_service_id'];
+    try {
+        $result = aitfRestoreService($db, $serviceId);
+        if ($isAjax) {
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 'success', 'message' => 'Service restored successfully']);
+            exit;
+        }
+        header("Location: clientRecycle.php?tab=services&msg=service_restored");
+        exit;
+    } catch (Exception $ex) {
+        if ($isAjax) {
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 'error', 'message' => $ex->getMessage()]);
+            exit;
+        }
+        echo $ex->getMessage();
+        exit;
+    }
+}
+
+// Permanently delete service
+if (isset($_REQUEST['deleteServicePermanent']) || isset($_REQUEST['delete_service_permanent'])) {
+    $serviceId = !empty($_REQUEST['deleteServicePermanent']) ? $_REQUEST['deleteServicePermanent'] : $_REQUEST['delete_service_permanent'];
+    try {
+        $result = aitfPermanentlyDeleteService($db, $serviceId);
+        if ($isAjax) {
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 'success', 'message' => 'Service permanently deleted']);
+            exit;
+        }
+        header("Location: clientRecycle.php?tab=services&msg=service_deleted");
+        exit;
+    } catch (Exception $ex) {
+        if ($isAjax) {
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 'error', 'message' => $ex->getMessage()]);
+            exit;
+        }
+        echo $ex->getMessage();
+        exit;
+    }
+}
+
+// Empty Recycle Bin
+if ((isset($_REQUEST['action']) && $_REQUEST['action'] === 'empty_bin') || isset($_REQUEST['empty_bin'])) {
+    $targetTab = isset($_REQUEST['tab']) ? $_REQUEST['tab'] : 'all';
+    try {
+        aitfEmptyRecycleBin($db, $targetTab);
+        if ($isAjax) {
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 'success', 'message' => 'Recycle bin has been emptied successfully']);
+            exit;
+        }
+        header("Location: clientRecycle.php?msg=bin_emptied");
+        exit;
+    } catch (Exception $ex) {
+        if ($isAjax) {
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 'error', 'message' => $ex->getMessage()]);
+            exit;
+        }
+        echo $ex->getMessage();
+        exit;
+    }
+}
+
+// Restore customer
 if (isset($_POST['customerid']) && !empty($_POST['customerid'])) {
     try {
-        $customerDlt = "update customer_info set is_deleted = 'NO' WHERE id = :id";
+        $customerDlt = "update customer_info set is_deleted = 'NO', deleted_date = NULL WHERE id = :id";
         $statement = $db->prepare($customerDlt);
         $statement->bindParam(':id', $_POST['customerid']);
         $statement->execute();
-        header("Location: homePage.php");
+
+        if ($isAjax) {
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 'success', 'message' => 'Client restored successfully']);
+            exit;
+        }
+        header("Location: clientRecycle.php?tab=clients&msg=client_restored");
+        exit;
     } catch (Exception $ex) {
+        if ($isAjax) {
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 'error', 'message' => $ex->getMessage()]);
+            exit;
+        }
         echo $ex->getMessage();
+        exit;
     }
 }
 
@@ -340,8 +426,19 @@ if (isset($_POST["customerDlt"]) && !empty($_POST["customerDlt"])) {
         $statement->bindParam(':id', $_POST['customerDlt']);
         $statement->execute();
         
-        header("Location: clientRecycle.php");
+        if ($isAjax) {
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 'success', 'message' => 'Client permanently deleted']);
+            exit;
+        }
+        header("Location: clientRecycle.php?tab=clients&msg=client_deleted");
+        exit;
     } catch (Exception $ex) {
+        if ($isAjax) {
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 'error', 'message' => $ex->getMessage()]);
+            exit;
+        }
         echo $ex->getMessage();
     }
 }
