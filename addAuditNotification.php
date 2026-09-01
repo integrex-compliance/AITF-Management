@@ -44,18 +44,6 @@ if (isset($_POST["audit-noti-id-edit"]) && !empty($_POST["audit-noti-id-edit"]))
         $work = explode('~', $_POST['auditorWorkHidden']);
         $acceptance = explode('~', $_POST['auditorAcceptanceHidden']);
 
-        foreach ($auditors as $audIdVal) {
-            $audIdVal = trim((string)$audIdVal);
-            if ($audIdVal !== '') {
-                $conflictCheck = aitf_check_auditor_appointed_as_reviewer($db, $customer, $service, $audIdVal);
-                if (!empty($conflictCheck['has_conflict'])) {
-                    $_SESSION['audit_app_conflict_error'] = ($conflictCheck['conflicting_name'] ?? 'This user') . " is Reviewer of this client, cannot set as Auditor. Please select another Auditor.";
-                    header("Location: customerAccount.php?customerid=" . urlencode($customer) . "&reviewer_conflict=1");
-                    exit;
-                }
-            }
-        }
-
         $auditorlist = "";
         foreach ($auditors as $auditor) {
             $auditorlist = $auditorlist . $auditor . ", ";
@@ -339,18 +327,6 @@ if (isset($_POST["audit-noti-id-edit"]) && !empty($_POST["audit-noti-id-edit"]))
         $work = explode('~', $_POST['auditorWorkHidden']);
         $acceptance = explode('~', $_POST['auditorAcceptanceHidden']);
         $serviceid = "";
-
-        foreach ($auditors as $audIdVal) {
-            $audIdVal = trim((string)$audIdVal);
-            if ($audIdVal !== '') {
-                $conflictCheck = aitf_check_auditor_appointed_as_reviewer($db, $customer, $service, $audIdVal);
-                if (!empty($conflictCheck['has_conflict'])) {
-                    $_SESSION['audit_app_conflict_error'] = ($conflictCheck['conflicting_name'] ?? 'This user') . " is Reviewer of this client, cannot set as Auditor. Please select another Auditor.";
-                    header("Location: customerAccount.php?customerid=" . urlencode($customer) . "&reviewer_conflict=1");
-                    exit;
-                }
-            }
-        }
 
         $svcauditdate = "";
         $alldates = "";

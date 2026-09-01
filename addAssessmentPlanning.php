@@ -20,26 +20,6 @@ require_once __DIR__ . '/include/reviewer_conflict_helper.php';
 // Debug: Log what we received
 file_put_contents('debug_assessment.log', "POST Data: " . print_r($_POST, true) . "\n\n", FILE_APPEND);
 
-$custForPlan = trim((string)($_POST['assessmentUserId'] ?? ''));
-$svcForPlan = trim((string)($_POST['assessmentServiceId'] ?? ''));
-$auditorsToCheck = array();
-if (!empty($_POST['assessmentLeadAuditor'])) {
-    $auditorsToCheck[] = $_POST['assessmentLeadAuditor'];
-}
-if (!empty($_POST['assessmentAuditors'])) {
-    foreach (aitf_split_auditor_names($_POST['assessmentAuditors']) as $an) {
-        $auditorsToCheck[] = $an;
-    }
-}
-foreach ($auditorsToCheck as $audNameVal) {
-    $c = aitf_check_auditor_appointed_as_reviewer($db, $custForPlan, $svcForPlan, $audNameVal);
-    if (!empty($c['has_conflict'])) {
-        $_SESSION['audit_app_conflict_error'] = ($c['conflicting_name'] ?? $audNameVal) . " is Reviewer of this client, cannot set as Auditor. Please select another Auditor.";
-        header("Location:customerAccount.php?customerid=" . urlencode($custForPlan) . "&reviewer_conflict=1");
-        exit;
-    }
-}
-
 if (isset($_POST['assessmentId']) && !empty($_POST['assessmentId'])) {
     file_put_contents('debug_assessment.log', "UPDATE MODE - Assessment ID: " . $_POST['assessmentId'] . "\n", FILE_APPEND);
 //    echo $_POST['assessmentId']." update "; die;

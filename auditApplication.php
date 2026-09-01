@@ -117,24 +117,6 @@ if (strtoupper($_SERVER['REQUEST_METHOD']) == 'POST') {
 
     if (isset($_POST['addApplication'])) {
 
-        require_once __DIR__ . '/include/reviewer_conflict_helper.php';
-        $revConflict = aitf_check_auditor_reviewer_conflict(
-            $db,
-            $_POST['customerId'] ?? '',
-            $_POST['serviceId'] ?? ($_POST['unisvcId'] ?? ''),
-            $_POST['reviewer_name'] ?? ''
-        );
-        if ($revConflict['has_conflict']) {
-            $_SESSION['audit_app_conflict_error'] = "Reviewer and Auditor cannot be the same! " . ($revConflict['conflicting_name'] ?? '') . " is already assigned as an auditor for this client.";
-            $cid = urlencode($_POST['customerId'] ?? '');
-            if (isset($_POST['pageview']) && $_POST['pageview'] === 'agreement') {
-                header("Location: agreementPage.php?reviewer_conflict=1");
-            } else {
-                header("Location: customerAccount.php?customerid=" . $cid . "&reviewer_conflict=1");
-            }
-            exit;
-        }
-
         if (isset($_POST['auditId']) && !empty($_POST['auditId'])) {
             try {
                 if (isset($_POST['applicationDate']) && !empty($_POST['applicationDate'])) {

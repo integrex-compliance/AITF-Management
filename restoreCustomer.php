@@ -80,7 +80,22 @@ if ((isset($_REQUEST['action']) && $_REQUEST['action'] === 'empty_bin') || isset
 // Restore customer
 if (isset($_POST['customerid']) && !empty($_POST['customerid'])) {
     try {
-        $customerDlt = "update customer_info set is_deleted = 'NO', deleted_date = NULL WHERE id = :id";
+        aitfEnsureRecycleSchema($db);
+
+        $hasDeletedDate = false;
+        try {
+            $colCheck = $db->query("SHOW COLUMNS FROM `customer_info` LIKE 'deleted_date'")->fetchAll();
+            $hasDeletedDate = !empty($colCheck);
+        } catch (Exception $ce) {
+            $hasDeletedDate = false;
+        }
+
+        if ($hasDeletedDate) {
+            $customerDlt = "UPDATE `customer_info` SET is_deleted = 'NO', deleted_date = NULL WHERE id = :id";
+        } else {
+            $customerDlt = "UPDATE `customer_info` SET is_deleted = 'NO' WHERE id = :id";
+        }
+
         $statement = $db->prepare($customerDlt);
         $statement->bindParam(':id', $_POST['customerid']);
         $statement->execute();

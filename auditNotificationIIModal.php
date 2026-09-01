@@ -811,30 +811,6 @@ foreach ($category as $name) {
                 return;
             }
 
-            var hasAuditorConflictII = false;
-            var confAudNameII = '';
-            var confRevNameII = '';
-            $('.contractAuditorNameii').each(function () {
-                var audId = $(this).val();
-                var audName = $(this).find('option:selected').text().trim();
-                if (audId) {
-                    var conflictRev = checkAuditorConflictWithReviewersII(audId, audName);
-                    if (conflictRev) {
-                        hasAuditorConflictII = true;
-                        confAudNameII = audName;
-                        confRevNameII = conflictRev;
-                        $(this).val('');
-                        return false;
-                    }
-                }
-            });
-
-            if (hasAuditorConflictII) {
-                e.preventDefault();
-                showAuditorReviewerConflictDialogueII(confAudNameII, confRevNameII);
-                return false;
-            }
-
             var auditiiDatesArray = [];
             $('.auditiiDates').each(function () {
                 auditiiDatesArray.push($(this).val());
@@ -870,43 +846,6 @@ foreach ($category as $name) {
                 auditorAcceptanceiiArray.push($(this).val());
             });
             $('.auditorAcceptanceHiddenii').val(auditorAcceptanceiiArray.join("~"));
-        });
-
-        $(document).on("change", ".contractAuditorNameii", function () {
-            var $select = $(this);
-            var auditorId = $select.val();
-            var auditorName = $select.find('option:selected').text().trim();
-            if (!auditorId) return;
-
-            var conflictReviewer = checkAuditorConflictWithReviewersII(auditorId, auditorName);
-            if (conflictReviewer) {
-                $select.val("");
-                showAuditorReviewerConflictDialogueII(auditorName, conflictReviewer);
-                return;
-            }
-
-            var cid = $('.auditii-noti-customer').val() || $('.customerId').val();
-            var sid = $('.auditii-noti-service').val() || $('.serviceId').val();
-            if (cid || sid) {
-                $.ajax({
-                    url: "checkReviewerConflict.php",
-                    type: "POST",
-                    dataType: "json",
-                    data: {
-                        action: 'check_auditor',
-                        customerId: cid,
-                        serviceId: sid,
-                        auditorId: auditorId,
-                        auditorName: auditorName
-                    },
-                    success: function (resp) {
-                        if (resp && resp.conflict) {
-                            $select.val("");
-                            showAuditorReviewerConflictDialogueII(auditorName, resp.conflicting_reviewer || auditorName);
-                        }
-                    }
-                });
-            }
         });
 
         $(document.body).on('click', '.addAuditLinkii', function (e) {

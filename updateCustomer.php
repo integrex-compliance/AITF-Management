@@ -81,13 +81,34 @@ if (isset($_GET['id']) && !empty($_GET['id']) && isset($_GET['columnName'])) {
     }
 } else if(isset ($_POST['customerId']) && !empty ($_POST['customerId'])){
     try {
-        $deleteCustomer = "UPDATE `customer_info` SET is_deleted = 'YES', deleted_date = NOW() WHERE id = :id";
+        require_once __DIR__ . '/include/customer_recycle_helper.php';
+        if (isset($db) && $db) {
+            aitfEnsureRecycleSchema($db);
+        }
+
+        $hasDeletedDate = false;
+        try {
+            $colCheck = $db->query("SHOW COLUMNS FROM `customer_info` LIKE 'deleted_date'")->fetchAll();
+            $hasDeletedDate = !empty($colCheck);
+        } catch (Exception $ce) {
+            $hasDeletedDate = false;
+        }
+
+        if ($hasDeletedDate) {
+            $deleteCustomer = "UPDATE `customer_info` SET is_deleted = 'YES', deleted_date = NOW() WHERE id = :id";
+        } else {
+            $deleteCustomer = "UPDATE `customer_info` SET is_deleted = 'YES' WHERE id = :id";
+        }
+
         $statement = $db->prepare($deleteCustomer);
         $statement->bindParam(':id', $_POST['customerId']);
         $statement->execute();
         header("Location: clientRecycle.php");
+        exit;
     } catch (Exception $ex) {
-        echo $ex;
+        error_log("updateCustomer delete error: " . $ex->getMessage());
+        header("Location: clientRecycle.php");
+        exit;
     }
 } else if(isset ($_GET["handler"]) && !empty ($_GET["handler"]) && isset ($_GET["customer"]) && !empty ($_GET["customer"])){
     try {

@@ -10,15 +10,28 @@ if (!function_exists('aitfEnsureRecycleSchema')) {
         if ($checked) return;
 
         try {
-            $cols = $db->query("SHOW COLUMNS FROM service LIKE 'is_deleted'")->fetchAll();
+            // 1. service table
+            $cols = $db->query("SHOW COLUMNS FROM `service` LIKE 'is_deleted'")->fetchAll();
             if (empty($cols)) {
-                $db->exec("ALTER TABLE service ADD COLUMN is_deleted VARCHAR(10) DEFAULT 'NO'");
-                $db->exec("UPDATE service SET is_deleted = 'NO' WHERE is_deleted IS NULL");
+                $db->exec("ALTER TABLE `service` ADD COLUMN `is_deleted` VARCHAR(10) DEFAULT 'NO'");
+                $db->exec("UPDATE `service` SET `is_deleted` = 'NO' WHERE `is_deleted` IS NULL");
             }
 
-            $colsDate = $db->query("SHOW COLUMNS FROM service LIKE 'deleted_date'")->fetchAll();
+            $colsDate = $db->query("SHOW COLUMNS FROM `service` LIKE 'deleted_date'")->fetchAll();
             if (empty($colsDate)) {
-                $db->exec("ALTER TABLE service ADD COLUMN deleted_date DATETIME NULL");
+                $db->exec("ALTER TABLE `service` ADD COLUMN `deleted_date` DATETIME NULL");
+            }
+
+            // 2. customer_info table
+            $colsCust = $db->query("SHOW COLUMNS FROM `customer_info` LIKE 'is_deleted'")->fetchAll();
+            if (empty($colsCust)) {
+                $db->exec("ALTER TABLE `customer_info` ADD COLUMN `is_deleted` VARCHAR(10) DEFAULT 'NO'");
+                $db->exec("UPDATE `customer_info` SET `is_deleted` = 'NO' WHERE `is_deleted` IS NULL");
+            }
+
+            $colsCustDate = $db->query("SHOW COLUMNS FROM `customer_info` LIKE 'deleted_date'")->fetchAll();
+            if (empty($colsCustDate)) {
+                $db->exec("ALTER TABLE `customer_info` ADD COLUMN `deleted_date` DATETIME NULL");
             }
         } catch (Exception $e) {
             error_log("Recycle Schema Migration Error: " . $e->getMessage());
@@ -844,9 +857,23 @@ if (!function_exists('aitfGetDeletedServices')) {
 if (!function_exists('aitfGetDeletedClients')) {
     function aitfGetDeletedClients($db) {
         if (!$db) return [];
-        $sql = "SELECT id, customer_name, unique_id, deleted_date FROM customer_info WHERE is_deleted = 'YES' ORDER BY deleted_date DESC, id DESC";
-        $stmt = $db->prepare($sql);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        aitfEnsureRecycleSchema($db);
+
+        try {
+            $sql = "SELECT id, customer_name, unique_id, deleted_date FROM customer_info WHERE is_deleted = 'YES' ORDER BY deleted_date DESC, id DESC";
+            $stmt = $db->prepare($sql);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            try {
+                $sql = "SELECT id, customer_name, unique_id, NULL as deleted_date FROM customer_info WHERE is_deleted = 'YES' ORDER BY id DESC";
+                $stmt = $db->prepare($sql);
+                $stmt->execute();
+                return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            } catch (Exception $e2) {
+                error_log("aitfGetDeletedClients Error: " . $e2->getMessage());
+                return [];
+            }
+        }
     }
 }

@@ -1328,43 +1328,7 @@ $(document).on('change', '.nace-code', function() {
         }
 
         $('#reviewer_name').on('change', function () {
-            var revVal = ($(this).val() || '').trim();
-            if (!revVal) {
-                $('#revConflictError').hide();
-                return;
-            }
-
-            // Quick client-side check
-            var conflictAuditor = checkConflictBetweenReviewerAndAuditors(revVal);
-            if (conflictAuditor) {
-                $('#reviewer_name').val('');
-                showReviewerConflictDialogue(conflictAuditor, revVal);
-                return;
-            }
-
-            // Server-side double check
-            var customerId = $('.customerId').val();
-            var serviceId = $('.serviceId').val() || $('.unisvcId').val();
-            if (customerId || serviceId) {
-                $.ajax({
-                    url: "checkReviewerConflict.php",
-                    type: "POST",
-                    dataType: "json",
-                    data: {
-                        customerId: customerId,
-                        serviceId: serviceId,
-                        reviewerName: revVal
-                    },
-                    success: function (resp) {
-                        if (resp && resp.conflict) {
-                            $('#reviewer_name').val('');
-                            showReviewerConflictDialogue(resp.auditor_name, revVal);
-                        } else {
-                            $('#revConflictError').hide();
-                        }
-                    }
-                });
-            }
+            $('#revConflictError').hide();
         });
 
 $('.addApplication').click(function (e) {
@@ -1373,14 +1337,6 @@ $('.addApplication').click(function (e) {
         e.preventDefault();
         alert('Please select a Reviewer Name.');
         $('#reviewer_name').focus();
-        return false;
-    }
-
-    var conflictAuditor = checkConflictBetweenReviewerAndAuditors(reviewerVal);
-    if (conflictAuditor) {
-        e.preventDefault();
-        $('#reviewer_name').val('');
-        showReviewerConflictDialogue(conflictAuditor, reviewerVal);
         return false;
     }
 

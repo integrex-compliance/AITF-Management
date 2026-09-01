@@ -930,39 +930,7 @@ foreach ($auditors as $name) {
                 return;
             }
 
-            // 1. Check if auditor is already appointed as reviewer for this client
-            var conflictReviewer = checkAuditorConflictWithReviewers(auditorId, auditorName);
-            if (conflictReviewer) {
-                $select.val("");
-                showAuditorReviewerConflictDialogue(auditorName, conflictReviewer);
-                return;
-            }
-
-            // Server-side check
-            var cid = $('.audit-noti-customer').val() || $customerid;
-            var sid = $('.audit-noti-service').val() || $('.audit-noti-service1').val();
-            if (cid || sid) {
-                $.ajax({
-                    url: "checkReviewerConflict.php",
-                    type: "POST",
-                    dataType: "json",
-                    data: {
-                        action: 'check_auditor',
-                        customerId: cid,
-                        serviceId: sid,
-                        auditorId: auditorId,
-                        auditorName: auditorName
-                    },
-                    success: function (resp) {
-                        if (resp && resp.conflict) {
-                            $select.val("");
-                            showAuditorReviewerConflictDialogue(auditorName, resp.conflicting_reviewer || auditorName);
-                        }
-                    }
-                });
-            }
-
-            // 2. Existing check for previous 2 services as lead auditor
+            // Existing check for previous 2 services as lead auditor
             $.ajax({
                 url: "getNotificationInfo.php",
                 type: "GET",
@@ -1281,30 +1249,6 @@ foreach ($auditors as $name) {
             if (validateStage1()) {
                 e.preventDefault();
                 return;
-            }
-
-            var hasAuditorConflict = false;
-            var confAudName = '';
-            var confRevName = '';
-            $('.contractAuditorName').each(function () {
-                var audId = $(this).val();
-                var audName = $(this).find('option:selected').text().trim();
-                if (audId) {
-                    var conflictRev = checkAuditorConflictWithReviewers(audId, audName);
-                    if (conflictRev) {
-                        hasAuditorConflict = true;
-                        confAudName = audName;
-                        confRevName = conflictRev;
-                        $(this).val('');
-                        return false;
-                    }
-                }
-            });
-
-            if (hasAuditorConflict) {
-                e.preventDefault();
-                showAuditorReviewerConflictDialogue(confAudName, confRevName);
-                return false;
             }
 
             var auditDateArray = [];

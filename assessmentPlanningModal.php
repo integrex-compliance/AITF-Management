@@ -578,79 +578,7 @@ foreach ($auditors as $name) {
             loadAppointedReviewersForAssessmentPlan($('.assessmentUserId').val(), $('.assessmentServiceId').val());
         });
 
-        $(document).on('change', '.assessmentLeadAuditor, .assessmentAuditors', function () {
-            var $select = $(this);
-            var audName = $select.val();
-            if (!audName) return;
-
-            var conflictRev = checkAuditorConflictWithReviewersAP(audName);
-            if (conflictRev) {
-                $select.val("");
-                showAuditorConflictAP(audName, conflictRev);
-                return;
-            }
-
-            var cid = $('.assessmentUserId').val();
-            var sid = $('.assessmentServiceId').val();
-            if (cid || sid) {
-                $.ajax({
-                    url: "checkReviewerConflict.php",
-                    type: "POST",
-                    dataType: "json",
-                    data: {
-                        action: 'check_auditor',
-                        customerId: cid,
-                        serviceId: sid,
-                        auditorName: audName
-                    },
-                    success: function (resp) {
-                        if (resp && resp.conflict) {
-                            $select.val("");
-                            showAuditorConflictAP(audName, resp.conflicting_reviewer || audName);
-                        }
-                    }
-                });
-            }
-        });
-
         $('.addAssessment').click(function (e) {
-            var hasConflictAP = false;
-            var confAudName = '';
-            var confRevName = '';
-
-            var leadAud = $('.assessmentLeadAuditor').val();
-            if (leadAud) {
-                var cRev = checkAuditorConflictWithReviewersAP(leadAud);
-                if (cRev) {
-                    hasConflictAP = true;
-                    confAudName = leadAud;
-                    confRevName = cRev;
-                    $('.assessmentLeadAuditor').val('');
-                }
-            }
-
-            if (!hasConflictAP) {
-                $('.assessmentAuditors').each(function () {
-                    var aVal = $(this).val();
-                    if (aVal) {
-                        var cr = checkAuditorConflictWithReviewersAP(aVal);
-                        if (cr) {
-                            hasConflictAP = true;
-                            confAudName = aVal;
-                            confRevName = cr;
-                            $(this).val('');
-                            return false;
-                        }
-                    }
-                });
-            }
-
-            if (hasConflictAP) {
-                e.preventDefault();
-                showAuditorConflictAP(confAudName, confRevName);
-                return false;
-            }
-
             var AuditorArray = [];
             $('.assessmentAuditors').each(function () {
                 AuditorArray.push($(this).val());
