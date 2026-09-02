@@ -836,6 +836,9 @@ aitf_touch_login_activity($db);
                 <a class="nav-item" data-tab="assignments" href="#assignments">
                     <i class="fas fa-tasks"></i> My Assignments
                 </a>
+                <a class="nav-item" href="auditorPendingDocuments.php">
+                    <i class="fas fa-file-alt"></i> Pending Documents
+                </a>
                 <a class="nav-item" data-tab="clients" href="#clients">
                     <i class="fas fa-users"></i> My Clients
                 </a>

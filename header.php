@@ -379,6 +379,7 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
         <?php } ?>
         <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'Auditor') { ?>
         <li><a href="auditorDashboard.php" class="animate"><span>AUDITOR DASHBOARD</span><i class="sub_icon fa fa-home"></i></a></li>
+        <li><a href="auditorPendingDocuments.php" class="animate"><span>PENDING DOCUMENTS</span><i class="sub_icon fa fa-file-text-o"></i></a></li>
         <?php } ?>
         <?php if (aitf_has_access("IAF Dashboard")) { ?>
         <li><a href="iaf_dashboard.php" class="animate <?php echo isset($iafClass) ? $iafClass : ''; ?>"><span>IAF DASHBOARD</span><i class="sub_icon fa fa-globe"></i></a></li>

@@ -240,12 +240,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_nc_form'])) {
     if (empty($org_name)) $errors[] = "Organization name is required";
     if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $errors[] = "Valid Organization Mail ID is required.";
-    } else {
-        require_once __DIR__ . '/include/client_email_validator.php';
-        $emailCheck = aitf_check_client_email_exists($db, $email);
-        if (!$emailCheck['found']) {
-            $errors[] = "This mail is not valid. Kindly mention the mail ID that is present in your application form.";
-        }
     }
     if (empty($standard)) $errors[] = "Standard is required";
     if (empty($audit_date)) $errors[] = "Date of audit is required";
@@ -363,7 +357,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_nc_form'])) {
             }
 
             $successMessage = "NC Closing form submitted successfully!";
-            unset($_SESSION['nc_closing_email_verified']);
             $_POST = [];
         } catch (PDOException $e) {
             error_log("Database insert error: " . $e->getMessage());
@@ -832,66 +825,21 @@ $canonicalUrl = "https://www.aitf.co.in/nc_closing";
                     </div>
                 </div>
 
-                <!-- 5. Organisation Mail ID Verification -->
+                <!-- 5. Organisation Mail ID -->
                 <div class="nc-form-section" id="nc_email_verification_section" style="border: 1.5px solid #0284c7; background: #f0f9ff; border-radius: 16px; padding: 28px 32px;">
                     <h4 style="color: #0369a1; border-bottom: 2px solid #bae6fd; padding-bottom: 12px; margin-bottom: 18px;">
-                        <span class="nc-section-icon" style="background: #0284c7; color: #fff;"><i class="fa fa-shield"></i></span>
-                        Organisation Mail ID & Email Verification
+                        <span class="nc-section-icon" style="background: #0284c7; color: #fff;"><i class="fa fa-envelope"></i></span>
+                        Organisation Mail ID
                     </h4>
                     <p style="font-size: 14px; color: #0369a1; margin-bottom: 20px; font-weight: 500;">
-                        Please provide your registered Organisation Mail ID. You must verify it before submitting this form.
+                        Please provide your registered Organisation Mail ID.
                     </p>
                     
                     <div style="max-width: 580px;">
-                        <!-- Email Input & Verify Mail Button -->
-                        <div class="form-group" id="nc_email_input_wrap" style="margin-bottom: 14px;">
+                        <div class="form-group" style="margin-bottom: 14px;">
                             <label style="font-weight: 600; color: #0f172a; font-size: 14px;">Organisation Mail ID <span style="color:#ef4444;">*</span></label>
-                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                                <input type="email" name="email" id="nc_email" class="form-control" placeholder="name@company.com" value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>" style="flex: 1; min-width: 240px; background: #fff;" required>
-                                <button type="button" id="btn_nc_verify_email" class="btn" style="background: #0284c7; color: #fff; font-weight: 600; padding: 10px 22px; border-radius: 10px; border: none; white-space: nowrap; transition: all 0.2s;">
-                                    <i class="fa fa-check-circle"></i> Verify Mail
-                                </button>
-                            </div>
+                            <input type="email" name="email" id="nc_email" class="form-control" placeholder="name@company.com" value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>" style="background: #fff;" required>
                         </div>
-
-                        <!-- 2-3s Verifying Effect Loader -->
-                        <div id="nc_verifying_loader" style="display: none; align-items: center; gap: 12px; background: #eff6ff; border: 1.5px solid #93c5fd; border-radius: 10px; padding: 13px 18px; color: #1e40af; font-size: 14px; font-weight: 600; margin-bottom: 14px;">
-                            <i class="fa fa-circle-o-notch fa-spin" style="font-size: 20px; color: #0284c7;"></i>
-                            <span id="nc_loader_text">Verifying your mail ID with system records...</span>
-                        </div>
-
-                        <!-- Status Message -->
-                        <div id="nc_otp_msg" style="font-size: 13.5px; font-weight: 600; margin-bottom: 14px; display: none;"></div>
-
-                        <!-- Verified Badge -->
-                        <div id="nc_verified_badge" style="display: none; background: #ecfdf5; border: 1.5px solid #a7f3d0; color: #065f46; border-radius: 12px; padding: 14px 18px; font-weight: 600; font-size: 14px; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 14px;">
-                            <div style="display: flex; align-items: center; gap: 12px;">
-                                <i class="fa fa-check-circle" style="font-size: 24px; color: #10b981; flex-shrink: 0;"></i>
-                                <div>
-                                    <div style="color: #065f46; font-size: 14.5px; font-weight: 700;">Mail is verified, proceed to submit form.</div>
-                                    <div id="nc_verified_text" style="color: #047857; font-size: 13px; font-weight: 500; margin-top: 2px;"></div>
-                                </div>
-                            </div>
-                            <button type="button" id="btn_nc_change_email" style="background: none; border: none; color: #047857; text-decoration: underline; font-size: 13px; cursor: pointer; font-weight: 600; white-space: nowrap;">Change Email</button>
-                        </div>
-                        
-                        <input type="hidden" name="is_email_verified" id="nc_is_email_verified" value="<?php echo (!empty($_SESSION['nc_closing_email_verified']) && !empty($_POST['email']) && $_SESSION['nc_closing_email_verified'] === $_POST['email']) ? '1' : '0'; ?>">
-                    </div>
-                </div>
-
-                <!-- Email Not Eligible Modal -->
-                <div id="nc_email_modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(15,23,42,0.65); backdrop-filter:blur(4px); z-index:99999; align-items:center; justify-content:center; padding:20px;">
-                    <div style="background:#fff; border-radius:18px; max-width:440px; width:100%; padding:32px 28px; text-align:center; box-shadow:0 25px 50px -12px rgba(0,0,0,0.35); border:1px solid #fee2e2; animation: modalPop 0.25s ease-out;">
-                        <div style="width:68px; height:68px; background:#fef2f2; border:2px solid #fecaca; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 18px;">
-                            <i class="fa fa-exclamation-triangle" style="font-size:32px; color:#dc2626;"></i>
-                        </div>
-                        <h4 style="font-size:20px; font-weight:700; color:#1e293b; margin-bottom:12px;">Email Verification Failed</h4>
-                        <p style="font-size:15px; color:#475569; line-height:1.6; margin-bottom:24px;">
-                            This mail is not valid. Kindly mention the mail ID that is present in your application form.
-                        </p>
-                        <button type="button" id="btn_nc_close_modal" style="width:100%; background:linear-gradient(135deg, #0284c7, #0369a1); color:#fff; font-weight:600; font-size:15px; padding:13px 20px; border-radius:10px; border:none; cursor:pointer; box-shadow:0 4px 14px rgba(2,132,199,0.35); transition:all 0.2s;">
-                            <i class="fa fa-check"></i> OK, I Understood
-                        </button>
                     </div>
                 </div>
 
@@ -909,17 +857,10 @@ $canonicalUrl = "https://www.aitf.co.in/nc_closing";
                 <?php endif; ?>
 
                 <div class="text-center" style="margin-top: 35px; margin-bottom: 10px;">
-                    <button type="submit" name="submit_nc_form" id="submit_btn" class="btn-submit" <?php echo (empty($_SESSION['nc_closing_email_verified']) || empty($_POST['email']) || $_SESSION['nc_closing_email_verified'] !== $_POST['email']) ? 'disabled' : ''; ?>>
+                    <button type="submit" name="submit_nc_form" id="submit_btn" class="btn-submit">
                         <span id="btn_text"><i class="fa fa-paper-plane"></i> Submit NC Closing Form</span>
                         <span id="btn_spinner" style="display:none;"><i class="fa fa-spinner fa-spin"></i> Submitting your form...</span>
                     </button>
-                    <div id="submit_btn_hint" style="margin-top: 12px; font-size: 13.5px; font-weight: 500; color: #64748b;">
-                        <?php if (!empty($_SESSION['nc_closing_email_verified']) && !empty($_POST['email']) && $_SESSION['nc_closing_email_verified'] === $_POST['email']): ?>
-                            <span style="color: #16a34a; font-weight: 600;"><i class="fa fa-check-circle"></i> Mail is verified, proceed to submit form.</span>
-                        <?php else: ?>
-                            <span style="color: #64748b;"><i class="fa fa-lock"></i> Submit button will be enabled once your Organisation Mail ID is verified above.</span>
-                        <?php endif; ?>
-                    </div>
                 </div>
             </form>
             
@@ -935,199 +876,9 @@ $canonicalUrl = "https://www.aitf.co.in/nc_closing";
                 isNcTurnstileSolved = false;
             }
 
-            // NC Closing Form Email Verification Handler
             document.addEventListener('DOMContentLoaded', function() {
-                var btnVerify = document.getElementById('btn_nc_verify_email');
-                var btnChange = document.getElementById('btn_nc_change_email');
-                var emailInput = document.getElementById('nc_email');
-                var otpMsg = document.getElementById('nc_otp_msg');
-                var verifiedBadge = document.getElementById('nc_verified_badge');
-                var isVerified = document.getElementById('nc_is_email_verified');
-                var submitBtn = document.getElementById('submit_btn');
-                var submitBtnHint = document.getElementById('submit_btn_hint');
-                var verifyingLoader = document.getElementById('nc_verifying_loader');
-                var loaderText = document.getElementById('nc_loader_text');
-                var modal = document.getElementById('nc_email_modal');
-                var btnCloseModal = document.getElementById('btn_nc_close_modal');
-
-                function updateSubmitButtonState() {
-                    if (isVerified.value === '1') {
-                        submitBtn.disabled = false;
-                        submitBtnHint.innerHTML = '<span style="color: #16a34a; font-weight: 600;"><i class="fa fa-check-circle"></i> Mail is verified, proceed to submit form.</span>';
-                    } else {
-                        submitBtn.disabled = true;
-                        submitBtnHint.innerHTML = '<span style="color: #64748b;"><i class="fa fa-lock"></i> Submit button will be enabled once your Organisation Mail ID is verified above.</span>';
-                    }
-                }
-
-                // Close Modal handler
-                if (btnCloseModal && modal) {
-                    btnCloseModal.addEventListener('click', function() {
-                        modal.style.display = 'none';
-                        if (emailInput) {
-                            emailInput.focus();
-                            emailInput.select();
-                        }
-                    });
-                }
-
-                // Initial state
-                updateSubmitButtonState();
-                if (isVerified.value === '1' && emailInput.value) {
-                    verifiedBadge.style.display = 'flex';
-                    document.getElementById('nc_verified_text').textContent = 'Verified Mail: ' + emailInput.value;
-                    if (btnVerify) btnVerify.style.display = 'none';
-                    emailInput.readOnly = true;
-                    emailInput.style.backgroundColor = '#f1f5f9';
-                }
-
-                function verifyEmail() {
-                    var email = emailInput.value.trim();
-
-                    if (!email || email.indexOf('@') === -1 || email.indexOf('.') === -1) {
-                        alert('Please enter a valid Organisation Mail ID.');
-                        emailInput.focus();
-                        return;
-                    }
-
-                    btnVerify.disabled = true;
-                    btnVerify.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Verifying...';
-                    otpMsg.style.display = 'none';
-                    if (modal) modal.style.display = 'none';
-
-                    // Show 2-3s verifying effect loader
-                    if (verifyingLoader) {
-                        verifyingLoader.style.display = 'flex';
-                        loaderText.textContent = 'Verifying your mail ID with system records...';
-                    }
-
-                    // Progress text switch after 1.1s to give real fetching feel
-                    var progressTimer = setTimeout(function() {
-                        if (loaderText) {
-                            loaderText.textContent = 'Checking registered client database...';
-                        }
-                    }, 1100);
-
-                    var startTime = Date.now();
-                    var formData = new FormData();
-                    formData.append('email', email);
-
-                    fetch('ajax_verify_otp_nc.php', {
-                        method: 'POST',
-                        body: formData
-                    })
-                    .then(function(r) { return r.json(); })
-                    .then(function(res) {
-                        var elapsed = Date.now() - startTime;
-                        var waitTime = Math.max(0, 2400 - elapsed);
-
-                        setTimeout(function() {
-                            clearTimeout(progressTimer);
-                            if (verifyingLoader) verifyingLoader.style.display = 'none';
-
-                            if (res.success) {
-                                isVerified.value = '1';
-                                updateSubmitButtonState();
-                                otpMsg.style.display = 'none';
-                                btnVerify.style.display = 'none';
-                                emailInput.readOnly = true;
-                                emailInput.style.backgroundColor = '#f1f5f9';
-                                verifiedBadge.style.display = 'flex';
-                                document.getElementById('nc_verified_text').textContent = 'Verified Mail: ' + email;
-
-                                // Auto-select Organization Name from DB (editable)
-                                if (res.org_name) {
-                                    var orgNameInput = document.getElementById('nc_org_name');
-                                    if (orgNameInput) {
-                                        orgNameInput.value = res.org_name;
-                                        orgNameInput.classList.add('auto-filled-highlight');
-                                        setTimeout(function() {
-                                            orgNameInput.classList.remove('auto-filled-highlight');
-                                        }, 2600);
-                                        var autoHint = document.getElementById('nc_org_auto_filled');
-                                        if (autoHint) autoHint.style.display = 'block';
-                                    }
-                                }
-                            } else {
-                                isVerified.value = '0';
-                                updateSubmitButtonState();
-                                btnVerify.disabled = false;
-                                btnVerify.innerHTML = '<i class="fa fa-check-circle"></i> Verify Mail';
-
-                                // Show the popup modal
-                                if (modal) modal.style.display = 'flex';
-
-                                // Also show inline error message
-                                otpMsg.style.display = 'block';
-                                otpMsg.style.color = '#ef4444';
-                                otpMsg.innerHTML = '<i class="fa fa-exclamation-circle"></i> ' + res.message;
-                            }
-                        }, waitTime);
-                    })
-                    .catch(function() {
-                        var elapsed = Date.now() - startTime;
-                        var waitTime = Math.max(0, 2000 - elapsed);
-
-                        setTimeout(function() {
-                            clearTimeout(progressTimer);
-                            if (verifyingLoader) verifyingLoader.style.display = 'none';
-                            isVerified.value = '0';
-                            updateSubmitButtonState();
-                            otpMsg.style.display = 'block';
-                            otpMsg.style.color = '#ef4444';
-                            otpMsg.textContent = 'Verification error. Please try again.';
-                            btnVerify.disabled = false;
-                            btnVerify.innerHTML = '<i class="fa fa-check-circle"></i> Verify Mail';
-                        }, waitTime);
-                    });
-                }
-
-                if (btnVerify) btnVerify.addEventListener('click', verifyEmail);
-
-                if (btnChange) {
-                    btnChange.addEventListener('click', function() {
-                        isVerified.value = '0';
-                        updateSubmitButtonState();
-                        emailInput.readOnly = false;
-                        emailInput.style.backgroundColor = '#fff';
-                        emailInput.focus();
-                        verifiedBadge.style.display = 'none';
-                        if (btnVerify) {
-                            btnVerify.style.display = 'inline-block';
-                            btnVerify.disabled = false;
-                            btnVerify.innerHTML = '<i class="fa fa-check-circle"></i> Verify Mail';
-                        }
-                        otpMsg.style.display = 'none';
-                    });
-                }
-
-                if (emailInput) {
-                    emailInput.addEventListener('input', function() {
-                        if (isVerified.value === '1') {
-                            isVerified.value = '0';
-                            updateSubmitButtonState();
-                            verifiedBadge.style.display = 'none';
-                            if (btnVerify) {
-                                btnVerify.style.display = 'inline-block';
-                                btnVerify.disabled = false;
-                                btnVerify.innerHTML = '<i class="fa fa-check-circle"></i> Verify Mail';
-                            }
-                            otpMsg.style.display = 'none';
-                        }
-                    });
-                }
-
                 // Form submit handler
                 document.getElementById('nc_form').addEventListener('submit', function(e) {
-                    // Check email verification first
-                    if (isVerified.value !== '1') {
-                        e.preventDefault();
-                        alert('Please verify your Organisation Mail ID before submitting.');
-                        var sec = document.getElementById('nc_email_verification_section');
-                        if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        if (emailInput) emailInput.focus();
-                        return false;
-                    }
 
                     // Check Captcha if present
                     var turnstileWidget = document.querySelector('.cf-turnstile');

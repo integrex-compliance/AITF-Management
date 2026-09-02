@@ -214,13 +214,6 @@ if (isset($db)) {
             $error_message = 'Please fill in all required fields marked with *.';
         } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $error_message = 'Please enter a valid email address.';
-        } elseif (!isset($_SESSION['application_email_verified']) || strtolower($_SESSION['application_email_verified']) !== strtolower($email)) {
-            require_once __DIR__ . '/include/otp_helper.php';
-            if (!aitf_is_email_verified_db($db, $email)) {
-                $error_message = 'Please verify your email address using OTP before submitting.';
-            } else {
-                $_SESSION['application_email_verified'] = strtolower($email);
-            }
         } elseif (empty($_POST['declaration_confirmed'])) {
             $error_message = 'Please confirm the declaration before submitting.';
         } elseif (empty($_FILES['sign_image']['name']) && empty($_FILES['sign_image']['tmp_name'])) {
@@ -2435,56 +2428,21 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                                     </div>
                                 </div>
 
-                                <!-- 10. Organisation Mail ID & Email Verification Section -->
+                                <!-- 10. Organisation Mail ID Section -->
                                 <div class="nc-form-section" id="email-verification-section" style="border: 1.5px solid #0284c7; background: #f0f9ff; border-radius: 16px; padding: 28px 32px;">
                                     <h4 style="color: #0369a1; border-bottom: 2px solid #bae6fd; padding-bottom: 12px; margin-bottom: 18px;">
-                                        <span class="nc-section-icon" style="background: #0284c7; color: #fff;"><i class="fa fa-shield"></i></span>
-                                        10. ORGANISATION MAIL ID &amp; EMAIL VERIFICATION
+                                        <span class="nc-section-icon" style="background: #0284c7; color: #fff;"><i class="fa fa-envelope"></i></span>
+                                        10. ORGANISATION MAIL ID
                                     </h4>
                                     <p style="font-size: 14px; color: #0369a1; margin-bottom: 20px; font-weight: 500;">
-                                        Please provide your registered Organisation Mail ID. You must verify it with a One-Time Password (OTP) before submitting this application.
+                                        Please provide your registered Organisation Mail ID.
                                     </p>
                                     
                                     <div style="max-width: 580px;">
-                                        <!-- Email Input & Send OTP Button -->
-                                        <div class="form-group" id="send-otp-container" style="margin-bottom: 14px;">
+                                        <div class="form-group" style="margin-bottom: 14px;">
                                             <label style="font-weight: 600; color: #0f172a; font-size: 14px;">Organisation Mail ID <span style="color:#ef4444;">*</span></label>
-                                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                                                <input type="email" name="email" id="app_email" class="form-control" placeholder="name@company.com" value="<?php echo htmlspecialchars($_POST['email'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" style="flex: 1; min-width: 240px; background: #fff;" required>
-                                                <button type="button" id="btn-send-otp" class="btn" style="background: #0284c7; color: #fff; font-weight: 600; padding: 10px 22px; border-radius: 10px; border: none; white-space: nowrap; transition: all 0.2s;">
-                                                    <i class="fa fa-envelope"></i> Send OTP
-                                                </button>
-                                            </div>
+                                            <input type="email" name="email" id="app_email" class="form-control" placeholder="name@company.com" value="<?php echo htmlspecialchars($_POST['email'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" style="background: #fff;" required>
                                         </div>
-
-                                        <!-- OTP Status Message -->
-                                        <div id="otp-message" style="font-size: 13.5px; font-weight: 600; margin-bottom: 14px; display: none;"></div>
-
-                                        <!-- Countdown Timer -->
-                                        <div id="app_otp_countdown" style="font-size: 13px; color: #0284c7; margin-bottom: 12px; font-weight: 500; display: none;"></div>
-
-                                        <!-- OTP Input & Verify Section -->
-                                        <div id="otp-input-section" style="display: none; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 16px 20px; margin-bottom: 14px;">
-                                            <label style="font-weight: 600; color: #0f172a; font-size: 13.5px; margin-bottom: 6px;">Enter 6-Digit OTP received on email <span style="color:#ef4444;">*</span></label>
-                                            <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
-                                                <input type="text" id="otp_code" class="form-control" placeholder="• • • • • •" maxlength="6" style="width: 150px; text-align: center; letter-spacing: 4px; font-size: 18px; font-weight: 700;">
-                                                <button type="button" id="btn-verify-otp" class="btn" style="background: #16a34a; color: #fff; font-weight: 600; padding: 10px 22px; border-radius: 10px; border: none; white-space: nowrap;">
-                                                    <i class="fa fa-check"></i> Verify OTP
-                                                </button>
-                                                <button type="button" id="btn-resend-otp" style="background: none; border: none; color: #0284c7; font-size: 13px; cursor: pointer; text-decoration: underline; font-weight: 600; display: none;">Resend OTP</button>
-                                            </div>
-                                        </div>
-
-                                        <!-- Verified Badge -->
-                                        <div id="app_verified_badge" style="display: none; background: #ecfdf5; border: 1.5px solid #a7f3d0; color: #065f46; border-radius: 10px; padding: 12px 18px; font-weight: 600; font-size: 14px; align-items: center; justify-content: space-between;">
-                                            <div style="display: flex; align-items: center; gap: 10px;">
-                                                <i class="fa fa-check-circle" style="font-size: 20px; color: #10b981;"></i>
-                                                <span id="app_verified_text">Organisation Mail ID Verified</span>
-                                            </div>
-                                            <button type="button" id="btn_app_change_email" style="background: none; border: none; color: #047857; text-decoration: underline; font-size: 12.5px; cursor: pointer; font-weight: 600;">Change Email</button>
-                                        </div>
-                                        
-                                        <input type="hidden" name="is_email_verified" id="is_email_verified" value="<?php echo (!empty($_SESSION['application_email_verified']) && !empty($_POST['email']) && $_SESSION['application_email_verified'] === $_POST['email']) ? '1' : '0'; ?>">
                                     </div>
                                 </div>
 
@@ -2502,16 +2460,9 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
 
                                 <div class="text-center" style="margin-top: 35px; margin-bottom: 15px;">
                                     <div id="required-warning" class="required-warning" style="margin-bottom: 12px;">Please fill all required fields marked with *</div>
-                                    <button type="submit" id="main-submit-btn" class="btn-submit-main submit-btn" <?php echo (empty($_SESSION['application_email_verified']) || empty($_POST['email']) || $_SESSION['application_email_verified'] !== $_POST['email']) ? 'disabled' : ''; ?>>
+                                    <button type="submit" id="main-submit-btn" class="btn-submit-main submit-btn">
                                         <i class="fa fa-paper-plane"></i> Submit Application Form
                                     </button>
-                                    <div id="app_submit_hint" style="margin-top: 12px; font-size: 13.5px; font-weight: 500; color: #64748b;">
-                                        <?php if (!empty($_SESSION['application_email_verified']) && !empty($_POST['email']) && $_SESSION['application_email_verified'] === $_POST['email']): ?>
-                                            <span style="color: #16a34a;"><i class="fa fa-check-circle"></i> Email verified! You can now submit the application.</span>
-                                        <?php else: ?>
-                                            <span style="color: #64748b;"><i class="fa fa-lock"></i> Submit button will be enabled once your Organisation Mail ID is verified with OTP above.</span>
-                                        <?php endif; ?>
-                                    </div>
                                 </div>
                             </form>
                         </div>
@@ -3067,22 +3018,8 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                 }
                 if (submitBtn) {
                     var captchaMissing = !isApplicationCaptchaComplete();
-                    var isEmailVerified = document.getElementById('is_email_verified') && document.getElementById('is_email_verified').value === '1';
-                    
-                    // Enable button as soon as email is verified. Missing fields trigger HTML5 tooltips on click.
-                    submitBtn.disabled = !isEmailVerified;
                     submitBtn.dataset.missing = missing ? '1' : '0';
                     submitBtn.dataset.captchaMissing = captchaMissing ? '1' : '0';
-                    submitBtn.dataset.emailNotVerified = !isEmailVerified ? '1' : '0';
-
-                    var hint = document.getElementById('app_submit_hint');
-                    if (hint) {
-                        if (isEmailVerified) {
-                            hint.innerHTML = '<span style="color: #16a34a; font-weight: 600;"><i class="fa fa-check-circle"></i> Email verified! You can now submit the application.</span>';
-                        } else {
-                            hint.innerHTML = '<span style="color: #64748b;"><i class="fa fa-lock"></i> Submit button will be enabled once your Organisation Mail ID is verified with OTP above.</span>';
-                        }
-                    }
                 }
                 if (requiredWarning) {
                     requiredWarning.style.display = 'none';
@@ -3128,12 +3065,6 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
             }
 
             form.addEventListener('submit', function (e) {
-                if (document.getElementById('is_email_verified') && document.getElementById('is_email_verified').value !== '1') {
-                    alert('Please verify your Organisation Mail ID with OTP before submitting.');
-                    e.preventDefault();
-                    return false;
-                }
-
                 if (declarationCheckbox && !declarationCheckbox.checked) {
                     alert('Please confirm the declaration before submitting the application.');
                     e.preventDefault();
@@ -3143,9 +3074,7 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                 validateRequiredFields();
                 if (submitBtn && submitBtn.disabled) {
                     e.preventDefault();
-                    if (submitBtn.dataset.emailNotVerified === '1') {
-                        alert('Please verify your Organisation Mail ID with OTP before submitting.');
-                    } else if (submitBtn.dataset.missing === '1') {
+                    if (submitBtn.dataset.missing === '1') {
                         alert('Please fill all required fields before submitting.');
                     } else if (submitBtn.dataset.captchaMissing === '1') {
                         alert('Please complete the captcha before submitting.');
@@ -3195,169 +3124,6 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                 }
                 validateRequiredFields();
             });
-
-            // Email Verification Logic
-            var appCountdownInterval = null;
-
-            function startAppCountdown(seconds) {
-                clearInterval(appCountdownInterval);
-                var remaining = seconds;
-                $('#app_otp_countdown').show().text('You can request a new OTP in ' + remaining + ' seconds');
-                $('#btn-send-otp, #btn-resend-otp').prop('disabled', true);
-
-                appCountdownInterval = setInterval(function() {
-                    remaining--;
-                    if (remaining <= 0) {
-                        clearInterval(appCountdownInterval);
-                        $('#app_otp_countdown').hide();
-                        $('#btn-send-otp, #btn-resend-otp').prop('disabled', false);
-                        $('#btn-resend-otp').show();
-                    } else {
-                        $('#app_otp_countdown').text('You can request a new OTP in ' + remaining + ' seconds');
-                    }
-                }, 1000);
-            }
-
-            function sendAppOtp() {
-                var email = $('#app_email').val().trim().toLowerCase();
-                var orgName = $('input[name="org_name"]').val().trim();
-                var contactPerson = $('input[name="contact_person"]').val().trim();
-                var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-                if (!email || !emailRegex.test(email)) {
-                    alert('Please enter a valid Organisation Mail ID first.');
-                    $('#app_email').focus();
-                    return;
-                }
-                if (!orgName) {
-                    alert('Please enter the Organization Name first.');
-                    $('input[name="org_name"]').focus();
-                    return;
-                }
-                if (!contactPerson) {
-                    alert('Please enter the Contact Person with Designation first.');
-                    $('input[name="contact_person"]').focus();
-                    return;
-                }
-
-                $('#btn-send-otp').html('<i class="fa fa-spinner fa-spin"></i> Sending...').prop('disabled', true);
-                $('#otp-message').show().css('color', '#0284c7').html('<i class="fa fa-spinner fa-spin"></i> Sending OTP to <strong>' + $('<div>').text(email).html() + '</strong>...');
-
-                $.ajax({
-                    url: 'ajax_send_otp_app.php',
-                    type: 'POST',
-                    data: {
-                        email: email,
-                        org_name: orgName,
-                        contact_person: contactPerson
-                    },
-                    dataType: 'json',
-                    timeout: 25000,
-                    success: function(response) {
-                        if (response.success) {
-                            $('#otp-message').css('color', '#16a34a').html('<i class="fa fa-check-circle"></i> ' + response.message);
-                            $('#send-otp-container').hide();
-                            $('#otp-input-section').show();
-                            $('#app_email').prop('readonly', true);
-                            $('#otp_code').val('').focus();
-                            startAppCountdown(60);
-                        } else {
-                            $('#btn-send-otp').html('<i class="fa fa-envelope"></i> Send OTP').prop('disabled', false);
-                            $('#otp-message').css('color', '#dc2626').html('<i class="fa fa-exclamation-circle"></i> ' + response.message);
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        $('#btn-send-otp').html('<i class="fa fa-envelope"></i> Send OTP').prop('disabled', false);
-                        var errMsg = 'Unable to send OTP. Please check your connection and try again.';
-                        if (status === 'timeout') {
-                            errMsg = 'Connection timed out while sending OTP. Please try again.';
-                        }
-                        $('#otp-message').css('color', '#dc2626').html('<i class="fa fa-exclamation-circle"></i> ' + errMsg);
-                    }
-                });
-            }
-
-            $('#btn-send-otp, #btn-resend-otp').click(function(e) {
-                e.preventDefault();
-                sendAppOtp();
-            });
-
-            $('#btn-verify-otp').click(function() {
-                var otp = $('#otp_code').val().replace(/\D/g, '').trim();
-                var email = $('#app_email').val().trim().toLowerCase();
-
-                if (!otp || otp.length !== 6) {
-                    alert('Please enter the 6-digit OTP received in your email.');
-                    $('#otp_code').focus();
-                    return;
-                }
-
-                var $btn = $(this);
-                $btn.html('<i class="fa fa-spinner fa-spin"></i> Verifying...').prop('disabled', true);
-                $('#otp-message').show().css('color', '#0284c7').text('Verifying OTP...');
-
-                $.ajax({
-                    url: 'ajax_verify_otp_app.php',
-                    type: 'POST',
-                    data: {
-                        email: email,
-                        otp: otp
-                    },
-                    dataType: 'json',
-                    success: function(response) {
-                        if (response.success) {
-                            clearInterval(appCountdownInterval);
-                            $('#app_otp_countdown').hide();
-                            $('#otp-input-section').hide();
-                            $('#otp-message').hide();
-                            $('#send-otp-container').hide();
-                            
-                            $('#app_verified_text').text('Verified: ' + email);
-                            $('#app_verified_badge').css('display', 'flex');
-                            $('#is_email_verified').val('1');
-
-                            // Immediately enable submit button and update hint
-                            $('#main-submit-btn').prop('disabled', false).removeAttr('disabled');
-                            $('#app_submit_hint').html('<span style="color: #16a34a; font-weight: 600;"><i class="fa fa-check-circle"></i> Email verified! You can now submit the application.</span>');
-
-                            validateRequiredFields();
-                        } else {
-                            $btn.html('<i class="fa fa-check"></i> Verify OTP').prop('disabled', false);
-                            $('#otp-message').css('color', '#dc2626').html('<i class="fa fa-times-circle"></i> ' + response.message);
-                        }
-                    },
-                    error: function() {
-                        $btn.html('<i class="fa fa-check"></i> Verify OTP').prop('disabled', false);
-                        $('#otp-message').css('color', '#dc2626').html('<i class="fa fa-times-circle"></i> Verification failed. Please try again.');
-                    }
-                });
-            });
-
-            $('#btn_app_change_email').click(function(e) {
-                e.preventDefault();
-                $('#app_verified_badge').hide();
-                $('#send-otp-container').show();
-                $('#otp-input-section').hide();
-                $('#otp-message').hide();
-                $('#app_email').prop('readonly', false).focus();
-                $('#is_email_verified').val('0');
-                $('#btn-send-otp').html('<i class="fa fa-envelope"></i> Send OTP').prop('disabled', false);
-                $('#main-submit-btn').prop('disabled', true).attr('disabled', 'disabled');
-                $('#app_submit_hint').html('<span style="color: #64748b;"><i class="fa fa-lock"></i> Submit button will be enabled once your Organisation Mail ID is verified with OTP above.</span>');
-                validateRequiredFields();
-            });
-
-            // If page loaded with verified email in session
-            if ($('#is_email_verified').val() === '1') {
-                var currentEmail = $('#app_email').val();
-                if (currentEmail) {
-                    $('#send-otp-container').hide();
-                    $('#app_verified_text').text('Verified: ' + currentEmail);
-                    $('#app_verified_badge').css('display', 'flex');
-                    $('#main-submit-btn').prop('disabled', false).removeAttr('disabled');
-                    $('#app_submit_hint').html('<span style="color: #16a34a; font-weight: 600;"><i class="fa fa-check-circle"></i> Email verified! You can now submit the application.</span>');
-                }
-            }
         })();
     </script>
 

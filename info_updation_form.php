@@ -114,12 +114,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_info_form'])) 
         $errors[] = "Phone is required";
     if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $errors[] = "Valid email is required";
-    } else {
-        require_once __DIR__ . '/include/client_email_validator.php';
-        $emailCheck = aitf_check_client_email_exists($db, $email);
-        if (!$emailCheck['found']) {
-            $errors[] = "This mail is not valid. Kindly mention the mail ID that is present in your application form.";
-        }
     }
 
     // Change categories
@@ -1142,61 +1136,19 @@ $canonicalUrl = "https://www.aitf.co.in/info-updation";
                     </div>
                 </div>
 
-                <!-- Email Verification Section -->
+                <!-- Email Section -->
                 <div class="info-update-section" id="email-verification-section" style="text-align: center; margin-top: 30px;">
-                    <h4><i class="fa fa-shield"></i> Email Verification</h4>
+                    <h4><i class="fa fa-envelope"></i> Organisation Mail ID</h4>
                     <p style="margin-bottom: 15px; color: #0284c7; font-weight: 600; font-size: 15px;">Organisation requested to mention their registered mail id.</p>
                     <div style="display: flex; justify-content: center; align-items: center; flex-direction: column; gap: 15px;">
-                        <div style="display: flex; align-items: flex-end; gap: 15px; justify-content: center; flex-wrap: wrap;" id="verify-email-container">
-                            <div style="text-align: left; width: 100%; max-width: 320px;">
-                                <label style="font-weight: 600; margin-bottom: 5px; display: block; color: #111827;">Email <span style="color: red;">*</span></label>
-                                <input type="email" name="email" id="info_email" class="form-control"
-                                    value="<?php echo htmlspecialchars($_POST['email'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
-                                    style="width: 100%; margin-bottom: 0;"
-                                    placeholder="name@company.com"
-                                    required>
-                            </div>
-                            <button type="button" id="btn-verify-mail" class="btn-submit" style="padding: 12px 25px; font-size: 16px; background: #0056b3; margin: 0;">
-                                <i class="fa fa-check-circle"></i> Verify Mail
-                            </button>
+                        <div style="text-align: left; width: 100%; max-width: 420px;">
+                            <label style="font-weight: 600; margin-bottom: 5px; display: block; color: #111827;">Email <span style="color: red;">*</span></label>
+                            <input type="email" name="email" id="info_email" class="form-control"
+                                value="<?php echo htmlspecialchars($_POST['email'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+                                style="width: 100%; margin-bottom: 0;"
+                                placeholder="name@company.com"
+                                required>
                         </div>
-
-                        <!-- 2-3s Verifying Effect Loader -->
-                        <div id="info_verifying_loader" style="display: none; align-items: center; gap: 12px; background: #eff6ff; border: 1.5px solid #93c5fd; border-radius: 10px; padding: 13px 18px; color: #1e40af; font-size: 14px; font-weight: 600; margin-top: 10px; max-width: 440px; width: 100%; justify-content: center;">
-                            <i class="fa fa-circle-o-notch fa-spin" style="font-size: 20px; color: #0056b3;"></i>
-                            <span id="info_loader_text">Verifying your mail ID with system records...</span>
-                        </div>
-
-                        <div id="otp-message" style="font-size: 14px; font-weight: bold; margin-top: 5px;"></div>
-                        
-                        <!-- Verified Badge for Info Updation -->
-                        <div id="info_verified_badge" style="display: none; background: #ecfdf5; border: 1.5px solid #a7f3d0; color: #065f46; border-radius: 12px; padding: 14px 20px; font-weight: 600; font-size: 14px; align-items: center; justify-content: space-between; gap: 15px; max-width: 500px; width: 100%;">
-                            <div style="display: flex; align-items: center; gap: 12px; text-align: left;">
-                                <i class="fa fa-check-circle" style="font-size: 24px; color: #10b981; flex-shrink: 0;"></i>
-                                <div>
-                                    <div style="color: #065f46; font-size: 14.5px; font-weight: 700;">Mail is verified, proceed to submit form.</div>
-                                    <div id="info_verified_text" style="color: #047857; font-size: 13px; font-weight: 500; margin-top: 2px;"></div>
-                                </div>
-                            </div>
-                            <button type="button" id="btn_info_change_email" style="background: none; border: none; color: #047857; text-decoration: underline; font-size: 13px; cursor: pointer; font-weight: 600; white-space: nowrap;">Change Email</button>
-                        </div>
-                    </div>
-                    <input type="hidden" name="is_email_verified" id="is_email_verified" value="<?php echo (!empty($_SESSION['info_updation_email_verified']) && !empty($_POST['email']) && $_SESSION['info_updation_email_verified'] === $_POST['email']) ? '1' : '0'; ?>">
-                </div>
-
-                <!-- Email Not Eligible Modal -->
-                <div id="info_email_modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(15,23,42,0.65); backdrop-filter:blur(4px); z-index:99999; align-items:center; justify-content:center; padding:20px;">
-                    <div style="background:#fff; border-radius:18px; max-width:440px; width:100%; padding:32px 28px; text-align:center; box-shadow:0 25px 50px -12px rgba(0,0,0,0.35); border:1px solid #fee2e2; animation: modalPop 0.25s ease-out;">
-                        <div style="width:68px; height:68px; background:#fef2f2; border:2px solid #fecaca; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 18px;">
-                            <i class="fa fa-exclamation-triangle" style="font-size:32px; color:#dc2626;"></i>
-                        </div>
-                        <h4 style="font-size:20px; font-weight:700; color:#1e293b; margin-bottom:12px;">Email Verification Failed</h4>
-                        <p style="font-size:15px; color:#475569; line-height:1.6; margin-bottom:24px;">
-                            This mail is not valid. Kindly mention the mail ID that is present in your application form.
-                        </p>
-                        <button type="button" id="btn_info_close_modal" style="width:100%; background:linear-gradient(135deg, #0056b3, #004085); color:#fff; font-weight:600; font-size:15px; padding:13px 20px; border-radius:10px; border:none; cursor:pointer; box-shadow:0 4px 14px rgba(0,86,179,0.35); transition:all 0.2s;">
-                            <i class="fa fa-check"></i> OK, I Understood
-                        </button>
                     </div>
                 </div>
 
@@ -1210,9 +1162,9 @@ $canonicalUrl = "https://www.aitf.co.in/info-updation";
                 </div>
 
                 <!-- Submit Button -->
-                <div style="text-align: center;">
-                    <button type="submit" name="submit_info_form" id="main-submit-btn" class="btn-submit" disabled style="background-color: #6b7280; cursor: not-allowed; opacity: 0.7;">
-                        <i class="fa fa-lock"></i> Please verify your mail
+                <div style="text-align: center; margin-top: 20px;">
+                    <button type="submit" name="submit_info_form" id="main-submit-btn" class="btn-submit" style="background-color: #111827; cursor: pointer; opacity: 1;">
+                        <i class="fa fa-paper-plane"></i> Submit Information Updation Form
                     </button>
                 </div>
             </form>
@@ -1292,155 +1244,9 @@ $canonicalUrl = "https://www.aitf.co.in/info-updation";
                     isValid = false;
                 }
 
-                if ($('#is_email_verified').val() !== '1') {
-                    errors.push('Please verify your email before submitting.');
-                    isValid = false;
-                }
-
                 if (!isValid) {
                     e.preventDefault();
                     alert(errors.join('\n'));
-                }
-            });
-
-            // Close Modal handler
-            $('#btn_info_close_modal').click(function() {
-                $('#info_email_modal').hide();
-                $('input[name="email"]').focus().select();
-            });
-
-            // Email Verification Logic
-            $('#btn-verify-mail').click(function() {
-                var email = $('input[name="email"]').val().trim();
-                var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-                if (!email || !emailRegex.test(email)) {
-                    alert('Please enter a valid email address first.');
-                    $('input[name="email"]').focus();
-                    return;
-                }
-
-                var $btn = $(this);
-                $btn.html('<i class="fa fa-spinner fa-spin"></i> Verifying...').prop('disabled', true);
-                $('#otp-message').hide();
-                $('#info_email_modal').hide();
-
-                // Show 2-3s verifying effect loader
-                $('#info_verifying_loader').css('display', 'flex');
-                $('#info_loader_text').text('Verifying your mail ID with system records...');
-
-                // Dynamic text update after 1.1s for realistic feel
-                var progressTimer = setTimeout(function() {
-                    $('#info_loader_text').text('Checking registered client database...');
-                }, 1100);
-
-                var startTime = Date.now();
-
-                $.ajax({
-                    url: 'ajax_verify_otp_info.php',
-                    type: 'POST',
-                    data: {
-                        email: email
-                    },
-                    dataType: 'json',
-                    success: function(response) {
-                        var elapsed = Date.now() - startTime;
-                        var waitTime = Math.max(0, 2400 - elapsed);
-
-                        setTimeout(function() {
-                            clearTimeout(progressTimer);
-                            $('#info_verifying_loader').hide();
-
-                            if (response.success) {
-                                $('#otp-message').hide();
-                                $('#verify-email-container').hide();
-                                $('#info_verified_badge').css('display', 'flex');
-                                $('#info_verified_text').text('Verified Mail: ' + email);
-                                $('#is_email_verified').val('1');
-                                $('input[name="email"]').prop('readonly', true);
-                                $('#main-submit-btn').prop('disabled', false)
-                                    .css({'background-color': '#111827', 'cursor': 'pointer', 'opacity': '1'})
-                                    .html('<i class="fa fa-paper-plane"></i> Submit Information Updation Form');
-
-                                // Auto-select Organization Name from DB (editable)
-                                if (response.org_name) {
-                                    var $orgName = $('input[name="org_name"]');
-                                    if ($orgName.length) {
-                                        $orgName.val(response.org_name);
-                                        $orgName.addClass('auto-filled-highlight');
-                                        setTimeout(function() {
-                                            $orgName.removeClass('auto-filled-highlight');
-                                        }, 2600);
-                                        $('#info_org_auto_filled').show();
-                                    }
-                                }
-
-                                // Auto-fill Certificate Number if empty and found
-                                if (response.cert_no) {
-                                    var $certNo = $('input[name="certificate_number"]');
-                                    if ($certNo.length && !$certNo.val().trim()) {
-                                        $certNo.val(response.cert_no);
-                                    }
-                                }
-
-                                // Auto-fill Contact Person if empty and found
-                                if (response.contact_person) {
-                                    var $contactPerson = $('input[name="contact_person"]');
-                                    if ($contactPerson.length && !$contactPerson.val().trim()) {
-                                        $contactPerson.val(response.contact_person);
-                                    }
-                                }
-                            } else {
-                                $btn.html('<i class="fa fa-check-circle"></i> Verify Mail').prop('disabled', false);
-                                $('#is_email_verified').val('0');
-                                $('#main-submit-btn').prop('disabled', true)
-                                    .css({'background-color': '#6b7280', 'cursor': 'not-allowed', 'opacity': '0.7'})
-                                    .html('<i class="fa fa-lock"></i> Please verify your mail');
-
-                                // Show modal
-                                $('#info_email_modal').css('display', 'flex');
-
-                                // Inline error message
-                                $('#otp-message').show().css('color', '#dc3545').html('<i class="fa fa-exclamation-circle"></i> ' + response.message);
-                            }
-                        }, waitTime);
-                    },
-                    error: function() {
-                        var elapsed = Date.now() - startTime;
-                        var waitTime = Math.max(0, 2000 - elapsed);
-
-                        setTimeout(function() {
-                            clearTimeout(progressTimer);
-                            $('#info_verifying_loader').hide();
-                            $btn.html('<i class="fa fa-check-circle"></i> Verify Mail').prop('disabled', false);
-                            $('#otp-message').show().css('color', '#dc3545').text('An error occurred. Please try again.');
-                        }, waitTime);
-                    }
-                });
-            });
-
-            $('#btn_info_change_email').click(function() {
-                $('#is_email_verified').val('0');
-                $('input[name="email"]').prop('readonly', false).focus();
-                $('#info_verified_badge').hide();
-                $('#verify-email-container').show();
-                $('#btn-verify-mail').html('<i class="fa fa-check-circle"></i> Verify Mail').prop('disabled', false);
-                $('#otp-message').hide();
-                $('#main-submit-btn').prop('disabled', true)
-                    .css({'background-color': '#6b7280', 'cursor': 'not-allowed', 'opacity': '0.7'})
-                    .html('<i class="fa fa-lock"></i> Please verify your mail');
-            });
-
-            $('input[name="email"]').on('input', function() {
-                if ($('#is_email_verified').val() === '1') {
-                    $('#is_email_verified').val('0');
-                    $('#info_verified_badge').hide();
-                    $('#verify-email-container').show();
-                    $('#btn-verify-mail').html('<i class="fa fa-check-circle"></i> Verify Mail').prop('disabled', false);
-                    $('#otp-message').hide();
-                    $('#main-submit-btn').prop('disabled', true)
-                        .css({'background-color': '#6b7280', 'cursor': 'not-allowed', 'opacity': '0.7'})
-                        .html('<i class="fa fa-lock"></i> Please verify your mail');
                 }
             });
         });
