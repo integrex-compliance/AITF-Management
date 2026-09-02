@@ -754,10 +754,108 @@ function removeUnwantedOptions(selector, optionsToRemove) {
 
     $(document).ready(function () {
 
+        var aitfServiceAuditorsRR = [];
+
+        function loadServiceAuditorsForReviewReport(serviceId, customerId) {
+            aitfServiceAuditorsRR = [];
+            if (!serviceId) return;
+            $.ajax({
+                url: "checkReviewerConflict.php",
+                type: "POST",
+                dataType: "json",
+                data: {
+                    action: "get_service_auditors",
+                    serviceId: serviceId,
+                    customerId: customerId || ""
+                },
+                success: function (resp) {
+                    if (resp && resp.auditors) {
+                        aitfServiceAuditorsRR = resp.auditors;
+                    }
+                }
+            });
+        }
+
+        function checkReviewerConflictWithServiceAuditorsRR(reviewerName) {
+            if (!reviewerName || !aitfServiceAuditorsRR || !aitfServiceAuditorsRR.length) return false;
+            var normRev = reviewerName.toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (!normRev) return false;
+            for (var i = 0; i < aitfServiceAuditorsRR.length; i++) {
+                var normAud = aitfServiceAuditorsRR[i].toLowerCase().replace(/[^a-z0-9]/g, '');
+                if (normRev === normAud || (normRev.length >= 5 && normAud.length >= 5 && (normRev.indexOf(normAud) !== -1 || normAud.indexOf(normRev) !== -1))) {
+                    return aitfServiceAuditorsRR[i];
+                }
+            }
+            return false;
+        }
+
+        function showServiceReviewerConflictDialogueRR(auditorName, reviewerName) {
+            var nameToDisplay = auditorName || reviewerName || "This user";
+            var msg = nameToDisplay + " is Auditor of this service, cannot set as Reviewer.\n\nPlease select another Reviewer.";
+            if (typeof Swal !== 'undefined' && Swal.fire) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Conflict Detected',
+                    html: '<div class="aitf-conflict-card">' +
+                              '<div class="aitf-conflict-card-title">' +
+                                  '<span class="aitf-conflict-card-name">' + nameToDisplay + '</span> is Auditor of this service, cannot set as Reviewer.' +
+                              '</div>' +
+                              '<div class="aitf-conflict-card-sub">' +
+                                  'Please select another Reviewer.' +
+                              '</div>' +
+                          '</div>',
+                    confirmButtonText: 'OK, I Understood',
+                    confirmButtonColor: '#0F2742',
+                    customClass: {
+                        popup: 'aitf-conflict-swal',
+                        confirmButton: 'aitf-conflict-btn'
+                    }
+                });
+            } else {
+                alert(msg);
+            }
+        }
+
+        $(document).on('change', '.ReviewerName1, .reviewerNameEdit', function () {
+            var $select = $(this);
+            var revVal = ($select.val() || '').trim();
+            if (!revVal) return;
+
+            var confAud = checkReviewerConflictWithServiceAuditorsRR(revVal);
+            if (confAud) {
+                $select.val("");
+                showServiceReviewerConflictDialogueRR(confAud, revVal);
+                return;
+            }
+
+            var sid = $('.serviceId').val() || $('.serviceIdEdit').val();
+            var cid = $('.customerId').val() || $('.customerIdEdit').val();
+            if (sid) {
+                $.ajax({
+                    url: "checkReviewerConflict.php",
+                    type: "POST",
+                    dataType: "json",
+                    data: {
+                        action: "check_service_reviewer",
+                        serviceId: sid,
+                        customerId: cid,
+                        reviewerName: revVal
+                    },
+                    success: function (resp) {
+                        if (resp && resp.conflict) {
+                            $select.val("");
+                            showServiceReviewerConflictDialogueRR(resp.conflicting_auditor || revVal, revVal);
+                        }
+                    }
+                });
+            }
+        });
+
         //code by app for Review Report (Annex I) Update
         $('.auditStage-I').click(function () {
             $('.serviceId').val($(this).attr('data-service'));
             $('.customerId').val($(this).attr('data-customer'));
+            loadServiceAuditorsForReviewReport($(this).attr('data-service'), $(this).attr('data-customer'));
             $.ajax({
                 url: "getClientInfo.php",
                 type: "GET",
@@ -894,6 +992,7 @@ removeUnwantedOptions('.ReviewerName1', optionsToRemove);
             $('.serviceIdEdit').val($(this).attr('data-service'));
             $('.customerIdEdit').val($(this).attr('data-customer'));
             $('.review-report-id').val($(this).attr('data-notification'));
+            loadServiceAuditorsForReviewReport($(this).attr('data-service'), $(this).attr('data-customer'));
             $.ajax({
                 url: "reviewReportData.php",
                 type: "GET",
@@ -1052,6 +1151,15 @@ removeUnwantedOptions('.reviewerNameEdit', optionsToRemove);
                 return;
             }
 
+            var selectedRev = ($('.ReviewerName1').val() || '').trim();
+            var confAud1 = checkReviewerConflictWithServiceAuditorsRR(selectedRev);
+            if (confAud1) {
+                e.preventDefault();
+                $('.ReviewerName1').val('');
+                showServiceReviewerConflictDialogueRR(confAud1, selectedRev);
+                return false;
+            }
+
             var aspectpoint = [];
             $(".audit-aspect-hidden").each(function () {
                 aspectpoint.push($(this).val());
@@ -1093,9 +1201,18 @@ removeUnwantedOptions('.reviewerNameEdit', optionsToRemove);
         });
 
         $('.updateReviewReport').click(function (e) {
-                        if (validateAnexModel1()) {
+            if (validateAnexModel1()) {
                 e.preventDefault();
                 return;
+            }
+
+            var selectedRevEdit = ($('.reviewerNameEdit').val() || '').trim();
+            var confAudEdit = checkReviewerConflictWithServiceAuditorsRR(selectedRevEdit);
+            if (confAudEdit) {
+                e.preventDefault();
+                $('.reviewerNameEdit').val('');
+                showServiceReviewerConflictDialogueRR(confAudEdit, selectedRevEdit);
+                return false;
             }
 
             var aspectpoint = [];

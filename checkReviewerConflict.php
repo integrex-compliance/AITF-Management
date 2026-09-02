@@ -12,6 +12,28 @@ $serviceId = trim((string)($_REQUEST['serviceId'] ?? $_REQUEST['service_id'] ?? 
 $reviewerName = trim((string)($_REQUEST['reviewerName'] ?? $_REQUEST['reviewer_name'] ?? ''));
 $auditor = trim((string)($_REQUEST['auditor'] ?? $_REQUEST['auditorId'] ?? $_REQUEST['auditor_id'] ?? $_REQUEST['auditorName'] ?? $_REQUEST['auditor_name'] ?? ''));
 
+if ($action === 'get_service_auditors') {
+    $assigned = aitf_get_auditors_for_service($db, $serviceId, $customerId);
+    echo json_encode(array(
+        'success' => true,
+        'auditors' => $assigned['names'],
+        'auditor_ids' => $assigned['ids']
+    ));
+    exit;
+}
+
+if ($action === 'check_service_reviewer') {
+    $result = aitf_check_service_reviewer_conflict($db, $serviceId, $reviewerName, $customerId);
+    echo json_encode(array(
+        'conflict' => !empty($result['has_conflict']),
+        'conflicting_auditor' => $result['conflicting_auditor'] ?? '',
+        'reviewer_name' => $result['reviewer_name'] ?? '',
+        'message' => $result['message'] ?? '',
+        'auditors' => $result['auditors'] ?? array()
+    ));
+    exit;
+}
+
 if ($action === 'get_assigned_auditors') {
     $assigned = aitf_get_assigned_auditors_for_client($db, $customerId, $serviceId);
     echo json_encode(array(

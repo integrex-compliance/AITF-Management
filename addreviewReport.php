@@ -48,9 +48,16 @@ if (strtoupper($_SERVER['REQUEST_METHOD']) == 'POST') {
 
                 $auditOrganisation = $_POST['auditOrganisation'];
                 $leadAuditor = $_POST['leadAuditor'];
-                $referenceNumber = $_POST['referenceNumber'];
                 $reviewer_comments = $_POST['ReviewerComments1'];
                 $reviewer_name = $_POST['ReviewerName1'];
+
+                require_once __DIR__ . '/include/reviewer_conflict_helper.php';
+                $conflictCheck = aitf_check_service_reviewer_conflict($db, $service, $reviewer_name, $_POST['customerId'] ?? 0);
+                if (!empty($conflictCheck['has_conflict'])) {
+                    $_SESSION['audit_app_conflict_error'] = $conflictCheck['message'];
+                    header("Location: customerAccount.php?customerid=" . urlencode($_POST['customerId']) . "&reviewer_conflict=1");
+                    exit;
+                }
 
                 $sql = "INSERT INTO stage_i_audit_id(ca_service_id,customer_id,auditOrganisation, auditDate,leadAuditor, referenceNumber,accepted,reviewer_comments,review_date, remark,reviewer_name, certificationStandered) VALUES (:id,:customer,:auditOrganisation,:auditDate,:leadAuditor,:referenceNumber,:accepted,:reviewer_comments,:reviewDate, :remark, :reviewer_name, :certificationStandered)";
                 $statement = $db->prepare($sql);
@@ -105,9 +112,17 @@ if (strtoupper($_SERVER['REQUEST_METHOD']) == 'POST') {
                 }
                 $auditOrganisation = $_POST['auditOrganisation'];
                 $leadAuditor = $_POST['leadAuditor'];
-                $referenceNumber = $_POST['referenceNumber'];
                 $reviewer_comments = $_POST['ReviewerCommentsEdit1'];
                 $reviewer_name = $_POST['reviewerNameEdit'];
+
+                require_once __DIR__ . '/include/reviewer_conflict_helper.php';
+                $conflictCheck = aitf_check_service_reviewer_conflict($db, $_POST['serviceIdEdit'], $reviewer_name, $_POST['customerIdEdit'] ?? 0);
+                if (!empty($conflictCheck['has_conflict'])) {
+                    $_SESSION['audit_app_conflict_error'] = $conflictCheck['message'];
+                    header("Location: customerAccount.php?customerid=" . urlencode($_POST['customerIdEdit']) . "&reviewer_conflict=1");
+                    exit;
+                }
+
                 if (isset($_POST['reviewDateEdit']) && !empty($_POST['reviewDateEdit'])) {
                     $reviewDate = date("Y-m-d", strtotime($_POST['reviewDateEdit']));
                 } else {

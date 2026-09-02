@@ -45,6 +45,15 @@ if (isset($_POST['service_Id']) && !empty($_POST['service_Id']) && isset($_POST[
         
         $auditOrganisation = $_POST['auditOrganisationII'];
         $ReviewerName = $_POST['ReviewerName'];
+
+        require_once __DIR__ . '/include/reviewer_conflict_helper.php';
+        $conflictCheck = aitf_check_service_reviewer_conflict($db, $_POST['service_Id'], $ReviewerName, $_POST['customer_Id'] ?? 0);
+        if (!empty($conflictCheck['has_conflict'])) {
+            $_SESSION['audit_app_conflict_error'] = $conflictCheck['message'];
+            header("Location: customerAccount.php?customerid=" . urlencode($_POST['customer_Id']) . "&reviewer_conflict=1");
+            exit;
+        }
+
         $_POST['auditDateII'];
         $leadAuditor = $_POST['leadAuditorII'];
         $referenceNumber = $_POST['referenceNumberII'];
@@ -105,7 +114,16 @@ if (isset($_POST['service_Id_Edit']) && !empty($_POST['service_Id_Edit']) && iss
         $service = $_POST['service_Id_Edit'];
 
         $auditOrganisation = $_POST['auditOrganisationIIEdit'];
-        $ReviewerName = $_POST['ReviewerName'];
+        $ReviewerName = $_POST['ReviewerNameEdit'] ?? ($_POST['ReviewerName'] ?? '');
+
+        require_once __DIR__ . '/include/reviewer_conflict_helper.php';
+        $conflictCheck = aitf_check_service_reviewer_conflict($db, $service, $ReviewerName, $_POST['customer_Id_Edit'] ?? 0);
+        if (!empty($conflictCheck['has_conflict'])) {
+            $_SESSION['audit_app_conflict_error'] = $conflictCheck['message'];
+            header("Location: customerAccount.php?customerid=" . urlencode($_POST['customer_Id_Edit']) . "&reviewer_conflict=1");
+            exit;
+        }
+
         $leadAuditor = $_POST['leadAuditorII'];
         $referenceNumber = $_POST['referenceNumberIIEdit'];
         $id = $_POST['review_report_id'];

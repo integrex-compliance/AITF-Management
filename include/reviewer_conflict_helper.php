@@ -582,3 +582,197 @@ if (!function_exists('aitf_check_auditor_appointed_as_reviewer')) {
         return array('has_conflict' => false, 'conflicting_name' => '', 'auditor_name' => $auditorName, 'message' => '');
     }
 }
+
+if (!function_exists('aitf_get_auditors_for_service')) {
+    /**
+     * Get all assigned auditors specifically for a particular service (e.g. CA service).
+     * @param PDO $db
+     * @param string|int $serviceId CA service ID (ca_id)
+     * @param string|int $customerId Customer ID (optional)
+     * @param string $serviceType Service type ('ca', 'sai', etc.)
+     * @return array ['names' => [...], 'ids' => [...]]
+     */
+    function aitf_get_auditors_for_service(PDO $db, $serviceId, $customerId = 0, $serviceType = 'ca')
+    {
+        $auditorNames = array();
+        $auditorIds = array();
+
+        $serviceId = trim((string)$serviceId);
+        if ($serviceId === '') {
+            return array('names' => array(), 'ids' => array());
+        }
+
+        // 1. Check stage_audit_one (Stage 1 Audit Notification) for ca_service_id
+        try {
+            $stmt = $db->prepare("SELECT auditor_id, auditor_name FROM stage_audit_one WHERE ca_service_id = :ca_id");
+            $stmt->execute(array(':ca_id' => $serviceId));
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                if (!empty($row['auditor_name'])) {
+                    $auditorNames[] = trim($row['auditor_name']);
+                }
+                if (!empty($row['auditor_id'])) {
+                    $auditorIds[] = (int)$row['auditor_id'];
+                }
+            }
+        } catch (Exception $e) {}
+
+        // 2. Check stage_audit_two (Stage 2 Audit Notification) for service_id
+        try {
+            $stmt = $db->prepare("SELECT auditor_id, auditor_name FROM stage_audit_two WHERE service_id = :ca_id");
+            $stmt->execute(array(':ca_id' => $serviceId));
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                if (!empty($row['auditor_name'])) {
+                    $auditorNames[] = trim($row['auditor_name']);
+                }
+                if (!empty($row['auditor_id'])) {
+                    $auditorIds[] = (int)$row['auditor_id'];
+                }
+            }
+        } catch (Exception $e) {}
+
+        // 3. Check service_type_ca (stage1_auditor and stage2_auditor text columns)
+        try {
+            $stmt = $db->prepare("SELECT stage1_auditor, stage2_auditor FROM service_type_ca WHERE ca_id = :ca_id");
+            $stmt->execute(array(':ca_id' => $serviceId));
+            $caRow = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($caRow) {
+                foreach (array('stage1_auditor', 'stage2_auditor') as $col) {
+                    if (!empty($caRow[$col])) {
+                        foreach (aitf_split_auditor_names($caRow[$col]) as $p) {
+                            if ($p !== '') {
+                                $auditorNames[] = $p;
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception $e) {}
+
+        // 4. Check stage_oneaudit_id (auditor_list text column)
+        try {
+            $stmt = $db->prepare("SELECT auditor_list FROM stage_oneaudit_id WHERE ca_service_id = :ca_id");
+            $stmt->execute(array(':ca_id' => $serviceId));
+            while ($soRow = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                if (!empty($soRow['auditor_list'])) {
+                    foreach (aitf_split_auditor_names($soRow['auditor_list']) as $p) {
+                        if (is_numeric($p)) {
+                            $auditorIds[] = (int)$p;
+                        } elseif ($p !== '') {
+                            $auditorNames[] = $p;
+                        }
+                    }
+                }
+            }
+        } catch (Exception $e) {}
+
+        // 5. Check assessment_planning for this ca_service_id or service_id
+        try {
+            $stmt = $db->prepare("SELECT lead_auditor, auditors FROM assessment_planning WHERE ca_service_id = :ca_id OR service_id = :ca_id");
+            $stmt->execute(array(':ca_id' => $serviceId));
+            while ($ap = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                if (!empty($ap['lead_auditor'])) {
+                    foreach (aitf_split_auditor_names($ap['lead_auditor']) as $an) {
+                        if ($an !== '') $auditorNames[] = $an;
+                    }
+                }
+                if (!empty($ap['auditors'])) {
+                    foreach (aitf_split_auditor_names($ap['auditors']) as $an) {
+                        if ($an !== '') $auditorNames[] = $an;
+                    }
+                }
+            }
+        } catch (Exception $e) {}
+
+        // 6. If auditor IDs exist, also resolve their names from `auditors` table
+        if (!empty($auditorIds)) {
+            try {
+                $uniqueIds = array_values(array_unique(array_filter($auditorIds)));
+                if (!empty($uniqueIds)) {
+                    $inClause = implode(',', $uniqueIds);
+                    $stmt = $db->query("SELECT auditors_id, auditor_name FROM auditors WHERE auditors_id IN ($inClause)");
+                    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                        if (!empty($row['auditor_name'])) {
+                            $auditorNames[] = trim($row['auditor_name']);
+                        }
+                    }
+                }
+            } catch (Exception $e) {}
+        }
+
+        // Clean, filter, and unique
+        $uniqueNames = array();
+        foreach ($auditorNames as $nm) {
+            $nm = trim((string)$nm);
+            if ($nm !== '' && !in_array($nm, $uniqueNames, true)) {
+                $uniqueNames[] = $nm;
+            }
+        }
+
+        return array(
+            'names' => $uniqueNames,
+            'ids' => array_values(array_unique(array_filter($auditorIds)))
+        );
+    }
+}
+
+if (!function_exists('aitf_check_service_reviewer_conflict')) {
+    /**
+     * Check if a proposed reviewer for a service is already an auditor of that same service.
+     * @param PDO $db
+     * @param string|int $serviceId CA service ID (ca_id)
+     * @param string $reviewerName Reviewer name
+     * @param string|int $customerId Customer ID (optional)
+     * @param string $serviceType Service type (default 'ca')
+     * @return array
+     */
+    function aitf_check_service_reviewer_conflict(PDO $db, $serviceId, $reviewerName, $customerId = 0, $serviceType = 'ca')
+    {
+        $reviewerName = trim((string)$reviewerName);
+        if ($reviewerName === '') {
+            return array(
+                'has_conflict' => false,
+                'conflicting_auditor' => '',
+                'reviewer_name' => '',
+                'message' => '',
+                'auditors' => array()
+            );
+        }
+
+        $assigned = aitf_get_auditors_for_service($db, $serviceId, $customerId, $serviceType);
+        $normRev = aitf_normalize_person_name($reviewerName);
+
+        if ($normRev === '') {
+            return array(
+                'has_conflict' => false,
+                'conflicting_auditor' => '',
+                'reviewer_name' => $reviewerName,
+                'message' => '',
+                'auditors' => $assigned['names']
+            );
+        }
+
+        foreach ($assigned['names'] as $audName) {
+            $normAud = aitf_normalize_person_name($audName);
+            if ($normAud === '') continue;
+
+            if ($normAud === $normRev ||
+                (strlen($normAud) >= 5 && strlen($normRev) >= 5 && (strpos($normAud, $normRev) !== false || strpos($normRev, $normAud) !== false))) {
+                return array(
+                    'has_conflict' => true,
+                    'conflicting_auditor' => $audName,
+                    'reviewer_name' => $reviewerName,
+                    'message' => "'" . aitf_rbac_escape($audName) . "' is Auditor of this service, cannot set as Reviewer. Please select another Reviewer.",
+                    'auditors' => $assigned['names']
+                );
+            }
+        }
+
+        return array(
+            'has_conflict' => false,
+            'conflicting_auditor' => '',
+            'reviewer_name' => $reviewerName,
+            'message' => '',
+            'auditors' => $assigned['names']
+        );
+    }
+}

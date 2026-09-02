@@ -125,7 +125,7 @@ if (!function_exists('aitf_fetch_auditor_dashboard_data')) {
         // so resolve the real service type by joining all four typed tables.
         $stageOne = $db->prepare("SELECT 'Stage I' AS source, sao.stage_one_id AS row_id, sao.auditor_id, sao.auditor_name,
                                          sao.auditor_category, sao.auditor_acceptance, soi.audit_stage_id AS audit_id,
-                                         soi.audit_ref_no, soi.audit_dates, soi.intimation_date,
+                                         soi.audit_ref_no, soi.audit_dates, soi.intimation_date, soi.location,
                                          CASE WHEN ca.ca_id IS NOT NULL THEN 'CA'
                                               WHEN sai.sai_id IS NOT NULL THEN 'SA-I'
                                               WHEN saii.saii_id IS NOT NULL THEN 'SA-II'
@@ -150,7 +150,7 @@ if (!function_exists('aitf_fetch_auditor_dashboard_data')) {
         // real type the same way instead of trusting stage_ii_of (values like 'Stage-ii').
         $stageTwo = $db->prepare("SELECT 'Stage II' AS source, sat.stage_two_id AS row_id, sat.auditor_id, sat.auditor_name,
                                          sat.auditor_category, sat.auditor_acceptance, sti.audit_stageii_id AS audit_id,
-                                         sti.audit_ref_no, sti.audit_dates, sti.intimation_date,
+                                         sti.audit_ref_no, sti.audit_dates, sti.intimation_date, sti.location,
                                          CASE WHEN ca.ca_id IS NOT NULL THEN 'CA'
                                               WHEN sai.sai_id IS NOT NULL THEN 'SA-I'
                                               WHEN saii.saii_id IS NOT NULL THEN 'SA-II'
@@ -188,6 +188,7 @@ if (!function_exists('aitf_fetch_auditor_dashboard_data')) {
         foreach ($rows as &$row) {
             $row['service_type'] = aitf_normalize_audit_service_type($row['service_type']);
             $row['parsed_audit_date'] = aitf_parse_audit_date_value($row['audit_dates'] ?: $row['audit_date']);
+            $row['planned_date'] = !empty($row['audit_dates']) ? $row['audit_dates'] : (!empty($row['audit_date']) ? $row['audit_date'] : $row['parsed_audit_date']);
             $stats['total']++;
 
             if (strtolower(trim((string)$row['auditor_acceptance'])) === 'yes') {

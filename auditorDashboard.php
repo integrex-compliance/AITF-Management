@@ -56,7 +56,7 @@ if (!empty($clients)) {
         $placeholders = implode(',', array_fill(0, count($clientIds), '?'));
         $stmt = $db->prepare("SELECT ci.*, s.service_type, s.service_status, s.service_id
             FROM customer_info ci
-            LEFT JOIN service s ON s.customer_id = ci.id
+            LEFT JOIN service s ON s.customer_id = ci.id AND (s.is_deleted IS NULL OR s.is_deleted <> 'Y')
             WHERE ci.id IN ($placeholders)
             ORDER BY ci.customer_name ASC");
         $stmt->execute($clientIds);
@@ -830,25 +830,25 @@ aitf_touch_login_activity($db);
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
             <nav>
-                <a class="nav-item active" data-tab="dashboard">
+                <a class="nav-item active" data-tab="dashboard" href="#dashboard">
                     <i class="fas fa-home"></i> Dashboard
                 </a>
-                <a class="nav-item" data-tab="assignments">
+                <a class="nav-item" data-tab="assignments" href="#assignments">
                     <i class="fas fa-tasks"></i> My Assignments
                 </a>
-                <a class="nav-item" data-tab="clients">
+                <a class="nav-item" data-tab="clients" href="#clients">
                     <i class="fas fa-users"></i> My Clients
                 </a>
-                <a class="nav-item" data-tab="history">
+                <a class="nav-item" data-tab="history" href="#history">
                     <i class="fas fa-history"></i> Audit History
                 </a>
-                <a class="nav-item" data-tab="profile">
+                <a class="nav-item" data-tab="profile" href="#profile">
                     <i class="fas fa-user"></i> Profile
                 </a>
-                <a class="nav-item" data-tab="updates">
+                <a class="nav-item" data-tab="updates" href="#updates">
                     <i class="fas fa-bell"></i> Updates and News
                 </a>
-                <a class="nav-item" data-tab="performance">
+                <a class="nav-item" data-tab="performance" href="#performance">
                     <i class="fas fa-chart-bar"></i> Performance
                 </a>
                 <?php if (Utitlity::checkUserPermission('client_access')) { ?>
@@ -877,27 +877,27 @@ aitf_touch_login_activity($db);
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-icon total"><i class="fas fa-clipboard-check"></i></div>
-                        <div class="stat-value counter" data-target="<?php echo $stats['total']; ?>">0</div>
+                        <div class="stat-value counter" data-target="<?php echo $stats['total']; ?>"><?php echo (int)$stats['total']; ?></div>
                         <div class="stat-label">Total Audits</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon ca"><i class="fas fa-file-contract"></i></div>
-                        <div class="stat-value counter" data-target="<?php echo $stats['ca']; ?>">0</div>
+                        <div class="stat-value counter" data-target="<?php echo $stats['ca']; ?>"><?php echo (int)$stats['ca']; ?></div>
                         <div class="stat-label">CA Audits</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon sa1"><i class="fas fa-search"></i></div>
-                        <div class="stat-value counter" data-target="<?php echo $stats['sa1']; ?>">0</div>
+                        <div class="stat-value counter" data-target="<?php echo $stats['sa1']; ?>"><?php echo (int)$stats['sa1']; ?></div>
                         <div class="stat-label">SA-I Audits</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon sa2"><i class="fas fa-search-plus"></i></div>
-                        <div class="stat-value counter" data-target="<?php echo $stats['sa2']; ?>">0</div>
+                        <div class="stat-value counter" data-target="<?php echo $stats['sa2']; ?>"><?php echo (int)$stats['sa2']; ?></div>
                         <div class="stat-label">SA-II Audits</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon rc"><i class="fas fa-sync-alt"></i></div>
-                        <div class="stat-value counter" data-target="<?php echo $stats['rc']; ?>">0</div>
+                        <div class="stat-value counter" data-target="<?php echo $stats['rc']; ?>"><?php echo (int)$stats['rc']; ?></div>
                         <div class="stat-label">RC Audits</div>
                     </div>
                 </div>
@@ -910,17 +910,19 @@ aitf_touch_login_activity($db);
                 <div class="upcoming-grid">
                     <?php foreach ($futureAudits as $fa): 
                         $badgeClass = 'badge-' . strtolower(str_replace('-', '', $fa['service_type']));
+                        $displayDate = !empty($fa['planned_date']) ? $fa['planned_date'] : (!empty($fa['audit_dates']) ? $fa['audit_dates'] : ($fa['parsed_audit_date'] ?? 'N/A'));
+                        $displayLoc = !empty($fa['location']) ? $fa['location'] : 'N/A';
                     ?>
-                    <div class="upcoming-card">
+                    <a href="customerAccount.php?customerid=<?php echo $fa['customer_id']; ?>" class="upcoming-card" style="text-decoration:none; color:inherit; display:block;">
                         <div class="upcoming-header">
                             <div class="upcoming-client"><?php echo htmlspecialchars($fa['customer_name']); ?></div>
                             <span class="badge <?php echo $badgeClass; ?>"><?php echo htmlspecialchars($fa['service_type']); ?></span>
                         </div>
                         <div class="upcoming-details">
-                            <div><i class="far fa-calendar-alt"></i> <?php echo htmlspecialchars($fa['planned_date']); ?></div>
-                            <div><i class="fas fa-map-marker-alt"></i> <?php echo htmlspecialchars($fa['location'] ?? 'N/A'); ?></div>
+                            <div><i class="far fa-calendar-alt"></i> <?php echo htmlspecialchars($displayDate); ?></div>
+                            <div><i class="fas fa-map-marker-alt"></i> <?php echo htmlspecialchars($displayLoc); ?></div>
                         </div>
-                    </div>
+                    </a>
                     <?php endforeach; ?>
                 </div>
                 <?php else: ?>
@@ -1032,8 +1034,8 @@ aitf_touch_login_activity($db);
                             <span class="client-id">ID: <?php echo htmlspecialchars($client['unique_id']); ?></span>
                         </div>
                         <div style="color: var(--text-muted); font-size: 14px; margin-bottom: 12px;">
-                            <div><i class="fas fa-envelope" style="width: 20px;"></i> <?php echo htmlspecialchars($client['email'] ?? 'N/A'); ?></div>
-                            <div><i class="fas fa-phone" style="width: 20px;"></i> <?php echo htmlspecialchars($client['mobile_no'] ?? 'N/A'); ?></div>
+                            <div><i class="fas fa-envelope" style="width: 20px;"></i> <?php echo htmlspecialchars(!empty($client['email_id']) ? $client['email_id'] : ($client['email'] ?? 'N/A')); ?></div>
+                            <div><i class="fas fa-phone" style="width: 20px;"></i> <?php echo htmlspecialchars(!empty($client['contact']) ? $client['contact'] : ($client['mobile_no'] ?? 'N/A')); ?></div>
                         </div>
                         
                         <div class="client-services">
@@ -1157,93 +1159,100 @@ aitf_touch_login_activity($db);
                 </div>
                 <div class="panel-content">
                     <?php
-                    // Fetch quality analysis data for the logged-in auditor
-                    $qaSql = "SELECT ci.id, customer_name, address, contact, email_id, scope, aif_nace, svc.service_id, service_type, svc.audit_date FROM customer_info ci join service svc on ci.id = svc.customer_id WHERE is_deleted <> 'Y' ORDER BY svc.audit_date DESC";
-                    $qaStmt = $db->prepare($qaSql);
-                    $qaStmt->execute();
-                    $qaListOfCustomer = $qaStmt->fetchAll();
+                    // Fetch quality analysis data for the logged-in auditor safely
+                    $qaListOfCustomer = [];
+                    $qaCaMap = []; $qaSaiMap = []; $qaSaiiMap = []; $qaRcMap = []; $qaSpMap = [];
+                    $qaSurveyDetailMap = []; $qaSurveyAgg = []; $qaCdcMap = [];
+                    try {
+                        $qaSql = "SELECT ci.id, customer_name, address, contact, email_id, scope, aif_nace, svc.service_id, service_type, svc.audit_date 
+                                  FROM customer_info ci 
+                                  JOIN service svc ON ci.id = svc.customer_id 
+                                  WHERE (ci.is_deleted IS NULL OR ci.is_deleted <> 'Y') 
+                                    AND (svc.is_deleted IS NULL OR svc.is_deleted <> 'Y') 
+                                  ORDER BY svc.audit_date DESC";
+                        $qaStmt = $db->prepare($qaSql);
+                        $qaStmt->execute();
+                        $qaListOfCustomer = $qaStmt->fetchAll(PDO::FETCH_ASSOC);
 
-                    $qaServiceIdsByType = [
-                        'CA' => [], 'SA-I' => [], 'SA-II' => [], 'RC' => [], 'SP' => []
-                    ];
-                    foreach ($qaListOfCustomer as $c) {
-                        if (isset($qaServiceIdsByType[$c['service_type']])) {
-                            $qaServiceIdsByType[$c['service_type']][] = $c['service_id'];
-                        }
-                    }
-
-                    $qaLoadMap = function($table, $serviceCol, $filterIds) use (&$db) {
-                        if (empty($filterIds)) return [];
-                        $ph = implode(',', array_fill(0, count($filterIds), '?'));
-                        $sql = "SELECT * FROM {$table} WHERE {$serviceCol} IN ($ph)";
-                        $stmt = $db->prepare($sql);
-                        $stmt->execute($filterIds);
-                        $out = [];
-                        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
-                            $out[$r[$serviceCol]] = $r;
-                        }
-                        return $out;
-                    };
-
-                    $qaCaMap = $qaLoadMap('service_type_ca', 'service', $qaServiceIdsByType['CA']);
-                    $qaSaiMap = $qaLoadMap('service_type_sai', 'service', $qaServiceIdsByType['SA-I']);
-                    $qaSaiiMap = $qaLoadMap('service_type_saii', 'service', $qaServiceIdsByType['SA-II']);
-                    $qaRcMap = $qaLoadMap('service_type_rc', 'service', $qaServiceIdsByType['RC']);
-                    $qaSpMap = $qaLoadMap('service_type_sp', 'service', $qaServiceIdsByType['SP']);
-
-                    $qaSubtypeIds = array_merge(
-                        array_column($qaCaMap, 'ca_id'),
-                        array_column($qaSaiMap, 'sai_id'),
-                        array_column($qaSaiiMap, 'saii_id'),
-                        array_column($qaRcMap, 'rc_id'),
-                        array_column($qaSpMap, 'sp_id')
-                    );
-                    $qaSubtypeIds = array_filter($qaSubtypeIds, function($v){ return $v !== null && $v !== ''; });
-
-                    $qaSurveyIdMap = [];
-                    $qaSurveyDetailMap = [];
-                    if (!empty($qaSubtypeIds)) {
-                        $ph = implode(',', array_fill(0, count($qaSubtypeIds), '?'));
-                        $sqlSurveyIds = "SELECT ca_serviceid, survey_id, auditing_quality, mgmt_satisfaction, aggregate, ncval, ofival, oplusval FROM customer_survey_id WHERE ca_serviceid IN ($ph)";
-                        $stmt = $db->prepare($sqlSurveyIds);
-                        $stmt->execute($qaSubtypeIds);
-                        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
-                            $qaSurveyIdMap[$r['ca_serviceid']] = $r['survey_id'];
-                            $qaSurveyDetailMap[$r['ca_serviceid']] = $r;
-                        }
-                    }
-
-                    $qaSurveyAgg = [];
-                    $qaSurveyIds = array_values(array_filter($qaSurveyIdMap));
-                    if (!empty($qaSurveyIds)) {
-                        $ph = implode(',', array_fill(0, count($qaSurveyIds), '?'));
-                        $sqlSurvey = "SELECT survayid, lead_auditor, marks FROM customer_survey WHERE survayid IN ($ph)";
-                        $stmt = $db->prepare($sqlSurvey);
-                        $stmt->execute($qaSurveyIds);
-                        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
-                            $sid = $r['survayid'];
-                            if (!isset($qaSurveyAgg[$sid])) {
-                                $qaSurveyAgg[$sid] = ['auditors' => [], 'marks' => []];
+                        $qaServiceIdsByType = [
+                            'CA' => [], 'SA-I' => [], 'SA-II' => [], 'RC' => [], 'SP' => []
+                        ];
+                        foreach ($qaListOfCustomer as $c) {
+                            if (isset($qaServiceIdsByType[$c['service_type']])) {
+                                $qaServiceIdsByType[$c['service_type']][] = $c['service_id'];
                             }
-                            $qaSurveyAgg[$sid]['auditors'][] = $r['lead_auditor'];
-                            $qaSurveyAgg[$sid]['marks'][] = $r['marks'];
                         }
-                        foreach ($qaSurveyAgg as $sid => $vals) {
-                            $qaSurveyAgg[$sid]['auditors'] = implode(', ', array_filter($vals['auditors']));
-                            $qaSurveyAgg[$sid]['marks'] = implode(', ', array_filter($vals['marks']));
-                        }
-                    }
 
-                    $qaCdcMap = [];
-                    if (!empty($qaSubtypeIds)) {
-                        $ph = implode(',', array_fill(0, count($qaSubtypeIds), '?'));
-                        $sqlCdc = "SELECT * FROM cdc_report_review WHERE ca_service_id IN ($ph)";
-                        $stmt = $db->prepare($sqlCdc);
-                        $stmt->execute($qaSubtypeIds);
-                        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
-                            $qaCdcMap[$r['ca_service_id']] = $r;
+                        $qaLoadMap = function($table, $serviceCol, $filterIds) use (&$db) {
+                            if (empty($filterIds)) return [];
+                            $ph = implode(',', array_fill(0, count($filterIds), '?'));
+                            $sql = "SELECT * FROM {$table} WHERE {$serviceCol} IN ($ph)";
+                            $stmt = $db->prepare($sql);
+                            $stmt->execute($filterIds);
+                            $out = [];
+                            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                                $out[$r[$serviceCol]] = $r;
+                            }
+                            return $out;
+                        };
+
+                        $qaCaMap = $qaLoadMap('service_type_ca', 'service', $qaServiceIdsByType['CA']);
+                        $qaSaiMap = $qaLoadMap('service_type_sai', 'service', $qaServiceIdsByType['SA-I']);
+                        $qaSaiiMap = $qaLoadMap('service_type_saii', 'service', $qaServiceIdsByType['SA-II']);
+                        $qaRcMap = $qaLoadMap('service_type_rc', 'service', $qaServiceIdsByType['RC']);
+                        $qaSpMap = $qaLoadMap('service_type_sp', 'service', $qaServiceIdsByType['SP']);
+
+                        $qaSubtypeIds = array_merge(
+                            array_column($qaCaMap, 'ca_id'),
+                            array_column($qaSaiMap, 'sai_id'),
+                            array_column($qaSaiiMap, 'saii_id'),
+                            array_column($qaRcMap, 'rc_id'),
+                            array_column($qaSpMap, 'sp_id')
+                        );
+                        $qaSubtypeIds = array_filter($qaSubtypeIds, function($v){ return $v !== null && $v !== ''; });
+
+                        $qaSurveyIdMap = [];
+                        if (!empty($qaSubtypeIds)) {
+                            $ph = implode(',', array_fill(0, count($qaSubtypeIds), '?'));
+                            $sqlSurveyIds = "SELECT ca_serviceid, survey_id, auditing_quality, mgmt_satisfaction, aggregate, ncval, ofival, oplusval FROM customer_survey_id WHERE ca_serviceid IN ($ph)";
+                            $stmt = $db->prepare($sqlSurveyIds);
+                            $stmt->execute($qaSubtypeIds);
+                            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                                $qaSurveyIdMap[$r['ca_serviceid']] = $r['survey_id'];
+                                $qaSurveyDetailMap[$r['ca_serviceid']] = $r;
+                            }
                         }
-                    }
+
+                        $qaSurveyIds = array_values(array_filter($qaSurveyIdMap));
+                        if (!empty($qaSurveyIds)) {
+                            $ph = implode(',', array_fill(0, count($qaSurveyIds), '?'));
+                            $sqlSurvey = "SELECT survayid, lead_auditor, marks FROM customer_survey WHERE survayid IN ($ph)";
+                            $stmt = $db->prepare($sqlSurvey);
+                            $stmt->execute($qaSurveyIds);
+                            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                                $sid = $r['survayid'];
+                                if (!isset($qaSurveyAgg[$sid])) {
+                                    $qaSurveyAgg[$sid] = ['auditors' => [], 'marks' => []];
+                                }
+                                $qaSurveyAgg[$sid]['auditors'][] = $r['lead_auditor'];
+                                $qaSurveyAgg[$sid]['marks'][] = $r['marks'];
+                            }
+                            foreach ($qaSurveyAgg as $sid => $vals) {
+                                $qaSurveyAgg[$sid]['auditors'] = implode(', ', array_filter($vals['auditors']));
+                                $qaSurveyAgg[$sid]['marks'] = implode(', ', array_filter($vals['marks']));
+                            }
+                        }
+
+                        if (!empty($qaSubtypeIds)) {
+                            $ph = implode(',', array_fill(0, count($qaSubtypeIds), '?'));
+                            $sqlCdc = "SELECT * FROM cdc_report_review WHERE ca_service_id IN ($ph)";
+                            $stmt = $db->prepare($sqlCdc);
+                            $stmt->execute($qaSubtypeIds);
+                            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                                $qaCdcMap[$r['ca_service_id']] = $r;
+                            }
+                        }
+                    } catch (Exception $e) {}
                     ?>
                     
                     <div class="table-responsive">
@@ -1422,46 +1431,75 @@ aitf_touch_login_activity($db);
             const navItems = document.querySelectorAll('.nav-item[data-tab]');
             const tabPanes = document.querySelectorAll('.tab-pane');
             
+            function switchTab(tabId) {
+                if (!tabId) return;
+                const targetNav = document.querySelector('.nav-item[data-tab="' + tabId + '"]');
+                const targetPane = document.getElementById('tab-' + tabId);
+                if (!targetPane) return;
+
+                navItems.forEach(nav => nav.classList.remove('active'));
+                tabPanes.forEach(pane => pane.classList.remove('active'));
+
+                if (targetNav) targetNav.classList.add('active');
+                targetPane.classList.add('active');
+
+                if (window.innerWidth <= 768 && sidebar) {
+                    sidebar.classList.remove('show');
+                }
+
+                if (tabId === 'dashboard') {
+                    animateCounters();
+                } else if (tabId === 'updates') {
+                    if (typeof loadAuditorMessages === 'function') {
+                        loadAuditorMessages();
+                    }
+                }
+            }
+
             navItems.forEach(item => {
-                item.addEventListener('click', () => {
-                    // Remove active from all nav items and panes
-                    navItems.forEach(nav => nav.classList.remove('active'));
-                    tabPanes.forEach(pane => pane.classList.remove('active'));
-                    
-                    // Add active to clicked nav and corresponding pane
-                    item.classList.add('active');
-                    const tabId = item.getAttribute('data-tab');
-                    document.getElementById('tab-' + tabId).classList.add('active');
-                    
-                    // Close sidebar on mobile after clicking
-                    if (window.innerWidth <= 768) {
-                        sidebar.classList.remove('show');
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const tabId = this.getAttribute('data-tab');
+                    if (history.pushState) {
+                        history.pushState(null, null, '#' + tabId);
+                    } else {
+                        window.location.hash = tabId;
                     }
-                    
-                    // Trigger counters if dashboard tab
-                    if (tabId === 'dashboard') {
-                        animateCounters();
-                    }
+                    switchTab(tabId);
                 });
             });
+
+            // Handle hash on load and hash changes
+            window.addEventListener('hashchange', function() {
+                const hashTab = window.location.hash.replace('#', '');
+                if (hashTab && document.getElementById('tab-' + hashTab)) {
+                    switchTab(hashTab);
+                }
+            });
+
+            if (window.location.hash) {
+                const initTab = window.location.hash.replace('#', '');
+                if (initTab && document.getElementById('tab-' + initTab)) {
+                    switchTab(initTab);
+                }
+            }
 
             // Animated Counters
             function animateCounters() {
                 const counters = document.querySelectorAll('.counter');
-                const speed = 200; // lower is faster
+                const speed = 40;
                 
                 counters.forEach(counter => {
-                    const target = +counter.getAttribute('data-target');
-                    const count = +counter.innerText;
-                    
+                    const target = +counter.getAttribute('data-target') || 0;
                     if (target > 0) {
-                        const inc = target / speed;
+                        counter.innerText = '0';
+                        const inc = Math.max(1, Math.ceil(target / speed));
                         
                         function updateCount() {
-                            const current = +counter.innerText;
+                            const current = +counter.innerText || 0;
                             if (current < target) {
-                                counter.innerText = Math.ceil(current + inc);
-                                setTimeout(updateCount, 1);
+                                counter.innerText = Math.min(target, current + inc);
+                                setTimeout(updateCount, 15);
                             } else {
                                 counter.innerText = target;
                             }
