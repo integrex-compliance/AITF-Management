@@ -2631,9 +2631,9 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
     <div class="submit-overlay" id="submitOverlay" aria-live="polite" aria-busy="true">
         <div class="submit-modal" role="status">
             <div class="loader-ring" aria-hidden="true"></div>
-            <h4>Submitting your application to AITF</h4>
-            <p>Please wait while we verify the details, prepare your application PDF and send it to our certification
-                team.</p>
+            <h4>Submitting your application to A.I.T.F</h4>
+            <p>Please wait while we prepare your application form and send it to our certification team.
+            </p>
             <div class="submit-progress" aria-hidden="true"><span></span><span></span><span></span></div>
         </div>
     </div>
