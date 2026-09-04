@@ -2,117 +2,200 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
         <loc>https://www.aitf.co.in/</loc>
+        <lastmod>2026-09-04</lastmod>
         <changefreq>weekly</changefreq>
         <priority>1.0</priority>
     </url>
     <url>
         <loc>https://www.aitf.co.in/about-us</loc>
+        <lastmod>2026-09-04</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.9</priority>
+    </url>
+    <url>
+        <loc>https://www.aitf.co.in/services</loc>
+        <lastmod>2026-09-04</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.9</priority>
     </url>
     <url>
         <loc>https://www.aitf.co.in/certification-process</loc>
+        <lastmod>2026-09-04</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.9</priority>
     </url>
     <url>
         <loc>https://www.aitf.co.in/application-form</loc>
+        <lastmod>2026-09-04</lastmod>
         <changefreq>monthly</changefreq>
-        <priority>0.8</priority>
-    </url>
-    <url>
-        <loc>https://www.aitf.co.in/application-form#online-application-form</loc>
-        <changefreq>monthly</changefreq>
-        <priority>0.8</priority>
-    </url>
-    <url>
-        <loc>https://www.aitf.co.in/contact-us</loc>
-        <changefreq>monthly</changefreq>
-        <priority>0.8</priority>
+        <priority>0.9</priority>
     </url>
     <url>
         <loc>https://www.aitf.co.in/certificate-validation</loc>
+        <lastmod>2026-09-04</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.85</priority>
+    </url>
+    <url>
+        <loc>https://www.aitf.co.in/career</loc>
+        <lastmod>2026-09-04</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.85</priority>
+    </url>
+    <url>
+        <loc>https://www.aitf.co.in/training</loc>
+        <lastmod>2026-09-04</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.85</priority>
+    </url>
+    <url>
+        <loc>https://www.aitf.co.in/contact-us</loc>
+        <lastmod>2026-09-04</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.8</priority>
     </url>
     <url>
+        <loc>https://www.aitf.co.in/qms_iso_9001</loc>
+        <lastmod>2026-09-04</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+    </url>
+    <url>
+        <loc>https://www.aitf.co.in/ems_iso_9001</loc>
+        <lastmod>2026-09-04</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+    </url>
+    <url>
+        <loc>https://www.aitf.co.in/isms_iso_27001</loc>
+        <lastmod>2026-09-04</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+    </url>
+    <url>
+        <loc>https://www.aitf.co.in/bcms_iso_22301</loc>
+        <lastmod>2026-09-04</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+    </url>
+    <url>
+        <loc>https://www.aitf.co.in/ohsms_iso_45001</loc>
+        <lastmod>2026-09-04</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+    </url>
+    <url>
+        <loc>https://www.aitf.co.in/md_qms_iso</loc>
+        <lastmod>2026-09-04</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+    </url>
+    <url>
+        <loc>https://www.aitf.co.in/fsms_iso_22000</loc>
+        <lastmod>2026-09-04</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+    </url>
+    <url>
+        <loc>https://www.aitf.co.in/integrated_mgmgt_system</loc>
+        <lastmod>2026-09-04</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.75</priority>
+    </url>
+    <url>
+        <loc>https://www.aitf.co.in/lead-auditor-training</loc>
+        <lastmod>2026-09-04</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.75</priority>
+    </url>
+    <url>
         <loc>https://www.aitf.co.in/certification-guidelines</loc>
+        <lastmod>2026-09-04</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.7</priority>
     </url>
     <url>
         <loc>https://www.aitf.co.in/auditor-guidelines</loc>
+        <lastmod>2026-09-04</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.7</priority>
     </url>
     <url>
         <loc>https://www.aitf.co.in/logo-usage-guidelines</loc>
+        <lastmod>2026-09-04</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.7</priority>
     </url>
     <url>
         <loc>https://www.aitf.co.in/transition-guidelines</loc>
+        <lastmod>2026-09-04</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.7</priority>
     </url>
     <url>
         <loc>https://www.aitf.co.in/nc-closure</loc>
+        <lastmod>2026-09-04</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.7</priority>
     </url>
     <url>
         <loc>https://www.aitf.co.in/expected-outcome</loc>
+        <lastmod>2026-09-04</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.7</priority>
     </url>
     <url>
         <loc>https://www.aitf.co.in/complaints-appeals</loc>
+        <lastmod>2026-09-04</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.7</priority>
     </url>
     <url>
         <loc>https://www.aitf.co.in/impartiality</loc>
+        <lastmod>2026-09-04</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.7</priority>
-    </url>
-    <url>
-        <loc>https://www.aitf.co.in/services</loc>
-        <changefreq>monthly</changefreq>
-        <priority>0.7</priority>
-    </url>
-    <url>
-        <loc>https://www.aitf.co.in/career</loc>
-        <changefreq>monthly</changefreq>
-        <priority>0.6</priority>
-    </url>
-    <url>
-        <loc>https://www.aitf.co.in/faq</loc>
-        <changefreq>monthly</changefreq>
-        <priority>0.6</priority>
-    </url>
-    <url>
-        <loc>https://www.aitf.co.in/policy</loc>
-        <changefreq>monthly</changefreq>
-        <priority>0.6</priority>
-    </url>
-    <url>
-        <loc>https://www.aitf.co.in/circulars</loc>
-        <changefreq>monthly</changefreq>
-        <priority>0.6</priority>
-    </url>
-    <url>
-        <loc>https://www.aitf.co.in/news</loc>
-        <changefreq>weekly</changefreq>
-        <priority>0.6</priority>
     </url>
     <url>
         <loc>https://www.aitf.co.in/info-updation</loc>
+        <lastmod>2026-09-04</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.7</priority>
     </url>
     <url>
         <loc>https://www.aitf.co.in/nc_closing</loc>
+        <lastmod>2026-09-04</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.7</priority>
+    </url>
+    <url>
+        <loc>https://www.aitf.co.in/news</loc>
+        <lastmod>2026-09-04</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.7</priority>
+    </url>
+    <url>
+        <loc>https://www.aitf.co.in/circulars</loc>
+        <lastmod>2026-09-04</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.65</priority>
+    </url>
+    <url>
+        <loc>https://www.aitf.co.in/faq</loc>
+        <lastmod>2026-09-04</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.65</priority>
+    </url>
+    <url>
+        <loc>https://www.aitf.co.in/policy</loc>
+        <lastmod>2026-09-04</lastmod>
+        <changefreq>yearly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://www.aitf.co.in/terms-and-conditions</loc>
+        <lastmod>2026-09-04</lastmod>
+        <changefreq>yearly</changefreq>
+        <priority>0.5</priority>
     </url>
 </urlset>

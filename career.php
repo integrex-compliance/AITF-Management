@@ -1,6 +1,7 @@
 <?php
 $pageTitle = "Career & Opportunity | AITF";
 $pageDescription = "Explore career opportunities, auditor empanelment, and job openings at AITF Management Certification.";
+$canonicalUrl = "https://www.aitf.co.in/career";
 $turnstileHelperPath = __DIR__ . '/include/turnstile_helper.php';
 if (file_exists($turnstileHelperPath)) {
     require_once $turnstileHelperPath;
