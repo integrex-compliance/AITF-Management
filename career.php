@@ -19,7 +19,7 @@ $successApplicant = isset($_GET['success']) && $_GET['success'] == '1' ? trim($_
 <html lang="en">
 
 <head>
-    <?php include './headSource.php'; ?>
+    <?php include __DIR__ . '/headsource.php'; ?>
     <?php if ($turnstileReady): ?>
         <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <?php endif; ?>

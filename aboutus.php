@@ -7,7 +7,7 @@ $canonicalUrl = "https://www.aitf.co.in/about-us";
 <html lang="en">
 
 <head>
-    <?php include './headSource.php'; ?>
+    <?php include __DIR__ . '/headsource.php'; ?>
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">

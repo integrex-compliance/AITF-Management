@@ -351,7 +351,7 @@
 
     </style> 
     <head>
-        <?php include './headSource.php'; ?>
+        <?php include __DIR__ . '/headsource.php'; ?>
     </head>
 
     <body id="home" data-spy="scroll" data-target="#navbar-wd" data-offset="98">

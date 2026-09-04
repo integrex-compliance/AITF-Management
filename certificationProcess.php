@@ -7,7 +7,7 @@ $canonicalUrl = "https://www.aitf.co.in/certification-process";
 <html lang="en">
 
 <head>
-    <?php include './headSource.php'; ?>
+    <?php include __DIR__ . '/headsource.php'; ?>
     <style>
         /* Modern Color Scheme */
         :root {

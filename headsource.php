@@ -83,7 +83,13 @@ if (isset($_SERVER['HTTP_HOST'])) {
         $favicoBase = '/';
     }
 }
-$favicoVersion = '4';
+$favicoVersion = '5';
+
+// Auto-sync with headSource.php on case-sensitive Linux filesystems
+$altHeadSourcePath = __DIR__ . '/headSource.php';
+if (file_exists($altHeadSourcePath) && realpath($altHeadSourcePath) !== realpath(__FILE__)) {
+    @copy(__FILE__, $altHeadSourcePath);
+}
 ?>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">

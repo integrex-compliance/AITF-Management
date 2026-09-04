@@ -6,7 +6,7 @@ $canonicalUrl = "https://www.aitf.co.in/certification-guidelines";
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <?php include './headSource.php'; ?>
+    <?php include __DIR__ . '/headsource.php'; ?>
     <style>
         :root {
             --primary-color: #1a365d;

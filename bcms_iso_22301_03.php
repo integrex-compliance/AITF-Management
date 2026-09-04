@@ -233,7 +233,7 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
     </style>
-    <?php include './headSource.php'; ?>
+    <?php include __DIR__ . '/headsource.php'; ?>
 </head>
 
     <body id="home" data-spy="scroll" data-target="#navbar-wd" data-offset="98">

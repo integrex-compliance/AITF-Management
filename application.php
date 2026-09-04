@@ -688,7 +688,7 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
 <html lang="en">
 
 <head>
-    <?php include './headSource.php'; ?>
+    <?php include __DIR__ . '/headsource.php'; ?>
     <?php if ($turnstileReady): ?>
         <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <?php endif; ?>

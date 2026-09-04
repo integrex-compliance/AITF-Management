@@ -25,7 +25,7 @@
         } 
     </style> 
     <head>
-        <?php include './headSource.php'; ?>
+        <?php include __DIR__ . '/headsource.php'; ?>
     </head>
     <body>
         <?php include './headerSource.php'; ?>

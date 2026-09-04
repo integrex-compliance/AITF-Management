@@ -190,14 +190,13 @@ $canonicalUrl = "https://www.aitf.co.in/contact-us";
 <html lang="en">
 
 <head>
-    <?php include './headSource.php'; ?>
+    <?php include __DIR__ . '/headsource.php'; ?>
     <?php if ($turnstileReady): ?>
         <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <?php endif; ?>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <title>Contact Us - AITF Management Certification</title>
     <style>
         * {
             margin: 0;

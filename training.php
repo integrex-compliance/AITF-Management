@@ -2,7 +2,7 @@
 <html lang="en">
 
 <head>
-    <?php include './headSource.php'; ?>
+    <?php include __DIR__ . '/headsource.php'; ?>
     <style>
         :root {
             --ink: #f5f5f5;

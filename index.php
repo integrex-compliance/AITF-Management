@@ -9,7 +9,7 @@ session_start();
 <!-- Basic -->
 
 <head>
-    <?php include './headSource.php'; ?>
+    <?php include __DIR__ . '/headsource.php'; ?>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/perfect-learn/css/methodology-styles.css">
 

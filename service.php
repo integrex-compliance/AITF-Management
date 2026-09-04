@@ -1,5 +1,5 @@
 <?php
-include './headSource.php';
+include __DIR__ . '/headsource.php';
 include './headerSource.php';
 ?>
 

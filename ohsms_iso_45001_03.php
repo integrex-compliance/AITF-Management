@@ -214,7 +214,7 @@
             animation: fadeInUp 0.6s ease-out forwards;
         }
     </style>
-    <?php include './headSource.php'; ?>
+    <?php include __DIR__ . '/headsource.php'; ?>
 </head>
 
     <body id="home" data-spy="scroll" data-target="#navbar-wd" data-offset="98">

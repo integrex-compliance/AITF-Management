@@ -429,7 +429,7 @@ $canonicalUrl = "https://www.aitf.co.in/info-updation";
 <html lang="en">
 
 <head>
-    <?php include './headSource.php'; ?>
+    <?php include __DIR__ . '/headsource.php'; ?>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <?php if ($turnstileReady): ?>
