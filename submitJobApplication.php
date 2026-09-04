@@ -47,7 +47,8 @@ function ensureJobApplicationsTable($db)
         "ALTER TABLE job_applications ADD COLUMN read_flag TINYINT(1) DEFAULT 0",
         "ALTER TABLE job_applications ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP",
         "ALTER TABLE job_applications ADD COLUMN assigned_to_auditor_id INT NULL",
-        "ALTER TABLE job_applications ADD COLUMN auditor_review TEXT NULL"
+        "ALTER TABLE job_applications ADD COLUMN auditor_review TEXT NULL",
+        "ALTER TABLE job_applications MODIFY COLUMN apply_for VARCHAR(150) NULL"
     ];
 
     foreach ($alterStatements as $sql) {
@@ -133,7 +134,6 @@ if (($qualificationRaw === 'Other' || $qualificationRaw === 'Any other relevant'
 
 $applyFor = trim($_POST['apply_for'] ?? '');
 $message = trim($_POST['message'] ?? '');
-$allowedRoles = ['Auditor', 'Facilitator', 'Lead Auditor', 'Quality Assessor', 'Management Representative', 'General Application', 'Other'];
 
 if ($fullName === '') {
     redirectCareerWithError('Applicant name is required.');
@@ -151,8 +151,14 @@ if ($qualification === '') {
     redirectCareerWithError('Please select your qualification.');
 }
 
-if ($applyFor === '' || !in_array($applyFor, $allowedRoles, true)) {
-    $applyFor = 'General Application';
+if ($applyFor === '') {
+    redirectCareerWithError('Please enter the position name you are interested in.');
+}
+
+if (function_exists('mb_substr')) {
+    $applyFor = mb_substr($applyFor, 0, 100);
+} else {
+    $applyFor = substr($applyFor, 0, 100);
 }
 
 // Check Email OTP Verification

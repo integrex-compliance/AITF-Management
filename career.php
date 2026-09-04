@@ -1,4 +1,6 @@
 <?php
+$pageTitle = "Career & Opportunity | AITF";
+$pageDescription = "Explore career opportunities, auditor empanelment, and job openings at AITF Management Certification.";
 $turnstileHelperPath = __DIR__ . '/include/turnstile_helper.php';
 if (file_exists($turnstileHelperPath)) {
     require_once $turnstileHelperPath;
@@ -23,7 +25,6 @@ $successApplicant = isset($_GET['success']) && $_GET['success'] == '1' ? trim($_
     <?php endif; ?>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <title>Careers & Opportunities - AITF Management Certification</title>
     <style>
         :root {
             --c-primary: #1d4ed8;
@@ -266,70 +267,110 @@ $successApplicant = isset($_GET['success']) && $_GET['success'] == '1' ? trim($_
             color: #ffffff;
         }
 
-        /* Hero Quick Overview Card */
-        .hero-feature-card {
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: var(--c-radius);
-            padding: 26px;
-            backdrop-filter: blur(14px);
-            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.25);
-        }
-
-        .hero-feature-card h3 {
-            margin: 0 0 18px;
-            font-size: 18px;
-            font-weight: 700;
-            color: #ffffff;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .hero-feature-card h3 i {
-            color: #38bdf8;
-            font-size: 16px;
-        }
-
-        .hero-feature-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-        }
-
-        .hero-feature-item {
+        /* Hero Visual Showcase Card */
+        .hero-visual-card {
             background: rgba(255, 255, 255, 0.07);
-            border: 1px solid rgba(255, 255, 255, 0.10);
-            border-radius: var(--c-radius-sm);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            border-radius: var(--c-radius);
             padding: 14px;
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.35);
             transition: var(--c-transition);
         }
 
-        .hero-feature-item:hover {
-            background: rgba(255, 255, 255, 0.12);
-            border-color: rgba(255, 255, 255, 0.20);
+        .hero-visual-card:hover {
+            border-color: rgba(255, 255, 255, 0.28);
+            transform: translateY(-3px);
+            box-shadow: 0 26px 55px rgba(0, 0, 0, 0.45);
         }
 
-        .hero-feature-item i {
-            font-size: 18px;
-            color: #60a5fa;
-            margin-bottom: 8px;
-            display: block;
+        .hero-visual-media {
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #f7ede2;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
         }
 
-        .hero-feature-item strong {
+        .hero-career-img {
+            width: 100%;
+            height: auto;
+            max-height: 310px;
+            object-fit: cover;
             display: block;
-            font-size: 14px;
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .hero-visual-card:hover .hero-career-img {
+            transform: scale(1.03);
+        }
+
+        .hero-floating-chip {
+            position: absolute;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 6px 12px;
+            border-radius: 9999px;
+            font-size: 12px;
             font-weight: 700;
-            color: #ffffff;
-            margin-bottom: 3px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+            z-index: 2;
+            user-select: none;
         }
 
-        .hero-feature-item span {
+        .hero-floating-chip.bottom-right {
+            bottom: 12px;
+            right: 12px;
+            background: rgba(37, 99, 235, 0.90);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .hero-visual-footer {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .hero-visual-stat {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.10);
+            border-radius: var(--c-radius-sm);
+            padding: 10px 6px;
+            text-align: center;
+            transition: var(--c-transition);
+        }
+
+        .hero-visual-stat:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.22);
+        }
+
+        .hero-visual-stat i {
+            font-size: 15px;
+            color: #38bdf8;
+            margin-bottom: 3px;
+            display: block;
+        }
+
+        .hero-visual-stat strong {
             display: block;
             font-size: 12px;
+            font-weight: 700;
+            color: #ffffff;
+            line-height: 1.25;
+        }
+
+        .hero-visual-stat span {
+            display: block;
+            font-size: 10.5px;
             color: #94a3b8;
-            line-height: 1.4;
+            margin-top: 2px;
         }
 
         /* 2. WHY JOIN AITF */
@@ -1095,7 +1136,6 @@ $successApplicant = isset($_GET['success']) && $_GET['success'] == '1' ? trim($_
             }
 
             .form-grid-2,
-            .hero-feature-grid,
             .email-input-group {
                 grid-template-columns: 1fr;
                 flex-direction: column;
@@ -1116,6 +1156,26 @@ $successApplicant = isset($_GET['success']) && $_GET['success'] == '1' ? trim($_
 
             .director-quote-box {
                 padding: 26px 20px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .hero-visual-footer {
+                grid-template-columns: 1fr;
+                gap: 6px;
+            }
+
+            .hero-visual-stat {
+                display: flex;
+                align-items: center;
+                text-align: left;
+                gap: 10px;
+                padding: 8px 12px;
+            }
+
+            .hero-visual-stat i {
+                margin-bottom: 0;
+                font-size: 16px;
             }
         }
     </style>
@@ -1151,28 +1211,28 @@ $successApplicant = isset($_GET['success']) && $_GET['success'] == '1' ? trim($_
                     </div>
                 </div>
 
-                <div class="hero-feature-card">
-                    <h3><i class="fa-solid fa-compass"></i> Why Build Your Career Here</h3>
-                    <div class="hero-feature-grid">
-                        <div class="hero-feature-item">
+                <div class="hero-visual-card">
+                    <div class="hero-visual-media">
+                        <img src="aitfImages/careerimage.jpg" alt="Career Growth at AITF" class="hero-career-img" width="1470" height="980" fetchpriority="high">
+                        <div class="hero-floating-chip bottom-right">
+                            <i class="fa-solid fa-certificate"></i> Accredited Body
+                        </div>
+                    </div>
+                    <div class="hero-visual-footer">
+                        <div class="hero-visual-stat">
                             <i class="fa-solid fa-graduation-cap"></i>
                             <strong>Training</strong>
-                            <span>Continuous technical training to grow your auditing skills</span>
+                            <span>Technical & Auditing</span>
                         </div>
-                        <div class="hero-feature-item">
+                        <div class="hero-visual-stat">
                             <i class="fa-solid fa-user-tie"></i>
-                            <strong>Qualified Auditors</strong>
-                            <span>Work alongside experienced & qualified auditors</span>
+                            <strong>Lead Auditors</strong>
+                            <span>Experienced Team</span>
                         </div>
-                        <div class="hero-feature-item">
+                        <div class="hero-visual-stat">
                             <i class="fa-solid fa-globe"></i>
-                            <strong>Global Standards</strong>
-                            <span>Assessments on ISO 9001, 14001, 45001 </span>
-                        </div>
-                        <div class="hero-feature-item">
-                            <i class="fa-solid fa-shield-halved"></i>
-                            <strong>Societal Value</strong>
-                            <span>Contribute to society by establishing compliance & safety</span>
+                            <strong>ISO Standards</strong>
+                            <span>Global Benchmarks</span>
                         </div>
                     </div>
                 </div>
@@ -1329,14 +1389,7 @@ $successApplicant = isset($_GET['success']) && $_GET['success'] == '1' ? trim($_
                             <label class="form-label" for="apply_for">Applying For Position <span class="req">*</span></label>
                             <div class="input-wrap">
                                 <i class="fa-solid fa-briefcase input-icon"></i>
-                                <select class="form-select" id="apply_for" name="apply_for" required>
-                                    <option value="" disabled selected>Select Position...</option>
-                                    <option value="Auditor">Auditor / Lead Auditor</option>
-                                    <option value="Facilitator">Technical Facilitator / Trainer</option>
-                                    <option value="Quality Assessor">Quality Assessor / Technical Reviewer</option>
-                                    <option value="General Application">General Assessment / Empanelment</option>
-                                    <option value="Other">Other</option>
-                                </select>
+                                <input type="text" class="form-input" id="apply_for" name="apply_for" placeholder="Enter position name you are interested in" required maxlength="100">
                             </div>
                         </div>
 

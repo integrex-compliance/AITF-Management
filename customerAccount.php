@@ -3334,9 +3334,61 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             background: #ffffff !important;
         }
 
-        .service_title {
+        .service_title,
+        .cr-service-row,
+        .ca-service-row,
+        .sai-service-row,
+        .saii-service-row,
+        .rc-service-row,
+        .sp-service-row,
+        .ta-service-row,
+        .payment-row,
+        .service-row,
+        .servicebox .service_title,
+        .servicebox-bunch .service_title,
+        .qms_customer_name.service_title {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
             font-weight: 700 !important;
+            cursor: pointer !important;
+            user-select: none !important;
+            -webkit-user-select: none !important;
+            -moz-user-select: none !important;
+            -ms-user-select: none !important;
+        }
+
+        .service_title *,
+        .cr-service-row *,
+        .ca-service-row *,
+        .sai-service-row *,
+        .saii-service-row *,
+        .rc-service-row *,
+        .sp-service-row *,
+        .ta-service-row *,
+        .payment-row *,
+        .service-row *,
+        .servicebox .service_title *,
+        .servicebox-bunch .service_title *,
+        .qms_customer_name.service_title * {
+            cursor: pointer !important;
+        }
+
+        .cr-service-row:hover,
+        .ca-service-row:hover,
+        .sai-service-row:hover,
+        .saii-service-row:hover,
+        .rc-service-row:hover,
+        .sp-service-row:hover,
+        .ta-service-row:hover,
+        .payment-row:hover,
+        .service_title:hover {
+            filter: brightness(1.12) !important;
+            transition: filter 0.15s ease !important;
+        }
+
+        .service_title a.deleteServiceCR:hover i,
+        .service_title a.deleteServiceCA:hover i,
+        .service_title a[class*="deleteService"]:hover i {
+            color: #ef4444 !important;
         }
 
         .service_title.payment-title,
@@ -3622,11 +3674,14 @@ if ($currentRole === 'client' || $currentRole === 'external') {
         .servicebox-bunch .serviceContentCompleted a,
         .new-cr-service-add .serviceContent a,
         .new-cr-service-add .serviceContentwaiting a,
-        .new-cr-service-add .serviceContentCompleted a {
+        .new-cr-service-add .serviceContentCompleted a,
+        .image-preview-input,
+        .customerReviewFileDownload {
             display: inline-block !important;
             line-height: 23px !important;
             padding: 0 3px !important;
             text-decoration: none !important;
+            cursor: pointer !important;
             opacity: 0.95;
             transition: transform 0.15s ease, opacity 0.15s ease;
         }
@@ -5720,8 +5775,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 ?>
                 <div class="servicebox-bunch <?php //echo $class2     ?> new-cr-service-add">
                     <div class="servicebox">
-                        <div class="row cr-service-row" id="service-row" data-id="<?php echo $crservice['cr_id'] ?>">
-                            <div class="col-xs-12 qms_customer_name service_title" style="text-align: center" data-row-id="">
+                        <div class="row cr-service-row" id="service-row" data-id="<?php echo $crservice['cr_id'] ?>" style="cursor: pointer; user-select: none;">
+                            <div class="col-xs-12 qms_customer_name service_title" style="text-align: center; cursor: pointer; user-select: none;" data-row-id="">
                                 Contract Review
                                 <span class="serviceStatus"></span>
                                 <a class="deleteServiceCR" id="deleteServiceCR"
@@ -5969,8 +6024,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 <div class="servicebox-bunch <?php echo $class1 ?>" style="display: ">
                     <div class="servicebox">
                         <form id="caService" action="serviceTypeCA.php" method="post" enctype="multipart/form-data">
-                            <div class="row ca-service-row" id="service-row" data-id="<?php echo $caservice['ca_id'] ?>">
-                                <div class="col-xs-12 qms_customer_name service_title" style="text-align: center"
+                            <div class="row ca-service-row" id="service-row" data-id="<?php echo $caservice['ca_id'] ?>" style="cursor: pointer; user-select: none;">
+                                <div class="col-xs-12 qms_customer_name service_title" style="text-align: center; cursor: pointer; user-select: none;"
                                     data-row-id="">Service type - CA<span class="serviceStatus"></span>
                                     <!--<a class="saveServiceCA" id="saveServiceCA" data-row-id=""><i class="fa fa-floppy-o pull-right " style="color:white; padding-right:10px; display:"></i></a>-->
                                     <a class="deleteServiceCA" id="deleteServiceCA"
@@ -11050,8 +11105,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
         style="display: none">
         <div class="servicebox">
             <form id="caService" action="serviceTypeCA.php" method="post" enctype="multipart/form-data">
-                <div class="row" id="service-row" class="service-row">
-                    <div class="col-xs-12 qms_customer_name service_title" style="text-align: center" data-row-id="">
+                <div class="row" id="service-row" class="service-row" style="cursor: pointer; user-select: none;">
+                    <div class="col-xs-12 qms_customer_name service_title" style="text-align: center; cursor: pointer; user-select: none;" data-row-id="">
                         Contract Review<span class="serviceStatus"></span>
                     </div>
                 </div>

@@ -1105,6 +1105,9 @@ Fix to show in full screen demo
             margin-right: 0px;
             font-size: 1.2em;
             text-transform: uppercase;
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
         }
         
         .top_qms_page {

@@ -28,7 +28,22 @@ function UserPermissionCheck($module) {
         exit("403 - Access Denied");
     }
 }
+function userActive(
+    ($module)   {
 
+    if (userrole==={false}|| userstatus==={true}) {
+        utility::header("Location: login.php?reason=Login again to continue session.");
+    }
+    else{
+        utlity.e.target.length(
+            include_once "./headerSource.php";
+            require_once "./login.php";
+            session.userActive(
+                active==={true}|| userstatus==={false}
+            )
+        )
+    }
+)
 
 function Library (
 

@@ -527,16 +527,28 @@ if (in_array(trim($hp_role), array('Office Staff-A', 'Office Staff-B'), true)) {
         color: #334155 !important;
     }
 
+    .customerAccount {
+        cursor: pointer !important;
+    }
+
+    .customerAccount,
+    .customerAccount * {
+        cursor: pointer !important;
+    }
+
     .customerAccount a {
         color: #0d4d8b !important;
         font-weight: 700 !important;
         font-size: 12.5px !important;
         text-decoration: none !important;
+        cursor: pointer !important;
     }
 
-    .customerAccount a:hover {
+    .customerAccount a:hover,
+    .customerAccount:hover a {
         color: #2563eb !important;
         text-decoration: underline !important;
+        cursor: pointer !important;
     }
 
     /* Badges */
@@ -779,6 +791,12 @@ if (in_array(trim($hp_role), array('Office Staff-A', 'Office Staff-B'), true)) {
         color: #60a5fa !important;
     }
 
+    html.theme-dark .customerAccount a:hover,
+    html.theme-dark .customerAccount:hover a {
+        color: #93c5fd !important;
+        text-decoration: underline !important;
+    }
+
     html.theme-dark #tab_customer_list select.setHandler {
         background-color: #161d2b !important;
         border-color: #2e3a4f !important;
@@ -921,10 +939,10 @@ if (in_array(trim($hp_role), array('Office Staff-A', 'Office Staff-B'), true)) {
                                                 echo $customer['unique_id'] ?></small>
                                         </td>
                                         <td class="customerAccount" data-id="<?php echo $customer['id'] ?>" data-name="mail">
-                                            <small><a><?php echo $customer['certification_date'] ?></a></small>
+                                            <small><a style="cursor: pointer;"><?php echo $customer['certification_date'] ?></a></small>
                                         </td>
                                         <td class="customerAccount" data-id="<?php echo $customer['id'] ?>" data-name="mail">
-                                            <small><a style="font-weight: 600; color: #0d4d8b;"><?php echo $customer['customer_name'] ?></a></small>
+                                            <small><a style="font-weight: 600; color: #0d4d8b; cursor: pointer;"><?php echo $customer['customer_name'] ?></a></small>
                                         </td>
                                         <td class="customerAccount" data-id="<?php echo $customer['id'] ?>" data-name="desc">
                                             <small><?php echo $customer['contact_person'] ?></small>
