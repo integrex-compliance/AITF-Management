@@ -1,9 +1,19 @@
 <?php
+$favicoBaseHead = '';
+if (isset($_SERVER['HTTP_HOST'])) {
+    $scriptNameHead = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
+    if (strpos($scriptNameHead, '/public_html/') !== false) {
+        $favicoBaseHead = '/public_html/';
+    } else {
+        $favicoBaseHead = '/';
+    }
+}
+$favicoVersionHead = '4';
 ?>
-<link rel="icon" type="image/png" href="aitfImages/aitfasset/updatedfavicon.png?v=2">
-<link rel="shortcut icon" href="aitfImages/aitfasset/updatedfavicon.png?v=2" type="image/png">
-<link rel="apple-touch-icon" href="aitfImages/aitfasset/updatedfavicon.png?v=2">
-<link rel="icon" type="image/x-icon" href="aitfImages/fav.ico">
+<link rel="shortcut icon" href="<?php echo $favicoBaseHead; ?>aitfImages/favico/favicon.ico?v=<?php echo $favicoVersionHead; ?>" type="image/x-icon">
+<link rel="icon" type="image/x-icon" href="<?php echo $favicoBaseHead; ?>aitfImages/favico/favicon.ico?v=<?php echo $favicoVersionHead; ?>">
+<link rel="icon" type="image/png" sizes="32x32" href="<?php echo $favicoBaseHead; ?>aitfImages/favico/favicon.png?v=<?php echo $favicoVersionHead; ?>">
+<link rel="apple-touch-icon" sizes="180x180" href="<?php echo $favicoBaseHead; ?>aitfImages/favico/apple-touch-icon.png?v=<?php echo $favicoVersionHead; ?>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">

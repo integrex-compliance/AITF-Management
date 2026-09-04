@@ -12,7 +12,7 @@
 	<meta name="description" content="" />
     
     <!-- Favicon --> 
-	<link rel="shortcut icon" href="imageused/fav.ico">
+	<link rel="shortcut icon" href="aitfImages/favico/favicon.ico?v=4">
     
     <!-- this styles only adds some repairs on idevices  -->
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
@@ -25,7 +25,7 @@
 	<![endif]-->
     
     <!-- Favicon -->
-  	<link rel="shortcut icon" type="image/x-icon" href="imageused/fav.ico">
+  	<link rel="shortcut icon" type="image/x-icon" href="aitfImages/favico/favicon.ico?v=4">
     
     <!-- ######### CSS STYLES ######### -->
 	
