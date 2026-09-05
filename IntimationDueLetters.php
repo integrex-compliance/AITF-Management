@@ -113,6 +113,9 @@ if (isset($_POST['action']) && !empty($_POST['action'])) {
     $action1Info = $statement->fetch();
 
     $date = date("d.m.Y", strtotime($action1Info['due_date']));
+    if (empty($service_id) && !empty($action1Info['service_id'])) {
+        $service_id = $action1Info['service_id'];
+    }
 }
 
 //KeyValue pair for parameters
@@ -128,20 +131,12 @@ if ($lettertype == "Suspension Reminder") {
 	$pdfTitle = "Sureillance Audit Due";
 	$letterDisplayName = 'Suspension Reminder';
 	$statusWord = 'suspension';
-	$mailBodyPart = '<p>This is to inform you that your management system certificate is <strong>approaching its expiry date</strong>, as per our records.</p>'
-        . '<p>To ensure continuity of certification, you are required to <strong>inform us immediately</strong> so that the necessary <strong>audit can be planned and conducted within the stipulated timeline</strong>.</p>'
-        . '<p>Please note that <strong>all relevant details regarding the due audit, scope, and validity period are clearly mentioned in the attached Due Letter</strong> for your reference.</p>'
-        . '<p>We request you to review the attached document carefully and confirm your availability at the earliest to avoid any lapse in certification.</p>'
-        . '<p>If you have already initiated communication regarding this matter, please consider this email as a reminder.</p>'
-        . '<p>For any clarification or coordination, feel free to reply to this email.</p>'
-        . '<p>Warm regards,<br><strong>AITF Team</strong><br>Assessment Department<br>AITF</p>'
-        . '<p>Email: <a href="mailto:' . $mailFromEmailHtml . '">' . $mailFromEmailHtml . '</a><br>'
-        . ($mailCcEmailHtml !== '' ? 'Email: <a href="mailto:' . $mailCcEmailHtml . '">' . $mailCcEmailHtml . '</a><br>' : '')
-        . 'Website: <a href="http://www.aitf.in">www.aitf.in</a></p>';
 	
 	//build require parameters
 	$reg_date = date("d.m.Y", strtotime($customer['certification_stage_date']));
-	$NextDueDate = date("d.m.Y", strtotime('+1 month', strtotime($date)));
+    require_once __DIR__ . '/include/intimation_letter_auto_helper.php';
+    $dbNextDueDate = aitfFindNextActionDueDateFromDb($db, $service_id, 'Suspension Reminder', $date);
+	$NextDueDate = !empty($dbNextDueDate) ? $dbNextDueDate : date("d.m.Y", strtotime('+1 month', strtotime($date)));
 	
 	//Create json for parameter values
 	$LetterParamJSON->customer_unique_id = $customer['unique_id'];
@@ -183,7 +178,9 @@ else if($lettertype == "Withdrawal Reminder"){
 	$statusWord = 'withdrawal review';
 	
 	//build require parameters
-	$NextDueDate = date("d.m.Y", strtotime('+2 month', strtotime($date)));
+    require_once __DIR__ . '/include/intimation_letter_auto_helper.php';
+    $dbNextDueDate = aitfFindNextActionDueDateFromDb($db, $service_id, 'Withdrawal Reminder', $date);
+	$NextDueDate = !empty($dbNextDueDate) ? $dbNextDueDate : date("d.m.Y", strtotime('+2 month', strtotime($date)));
 	$PrevDueDate = date("d.m.Y", strtotime('-2 month', strtotime($date)));
 	
 	//Create json for parameter values
@@ -341,19 +338,18 @@ $pdf->AddPage();
 $pdf->writeHTML($html, true, false, true, false, '');
 $fileName = $lettertype . ".pdf";
 
-// Unified mail body (letter-specific name/status applied)
-$clientNameSafe = htmlspecialchars($customer['customer_name'], ENT_QUOTES, 'UTF-8');
-$letterNameSafe = htmlspecialchars($letterDisplayName, ENT_QUOTES, 'UTF-8');
-$attachmentNameSafe = htmlspecialchars($fileName, ENT_QUOTES, 'UTF-8');
-$statusWordSafe = htmlspecialchars($statusWord, ENT_QUOTES, 'UTF-8');
-$mailBodyPart = '<p>Dear ' . $clientNameSafe . ',</p>'
-    . '<p>We would like to inform you that your ISO certification is currently under <strong>' . $statusWordSafe . '</strong> due to pending certification requirements.</p>'
-    . '<p>Please find the attached <strong>' . $letterNameSafe . '</strong> for complete details, including the reason and the actions needed.</p>'
-    . '<p>Kindly review the letter and share your <strong>corrective action plan with supporting documents</strong> within the mentioned timeline. Once we receive and verify the required information, we will move ahead accordingly.</p>'
-    . '<p>If you have already completed the necessary actions, please ignore this email and send us the relevant documents for our review.</p>'
-    . '<p>We look forward to your support in resolving this at the earliest.</p>'
-    . '<p>Sincerely,<br>AITF Certification</p>'
-    . '<p>Attachment: ' . $attachmentNameSafe . '</p>';
+require_once __DIR__ . '/include/intimation_letter_auto_helper.php';
+$mailBodyPart = aitfBuildIntimationMailBodyPart(
+    $customer['customer_name'] ?? '',
+    $letterDisplayName ?? $lettertype,
+    $date ?? '',
+    $NextDueDate ?? '',
+    $fileName ?? '',
+    $mailFromEmailHtml ?? '',
+    $mailCcEmailHtml ?? '',
+    $service_id ?? null,
+    $db
+);
 
 if($PageAction == "PreviewPDF"){
 	if (ob_get_length()) {

@@ -100,7 +100,7 @@
 
     // Helper function to parse last cron dispatch info from log file
     if (!function_exists('get_last_dispatch_info')) {
-        function get_last_dispatch_info() {
+        function get_last_dispatch_info($db = null) {
             $logPath = __DIR__ . '/test_logs/cron_intimation_due_mail_log.txt';
             $info = [
                 'date' => 'N/A',
@@ -110,68 +110,117 @@
                 'status' => 'No logs found'
             ];
 
-            if (!file_exists($logPath) || !is_readable($logPath)) {
-                return $info;
-            }
+            if (file_exists($logPath) && is_readable($logPath)) {
+                $lines = file($logPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+                if (!empty($lines)) {
+                    $lastEndIdx = -1;
+                    $noPendingFoundIdx = -1;
+                    $lastStartIdx = -1;
 
-            $lines = file($logPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-            if (empty($lines)) {
-                return $info;
-            }
+                    for ($i = count($lines) - 1; $i >= 0; $i--) {
+                        $line = $lines[$i];
+                        if (strpos($line, '=== AUTOMATED CRON JOB COMPLETED:') !== false) {
+                            if ($lastEndIdx === -1) {
+                                $lastEndIdx = $i;
+                            }
+                        }
+                        if (strpos($line, 'No pending due letters found for today.') !== false) {
+                            if ($noPendingFoundIdx === -1 && $lastEndIdx === -1) {
+                                $noPendingFoundIdx = $i;
+                            }
+                        }
+                        if (strpos($line, '=== STARTING AUTOMATED INTIMATION DUE LETTER CRON JOB') !== false) {
+                            if ($lastStartIdx === -1) {
+                                $lastStartIdx = $i;
+                            }
+                        }
+                    }
 
-            $lastEndIdx = -1;
-            $noPendingFoundIdx = -1;
-
-            for ($i = count($lines) - 1; $i >= 0; $i--) {
-                $line = $lines[$i];
-                if (strpos($line, '=== AUTOMATED CRON JOB COMPLETED:') !== false) {
-                    if ($lastEndIdx === -1) {
-                        $lastEndIdx = $i;
+                    if ($lastEndIdx !== -1) {
+                        $line = $lines[$lastEndIdx];
+                        if (preg_match('/^\[(.*?)\]/', $line, $matches)) {
+                            $info['date'] = $matches[1];
+                        }
+                        if (preg_match('/COMPLETED:\s*(\d+)\s*succeeded,\s*(\d+)\s*failed/', $line, $matches)) {
+                            $info['success'] = (int)$matches[1];
+                            $info['failed'] = (int)$matches[2];
+                            $info['total'] = $info['success'] + $info['failed'];
+                        }
+                        if ($info['failed'] > 0) {
+                            $info['status'] = 'Failed (' . $info['failed'] . ' error' . ($info['failed'] > 1 ? 's' : '') . ')';
+                        } else if ($info['success'] > 0) {
+                            $info['status'] = 'Success';
+                        } else {
+                            $info['status'] = 'Completed (0 sent)';
+                        }
+                    } else if ($noPendingFoundIdx !== -1) {
+                        $line = $lines[$noPendingFoundIdx];
+                        if (preg_match('/^\[(.*?)\]/', $line, $matches)) {
+                            $info['date'] = $matches[1];
+                        }
+                        $info['total'] = 0;
+                        $info['success'] = 0;
+                        $info['failed'] = 0;
+                        $info['status'] = 'No pending letters';
+                    } else if ($lastStartIdx !== -1) {
+                        $line = $lines[$lastStartIdx];
+                        if (preg_match('/^\[(.*?)\]/', $line, $matches)) {
+                            $info['date'] = $matches[1];
+                        }
+                        $runSuccess = 0;
+                        $runFailed = 0;
+                        for ($j = $lastStartIdx; $j < count($lines); $j++) {
+                            if (strpos($lines[$j], 'SUCCESS: Emailed due letter') !== false) {
+                                $runSuccess++;
+                            } else if (strpos($lines[$j], 'ERROR:') !== false) {
+                                $runFailed++;
+                            }
+                        }
+                        $info['success'] = $runSuccess;
+                        $info['failed'] = $runFailed;
+                        $info['total'] = $runSuccess + $runFailed;
+                        if ($runSuccess > 0 && $runFailed === 0) {
+                            $info['status'] = 'Success';
+                        } else if ($runFailed > 0 && $runSuccess > 0) {
+                            $info['status'] = 'Partial (' . $runSuccess . ' sent, ' . $runFailed . ' failed)';
+                        } else if ($runFailed > 0) {
+                            $info['status'] = 'Failed (' . $runFailed . ' error' . ($runFailed > 1 ? 's' : '') . ')';
+                        } else {
+                            $info['status'] = 'Dispatched';
+                        }
                     }
                 }
-                if (strpos($line, 'No pending due letters found for today.') !== false) {
-                    if ($noPendingFoundIdx === -1 && $lastEndIdx === -1) {
-                        $noPendingFoundIdx = $i;
-                    }
-                }
             }
 
-            if ($lastEndIdx !== -1) {
-                $line = $lines[$lastEndIdx];
-                if (preg_match('/^\[(.*?)\]/', $line, $matches)) {
-                    $info['date'] = $matches[1];
-                }
-                if (preg_match('/COMPLETED:\s*(\d+)\s*succeeded,\s*(\d+)\s*failed/', $line, $matches)) {
-                    $info['success'] = (int)$matches[1];
-                    $info['failed'] = (int)$matches[2];
-                    $info['total'] = $info['success'] + $info['failed'];
-                }
-                if ($info['failed'] > 0) {
-                    $info['status'] = 'Failed (' . $info['failed'] . ' error' . ($info['failed'] > 1 ? 's' : '') . ')';
-                } else if ($info['success'] > 0) {
-                    $info['status'] = 'Success';
-                } else {
-                    $info['status'] = 'Completed (0 sent)';
-                }
-            } else if ($noPendingFoundIdx !== -1) {
-                $line = $lines[$noPendingFoundIdx];
-                if (preg_match('/^\[(.*?)\]/', $line, $matches)) {
-                    $info['date'] = $matches[1];
-                }
-                $info['total'] = 0;
-                $info['success'] = 0;
-                $info['failed'] = 0;
-                $info['status'] = 'No pending letters';
+            // Fallback to database if log file did not provide a date
+            if ($info['date'] === 'N/A' && $db instanceof PDO) {
+                try {
+                    $stmt = $db->query("SELECT MAX(sent_date) as last_sent FROM ca_service_dates WHERE status = 'sent' AND is_deleted = 'N' AND sent_date IS NOT NULL");
+                    $row = $stmt ? $stmt->fetch(PDO::FETCH_ASSOC) : null;
+                    if ($row && !empty($row['last_sent'])) {
+                        $lastSentDate = $row['last_sent'];
+                        $cntStmt = $db->prepare("SELECT COUNT(*) as cnt FROM ca_service_dates WHERE status = 'sent' AND is_deleted = 'N' AND sent_date = :sd");
+                        $cntStmt->execute([':sd' => $lastSentDate]);
+                        $cntRow = $cntStmt->fetch(PDO::FETCH_ASSOC);
+                        $cnt = $cntRow ? (int)$cntRow['cnt'] : 1;
+
+                        $info['date'] = $lastSentDate . ' 12:00:00';
+                        $info['total'] = $cnt;
+                        $info['success'] = $cnt;
+                        $info['failed'] = 0;
+                        $info['status'] = 'Success';
+                    }
+                } catch (Exception $e) {}
             }
 
             return $info;
         }
     }
 
-    $lastDispatch = get_last_dispatch_info();
+    $lastDispatch = get_last_dispatch_info($db);
 
-    // Fetch sent intimations list for the sidebar tab (all entries)
-    $sentNoticeQuery = "SELECT ci.id, ci.customer_name, ci.email_id, ci.unique_id, svc.service_id, svc.service_type, svcdt.due_date, svcdt.sent_date, svcdt.action, svcdt.action_id FROM ca_service_dates svcdt INNER JOIN service svc ON svcdt.service_id = svc.service_id INNER JOIN customer_info ci ON svc.customer_id = ci.id WHERE svcdt.status = 'sent' AND svcdt.is_deleted = 'N' AND svcdt.due_date <= NOW() ORDER BY svcdt.sent_date DESC";
+    // Fetch sent intimations list for the sidebar tab (all entries till date)
+    $sentNoticeQuery = "SELECT ci.id, ci.customer_name, ci.email_id, ci.unique_id, svc.service_id, svc.service_type, svcdt.due_date, svcdt.sent_date, svcdt.action, svcdt.action_id FROM ca_service_dates svcdt INNER JOIN service svc ON svcdt.service_id = svc.service_id INNER JOIN customer_info ci ON svc.customer_id = ci.id WHERE svcdt.status = 'sent' AND svcdt.is_deleted = 'N' ORDER BY svcdt.sent_date DESC, svcdt.action_id DESC";
     $sentStatement = $db->prepare($sentNoticeQuery);
     $sentStatement->execute();
     $sentNoticeDue = $sentStatement->fetchAll();
@@ -698,6 +747,82 @@
             font-weight: 600;
         }
 
+        .sent-mailed-box {
+            margin: 6px 0 8px 0;
+            padding: 6px 10px;
+            background: #eff6ff;
+            border-radius: 5px;
+            border: 1px solid #bfdbfe;
+            font-size: 11px;
+        }
+
+        .sent-mailed-box .sent-mail-header {
+            color: #1e40af;
+            font-weight: 700;
+            margin-bottom: 2px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .sent-mailed-box .sent-mail-address {
+            color: #1e3a8a;
+            word-break: break-all;
+            font-weight: 600;
+            font-size: 11px;
+        }
+
+        .sent-badge {
+            display: inline-block;
+            padding: 2px 7px;
+            font-size: 10px;
+            font-weight: 700;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .sent-badge-reminder {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+
+        .sent-badge-danger {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        .sent-badge-info {
+            background: #e0f2fe;
+            color: #0369a1;
+            border: 1px solid #bae6fd;
+        }
+
+        .sent-pdf-btn {
+            background: #dc2626 !important;
+            border-color: #b91c1c !important;
+            color: #ffffff !important;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            text-decoration: none;
+            box-shadow: 0 1px 2px rgba(220, 38, 38, 0.2);
+            transition: background 0.15s ease, transform 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .sent-pdf-btn:hover {
+            background: #b91c1c !important;
+            color: #ffffff !important;
+            text-decoration: none;
+            transform: translateY(-1px);
+        }
+
         /* Dark Mode overrides */
         html.theme-dark .sent-intimation-tab {
             background: var(--hpd-accent) !important;
@@ -748,6 +873,43 @@
 
         html.theme-dark .sent-intimation-detail strong {
             color: var(--hpd-text-dim) !important;
+        }
+
+        html.theme-dark .sent-mailed-box {
+            background: rgba(30, 58, 138, 0.25) !important;
+            border-color: rgba(59, 130, 246, 0.35) !important;
+        }
+
+        html.theme-dark .sent-mailed-box .sent-mail-header {
+            color: #60a5fa !important;
+        }
+
+        html.theme-dark .sent-mailed-box .sent-mail-address {
+            color: #bfdbfe !important;
+        }
+
+        html.theme-dark .sent-badge-reminder {
+            background: rgba(245, 158, 11, 0.2) !important;
+            color: #fcd34d !important;
+            border-color: rgba(245, 158, 11, 0.4) !important;
+        }
+
+        html.theme-dark .sent-badge-danger {
+            background: rgba(239, 68, 68, 0.2) !important;
+            color: #fca5a5 !important;
+            border-color: rgba(239, 68, 68, 0.4) !important;
+        }
+
+        html.theme-dark .sent-badge-info {
+            background: rgba(59, 130, 246, 0.2) !important;
+            color: #93c5fd !important;
+            border-color: rgba(59, 130, 246, 0.4) !important;
+        }
+
+        html.theme-dark #sent-load-more-btn {
+            background: var(--hpd-surface) !important;
+            border-color: var(--hpd-border) !important;
+            color: var(--hpd-accent) !important;
         }
 
         html.theme-dark #sent-intimation-search-wrapper {
@@ -1161,23 +1323,27 @@
 
     <div class="sent-intimation-panel" id="sentIntimationPanel" aria-hidden="true">
         <div class="sent-intimation-panel-header">
-            <h4 class="sent-intimation-panel-title">Sent Letters</h4>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <h4 class="sent-intimation-panel-title">Sent Letters</h4>
+                <a href="sentintimation.php" target="_blank" class="btn btn-xs" style="background: rgba(255,255,255,0.18); color: #fff; font-weight: 600; padding: 2px 7px; font-size: 10px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.3); text-decoration: none;" title="Open full history table in sentintimation.php">
+                    Full Table <i class="fa fa-external-link"></i>
+                </a>
+            </div>
             <button type="button" class="sent-intimation-close" id="sentIntimationClose" aria-label="Close">&times;</button>
         </div>
         <div class="sent-intimation-panel-body">
-            <div id="sent-intimation-search-wrapper" style="margin-bottom: 12px; position: sticky; top: 0; z-index: 10; background: #f8fafc; padding: 2px 0 10px 0; border-bottom: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 8px;">
-                <!-- Search Input -->
+            <div id="sent-intimation-search-wrapper" style="margin-bottom: 10px; position: sticky; top: 0; z-index: 10; background: #f8fafc; padding: 2px 0 10px 0; border-bottom: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 8px;">
+                <!-- Search Input with clear button and autofill preventer -->
                 <div class="input-group">
-                    <span class="input-group-addon" style="background: #fff; border-right: 0;"><i class="fa fa-search"></i></span>
-                    <input type="text" id="sent-intimation-search" class="form-control" placeholder="Search Client, ID..." style="border-left: 0; box-shadow: none; height: 34px;">
+                    <span class="input-group-addon" style="background: #fff; border-right: 0; color: #64748b;"><i class="fa fa-search"></i></span>
+                    <input type="search" id="sent-intimation-search" name="sent_search_query_no_autofill" class="form-control" placeholder="Search Client, Unique ID, Email..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="border-left: 0; border-right: 0; box-shadow: none; height: 34px;">
+                    <span class="input-group-addon" id="sent-search-clear-btn" style="background: #fff; border-left: 0; cursor: pointer; color: #94a3b8; display: none;" title="Clear Search"><i class="fa fa-times-circle"></i></span>
                 </div>
                 
                 <!-- Type Selection -->
                 <div>
                     <select id="sent-intimation-filter-type" class="form-control" style="height: 34px; box-shadow: none;">
-                        <option value="">Select Letter Type</option>
-                        <option value="Stage 1 Notification">Stage 1 Notification</option>
-                        <option value="Stage 2 Notification">Stage 2 Notification</option>
+                        <option value="">All Letter Types (All)</option>
                         <option value="1st Reminder">1st Reminder</option>
                         <option value="2nd Reminder">2nd Reminder</option>
                         <option value="Suspension Reminder">Suspension Reminder</option>
@@ -1187,22 +1353,35 @@
                         <option value="Withdraw Letter">Withdraw Letter</option>
                         <option value="Withdrawal Letter">Withdrawal Letter</option>
                         <option value="Expire Letter">Expire Letter</option>
+                        <option value="Stage 1 Notification">Stage 1 Notification</option>
+                        <option value="Stage 2 Notification">Stage 2 Notification</option>
                     </select>
                 </div>
 
-                <!-- Date Range Selection -->
-                <div style="display: flex; gap: 8px;">
+                <!-- Date Range Selection with Clear button -->
+                <div style="display: flex; gap: 8px; align-items: center;">
                     <div style="flex: 1; position: relative;">
-                        <input type="text" id="sent-intimation-filter-from" class="form-control" placeholder="Sent Date From" style="height: 34px; background: #fff; box-shadow: none;" autocomplete="off">
+                        <input type="text" id="sent-intimation-filter-from" class="form-control" placeholder="Sent Date From" style="height: 34px; background: #fff; box-shadow: none;" autocomplete="off" readonly>
                     </div>
                     <div style="flex: 1; position: relative;">
-                        <input type="text" id="sent-intimation-filter-to" class="form-control" placeholder="Sent Date To" style="height: 34px; background: #fff; box-shadow: none;" autocomplete="off">
+                        <input type="text" id="sent-intimation-filter-to" class="form-control" placeholder="Sent Date To" style="height: 34px; background: #fff; box-shadow: none;" autocomplete="off" readonly>
                     </div>
+                    <button type="button" id="sent-date-clear-btn" class="btn btn-default btn-sm" title="Clear Date Filters" style="height: 34px; padding: 0 10px; color: #64748b;">
+                        <i class="fa fa-refresh"></i>
+                    </button>
+                </div>
+
+                <!-- Status Counter & Reset All -->
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #64748b; padding-top: 2px;">
+                    <span id="sent-total-counter">Showing <strong id="sent-visible-count">0</strong> of <?php echo count($sentNoticeDue); ?> sent letters</span>
+                    <a href="javascript:void(0)" id="sent-reset-all-filters" style="color: #0284c7; font-weight: 600; text-decoration: none; display: none;"><i class="fa fa-times"></i> Reset Filters</a>
                 </div>
             </div>
+
             <?php if (empty($sentNoticeDue)) { ?>
-                <div class="sent-intimation-empty">No sent letters found.</div>
+                <div class="sent-intimation-empty">No sent letters found in system history.</div>
             <?php } else { ?>
+                <div id="sent-intimation-list">
                 <?php foreach ($sentNoticeDue as $notiInfo) { 
                     $url = "";
                     if ($notiInfo['action'] == "Stage 1 Notification") {
@@ -1219,7 +1398,7 @@
                         $url = "reminder.php";
                     } else if ($notiInfo['action'] == "Suspension Reminder") {
                         $url = "suspension.php";
-                    } else if ($notiInfo['action'] == "Suspend Letter" || $notiInfo['action'] == "Suspension Letter") {
+                    } else if ($notiInfo['action'] == "Suspend Letter" || $notiInfo['action'] == "Suspension Letter" || $notiInfo['action'] == "Suspention Letter") {
                         $url = "suspension.php";
                     } else if ($notiInfo['action'] == "Withdrawal Reminder") {
                         $url = "withdrawRemind.php";
@@ -1238,43 +1417,94 @@
                     } else {
                         $nextSVC = $notiInfo['service_type'];
                     }
+
+                    $actionName = $notiInfo['action'];
+                    $badgeClass = 'sent-badge-info';
+                    if (stripos($actionName, 'Reminder') !== false) {
+                        $badgeClass = 'sent-badge-reminder';
+                    } else if (stripos($actionName, 'Suspend') !== false || stripos($actionName, 'Withdraw') !== false || stripos($actionName, 'Expire') !== false) {
+                        $badgeClass = 'sent-badge-danger';
+                    }
                 ?>
                     <div class="sent-intimation-card">
-                        <div class="sent-intimation-card-head">
-                            <div class="sent-intimation-card-title">
-                                <?php echo htmlspecialchars($notiInfo['customer_name'], ENT_QUOTES, 'UTF-8'); ?>
+                        <div class="sent-intimation-card-head" style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+                            <div>
+                                <div class="sent-intimation-card-title">
+                                    <a href="customerAccount.php?customerid=<?php echo $notiInfo['id']; ?>" target="_blank" style="color: inherit; text-decoration: none;" title="Open Client Account">
+                                        <?php echo htmlspecialchars($notiInfo['customer_name'], ENT_QUOTES, 'UTF-8'); ?>
+                                        <i class="fa fa-external-link" style="font-size: 10px; color: #94a3b8; margin-left: 3px;"></i>
+                                    </a>
+                                </div>
+                                <div class="sent-intimation-card-meta">
+                                    <span style="font-family: monospace; font-weight: 600; color: #475569;">ID: <?php echo htmlspecialchars($notiInfo['unique_id'], ENT_QUOTES, 'UTF-8'); ?></span>
+                                </div>
                             </div>
-                            <div class="sent-intimation-card-meta">
-                                ID: <?php echo htmlspecialchars($notiInfo['unique_id'], ENT_QUOTES, 'UTF-8'); ?>
+                            <div>
+                                <span class="sent-badge <?php echo $badgeClass; ?> card-letter-type"><?php echo htmlspecialchars($notiInfo['action'], ENT_QUOTES, 'UTF-8'); ?></span>
                             </div>
                         </div>
                         <div class="sent-intimation-card-body-content">
-                            <div class="sent-intimation-item">
-                                <div class="sent-intimation-detail">
-                                    <strong>Letter Type:</strong> <span class="card-letter-type"><?php echo htmlspecialchars($notiInfo['action'], ENT_QUOTES, 'UTF-8'); ?></span>
+                            <div class="sent-intimation-item" style="padding: 8px 12px;">
+                                <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px; color: #475569;">
+                                    <div>
+                                        <strong>Service:</strong> <span style="font-weight: 600; color: #0284c7;"><?php echo htmlspecialchars($nextSVC, ENT_QUOTES, 'UTF-8'); ?></span>
+                                    </div>
+                                    <div>
+                                        <i class="fa fa-calendar" style="color: #64748b;"></i> <strong>Sent:</strong> <span class="card-sent-date" style="font-weight: 600; color: #0f172a;"><?php echo simpleDateConversion($notiInfo['sent_date']); ?></span>
+                                    </div>
                                 </div>
-                                <div class="sent-intimation-detail">
-                                    <strong>Service:</strong> <?php echo htmlspecialchars($nextSVC, ENT_QUOTES, 'UTF-8'); ?>
+                                
+                                <?php if (!empty($notiInfo['due_date'])) { ?>
+                                <div style="font-size: 11px; margin-bottom: 6px; color: #64748b;">
+                                    <i class="fa fa-clock-o"></i> Due On: <?php echo simpleDateConversion($notiInfo['due_date']); ?>
                                 </div>
-                                <div class="sent-intimation-detail">
-                                    <strong>Sent Date:</strong> <span class="card-sent-date"><?php echo simpleDateConversion($notiInfo['sent_date']); ?></span>
+                                <?php } ?>
+
+                                <!-- Recipient Email Box -->
+                                <div class="sent-mailed-box">
+                                    <div class="sent-mail-header">
+                                        <i class="fa fa-envelope"></i> Mailed To (Recipient):
+                                    </div>
+                                    <div class="sent-mail-address card-email">
+                                        <?php echo !empty($notiInfo['email_id']) ? htmlspecialchars($notiInfo['email_id'], ENT_QUOTES, 'UTF-8') : '<em style="color:#94a3b8; font-weight: normal;">No email address</em>'; ?>
+                                    </div>
                                 </div>
-                                <div class="sent-intimation-detail">
-                                    <strong>Mailed To:</strong> <span style="word-break: break-all;"><?php echo htmlspecialchars($notiInfo['email_id'], ENT_QUOTES, 'UTF-8'); ?></span>
-                                </div>
-                                <div style="margin-top: 8px; overflow: hidden;">
-                                    <a class="sentNotificationGenerate btn btn-default btn-xs btn-info" title="PDF Preview" 
-                                       data-customer='<?php echo $notiInfo['id'] ?>' 
-                                       data-service='<?php echo $notiInfo['service_id'] ?>' 
-                                       data-action ="<?php echo $notiInfo['action_id'] ?>" 
-                                       data-servicetype="<?php echo $notiInfo["service_type"] ?>" 
-                                       data-url="<?php echo $url; ?>" 
-                                       style="float: right;"><i class="fa fa-file-pdf-o"></i> View PDF</a>
+
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; padding-top: 6px; border-top: 1px solid #f1f5f9;">
+                                    <span style="font-size: 11px; color: #10b981; font-weight: 600;">
+                                        <i class="fa fa-check-circle"></i> Sent Successfully
+                                    </span>
+                                    <a href="javascript:void(0)" class="sentNotificationGenerate sent-pdf-btn" title="View / Generate Sent Letter PDF" 
+                                       data-customer='<?php echo $notiInfo['id']; ?>' 
+                                       data-service='<?php echo $notiInfo['service_id']; ?>' 
+                                       data-action='<?php echo $notiInfo['action_id']; ?>' 
+                                       data-servicetype='<?php echo $notiInfo["service_type"]; ?>' 
+                                       data-url='<?php echo $url; ?>'>
+                                       <i class="fa fa-file-pdf-o"></i> View PDF
+                                    </a>
                                 </div>
                             </div>
                         </div>
                     </div>
                 <?php } ?>
+                </div>
+
+                <!-- Load More Button -->
+                <div id="sent-load-more-wrapper" style="text-align: center; margin: 12px 0 20px 0;">
+                    <button type="button" id="sent-load-more-btn" class="btn btn-sm btn-default" style="width: 100%; padding: 8px; font-weight: 600; color: #053c6d; border: 1px dashed #cbd5e1; background: #fff;">
+                        Load More Letters (40 more) <i class="fa fa-chevron-down"></i>
+                    </button>
+                </div>
+
+                <!-- No Matching Results Message -->
+                <div id="sent-intimation-no-results" class="sent-intimation-empty" style="display:none; margin: 20px 0; padding: 20px 14px; text-align: center;">
+                    <i class="fa fa-search" style="font-size: 26px; color: #94a3b8; margin-bottom: 8px; display: block;"></i>
+                    <strong style="font-size: 13px; color: #334155;">No sent letters match your search</strong>
+                    <p style="font-size: 11px; color: #64748b; margin: 6px 0 12px 0;">Try searching by Client Name, Unique ID, or recipient Email address.</p>
+                    <button type="button" id="sent-intimation-reset-btn" class="btn btn-primary btn-xs" style="background: #053c6d; border: none; padding: 5px 14px; font-size: 11px; font-weight: 600;">
+                        <i class="fa fa-refresh"></i> Reset & Show All
+                    </button>
+                </div>
             <?php } ?>
         </div>
     </div>
@@ -1402,54 +1632,70 @@
 	});
 		
     $(document).ready(function () {
-        // Sent Intimations Sliding Panel Events
-        $('#sentIntimationTab').click(function () {
-            $('#sentIntimationPanel').css('right', '0').attr('aria-hidden', 'false');
-        });
+        // Clear search input on load to prevent browser credential autofill
+        $('#sent-intimation-search').val('');
 
-        $('#sentIntimationClose').click(function () {
-            $('#sentIntimationPanel').css('right', '-430px').attr('aria-hidden', 'true');
-        });
+        var sentBatchSize = 40;
+        var sentCurrentLimit = 40;
+        var $allSentCards = $('.sent-intimation-card');
+        var matchedSentCards = [];
 
-        $(document).mouseup(function (e) {
-            var container = $("#sentIntimationPanel");
-            var tab = $("#sentIntimationTab");
-            var datepicker = $("#ui-datepicker-div");
-            
-            // Check if the click target is the datepicker panel or is nested inside jQuery UI datepicker elements
-            var isClickInsideDatepicker = datepicker.is(e.target) || datepicker.has(e.target).length > 0 || $(e.target).closest('.ui-datepicker').length > 0;
-            
-            if (!isClickInsideDatepicker && !container.is(e.target) && container.has(e.target).length === 0 && !tab.is(e.target) && tab.has(e.target).length === 0) {
-                container.css('right', '-430px').attr('aria-hidden', 'true');
+        function renderSentCardsBatch() {
+            var totalMatched = matchedSentCards.length;
+            $allSentCards.hide();
+
+            if (totalMatched === 0) {
+                $('#sent-intimation-no-results').show();
+                $('#sent-load-more-wrapper').hide();
+                $('#sent-visible-count').text('0');
+                return;
             }
-        });
 
-        $('.sentNotificationGenerate').click(function () {
-            var customer = $(this).attr('data-customer');
-            var service = $(this).attr('data-service');
-            var action = $(this).attr('data-action');
-            var servicetype = $(this).attr("data-servicetype");
-            var url = $(this).attr("data-url");
-            var form = $('<form action="' + url + '" method="post" target="_blank">' +
-                    '<input type="hidden" name="customer" value="' + customer + '" />' +
-                    '<input type="hidden" name="customerid" value="' + customer + '" />' +
-                    '<input type="hidden" name="service" value="' + service + '" />' +
-                    '<input type="hidden" name="serviceid" value="' + service + '" />' +
-                    '<input type="hidden" name="action" value="' + action + '" />' +
-                    '<input type="hidden" name="auditid" value="' + action + '" />' +
-                    '<input type="hidden" name="notificationid" value="' + action + '" />' +
-                    '<input type="hidden" name="servicetype" value="' + servicetype + '" />' +
-                    '</form>');
-            $('body').append(form);
-            form.submit();
-        });
+            $('#sent-intimation-no-results').hide();
+            
+            var toShow = matchedSentCards.slice(0, sentCurrentLimit);
+            for (var i = 0; i < toShow.length; i++) {
+                $(toShow[i]).show();
+            }
+
+            var visibleCount = toShow.length;
+            $('#sent-visible-count').text(visibleCount);
+            
+            if (sentCurrentLimit < totalMatched) {
+                var remaining = totalMatched - sentCurrentLimit;
+                var nextBatch = Math.min(sentBatchSize, remaining);
+                $('#sent-load-more-btn').html('Load More Letters (' + nextBatch + ' more, ' + remaining + ' left) <i class="fa fa-chevron-down"></i>');
+                $('#sent-load-more-wrapper').show();
+            } else {
+                $('#sent-load-more-wrapper').hide();
+            }
+        }
 
         // Combined filter function for Sent Letters
-        function filterSentIntimations() {
-            var searchText = $('#sent-intimation-search').val().toLowerCase();
-            var letterType = $('#sent-intimation-filter-type').val().toLowerCase();
+        function filterSentIntimations(resetLimit) {
+            if (resetLimit !== false) {
+                sentCurrentLimit = sentBatchSize;
+            }
+
+            var rawSearch = $('#sent-intimation-search').val() || '';
+            var searchText = rawSearch.toLowerCase().trim();
+            var letterType = ($('#sent-intimation-filter-type').val() || '').toLowerCase().trim();
             var fromDateVal = $('#sent-intimation-filter-from').val();
             var toDateVal = $('#sent-intimation-filter-to').val();
+
+            // Toggle clear button for search input
+            if (rawSearch.length > 0) {
+                $('#sent-search-clear-btn').show();
+            } else {
+                $('#sent-search-clear-btn').hide();
+            }
+
+            // Toggle reset all filters link
+            if (rawSearch.length > 0 || letterType !== '' || fromDateVal || toDateVal) {
+                $('#sent-reset-all-filters').show();
+            } else {
+                $('#sent-reset-all-filters').hide();
+            }
 
             var fromDate = null;
             if (fromDateVal) {
@@ -1463,7 +1709,9 @@
                 toDate = new Date(parts[2], parts[1] - 1, parts[0]);
             }
 
-            $('.sent-intimation-card').each(function() {
+            matchedSentCards = [];
+
+            $allSentCards.each(function() {
                 var card = $(this);
                 var cardText = card.text().toLowerCase();
                 var cardLetterType = card.find('.card-letter-type').text().trim().toLowerCase();
@@ -1475,7 +1723,7 @@
                     cardSentDate = new Date(parts[2], parts[1] - 1, parts[0]);
                 }
 
-                var matchesText = cardText.indexOf(searchText) > -1;
+                var matchesText = (searchText === '') || (cardText.indexOf(searchText) > -1);
 
                 var matchesLetterType = true;
                 if (letterType) {
@@ -1494,13 +1742,114 @@
                     matchesDate = false;
                 }
 
-                card.toggle(matchesText && matchesLetterType && matchesDate);
+                if (matchesText && matchesLetterType && matchesDate) {
+                    matchedSentCards.push(this);
+                }
             });
+
+            renderSentCardsBatch();
         }
 
-        // Bind filter events
-        $('#sent-intimation-search').on('keyup', filterSentIntimations);
-        $('#sent-intimation-filter-type').on('change', filterSentIntimations);
+        // Initialize display with default batch
+        filterSentIntimations(true);
+
+        // Load More button click
+        $('#sent-load-more-btn').click(function() {
+            sentCurrentLimit += sentBatchSize;
+            renderSentCardsBatch();
+        });
+
+        // Sent Intimations Sliding Panel Events
+        $('#sentIntimationTab').click(function () {
+            $('#sentIntimationPanel').css('right', '0').attr('aria-hidden', 'false');
+            // If browser autofilled mainadmin username or email into the search box, clear it
+            var curVal = ($('#sent-intimation-search').val() || '').trim();
+            if (curVal === 'mainadmin@aitf.com' || curVal === 'mainadmin') {
+                $('#sent-intimation-search').val('');
+                filterSentIntimations(true);
+            }
+        });
+
+        $('#sentIntimationClose').click(function () {
+            $('#sentIntimationPanel').css('right', '-430px').attr('aria-hidden', 'true');
+        });
+
+        $(document).mouseup(function (e) {
+            var container = $("#sentIntimationPanel");
+            var tab = $("#sentIntimationTab");
+            var datepicker = $("#ui-datepicker-div");
+            
+            var isClickInsideDatepicker = datepicker.is(e.target) || datepicker.has(e.target).length > 0 || $(e.target).closest('.ui-datepicker').length > 0;
+            
+            if (!isClickInsideDatepicker && !container.is(e.target) && container.has(e.target).length === 0 && !tab.is(e.target) && tab.has(e.target).length === 0) {
+                container.css('right', '-430px').attr('aria-hidden', 'true');
+            }
+        });
+
+        // Search clear button
+        $('#sent-search-clear-btn').click(function() {
+            $('#sent-intimation-search').val('').focus();
+            filterSentIntimations(true);
+        });
+
+        // Date clear button
+        $('#sent-date-clear-btn').click(function() {
+            $('#sent-intimation-filter-from').val('');
+            $('#sent-intimation-filter-to').val('');
+            filterSentIntimations(true);
+        });
+
+        // Reset all filters button
+        $(document).on('click', '#sent-reset-all-filters, #sent-intimation-reset-btn', function() {
+            $('#sent-intimation-search').val('');
+            $('#sent-intimation-filter-type').val('');
+            $('#sent-intimation-filter-from').val('');
+            $('#sent-intimation-filter-to').val('');
+            $('#sent-search-clear-btn').hide();
+            $('#sent-reset-all-filters').hide();
+            filterSentIntimations(true);
+        });
+
+        // Sent Notification Generate (PDF Preview)
+        $(document).on('click', '.sentNotificationGenerate', function () {
+            var customer = $(this).attr('data-customer');
+            var service = $(this).attr('data-service');
+            var action = $(this).attr('data-action');
+            var servicetype = $(this).attr("data-servicetype");
+            var url = $(this).attr("data-url");
+
+            if (!url) {
+                alert("PDF preview URL not configured for this letter type.");
+                return;
+            }
+
+            var form = $('<form action="' + url + '" method="post" target="_blank">' +
+                    '<input type="hidden" name="customer" value="' + customer + '" />' +
+                    '<input type="hidden" name="customerid" value="' + customer + '" />' +
+                    '<input type="hidden" name="service" value="' + service + '" />' +
+                    '<input type="hidden" name="serviceid" value="' + service + '" />' +
+                    '<input type="hidden" name="action" value="' + action + '" />' +
+                    '<input type="hidden" name="auditid" value="' + action + '" />' +
+                    '<input type="hidden" name="notificationid" value="' + action + '" />' +
+                    '<input type="hidden" name="servicetype" value="' + servicetype + '" />' +
+                    '</form>');
+            $('body').append(form);
+            form.submit();
+            form.remove();
+        });
+
+        // Debounced search on input/keyup
+        var searchDebounceTimer = null;
+        $('#sent-intimation-search').on('input keyup', function() {
+            clearTimeout(searchDebounceTimer);
+            searchDebounceTimer = setTimeout(function() {
+                filterSentIntimations(true);
+            }, 200);
+        });
+
+        $('#sent-intimation-filter-type').on('change', function() {
+            filterSentIntimations(true);
+        });
         
         // Initialize datepickers
         $('#sent-intimation-filter-from, #sent-intimation-filter-to').datepicker({
@@ -1508,12 +1857,14 @@
             changeMonth: true,
             changeYear: true,
             onSelect: function() {
-                filterSentIntimations();
+                filterSentIntimations(true);
             }
         });
 
-        // Trigger filter on date manual input or keyup
-        $('#sent-intimation-filter-from, #sent-intimation-filter-to').on('change keyup', filterSentIntimations);
+        // Trigger filter on date change
+        $('#sent-intimation-filter-from, #sent-intimation-filter-to').on('change', function() {
+            filterSentIntimations(true);
+        });
 
         // Countdown timer for automatic mail dispatch
         (function() {

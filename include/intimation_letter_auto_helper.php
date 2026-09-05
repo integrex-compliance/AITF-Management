@@ -66,6 +66,9 @@ function aitfIntimationBuildLetterContext(array $customer, array $actionRow)
         ),
     );
 
+    $actionServiceId = isset($actionRow['service_id']) ? $actionRow['service_id'] : (isset($customer['service_id']) ? $customer['service_id'] : null);
+    $dbInstance = isset($GLOBALS['db']) ? $GLOBALS['db'] : null;
+
     if ($letterType === 'Suspension Reminder') {
         $context['service_desc'] = 'Surveillance audit due';
         $context['template'] = __DIR__ . '/../Initimation_PDF_Formats/SuspensionReminder.txt';
@@ -73,7 +76,8 @@ function aitfIntimationBuildLetterContext(array $customer, array $actionRow)
         $context['status_word'] = 'suspension';
         $context['params']['servicedesc'] = $context['service_desc'];
         $context['params']['reg_date'] = aitfIntimationDisplayDate(isset($customer['certification_stage_date']) ? $customer['certification_stage_date'] : '');
-        $context['params']['NextDueDate'] = date('d.m.Y', strtotime('+1 month', strtotime($date)));
+        $dbNext = aitfFindNextActionDueDateFromDb($dbInstance, $actionServiceId, 'Suspension Reminder', $date);
+        $context['params']['NextDueDate'] = !empty($dbNext) ? $dbNext : date('d.m.Y', strtotime('+1 month', strtotime($date)));
     } elseif ($letterType === 'Suspend Letter') {
         $context['service_desc'] = 'Suspension of ISO 9001 Certificate';
         $context['template'] = __DIR__ . '/../Initimation_PDF_Formats/SuspendLetter.txt';
@@ -88,7 +92,8 @@ function aitfIntimationBuildLetterContext(array $customer, array $actionRow)
         $context['pdf_title'] = 'Sureillance Withdrawal Reminder';
         $context['status_word'] = 'withdrawal review';
         $context['params']['servicedesc'] = $context['service_desc'];
-        $context['params']['NextDueDate'] = date('d.m.Y', strtotime('+2 month', strtotime($date)));
+        $dbNext = aitfFindNextActionDueDateFromDb($dbInstance, $actionServiceId, 'Withdrawal Reminder', $date);
+        $context['params']['NextDueDate'] = !empty($dbNext) ? $dbNext : date('d.m.Y', strtotime('+2 month', strtotime($date)));
         $context['params']['PrevDueDate'] = date('d.m.Y', strtotime('-2 month', strtotime($date)));
     } elseif ($letterType === 'Withdraw Letter' || $letterType === 'Withdrawal Letter') {
         $context['letter_type'] = 'Withdraw Letter';
@@ -179,18 +184,165 @@ function aitfIntimationBuildPdf($html, array $context, $outputPath = '')
     return $pdf->Output('', 'S');
 }
 
+function aitfFindNextActionDueDateFromDb($db, $serviceId, $currentAction, $currentDueDate = '')
+{
+    if (!$db && isset($GLOBALS['db'])) {
+        $db = $GLOBALS['db'];
+    }
+
+    if (!$db || empty($serviceId)) {
+        return '';
+    }
+
+    $targetAction = '';
+    if ($currentAction === 'Suspension Reminder') {
+        $targetAction = 'Suspend Letter';
+    } elseif ($currentAction === 'Withdrawal Reminder') {
+        $targetAction = 'Withdraw Letter';
+    } elseif ($currentAction === '1st Reminder') {
+        $targetAction = '2nd Reminder';
+    } elseif ($currentAction === '2nd Reminder') {
+        $targetAction = 'Expire Letter';
+    }
+
+    if ($targetAction === '') {
+        return '';
+    }
+
+    try {
+        if ($targetAction === 'Suspend Letter') {
+            $stmt = $db->prepare("SELECT due_date FROM ca_service_dates WHERE service_id = :sid AND action IN ('Suspend Letter', 'Suspension Letter', 'Suspention Letter') AND is_deleted = 'N' AND due_date IS NOT NULL AND due_date != '0000-00-00' ORDER BY due_date ASC LIMIT 1");
+        } elseif ($targetAction === 'Withdraw Letter') {
+            $stmt = $db->prepare("SELECT due_date FROM ca_service_dates WHERE service_id = :sid AND action IN ('Withdraw Letter', 'Withdrawal Letter') AND is_deleted = 'N' AND due_date IS NOT NULL AND due_date != '0000-00-00' ORDER BY due_date ASC LIMIT 1");
+        } else {
+            $stmt = $db->prepare("SELECT due_date FROM ca_service_dates WHERE service_id = :sid AND action = :act AND is_deleted = 'N' AND due_date IS NOT NULL AND due_date != '0000-00-00' ORDER BY due_date ASC LIMIT 1");
+            $stmt->bindValue(':act', $targetAction);
+        }
+        $stmt->bindValue(':sid', $serviceId);
+        $stmt->execute();
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row && !empty($row['due_date']) && $row['due_date'] !== '0000-00-00') {
+            $ts = strtotime($row['due_date']);
+            if ($ts) {
+                return date('d.m.Y', $ts);
+            }
+        }
+    } catch (Exception $e) {
+        // ignore and fallback
+    }
+
+    return '';
+}
+
+function aitfBuildIntimationMailBodyPart($customerName, $lettertype, $date = '', $nextDueDate = '', $fileName = '', $fromEmail = '', $ccEmail = '', $serviceId = null, $db = null)
+{
+    $clientNameSafe = htmlspecialchars($customerName, ENT_QUOTES, 'UTF-8');
+    $letterNameSafe = htmlspecialchars($lettertype, ENT_QUOTES, 'UTF-8');
+    $attachmentNameSafe = htmlspecialchars($fileName, ENT_QUOTES, 'UTF-8');
+    $actionType = trim($lettertype);
+
+    if (empty($nextDueDate) && !empty($serviceId)) {
+        $nextDueDate = aitfFindNextActionDueDateFromDb($db ?: ($GLOBALS['db'] ?? null), $serviceId, $actionType, $date);
+    }
+    $targetDate = !empty($nextDueDate) ? $nextDueDate : $date;
+
+    if ($actionType === "Suspension Reminder") {
+        return '<div style="font-family: Arial, Helvetica, sans-serif; font-size: 14.5px; line-height: 1.65; color: #222222; max-width: 680px;">'
+            . '<p style="margin: 0 0 16px 0;">Dear ' . $clientNameSafe . ',</p>'
+            . '<p style="margin: 0 0 14px 0;">This is a formal reminder regarding the continuation of your ISO certification.</p>'
+            . '<p style="margin: 0 0 14px 0;">Your ISO certification is approaching the date by which the required surveillance audit and compliance requirements must be completed. You are requested to schedule and complete the required audit on or before <strong>' . $targetDate . '</strong> to maintain the validity and continuity of your ISO certification.</p>'
+            . '<p style="margin: 0 0 14px 0;">Please note that failure to complete the required audit within the specified timeframe may result in the suspension of your ISO certification.</p>'
+            . '<p style="margin: 0 0 14px 0;">Please find attached the <strong>Suspension Reminder</strong> letter containing the applicable audit requirements, timelines, and further details.</p>'
+            . '<p style="margin: 0 0 14px 0;">We request you to take the necessary action at the earliest to avoid any interruption to your ISO certification status.</p>'
+            . '<p style="margin: 0 0 14px 0;">If you have already scheduled the audit or submitted the required documents, please disregard this reminder.</p>'
+            . '<p style="margin: 24px 0 0 0; line-height: 1.5;">Sincerely,<br><strong>AITF Management Certification Limited</strong><br>Assessment Team</p>'
+            . '<p style="margin: 18px 0 0 0; font-size: 13px; color: #555555;"><strong>Attachment:</strong> ' . $attachmentNameSafe . '</p>'
+            . '</div>';
+    } 
+    else if ($actionType === "Suspend Letter" || $actionType === "Suspension Letter" || $actionType === "Suspention Letter") {
+        $suspensionDate = !empty($date) ? $date : (!empty($nextDueDate) ? $nextDueDate : date('d.m.Y'));
+        return '<div style="font-family: Arial, Helvetica, sans-serif; font-size: 14.5px; line-height: 1.65; color: #222222; max-width: 680px;">'
+            . '<p style="margin: 0 0 16px 0;">Dear ' . $clientNameSafe . ',</p>'
+            . '<p style="margin: 0 0 14px 0;">This is to formally notify you that your <strong>ISO certification will be placed under SUSPENSION effective from ' . $suspensionDate . '</strong> due to the non-completion of the required <strong>surveillance audit and/or applicable compliance requirements</strong> within the stipulated timeframe.</p>'
+            . '<p style="margin: 0 0 14px 0;">Accordingly, your ISO certification will <strong>not remain valid during the suspension period</strong> and the certification status will be recorded as <strong>SUSPENDED</strong> from the effective date mentioned above.</p>'
+            . '<p style="margin: 0 0 14px 0;">The suspension will remain in effect until the outstanding requirements are satisfactorily completed and the suspension is formally lifted by <strong>AITF Management Certification Limited</strong> in accordance with the applicable certification requirements.</p>'
+            . '<p style="margin: 0 0 14px 0;">Please find attached the official <strong>Suspension Letter</strong>, which contains the details of the suspension, applicable requirements, and the necessary actions to be taken.</p>'
+            . '<p style="margin: 0 0 14px 0;">You are requested to review the attached letter carefully and take the required action at the earliest to resolve the suspension and restore the validity of your ISO certification.</p>'
+            . '<p style="margin: 0 0 14px 0;">For any clarification regarding the suspension or the required actions, please contact the Assessment Department.</p>'
+            . '<p style="margin: 24px 0 0 0; line-height: 1.5;">Sincerely,<br><strong>AITF Management Certification Limited</strong><br>Assessment Department</p>'
+            . '<p style="margin: 18px 0 0 0; font-size: 13px; color: #555555;"><strong>Attachment:</strong> ' . $attachmentNameSafe . '</p>'
+            . '</div>';
+    } 
+    else if ($actionType === "Withdrawal Reminder") {
+        return '<div style="font-family: Arial, Helvetica, sans-serif; font-size: 14.5px; line-height: 1.65; color: #222222; max-width: 680px;">'
+            . '<p style="margin: 0 0 16px 0;">Dear ' . $clientNameSafe . ',</p>'
+            . '<p style="margin: 0 0 14px 0;">This is a <strong>final reminder</strong> regarding your ISO certification and the pending surveillance audit and/or compliance requirements.</p>'
+            . '<p style="margin: 0 0 14px 0;">Please be advised that your certification is <strong>at risk of withdrawal</strong> due to the pending requirements. You are required to complete the necessary <strong>surveillance audit and compliance requirements</strong> on or before <strong>' . $targetDate . '</strong> to maintain the validity of your ISO certification.</p>'
+            . '<p style="margin: 0 0 14px 0;"><strong>If the required requirements are not completed within the specified timeframe, your ISO certification will be subject to withdrawal</strong> in accordance with the applicable certification requirements.</p>'
+            . '<p style="margin: 0 0 14px 0;">Please find attached the official <strong>Withdrawal Reminder</strong> letter containing the relevant details, timelines, and requirements.</p>'
+            . '<p style="margin: 0 0 14px 0;">We strongly request you to take the necessary action within the specified timeframe to <strong>avoid withdrawal of your ISO certification</strong>.</p>'
+            . '<p style="margin: 0 0 14px 0;">If you have already completed the required audit or submitted the necessary documents, please disregard this reminder.</p>'
+            . '<p style="margin: 24px 0 0 0; line-height: 1.5;">Sincerely,<br><strong>AITF Management Certification Limited</strong><br>Assessment Department</p>'
+            . '<p style="margin: 18px 0 0 0; font-size: 13px; color: #555555;"><strong>Attachment:</strong> ' . $attachmentNameSafe . '</p>'
+            . '</div>';
+    } 
+    else if ($actionType === "Withdraw Letter" || $actionType === "Withdrawal Letter") {
+        $withdrawalDate = !empty($date) ? $date : (!empty($nextDueDate) ? $nextDueDate : date('d.m.Y'));
+        return '<div style="font-family: Arial, Helvetica, sans-serif; font-size: 14.5px; line-height: 1.65; color: #222222; max-width: 680px;">'
+            . '<p style="margin: 0 0 16px 0;">Dear ' . $clientNameSafe . ',</p>'
+            . '<p style="margin: 0 0 14px 0;">This is to formally notify you that your <strong>ISO certification will be withdrawn effective from ' . $withdrawalDate . '</strong> due to the non-completion of the required <strong>surveillance audit and/or applicable compliance requirements</strong> within the stipulated timeframe.</p>'
+            . '<p style="margin: 0 0 14px 0;">Accordingly, effective from <strong>' . $withdrawalDate . '</strong>, your ISO certification will <strong>no longer be valid</strong>, and your certification status will be recorded as <strong>WITHDRAWN</strong> by <strong>AITF Management Certification Limited</strong>.</p>'
+            . '<p style="margin: 0 0 14px 0;">Please find attached the official <strong>Withdrawal Letter</strong>, which contains the details of the withdrawal, applicable requirements, and the relevant actions to be taken.</p>'
+            . '<p style="margin: 0 0 14px 0;">You are requested to review the attached letter carefully. Any reference to or use of the withdrawn ISO certification after the effective withdrawal date must be discontinued in accordance with the applicable certification requirements.</p>'
+            . '<p style="margin: 0 0 14px 0;">If you have any questions or require clarification regarding the withdrawal, please contact the Assessment Department.</p>'
+            . '<p style="margin: 24px 0 0 0; line-height: 1.5;">Sincerely,<br><strong>AITF Management Certification Limited</strong><br>Assessment Department</p>'
+            . '<p style="margin: 18px 0 0 0; font-size: 13px; color: #555555;"><strong>Attachment:</strong> ' . $attachmentNameSafe . '</p>'
+            . '</div>';
+    } 
+    else if ($actionType === "1st Reminder") {
+        return '<p>Dear ' . $clientNameSafe . ',</p>'
+            . '<p>This is the <strong>1st Reminder</strong> to inform you that your ISO recertification / surveillance audit is due on or before <strong>' . $targetDate . '</strong>.</p>'
+            . '<p>Please find attached the <strong>1st Reminder</strong> notice for complete details regarding the audit schedule and requirements.</p>'
+            . '<p>Kindly coordinate with our assessment department to plan and confirm your audit dates at the earliest to maintain uninterrupted certification validity.</p>'
+            . '<p>If you have already submitted the audit plan, please treat this email as a routine reminder.</p>'
+            . '<p>Sincerely,<br><strong>AITF Management Certification Limited</strong><br>Assessment Department</p>'
+            . '<p>Attachment: ' . $attachmentNameSafe . '</p>';
+    } 
+    else if ($actionType === "2nd Reminder") {
+        return '<p>Dear ' . $clientNameSafe . ',</p>'
+            . '<p>This is the <strong>2nd Reminder</strong> regarding your pending ISO recertification / surveillance audit, which must be completed on or before <strong>' . $targetDate . '</strong>.</p>'
+            . '<p>Please find attached the <strong>2nd Reminder</strong> notice with the necessary details.</p>'
+            . '<p>Kindly arrange for the audit schedule at the earliest to prevent the initiation of certificate suspension procedures.</p>'
+            . '<p>Sincerely,<br><strong>AITF Management Certification Limited</strong><br>Assessment Department</p>'
+            . '<p>Attachment: ' . $attachmentNameSafe . '</p>';
+    } 
+    else if ($actionType === "Expire Letter") {
+        return '<p>Dear ' . $clientNameSafe . ',</p>'
+            . '<p>This is to inform you that the validity of your ISO certification has <strong>EXPIRED</strong> on <strong>' . $date . '</strong>.</p>'
+            . '<p>Please find attached the <strong>Expire Letter</strong> for your reference.</p>'
+            . '<p>If you wish to re-apply or obtain fresh certification, kindly contact our assessment department.</p>'
+            . '<p>Sincerely,<br><strong>AITF Management Certification Limited</strong><br>Assessment Department</p>'
+            . '<p>Attachment: ' . $attachmentNameSafe . '</p>';
+    }
+    else {
+        return '<p>Dear ' . $clientNameSafe . ',</p>'
+            . '<p>Please find attached the official communication regarding your ISO certification: <strong>' . $letterNameSafe . '</strong>' . (!empty($date) ? ' (dated: ' . $date . ')' : '') . '.</p>'
+            . '<p>Kindly review the attached document and arrange for the required audit coordination / compliance at the earliest.</p>'
+            . '<p>Sincerely,<br><strong>AITF Management Certification Limited</strong><br>Assessment Department</p>'
+            . '<p>Attachment: ' . $attachmentNameSafe . '</p>';
+    }
+}
+
 function aitfIntimationMailBody(array $customer, array $context, $fileName)
 {
-    return '<html><body>'
-        . '<p>Dear ' . aitfIntimationEscape(isset($customer['customer_name']) ? $customer['customer_name'] : '') . ',</p>'
-        . '<p>We would like to inform you that your ISO certification is currently under <strong>' . aitfIntimationEscape($context['status_word']) . '</strong> due to pending certification requirements.</p>'
-        . '<p>Please find the attached <strong>' . aitfIntimationEscape($context['display_name']) . '</strong> for complete details, including the reason and the actions needed.</p>'
-        . '<p>Kindly review the letter and share your <strong>corrective action plan with supporting documents</strong> within the mentioned timeline. Once we receive and verify the required information, we will move ahead accordingly.</p>'
-        . '<p>If you have already completed the necessary actions, please ignore this email and send us the relevant documents for our review.</p>'
-        . '<p>We look forward to your support in resolving this at the earliest.</p>'
-        . '<p>Sincerely,<br>AITF Certification</p>'
-        . '<p>Attachment: ' . aitfIntimationEscape($fileName) . '</p>'
-        . '</body></html>';
+    $customerName = isset($customer['customer_name']) ? $customer['customer_name'] : '';
+    $letterType = isset($context['display_name']) ? $context['display_name'] : (isset($context['action']) ? $context['action'] : '');
+    $dueDate = isset($context['due_date']) ? date("d.m.Y", strtotime($context['due_date'])) : '';
+    $nextDueDate = isset($context['NextDueDate']) ? $context['NextDueDate'] : '';
+
+    $serviceId = isset($context['service_id']) ? $context['service_id'] : (isset($customer['service_id']) ? $customer['service_id'] : null);
+    $bodyPart = aitfBuildIntimationMailBodyPart($customerName, $letterType, $dueDate, $nextDueDate, $fileName, '', '', $serviceId);
+    return '<html><body>' . $bodyPart . '</body></html>';
 }
 
 function aitfIsClientStatusLetterApplicableForAutoSend($db, $serviceId, $customerId, $dueDate)

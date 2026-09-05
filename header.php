@@ -431,11 +431,6 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
             <li><a href="intimationLetter.php" class="animate <?php echo $adddueClass ?>"><span>INTIMATION DUE</span><i
                         class="sub_icon fa fa-envelope-o"></i></a></li>
         <?php } ?>
-        <?php if (aitf_has_access("Mailbox")) { ?>
-            <li><a href="inbox.php" target="_blank"
-                    class="animate <?php echo isset($addInboxClass) ? $addInboxClass : ''; ?>"><span>MAIL-BOX</span><i
-                        class="sub_icon fa fa-inbox"></i></a></li>
-        <?php } ?>
         <?php if (aitf_has_access('Invoices')) { ?>
             <li><a href="invoicePage.php" class="animate <?php echo $addInvoiceClass ?>"><span>INVOICES</span><i
                         class="sub_icon fa fa-inr"></i></a></li>
@@ -629,7 +624,6 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
                 <?php } ?>
                 <li><a href="listOfTds.php">TDS DEDUCTED</a></li>
                 <li><a href="intimationLetter.php">INTIMATION LETTERS</a></li>
-                <li><a href="inbox.php" target="_blank">MAIL-BOX</a></li>
                 <li><a href="clientList.php">CLIENT LIST</a></li>
                 <li><a href="invoicePage.php">INVOICE</a></li>
                 <li><a href="billsPage.php">BILLS</a></li>

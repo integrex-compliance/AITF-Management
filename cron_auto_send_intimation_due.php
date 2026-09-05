@@ -80,6 +80,8 @@ function logCronEvent($message) {
 }
 
 function runAutoSendIntimationDue($db) {
+    @set_time_limit(0);
+    @ini_set('max_execution_time', '0');
     logCronEvent("=== STARTING AUTOMATED INTIMATION DUE LETTER CRON JOB (12:00 PM) ===");
 
     $mailConfig = aitf_get_mail_config([
@@ -161,7 +163,7 @@ function runAutoSendIntimationDue($db) {
                     AND svcdt.status = 'sent' 
                     AND svcdt.is_deleted = 'N'
                 WHERE svcdt.action_id IS NULL
-                  AND soi.intimation_date <= CURDATE()
+                  AND soi.intimation_date = CURDATE()
                   AND (ci.is_deleted IS NULL OR ci.is_deleted <> 'YES')
                   AND (cas.service_ca_status IS NULL OR cas.service_ca_status <> 'Withdrawn')";
     $s1Statement = $db->prepare($s1Query);
@@ -182,7 +184,7 @@ function runAutoSendIntimationDue($db) {
                     AND svcdt.status = 'sent' 
                     AND svcdt.is_deleted = 'N'
                 WHERE svcdt.action_id IS NULL
-                  AND stai.intimation_date <= CURDATE()
+                  AND stai.intimation_date = CURDATE()
                   AND (ci.is_deleted IS NULL OR ci.is_deleted <> 'YES')
                   AND (cas.service_ca_status IS NULL OR cas.service_ca_status <> 'Withdrawn')";
     $s2Statement = $db->prepare($s2Query);
@@ -283,19 +285,11 @@ function runAutoSendIntimationDue($db) {
             $pdfTitle = "Sureillance Audit Due";
             $letterDisplayName = 'Suspension Reminder';
             $statusWord = 'suspension';
-            $mailBodyPart = '<p>This is to inform you that your management system certificate is <strong>approaching its expiry date</strong>, as per our records.</p>'
-                . '<p>To ensure continuity of certification, you are required to <strong>inform us immediately</strong> so that the necessary <strong>audit can be planned and conducted within the stipulated timeline</strong>.</p>'
-                . '<p>Please note that <strong>all relevant details regarding the due audit, scope, and validity period are clearly mentioned in the attached Due Letter</strong> for your reference.</p>'
-                . '<p>We request you to review the attached document carefully and confirm your availability at the earliest to avoid any lapse in certification.</p>'
-                . '<p>If you have already initiated communication regarding this matter, please consider this email as a reminder.</p>'
-                . '<p>For any clarification or coordination, feel free to reply to this email.</p>'
-                . '<p>Warm regards,<br><strong>AITF Team</strong><br>Assessment Department<br>AITF</p>'
-                . '<p>Email: <a href="mailto:' . $mailFromEmailHtml . '">' . $mailFromEmailHtml . '</a><br>'
-                . ($mailCcEmailHtml !== '' ? 'Email: <a href="mailto:' . $mailCcEmailHtml . '">' . $mailCcEmailHtml . '</a><br>' : '')
-                . 'Website: <a href="http://www.aitf.in">www.aitf.in</a></p>';
 
             $reg_date = date("d.m.Y", strtotime($customer['certification_stage_date']));
-            $NextDueDate = date("d.m.Y", strtotime('+1 month', strtotime($date)));
+            require_once __DIR__ . '/include/intimation_letter_auto_helper.php';
+            $dbNextDueDate = aitfFindNextActionDueDateFromDb($db, $action1Info['service_id'] ?? null, 'Suspension Reminder', $date);
+            $NextDueDate = !empty($dbNextDueDate) ? $dbNextDueDate : date("d.m.Y", strtotime('+1 month', strtotime($date)));
 
             $LetterParamJSON->customer_unique_id = $customer['unique_id'];
             $LetterParamJSON->due_date = $date;
@@ -333,7 +327,9 @@ function runAutoSendIntimationDue($db) {
             $letterDisplayName = 'Withdrawal Reminder';
             $statusWord = 'withdrawal review';
             
-            $NextDueDate = date("d.m.Y", strtotime('+2 month', strtotime($date)));
+            require_once __DIR__ . '/include/intimation_letter_auto_helper.php';
+            $dbNextDueDate = aitfFindNextActionDueDateFromDb($db, $action1Info['service_id'] ?? null, 'Withdrawal Reminder', $date);
+            $NextDueDate = !empty($dbNextDueDate) ? $dbNextDueDate : date("d.m.Y", strtotime('+2 month', strtotime($date)));
             $PrevDueDate = date("d.m.Y", strtotime('-2 month', strtotime($date)));
             
             $LetterParamJSON->customer_unique_id = $customer['unique_id'];
@@ -464,21 +460,19 @@ function runAutoSendIntimationDue($db) {
         $pdf->Output($fullFilePath, 'F');
         logCronEvent("Generated PDF letter at: $fullFilePath");
 
-        // Build email body if not already set (for non-Suspension Reminder letters)
-        if (empty($mailBodyPart)) {
-            $clientNameSafe = htmlspecialchars($customer['customer_name'], ENT_QUOTES, 'UTF-8');
-            $letterNameSafe = htmlspecialchars($letterDisplayName, ENT_QUOTES, 'UTF-8');
-            $attachmentNameSafe = htmlspecialchars($fileName, ENT_QUOTES, 'UTF-8');
-            $statusWordSafe = htmlspecialchars($statusWord, ENT_QUOTES, 'UTF-8');
-            $mailBodyPart = '<p>Dear ' . $clientNameSafe . ',</p>'
-                . '<p>We would like to inform you that your ISO certification is currently under <strong>' . $statusWordSafe . '</strong> due to pending certification requirements.</p>'
-                . '<p>Please find the attached <strong>' . $letterNameSafe . '</strong> for complete details, including the reason and the actions needed.</p>'
-                . '<p>Kindly review the letter and share your <strong>corrective action plan with supporting documents</strong> within the mentioned timeline. Once we receive and verify the required information, we will move ahead accordingly.</p>'
-                . '<p>If you have already completed the necessary actions, please ignore this email and send us the relevant documents for our review.</p>'
-                . '<p>We look forward to your support in resolving this at the earliest.</p>'
-                . '<p>Sincerely,<br>AITF Certification</p>'
-                . '<p>Attachment: ' . $attachmentNameSafe . '</p>';
-        }
+        // Build email body using standardized assessment-body template
+        require_once __DIR__ . '/include/intimation_letter_auto_helper.php';
+        $mailBodyPart = aitfBuildIntimationMailBodyPart(
+            $customer['customer_name'] ?? '',
+            $letterDisplayName ?? $lettertype,
+            $date ?? '',
+            $NextDueDate ?? '',
+            $fileName ?? '',
+            $mailConfig['from_email'] ?? '',
+            $mailConfig['cc_email'] ?? '',
+            $action1Info['service_id'] ?? null,
+            $db
+        );
 
         $mailBody = '<html><body>' . $mailBodyPart . '</body></html>';
         $subject = $servicedesc . ' - ' . $customer['customer_name'];
@@ -588,7 +582,7 @@ function runAutoSendIntimationDue($db) {
                 . '<tr><td style="color: #555;"><strong>Client Email(s):</strong></td><td><span style="color: #0d6efd;">' . htmlspecialchars($officeRecipientsStr, ENT_QUOTES, 'UTF-8') . '</span></td></tr>'
                 . '<tr><td style="color: #555;"><strong>Due Date:</strong></td><td>' . htmlspecialchars($date, ENT_QUOTES, 'UTF-8') . '</td></tr>'
                 . '<tr><td style="color: #555;"><strong>Mail Subject:</strong></td><td>' . htmlspecialchars($subject, ENT_QUOTES, 'UTF-8') . '</td></tr>'
-                . '<tr><td style="color: #555;"><strong>Dispatch System:</strong></td><td><span style="color: green; font-weight: bold;">SUCCESS (Automated Daily 12:00 PM Cron)</span></td></tr>'
+                . '<tr><td style="color: #555;"><strong>Dispatch System:</strong></td><td><span style="color: green; font-weight: bold;">Automatic Sent</span></td></tr>'
                 . ($newAuditStatus !== null ? '<tr><td style="color: #555;"><strong>Status Changed To:</strong></td><td><span style="color: #dc3545; font-weight: bold;">' . htmlspecialchars($newAuditStatus, ENT_QUOTES, 'UTF-8') . '</span></td></tr>' : '')
                 . '</table>'
                 . '<h4 style="color: #053c6d; margin-bottom: 10px; border-bottom: 2px solid #e1ebf2; padding-bottom: 6px;">Exact Message Sent to Client:</h4>'
@@ -623,6 +617,11 @@ function runAutoSendIntimationDue($db) {
     }
 
     logCronEvent("=== AUTOMATED CRON JOB COMPLETED: $successCount succeeded, $failCount failed ===");
+
+    // Mark today as dispatched so webcron in header.php does not duplicate
+    $cronFlagDir = __DIR__ . '/test_logs';
+    if (!is_dir($cronFlagDir)) { @mkdir($cronFlagDir, 0777, true); }
+    @file_put_contents($cronFlagDir . '/last_due_mail_cron_date.txt', date('Y-m-d'));
 }
 
 runAutoSendIntimationDue($db);

@@ -134,7 +134,7 @@ $html = '<span style="text-align:justify;">'
     <span> Dear Sir/Madam, </span>
     <br>
     <br>
-    <span>Please refer our earlier latter dated '.date("d.m.Y", strtotime($suspensiondate)) .' suspending your ISO 9001
+    <span>Please refer our earlier latter dated '.date("d.m.Y", strtotime($suspensiondate)) .' suspending your ISO 
     certification. Since you have failed to complete surveillance audit within the period specified
     above latter we are forced to withdraw your certification with immediate effect.</span>
     <br>
