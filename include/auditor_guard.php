@@ -69,6 +69,7 @@ if (!function_exists('aitf_auditor_allowed_scripts')) {
             'auditordashboard.php', 'auditorcustomeraccount.php',
             'auditorpendingdocuments.php', 'save_auditor_doc_status.php',
             'customeraccount.php', 'homepage.php', 'auditplanning.php',
+            'guidelines.php', 'view_guideline_doc.php',
             'invoicepage.php', 'billspage.php',
             'invoicepdf.php', 'finalinvoicepdf.php', 'finalinvoice.php',
             'invoicemailsend.php', 'mailattach.php',

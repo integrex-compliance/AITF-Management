@@ -310,6 +310,12 @@ if (!Utitlity::checkIfLoggedIn()) {
         header("Location: login.php?reason=login_required");
         exit;
     }
+} else if (isset($pageIdentifier) && $pageIdentifier == "Guidelines") {
+    $addGuidelinesClass = "active";
+    if (!aitf_has_access("Guidelines") || Utitlity::checkExternalUser() || Utitlity::checkClient()) {
+        header("Location: login.php?reason=login_required");
+        exit;
+    }
 }
 
 function simpleDateConversion($inputStr)
@@ -422,6 +428,14 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
         <?php if (aitf_has_access("Master Creator")) { ?>
             <li><a href="masterCreator.php" class="animate <?php echo $addMasterClass ?? '' ?>"><span>MASTER CREATOR</span><i
                         class="sub_icon fa fa-wrench"></i></a></li>
+        <?php } ?>
+        <?php if (aitf_has_access("Guidelines")) { ?>
+            <li class="guidelines-nav-item">
+                <a href="guidelines.php" class="animate guidelines-nav-link <?php echo $addGuidelinesClass ?? '' ?>">
+                    <span><i class="fa fa-book" style="color: #34d399; margin-right: 4px; font-size: 11px;"></i> GUIDELINES</span>
+                    <i class="sub_icon fa fa-book"></i>
+                </a>
+            </li>
         <?php } ?>
         <?php if (aitf_has_access("TDS Deducted")) { ?>
             <li><a href="listOfTds.php" class="animate <?php echo $addtds ?? '' ?>"><span>TDS DEDUCTED</span><i
@@ -605,6 +619,7 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
             <ul class="nav navbar-nav visible-xs">
                 <li><a href="auditorDashboard.php"><i class="fa fa-arrow-left"></i> Back to Dashboard</a></li>
                 <li class="active"><a href="invoicePage.php">INVOICES</a></li>
+                <li><a href="guidelines.php" style="color: #10b981; font-weight: 700;"><i class="fa fa-book"></i> GUIDELINES</a></li>
             </ul>
             <?php } else { ?>
             <ul class="nav navbar-nav visible-xs">
@@ -621,6 +636,9 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
                 <li><a href="auditPlanning.php">AUDIT PLANNING</a></li>
                 <?php if ((Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin()) && (!isset($_SESSION['role']) || $_SESSION['role'] !== 'Main Admin')) { ?>
                 <li><a href="masterCreator.php">MASTER CREATOR</a></li>
+                <?php } ?>
+                <?php if (aitf_has_access("Guidelines")) { ?>
+                <li><a href="guidelines.php" style="color: #10b981; font-weight: 700;"><i class="fa fa-book"></i> GUIDELINES</a></li>
                 <?php } ?>
                 <li><a href="listOfTds.php">TDS DEDUCTED</a></li>
                 <li><a href="intimationLetter.php">INTIMATION LETTERS</a></li>

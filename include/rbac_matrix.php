@@ -49,6 +49,7 @@ function aitf_has_access($module) {
         'Mgmt Dashboard' => ['Top Mgmt'],
         'Mailbox' => ['Admin', 'Office Staff-A', 'Office Staff-B', 'Finance', 'Marketing Head', 'Marketing Executive'],
         'Job Applications' => ['Admin', 'Office Staff-A', 'Office Staff-B'],
+        'Guidelines' => ['Admin', 'Office Staff', 'Office Staff-A', 'Office Staff-B', 'Finance', 'Auditor', 'auditors', 'Application Reviewer', 'Application Reviewers', 'Report Reviewer', 'Marketing', 'Marketing Head', 'Marketing Executive', 'Working Project'],
     ];
 
     if (!array_key_exists($module, $access_matrix)) {

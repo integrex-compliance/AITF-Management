@@ -33,8 +33,9 @@ function getNextAllotmentSequence($db, $customerId, $year, $month) {
     }
 
     // 2. Get max sequence from certification_aggrement for the same Agreement month/year.
+    // Explicitly exclude RC agreements so RC recertifications never bump new client sequence
     $maxCountFromAgreement = 0;
-    $sql2 = "SELECT aggrement_no FROM certification_aggrement WHERE YEAR(aggrement_date) = :year AND MONTH(aggrement_date) = :month AND aggrement_no LIKE :prefix";
+    $sql2 = "SELECT aggrement_no FROM certification_aggrement WHERE YEAR(aggrement_date) = :year AND MONTH(aggrement_date) = :month AND aggrement_no LIKE :prefix AND aggrement_no NOT LIKE '%Rc-%' AND aggrement_no NOT LIKE '%-RC-%'";
     $stmt2 = $db->prepare($sql2);
     $monthInt = (int)$month;
     $stmt2->bindParam(':year', $year);
@@ -44,7 +45,7 @@ function getNextAllotmentSequence($db, $customerId, $year, $month) {
     $rows2 = $stmt2->fetchAll(PDO::FETCH_ASSOC);
     foreach ($rows2 as $row2) {
         $agNo = $row2['aggrement_no'];
-        if ($agNo && preg_match('/^AITF\/' . preg_quote($monthName, '/') . '-' . preg_quote($yy, '/') . '\/(\d+)(?:\s+Rc-\d+)?$/i', $agNo, $matches)) {
+        if ($agNo && preg_match('/^AITF\/' . preg_quote($monthName, '/') . '-' . preg_quote($yy, '/') . '\/(\d+)$/i', $agNo, $matches)) {
             $seq = (int)$matches[1];
             if ($seq > $maxCountFromAgreement) {
                 $maxCountFromAgreement = $seq;
@@ -117,18 +118,32 @@ if (isset($_POST["certificateid"]) && !empty($_POST["certificateid"])) {
         $year = $orderdate[2];
         $allotmentLockName = acquireAllotmentLock($db, $year, $month);
         
+        $isRcAgreement = (bool)preg_match('/\bRc-\d+/i', $_POST['allotmentNo']);
+        if (!$isRcAgreement && isset($_POST["service"]) && !empty($_POST["service"])) {
+            $serviceTypeCheck = "SELECT service_type FROM service WHERE service_id = :sid";
+            $stmtCheck = $db->prepare($serviceTypeCheck);
+            $stmtCheck->bindParam(':sid', $_POST["service"]);
+            $stmtCheck->execute();
+            $svcRow = $stmtCheck->fetch();
+            if ($svcRow && ($svcRow['service_type'] == 'RC' || $svcRow['service_type'] == 'CR')) {
+                $isRcAgreement = true;
+            }
+        }
+
         // Validation to prevent duplicate allotment numbers in Case A (Edit)
-        $checkSql = "SELECT COUNT(*) as count FROM certification_aggrement WHERE aggrement_no = :altno AND id != :id";
-        $stmtCheck = $db->prepare($checkSql);
-        $stmtCheck->bindParam(':altno', $_POST['allotmentNo']);
-        $stmtCheck->bindParam(':id', $_POST["certificateid"]);
-        $stmtCheck->execute();
-        $resCheck = $stmtCheck->fetch();
-        if ($resCheck && (int)$resCheck['count'] > 0) {
-            // It is a duplicate! Recalculate a unique one
-            $allocatedCount = getNextAllotmentSequence($db, $_POST["csId"], $year, $month);
-            $_POST['allotmentNo'] = formatAllotmentNo($year, $month, $allocatedCount);
-            $_POST['newCount'] = $allocatedCount;
+        if (!$isRcAgreement) {
+            $checkSql = "SELECT COUNT(*) as count FROM certification_aggrement WHERE aggrement_no = :altno AND id != :id";
+            $stmtCheck = $db->prepare($checkSql);
+            $stmtCheck->bindParam(':altno', $_POST['allotmentNo']);
+            $stmtCheck->bindParam(':id', $_POST["certificateid"]);
+            $stmtCheck->execute();
+            $resCheck = $stmtCheck->fetch();
+            if ($resCheck && (int)$resCheck['count'] > 0) {
+                // It is a duplicate! Recalculate a unique one
+                $allocatedCount = getNextAllotmentSequence($db, $_POST["csId"], $year, $month);
+                $_POST['allotmentNo'] = formatAllotmentNo($year, $month, $allocatedCount);
+                $_POST['newCount'] = $allocatedCount;
+            }
         }
 
         $sql = "UPDATE `certification_aggrement` SET `aggrement_date`= :date ,`aggrement_no`= :no  WHERE `id` = :id ";
@@ -145,14 +160,26 @@ if (isset($_POST["certificateid"]) && !empty($_POST["certificateid"])) {
         $statement->bindParam(':id', $_POST['csId']);
         $statement->execute();
 
-        $updateCount = "UPDATE allotment_count SET year = :year, month = :month, certification_date = :date, client_count = :count WHERE client_id = :customer";
-        $statement = $db->prepare($updateCount);
-        $statement->bindParam(":year", $year);
-        $statement->bindParam(":month", $month);
-        $statement->bindParam(":count", $_POST["newCount"]);
-        $statement->bindParam(":customer", $_POST['csId']);
-        $statement->bindParam(":date", date("Y-m-d", strtotime($_POST["newRegistrationDate"])));
-        $statement->execute();
+        // ONLY update allotment_count for base client allotments (NEVER for RC agreements)
+        if (!$isRcAgreement) {
+            $cleanCount = null;
+            if (preg_match('/\/(\d+)$/', $_POST['allotmentNo'], $seqMatch)) {
+                $cleanCount = (int)$seqMatch[1];
+            } else if (isset($_POST["newCount"]) && is_numeric($_POST["newCount"])) {
+                $cleanCount = (int)$_POST["newCount"];
+            }
+
+            if ($cleanCount !== null) {
+                $updateCount = "UPDATE allotment_count SET year = :year, month = :month, certification_date = :date, client_count = :count WHERE client_id = :customer";
+                $statement = $db->prepare($updateCount);
+                $statement->bindParam(":year", $year);
+                $statement->bindParam(":month", $month);
+                $statement->bindParam(":count", $cleanCount);
+                $statement->bindParam(":customer", $_POST['csId']);
+                $statement->bindParam(":date", date("Y-m-d", strtotime($_POST["newRegistrationDate"])));
+                $statement->execute();
+            }
+        }
 
         releaseAllotmentLock($db, $allotmentLockName);
         $allotmentLockName = null;
@@ -205,7 +232,8 @@ if (isset($_POST["certificateid"]) && !empty($_POST["certificateid"])) {
         $statement->execute();
         $row = $statement->fetch();
 
-        $shouldAllocateBaseAllotment = (!$isRCService && !($isCRService && $hasPreviousServices));
+        $isRcAgreement = ($isRCService || ($isCRService && $hasPreviousServices) || preg_match('/\bRc-\d+/i', $_POST['allotmentNo']));
+        $shouldAllocateBaseAllotment = (!$isRcAgreement);
         
         // Always store the allotment as provided (including Rc-X suffix when generated for RC/CR)
         $allotmentToStore = $_POST["allotmentNo"];
@@ -214,7 +242,7 @@ if (isset($_POST["certificateid"]) && !empty($_POST["certificateid"])) {
         if (!$row["id"] && $shouldAllocateBaseAllotment) {
             $allocatedCount = getNextAllotmentSequence($db, $_POST["csId"], $year, $month);
             $allotmentToStore = formatAllotmentNo($year, $month, $allocatedCount);
-        } else {
+        } else if ($shouldAllocateBaseAllotment) {
             // Validate to prevent duplicate allotment numbers for any other base allotments
             $checkSql = "SELECT COUNT(*) as count FROM certification_aggrement WHERE aggrement_no = :altno";
             $stmtCheck = $db->prepare($checkSql);
@@ -224,6 +252,31 @@ if (isset($_POST["certificateid"]) && !empty($_POST["certificateid"])) {
             if ($resCheck && (int)$resCheck['count'] > 0) {
                 $allocatedCount = getNextAllotmentSequence($db, $_POST["csId"], $year, $month);
                 $allotmentToStore = formatAllotmentNo($year, $month, $allocatedCount);
+            }
+        } else {
+            // RC or CR after CA/SA: Never overwrite with a monthly sequence!
+            // If duplicate exists, increment the RC suffix (e.g. Rc-1 -> Rc-2)
+            $checkSql = "SELECT COUNT(*) as count FROM certification_aggrement WHERE aggrement_no = :altno";
+            $stmtCheck = $db->prepare($checkSql);
+            $stmtCheck->bindParam(':altno', $allotmentToStore);
+            $stmtCheck->execute();
+            $resCheck = $stmtCheck->fetch();
+            if ($resCheck && (int)$resCheck['count'] > 0) {
+                if (preg_match('/^(.*)\s+Rc-(\d+)$/i', $allotmentToStore, $rcMatches)) {
+                    $base = $rcMatches[1];
+                    $nextRc = (int)$rcMatches[2] + 1;
+                    while (true) {
+                        $candidateRc = $base . ' Rc-' . $nextRc;
+                        $stmtDup = $db->prepare("SELECT COUNT(*) as count FROM certification_aggrement WHERE aggrement_no = :cno");
+                        $stmtDup->execute([':cno' => $candidateRc]);
+                        $dupRes = $stmtDup->fetch();
+                        if (!$dupRes || (int)$dupRes['count'] === 0) {
+                            $allotmentToStore = $candidateRc;
+                            break;
+                        }
+                        $nextRc++;
+                    }
+                }
             }
         }
 

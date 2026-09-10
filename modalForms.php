@@ -2419,6 +2419,7 @@ $csgttax = $taxationDetails["rate"];
                                                     var allotmentWithSuffix = rcData.base_allotment + ' Rc-' + rcData.rc_count;
                                                     console.log('✅ Setting allotment:', allotmentWithSuffix);
                                                     $('.allotmentNo').val(allotmentWithSuffix);
+                                                    $('.newCount').val('');
                                                     $(".allotmentNo").trigger("change");
                                                 } else {
                                                     console.error('❌ Invalid RC data received:', rcData);
@@ -2459,6 +2460,7 @@ $csgttax = $taxationDetails["rate"];
                                         var allotmentWithSuffix = rcData.base_allotment + ' Rc-' + rcData.rc_count;
                                         console.log('✅ Setting RC allotment:', allotmentWithSuffix);
                                         $('.allotmentNo').val(allotmentWithSuffix);
+                                        $('.newCount').val('');
                                         $(".allotmentNo").trigger("change");
                                     } else {
                                         console.error('❌ Invalid RC data:', rcData);

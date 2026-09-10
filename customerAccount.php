@@ -14661,11 +14661,6 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         serviceid: serviceId
                     },
                     success: function (countData) {
-                        // Set the count if available
-                        if (countData && countData[1] && countData[1].c_id) {
-                            $('.newCount').val(countData[1].c_id);
-                        }
-
                         // Trigger change to update float labels
                         $('input[type="text"]').trigger('change');
 
@@ -14707,27 +14702,11 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         }
                         if (certData && certData.aggrement_no) {
                             $('.allotmentNo').val(certData.aggrement_no);
-                        }
-
-                        // Fetch count data for the customer
-                        $.ajax({
-                            url: "checkCustomer.php",
-                            type: "GET",
-                            dataType: "json",
-                            data: {
-                                customerId: customerId,
-                                serviceid: serviceId
-                            },
-                            success: function (countData) {
-                                // Set the count if available
-                                if (countData && countData[1] && countData[1].c_id) {
-                                    $('.newCount').val(countData[1].c_id);
-                                }
-                            },
-                            error: function () {
-                                // Continue even if count fetch fails
+                            var seqMatch = certData.aggrement_no.match(/\/(\d+)$/);
+                            if (seqMatch && seqMatch[1]) {
+                                $('.newCount').val(seqMatch[1]);
                             }
-                        });
+                        }
 
                         // Trigger change to update float labels
                         $('input[type="text"]').trigger('change');

@@ -854,6 +854,9 @@ aitf_touch_login_activity($db);
                 <a class="nav-item" data-tab="performance" href="#performance">
                     <i class="fas fa-chart-bar"></i> Performance
                 </a>
+                <a href="guidelines.php" class="nav-item" style="color: #10b981; font-weight: 600;">
+                    <i class="fas fa-book"></i> Guidelines
+                </a>
                 <?php if (Utitlity::checkUserPermission('client_access')) { ?>
                 <a href="homePage.php" class="nav-item" style="color: #6366f1;">
                     <i class="fas fa-building"></i> Company Clients

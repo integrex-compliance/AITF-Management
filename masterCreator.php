@@ -7,6 +7,7 @@
     include_once './include/customer_feature_flags.php';
     require_once __DIR__ . '/include/auditor_portal_helper.php';
     require_once __DIR__ . '/include/rbac_helper.php';
+    require_once __DIR__ . '/include/staff_guidelines_lib.php';
     date_default_timezone_set('Asia/Kolkata');
 
     if (!Utitlity::checkForDirector()) {
@@ -123,6 +124,10 @@
     $statement = $db->prepare($handlers);
     $statement->execute();
     $handlersList = $statement->fetchAll();
+
+    // Staff Guidelines Data
+    $availableGuidelineRoles = aitf_get_guideline_roles_list($db);
+    $allMasterGuidelines = aitf_get_guidelines_for_user($db, 'Top Mgmt');
     ?>
     <div id="page-content-wrapper">
         <div class="page-content inset">
@@ -793,6 +798,189 @@
                     </div>
                 </div>
 
+                <!-- ======================================================== -->
+                <!-- POST GUIDELINES FOR STAFF SECTION                        -->
+                <!-- ======================================================== -->
+                <div class="row" id="guidelines-section" style="margin-top: 35px; margin-bottom: 25px;">
+                    <div class="col-sm-12">
+                        <div class="mc-guidelines-box" style="background: #ffffff; border-radius: 14px; border: 1px solid #e2e8f0; box-shadow: 0 4px 20px rgba(0,0,0,0.05); padding: 24px;">
+                            <div class="mc-guidelines-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-bottom: 2px solid #f1f5f9; padding-bottom: 16px;">
+                                <div>
+                                    <h3 style="margin: 0 0 4px 0; font-size: 19px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 10px;">
+                                        <span style="background: #ecfdf5; color: #10b981; width: 34px; height: 34px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-size: 16px;">
+                                            <i class="fa fa-book"></i>
+                                        </span>
+                                        Post Guidelines for Staff
+                                    </h3>
+                                    <p style="margin: 0; font-size: 13px; color: #64748b;">
+                                        Publish operational guidelines and directives for staff.
+                                    </p>
+                                </div>
+                               
+                            </div>
+
+                            <div class="row" style="margin-top: 22px;">
+                                <!-- Left Column: Form -->
+                                <div class="col-md-6">
+                                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px;">
+                                        <h4 style="margin: 0 0 16px 0; font-size: 15px; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 8px;">
+                                            <i class="fa fa-pencil-square-o" style="color: #0ea5e9;"></i> Create New Staff Guideline
+                                        </h4>
+                                        <form id="postStaffGuidelineForm" method="post" enctype="multipart/form-data">
+                                            <input type="hidden" name="action" value="create_guideline">
+                                            <input type="hidden" name="is_ajax" value="1">
+
+                                            <!-- Select Post For (Role) -->
+                                            <div class="form-group" style="margin-bottom: 16px;">
+                                                <label style="font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px; display: block;">
+                                                    <i class="fa fa-user-circle-o" style="color: #6366f1;"></i> Select Post For (Target Role) <span class="text-danger">*</span>
+                                                </label>
+                                                <select name="target_role" id="targetRoleSelect" class="form-control" required style="border-radius: 8px; height: 42px; font-weight: 600; font-size: 13.5px; border-color: #cbd5e1;">
+                                                    <option value="All" style="font-weight: 700; color: #047857;">-- All Staff / All Roles (Everyone) --</option>
+                                                    <?php foreach ($availableGuidelineRoles as $rKey => $rVal) { 
+                                                        if ($rKey === 'All') continue;
+                                                    ?>
+                                                        <option value="<?php echo htmlspecialchars($rKey); ?>"><?php echo htmlspecialchars($rVal); ?></option>
+                                                    <?php } ?>
+                                                </select>
+                                                <small class="text-muted" style="display: block; margin-top: 5px; font-size: 11.5px; color: #64748b;">
+                                                    <i class="fa fa-info-circle text-info"></i> If you select <strong>Auditor</strong>, only Auditor role will see this. Top Mgmt sees all guidelines with role tags.
+                                                </small>
+                                            </div>
+
+                                            <!-- Guideline Title -->
+                                            <div class="form-group" style="margin-bottom: 16px;">
+                                                <label style="font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px; display: block;">
+                                                    <i class="fa fa-tag" style="color: #f59e0b;"></i> Guideline Title<span class="text-danger">*</span>
+                                                </label>
+                                                <input type="text" name="guideline_title" id="guidelineTitle" class="form-control" required 
+                                                       placeholder="e.g., ISO Audit Reporting Protocol & Deadlines 2026" 
+                                                       style="border-radius: 8px; height: 42px; font-size: 13.5px; border-color: #cbd5e1;">
+                                            </div>
+
+                                            <!-- Guideline Description -->
+                                            <div class="form-group" style="margin-bottom: 16px;">
+                                                <label style="font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px; display: block;">
+                                                    <i class="fa fa-align-left" style="color: #0ea5e9;"></i> Description<span class="text-danger">*</span>
+                                                </label>
+                                                <textarea name="guideline_description" id="guidelineDesc" rows="5" class="form-control" required 
+                                                          placeholder="Write detailed instructions, procedures, checklist guidelines, or policy rules for the staff..." 
+                                                          style="border-radius: 8px; resize: vertical; font-size: 13.5px; border-color: #cbd5e1; line-height: 1.5;"></textarea>
+                                            </div>
+
+                                            <!-- Attachments & Dynamic Add More -->
+                                            <div class="form-group" style="margin-bottom: 20px;">
+                                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                                    <label style="font-weight: 700; font-size: 13px; color: #334155; margin: 0;">
+                                                        <i class="fa fa-paperclip" style="color: #10b981;"></i> Attach Document(s)
+                                                    </label>
+                                                    <button type="button" class="btn btn-xs" id="btnAddMoreAttachment" 
+                                                            style="background: #10b981; color: #fff; border-radius: 6px; font-weight: 700; padding: 4px 12px; box-shadow: 0 2px 6px rgba(16,185,129,0.25);">
+                                                        <i class="fa fa-plus"></i> Add More Attachment
+                                                    </button>
+                                                </div>
+                                             
+
+                                                <!-- Dynamic Container for Attachment inputs -->
+                                                <div id="attachmentsContainer">
+                                                    <!-- Default First Row -->
+                                                    <div class="attachment-input-row" style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                                                        <div style="flex-grow: 1;">
+                                                            <input type="file" name="guideline_files[]" class="form-control" style="border-radius: 8px; height: 38px; padding: 5px 10px; font-size: 12px; border-color: #cbd5e1;">
+                                                        </div>
+                                                        <button type="button" class="btn btn-default btn-sm btn-remove-att-row" style="border-radius: 8px; color: #94a3b8; display: none;" title="Remove attachment">
+                                                            <i class="fa fa-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Submit / Post Button -->
+                                            <div>
+                                                <button type="submit" class="btn btn-block" id="btnSubmitGuideline" 
+                                                        style="background: linear-gradient(135deg, #0d4d8b 0%, #06325d 100%); color: #fff; border-radius: 8px; height: 44px; font-size: 14px; font-weight: 700; border: none; box-shadow: 0 4px 14px rgba(13,77,139,0.3); transition: all 0.2s ease;">
+                                                    <i class="fa fa-paper-plane" style="margin-right: 6px;"></i> Post Guideline
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+
+                                <!-- Right Column: Recently Posted Guidelines -->
+                                <div class="col-md-6">
+                                    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; height: 100%;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 14px;">
+                                            <h4 style="margin: 0; font-size: 15px; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 8px;">
+                                                <i class="fa fa-list-alt" style="color: #10b981;"></i> Published Guidelines
+                                            </h4>
+                                            <span class="badge" style="background: #0ea5e9; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 12px;" id="postedGuidelinesCount">
+                                                <?php echo count($allMasterGuidelines); ?> Posted
+                                            </span>
+                                        </div>
+
+                                        <div class="posted-guidelines-scroll" style="max-height: 520px; overflow-y: auto; padding-right: 6px;">
+                                            <div id="masterGuidelinesListContainer">
+                                                <?php if (empty($allMasterGuidelines)) { ?>
+                                                    <div class="text-center text-muted" style="padding: 60px 15px;" id="noMasterGuidelinesNotice">
+                                                        <i class="fa fa-folder-open-o" style="font-size: 40px; color: #cbd5e1; margin-bottom: 10px; display: block;"></i>
+                                                        <p style="margin: 0; font-size: 13.5px;">No guidelines posted yet. Use the form on the left to post directives for staff.</p>
+                                                    </div>
+                                                <?php } else { ?>
+                                                    <?php foreach ($allMasterGuidelines as $mg) { 
+                                                        $mBadge = aitf_get_role_badge_style($mg['target_role']);
+                                                        $mAtts = $mg['attachments'] ?? [];
+                                                        $mDate = date('M d, Y - h:i A', strtotime($mg['created_at']));
+                                                        $mRoleName = ($mg['target_role'] === 'All' || $mg['target_role'] === 'All Roles' || $mg['target_role'] === 'All Staff') ? 'All Staff' : $mg['target_role'];
+                                                    ?>
+                                                        <div class="mc-guideline-item" id="mc-guideline-item-<?php echo $mg['id']; ?>" 
+                                                             style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; transition: all 0.2s ease;">
+                                                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+                                                                <div>
+                                                                    <span class="badge" style="background: <?php echo $mBadge['bg']; ?>; color: <?php echo $mBadge['text']; ?>; border: 1px solid <?php echo $mBadge['border']; ?>; font-size: 11px; font-weight: 800; padding: 3px 10px; border-radius: 12px; margin-bottom: 6px; display: inline-block;">
+                                                                        <i class="<?php echo $mBadge['icon']; ?>"></i> FOR: <?php echo strtoupper(htmlspecialchars($mRoleName)); ?>
+                                                                    </span>
+                                                                    <div style="font-size: 14px; font-weight: 700; color: #0f172a; margin-top: 2px;">
+                                                                        <?php echo htmlspecialchars($mg['title']); ?>
+                                                                    </div>
+                                                                </div>
+                                                                <button type="button" class="btn btn-xs btn-delete-mc-guideline" 
+                                                                        data-id="<?php echo $mg['id']; ?>" 
+                                                                        data-title="<?php echo htmlspecialchars($mg['title'], ENT_QUOTES); ?>"
+                                                                        style="color: #dc2626; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 4px 8px;" 
+                                                                        title="Delete this guideline">
+                                                                    <i class="fa fa-trash"></i>
+                                                                </button>
+                                                            </div>
+
+                                                            <div style="font-size: 12.5px; color: #475569; margin: 8px 0; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                                                                <?php echo htmlspecialchars($mg['description']); ?>
+                                                            </div>
+
+                                                            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; color: #94a3b8; border-top: 1px dashed #e2e8f0; padding-top: 8px; margin-top: 8px;">
+                                                                <span><i class="fa fa-clock-o"></i> <?php echo $mDate; ?></span>
+                                                                <span style="display: flex; align-items: center; gap: 10px;">
+                                                                    <?php if (!empty($mAtts)) { ?>
+                                                                        <span style="color: #0ea5e9; font-weight: 600;">
+                                                                            <i class="fa fa-paperclip"></i> <?php echo count($mAtts); ?> doc(s)
+                                                                        </span>
+                                                                    <?php } ?>
+                                                                    <a href="guidelines.php#guideline-card-<?php echo $mg['id']; ?>" target="_blank" style="color: #10b981; font-weight: 700; text-decoration: none;">
+                                                                        <i class="fa fa-eye"></i> View Live
+                                                                    </a>
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    <?php } ?>
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div id="delete-details" style="display: none">
                     <div id="loading-div" class="ui-corner-all">
                         <span style="font-size: 30pt;"><i style="padding: 5px;"
@@ -860,6 +1048,166 @@
 
         $(document).ready(function () {
             
+            // ==========================================
+            // Staff Guidelines Logic
+            // ==========================================
+            // Dynamic Add More Attachment
+            $('#btnAddMoreAttachment').on('click', function(e) {
+                e.preventDefault();
+                var newRow = $(
+                    '<div class="attachment-input-row" style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">' +
+                        '<div style="flex-grow: 1;">' +
+                            '<input type="file" name="guideline_files[]" class="form-control" style="border-radius: 8px; height: 38px; padding: 5px 10px; font-size: 12px; border-color: #cbd5e1;">' +
+                        '</div>' +
+                        '<button type="button" class="btn btn-danger btn-sm btn-remove-att-row" style="border-radius: 8px; padding: 5px 10px;" title="Remove attachment">' +
+                            '<i class="fa fa-trash"></i>' +
+                        '</button>' +
+                    '</div>'
+                );
+                $('#attachmentsContainer').append(newRow);
+            });
+
+            // Remove Attachment Row
+            $(document).on('click', '.btn-remove-att-row', function(e) {
+                e.preventDefault();
+                $(this).closest('.attachment-input-row').remove();
+            });
+
+            // Post Guideline AJAX Submission
+            $('#postStaffGuidelineForm').on('submit', function(e) {
+                e.preventDefault();
+
+                var $form = $(this);
+                var $btn = $('#btnSubmitGuideline');
+                var origBtnHtml = $btn.html();
+
+                var title = $.trim($('#guidelineTitle').val());
+                var desc = $.trim($('#guidelineDesc').val());
+
+                if (title === '') {
+                    alert('Please enter guideline title.');
+                    $('#guidelineTitle').focus();
+                    return false;
+                }
+                if (desc === '') {
+                    alert('Please write guideline description.');
+                    $('#guidelineDesc').focus();
+                    return false;
+                }
+
+                $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Posting Guideline...');
+
+                var formData = new FormData(this);
+
+                $.ajax({
+                    url: 'guidelines_action.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    dataType: 'json',
+                    success: function(res) {
+                        $btn.prop('disabled', false).html(origBtnHtml);
+                        if (res.success) {
+                            if (typeof Swal !== 'undefined') {
+                                Swal.fire({
+                                    title: 'Guideline Posted!',
+                                    text: res.message,
+                                    icon: 'success',
+                                    confirmButtonColor: '#0d4d8b'
+                                }).then(function() {
+                                    location.reload();
+                                });
+                            } else {
+                                alert(res.message);
+                                location.reload();
+                            }
+                        } else {
+                            if (typeof Swal !== 'undefined') {
+                                Swal.fire('Error', res.message || 'Failed to post guideline', 'error');
+                            } else {
+                                alert(res.message || 'Failed to post guideline');
+                            }
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        $btn.prop('disabled', false).html(origBtnHtml);
+                        alert('Error communicating with server. Please try again.');
+                    }
+                });
+            });
+
+            // Delete Guideline from Master Creator
+            $(document).on('click', '.btn-delete-mc-guideline', function(e) {
+                e.preventDefault();
+                var id = $(this).data('id');
+                var title = $(this).data('title');
+
+                var doDelete = function() {
+                    $.ajax({
+                        url: 'guidelines_action.php',
+                        type: 'POST',
+                        data: {
+                            action: 'delete_guideline',
+                            guideline_id: id,
+                            is_ajax: 1
+                        },
+                        dataType: 'json',
+                        success: function(resp) {
+                            if (resp.success) {
+                                $('#mc-guideline-item-' + id).fadeOut(300, function() {
+                                    $(this).remove();
+                                    var count = $('.mc-guideline-item').length;
+                                    $('#postedGuidelinesCount').text(count + ' Posted');
+                                    if (count === 0) {
+                                        $('#masterGuidelinesListContainer').html(
+                                            '<div class="text-center text-muted" style="padding: 60px 15px;" id="noMasterGuidelinesNotice">' +
+                                                '<i class="fa fa-folder-open-o" style="font-size: 40px; color: #cbd5e1; margin-bottom: 10px; display: block;"></i>' +
+                                                '<p style="margin: 0; font-size: 13.5px;">No guidelines posted yet. Use the form on the left to post directives for staff.</p>' +
+                                            '</div>'
+                                        );
+                                    }
+                                });
+                                if (typeof Swal !== 'undefined') {
+                                    Swal.fire({
+                                        title: 'Deleted!',
+                                        text: resp.message,
+                                        icon: 'success',
+                                        timer: 1500,
+                                        showConfirmButton: false
+                                    });
+                                }
+                            } else {
+                                alert(resp.message || 'Failed to delete guideline.');
+                            }
+                        },
+                        error: function() {
+                            alert('Server connection error.');
+                        }
+                    });
+                };
+
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: 'Delete Guideline?',
+                        text: 'Are you sure you want to delete "' + title + '" and its attachments?',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#dc2626',
+                        cancelButtonColor: '#6b7280',
+                        confirmButtonText: 'Yes, Delete'
+                    }).then(function(result) {
+                        if (result.isConfirmed) {
+                            doDelete();
+                        }
+                    });
+                } else {
+                    if (confirm('Are you sure you want to delete "' + title + '"?')) {
+                        doDelete();
+                    }
+                }
+            });
+
             // Feature Toggles Logic
             var updateMasterToggleState = function() {
                 var allChecked = $('.feature-toggle-checkbox').length === $('.feature-toggle-checkbox:checked').length;

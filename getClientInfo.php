@@ -46,8 +46,9 @@ function getNextAllotmentSequence($db, $customerId, $year, $month) {
     }
 
     // 2. Get max sequence from certification_aggrement for the same Agreement month/year.
+    // Explicitly exclude RC agreements so RC recertifications never bump new client sequence
     $maxCountFromAgreement = 0;
-    $sql2 = "SELECT aggrement_no FROM certification_aggrement WHERE YEAR(aggrement_date) = :year AND MONTH(aggrement_date) = :month AND aggrement_no LIKE :prefix";
+    $sql2 = "SELECT aggrement_no FROM certification_aggrement WHERE YEAR(aggrement_date) = :year AND MONTH(aggrement_date) = :month AND aggrement_no LIKE :prefix AND aggrement_no NOT LIKE '%Rc-%' AND aggrement_no NOT LIKE '%-RC-%'";
     $stmt2 = $db->prepare($sql2);
     $monthInt = (int)$month;
     $stmt2->bindParam(':year', $year);
@@ -57,7 +58,7 @@ function getNextAllotmentSequence($db, $customerId, $year, $month) {
     $rows2 = $stmt2->fetchAll(PDO::FETCH_ASSOC);
     foreach ($rows2 as $row2) {
         $agNo = $row2['aggrement_no'];
-        if ($agNo && preg_match('/^AITF\/' . preg_quote($monthName, '/') . '-' . preg_quote($yy, '/') . '\/(\d+)(?:\s+Rc-\d+)?$/i', $agNo, $matches)) {
+        if ($agNo && preg_match('/^AITF\/' . preg_quote($monthName, '/') . '-' . preg_quote($yy, '/') . '\/(\d+)$/i', $agNo, $matches)) {
             $seq = (int)$matches[1];
             if ($seq > $maxCountFromAgreement) {
                 $maxCountFromAgreement = $seq;

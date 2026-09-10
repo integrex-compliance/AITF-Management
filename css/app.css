@@ -174,6 +174,38 @@
         .sidebar-nav li a.mgmt-space-link.active .sub_icon {
             color: #fbbf24 !important;
         }
+
+        /* Guidelines Menu Item — Distinct Vibrant Emerald Styling */
+        .sidebar-nav li a.guidelines-nav-link {
+            color: #34d399 !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.5px !important;
+            background: linear-gradient(90deg, rgba(16, 185, 129, 0.22) 0%, rgba(16, 185, 129, 0.05) 100%) !important;
+            border-left: 3.5px solid #10b981 !important;
+            border-bottom: 1px solid rgba(16, 185, 129, 0.22) !important;
+        }
+
+        .sidebar-nav li a.guidelines-nav-link .sub_icon,
+        .sidebar-nav li a.guidelines-nav-link i {
+            color: #34d399 !important;
+            text-shadow: 0 0 8px rgba(52, 211, 153, 0.5);
+        }
+
+        .sidebar-nav li a.guidelines-nav-link:hover {
+            background: linear-gradient(90deg, rgba(16, 185, 129, 0.35) 0%, rgba(16, 185, 129, 0.12) 100%) !important;
+            color: #ecfdf5 !important;
+        }
+
+        .sidebar-nav li a.guidelines-nav-link.active {
+            background: linear-gradient(90deg, rgba(16, 185, 129, 0.45) 0%, rgba(16, 185, 129, 0.2) 100%) !important;
+            border-left: 3.5px solid #34d399 !important;
+            color: #ffffff !important;
+            box-shadow: inset 0 0 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .sidebar-nav li a.guidelines-nav-link.active .sub_icon {
+            color: #ffffff !important;
+        }
         
         .sidebar-nav > .sidebar-brand {
             height: 65px;
