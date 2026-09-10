@@ -1,1 +1,0 @@
-<?php session_start(); $_SESSION["username"] = "admin"; $_SESSION["userId"] = 1; $_SESSION["role"] = "admin"; $_GET["customerid"] = 1226; $_SERVER['REQUEST_URI'] = '/public_html/customerAccount.php?customerid=1226'; error_reporting(E_ALL); ini_set("display_errors", 1); include "customerAccount.php"; ?>

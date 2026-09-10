@@ -18,8 +18,9 @@ dubug.php
 dbConnect.php
 .env
 repomix-output.xml
- .agents/
-        .kiro/
+.agents/
+.kiro/
+.claude/
 ai_project_notes.md
 README.md
 test_logs/
