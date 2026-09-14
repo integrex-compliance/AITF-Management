@@ -370,9 +370,9 @@ foreach ($auditors as $name) {
 
                         <div class="row " style="">
                             <div class="col-sm-12 form-group float-label-control">
-                                <label>If Stage- I Audit not recommended Reason</label>
+                                <label>Reason (If stage 1 audit is not recommended)</label>
                                 <input type="text" class="assessmentStageIReason" id="assessmentStageIReason"
-                                    name="assessmentStageIReason" placeholder="If Stage- I Audit not recommended Reason"
+                                    name="assessmentStageIReason" placeholder="Reason (If stage 1 audit is not recommended)"
                                     required>
                             </div>
                         </div>

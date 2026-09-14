@@ -347,7 +347,7 @@ $html = '<p style="text-align: justify;text-justify: inter-word;"><font size="9"
             </table>
             <table border="1"  cellpadding="4" cellspacing="0" >
                 <tr>
-                    <td> If Stage- I Audit not recommended Reason: ' . $assessmentInfo['recommended_reason'] . '</td>
+                    <td>  Reason (If stage 1 audit is not recommended): ' . $assessmentInfo['recommended_reason'] . '</td>
                 </tr>
             </table> 
             <table border="1"  cellpadding="4" cellspacing="0" >
