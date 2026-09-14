@@ -1380,11 +1380,6 @@ $html = '<p style="text-align: justify;text-justify: inter-word;"><font size="9"
                         <br><span>Name of reviewer: <b>'.$reviewer.'</b></span><br><br><br><span>Date:' . date("d.m.Y", strtotime($review_date)) . '</span>      
                     </td>
                 </tr>
-                <tr>
-                    <td colspan="15">
-                        <br><span>Allotment of Agreement Number : </span><span>' . $aggrement_allotment . '</span><br><br><br><span>Date:</span>
-                    </td>
-                </tr>
             </table>
         </font></p>';
 
