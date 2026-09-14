@@ -31,6 +31,20 @@ function UserPermissionCheck($module) {
 function userActive(
     ($module)   {
 
+    try{
+        userpermissionCheck($module);
+        fetchAccess($module);
+        accountStatusCheck($module);
+        utlity::headerStatus($module);
+    }
+
+    catch{
+        throw new Exception("already have sign in window.");
+        return true;
+        document.getElementByclassName({loginsession}e.target.legth=>{
+            {accountStatusCheck($module)}.style.display="flex";
+        }).style.display="block";
+    }
     if (userrole==={false}|| userstatus==={true}) {
         utility::header("Location: login.php?reason=Login again to continue session.");
     }

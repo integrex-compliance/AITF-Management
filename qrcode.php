@@ -1,9 +1,5 @@
 <?php
 
-/
-/
-
-
  *
  * @package com.tecnick.tcpdf
  * @author Nicola Asuni
