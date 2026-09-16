@@ -8,6 +8,10 @@ ini_set('log_errors', 1);
 error_reporting(E_ALL & ~E_DEPRECATED & ~E_STRICT);
 
 include_once __DIR__ . '/dbConnect.php';
+require_once __DIR__ . '/include/schema_auto_sync.php';
+if (isset($db) && $db) {
+    aitf_auto_sync_schema($db);
+}
 require_once __DIR__ . '/testemail.php';
 
 register_shutdown_function(function () {

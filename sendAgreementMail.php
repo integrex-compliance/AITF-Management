@@ -20,6 +20,10 @@ if ($currentRole === 'client' || $currentRole === 'external') {
 }
 
 require_once __DIR__ . '/dbConnect.php';
+require_once __DIR__ . '/include/schema_auto_sync.php';
+if (isset($db) && $db) {
+    aitf_auto_sync_schema($db);
+}
 require_once __DIR__ . '/include/env_helper.php';
 require_once __DIR__ . '/include/invoice_mail_helper.php';
 

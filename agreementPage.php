@@ -10,6 +10,10 @@
     $pageIdentifier = "agreement";
     include 'header.php';
     include 'dbConnect.php';
+    require_once __DIR__ . '/include/schema_auto_sync.php';
+    if (isset($db) && $db) {
+        aitf_auto_sync_schema($db);
+    }
 
     $invRole = trim($_SESSION['role'] ?? '');
     $isMarketingHead = in_array($invRole, array('Marketing Head', 'Marketing Executive'), true)

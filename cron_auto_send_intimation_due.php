@@ -23,6 +23,10 @@ if (ob_get_level()) {
 
 require_once __DIR__ . '/tcpdf_include.php';
 include_once __DIR__ . '/dbConnect.php';
+require_once __DIR__ . '/include/schema_auto_sync.php';
+if (isset($db) && $db) {
+    aitf_auto_sync_schema($db);
+}
 require_once __DIR__ . '/include/env_helper.php';
 require_once __DIR__ . '/include/certification_cycle_helper.php';
 

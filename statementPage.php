@@ -5,8 +5,9 @@ include 'header.php';
 include 'dbConnect.php';
 require_once __DIR__ . '/include/statement_helper.php';
 
-// Code-level self-healing: ensures tables exist on live without running manual DB queries
+require_once __DIR__ . '/include/schema_auto_sync.php';
 if ($db) {
+    aitf_auto_sync_schema($db);
     aitf_ensure_statement_tables($db);
 }
 

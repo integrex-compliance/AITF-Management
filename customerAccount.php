@@ -28,6 +28,10 @@ if ($currentRole === 'client' || $currentRole === 'external') {
 
     include_once __DIR__ . '/include/date_graph_helpers.php';
     ensureCdcIsoMetadataTable($db);
+    require_once __DIR__ . '/include/schema_auto_sync.php';
+    if (isset($db) && $db) {
+        aitf_auto_sync_schema($db);
+    }
 
     $customerLettersEditIconVisible = aitfCustomerFeatureIsEnabled($db, 'customer_letters_edit_icon_visible');
     $customerLettersDeleteIconVisible = aitfCustomerFeatureIsEnabled($db, 'customer_letters_delete_icon_visible');

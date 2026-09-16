@@ -27,8 +27,10 @@ include 'schedule2servelance.php';
 include 'utility.php';
 require_once __DIR__ . '/include/rbac_matrix.php';
 require_once __DIR__ . '/include/customer_recycle_helper.php';
+require_once __DIR__ . '/include/schema_auto_sync.php';
 if (isset($db) && $db) {
     aitfEnsureRecycleSchema($db);
+    aitf_auto_sync_schema($db);
 }
 
 // Automated Web-Cron URL Trigger for Daily 12:00 PM Due Letters Mailer
