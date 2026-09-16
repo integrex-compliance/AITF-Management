@@ -45,45 +45,58 @@
     $statement->execute();
     $expireDue = $statement->fetchAll();
 
-    // Fetch pending Stage 1 notifications
-    $stage1Query = "SELECT ci.id, ci.customer_name, ci.unique_id, svc.service_id, svc.service_type, 
+    // Fetch pending Stage 1 notifications and plans
+    $stage1Query = "SELECT ci.id, ci.customer_name, ci.email_id, ci.unique_id, svc.service_id, svc.service_type, 
                            soi.intimation_date as due_date, NULL as sent_date, 
-                           'Stage 1 Notification' as action, soi.audit_stage_id as action_id, cas.ca_id
+                           'Stage 1 Notification' as action, soi.audit_stage_id as action_id, cas.ca_id,
+                           COALESCE(asi.audit_schedule_id, (SELECT audit_schedule_id FROM audit_schedule_id WHERE serviceca_id = cas.ca_id OR customer_ca_id = ci.id ORDER BY audit_schedule_id DESC LIMIT 1)) as plan_id
                     FROM stage_oneaudit_id soi
                     INNER JOIN service_type_ca cas ON soi.ca_service_id = cas.ca_id
                     INNER JOIN service svc ON cas.service = svc.service_id
                     INNER JOIN customer_info ci ON svc.customer_id = ci.id
+                    LEFT JOIN audit_schedule_id asi ON cas.ca_id = asi.serviceca_id
                     LEFT JOIN ca_service_dates svcdt ON svc.service_id = svcdt.service_id 
                         AND svcdt.action = 'Stage 1 Notification' 
                         AND svcdt.status = 'sent' 
                         AND svcdt.is_deleted = 'N'
-                    WHERE svcdt.action_id IS NULL
+                    WHERE svc.service_id = " . $latestCertificationService . "
+                      AND svcdt.action_id IS NULL
                       AND soi.intimation_date = CURDATE()
                       AND (ci.is_deleted IS NULL OR ci.is_deleted <> 'YES')
-                      AND (cas.service_ca_status IS NULL OR cas.service_ca_status <> 'Withdrawn')";
+                      AND (cas.service_ca_status IS NULL OR cas.service_ca_status <> 'Withdrawn')"
+                      . $excludeWithdrawn . "
+                    GROUP BY soi.audit_stage_id
+                    ORDER BY soi.audit_stage_id DESC";
     $statement = $db->prepare($stage1Query);
     $statement->execute();
-    $stage1Due = $statement->fetchAll();
+    $stage1Due = $statement->fetchAll(PDO::FETCH_ASSOC);
 
-    // Fetch pending Stage 2 notifications
-    $stage2Query = "SELECT ci.id, ci.customer_name, ci.unique_id, svc.service_id, svc.service_type, 
+    // Fetch pending Stage 2 notifications and plans
+    $stage2Query = "SELECT ci.id, ci.customer_name, ci.email_id, ci.unique_id, svc.service_id, svc.service_type, 
                            stai.intimation_date as due_date, NULL as sent_date, 
-                           'Stage 2 Notification' as action, stai.audit_stageii_id as action_id, cas.ca_id
+                           'Stage 2 Notification' as action, stai.audit_stageii_id as action_id, cas.ca_id,
+                           COALESCE(asii.audit_scheduleii_id, (SELECT audit_scheduleii_id FROM audit_scheduleii_id WHERE ca_service = cas.ca_id OR ca_customer = ci.id ORDER BY audit_scheduleii_id DESC LIMIT 1)) as plan_id
                     FROM stage_twoaudit_id stai
                     INNER JOIN service_type_ca cas ON stai.service_id = cas.ca_id
                     INNER JOIN service svc ON cas.service = svc.service_id
                     INNER JOIN customer_info ci ON svc.customer_id = ci.id
+                    LEFT JOIN audit_scheduleii_id asii ON cas.ca_id = asii.ca_service
                     LEFT JOIN ca_service_dates svcdt ON svc.service_id = svcdt.service_id 
                         AND svcdt.action = 'Stage 2 Notification' 
                         AND svcdt.status = 'sent' 
                         AND svcdt.is_deleted = 'N'
-                    WHERE svcdt.action_id IS NULL
+                    WHERE svc.service_id = " . $latestCertificationService . "
+                      AND svcdt.action_id IS NULL
                       AND stai.intimation_date = CURDATE()
                       AND (ci.is_deleted IS NULL OR ci.is_deleted <> 'YES')
-                      AND (cas.service_ca_status IS NULL OR cas.service_ca_status <> 'Withdrawn')";
+                      AND (cas.service_ca_status IS NULL OR cas.service_ca_status <> 'Withdrawn')"
+                      . $excludeWithdrawn . "
+                    GROUP BY stai.audit_stageii_id
+                    ORDER BY stai.audit_stageii_id DESC";
     $statement = $db->prepare($stage2Query);
     $statement->execute();
-    $stage2Due = $statement->fetchAll();
+    $stage2Due = $statement->fetchAll(PDO::FETCH_ASSOC);
+
 
     // Calculate remaining seconds for the next 12:00 PM (Noon) mail dispatch
     date_default_timezone_set('Asia/Kolkata');
@@ -958,21 +971,68 @@
 
         <div class="modal fade" id="sendStageConfirmModal" tabindex="-1" role="dialog" aria-labelledby="sendStageConfirmTitle">
             <div class="modal-dialog" role="document">
-                <div class="modal-content">
-                    <div class="modal-header" style="background:#053c6d; color: #fff;">
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                        <h4 class="modal-title" id="sendStageConfirmTitle">Send Stage Audit Notification</h4>
+                <div class="modal-content" style="border-radius:8px; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,0.3);">
+                    <div class="modal-header" style="background:#053c6d; color:#fff; padding:15px 20px;">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color:#fff; opacity:0.8;"><span aria-hidden="true">&times;</span></button>
+                        <h4 class="modal-title" id="sendStageConfirmTitle" style="font-weight:600;"><i class="fa fa-envelope" style="margin-right:8px;"></i> <span id="sendStageModalTitleText">Send Notification & Audit Plan</span></h4>
                     </div>
-                    <div class="modal-body">
-                        <p style="font-size:15px; color:#333; margin-bottom: 0;">Are you sure you want to send this stage audit notification to the client?</p>
+                    <div class="modal-body" style="padding:22px;">
+                        <p style="font-size:15px; color:#1e293b; line-height:1.5; margin-bottom:14px;">
+                            Are you sure you want to send <strong id="sendStageModalStageLabel" style="color:#053c6d;">Stage 1 Notification and Plan</strong> to <strong id="sendStageModalCustomerName" style="color:#2563eb;">Client</strong>?
+                        </p>
+                        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-left:4px solid #053c6d; border-radius:6px; padding:12px 16px; margin-bottom:14px;">
+                            <div style="margin-bottom:6px;"><strong>Company:</strong> <span id="sendStageModalCustomerText" style="color:#0f172a; font-weight:600;"></span></div>
+                            <div style="margin-bottom:6px;"><strong>CC:</strong> <span style="color:#2563eb; font-weight:600;">aitfmcl@gmail.com</span></div>
+                            <div style="font-size:12px; color:#64748b;"><i class="fa fa-info-circle"></i> A confirmation copy with Notification and Audit Plan attachments will also be sent to <strong>certification@aitf.co.in</strong>.</div>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label style="display:block; font-size:13px; font-weight:600; color:#334155; margin-bottom:6px;">Recipient Email Address:</label>
+                            <input type="text" id="sendStageModalEmailInput" class="form-control" placeholder="e.g. client@company.com" style="border-radius:6px; font-size:13.5px; padding:8px 12px; border:1px solid #cbd5e1; width:100%; box-sizing:border-box;">
+                        </div>
                     </div>
-                    <div class="modal-footer">
+                    <div class="modal-footer" style="background:#f8fafc; border-top:1px solid #e2e8f0; padding:12px 20px;">
                         <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-                        <button type="button" class="btn btn-warning" id="confirmSendStageBtn">Yes, Send</button>
+                        <button type="button" class="btn btn-primary" id="confirmSendStageBtn" style="background:#053c6d; border-color:#053c6d; font-weight:600;"><i class="fa fa-paper-plane" style="margin-right:5px;"></i> Yes, Send Mail</button>
                     </div>
                 </div>
             </div>
         </div>
+
+
+
+        <!-- Missing Audit Plan Warning Modal -->
+        <div class="modal fade" id="stagePlanMissingModal" tabindex="-1" role="dialog" aria-labelledby="stagePlanMissingTitle">
+            <div class="modal-dialog" role="document" style="max-width: 500px;">
+                <div class="modal-content" style="border-radius:10px; overflow:hidden; box-shadow:0 12px 35px rgba(0,0,0,0.3); border:none;">
+                    <div class="modal-header" style="background:#b45309; color:#fff; padding:15px 20px;">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color:#fff; opacity:0.85;"><span aria-hidden="true">&times;</span></button>
+                        <h4 class="modal-title" id="stagePlanMissingTitle" style="font-weight:600; font-size:16px;">
+                            <i class="fa fa-exclamation-triangle" style="margin-right:8px;"></i> Audit Plan Missing
+                        </h4>
+                    </div>
+                    <div class="modal-body" style="padding:25px; text-align:center;">
+                        <div style="width:68px; height:68px; border-radius:50%; background:#fef3c7; color:#d97706; display:inline-flex; align-items:center; justify-content:center; font-size:30px; margin-bottom:15px; border:2px solid #fde68a;">
+                            <i class="fa fa-file-text-o"></i>
+                        </div>
+                        <h3 style="color:#1e293b; font-weight:700; margin-top:0; margin-bottom:10px; font-size:18px;">Cannot Send Only Notification!</h3>
+                        <p style="font-size:14px; color:#475569; line-height:1.6; margin-bottom:16px;">
+                            The <span id="stageMissingPlanStageText" style="font-weight:600; color:#053c6d;">Stage 1 Notification</span> has been generated for <strong id="missingPlanCustomerName" style="color:#0f172a;">Client</strong>, but the <strong>Audit Plan</strong> has not been generated yet.
+                        </p>
+                        <div style="background:#fffbeb; border:1px solid #fde68a; border-left:4px solid #d97706; border-radius:6px; padding:12px 16px; font-size:13.5px; color:#92400e; text-align:left; line-height:1.5;">
+                            <div style="font-weight:700; margin-bottom:3px;"><i class="fa fa-info-circle"></i> Audit Plan Required:</div>
+                            Please make/generate the <strong>Audit Plan</strong> for this audit first. The email will only be sent when <strong>both</strong> the Audit Notification and Audit Plan documents are ready.
+                        </div>
+                    </div>
+                    <div class="modal-footer" style="background:#f8fafc; border-top:1px solid #e2e8f0; padding:12px 20px; text-align:center;">
+                        <button type="button" class="btn btn-warning" data-dismiss="modal" style="background:#d97706; border-color:#d97706; font-weight:600; padding:8px 25px; border-radius:6px;">
+                            <i class="fa fa-check" style="margin-right:5px;"></i> Understood / OK
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
 
         <div id="loading-div-background" >
             <div id="loading-div" class="ui-corner-all text-center">
@@ -1034,20 +1094,42 @@
                     <div class="col-md-6">
                         <div class="panel panel-primary" style="min-height: 140px" >
                             <div class="panel-heading text-center" style="background: #053c6d">
-                                <h4 style="color: white">Stage 1 Notification</h4>
+                                <h4 style="color: white"><i class="fa fa-calendar-check-o" style="margin-right:6px;"></i> Stage 1 Notification and Plan</h4>
                             </div>
-                            <?php foreach ($stage1Due as $notiInfo) { ?>
+                            <?php if (empty($stage1Due)) { ?>
+                                <div class="text-center text-muted" style="padding: 25px; font-size: 13.5px;">
+                                    <i class="fa fa-check-circle" style="color: #10b981; font-size: 18px;"></i> All Stage 1 notifications & plans have been sent.
+                                </div>
+                            <?php } ?>
+                            <?php foreach ($stage1Due as $notiInfo) { 
+                                $hasPlan = !empty($notiInfo['plan_id']) && intval($notiInfo['plan_id']) > 0;
+                            ?>
                                 <div class="panel-rightbody homePagePanel" id="actionItemDisplayPanel">
                                     <div class="row event-row" id="dummyActionItemRow">
                                         <div class="col-xs-12 col-sm-12">
                                             <ul class="event-list">
                                                 <li>
                                                     <div class="info showActionItem">
-                                                        <a class="PreviewStagePDF btn btn-default btn-xs btn-info" title="PDF" data-customer='<?php echo $notiInfo['id'] ?>' data-service='<?php echo $notiInfo['ca_id'] ?>' data-action ="<?php echo $notiInfo['action_id'] ?>" data-servicetype="<?php echo $notiInfo["service_type"] ?>" style="float: right;">PDF <i class="fa fa-file-pdf-o"></i></a>
-                                                        <a class="SendStageMail btn btn-default btn-xs btn-info" title="Send" data-customer='<?php echo $notiInfo['id'] ?>' data-service='<?php echo $notiInfo['ca_id'] ?>' data-action ="<?php echo $notiInfo['action_id'] ?>" data-stage="stage1" style="float: right; margin-right: 10px">Generate <i class="fa fa-envelope-o"></i></a>
-                                                        <p class="desc text-primary customerName" data-id="<?php echo $notiInfo['id'] ?>" title="Action item description" > <?php echo htmlspecialchars($notiInfo['customer_name'], ENT_QUOTES, 'UTF-8'); ?></p>
+                                                        <?php if ($hasPlan) { ?>
+                                                            <a class="PreviewStagePlanPDF btn btn-default btn-xs" title="Preview Stage 1 Audit Plan PDF" data-customer='<?php echo $notiInfo['id'] ?>' data-service='<?php echo $notiInfo['ca_id'] ?>' data-action="<?php echo $notiInfo['action_id'] ?>" data-planid="<?php echo $notiInfo['plan_id'] ?>" data-stage="stage1" style="float: right; margin-left: 4px;">Plan <i class="fa fa-file-text-o"></i></a>
+                                                        <?php } else { ?>
+                                                            <a class="PreviewStagePlanPDF btn btn-default btn-xs" title="Audit Plan not generated yet - click for details" data-customer='<?php echo $notiInfo['id'] ?>' data-service='<?php echo $notiInfo['ca_id'] ?>' data-action="<?php echo $notiInfo['action_id'] ?>" data-planid="" data-stage="stage1" style="float: right; margin-left: 4px; background:#fffbeb; color:#b45309; border-color:#f59e0b; font-weight:600;">Plan <i class="fa fa-exclamation-circle"></i></a>
+                                                        <?php } ?>
+                                                        <a class="PreviewStagePDF btn btn-default btn-xs btn-info" title="Preview Stage 1 Notification PDF" data-customer='<?php echo $notiInfo['id'] ?>' data-service='<?php echo $notiInfo['ca_id'] ?>' data-action="<?php echo $notiInfo['action_id'] ?>" data-servicetype="<?php echo $notiInfo["service_type"] ?>" data-stage="stage1" style="float: right; margin-left: 4px;">Notif <i class="fa fa-file-pdf-o"></i></a>
+                                                        <a class="SendStageMail btn btn-primary btn-xs" title="<?php echo $hasPlan ? 'Send Notification and Audit Plan via Email' : 'Cannot send only notification - Audit Plan missing'; ?>" data-customer='<?php echo $notiInfo['id'] ?>' data-service='<?php echo $notiInfo['ca_id'] ?>' data-action="<?php echo $notiInfo['action_id'] ?>" data-stage="stage1" data-planid="<?php echo $notiInfo['plan_id'] ?? '' ?>" data-hasplan="<?php echo $hasPlan ? '1' : '0'; ?>" data-customername="<?php echo htmlspecialchars($notiInfo['customer_name'], ENT_QUOTES, 'UTF-8'); ?>" data-email="<?php echo htmlspecialchars($notiInfo['email_id'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" style="float: right; margin-right: 5px; <?php echo $hasPlan ? 'background: #053c6d; border-color: #053c6d;' : 'background: #64748b; border-color: #64748b; opacity: 0.9;'; ?>"><i class="fa fa-paper-plane"></i> Send Mail</a>
+                                                        <p class="desc text-primary customerName" data-id="<?php echo $notiInfo['id'] ?>" title="Action item description" > 
+                                                            <?php echo htmlspecialchars($notiInfo['customer_name'], ENT_QUOTES, 'UTF-8'); ?>
+                                                            <?php if (!$hasPlan) { ?>
+                                                                <span class="label" style="background:#fef3c7; color:#b45309; border:1px solid #fde68a; font-size:10px; margin-left:6px; font-weight:600; padding:2px 6px;" title="Audit Plan is not generated yet"><i class="fa fa-exclamation-triangle"></i> Plan Missing</span>
+                                                            <?php } else { ?>
+                                                                <span class="label" style="background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; font-size:10px; margin-left:6px; font-weight:600; padding:2px 6px;" title="Notification & Audit Plan ready"><i class="fa fa-check"></i> Plan Ready</span>
+                                                            <?php } ?>
+                                                        </p>
                                                         <p class="other-info">
                                                             <small title="Notice due date" class="text-muted"><i style="padding: 3px" class="fa fa-calendar"></i><?php echo simpleDateConversion($notiInfo['due_date']) ?></small>
+                                                            <?php if (!empty($notiInfo['email_id'])) { ?>
+                                                                <small class="text-muted" style="margin-left: 10px;"><i class="fa fa-envelope-o" style="padding: 3px"></i><?php echo htmlspecialchars($notiInfo['email_id']); ?></small>
+                                                            <?php } ?>
                                                         </p>
                                                     </div>                                                
                                                 </li>
@@ -1062,20 +1144,42 @@
                     <div class="col-md-6 ">
                         <div class="panel panel-primary" style="min-height: 140px" >
                             <div class="panel-heading text-center" style="background: #053c6d">
-                                <h4 style="color: white">Stage 2 Notification</h4>
+                                <h4 style="color: white"><i class="fa fa-calendar-check-o" style="margin-right:6px;"></i> Stage 2 Notification and Plan</h4>
                             </div>
-                            <?php foreach ($stage2Due as $notiInfo) { ?>
+                            <?php if (empty($stage2Due)) { ?>
+                                <div class="text-center text-muted" style="padding: 25px; font-size: 13.5px;">
+                                    <i class="fa fa-check-circle" style="color: #10b981; font-size: 18px;"></i> All Stage 2 notifications & plans have been sent.
+                                </div>
+                            <?php } ?>
+                            <?php foreach ($stage2Due as $notiInfo) { 
+                                $hasPlan2 = !empty($notiInfo['plan_id']) && intval($notiInfo['plan_id']) > 0;
+                            ?>
                                 <div class="panel-rightbody homePagePanel" id="actionItemDisplayPanel">
                                     <div class="row event-row" id="dummyActionItemRow">
                                         <div class="col-xs-12 col-sm-12">
                                             <ul class="event-list">
                                                 <li>
                                                     <div class="info showActionItem">
-                                                        <a class="PreviewStagePDF btn btn-default btn-xs btn-info" title="PDF" data-customer='<?php echo $notiInfo['id'] ?>' data-service='<?php echo $notiInfo['ca_id'] ?>' data-action ="<?php echo $notiInfo['action_id'] ?>" data-servicetype="<?php echo $notiInfo["service_type"] ?>" style="float: right;">PDF <i class="fa fa-file-pdf-o"></i></a>
-                                                        <a class="SendStageMail btn btn-default btn-xs btn-info" title="Send" data-customer='<?php echo $notiInfo['id'] ?>' data-service='<?php echo $notiInfo['ca_id'] ?>' data-action ="<?php echo $notiInfo['action_id'] ?>" data-stage="stage2" style="float: right; margin-right: 10px">Generate <i class="fa fa-envelope-o"></i></a>
-                                                        <p class="desc text-primary customerName" data-id="<?php echo $notiInfo['id'] ?>" title="Action item description" > <?php echo htmlspecialchars($notiInfo['customer_name'], ENT_QUOTES, 'UTF-8'); ?></p>
+                                                        <?php if ($hasPlan2) { ?>
+                                                            <a class="PreviewStagePlanPDF btn btn-default btn-xs" title="Preview Stage 2 Audit Plan PDF" data-customer='<?php echo $notiInfo['id'] ?>' data-service='<?php echo $notiInfo['ca_id'] ?>' data-action="<?php echo $notiInfo['action_id'] ?>" data-planid="<?php echo $notiInfo['plan_id'] ?>" data-stage="stage2" style="float: right; margin-left: 4px;">Plan <i class="fa fa-file-text-o"></i></a>
+                                                        <?php } else { ?>
+                                                            <a class="PreviewStagePlanPDF btn btn-default btn-xs" title="Audit Plan not generated yet - click for details" data-customer='<?php echo $notiInfo['id'] ?>' data-service='<?php echo $notiInfo['ca_id'] ?>' data-action="<?php echo $notiInfo['action_id'] ?>" data-planid="" data-stage="stage2" style="float: right; margin-left: 4px; background:#fffbeb; color:#b45309; border-color:#f59e0b; font-weight:600;">Plan <i class="fa fa-exclamation-circle"></i></a>
+                                                        <?php } ?>
+                                                        <a class="PreviewStagePDF btn btn-default btn-xs btn-info" title="Preview Stage 2 Notification PDF" data-customer='<?php echo $notiInfo['id'] ?>' data-service='<?php echo $notiInfo['ca_id'] ?>' data-action="<?php echo $notiInfo['action_id'] ?>" data-servicetype="<?php echo $notiInfo["service_type"] ?>" data-stage="stage2" style="float: right; margin-left: 4px;">Notif <i class="fa fa-file-pdf-o"></i></a>
+                                                        <a class="SendStageMail btn btn-primary btn-xs" title="<?php echo $hasPlan2 ? 'Send Notification and Audit Plan via Email' : 'Cannot send only notification - Audit Plan missing'; ?>" data-customer='<?php echo $notiInfo['id'] ?>' data-service='<?php echo $notiInfo['ca_id'] ?>' data-action="<?php echo $notiInfo['action_id'] ?>" data-stage="stage2" data-planid="<?php echo $notiInfo['plan_id'] ?? '' ?>" data-hasplan="<?php echo $hasPlan2 ? '1' : '0'; ?>" data-customername="<?php echo htmlspecialchars($notiInfo['customer_name'], ENT_QUOTES, 'UTF-8'); ?>" data-email="<?php echo htmlspecialchars($notiInfo['email_id'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" style="float: right; margin-right: 5px; <?php echo $hasPlan2 ? 'background: #053c6d; border-color: #053c6d;' : 'background: #64748b; border-color: #64748b; opacity: 0.9;'; ?>"><i class="fa fa-paper-plane"></i> Send Mail</a>
+                                                        <p class="desc text-primary customerName" data-id="<?php echo $notiInfo['id'] ?>" title="Action item description" > 
+                                                            <?php echo htmlspecialchars($notiInfo['customer_name'], ENT_QUOTES, 'UTF-8'); ?>
+                                                            <?php if (!$hasPlan2) { ?>
+                                                                <span class="label" style="background:#fef3c7; color:#b45309; border:1px solid #fde68a; font-size:10px; margin-left:6px; font-weight:600; padding:2px 6px;" title="Audit Plan is not generated yet"><i class="fa fa-exclamation-triangle"></i> Plan Missing</span>
+                                                            <?php } else { ?>
+                                                                <span class="label" style="background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; font-size:10px; margin-left:6px; font-weight:600; padding:2px 6px;" title="Notification & Audit Plan ready"><i class="fa fa-check"></i> Plan Ready</span>
+                                                            <?php } ?>
+                                                        </p>
                                                         <p class="other-info">
                                                             <small title="Notice due date" class="text-muted"><i style="padding: 3px" class="fa fa-calendar"></i><?php echo simpleDateConversion($notiInfo['due_date']) ?></small>
+                                                            <?php if (!empty($notiInfo['email_id'])) { ?>
+                                                                <small class="text-muted" style="margin-left: 10px;"><i class="fa fa-envelope-o" style="padding: 3px"></i><?php echo htmlspecialchars($notiInfo['email_id']); ?></small>
+                                                            <?php } ?>
                                                         </p>
                                                     </div>                                                
                                                 </li>
@@ -1084,6 +1188,7 @@
                                     </div>
                                 </div>
                             <?php } ?>
+
                         </div>                        
                     </div>
                 </div>
@@ -1353,8 +1458,8 @@
                         <option value="Withdraw Letter">Withdraw Letter</option>
                         <option value="Withdrawal Letter">Withdrawal Letter</option>
                         <option value="Expire Letter">Expire Letter</option>
-                        <option value="Stage 1 Notification">Stage 1 Notification</option>
-                        <option value="Stage 2 Notification">Stage 2 Notification</option>
+                        <option value="Stage 1 Notification">Stage 1 Notification and Plan</option>
+                        <option value="Stage 2 Notification">Stage 2 Notification and Plan</option>
                     </select>
                 </div>
 
@@ -2007,21 +2112,56 @@
             
         });
 
-        // Stage 1 & Stage 2 Notification Handlers
+        // Stage 1 & Stage 2 Notification & Plan Handlers
         var pendingStagePayload = null;
         
         $('.SendStageMail').click(function () {
+            var customer = $(this).attr('data-customer');
+            var service = $(this).attr('data-service');
+            var audit = $(this).attr('data-action');
+            var stage = $(this).attr('data-stage');
+            var customerName = $(this).attr('data-customername') || '';
+            var email = $(this).attr('data-email') || '';
+            var hasPlan = $(this).attr('data-hasplan');
+            var planId = $(this).attr('data-planid') || '';
+
+            var stageLabel = (stage === 'stage2') ? 'Stage 2 Notification and Plan' : 'Stage 1 Notification and Plan';
+            var stageName = (stage === 'stage2') ? 'Stage 2' : 'Stage 1';
+
+            // Check if Audit Plan is missing
+            if (hasPlan === '0' || !planId || planId === '' || planId === '0') {
+                $('#missingPlanCustomerName').text(customerName);
+                $('#stageMissingPlanStageText').text(stageName + ' Notification');
+                $('#stagePlanMissingModal').modal('show');
+                return false;
+            }
+
             pendingStagePayload = {
-                customer: $(this).attr('data-customer'),
-                service: $(this).attr('data-service'),
-                audit: $(this).attr('data-action'),
-                stage: $(this).attr('data-stage')
+                customer: customer,
+                service: service,
+                audit: audit,
+                stage: stage
             };
+
+            $('#sendStageModalTitleText').text('Send ' + stageLabel);
+            $('#sendStageModalStageLabel').text(stageLabel);
+            $('#sendStageModalCustomerName').text(customerName);
+            $('#sendStageModalCustomerText').text(customerName);
+            $('#sendStageModalEmailInput').val(email);
+
             $('#sendStageConfirmModal').modal('show');
         });
 
         $('#confirmSendStageBtn').click(function(){
             if(!pendingStagePayload){ return; }
+            var enteredEmail = $.trim($('#sendStageModalEmailInput').val());
+            if(!enteredEmail) {
+                alert('Please enter recipient email address.');
+                $('#sendStageModalEmailInput').focus();
+                return false;
+            }
+            pendingStagePayload.email = enteredEmail;
+
             $('#sendStageConfirmModal').modal('hide');
             ShowProgressAnimation();
             
@@ -2033,22 +2173,34 @@
             }).done(function(res){
                 HideProgressAnimation();
                 if(res && res.success){
-                    showToast(res.message || 'Stage notification sent successfully.', true);
-                    setTimeout(function(){ location.reload(); }, 1000);
+                    if(typeof showToast === 'function'){
+                        showToast(res.message || 'Stage notification and plan sent successfully.', true);
+                    } else {
+                        alert(res.message || 'Stage notification and plan sent successfully.');
+                    }
+                    setTimeout(function(){ location.reload(); }, 1200);
                 } else {
-                    var msg = (res && res.message) ? res.message : 'Unable to send stage notification. Please try again.';
-                    showToast(msg, false);
+                    var msg = (res && res.message) ? res.message : 'Unable to send notification & plan. Please try again.';
+                    if(typeof showToast === 'function'){
+                        showToast(msg, false);
+                    } else {
+                        alert(msg);
+                    }
                 }
             }).fail(function(xhr){
                 HideProgressAnimation();
-                var msg = 'Unable to send stage notification. Please try again.';
+                var msg = 'Unable to send notification & plan. Please try again.';
                 if(xhr && xhr.responseText){
                     try {
                         var parsed = JSON.parse(xhr.responseText);
                         if (parsed && parsed.message) msg = parsed.message;
                     } catch(e) {}
                 }
-                showToast(msg, false);
+                if(typeof showToast === 'function'){
+                    showToast(msg, false);
+                } else {
+                    alert(msg);
+                }
             });
         });
 
@@ -2056,7 +2208,7 @@
             var customer = $(this).attr('data-customer');
             var service = $(this).attr('data-service');
             var action = $(this).attr('data-action');
-            var stage = $(this).siblings('.SendStageMail').attr('data-stage');
+            var stage = $(this).attr('data-stage') || $(this).siblings('.SendStageMail').attr('data-stage');
             
             var url, form;
             if (stage === 'stage1') {
@@ -2070,6 +2222,41 @@
                 url = 'AuditNotificationStage2.php';
                 form = $('<form action="' + url + '" method="post" target="_blank">' +
                         '<input type="hidden" name="notificationid" value="' + action + '" />' +
+                        '</form>');
+            }
+            $('body').append(form);
+            form.submit();
+        });
+
+        $('.PreviewStagePlanPDF').click(function () {
+            var customer = $(this).attr('data-customer');
+            var service = $(this).attr('data-service');
+            var planId = $(this).attr('data-planid') || '';
+            var stage = $(this).attr('data-stage') || '';
+            var customerName = $(this).closest('.showActionItem').find('.customerName').text().trim();
+            var stageName = (stage === 'stage2') ? 'Stage 2' : 'Stage 1';
+
+            if (!planId || planId === '' || planId === '0') {
+                $('#missingPlanCustomerName').text(customerName);
+                $('#stageMissingPlanStageText').text(stageName + ' Notification');
+                $('#stagePlanMissingModal').modal('show');
+                return false;
+            }
+            
+            var url, form;
+            if (stage === 'stage1') {
+                url = 'AuditSchedule.php';
+                form = $('<form action="' + url + '" method="post" target="_blank">' +
+                        '<input type="hidden" name="auditscheduleid" value="' + planId + '" />' +
+                        '<input type="hidden" name="customerid" value="' + customer + '" />' +
+                        '<input type="hidden" name="serviceid" value="' + service + '" />' +
+                        '</form>');
+            } else {
+                url = 'SurveillanceAudit2.php';
+                form = $('<form action="' + url + '" method="post" target="_blank">' +
+                        '<input type="hidden" name="auditnotiid" value="' + planId + '" />' +
+                        '<input type="hidden" name="customerid" value="' + customer + '" />' +
+                        '<input type="hidden" name="serviceid" value="' + service + '" />' +
                         '</form>');
             }
             $('body').append(form);

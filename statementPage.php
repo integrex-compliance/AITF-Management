@@ -3,45 +3,96 @@
 $pageIdentifier = "Statement Page";
 include 'header.php';
 include 'dbConnect.php';
+require_once __DIR__ . '/include/statement_helper.php';
 
-// Fetch clients and payment data from both old payment_system and new statement_payments tables
-$query = "
-SELECT ci.id, ci.customer_name, ci.contact_person, ci.contact, ci.email_id, ci.audit_status,
-       COALESCE(old_pay.total_decided, 0) + COALESCE(new_pay.total_decided, 0) as total_decided,
-       COALESCE(old_pay.total_received, 0) + COALESCE(new_pay.total_received, 0) as total_received,
-       COALESCE(old_pay.total_balance, 0) + COALESCE(new_pay.total_balance, 0) as total_balance,
-       COALESCE(new_pay.total_tds_decided, 0) as total_tds_decided,
-       COALESCE(new_pay.total_tds_received, 0) as total_tds_received,
-       CASE WHEN new_pay.cnt > 0 THEN 1 ELSE 0 END as has_new_payments,
-       CASE WHEN old_pay.cnt > 0 THEN 1 ELSE 0 END as has_old_payments
-FROM customer_info ci
-LEFT JOIN (
-    SELECT customer_id, 
-           SUM(amount_decided) as total_decided, 
-           SUM(payment_received) as total_received, 
-           SUM(balance) as total_balance, 
-           COUNT(*) as cnt 
-    FROM payment_system 
-    WHERE service_type NOT LIKE '%tds%' 
-    GROUP BY customer_id
-) old_pay ON ci.id = old_pay.customer_id
-LEFT JOIN (
-    SELECT customer_id, 
-           SUM(amount_decided) as total_decided, 
-           SUM(payment_received) as total_received, 
-           SUM(balance) as total_balance,
-           SUM(tds_decided) as total_tds_decided,
-           SUM(tds_received) as total_tds_received,
-           COUNT(*) as cnt 
-    FROM statement_payments 
-    GROUP BY customer_id
-) new_pay ON ci.id = new_pay.customer_id
-WHERE ci.is_deleted = 'NO'
-ORDER BY ci.id DESC
-";
+// Code-level self-healing: ensures tables exist on live without running manual DB queries
+if ($db) {
+    aitf_ensure_statement_tables($db);
+}
 
-$stmt = $db->query($query);
-$clients = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$clients = [];
+$hasStatementPayments = ($db && aitf_statement_table_exists($db, 'statement_payments'));
+
+if ($hasStatementPayments) {
+    $query = "
+    SELECT ci.id, ci.customer_name, ci.contact_person, ci.contact, ci.email_id, ci.audit_status,
+           COALESCE(old_pay.total_decided, 0) + COALESCE(new_pay.total_decided, 0) as total_decided,
+           COALESCE(old_pay.total_received, 0) + COALESCE(new_pay.total_received, 0) as total_received,
+           (COALESCE(old_pay.total_decided, 0) + COALESCE(new_pay.total_decided, 0)) - (COALESCE(old_pay.total_received, 0) + COALESCE(new_pay.total_received, 0)) as total_balance,
+           COALESCE(new_pay.total_tds_decided, 0) as total_tds_decided,
+           COALESCE(new_pay.total_tds_received, 0) as total_tds_received,
+           CASE WHEN new_pay.cnt > 0 THEN 1 ELSE 0 END as has_new_payments,
+           CASE WHEN old_pay.cnt > 0 THEN 1 ELSE 0 END as has_old_payments
+    FROM customer_info ci
+    LEFT JOIN (
+        SELECT customer_id, 
+               SUM(REPLACE(REPLACE(amount_decided, ',', ''), ' ', '') + 0) as total_decided, 
+               SUM(REPLACE(REPLACE(payment_received, ',', ''), ' ', '') + 0) as total_received, 
+               SUM(REPLACE(REPLACE(balance, ',', ''), ' ', '') + 0) as total_balance, 
+               COUNT(*) as cnt 
+        FROM payment_system 
+        WHERE service_type NOT LIKE '%tds%' 
+        GROUP BY customer_id
+    ) old_pay ON ci.id = old_pay.customer_id
+    LEFT JOIN (
+        SELECT customer_id, 
+               SUM(amount_decided) as total_decided, 
+               SUM(payment_received) as total_received, 
+               SUM(balance) as total_balance,
+               SUM(tds_decided) as total_tds_decided,
+               SUM(tds_received) as total_tds_received,
+               COUNT(*) as cnt 
+        FROM statement_payments 
+        GROUP BY customer_id
+    ) new_pay ON ci.id = new_pay.customer_id
+    WHERE (ci.is_deleted = 'NO' OR ci.is_deleted IS NULL)
+    ORDER BY ci.id DESC
+    ";
+} else {
+    $query = "
+    SELECT ci.id, ci.customer_name, ci.contact_person, ci.contact, ci.email_id, ci.audit_status,
+           COALESCE(old_pay.total_decided, 0) as total_decided,
+           COALESCE(old_pay.total_received, 0) as total_received,
+           (COALESCE(old_pay.total_decided, 0) - COALESCE(old_pay.total_received, 0)) as total_balance,
+           0 as total_tds_decided,
+           0 as total_tds_received,
+           0 as has_new_payments,
+           CASE WHEN old_pay.cnt > 0 THEN 1 ELSE 0 END as has_old_payments
+    FROM customer_info ci
+    LEFT JOIN (
+        SELECT customer_id, 
+               SUM(REPLACE(REPLACE(amount_decided, ',', ''), ' ', '') + 0) as total_decided, 
+               SUM(REPLACE(REPLACE(payment_received, ',', ''), ' ', '') + 0) as total_received, 
+               SUM(REPLACE(REPLACE(balance, ',', ''), ' ', '') + 0) as total_balance, 
+               COUNT(*) as cnt 
+        FROM payment_system 
+        WHERE service_type NOT LIKE '%tds%' 
+        GROUP BY customer_id
+    ) old_pay ON ci.id = old_pay.customer_id
+    WHERE (ci.is_deleted = 'NO' OR ci.is_deleted IS NULL)
+    ORDER BY ci.id DESC
+    ";
+}
+
+try {
+    if ($db) {
+        $stmt = $db->query($query);
+        if ($stmt) {
+            $clients = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+    }
+} catch (Throwable $e) {
+    error_log("statementPage.php query error: " . $e->getMessage());
+    try {
+        if ($db) {
+            $fallbackQuery = "SELECT id, customer_name, contact_person, contact, email_id, audit_status, 0 as total_decided, 0 as total_received, 0 as total_balance, 0 as total_tds_decided, 0 as total_tds_received, 0 as has_new_payments, 0 as has_old_payments FROM customer_info WHERE (ci.is_deleted = 'NO' OR ci.is_deleted IS NULL) ORDER BY id DESC";
+            $clients = $db->query($fallbackQuery)->fetchAll(PDO::FETCH_ASSOC);
+        }
+    } catch (Throwable $ex) {
+        error_log("statementPage.php fallback query error: " . $ex->getMessage());
+        $clients = [];
+    }
+}
 
 $global_decided = 0;
 $global_received = 0;
@@ -60,7 +111,9 @@ foreach($clients as $c) {
 
     $global_decided += $dec;
     $global_received += $rec;
-    $global_balance += $bal;
+    if ($bal > 0) {
+        $global_balance += $bal;
+    }
 
     if (!$has_old && !$has_new) {
         $count_new++;

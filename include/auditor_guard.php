@@ -93,7 +93,7 @@ if (!function_exists('aitf_auditor_allowed_scripts')) {
             'addcontrolformat1.php', 'addcontrolformat2.php',
             'addcustomersurvey.php', 'csa.php', 'addannexiimodel.php',
             'getinfoupdationreview.php', 'saveinfoupdationreview.php',
-            'sendstagenotificationmail.php', 'sendcdcmail.php',
+            'sendstagenotificationmail.php', 'sendcdcmail.php', 'sendagreementmail.php',
             'editcadates.php', 'addcomments.php', 'savecomments.php',
 
             // Audit workflow download / print / PDF endpoints

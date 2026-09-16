@@ -3,8 +3,14 @@
 // Prevent premature output that breaks PDF headers
 error_reporting(E_ALL & ~E_DEPRECATED & ~E_WARNING & ~E_NOTICE);
 ini_set('display_errors', 0);
-ob_start();
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+if (isset($csaCustomerId)) { $_POST['csId'] = $csaCustomerId; }
+if (isset($csaServiceId)) { $_POST['service'] = $csaServiceId; }
+if (isset($csaCertificationId)) { $_POST['certification'] = $csaCertificationId; }
+if (isset($csaSaiiCount)) { $_POST['saiicount'] = $csaSaiiCount; }
 
 //============================================================+
 // File name   : example_003.php
@@ -143,6 +149,7 @@ $header_content = $regDate;
 $clientID = $alotno;
 
 // Extend the TCPDF class to create custom Header and Footer
+if (!class_exists('MYPDF')) {
 class MYPDF extends TCPDF {
 
     protected $processId = 0;
@@ -215,7 +222,7 @@ class MYPDF extends TCPDF {
         // Page number
         $this->Cell(0, 0, 'F 7.03. Rev. 06 dt.26.05.2019        Agreement No: ' . $clientID . ',   Dt. ' . date("d.m.Y", strtotime($header_content)) . ',             [P a g e ' . $this->getAliasNumPage() . ' of ' . $this->getAliasNbPages() . ']', 0, false, 'C', 0, '', 0, false, 'T', 'M');
     }
-
+}
 }
 
 // create new PDF document
@@ -1040,7 +1047,18 @@ if (ob_get_length()) {
 } else {
     @ob_end_clean();
 }
-$pdf->Output('CSA.pdf', 'I');
+
+$csaMode = isset($csaOutputMode) ? $csaOutputMode : (isset($_POST['output_mode']) ? $_POST['output_mode'] : 'I');
+$csaName = isset($csaOutputName) ? $csaOutputName : (isset($_POST['output_name']) ? $_POST['output_name'] : 'CSA.pdf');
+
+if ($csaMode === 'S') {
+    return $pdf->Output($csaName, 'S');
+} elseif ($csaMode === 'F') {
+    $pdf->Output($csaName, 'F');
+    return $csaName;
+} else {
+    $pdf->Output($csaName, 'I');
+}
 
 //============================================================+
 // END OF FILE

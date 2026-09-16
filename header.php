@@ -377,7 +377,7 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
     </ul>
     <ul class="sidebar-nav" id="sidebar">
         <?php if (Utitlity::checkForDirector()) { ?>
-            <li class="mgmt-space-item"><a href="directorSpace.php" class="animate mgmt-space-link <?php echo $addDirectorSpaceClass ?? '' ?>"><span class="mgmt-space-text"><i class="fa fa-star mgmt-star-icon" style="color: #fbbf24; margin-right: 4px; font-size: 10px;"></i> TOP MGMT SPACE</span><i
+            <li class="mgmt-space-item"><a href="directorSpace.php" class="animate mgmt-space-link <?php echo $addDirectorSpaceClass ?? '' ?>"><span class="mgmt-space-text"><i class="fa fa-star mgmt-star-icon" style="color: #fbbf24; margin-right: 4px; font-size: 10px;"></i> CONTROL MANAGEMENT</span><i
                         class="sub_icon fa fa-black-tie mgmt-icon"></i></a></li>
         <?php } ?>
         <?php if (aitf_has_access("Admin Dashboard") || aitf_has_access("Management Dashboard") || aitf_has_access("Top Mgmt Dashboard") || aitf_has_access("MGMT Dashboard") || aitf_has_access("Mgmt Dashboard")) { ?>
@@ -624,6 +624,7 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
             <?php } else { ?>
             <ul class="nav navbar-nav visible-xs">
                 <?php if (Utitlity::checkForDirector()) { ?>
+                    <li><a href="directorSpace.php">CONTROL MANAGEMENT</a></li>
                     <li><a href="adminDashboard.php">MGMT DASHBOARD</a></li>
                 <?php } ?>
                 <?php if (!isset($_SESSION["role"]) || $_SESSION["role"] != 'client') { ?>

@@ -314,11 +314,24 @@ $pdf->writeHTML($html, true, false, true, false, '');
 
 $pdf->Output(__DIR__ . '/notification/'.$otp.'firstDue.pdf', 'F');
 
-$body = '<html><body><p>Dear Sir / Mam,</p>'
-        . '<p>Your First Surveillance Audit  has been due, please find herewith an attachment of reminder letter.</p>'
-        . '<p>Thanks,</p>'
-        . '<br>AITF-MCL'
-        . '<body></html>';
+$body = '<html><body style="font-family: Arial, sans-serif; font-size: 14px; color: #333333; line-height: 1.6; padding: 15px;">'
+        . '<p>Dear <strong>' . htmlspecialchars($customer['customer_name']) . '</strong> Team,</p>'
+        . '<p>Your First Surveillance Audit is due. Please find attached the reminder letter for your reference.</p>'
+        . '<div style="margin-top: 28px; border-top: 1px solid #e2e8f0; padding-top: 18px;">'
+        . '<p style="margin: 0 0 6px; color: #475569;">Regards,</p>'
+        . '<p style="margin: 0; line-height: 1.45;">'
+        . '<strong>AITF Management Certification Limited.</strong><br>'
+        . '<strong>QCI-NABCB Accredited Certification Body.</strong><br><br>'
+        . '<strong>Authorised Signatory</strong>'
+        . '</p>'
+        . '</div>'
+        . '<div style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 16px 20px; font-size: 12px; color: #64748b; line-height: 1.5; margin-top: 24px; border-radius: 4px;">'
+        . '<strong>AITF Management Certification Limited</strong><br>'
+        . 'Devi Indrayani, Wing B-26, Near IT Park, Talawade, Pune &ndash; 411062, Maharashtra, India<br>'
+        . 'Email: <a href="mailto:certification@aitf.co.in" style="color: #2563eb; text-decoration: none;">certification@aitf.co.in</a> | Website: <a href="https://www.aitf.co.in" target="_blank" style="color: #2563eb; text-decoration: none;">www.aitf.co.in</a>'
+        . '</div>'
+        . '</body></html>';
+
 
 $email = new PHPMailer();
 $email->From      = 'aitfmcl@gmail.com';

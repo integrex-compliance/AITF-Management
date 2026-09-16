@@ -11,9 +11,16 @@
  *  - get_payments    : Get all payments for a customer (old + new)
  */
 
-session_start();
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
 include_once './dbConnect.php';
+require_once __DIR__ . '/include/statement_helper.php';
 date_default_timezone_set('Asia/Kolkata');
+
+if ($db) {
+    aitf_ensure_statement_tables($db);
+}
 
 header('Content-Type: application/json');
 

@@ -5761,7 +5761,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             //            new changes by Pallavi
         
             if ($service['service_type'] == "CR") {
-                $crServices = "SELECT crs.cr_id, crs.service, application_form, certification_aggrement, aud.audit_id, contractid, asp.assessment_id, cfp.certificate_id, ca.id, aggrement_date, aggrement_no FROM service_type_cr crs left join audit_application aud on crs.cr_id = aud.service_id left join contract_id ci on crs.cr_id = ci.ca_service_id left join assessment_planning asp on crs.cr_id = asp.service_id left join stage_twoaudit_id stai on crs.cr_id = stai.service_id left join certificate_print cfp on crs.cr_id = cfp.service_id left join certification_aggrement ca on crs.cr_id = ca.service WHERE crs.service = :id";
+                $crServices = "SELECT crs.cr_id, crs.service, application_form, certification_aggrement, aud.audit_id, contractid, asp.assessment_id, cfp.certificate_id, ca.id, aggrement_date, aggrement_no, ca.mail_sent, ca.mail_sent_at, ca.mail_sent_to FROM service_type_cr crs left join audit_application aud on crs.cr_id = aud.service_id left join contract_id ci on crs.cr_id = ci.ca_service_id left join assessment_planning asp on crs.cr_id = asp.service_id left join stage_twoaudit_id stai on crs.cr_id = stai.service_id left join certificate_print cfp on crs.cr_id = cfp.service_id left join certification_aggrement ca on crs.cr_id = ca.service WHERE crs.service = :id";
                 $statement = $db->prepare($crServices);
                 $statement->bindParam(':id', $service["service_id"]);
                 $statement->execute();
@@ -5877,6 +5877,25 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                     data-filepath="<?php echo isset($crservice['certification_aggrement']) ? $crservice['certification_aggrement'] : ''; ?>"
                                                     title="Download Certification Agreement" style="padding: 1px 5px;"><i
                                                         class="fa fa-download fa-lg " style="padding: 3px"></i></a>
+                                                <?php
+                                                $crMailSent = !empty($crservice['mail_sent']);
+                                                $crMailSentAt = !empty($crservice['mail_sent_at']) ? date('d.m.Y h:i A', strtotime($crservice['mail_sent_at'])) : '';
+                                                $crMailSentTo = $crservice['mail_sent_to'] ?? '';
+                                                ?>
+                                                <a class="sendcertificatemail pull-right"
+                                                    data-customer="<?php echo $_GET['customerid'] ?>"
+                                                    data-service="<?php echo $crservice['cr_id'] ?>"
+                                                    data-certfication="<?php echo $crservice['id'] ?>"
+                                                    data-servicecount="<?php echo $saiiid; ?>"
+                                                    data-customername="<?php echo htmlspecialchars($clientInfo['customer_name'] ?? '', ENT_QUOTES); ?>"
+                                                    data-email="<?php echo htmlspecialchars($clientInfo['email_id'] ?? '', ENT_QUOTES); ?>"
+                                                    data-agreementno="<?php echo htmlspecialchars($crservice['aggrement_no'] ?? ($clientInfo['unique_id'] ?? ''), ENT_QUOTES); ?>"
+                                                    data-mailsent="<?php echo $crMailSent ? '1' : '0'; ?>"
+                                                    data-mailsentat="<?php echo htmlspecialchars($crMailSentAt, ENT_QUOTES); ?>"
+                                                    data-mailsentto="<?php echo htmlspecialchars($crMailSentTo, ENT_QUOTES); ?>"
+                                                    title="<?php echo $crMailSent ? 'Already sent to client on ' . $crMailSentAt : 'Send Certification Agreement via Email'; ?>"
+                                                    style="padding: 1px 5px; cursor: pointer; <?php if ($crMailSent) echo 'color: #10b981;'; ?>"><i
+                                                        class="fa fa-envelope fa-lg " style="padding: 3px"></i></a>
                                             <?php } ?>
                                         </div>
                                     </div>
@@ -10205,7 +10224,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     $class10 = "sp-service-type";
                 }
 
-                $spService = "SELECT DISTINCT sp.sp_id, sp.service, sp_signed_noti, certificate_option, sp_signed_copy, sp_audit_report, service_sp_status, sp.audit_date as spaudit, sp.auditors as sp_auditors, soi.audit_stage_id, asi.audit_schedule_id, siea.stage_ii_id, crr.crr_id, cfp.certificate_id, ca.id, aggrement_date, aggrement_no FROM service_type_sp sp left join stage_oneaudit_id soi on sp.sp_id = soi.ca_service_id left join audit_schedule_id asi on sp.sp_id = asi.serviceca_id left join stage_ii_audit_id siea on sp.sp_id = siea.ca_service_id left join cdc_report_review crr on sp.sp_id = crr.ca_service_id left join certificate_print cfp on sp.sp_id = cfp.service_id left join certification_aggrement ca on sp.sp_id = ca.service WHERE sp.service = :id GROUP BY sp.sp_id";
+                $spService = "SELECT DISTINCT sp.sp_id, sp.service, sp_signed_noti, certificate_option, sp_signed_copy, sp_audit_report, service_sp_status, sp.audit_date as spaudit, sp.auditors as sp_auditors, soi.audit_stage_id, asi.audit_schedule_id, siea.stage_ii_id, crr.crr_id, cfp.certificate_id, ca.id, aggrement_date, aggrement_no, ca.mail_sent, ca.mail_sent_at, ca.mail_sent_to FROM service_type_sp sp left join stage_oneaudit_id soi on sp.sp_id = soi.ca_service_id left join audit_schedule_id asi on sp.sp_id = asi.serviceca_id left join stage_ii_audit_id siea on sp.sp_id = siea.ca_service_id left join cdc_report_review crr on sp.sp_id = crr.ca_service_id left join certificate_print cfp on sp.sp_id = cfp.service_id left join certification_aggrement ca on sp.sp_id = ca.service WHERE sp.service = :id GROUP BY sp.sp_id";
                 $statement = $db->prepare($spService);
                 $statement->bindParam(':id', $service["service_id"]);
                 $statement->execute();
@@ -10428,6 +10447,25 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                             data-filepath="<?php echo isset($spservices['certification_aggrement']) ? $spservices['certification_aggrement'] : ''; ?>"
                                                             title="Download Certification Agreement" style="padding: 1px 5px;"><i
                                                                 class="fa fa-download fa-lg " style="padding: 3px"></i></a>
+                                                        <?php
+                                                        $spMailSent = !empty($spservices['mail_sent']);
+                                                        $spMailSentAt = !empty($spservices['mail_sent_at']) ? date('d.m.Y h:i A', strtotime($spservices['mail_sent_at'])) : '';
+                                                        $spMailSentTo = $spservices['mail_sent_to'] ?? '';
+                                                        ?>
+                                                        <a class="sendcertificatemail pull-right"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-service="<?php echo $spservices['sp_id'] ?>"
+                                                            data-certfication="<?php echo $spservices['id'] ?>"
+                                                            data-servicecount="0"
+                                                            data-customername="<?php echo htmlspecialchars($clientInfo['customer_name'] ?? '', ENT_QUOTES); ?>"
+                                                            data-email="<?php echo htmlspecialchars($clientInfo['email_id'] ?? '', ENT_QUOTES); ?>"
+                                                            data-agreementno="<?php echo htmlspecialchars($spservices['aggrement_no'] ?? ($clientInfo['unique_id'] ?? ''), ENT_QUOTES); ?>"
+                                                            data-mailsent="<?php echo $spMailSent ? '1' : '0'; ?>"
+                                                            data-mailsentat="<?php echo htmlspecialchars($spMailSentAt, ENT_QUOTES); ?>"
+                                                            data-mailsentto="<?php echo htmlspecialchars($spMailSentTo, ENT_QUOTES); ?>"
+                                                            title="<?php echo $spMailSent ? 'Already sent to client on ' . $spMailSentAt : 'Send Certification Agreement via Email'; ?>"
+                                                            style="padding: 1px 5px; cursor: pointer; <?php if ($spMailSent) echo 'color: #10b981;'; ?>"><i
+                                                                class="fa fa-envelope fa-lg " style="padding: 3px"></i></a>
                                                     <?php } ?>
                                                 </div>
                                             </div>
@@ -14741,6 +14779,209 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 $('body').append(form);
                 form.submit();
                 form.remove();
+            });
+
+            $("body").on("click", ".sendcertificatemail", function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                var $btn = $(this);
+                var customerId = $btn.attr('data-customer');
+                var serviceId = $btn.attr('data-service');
+                var certificationId = $btn.attr('data-certfication');
+                var serviceCount = $btn.attr('data-servicecount') || '';
+                var customerName = $btn.attr('data-customername') || '';
+                var email = $btn.attr('data-email') || '';
+                var agreementNo = $btn.attr('data-agreementno') || '';
+                var mailSent = $btn.attr('data-mailsent');
+                var mailSentAt = $btn.attr('data-mailsentat') || '';
+                var mailSentTo = $btn.attr('data-mailsentto') || '';
+
+                // Prevent re-sending: Only allow sending once
+                if (mailSent === '1' || mailSent === 1) {
+                    var sentDetailHtml = '<div style="text-align:center;font-size:14px;color:#334155;line-height:1.6;margin-top:10px;">' +
+                        '<div style="width:58px;height:58px;border-radius:50%;background:#dcfce7;color:#16a34a;display:inline-flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:12px;"><i class="fa fa-envelope"></i></div>' +
+                        '<p style="font-size:16px;font-weight:700;color:#0f172a;margin-bottom:8px;">Already Sent to the Client</p>' +
+                        '<p style="font-size:13px;color:#64748b;margin-bottom:14px;">The Certification Service Agreement has already been sent to this client. Each agreement can only be sent once.</p>' +
+                        '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #10b981;border-radius:6px;padding:12px 16px;text-align:left;display:inline-block;width:100%;box-sizing:border-box;">' +
+                        (mailSentTo ? '<div style="margin-bottom:6px;"><strong>Sent To:</strong> <span style="color:#2563eb;font-weight:600;">' + $('<div>').text(mailSentTo).html() + '</span></div>' : '') +
+                        (mailSentAt ? '<div><strong>Sent Date & Time:</strong> <span style="color:#0f172a;font-weight:600;"><i class="fa fa-clock-o" style="color:#0284c7;"></i> ' + $('<div>').text(mailSentAt).html() + '</span></div>' : '') +
+                        '</div>' +
+                        '</div>';
+
+                    if (typeof Swal !== 'undefined' && Swal.fire) {
+                        Swal.fire({
+                            title: '',
+                            html: sentDetailHtml,
+                            confirmButtonColor: '#0F2742',
+                            confirmButtonText: '<i class="fa fa-check"></i> OK'
+                        });
+                    } else {
+                        alert('Already sent to the client' + (mailSentTo ? ' (' + mailSentTo + ')' : '') + (mailSentAt ? ' on ' + mailSentAt : '') + '.\nAgreements can only be sent once.');
+                    }
+                    return false;
+                }
+
+                if (typeof Swal !== 'undefined' && Swal.fire) {
+                    Swal.fire({
+                        title: '<div style="display:flex;align-items:center;justify-content:center;gap:10px;font-size:20px;font-weight:700;color:#0F2742;"><i class="fa fa-envelope" style="color:#2563eb;"></i> Send Agreement</div>',
+                        html: 
+                            '<div style="text-align:left;font-size:14px;color:#334155;line-height:1.6;margin-top:10px;">' +
+                                '<p style="margin-bottom:12px;font-size:14.5px;">Are you sure you want to send the <strong>Certification Service Agreement</strong> to <strong style="color:#2563eb;">' + $('<div>').text(email || customerName).html() + '</strong>?</p>' +
+                                '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #2563eb;border-radius:6px;padding:12px 16px;margin-bottom:14px;">' +
+                                    '<div style="margin-bottom:6px;"><strong>Company:</strong> <span style="color:#0f172a;font-weight:600;">' + $('<div>').text(customerName).html() + '</span></div>' +
+                                    (agreementNo ? '<div style="margin-bottom:6px;"><strong>Agreement No:</strong> <span style="background:#e0e7ff;color:#3730a3;font-weight:bold;padding:2px 8px;border-radius:4px;font-family:monospace;font-size:13px;">' + $('<div>').text(agreementNo).html() + '</span></div>' : '') +
+                                    '<div><strong>Client Email:</strong> <span style="color:#2563eb;font-weight:600;">' + $('<div>').text(email || 'Not specified').html() + '</span></div>' +
+                                '\x3c/div>' +
+                                '<div style="margin-top:10px;">' +
+                                    '<label style="display:block;font-size:12.5px;font-weight:600;color:#475569;margin-bottom:5px;">Recipient Email Address:</label>' +
+                                    '<input type="text" id="aitf_cert_mail_input" class="form-control" value="' + $('<div>').text(email).html() + '" placeholder="e.g. client@company.com" style="border-radius:6px;font-size:13.5px;padding:8px 12px;border:1px solid #cbd5e1;width:100%;box-sizing:border-box;">' +
+                                '\x3c/div>' +
+                                '<div style="font-size:12px;color:#64748b;margin-top:8px;"><i class="fa fa-info-circle"></i> The agreement PDF and client portal credentials will be attached and emailed.</div>' +
+                            '</div>',
+                        showCancelButton: true,
+                        confirmButtonText: '<i class="fa fa-paper-plane" style="margin-right:5px;"></i> Yes, Send Agreement',
+                        cancelButtonText: 'Cancel',
+                        confirmButtonColor: '#0F2742',
+                        cancelButtonColor: '#94a3b8',
+                        reverseButtons: true,
+                        focusConfirm: false,
+                        preConfirm: function () {
+                            var mailVal = $.trim($('#aitf_cert_mail_input').val());
+                            if (!mailVal) {
+                                Swal.showValidationMessage('Please enter recipient email address.');
+                                return false;
+                            }
+                            var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                            var items = mailVal.split(/[,;]+/);
+                            var hasValid = false;
+                            for (var i = 0; i < items.length; i++) {
+                                if (emailRegex.test($.trim(items[i]))) {
+                                    hasValid = true;
+                                    break;
+                                }
+                            }
+                            if (!hasValid) {
+                                Swal.showValidationMessage('Please enter a valid email address.');
+                                return false;
+                            }
+                            return mailVal;
+                        }
+                    }).then(function (result) {
+                        if (result.isConfirmed) {
+                            var finalEmail = result.value;
+
+                            Swal.fire({
+                                title: 'Sending Agreement...',
+                                html: '<div style="font-size:14px;color:#475569;margin-top:10px;">Generating Certification Agreement PDF and sending email to <strong>' + $('<div>').text(finalEmail).html() + '</strong>.<br><br>Please wait...</div>',
+                                allowOutsideClick: false,
+                                allowEscapeKey: false,
+                                showConfirmButton: false,
+                                didOpen: function () {
+                                    Swal.showLoading();
+                                }
+                            });
+
+                            $.ajax({
+                                url: 'sendAgreementMail.php',
+                                type: 'POST',
+                                dataType: 'json',
+                                data: {
+                                    customer: customerId,
+                                    service: serviceId,
+                                    certification: certificationId,
+                                    saiicount: serviceCount,
+                                    email: finalEmail
+                                },
+                                success: function (response) {
+                                    if (response && response.success) {
+                                        var sentAtStr = response.sent_at || '';
+                                        var sentToStr = response.sent_to || finalEmail;
+                                        $btn.attr('data-mailsent', '1');
+                                        $btn.attr('data-mailsentat', sentAtStr);
+                                        $btn.attr('data-mailsentto', sentToStr);
+                                        $btn.css('color', '#10b981');
+                                        $btn.attr('title', 'Already sent to client on ' + sentAtStr);
+
+                                        Swal.fire({
+                                            icon: 'success',
+                                            title: 'Agreement Sent Successfully!',
+                                            html: '<div style="font-size:14px;color:#334155;line-height:1.5;">' + (response.message || 'Certification Service Agreement has been sent to client email.') + '</div>',
+                                            confirmButtonColor: '#0F2742',
+                                            confirmButtonText: 'OK'
+                                        });
+                                    } else if (response && response.already_sent) {
+                                        var sentAtStr = response.sent_at || '';
+                                        var sentToStr = response.sent_to || '';
+                                        $btn.attr('data-mailsent', '1');
+                                        if (sentAtStr) $btn.attr('data-mailsentat', sentAtStr);
+                                        if (sentToStr) $btn.attr('data-mailsentto', sentToStr);
+                                        $btn.css('color', '#10b981');
+                                        $btn.attr('title', 'Already sent to client on ' + sentAtStr);
+
+                                        Swal.fire({
+                                            icon: 'info',
+                                            title: 'Already Sent',
+                                            html: '<div style="font-size:14px;color:#334155;line-height:1.5;">' + response.message + '</div>',
+                                            confirmButtonColor: '#0F2742',
+                                            confirmButtonText: 'OK'
+                                        });
+                                    } else {
+                                        Swal.fire({
+                                            icon: 'error',
+                                            title: 'Failed to Send Agreement',
+                                            html: '<div style="font-size:14px;color:#334155;line-height:1.5;">' + (response && response.message ? response.message : 'Could not send the email. Please try again.') + '</div>',
+                                            confirmButtonColor: '#0F2742',
+                                            confirmButtonText: 'OK'
+                                        });
+                                    }
+                                },
+                                error: function (xhr, status, error) {
+                                    var errMsg = 'An unexpected server error occurred while sending agreement.';
+                                    try {
+                                        var json = JSON.parse(xhr.responseText);
+                                        if (json && json.message) errMsg = json.message;
+                                    } catch (ex) {}
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Error',
+                                        html: '<div style="font-size:14px;color:#334155;">' + errMsg + '</div>',
+                                        confirmButtonColor: '#0F2742',
+                                        confirmButtonText: 'OK'
+                                    });
+                                }
+                            });
+                        }
+                    });
+                } else {
+                    if (confirm('Are you sure you want to send agreement to ' + (email || customerName) + '?')) {
+                        $.ajax({
+                            url: 'sendAgreementMail.php',
+                            type: 'POST',
+                            dataType: 'json',
+                            data: {
+                                customer: customerId,
+                                service: serviceId,
+                                certification: certificationId,
+                                saiicount: serviceCount,
+                                email: email
+                            },
+                            success: function (response) {
+                                if (response && (response.success || response.already_sent)) {
+                                    $btn.attr('data-mailsent', '1');
+                                    if (response.sent_at) $btn.attr('data-mailsentat', response.sent_at);
+                                    if (response.sent_to) $btn.attr('data-mailsentto', response.sent_to);
+                                    $btn.css('color', '#10b981');
+                                    $btn.attr('title', 'Already sent to client on ' + (response.sent_at || ''));
+                                }
+                                alert(response && response.message ? response.message : 'Agreement mail sent.');
+                            },
+                            error: function () {
+                                alert('Error sending agreement email.');
+                            }
+                        });
+                    }
+                }
             });
 
             // Reset customer modal when it's hidden to ensure clean state

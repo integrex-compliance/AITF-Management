@@ -19,7 +19,7 @@
         || in_array(strtolower(str_replace(array(' ', '-'), '', $invRole)), array('officestaffa', 'officestaffb'), true);
     $isRestrictedRole = $isMarketingHead || $isOfficeStaff;
 
-    $quotationList = "SELECT s.service_id, service_type, s.customer_id, ci.customer_name, ci.audit_status, aa.audit_id as quotation_id, aa.service_id as casvcid, uni_svc_id as quotationno, application_date as quotation_date,'Aggrement' as quotid,refundable_amount,audit_stage_i, audit_stage_iI, initial_assessment, ca.id, ca.aggrement_date, ca.aggrement_no FROM customer_info ci join service s on ci.id = s.customer_id join audit_application aa on s.service_id = aa.uni_svc_id left join certification_aggrement ca on aa.service_id = ca.service where ci.is_deleted = 'NO' order by aggrement_date DESC";
+    $quotationList = "SELECT s.service_id, service_type, s.customer_id, ci.customer_name, ci.audit_status, aa.audit_id as quotation_id, aa.service_id as casvcid, uni_svc_id as quotationno, application_date as quotation_date,'Aggrement' as quotid,refundable_amount,audit_stage_i, audit_stage_iI, initial_assessment, ca.id, ca.aggrement_date, ca.aggrement_no, ca.mail_sent, ca.mail_sent_at, ca.mail_sent_to FROM customer_info ci join service s on ci.id = s.customer_id join audit_application aa on s.service_id = aa.uni_svc_id left join certification_aggrement ca on aa.service_id = ca.service where ci.is_deleted = 'NO' order by aggrement_date DESC";
     $statement = $db->prepare($quotationList);
     $statement->execute();
     $quotationInfo = $statement->fetchAll();
@@ -296,6 +296,9 @@
                                                         <small><a>Status</a></small>
                                                     </th>
                                                     <th class="">
+                                                        <small><a>Mail Status</a></small>
+                                                    </th>
+                                                    <th class="">
                                                         <small><a>Edit / View</a></small>
                                                     </th>
                                                 </tr>
@@ -344,6 +347,27 @@
                                                             style="border-top: 1px solid #ffffff;  border-right: 1px solid #ffffff;">
                                                             <small><?php echo $quotation['audit_status']; ?></small>
                                                             <!--<a class="finalInvoice" data-customer="<?php //  echo $quotation['customer_id']              ?>" data-id="<?php echo $proforma['audit_status'] ?>" title="Add to final invoice" style="padding: 1px 5px; "><i class="fa fa-plus-circle fa-lg " style="padding:3px"></i></a>-->
+                                                        </td>
+                                                        <td style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; vertical-align: middle;">
+                                                            <?php if (!empty($quotation['mail_sent'])) { ?>
+                                                                <span class="label label-success" style="background-color: #10b981; font-size: 11px; padding: 4px 8px; border-radius: 4px; display: inline-block; font-weight: 600;">
+                                                                    <i class="fa fa-envelope"></i> Sent via mail
+                                                                </span>
+                                                                <?php if (!empty($quotation['mail_sent_at'])) { ?>
+                                                                    <div style="font-size: 11px; color: #1e293b; margin-top: 4px; font-weight: 600;">
+                                                                        <i class="fa fa-clock-o" style="color: #0284c7;"></i> <?php echo date("d.m.Y h:i A", strtotime($quotation['mail_sent_at'])); ?>
+                                                                    </div>
+                                                                <?php } ?>
+                                                                <?php if (!empty($quotation['mail_sent_to'])) { ?>
+                                                                    <div style="font-size: 10px; color: #64748b; margin-top: 2px; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="<?php echo htmlspecialchars($quotation['mail_sent_to']); ?>">
+                                                                        <i class="fa fa-paper-plane-o"></i> <?php echo htmlspecialchars($quotation['mail_sent_to']); ?>
+                                                                    </div>
+                                                                <?php } ?>
+                                                            <?php } else { ?>
+                                                                <span class="label label-default" style="background-color: #94a3b8; font-size: 11px; padding: 3px 7px; border-radius: 4px; display: inline-block;">
+                                                                    <i class="fa fa-envelope-o"></i> Not Sent
+                                                                </span>
+                                                            <?php } ?>
                                                         </td>
                                                         <td data-name="sel"
                                                             style="border-top: 1px solid #ffffff;  border-right: 1px solid #ffffff;">
@@ -580,32 +604,36 @@
         "dom": "tr<'row dt-bottom-row'<'col-sm-6 col-xs-12'i><'col-sm-6 col-xs-12'p>>",
         "columnDefs": [
             {
-                "width": "20%",
+                "width": "18%",
                 "targets": 0
             },
             {
-                "width": "12%",
+                "width": "10%",
                 "targets": 1
             },
             {
-                "width": "18%",
+                "width": "16%",
                 "targets": 2
             },
             {
-                "width": "12%",
+                "width": "10%",
                 "targets": 3
             },
             {
-                "width": "14%",
+                "width": "12%",
                 "targets": 4
             },
             {
-                "width": "12%",
+                "width": "10%",
                 "targets": 5
             },
             {
-                "width": "12%",
+                "width": "14%",
                 "targets": 6
+            },
+            {
+                "width": "10%",
+                "targets": 7
             }
         ],
         "language": {

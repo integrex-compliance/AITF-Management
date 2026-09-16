@@ -36,13 +36,32 @@ require_once(__DIR__ . '/tcpdf_include.php');
 include_once __DIR__ . '/dbConnect.php';
 date_default_timezone_set('Asia/Kolkata');
 
-$stageISchedule = "SELECT * FROM audit_schedule_id WHERE audit_schedule_id = :scheduleid and serviceca_id = :service and customer_ca_id = :customer ";
-$statement = $db->prepare($stageISchedule);
-$statement->bindParam(':scheduleid', $_POST['auditscheduleid']);
-$statement->bindParam(':service', $_POST['serviceid']);
-$statement->bindParam(':customer', $_POST['customerid']);
-$statement->execute();
-$stageIInfo = $statement->fetch();
+$reqScheduleId = isset($_POST['auditscheduleid']) ? $_POST['auditscheduleid'] : '';
+$reqService = isset($_POST['serviceid']) ? $_POST['serviceid'] : '';
+$reqCustomer = isset($_POST['customerid']) ? $_POST['customerid'] : '';
+
+$stageIInfo = false;
+if (!empty($reqScheduleId)) {
+    $stageISchedule = "SELECT * FROM audit_schedule_id WHERE audit_schedule_id = :scheduleid and serviceca_id = :service and customer_ca_id = :customer ";
+    $statement = $db->prepare($stageISchedule);
+    $statement->bindParam(':scheduleid', $reqScheduleId);
+    $statement->bindParam(':service', $reqService);
+    $statement->bindParam(':customer', $reqCustomer);
+    $statement->execute();
+    $stageIInfo = $statement->fetch();
+}
+if (!$stageIInfo && !empty($reqService)) {
+    $fallbackStmt = $db->prepare("SELECT * FROM audit_schedule_id WHERE serviceca_id = :service ORDER BY audit_schedule_id DESC LIMIT 1");
+    $fallbackStmt->bindParam(':service', $reqService);
+    $fallbackStmt->execute();
+    $stageIInfo = $fallbackStmt->fetch();
+}
+if (!$stageIInfo && !empty($reqCustomer)) {
+    $fallbackCustStmt = $db->prepare("SELECT * FROM audit_schedule_id WHERE customer_ca_id = :customer ORDER BY audit_schedule_id DESC LIMIT 1");
+    $fallbackCustStmt->bindParam(':customer', $reqCustomer);
+    $fallbackCustStmt->execute();
+    $stageIInfo = $fallbackCustStmt->fetch();
+}
 
 $agreementNo = $stageIInfo['ref_no'];
 $stmtCustomer = $db->prepare("SELECT unique_id FROM customer_info WHERE id = :id");

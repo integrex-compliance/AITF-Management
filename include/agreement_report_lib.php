@@ -37,7 +37,7 @@ function fetchAgreementReportData($db, $fromDate, $toDate, $clientName) {
     $sql = "SELECT s.service_id, s.service_type, s.customer_id, ci.customer_name, ci.audit_status,
                    aa.audit_id AS quotation_id, aa.service_id AS casvcid, aa.uni_svc_id AS quotationno,
                    aa.application_date AS quotation_date, aa.refundable_amount, aa.audit_stage_i, aa.audit_stage_iI,
-                   ca.aggrement_date, ca.aggrement_no
+                   ca.aggrement_date, ca.aggrement_no, ca.mail_sent, ca.mail_sent_at, ca.mail_sent_to
             FROM customer_info ci
             JOIN service s ON ci.id = s.customer_id
             JOIN audit_application aa ON s.service_id = aa.uni_svc_id
@@ -104,27 +104,27 @@ function buildAgreementReportXlsxBytes($data, $fromDate, $toDate, $clientName) {
     $xlsx = new SimpleXlsx();
     $xlsx->freezePanesAbove(5);
 
-    $widths = array(6, 34, 22, 22, 14, 16, 26);
+    $widths = array(6, 34, 22, 22, 14, 16, 24, 22);
     foreach ($widths as $idx => $width) {
         $xlsx->setColWidth($idx + 1, $width);
     }
 
     $xlsx->addRow(array(array('v' => 'AITF MANAGEMENT CERTIFICATION LIMITED', 's' => 1, 't' => 's')));
-    $xlsx->merge('A1:G1');
+    $xlsx->merge('A1:H1');
     $xlsx->setRowHeight(1, 28);
 
     $xlsx->addRow(array(array('v' => 'CERTIFICATION AGREEMENT REPORT (' . agreementReportFilterText($fromDate, $toDate, $clientName) . ')', 's' => 2, 't' => 's')));
-    $xlsx->merge('A2:G2');
+    $xlsx->merge('A2:H2');
     $xlsx->setRowHeight(2, 20);
 
     $accentRow = array();
-    for ($i = 0; $i < 7; $i++) {
+    for ($i = 0; $i < 8; $i++) {
         $accentRow[] = array('v' => '', 's' => 38, 't' => 's');
     }
     $xlsx->addRow($accentRow);
     $xlsx->setRowHeight(3, 8);
 
-    $headers = array('Sr.', 'Client Name', 'Service Type', 'Agreement No.', 'Date', 'Amount (Rs.)', 'Status');
+    $headers = array('Sr.', 'Client Name', 'Service Type', 'Agreement No.', 'Date', 'Amount (Rs.)', 'Status', 'Mail Status');
     $headerRow = array();
     foreach ($headers as $header) {
         $headerRow[] = array('v' => $header, 's' => 4, 't' => 's');
@@ -140,7 +140,7 @@ function buildAgreementReportXlsxBytes($data, $fromDate, $toDate, $clientName) {
 
     if (empty($agreements)) {
         $xlsx->addRow(array(array('v' => 'No records found', 's' => 7, 't' => 's')));
-        $xlsx->merge('A5:G5');
+        $xlsx->merge('A5:H5');
     } else {
         foreach ($agreements as $agreement) {
             $amount = agreementReportAmount($agreement);
@@ -158,6 +158,14 @@ function buildAgreementReportXlsxBytes($data, $fromDate, $toDate, $clientName) {
                 $sCenter = 7; $sClient = 6; $sText = 5; $sAmount = 8; $sStatus = 10;
             }
 
+            $mailStatusText = 'Not Sent';
+            if (!empty($agreement['mail_sent'])) {
+                $mailStatusText = 'Sent';
+                if (!empty($agreement['mail_sent_at'])) {
+                    $mailStatusText .= ' (' . date('d.m.Y h:i A', strtotime($agreement['mail_sent_at'])) . ')';
+                }
+            }
+
             $xlsx->addRow(array(
                 array('v' => $count++, 's' => $sCenter, 't' => 'n'),
                 array('v' => $agreement['customer_name'], 's' => $sClient, 't' => 's'),
@@ -166,6 +174,7 @@ function buildAgreementReportXlsxBytes($data, $fromDate, $toDate, $clientName) {
                 array('v' => agreementReportDisplayDate($agreement['aggrement_date']), 's' => $sCenter, 't' => 's'),
                 array('v' => round($amount, 2), 's' => $sAmount, 't' => 'n'),
                 array('v' => $agreement['audit_status'], 's' => $sStatus, 't' => 's'),
+                array('v' => $mailStatusText, 's' => $sText, 't' => 's'),
             ));
         }
     }
@@ -201,7 +210,7 @@ function buildAgreementReportXlsxBytes($data, $fromDate, $toDate, $clientName) {
 
     $curRow++;
     $xlsx->addRow(array(array('v' => 'AMOUNT IN WORDS: ' . strtoupper(convertToWord($totalAmount)), 's' => 17, 't' => 's')));
-    $xlsx->merge('A' . $curRow . ':G' . $curRow);
+    $xlsx->merge('A' . $curRow . ':H' . $curRow);
 
     return $xlsx->toString('Agreements');
 }

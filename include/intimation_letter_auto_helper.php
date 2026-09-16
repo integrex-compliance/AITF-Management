@@ -246,6 +246,20 @@ function aitfBuildIntimationMailBodyPart($customerName, $lettertype, $date = '',
     }
     $targetDate = !empty($nextDueDate) ? $nextDueDate : $date;
 
+    $standardSignoff = '<div style="margin-top: 28px; border-top: 1px solid #e2e8f0; padding-top: 18px;">'
+        . '<p style="margin: 0 0 6px; color: #475569;">Regards,</p>'
+        . '<p style="margin: 0; line-height: 1.45;">'
+        . '<strong>AITF Management Certification Limited.</strong><br>'
+        . '<strong>QCI-NABCB Accredited Certification Body.</strong><br><br>'
+        . '<strong>Authorised Signatory</strong>'
+        . '</p>'
+        . '</div>'
+        . '<div style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 16px 20px; font-size: 12px; color: #64748b; line-height: 1.5; margin-top: 24px; border-radius: 4px;">'
+        . '<strong>AITF Management Certification Limited</strong><br>'
+        . 'Devi Indrayani, Wing B-26, Near IT Park, Talawade, Pune &ndash; 411062, Maharashtra, India<br>'
+        . 'Email: <a href="mailto:certification@aitf.co.in" style="color: #2563eb; text-decoration: none;">certification@aitf.co.in</a> | Website: <a href="https://www.aitf.co.in" target="_blank" style="color: #2563eb; text-decoration: none;">www.aitf.co.in</a>'
+        . '</div>';
+
     if ($actionType === "Suspension Reminder") {
         return '<div style="font-family: Arial, Helvetica, sans-serif; font-size: 14.5px; line-height: 1.65; color: #222222; max-width: 680px;">'
             . '<p style="margin: 0 0 16px 0;">Dear ' . $clientNameSafe . ',</p>'
@@ -255,8 +269,8 @@ function aitfBuildIntimationMailBodyPart($customerName, $lettertype, $date = '',
             . '<p style="margin: 0 0 14px 0;">Please find attached the <strong>Suspension Reminder</strong> letter containing the applicable audit requirements, timelines, and further details.</p>'
             . '<p style="margin: 0 0 14px 0;">We request you to take the necessary action at the earliest to avoid any interruption to your ISO certification status.</p>'
             . '<p style="margin: 0 0 14px 0;">If you have already scheduled the audit or submitted the required documents, please disregard this reminder.</p>'
-            . '<p style="margin: 24px 0 0 0; line-height: 1.5;">Sincerely,<br><strong>AITF Management Certification Limited</strong><br>Assessment Team</p>'
             . '<p style="margin: 18px 0 0 0; font-size: 13px; color: #555555;"><strong>Attachment:</strong> ' . $attachmentNameSafe . '</p>'
+            . $standardSignoff
             . '</div>';
     } 
     else if ($actionType === "Suspend Letter" || $actionType === "Suspension Letter" || $actionType === "Suspention Letter") {
@@ -269,8 +283,8 @@ function aitfBuildIntimationMailBodyPart($customerName, $lettertype, $date = '',
             . '<p style="margin: 0 0 14px 0;">Please find attached the official <strong>Suspension Letter</strong>, which contains the details of the suspension, applicable requirements, and the necessary actions to be taken.</p>'
             . '<p style="margin: 0 0 14px 0;">You are requested to review the attached letter carefully and take the required action at the earliest to resolve the suspension and restore the validity of your ISO certification.</p>'
             . '<p style="margin: 0 0 14px 0;">For any clarification regarding the suspension or the required actions, please contact the Assessment Department.</p>'
-            . '<p style="margin: 24px 0 0 0; line-height: 1.5;">Sincerely,<br><strong>AITF Management Certification Limited</strong><br>Assessment Department</p>'
             . '<p style="margin: 18px 0 0 0; font-size: 13px; color: #555555;"><strong>Attachment:</strong> ' . $attachmentNameSafe . '</p>'
+            . $standardSignoff
             . '</div>';
     } 
     else if ($actionType === "Withdrawal Reminder") {
@@ -282,8 +296,8 @@ function aitfBuildIntimationMailBodyPart($customerName, $lettertype, $date = '',
             . '<p style="margin: 0 0 14px 0;">Please find attached the official <strong>Withdrawal Reminder</strong> letter containing the relevant details, timelines, and requirements.</p>'
             . '<p style="margin: 0 0 14px 0;">We strongly request you to take the necessary action within the specified timeframe to <strong>avoid withdrawal of your ISO certification</strong>.</p>'
             . '<p style="margin: 0 0 14px 0;">If you have already completed the required audit or submitted the necessary documents, please disregard this reminder.</p>'
-            . '<p style="margin: 24px 0 0 0; line-height: 1.5;">Sincerely,<br><strong>AITF Management Certification Limited</strong><br>Assessment Department</p>'
             . '<p style="margin: 18px 0 0 0; font-size: 13px; color: #555555;"><strong>Attachment:</strong> ' . $attachmentNameSafe . '</p>'
+            . $standardSignoff
             . '</div>';
     } 
     else if ($actionType === "Withdraw Letter" || $actionType === "Withdrawal Letter") {
@@ -295,42 +309,51 @@ function aitfBuildIntimationMailBodyPart($customerName, $lettertype, $date = '',
             . '<p style="margin: 0 0 14px 0;">Please find attached the official <strong>Withdrawal Letter</strong>, which contains the details of the withdrawal, applicable requirements, and the relevant actions to be taken.</p>'
             . '<p style="margin: 0 0 14px 0;">You are requested to review the attached letter carefully. Any reference to or use of the withdrawn ISO certification after the effective withdrawal date must be discontinued in accordance with the applicable certification requirements.</p>'
             . '<p style="margin: 0 0 14px 0;">If you have any questions or require clarification regarding the withdrawal, please contact the Assessment Department.</p>'
-            . '<p style="margin: 24px 0 0 0; line-height: 1.5;">Sincerely,<br><strong>AITF Management Certification Limited</strong><br>Assessment Department</p>'
             . '<p style="margin: 18px 0 0 0; font-size: 13px; color: #555555;"><strong>Attachment:</strong> ' . $attachmentNameSafe . '</p>'
+            . $standardSignoff
             . '</div>';
     } 
     else if ($actionType === "1st Reminder") {
-        return '<p>Dear ' . $clientNameSafe . ',</p>'
-            . '<p>This is the <strong>1st Reminder</strong> to inform you that your ISO recertification / surveillance audit is due on or before <strong>' . $targetDate . '</strong>.</p>'
-            . '<p>Please find attached the <strong>1st Reminder</strong> notice for complete details regarding the audit schedule and requirements.</p>'
-            . '<p>Kindly coordinate with our assessment department to plan and confirm your audit dates at the earliest to maintain uninterrupted certification validity.</p>'
-            . '<p>If you have already submitted the audit plan, please treat this email as a routine reminder.</p>'
-            . '<p>Sincerely,<br><strong>AITF Management Certification Limited</strong><br>Assessment Department</p>'
-            . '<p>Attachment: ' . $attachmentNameSafe . '</p>';
+        return '<div style="font-family: Arial, Helvetica, sans-serif; font-size: 14.5px; line-height: 1.65; color: #222222; max-width: 680px;">'
+            . '<p style="margin: 0 0 16px 0;">Dear ' . $clientNameSafe . ',</p>'
+            . '<p style="margin: 0 0 14px 0;">This is the <strong>1st Reminder</strong> to inform you that your ISO recertification / surveillance audit is due on or before <strong>' . $targetDate . '</strong>.</p>'
+            . '<p style="margin: 0 0 14px 0;">Please find attached the <strong>1st Reminder</strong> notice for complete details regarding the audit schedule and requirements.</p>'
+            . '<p style="margin: 0 0 14px 0;">Kindly coordinate with our assessment department to plan and confirm your audit dates at the earliest to maintain uninterrupted certification validity.</p>'
+            . '<p style="margin: 0 0 14px 0;">If you have already submitted the audit plan, please treat this email as a routine reminder.</p>'
+            . '<p style="margin: 18px 0 0 0; font-size: 13px; color: #555555;"><strong>Attachment:</strong> ' . $attachmentNameSafe . '</p>'
+            . $standardSignoff
+            . '</div>';
     } 
     else if ($actionType === "2nd Reminder") {
-        return '<p>Dear ' . $clientNameSafe . ',</p>'
-            . '<p>This is the <strong>2nd Reminder</strong> regarding your pending ISO recertification / surveillance audit, which must be completed on or before <strong>' . $targetDate . '</strong>.</p>'
-            . '<p>Please find attached the <strong>2nd Reminder</strong> notice with the necessary details.</p>'
-            . '<p>Kindly arrange for the audit schedule at the earliest to prevent the initiation of certificate suspension procedures.</p>'
-            . '<p>Sincerely,<br><strong>AITF Management Certification Limited</strong><br>Assessment Department</p>'
-            . '<p>Attachment: ' . $attachmentNameSafe . '</p>';
+        return '<div style="font-family: Arial, Helvetica, sans-serif; font-size: 14.5px; line-height: 1.65; color: #222222; max-width: 680px;">'
+            . '<p style="margin: 0 0 16px 0;">Dear ' . $clientNameSafe . ',</p>'
+            . '<p style="margin: 0 0 14px 0;">This is the <strong>2nd Reminder</strong> regarding your pending ISO recertification / surveillance audit, which must be completed on or before <strong>' . $targetDate . '</strong>.</p>'
+            . '<p style="margin: 0 0 14px 0;">Please find attached the <strong>2nd Reminder</strong> notice with the necessary details.</p>'
+            . '<p style="margin: 0 0 14px 0;">Kindly arrange for the audit schedule at the earliest to prevent the initiation of certificate suspension procedures.</p>'
+            . '<p style="margin: 18px 0 0 0; font-size: 13px; color: #555555;"><strong>Attachment:</strong> ' . $attachmentNameSafe . '</p>'
+            . $standardSignoff
+            . '</div>';
     } 
     else if ($actionType === "Expire Letter") {
-        return '<p>Dear ' . $clientNameSafe . ',</p>'
-            . '<p>This is to inform you that the validity of your ISO certification has <strong>EXPIRED</strong> on <strong>' . $date . '</strong>.</p>'
-            . '<p>Please find attached the <strong>Expire Letter</strong> for your reference.</p>'
-            . '<p>If you wish to re-apply or obtain fresh certification, kindly contact our assessment department.</p>'
-            . '<p>Sincerely,<br><strong>AITF Management Certification Limited</strong><br>Assessment Department</p>'
-            . '<p>Attachment: ' . $attachmentNameSafe . '</p>';
+        return '<div style="font-family: Arial, Helvetica, sans-serif; font-size: 14.5px; line-height: 1.65; color: #222222; max-width: 680px;">'
+            . '<p style="margin: 0 0 16px 0;">Dear ' . $clientNameSafe . ',</p>'
+            . '<p style="margin: 0 0 14px 0;">This is to inform you that the validity of your ISO certification has <strong>EXPIRED</strong> on <strong>' . $date . '</strong>.</p>'
+            . '<p style="margin: 0 0 14px 0;">Please find attached the <strong>Expire Letter</strong> for your reference.</p>'
+            . '<p style="margin: 0 0 14px 0;">If you wish to re-apply or obtain fresh certification, kindly contact our assessment department.</p>'
+            . '<p style="margin: 18px 0 0 0; font-size: 13px; color: #555555;"><strong>Attachment:</strong> ' . $attachmentNameSafe . '</p>'
+            . $standardSignoff
+            . '</div>';
     }
     else {
-        return '<p>Dear ' . $clientNameSafe . ',</p>'
-            . '<p>Please find attached the official communication regarding your ISO certification: <strong>' . $letterNameSafe . '</strong>' . (!empty($date) ? ' (dated: ' . $date . ')' : '') . '.</p>'
-            . '<p>Kindly review the attached document and arrange for the required audit coordination / compliance at the earliest.</p>'
-            . '<p>Sincerely,<br><strong>AITF Management Certification Limited</strong><br>Assessment Department</p>'
-            . '<p>Attachment: ' . $attachmentNameSafe . '</p>';
+        return '<div style="font-family: Arial, Helvetica, sans-serif; font-size: 14.5px; line-height: 1.65; color: #222222; max-width: 680px;">'
+            . '<p style="margin: 0 0 16px 0;">Dear ' . $clientNameSafe . ',</p>'
+            . '<p style="margin: 0 0 14px 0;">Please find attached the official communication regarding your ISO certification: <strong>' . $letterNameSafe . '</strong>' . (!empty($date) ? ' (dated: ' . $date . ')' : '') . '.</p>'
+            . '<p style="margin: 0 0 14px 0;">Kindly review the attached document and arrange for the required audit coordination / compliance at the earliest.</p>'
+            . '<p style="margin: 18px 0 0 0; font-size: 13px; color: #555555;"><strong>Attachment:</strong> ' . $attachmentNameSafe . '</p>'
+            . $standardSignoff
+            . '</div>';
     }
+
 }
 
 function aitfIntimationMailBody(array $customer, array $context, $fileName)

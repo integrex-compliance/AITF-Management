@@ -149,53 +149,8 @@ function runAutoSendIntimationDue($db) {
     $statement->execute();
     $dueLetters = $statement->fetchAll(PDO::FETCH_ASSOC);
 
-    // Fetch pending Stage 1 Notifications
-    $s1Query = "SELECT ci.id AS customer_id, ci.customer_name, ci.unique_id, ci.email_id, 
-                       svc.service_id, svc.service_type, cas.ca_id,
-                       soi.intimation_date as due_date, NULL as sent_date,
-                       'Stage 1 Notification' as action, soi.audit_stage_id as action_id
-                FROM stage_oneaudit_id soi
-                INNER JOIN service_type_ca cas ON soi.ca_service_id = cas.ca_id
-                INNER JOIN service svc ON cas.service = svc.service_id
-                INNER JOIN customer_info ci ON svc.customer_id = ci.id
-                LEFT JOIN ca_service_dates svcdt ON svc.service_id = svcdt.service_id 
-                    AND svcdt.action = 'Stage 1 Notification' 
-                    AND svcdt.status = 'sent' 
-                    AND svcdt.is_deleted = 'N'
-                WHERE svcdt.action_id IS NULL
-                  AND soi.intimation_date = CURDATE()
-                  AND (ci.is_deleted IS NULL OR ci.is_deleted <> 'YES')
-                  AND (cas.service_ca_status IS NULL OR cas.service_ca_status <> 'Withdrawn')";
-    $s1Statement = $db->prepare($s1Query);
-    $s1Statement->execute();
-    $s1Letters = $s1Statement->fetchAll(PDO::FETCH_ASSOC);
-
-    // Fetch pending Stage 2 Notifications
-    $s2Query = "SELECT ci.id AS customer_id, ci.customer_name, ci.unique_id, ci.email_id, 
-                       svc.service_id, svc.service_type, cas.ca_id,
-                       stai.intimation_date as due_date, NULL as sent_date,
-                       'Stage 2 Notification' as action, stai.audit_stageii_id as action_id
-                FROM stage_twoaudit_id stai
-                INNER JOIN service_type_ca cas ON stai.service_id = cas.ca_id
-                INNER JOIN service svc ON cas.service = svc.service_id
-                INNER JOIN customer_info ci ON svc.customer_id = ci.id
-                LEFT JOIN ca_service_dates svcdt ON svc.service_id = svcdt.service_id 
-                    AND svcdt.action = 'Stage 2 Notification' 
-                    AND svcdt.status = 'sent' 
-                    AND svcdt.is_deleted = 'N'
-                WHERE svcdt.action_id IS NULL
-                  AND stai.intimation_date = CURDATE()
-                  AND (ci.is_deleted IS NULL OR ci.is_deleted <> 'YES')
-                  AND (cas.service_ca_status IS NULL OR cas.service_ca_status <> 'Withdrawn')";
-    $s2Statement = $db->prepare($s2Query);
-    $s2Statement->execute();
-    $s2Letters = $s2Statement->fetchAll(PDO::FETCH_ASSOC);
-
-    // Merge regular due letters with Stage 1 and Stage 2 notifications
-    $dueLetters = array_merge($dueLetters, $s1Letters, $s2Letters);
-
     $totalFound = count($dueLetters);
-    logCronEvent("Found $totalFound pending due letter(s) (including stage notifications) eligible for automatic mail sending.");
+    logCronEvent("Found $totalFound pending due letter(s) eligible for automatic mail sending.");
 
     if ($totalFound == 0) {
         logCronEvent("No pending due letters found for today. Job completed.");
@@ -212,41 +167,6 @@ function runAutoSendIntimationDue($db) {
 
         logCronEvent("-------------------------------------------------------------------");
         logCronEvent("Processing due letter -> Customer: {$due['customer_name']} (ID: $customer_id) | Letter: $lettertype | Due Date: {$due['due_date']}");
-
-        if ($lettertype === 'Stage 1 Notification' || $lettertype === 'Stage 2 Notification') {
-            // Simulate $_POST variables and run the stage mailer
-            $originalPost = $_POST;
-            $_POST = [
-                'customer' => $customer_id,
-                'service' => $due['ca_id'], // ca_id
-                'audit' => $actionId,
-                'stage' => ($lettertype === 'Stage 2 Notification') ? 'stage2' : 'stage1'
-            ];
-            
-            $startLevel = ob_get_level();
-            ob_start();
-            try {
-                include __DIR__ . '/sendStageNotificationMail.php';
-                $responseJson = ob_get_clean();
-                $res = json_decode($responseJson, true);
-                if ($res && isset($res['success']) && $res['success']) {
-                    logCronEvent("SUCCESS: Automated stage notification sent successfully. Details: " . $res['message']);
-                    $successCount++;
-                } else {
-                    $errorMsg = ($res && isset($res['message'])) ? $res['message'] : 'Unknown error';
-                    logCronEvent("ERROR: Failed to send automated stage notification: " . $errorMsg);
-                    $failCount++;
-                }
-            } catch (Exception $ex) {
-                if (ob_get_level() > $startLevel) {
-                    ob_end_clean();
-                }
-                logCronEvent("EXCEPTION: Failed to run stage notification mailer: " . $ex->getMessage());
-                $failCount++;
-            }
-            $_POST = $originalPost;
-            continue; // Continue to next letter in loop
-        }
 
         // Fetch complete customer row
         $stmtCust = $db->prepare("SELECT * FROM customer_info WHERE id = :id");

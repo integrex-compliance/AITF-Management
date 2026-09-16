@@ -20,36 +20,60 @@ if (!$client) {
     exit; 
 }
 
+require_once __DIR__ . '/include/statement_helper.php';
+if ($db) {
+    aitf_ensure_statement_tables($db);
+}
+
 // Old payment records from legacy payment_system
-$stmt = $db->prepare("
-    SELECT ps.* 
-    FROM payment_system ps 
-    WHERE ps.customer_id = :cid 
-      AND ps.service_type NOT LIKE '%tds%' 
-    ORDER BY ps.payment_id ASC
-");
-$stmt->execute([':cid' => $customerId]);
-$oldPayments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$oldPayments = [];
+try {
+    $stmt = $db->prepare("
+        SELECT ps.* 
+        FROM payment_system ps 
+        WHERE ps.customer_id = :cid 
+          AND ps.service_type NOT LIKE '%tds%' 
+        ORDER BY ps.payment_id ASC
+    ");
+    $stmt->execute([':cid' => $customerId]);
+    $oldPayments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Throwable $e) {
+    error_log("statementDetail oldPayments error: " . $e->getMessage());
+}
 
 // New statement payments
-$stmt = $db->prepare("
-    SELECT * 
-    FROM statement_payments 
-    WHERE customer_id = :cid 
-    ORDER BY id ASC
-");
-$stmt->execute([':cid' => $customerId]);
-$newPayments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$newPayments = [];
+try {
+    if (aitf_statement_table_exists($db, 'statement_payments')) {
+        $stmt = $db->prepare("
+            SELECT * 
+            FROM statement_payments 
+            WHERE customer_id = :cid 
+            ORDER BY id ASC
+        ");
+        $stmt->execute([':cid' => $customerId]);
+        $newPayments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+} catch (Throwable $e) {
+    error_log("statementDetail newPayments error: " . $e->getMessage());
+}
 
 // Bank reconciliation records
-$stmt = $db->prepare("
-    SELECT * 
-    FROM statement_bank_reconciliation 
-    WHERE customer_id = :cid 
-    ORDER BY acknowledged_at DESC
-");
-$stmt->execute([':cid' => $customerId]);
-$reconciliations = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$reconciliations = [];
+try {
+    if (aitf_statement_table_exists($db, 'statement_bank_reconciliation')) {
+        $stmt = $db->prepare("
+            SELECT * 
+            FROM statement_bank_reconciliation 
+            WHERE customer_id = :cid 
+            ORDER BY acknowledged_at DESC
+        ");
+        $stmt->execute([':cid' => $customerId]);
+        $reconciliations = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+} catch (Throwable $e) {
+    error_log("statementDetail reconciliations error: " . $e->getMessage());
+}
 
 // Calculate totals
 $totalDecided = 0; 

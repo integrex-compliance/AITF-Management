@@ -191,7 +191,7 @@ class AITFServiceEmailSender {
         throw new Exception($lastError ?: 'Failed to send attachment email.');
     }
 
-    function sendMultipleAttachmentsEmail($toEmails, $toName, $body, $subject, $attachments) {
+    function sendMultipleAttachmentsEmail($toEmails, $toName, $body, $subject, $attachments, $ccEmails = null) {
         $mailConfig = aitf_get_mail_config([
             'from_name' => aitf_env('MAIL_FROM_NAME', 'AITF Management Certification Limited')
         ]);
@@ -209,6 +209,16 @@ class AITFServiceEmailSender {
                     }
                 } else {
                     $mail->AddAddress(trim($toEmails), $toName);
+                }
+
+                if (!empty($ccEmails)) {
+                    if (is_array($ccEmails)) {
+                        foreach ($ccEmails as $cc) {
+                            if (!empty($cc)) $mail->addCC(trim($cc));
+                        }
+                    } else {
+                        $mail->addCC(trim($ccEmails));
+                    }
                 }
 
                 $mail->Subject = $subject;

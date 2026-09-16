@@ -36,13 +36,32 @@ $dateval1 = !empty($audit1info["intimation_date"]) ? date("d.m.Y", strtotime($au
 //   $dateval1 =  $auditdate1[$i];
 //}
 
-$audit2 = "SELECT * FROM audit_scheduleii_id WHERE audit_scheduleii_id = :audit and ca_service = :service and ca_customer = :customer ";
-$statement = $db->prepare($audit2);
-$statement->bindParam(':audit', $_POST['auditnotiid']);
-$statement->bindParam(':service', $_POST['serviceid']);
-$statement->bindParam(':customer', $_POST['customerid']);
-$statement->execute();
-$audit2info = $statement->fetch();
+$reqAuditNotiId = isset($_POST['auditnotiid']) ? $_POST['auditnotiid'] : '';
+$reqService = isset($_POST['serviceid']) ? $_POST['serviceid'] : '';
+$reqCustomer = isset($_POST['customerid']) ? $_POST['customerid'] : '';
+
+$audit2info = false;
+if (!empty($reqAuditNotiId)) {
+    $audit2 = "SELECT * FROM audit_scheduleii_id WHERE audit_scheduleii_id = :audit and ca_service = :service and ca_customer = :customer ";
+    $statement = $db->prepare($audit2);
+    $statement->bindParam(':audit', $reqAuditNotiId);
+    $statement->bindParam(':service', $reqService);
+    $statement->bindParam(':customer', $reqCustomer);
+    $statement->execute();
+    $audit2info = $statement->fetch();
+}
+if (!$audit2info && !empty($reqService)) {
+    $fallbackStmt2 = $db->prepare("SELECT * FROM audit_scheduleii_id WHERE ca_service = :service ORDER BY audit_scheduleii_id DESC LIMIT 1");
+    $fallbackStmt2->bindParam(':service', $reqService);
+    $fallbackStmt2->execute();
+    $audit2info = $fallbackStmt2->fetch();
+}
+if (!$audit2info && !empty($reqCustomer)) {
+    $fallbackCustStmt2 = $db->prepare("SELECT * FROM audit_scheduleii_id WHERE ca_customer = :customer ORDER BY audit_scheduleii_id DESC LIMIT 1");
+    $fallbackCustStmt2->bindParam(':customer', $reqCustomer);
+    $fallbackCustStmt2->execute();
+    $audit2info = $fallbackCustStmt2->fetch();
+}
 
 if ($audit2info === false) {
     $audit2info = [
