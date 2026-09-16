@@ -19,10 +19,17 @@
         || in_array(strtolower(str_replace(array(' ', '-'), '', $invRole)), array('officestaffa', 'officestaffb'), true);
     $isRestrictedRole = $isMarketingHead || $isOfficeStaff;
 
-    $quotationList = "SELECT s.service_id, service_type, s.customer_id, ci.customer_name, ci.audit_status, aa.audit_id as quotation_id, aa.service_id as casvcid, uni_svc_id as quotationno, application_date as quotation_date,'Aggrement' as quotid,refundable_amount,audit_stage_i, audit_stage_iI, initial_assessment, ca.id, ca.aggrement_date, ca.aggrement_no, ca.mail_sent, ca.mail_sent_at, ca.mail_sent_to FROM customer_info ci join service s on ci.id = s.customer_id join audit_application aa on s.service_id = aa.uni_svc_id left join certification_aggrement ca on aa.service_id = ca.service where ci.is_deleted = 'NO' order by aggrement_date DESC";
-    $statement = $db->prepare($quotationList);
-    $statement->execute();
-    $quotationInfo = $statement->fetchAll();
+    try {
+        $quotationList = "SELECT s.service_id, service_type, s.customer_id, ci.customer_name, ci.audit_status, aa.audit_id as quotation_id, aa.service_id as casvcid, uni_svc_id as quotationno, application_date as quotation_date,'Aggrement' as quotid,refundable_amount,audit_stage_i, audit_stage_iI, initial_assessment, ca.id, ca.aggrement_date, ca.aggrement_no, ca.mail_sent, ca.mail_sent_at, ca.mail_sent_to FROM customer_info ci join service s on ci.id = s.customer_id join audit_application aa on s.service_id = aa.uni_svc_id left join certification_aggrement ca on aa.service_id = ca.service where ci.is_deleted = 'NO' order by aggrement_date DESC";
+        $statement = $db->prepare($quotationList);
+        $statement->execute();
+        $quotationInfo = $statement->fetchAll();
+    } catch (Throwable $e) {
+        $quotationListFallback = "SELECT s.service_id, service_type, s.customer_id, ci.customer_name, ci.audit_status, aa.audit_id as quotation_id, aa.service_id as casvcid, uni_svc_id as quotationno, application_date as quotation_date,'Aggrement' as quotid,refundable_amount,audit_stage_i, audit_stage_iI, initial_assessment, ca.id, ca.aggrement_date, ca.aggrement_no FROM customer_info ci join service s on ci.id = s.customer_id join audit_application aa on s.service_id = aa.uni_svc_id left join certification_aggrement ca on aa.service_id = ca.service where ci.is_deleted = 'NO' order by aggrement_date DESC";
+        $statement = $db->prepare($quotationListFallback);
+        $statement->execute();
+        $quotationInfo = $statement->fetchAll();
+    }
 
     $firmDetails = "SELECT * FROM consulting_firm";
     $statement = $db->prepare($firmDetails);

@@ -183,6 +183,14 @@ if (!function_exists('aitf_auditor_assert_service_access')) {
 if (!function_exists('aitf_auditor_enforce_access')) {
     function aitf_auditor_enforce_access($db = null)
     {
+        // Auto sync database schema (ensures live DB is always in sync with code)
+        if ($db) {
+            try {
+                require_once __DIR__ . '/schema_auto_sync.php';
+                aitf_auto_sync_schema($db);
+            } catch (Throwable $e) {}
+        }
+
         // Never applies to CLI/cron executions.
         if (PHP_SAPI === 'cli') {
             return;

@@ -292,7 +292,7 @@ try {
                 ':sent_by' => $sentBy,
                 ':id' => $certificationId
             ]);
-        } catch (Exception $ex) {
+        } catch (Throwable $ex) {
             error_log('Failed to update mail_sent in certification_aggrement: ' . $ex->getMessage());
         }
 

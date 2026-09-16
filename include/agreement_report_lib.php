@@ -78,14 +78,24 @@ function fetchAgreementReportData($db, $fromDate, $toDate, $clientName) {
 
     $sql .= " ORDER BY ca.aggrement_date DESC, ca.id DESC";
 
-    $statement = $db->prepare($sql);
-    foreach ($params as $key => &$val) {
-        $statement->bindParam($key, $val);
+    try {
+        $statement = $db->prepare($sql);
+        foreach ($params as $key => &$val) {
+            $statement->bindParam($key, $val);
+        }
+        unset($val);
+        $statement->execute();
+        return array('agreements' => $statement->fetchAll(PDO::FETCH_ASSOC));
+    } catch (Throwable $e) {
+        $fallbackSql = str_replace(", ca.mail_sent, ca.mail_sent_at, ca.mail_sent_to", "", $sql);
+        $statement = $db->prepare($fallbackSql);
+        foreach ($params as $key => &$val) {
+            $statement->bindParam($key, $val);
+        }
+        unset($val);
+        $statement->execute();
+        return array('agreements' => $statement->fetchAll(PDO::FETCH_ASSOC));
     }
-    unset($val);
-    $statement->execute();
-
-    return array('agreements' => $statement->fetchAll(PDO::FETCH_ASSOC));
 }
 
 function agreementReportFilterText($fromDate, $toDate, $clientName) {

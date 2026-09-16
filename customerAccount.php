@@ -5761,13 +5761,24 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             //            new changes by Pallavi
         
             if ($service['service_type'] == "CR") {
-                $crServices = "SELECT crs.cr_id, crs.service, application_form, certification_aggrement, aud.audit_id, contractid, asp.assessment_id, cfp.certificate_id, ca.id, aggrement_date, aggrement_no, ca.mail_sent, ca.mail_sent_at, ca.mail_sent_to FROM service_type_cr crs left join audit_application aud on crs.cr_id = aud.service_id left join contract_id ci on crs.cr_id = ci.ca_service_id left join assessment_planning asp on crs.cr_id = asp.service_id left join stage_twoaudit_id stai on crs.cr_id = stai.service_id left join certificate_print cfp on crs.cr_id = cfp.service_id left join certification_aggrement ca on crs.cr_id = ca.service WHERE crs.service = :id";
-                $statement = $db->prepare($crServices);
-                $statement->bindParam(':id', $service["service_id"]);
-                $statement->execute();
-                $crservice = $statement->fetch();
+                try {
+                    $crServices = "SELECT crs.cr_id, crs.service, application_form, certification_aggrement, aud.audit_id, contractid, asp.assessment_id, cfp.certificate_id, ca.id, aggrement_date, aggrement_no, ca.mail_sent, ca.mail_sent_at, ca.mail_sent_to FROM service_type_cr crs left join audit_application aud on crs.cr_id = aud.service_id left join contract_id ci on crs.cr_id = ci.ca_service_id left join assessment_planning asp on crs.cr_id = asp.service_id left join stage_twoaudit_id stai on crs.cr_id = stai.service_id left join certificate_print cfp on crs.cr_id = cfp.service_id left join certification_aggrement ca on crs.cr_id = ca.service WHERE crs.service = :id";
+                    $statement = $db->prepare($crServices);
+                    $statement->bindParam(':id', $service["service_id"]);
+                    $statement->execute();
+                    $crservice = $statement->fetch();
+                } catch (Throwable $e) {
+                    $crServicesFallback = "SELECT crs.cr_id, crs.service, application_form, certification_aggrement, aud.audit_id, contractid, asp.assessment_id, cfp.certificate_id, ca.id, aggrement_date, aggrement_no FROM service_type_cr crs left join audit_application aud on crs.cr_id = aud.service_id left join contract_id ci on crs.cr_id = ci.ca_service_id left join assessment_planning asp on crs.cr_id = asp.service_id left join stage_twoaudit_id stai on crs.cr_id = stai.service_id left join certificate_print cfp on crs.cr_id = cfp.service_id left join certification_aggrement ca on crs.cr_id = ca.service WHERE crs.service = :id";
+                    $statement = $db->prepare($crServicesFallback);
+                    $statement->bindParam(':id', $service["service_id"]);
+                    $statement->execute();
+                    $crservice = $statement->fetch();
+                }
+                if (!is_array($crservice)) {
+                    $crservice = [];
+                }
 
-                if ($letestService["c_service"] == $crservice['service']) {
+                if ($letestService["c_service"] == ($crservice['service'] ?? '')) {
                     $disp = "";
                 } else {
                     $disp = "none";
@@ -10224,11 +10235,22 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     $class10 = "sp-service-type";
                 }
 
-                $spService = "SELECT DISTINCT sp.sp_id, sp.service, sp_signed_noti, certificate_option, sp_signed_copy, sp_audit_report, service_sp_status, sp.audit_date as spaudit, sp.auditors as sp_auditors, soi.audit_stage_id, asi.audit_schedule_id, siea.stage_ii_id, crr.crr_id, cfp.certificate_id, ca.id, aggrement_date, aggrement_no, ca.mail_sent, ca.mail_sent_at, ca.mail_sent_to FROM service_type_sp sp left join stage_oneaudit_id soi on sp.sp_id = soi.ca_service_id left join audit_schedule_id asi on sp.sp_id = asi.serviceca_id left join stage_ii_audit_id siea on sp.sp_id = siea.ca_service_id left join cdc_report_review crr on sp.sp_id = crr.ca_service_id left join certificate_print cfp on sp.sp_id = cfp.service_id left join certification_aggrement ca on sp.sp_id = ca.service WHERE sp.service = :id GROUP BY sp.sp_id";
-                $statement = $db->prepare($spService);
-                $statement->bindParam(':id', $service["service_id"]);
-                $statement->execute();
-                $spservices = $statement->fetch();
+                try {
+                    $spService = "SELECT DISTINCT sp.sp_id, sp.service, sp_signed_noti, certificate_option, sp_signed_copy, sp_audit_report, service_sp_status, sp.audit_date as spaudit, sp.auditors as sp_auditors, soi.audit_stage_id, asi.audit_schedule_id, siea.stage_ii_id, crr.crr_id, cfp.certificate_id, ca.id, aggrement_date, aggrement_no, ca.mail_sent, ca.mail_sent_at, ca.mail_sent_to FROM service_type_sp sp left join stage_oneaudit_id soi on sp.sp_id = soi.ca_service_id left join audit_schedule_id asi on sp.sp_id = asi.serviceca_id left join stage_ii_audit_id siea on sp.sp_id = siea.ca_service_id left join cdc_report_review crr on sp.sp_id = crr.ca_service_id left join certificate_print cfp on sp.sp_id = cfp.service_id left join certification_aggrement ca on sp.sp_id = ca.service WHERE sp.service = :id GROUP BY sp.sp_id";
+                    $statement = $db->prepare($spService);
+                    $statement->bindParam(':id', $service["service_id"]);
+                    $statement->execute();
+                    $spservices = $statement->fetch();
+                } catch (Throwable $e) {
+                    $spServiceFallback = "SELECT DISTINCT sp.sp_id, sp.service, sp_signed_noti, certificate_option, sp_signed_copy, sp_audit_report, service_sp_status, sp.audit_date as spaudit, sp.auditors as sp_auditors, soi.audit_stage_id, asi.audit_schedule_id, siea.stage_ii_id, crr.crr_id, cfp.certificate_id, ca.id, aggrement_date, aggrement_no FROM service_type_sp sp left join stage_oneaudit_id soi on sp.sp_id = soi.ca_service_id left join audit_schedule_id asi on sp.sp_id = asi.serviceca_id left join stage_ii_audit_id siea on sp.sp_id = siea.ca_service_id left join cdc_report_review crr on sp.sp_id = crr.ca_service_id left join certificate_print cfp on sp.sp_id = cfp.service_id left join certification_aggrement ca on sp.sp_id = ca.service WHERE sp.service = :id GROUP BY sp.sp_id";
+                    $statement = $db->prepare($spServiceFallback);
+                    $statement->bindParam(':id', $service["service_id"]);
+                    $statement->execute();
+                    $spservices = $statement->fetch();
+                }
+                if (!is_array($spservices)) {
+                    $spservices = [];
+                }
 
                 $allSPServiceAction = "SELECT MIN(action_id) as action_id, service_id, action, due_date, MAX(sent_date) as sent_date, MAX(is_deleted) as is_deleted FROM ca_service_dates WHERE service_id = :id AND is_deleted = 'N' GROUP BY service_id, action, due_date ORDER BY due_date ASC";
                 $statement = $db->prepare($allSPServiceAction);
