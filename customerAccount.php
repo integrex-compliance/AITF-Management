@@ -39,6 +39,61 @@ if ($currentRole === 'client' || $currentRole === 'external') {
         || in_array($userRoleLower, array('marketinghead', 'marketingexecutive'), true)
         || in_array($userNameLower, array('marketingh', 'marketinge'), true);
 
+    if (!function_exists('aitfGetNotificationSentInfo')) {
+        function aitfGetNotificationSentInfo($db, $serviceUniversalId, $actionNames)
+        {
+            if (empty($serviceUniversalId) || empty($actionNames) || !$db) {
+                return null;
+            }
+            if (!is_array($actionNames)) {
+                $actionNames = array($actionNames);
+            }
+            try {
+                $inClause = implode(',', array_fill(0, count($actionNames), '?'));
+                $params = array_merge(array($serviceUniversalId), $actionNames);
+                // Check dedicated audit_notification_sent_log first
+                $sql = "SELECT id as action_id, action, sent_date, status 
+                        FROM audit_notification_sent_log 
+                        WHERE service_id = ? AND action IN ($inClause) AND status = 'sent' AND (is_deleted = 'N' OR is_deleted IS NULL) 
+                        ORDER BY id DESC LIMIT 1";
+                $stmt = $db->prepare($sql);
+                $stmt->execute($params);
+                $res = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($res) {
+                    return $res;
+                }
+                // Fallback to ca_service_dates if needed
+                $sql2 = "SELECT action_id, action, due_date, sent_date, status 
+                         FROM ca_service_dates 
+                         WHERE service_id = ? AND action IN ($inClause) AND status = 'sent' AND (is_deleted = 'N' OR is_deleted IS NULL) 
+                         ORDER BY action_id DESC LIMIT 1";
+                $stmt2 = $db->prepare($sql2);
+                $stmt2->execute($params);
+                $res2 = $stmt2->fetch(PDO::FETCH_ASSOC);
+                return $res2 ?: null;
+            } catch (Throwable $e) {
+                return null;
+            }
+        }
+    }
+
+    if (!function_exists('aitfFormatNotificationSentDate')) {
+        function aitfFormatNotificationSentDate($dateStr)
+        {
+            if (empty($dateStr)) {
+                return '';
+            }
+            $ts = strtotime($dateStr);
+            if (!$ts) {
+                return '';
+            }
+            if (date('H:i:s', $ts) === '00:00:00') {
+                return date('d.m.Y', $ts);
+            }
+            return date('d.m.Y h:i A', $ts);
+        }
+    }
+
     if (!function_exists('caDateGraphTargetForEntry')) {
         function caDateGraphTargetForEntry($serviceType, $label, $source, $typedServiceId)
         {
@@ -3724,6 +3779,44 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             cursor: not-allowed !important;
         }
 
+        /* Audit Notification Mail Sent Badge */
+        .sentAuditNotificationBadge {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            height: 17px !important;
+            line-height: 17px !important;
+            padding: 0 6px !important;
+            margin-top: 3px !important;
+            margin-right: 5px !important;
+            margin-bottom: 0 !important;
+            margin-left: 0 !important;
+            background-color: #16a34a !important;
+            color: #ffffff !important;
+            font-size: 10px !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.2px !important;
+            border-radius: 3px !important;
+            cursor: pointer !important;
+            box-sizing: border-box !important;
+            vertical-align: middle !important;
+            text-transform: none !important;
+            white-space: nowrap !important;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15) !important;
+        }
+        .sentAuditNotificationBadge:hover {
+            background-color: #15803d !important;
+            color: #ffffff !important;
+        }
+        .sentAuditNotificationBadge i.fa {
+            font-size: 9.5px !important;
+            line-height: 17px !important;
+            margin-right: 3px !important;
+            color: #ffffff !important;
+            display: inline-block !important;
+            vertical-align: middle !important;
+        }
+
         /* CA Top Audit Planning Controls (Labels & Inputs) */
         .servicebox-bunch .float-label-control label {
             color: #0d4d8b !important;
@@ -5890,23 +5983,33 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                         class="fa fa-download fa-lg " style="padding: 3px"></i></a>
                                                 <?php
                                                 $crMailSent = !empty($crservice['mail_sent']);
-                                                $crMailSentAt = !empty($crservice['mail_sent_at']) ? date('d.m.Y h:i A', strtotime($crservice['mail_sent_at'])) : '';
+                                                $crMailSentAt = !empty($crservice['mail_sent_at']) ? aitfFormatNotificationSentDate($crservice['mail_sent_at']) : '';
                                                 $crMailSentTo = $crservice['mail_sent_to'] ?? '';
-                                                ?>
-                                                <a class="sendcertificatemail pull-right"
-                                                    data-customer="<?php echo $_GET['customerid'] ?>"
-                                                    data-service="<?php echo $crservice['cr_id'] ?>"
-                                                    data-certfication="<?php echo $crservice['id'] ?>"
-                                                    data-servicecount="<?php echo $saiiid; ?>"
-                                                    data-customername="<?php echo htmlspecialchars($clientInfo['customer_name'] ?? '', ENT_QUOTES); ?>"
-                                                    data-email="<?php echo htmlspecialchars($clientInfo['email_id'] ?? '', ENT_QUOTES); ?>"
-                                                    data-agreementno="<?php echo htmlspecialchars($crservice['aggrement_no'] ?? ($clientInfo['unique_id'] ?? ''), ENT_QUOTES); ?>"
-                                                    data-mailsent="<?php echo $crMailSent ? '1' : '0'; ?>"
-                                                    data-mailsentat="<?php echo htmlspecialchars($crMailSentAt, ENT_QUOTES); ?>"
-                                                    data-mailsentto="<?php echo htmlspecialchars($crMailSentTo, ENT_QUOTES); ?>"
-                                                    title="<?php echo $crMailSent ? 'Already sent to client on ' . $crMailSentAt : 'Send Certification Agreement via Email'; ?>"
-                                                    style="padding: 1px 5px; cursor: pointer; <?php if ($crMailSent) echo 'color: #10b981;'; ?>"><i
-                                                        class="fa fa-envelope fa-lg " style="padding: 3px"></i></a>
+                                                if ($crMailSent) { ?>
+                                                    <span class="sentAgreementBadge pull-right"
+                                                        data-sentdate="<?php echo htmlspecialchars($crMailSentAt); ?>"
+                                                        data-sentto="<?php echo htmlspecialchars($crMailSentTo); ?>"
+                                                        title="Sent on <?php echo htmlspecialchars($crMailSentAt); ?>"
+                                                        style="display: inline-flex; align-items: center; justify-content: center; height: 17px; line-height: 17px; padding: 0 6px; margin-top: 3px; margin-right: 5px; background-color: #16a34a; color: #ffffff; font-size: 10px; font-weight: 700; border-radius: 3px; cursor: pointer; vertical-align: middle; box-sizing: border-box; text-transform: none; white-space: nowrap;">
+                                                        <i class="fa fa-check-circle" style="font-size: 9.5px; margin-right: 3px; color: #ffffff;"></i> Mail Sent
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <a class="sendcertificatemail pull-right"
+                                                        data-customer="<?php echo $_GET['customerid'] ?>"
+                                                        data-service="<?php echo $crservice['cr_id'] ?>"
+                                                        data-certfication="<?php echo $crservice['id'] ?>"
+                                                        data-servicecount="<?php echo $saiiid; ?>"
+                                                        data-customername="<?php echo htmlspecialchars($clientInfo['customer_name'] ?? '', ENT_QUOTES); ?>"
+                                                        data-email="<?php echo htmlspecialchars($clientInfo['email_id'] ?? '', ENT_QUOTES); ?>"
+                                                        data-agreementno="<?php echo htmlspecialchars($crservice['aggrement_no'] ?? ($clientInfo['unique_id'] ?? ''), ENT_QUOTES); ?>"
+                                                        data-mailsent="0"
+                                                        data-mailsentat=""
+                                                        data-mailsentto=""
+                                                        title="Send Certification Agreement via Email"
+                                                        style="padding: 1px 5px; cursor: pointer; color: #0275d8;">
+                                                        <i class="fa fa-envelope fa-lg " style="padding: 3px"></i>
+                                                    </a>
+                                                <?php } ?>
                                             <?php } ?>
                                         </div>
                                     </div>
@@ -6018,14 +6121,14 @@ if ($currentRole === 'client' || $currentRole === 'external') {
 
                 aitfBackfillClientStatusSentDatesForNextAudit($db, $caservice['service'], $_GET['customerid']);
 
-                $actiosDates = "SELECT MIN(action_id) as action_id, service_id, action, due_date, MAX(sent_date) as sent_date, MAX(is_deleted) as is_deleted FROM ca_service_dates WHERE service_id = :serviceID AND is_deleted = 'N' GROUP BY service_id, action, due_date ORDER BY due_date ASC";
+                $actiosDates = "SELECT MIN(action_id) as action_id, service_id, action, due_date, MAX(sent_date) as sent_date, MAX(is_deleted) as is_deleted FROM ca_service_dates WHERE service_id = :serviceID AND is_deleted = 'N' AND action NOT LIKE '%Notification%' GROUP BY service_id, action, due_date ORDER BY due_date ASC";
                 $statement = $db->prepare($actiosDates);
                 $statement->bindParam(':serviceID', $caservice['service']);
                 $statement->execute();
                 $actionDate = $statement->fetchAll();
 
                 // Fetch dates for CA service itself
-                $caActionDatesQuery = "SELECT MIN(action_id) as action_id, service_id, action, due_date, MAX(sent_date) as sent_date, MAX(is_deleted) as is_deleted FROM ca_service_dates WHERE service_id = :caServiceId AND is_deleted = 'N' GROUP BY service_id, action, due_date ORDER BY due_date ASC";
+                $caActionDatesQuery = "SELECT MIN(action_id) as action_id, service_id, action, due_date, MAX(sent_date) as sent_date, MAX(is_deleted) as is_deleted FROM ca_service_dates WHERE service_id = :caServiceId AND is_deleted = 'N' AND action NOT LIKE '%Notification%' GROUP BY service_id, action, due_date ORDER BY due_date ASC";
                 $statement = $db->prepare($caActionDatesQuery);
                 $statement->bindParam(':caServiceId', $caservice['service']);
                 $statement->execute();
@@ -6086,26 +6189,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                             <?php } ?>
                                         </select>
                                     </div>
-                                    <div class="col-xs-2 form-group float-label-control"
-                                        style="position: relative; padding-right: 26px;">
+                                    <div class="col-xs-2 form-group float-label-control" style="">
                                         <label>Stage 1 Date</label>
-                                        <?php if (!empty($caservice['audit_stage_id'])) { ?>
-                                            <?php if ($isStage1Sent) { ?>
-                                                <span class="stageMailSentIcon" title="Stage I notification email sent"
-                                                    style="position: absolute; top: -1.2em; left: 92px; z-index: 10; pointer-events: auto; padding: 1px 5px; color: #28a745;">
-                                                    <i class="fa fa-check-circle fa-lg" style="padding: 3px"></i>
-                                                </span>
-                                            <?php } else { ?>
-                                                <a class="sendStageNotificationMail" data-stage="stage1"
-                                                    data-customer="<?php echo $_GET['customerid'] ?>"
-                                                    data-service="<?php echo $caservice['ca_id'] ?>"
-                                                    data-audit="<?php echo $caservice['audit_stage_id'] ?>"
-                                                    title="Send Stage I audit notification by email"
-                                                    style="position: absolute; top: -1.2em; left: 92px; z-index: 10; pointer-events: auto; padding: 1px 5px;">
-                                                    <i class="fa fa-envelope fa-lg" style="padding: 3px"></i>
-                                                </a>
-                                            <?php } ?>
-                                        <?php } ?>
                                         <input class="serviceAuditDate" placeholder="Stage 1 Date"
                                             data-id="<?php echo $caservice['service'] ?>" data-service="caService"
                                             data-column="audit_date" name="serviceAuditDate" style="color: black" value="<?php if (isset($caservice["caaudit"]))
@@ -6117,26 +6202,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                             data-column="audit_date" name="caLeadAuditoe" style="color: black" value="<?php if (isset($caservice["stage1_auditor"]))
                                                 echo $caservice["stage1_auditor"]; ?>" />
                                     </div>
-                                    <div class="col-xs-2 form-group float-label-control"
-                                        style="position: relative; padding-right: 26px;">
+                                    <div class="col-xs-2 form-group float-label-control" style="">
                                         <label>Stage 2 Date</label>
-                                        <?php if (!empty($caservice['audit_stageii_id'])) { ?>
-                                            <?php if ($isStage2Sent) { ?>
-                                                <span class="stageMailSentIcon" title="Stage II notification email sent"
-                                                    style="position: absolute; top: -1.2em; left: 92px; z-index: 10; pointer-events: auto; padding: 1px 5px; color: #28a745;">
-                                                    <i class="fa fa-check-circle fa-lg" style="padding: 3px"></i>
-                                                </span>
-                                            <?php } else { ?>
-                                                <a class="sendStageNotificationMail" data-stage="stage2"
-                                                    data-customer="<?php echo $_GET['customerid'] ?>"
-                                                    data-service="<?php echo $caservice['ca_id'] ?>"
-                                                    data-audit="<?php echo $caservice['audit_stageii_id'] ?>"
-                                                    title="Send Stage II audit notification by email"
-                                                    style="position: absolute; top: -1.2em; left: 92px; z-index: 10; pointer-events: auto; padding: 1px 5px;">
-                                                    <i class="fa fa-envelope fa-lg" style="padding: 3px"></i>
-                                                </a>
-                                            <?php } ?>
-                                        <?php } ?>
                                         <input class="stage2date" placeholder="Stage 2 Date"
                                             data-id="<?php echo $caservice['service'] ?>" data-service="caService"
                                             data-column="audit_date" name="stage2date" style="color: black" value="<?php if (isset($caservice["stage2_audit"]))
@@ -6169,6 +6236,33 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                     title="Download audit notification" style="padding: 1px 5px;">
                                                     <i class="fa fa-download fa-lg " style="padding: 3px"></i>
                                                 </a>
+                                                <?php
+                                                $caStage1SentInfo = aitfGetNotificationSentInfo($db, $caservice['service'], array('Stage 1 Notification'));
+                                                if ($caStage1SentInfo) {
+                                                    $s1SentDate = !empty($caStage1SentInfo['sent_date']) ? aitfFormatNotificationSentDate($caStage1SentInfo['sent_date']) : '';
+                                                ?>
+                                                    <span class="sentAuditNotificationBadge pull-right"
+                                                        data-stage="stage1"
+                                                        data-servicename="CA Stage 1"
+                                                        data-sentdate="<?php echo htmlspecialchars($s1SentDate); ?>"
+                                                        title="Sent on <?php echo htmlspecialchars($s1SentDate); ?>"
+                                                        style="display: inline-flex; align-items: center; justify-content: center; height: 17px; line-height: 17px; padding: 0 6px; margin-top: 3px; margin-right: 5px; background-color: #16a34a; color: #ffffff; font-size: 10px; font-weight: 700; border-radius: 3px; cursor: pointer; vertical-align: middle; box-sizing: border-box; text-transform: none; white-space: nowrap;">
+                                                        <i class="fa fa-check-circle" style="font-size: 9.5px; margin-right: 3px; color: #ffffff;"></i> Mail Sent
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <a class="sendStageNotificationMailBtn pull-right"
+                                                        data-stage="stage1"
+                                                        data-customer="<?php echo $_GET['customerid']; ?>"
+                                                        data-service="<?php echo $caservice['ca_id']; ?>"
+                                                        data-universalservice="<?php echo $caservice['service']; ?>"
+                                                        data-audit="<?php echo $caservice['audit_stage_id']; ?>"
+                                                        data-planid="<?php echo !empty($caservice['audit_schedule_id']) ? $caservice['audit_schedule_id'] : ''; ?>"
+                                                        data-servicename="CA Stage 1"
+                                                        title="Send Stage I Notification & Audit Plan by email"
+                                                        style="padding: 1px 5px; color: #0275d8; cursor: pointer;">
+                                                        <i class="fa fa-envelope fa-lg" style="padding: 3px;"></i>
+                                                    </a>
+                                                <?php } ?>
                                             </div>
                                         </div>
                                         <div class="col-sm-6">
@@ -6423,6 +6517,33 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                             title="Download audit notification" style="padding: 1px 5px;">
                                                             <i class="fa fa-download fa-lg " style="padding: 3px"></i>
                                                         </a>
+                                                        <?php
+                                                        $caStage2SentInfo = aitfGetNotificationSentInfo($db, $caservice['service'], array('Stage 2 Notification'));
+                                                        if ($caStage2SentInfo) {
+                                                            $s2SentDate = !empty($caStage2SentInfo['sent_date']) ? aitfFormatNotificationSentDate($caStage2SentInfo['sent_date']) : '';
+                                                        ?>
+                                                            <span class="sentAuditNotificationBadge pull-right"
+                                                                data-stage="stage2"
+                                                                data-servicename="CA Stage 2"
+                                                                data-sentdate="<?php echo htmlspecialchars($s2SentDate); ?>"
+                                                                title="Sent on <?php echo htmlspecialchars($s2SentDate); ?>"
+                                                                style="display: inline-flex; align-items: center; justify-content: center; height: 17px; line-height: 17px; padding: 0 6px; margin-top: 3px; margin-right: 5px; background-color: #16a34a; color: #ffffff; font-size: 10px; font-weight: 700; border-radius: 3px; cursor: pointer; vertical-align: middle; box-sizing: border-box; text-transform: none; white-space: nowrap;">
+                                                                <i class="fa fa-check-circle" style="font-size: 9.5px; margin-right: 3px; color: #ffffff;"></i> Mail Sent
+                                                            </span>
+                                                        <?php } else { ?>
+                                                            <a class="sendStageNotificationMailBtn pull-right"
+                                                                data-stage="stage2"
+                                                                data-customer="<?php echo $_GET['customerid']; ?>"
+                                                                data-service="<?php echo $caservice['ca_id']; ?>"
+                                                                data-universalservice="<?php echo $caservice['service']; ?>"
+                                                                data-audit="<?php echo $caservice['audit_stageii_id']; ?>"
+                                                                data-planid="<?php echo !empty($caservice['audit_scheduleii_id']) ? $caservice['audit_scheduleii_id'] : ''; ?>"
+                                                                data-servicename="CA Stage 2"
+                                                                title="Send Stage II Notification & Audit Plan by email"
+                                                                style="padding: 1px 5px; color: #0275d8; cursor: pointer;">
+                                                                <i class="fa fa-envelope fa-lg" style="padding: 3px;"></i>
+                                                            </a>
+                                                        <?php } ?>
                                                 <?php } ?>
                                             </div>
                                         </div>
@@ -7247,7 +7368,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
 
 
 
-                $saiActionDate = "SELECT MIN(action_id) as action_id, service_id, action, due_date, MAX(sent_date) as sent_date, MAX(is_deleted) as is_deleted FROM ca_service_dates WHERE service_id = :ssiService AND is_deleted = 'N' GROUP BY service_id, action, due_date ORDER BY due_date ASC";
+                $saiActionDate = "SELECT MIN(action_id) as action_id, service_id, action, due_date, MAX(sent_date) as sent_date, MAX(is_deleted) as is_deleted FROM ca_service_dates WHERE service_id = :ssiService AND is_deleted = 'N' AND action NOT LIKE '%Notification%' GROUP BY service_id, action, due_date ORDER BY due_date ASC";
                 $statement = $db->prepare($saiActionDate);
                 $statement->bindParam(':ssiService', $saiService['service']);
                 $statement->execute();
@@ -7472,6 +7593,33 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                         title="Download audit notification" style="padding: 1px 5px;">
                                                         <i class="fa fa-download fa-lg " style="padding: 3px"></i>
                                                     </a>
+                                                    <?php
+                                                    $saiSentInfo = aitfGetNotificationSentInfo($db, $saiService['service'], array('SA-I Notification', 'SA-1 Notification'));
+                                                    if ($saiSentInfo) {
+                                                        $saiSentDate = !empty($saiSentInfo['sent_date']) ? aitfFormatNotificationSentDate($saiSentInfo['sent_date']) : '';
+                                                    ?>
+                                                        <span class="sentAuditNotificationBadge pull-right"
+                                                            data-stage="sai"
+                                                            data-servicename="SA-I"
+                                                            data-sentdate="<?php echo htmlspecialchars($saiSentDate); ?>"
+                                                            title="Sent on <?php echo htmlspecialchars($saiSentDate); ?>"
+                                                            style="display: inline-flex; align-items: center; justify-content: center; height: 17px; line-height: 17px; padding: 0 6px; margin-top: 3px; margin-right: 5px; background-color: #16a34a; color: #ffffff; font-size: 10px; font-weight: 700; border-radius: 3px; cursor: pointer; vertical-align: middle; box-sizing: border-box; text-transform: none; white-space: nowrap;">
+                                                            <i class="fa fa-check-circle" style="font-size: 9.5px; margin-right: 3px; color: #ffffff;"></i> Mail Sent
+                                                        </span>
+                                                    <?php } else { ?>
+                                                        <a class="sendStageNotificationMailBtn pull-right"
+                                                            data-stage="sai"
+                                                            data-customer="<?php echo $_GET['customerid']; ?>"
+                                                            data-service="<?php echo $saiService['sai_id']; ?>"
+                                                            data-universalservice="<?php echo $saiService['service']; ?>"
+                                                            data-audit="<?php echo $saiService['audit_stage_id']; ?>"
+                                                            data-planid="<?php echo !empty($saiService['servelance_id']) ? $saiService['servelance_id'] : ''; ?>"
+                                                            data-servicename="SA-I"
+                                                            title="Send SA-I Notification & Audit Plan by email"
+                                                            style="padding: 1px 5px; color: #0275d8; cursor: pointer;">
+                                                            <i class="fa fa-envelope fa-lg" style="padding: 3px;"></i>
+                                                        </a>
+                                                    <?php } ?>
                                                 <?php } ?>
                                             </div>
                                         </div>
@@ -8481,13 +8629,40 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                         title="Update Release Audit Notification" style="padding: 1px 5px;">
                                                         <i class="fa fa-pencil-square fa-lg " style="padding: 3px"></i>
                                                     </a>
-                                                    <a class="downloadAuditNotification pull-right"
+                                                     <a class="downloadAuditNotification pull-right"
                                                         data-customer="<?php echo $_GET['customerid'] ?>"
                                                         data-caservice-id="<?php echo $saiiService['saii_id'] ?>"
                                                         data-audit="<?php echo $saiiService['audit_stage_id'] ?>"
                                                         title="Download Release Audit Notification" style="padding: 1px 5px;">
                                                         <i class="fa fa-download fa-lg " style="padding: 3px"></i>
                                                     </a>
+                                                    <?php
+                                                    $saiiSentInfo = aitfGetNotificationSentInfo($db, $saiiService['service'], array('SA-II Notification', 'SA-2 Notification'));
+                                                    if ($saiiSentInfo) {
+                                                        $saiiSentDate = !empty($saiiSentInfo['sent_date']) ? aitfFormatNotificationSentDate($saiiSentInfo['sent_date']) : '';
+                                                    ?>
+                                                        <span class="sentAuditNotificationBadge pull-right"
+                                                            data-stage="saii"
+                                                            data-servicename="SA-II"
+                                                            data-sentdate="<?php echo htmlspecialchars($saiiSentDate); ?>"
+                                                            title="Sent on <?php echo htmlspecialchars($saiiSentDate); ?>"
+                                                            style="display: inline-flex; align-items: center; justify-content: center; height: 17px; line-height: 17px; padding: 0 6px; margin-top: 3px; margin-right: 5px; background-color: #16a34a; color: #ffffff; font-size: 10px; font-weight: 700; border-radius: 3px; cursor: pointer; vertical-align: middle; box-sizing: border-box; text-transform: none; white-space: nowrap;">
+                                                            <i class="fa fa-check-circle" style="font-size: 9.5px; margin-right: 3px; color: #ffffff;"></i> Mail Sent
+                                                        </span>
+                                                    <?php } else { ?>
+                                                        <a class="sendStageNotificationMailBtn pull-right"
+                                                            data-stage="saii"
+                                                            data-customer="<?php echo $_GET['customerid']; ?>"
+                                                            data-service="<?php echo $saiiService['saii_id']; ?>"
+                                                            data-universalservice="<?php echo $saiiService['service']; ?>"
+                                                            data-audit="<?php echo $saiiService['audit_stage_id']; ?>"
+                                                            data-planid="<?php echo !empty($saiiService['servelance_id']) ? $saiiService['servelance_id'] : ''; ?>"
+                                                            data-servicename="SA-II"
+                                                            title="Send SA-II Notification & Audit Plan by email"
+                                                            style="padding: 1px 5px; color: #0275d8; cursor: pointer;">
+                                                            <i class="fa fa-envelope fa-lg" style="padding: 3px;"></i>
+                                                        </a>
+                                                    <?php } ?>
                                                 <?php } ?>
                                             </div>
                                         </div>
@@ -9361,6 +9536,33 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                     title="Download audit notification" style="padding: 1px 5px;">
                                                     <i class="fa fa-download fa-lg " style="padding: 3px"></i>
                                                 </a>
+                                                <?php
+                                                $rcSentInfo = aitfGetNotificationSentInfo($db, $rcServiceinfo['service'], array('RC Notification'));
+                                                if ($rcSentInfo) {
+                                                    $rcSentDate = !empty($rcSentInfo['sent_date']) ? aitfFormatNotificationSentDate($rcSentInfo['sent_date']) : '';
+                                                ?>
+                                                    <span class="sentAuditNotificationBadge pull-right"
+                                                        data-stage="rc"
+                                                        data-servicename="RC"
+                                                        data-sentdate="<?php echo htmlspecialchars($rcSentDate); ?>"
+                                                        title="Sent on <?php echo htmlspecialchars($rcSentDate); ?>"
+                                                        style="display: inline-flex; align-items: center; justify-content: center; height: 17px; line-height: 17px; padding: 0 6px; margin-top: 3px; margin-right: 5px; background-color: #16a34a; color: #ffffff; font-size: 10px; font-weight: 700; border-radius: 3px; cursor: pointer; vertical-align: middle; box-sizing: border-box; text-transform: none; white-space: nowrap;">
+                                                        <i class="fa fa-check-circle" style="font-size: 9.5px; margin-right: 3px; color: #ffffff;"></i> Mail Sent
+                                                    </span>
+                                                <?php } else { ?>
+                                                    <a class="sendStageNotificationMailBtn pull-right"
+                                                        data-stage="rc"
+                                                        data-customer="<?php echo $_GET['customerid']; ?>"
+                                                        data-service="<?php echo $rcServiceinfo['rc_id']; ?>"
+                                                        data-universalservice="<?php echo $rcServiceinfo['service']; ?>"
+                                                        data-audit="<?php echo $rcServiceinfo['audit_stage_id']; ?>"
+                                                        data-planid="<?php echo !empty($rcServiceinfo['audit_scheduleii_id']) ? $rcServiceinfo['audit_scheduleii_id'] : ''; ?>"
+                                                        data-servicename="RC"
+                                                        title="Send RC Notification & Audit Plan by email"
+                                                        style="padding: 1px 5px; color: #0275d8; cursor: pointer;">
+                                                        <i class="fa fa-envelope fa-lg" style="padding: 3px;"></i>
+                                                    </a>
+                                                <?php } ?>
                                             </div>
                                         </div>
 
@@ -10471,23 +10673,33 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                 class="fa fa-download fa-lg " style="padding: 3px"></i></a>
                                                         <?php
                                                         $spMailSent = !empty($spservices['mail_sent']);
-                                                        $spMailSentAt = !empty($spservices['mail_sent_at']) ? date('d.m.Y h:i A', strtotime($spservices['mail_sent_at'])) : '';
+                                                        $spMailSentAt = !empty($spservices['mail_sent_at']) ? aitfFormatNotificationSentDate($spservices['mail_sent_at']) : '';
                                                         $spMailSentTo = $spservices['mail_sent_to'] ?? '';
-                                                        ?>
-                                                        <a class="sendcertificatemail pull-right"
-                                                            data-customer="<?php echo $_GET['customerid'] ?>"
-                                                            data-service="<?php echo $spservices['sp_id'] ?>"
-                                                            data-certfication="<?php echo $spservices['id'] ?>"
-                                                            data-servicecount="0"
-                                                            data-customername="<?php echo htmlspecialchars($clientInfo['customer_name'] ?? '', ENT_QUOTES); ?>"
-                                                            data-email="<?php echo htmlspecialchars($clientInfo['email_id'] ?? '', ENT_QUOTES); ?>"
-                                                            data-agreementno="<?php echo htmlspecialchars($spservices['aggrement_no'] ?? ($clientInfo['unique_id'] ?? ''), ENT_QUOTES); ?>"
-                                                            data-mailsent="<?php echo $spMailSent ? '1' : '0'; ?>"
-                                                            data-mailsentat="<?php echo htmlspecialchars($spMailSentAt, ENT_QUOTES); ?>"
-                                                            data-mailsentto="<?php echo htmlspecialchars($spMailSentTo, ENT_QUOTES); ?>"
-                                                            title="<?php echo $spMailSent ? 'Already sent to client on ' . $spMailSentAt : 'Send Certification Agreement via Email'; ?>"
-                                                            style="padding: 1px 5px; cursor: pointer; <?php if ($spMailSent) echo 'color: #10b981;'; ?>"><i
-                                                                class="fa fa-envelope fa-lg " style="padding: 3px"></i></a>
+                                                        if ($spMailSent) { ?>
+                                                            <span class="sentAgreementBadge pull-right"
+                                                                data-sentdate="<?php echo htmlspecialchars($spMailSentAt); ?>"
+                                                                data-sentto="<?php echo htmlspecialchars($spMailSentTo); ?>"
+                                                                title="Sent on <?php echo htmlspecialchars($spMailSentAt); ?>"
+                                                                style="display: inline-flex; align-items: center; justify-content: center; height: 17px; line-height: 17px; padding: 0 6px; margin-top: 3px; margin-right: 5px; background-color: #16a34a; color: #ffffff; font-size: 10px; font-weight: 700; border-radius: 3px; cursor: pointer; vertical-align: middle; box-sizing: border-box; text-transform: none; white-space: nowrap;">
+                                                                <i class="fa fa-check-circle" style="font-size: 9.5px; margin-right: 3px; color: #ffffff;"></i> Mail Sent
+                                                            </span>
+                                                        <?php } else { ?>
+                                                            <a class="sendcertificatemail pull-right"
+                                                                data-customer="<?php echo $_GET['customerid'] ?>"
+                                                                data-service="<?php echo $spservices['sp_id'] ?>"
+                                                                data-certfication="<?php echo $spservices['id'] ?>"
+                                                                data-servicecount="0"
+                                                                data-customername="<?php echo htmlspecialchars($clientInfo['customer_name'] ?? '', ENT_QUOTES); ?>"
+                                                                data-email="<?php echo htmlspecialchars($clientInfo['email_id'] ?? '', ENT_QUOTES); ?>"
+                                                                data-agreementno="<?php echo htmlspecialchars($spservices['aggrement_no'] ?? ($clientInfo['unique_id'] ?? ''), ENT_QUOTES); ?>"
+                                                                data-mailsent="0"
+                                                                data-mailsentat=""
+                                                                data-mailsentto=""
+                                                                title="Send Certification Agreement via Email"
+                                                                style="padding: 1px 5px; cursor: pointer; color: #0275d8;">
+                                                                <i class="fa fa-envelope fa-lg " style="padding: 3px"></i>
+                                                            </a>
+                                                        <?php } ?>
                                                     <?php } ?>
                                                 </div>
                                             </div>
@@ -14803,6 +15015,33 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 form.remove();
             });
 
+            $("body").on("click", ".sentAgreementBadge", function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var sDate = $(this).attr('data-sentdate') || '';
+                var sTo = $(this).attr('data-sentto') || '';
+                var sentDetailHtml = '<div style="text-align:center;font-size:14px;color:#334155;line-height:1.6;margin-top:10px;">' +
+                    '<div style="width:58px;height:58px;border-radius:50%;background:#dcfce7;color:#16a34a;display:inline-flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:12px;"><i class="fa fa-envelope"></i></div>' +
+                    '<p style="font-size:16px;font-weight:700;color:#0f172a;margin-bottom:8px;">Already Sent to the Client</p>' +
+                    '<p style="font-size:13px;color:#64748b;margin-bottom:14px;">The Certification Service Agreement has already been sent to this client. Each agreement can only be sent once.</p>' +
+                    '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #10b981;border-radius:6px;padding:12px 16px;text-align:left;display:inline-block;width:100%;box-sizing:border-box;">' +
+                    (sTo ? '<div style="margin-bottom:6px;"><strong>Sent To:</strong> <span style="color:#2563eb;font-weight:600;">' + $('<div>').text(sTo).html() + '</span></div>' : '') +
+                    (sDate ? '<div><strong>Sent Date & Time:</strong> <span style="color:#0f172a;font-weight:600;"><i class="fa fa-clock-o" style="color:#0284c7;"></i> ' + $('<div>').text(sDate).html() + '</span></div>' : '') +
+                    '</div>' +
+                    '</div>';
+
+                if (typeof Swal !== 'undefined' && Swal.fire) {
+                    Swal.fire({
+                        title: '',
+                        html: sentDetailHtml,
+                        confirmButtonColor: '#0F2742',
+                        confirmButtonText: '<i class="fa fa-check"></i> OK'
+                    });
+                } else {
+                    alert('Already sent to the client' + (sTo ? ' (' + sTo + ')' : '') + (sDate ? ' on ' + sDate : '') + '.\nAgreements can only be sent once.');
+                }
+            });
+
             $("body").on("click", ".sendcertificatemail", function (e) {
                 e.preventDefault();
                 e.stopPropagation();
@@ -14919,11 +15158,14 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                     if (response && response.success) {
                                         var sentAtStr = response.sent_at || '';
                                         var sentToStr = response.sent_to || finalEmail;
-                                        $btn.attr('data-mailsent', '1');
-                                        $btn.attr('data-mailsentat', sentAtStr);
-                                        $btn.attr('data-mailsentto', sentToStr);
-                                        $btn.css('color', '#10b981');
-                                        $btn.attr('title', 'Already sent to client on ' + sentAtStr);
+                                        var badgeHtml = '<span class="sentAgreementBadge pull-right" ' +
+                                            'data-sentdate="' + $('<div>').text(sentAtStr).html() + '" ' +
+                                            'data-sentto="' + $('<div>').text(sentToStr).html() + '" ' +
+                                            'title="Sent on ' + $('<div>').text(sentAtStr).html() + '" ' +
+                                            'style="display: inline-flex; align-items: center; justify-content: center; height: 17px; line-height: 17px; padding: 0 6px; margin-top: 3px; margin-right: 5px; background-color: #16a34a; color: #ffffff; font-size: 10px; font-weight: 700; border-radius: 3px; cursor: pointer; vertical-align: middle; box-sizing: border-box; text-transform: none; white-space: nowrap;">' +
+                                            '<i class="fa fa-check-circle" style="font-size: 9.5px; margin-right: 3px; color: #ffffff;"></i> Mail Sent' +
+                                            '</span>';
+                                        $btn.replaceWith(badgeHtml);
 
                                         Swal.fire({
                                             icon: 'success',
@@ -14935,11 +15177,14 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                     } else if (response && response.already_sent) {
                                         var sentAtStr = response.sent_at || '';
                                         var sentToStr = response.sent_to || '';
-                                        $btn.attr('data-mailsent', '1');
-                                        if (sentAtStr) $btn.attr('data-mailsentat', sentAtStr);
-                                        if (sentToStr) $btn.attr('data-mailsentto', sentToStr);
-                                        $btn.css('color', '#10b981');
-                                        $btn.attr('title', 'Already sent to client on ' + sentAtStr);
+                                        var badgeHtml = '<span class="sentAgreementBadge pull-right" ' +
+                                            'data-sentdate="' + $('<div>').text(sentAtStr).html() + '" ' +
+                                            'data-sentto="' + $('<div>').text(sentToStr).html() + '" ' +
+                                            'title="Sent on ' + $('<div>').text(sentAtStr).html() + '" ' +
+                                            'style="display: inline-flex; align-items: center; justify-content: center; height: 17px; line-height: 17px; padding: 0 6px; margin-top: 3px; margin-right: 5px; background-color: #16a34a; color: #ffffff; font-size: 10px; font-weight: 700; border-radius: 3px; cursor: pointer; vertical-align: middle; box-sizing: border-box; text-transform: none; white-space: nowrap;">' +
+                                            '<i class="fa fa-check-circle" style="font-size: 9.5px; margin-right: 3px; color: #ffffff;"></i> Mail Sent' +
+                                            '</span>';
+                                        $btn.replaceWith(badgeHtml);
 
                                         Swal.fire({
                                             icon: 'info',
@@ -16208,35 +16453,57 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 );
             }
 
-            $(document).on('click', '.sendStageNotificationMail', function (e) {
+            $(document).on('click', '.sentAuditNotificationBadge', function (e) {
                 e.preventDefault();
-                console.log('Mail button clicked');
+                var sName = $(this).attr('data-servicename') || 'Audit';
+                var sDate = $(this).attr('data-sentdate') || '';
+                var msg = sName + ' Notification and Audit Plan have already been sent' + (sDate ? ' on ' + sDate : '') + '.\n\nDuplicate sending is not allowed.';
+                if (typeof showStyledAlert === 'function') {
+                    showStyledAlert('Already Sent', msg, 'info');
+                } else {
+                    alert(msg);
+                }
+            });
 
+            $(document).on('click', '.sendStageNotificationMail, .sendStageNotificationMailBtn', function (e) {
+                e.preventDefault();
                 var $btn = $(this);
                 var payload = {
-                    customer: $btn.data('customer'),
-                    service: $btn.data('service'),
-                    audit: $btn.data('audit'),
-                    stage: $btn.data('stage')
+                    customer: $btn.attr('data-customer') || $btn.data('customer'),
+                    service: $btn.attr('data-service') || $btn.data('service'),
+                    universalservice: $btn.attr('data-universalservice') || $btn.data('universalservice'),
+                    audit: $btn.attr('data-audit') || $btn.data('audit'),
+                    planid: $btn.attr('data-planid') || $btn.data('planid'),
+                    stage: $btn.attr('data-stage') || $btn.data('stage')
                 };
+                var serviceName = $btn.attr('data-servicename') || (payload.stage === 'stage2' ? 'Stage II' : (payload.stage === 'sai' ? 'SA-I' : (payload.stage === 'saii' ? 'SA-II' : (payload.stage === 'rc' ? 'RC' : 'Stage I'))));
 
-                console.log('Payload:', payload);
-
-                var stageLabel = payload.stage === 'stage2' ? 'Stage II' : 'Stage I';
-
-                if (!payload.audit) {
-                    console.log('No audit ID found');
-                    showStyledAlert('Error', stageLabel + ' notification reference is missing. Please save the notification first.', 'error');
+                if (!payload.audit || payload.audit == '0') {
+                    var notiMsg = serviceName + ' Notification is not generated yet. Please create and save the notification first.';
+                    if (typeof showStyledAlert === 'function') {
+                        showStyledAlert('Notification Required', notiMsg, 'error');
+                    } else {
+                        alert(notiMsg);
+                    }
                     return false;
                 }
 
-                console.log('Showing confirmation dialog');
+                // Strict validation: Audit Plan must be generated!
+                if (!payload.planid || payload.planid == '0' || payload.planid === '') {
+                    var planMsg = 'Cannot send only notification! Make audit plan also.';
+                    if (typeof showStyledAlert === 'function') {
+                        showStyledAlert('Audit Plan Required', planMsg, 'error');
+                    } else {
+                        alert(planMsg);
+                    }
+                    return false;
+                }
+
+                var confirmMsg = 'Are you sure you want to send the ' + serviceName + ' Audit Notification and Audit Plan to the client via email?';
                 showStyledConfirm(
                     'Send Email Confirmation',
-                    'Are you sure you want to send the ' + stageLabel + ' audit notification and plan documents to the client via email?',
+                    confirmMsg,
                     function () {
-                        console.log('Confirmation OK clicked, sending AJAX request');
-
                         if (typeof ShowProgressAnimation === 'function') {
                             ShowProgressAnimation();
                         }
@@ -16249,15 +16516,14 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                             data: payload,
                             dataType: 'json'
                         }).done(function (res) {
-                            console.log('AJAX success:', res);
                             if (res && res.success) {
-                                showStyledAlert('Success', res.message || (stageLabel + ' audit documents sent successfully.'), 'success');
-                                $btn.replaceWith('<span class="stageMailSentIcon" title="' + stageLabel + ' notification email sent" style="position: absolute; top: -1.2em; left: 92px; z-index: 10; pointer-events: auto; padding: 1px 5px; color: #28a745;"><i class="fa fa-check-circle fa-lg" style="padding: 3px"></i></span>');
+                                var sentDateStr = res.sent_at || 'Just now';
+                                showStyledAlert('Success', res.message || (serviceName + ' notification and plan sent successfully.'), 'success');
+                                $btn.replaceWith('<span class="sentAuditNotificationBadge pull-right" data-stage="' + payload.stage + '" data-servicename="' + serviceName + '" data-sentdate="' + sentDateStr + '" title="Sent on ' + sentDateStr + '" style="display: inline-flex; align-items: center; justify-content: center; height: 17px; line-height: 17px; padding: 0 6px; margin-top: 3px; margin-right: 5px; background-color: #16a34a; color: #ffffff; font-size: 10px; font-weight: 700; border-radius: 3px; cursor: pointer; vertical-align: middle; box-sizing: border-box; text-transform: none; white-space: nowrap;"><i class="fa fa-check-circle" style="font-size: 9.5px; margin-right: 3px; color: #ffffff;"></i> Mail Sent</span>');
                             } else {
                                 showStyledAlert('Error', (res && res.message) ? res.message : 'Unable to send email right now.', 'error');
                             }
                         }).fail(function (xhr, status, error) {
-                            console.log('AJAX failed:', status, error, xhr.responseText);
                             var message = 'Unable to send email right now. Please try again.';
                             if (xhr && xhr.responseJSON && xhr.responseJSON.message) {
                                 message = xhr.responseJSON.message;

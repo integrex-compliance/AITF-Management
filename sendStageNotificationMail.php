@@ -1,5 +1,6 @@
 <?php
 session_start();
+date_default_timezone_set('Asia/Kolkata');
 header('Content-Type: application/json');
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
@@ -61,16 +62,132 @@ try {
 
     $customerId = isset($_POST['customer']) ? intval($_POST['customer']) : 0;
     $serviceId = isset($_POST['service']) ? intval($_POST['service']) : 0;
+    $universalServiceId = isset($_POST['universalservice']) ? intval($_POST['universalservice']) : 0;
     $auditId = isset($_POST['audit']) ? intval($_POST['audit']) : 0;
-    $stage = isset($_POST['stage']) ? trim($_POST['stage']) : '';
+    $planIdFromReq = isset($_POST['planid']) ? intval($_POST['planid']) : 0;
+    $stage = isset($_POST['stage']) ? strtolower(trim($_POST['stage'])) : '';
     $customEmail = isset($_POST['email']) ? trim($_POST['email']) : '';
 
-    if ($customerId <= 0 || $serviceId <= 0 || $auditId <= 0) {
-        throw new Exception('Invalid request parameters.');
+    // Normalize stage aliases
+    if ($stage === 'sa1' || $stage === 'sa-1' || $stage === 'sa_1') {
+        $stage = 'sai';
+    } else if ($stage === 'sa2' || $stage === 'sa-2' || $stage === 'sa_2') {
+        $stage = 'saii';
     }
 
-    if ($stage !== 'stage1' && $stage !== 'stage2') {
-        throw new Exception('Invalid stage specified.');
+    if ($customerId <= 0 || $serviceId <= 0 || $auditId <= 0) {
+        throw new Exception('Invalid request parameters. Customer, Service and Notification IDs are required.');
+    }
+
+    $validStages = array('stage1', 'stage2', 'sai', 'saii', 'rc');
+    if (!in_array($stage, $validStages, true)) {
+        throw new Exception('Invalid stage specified: ' . htmlspecialchars($stage));
+    }
+
+    // Determine Stage Label and ca_service_dates action name
+    switch ($stage) {
+        case 'stage2':
+            $stageLabel = 'Stage II';
+            $actionName = 'Stage 2 Notification';
+            break;
+        case 'sai':
+            $stageLabel = 'Surveillance Audit I (SA-I)';
+            $actionName = 'SA-I Notification';
+            break;
+        case 'saii':
+            $stageLabel = 'Surveillance Audit II (SA-II)';
+            $actionName = 'SA-II Notification';
+            break;
+        case 'rc':
+            $stageLabel = 'Recertification (RC)';
+            $actionName = 'RC Notification';
+            break;
+        case 'stage1':
+        default:
+            $stageLabel = 'Stage I';
+            $actionName = 'Stage 1 Notification';
+            break;
+    }
+
+    // Resolve Universal Service ID (service.service_id)
+    $mainServiceId = $universalServiceId;
+    if ($mainServiceId <= 0) {
+        if ($stage === 'stage1' || $stage === 'stage2') {
+            $stmtCa = $db->prepare("SELECT service FROM service_type_ca WHERE ca_id = ? LIMIT 1");
+            $stmtCa->execute(array($serviceId));
+            $caRow = $stmtCa->fetch(PDO::FETCH_ASSOC);
+            if ($caRow && !empty($caRow['service'])) {
+                $mainServiceId = intval($caRow['service']);
+            }
+        } else if ($stage === 'sai') {
+            $stmtSai = $db->prepare("SELECT service FROM service_type_sai WHERE sai_id = ? LIMIT 1");
+            $stmtSai->execute(array($serviceId));
+            $saiRow = $stmtSai->fetch(PDO::FETCH_ASSOC);
+            if ($saiRow && !empty($saiRow['service'])) {
+                $mainServiceId = intval($saiRow['service']);
+            }
+        } else if ($stage === 'saii') {
+            $stmtSaii = $db->prepare("SELECT service FROM service_type_saii WHERE saii_id = ? LIMIT 1");
+            $stmtSaii->execute(array($serviceId));
+            $saiiRow = $stmtSaii->fetch(PDO::FETCH_ASSOC);
+            if ($saiiRow && !empty($saiiRow['service'])) {
+                $mainServiceId = intval($saiiRow['service']);
+            }
+        } else if ($stage === 'rc') {
+            $stmtRc = $db->prepare("SELECT service FROM service_type_rc WHERE rc_id = ? LIMIT 1");
+            $stmtRc->execute(array($serviceId));
+            $rcRow = $stmtRc->fetch(PDO::FETCH_ASSOC);
+            if ($rcRow && !empty($rcRow['service'])) {
+                $mainServiceId = intval($rcRow['service']);
+            }
+        }
+    }
+
+    if ($mainServiceId <= 0) {
+        $stmtSvc = $db->prepare("SELECT service_id FROM service WHERE service_id = ? LIMIT 1");
+        $stmtSvc->execute(array($serviceId));
+        $svcRow = $stmtSvc->fetch(PDO::FETCH_ASSOC);
+        if ($svcRow && !empty($svcRow['service_id'])) {
+            $mainServiceId = intval($svcRow['service_id']);
+        } else {
+            $stmtSvcMax = $db->prepare("SELECT max(service_id) as max_svc FROM service WHERE customer_id = ? AND (is_deleted = 'NO' OR is_deleted IS NULL)");
+            $stmtSvcMax->execute(array($customerId));
+            $maxRow = $stmtSvcMax->fetch(PDO::FETCH_ASSOC);
+            if ($maxRow && !empty($maxRow['max_svc'])) {
+                $mainServiceId = intval($maxRow['max_svc']);
+            }
+        }
+    }
+
+    // Duplicate Check: If already sent, block re-sending
+    if ($mainServiceId > 0) {
+        $alreadyActions = array($actionName);
+        if ($stage === 'sai') {
+            $alreadyActions[] = 'SA-1 Notification';
+        } else if ($stage === 'saii') {
+            $alreadyActions[] = 'SA-2 Notification';
+        }
+        $inClause = implode(',', array_fill(0, count($alreadyActions), '?'));
+        $checkSentParams = array_merge(array($mainServiceId), $alreadyActions);
+        $checkSentStmt = $db->prepare("SELECT id as action_id, sent_date FROM audit_notification_sent_log WHERE service_id = ? AND action IN ($inClause) AND status = 'sent' AND (is_deleted = 'N' OR is_deleted IS NULL) LIMIT 1");
+        $checkSentStmt->execute($checkSentParams);
+        $alreadySent = $checkSentStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$alreadySent) {
+            $checkSentStmt2 = $db->prepare("SELECT action_id, sent_date FROM ca_service_dates WHERE service_id = ? AND action IN ($inClause) AND status = 'sent' AND (is_deleted = 'N' OR is_deleted IS NULL) LIMIT 1");
+            $checkSentStmt2->execute($checkSentParams);
+            $alreadySent = $checkSentStmt2->fetch(PDO::FETCH_ASSOC);
+        }
+
+        if ($alreadySent) {
+            $formattedSentDate = 'earlier';
+            if (!empty($alreadySent['sent_date'])) {
+                $ts = strtotime($alreadySent['sent_date']);
+                if ($ts) {
+                    $formattedSentDate = (date('H:i:s', $ts) === '00:00:00') ? date('d.m.Y', $ts) : date('d.m.Y h:i A', $ts);
+                }
+            }
+            throw new Exception($stageLabel . " notification and audit plan have already been sent on " . $formattedSentDate . ". Duplicate sending is not allowed.");
+        }
     }
 
     // Get customer info
@@ -102,170 +219,280 @@ try {
     }
     $finalRecipientEmail = implode(', ', $validEmails);
 
-    $stageLabel = ($stage === 'stage2') ? 'Stage II' : 'Stage I';
     $auditDates = '';
     $attachments = array();
     $cleanClientName = preg_replace('/[^A-Za-z0-9_-]+/', '_', trim($customer['customer_name']));
 
+    // Branch by stage to generate Notification PDF and Audit Plan PDF
     if ($stage === 'stage1') {
-        // 1. Get Stage I notification record
-        $notificationStmt = $db->prepare("SELECT audit_dates FROM stage_oneaudit_id WHERE audit_stage_id = ? AND ca_customer_id = ? AND ca_service_id = ? LIMIT 1");
-        $notificationStmt->execute(array($auditId, $customerId, $serviceId));
+        // 1. Notification
+        $notificationStmt = $db->prepare("SELECT audit_dates FROM stage_oneaudit_id WHERE audit_stage_id = ? LIMIT 1");
+        $notificationStmt->execute(array($auditId));
         $notification = $notificationStmt->fetch(PDO::FETCH_ASSOC);
-
         if (!$notification) {
-            // Fallback by audit_stage_id
-            $notificationStmt = $db->prepare("SELECT audit_dates FROM stage_oneaudit_id WHERE audit_stage_id = ? LIMIT 1");
-            $notificationStmt->execute(array($auditId));
-            $notification = $notificationStmt->fetch(PDO::FETCH_ASSOC);
+            throw new Exception('Stage I notification record not found.');
         }
+        $auditDates = trim($notification['audit_dates'] ?? '');
 
-        if (!$notification) {
-            throw new Exception('Stage I notification not found.');
-        }
-
-        $auditDates = isset($notification['audit_dates']) ? trim($notification['audit_dates']) : '';
-
-        // 2. Generate Stage 1 Notification PDF
-        $pdfBinary1 = aitfGeneratePdfBinary(__DIR__ . '/AuditNotificationandAssignment.php', array(
+        $pdfBinaryNoti = aitfGeneratePdfBinary(__DIR__ . '/AuditNotificationandAssignment.php', array(
             'auditid' => $auditId,
             'customerid' => $customerId,
             'serviceid' => $serviceId,
             'output_mode' => 'S'
         ));
-
-        if (is_string($pdfBinary1) && strlen($pdfBinary1) > 100) {
-            $tempFile1 = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'Stage_I_Audit_Notification_' . $cleanClientName . '_' . uniqid() . '.pdf';
-            if (file_put_contents($tempFile1, $pdfBinary1) !== false) {
-                $attachments[] = $tempFile1;
-            }
+        if (!is_string($pdfBinaryNoti) || strlen($pdfBinaryNoti) <= 100) {
+            throw new Exception('Unable to generate Stage I Audit Notification PDF.');
         }
-
-        // 3. Find and Generate Stage 1 Audit Plan PDF
-        $scheduleId = 0;
-        $schedStmt = $db->prepare("SELECT audit_schedule_id FROM audit_schedule_id WHERE serviceca_id = ? AND customer_ca_id = ? ORDER BY audit_schedule_id DESC LIMIT 1");
-        $schedStmt->execute(array($serviceId, $customerId));
-        $schedRow = $schedStmt->fetch(PDO::FETCH_ASSOC);
-        if ($schedRow && !empty($schedRow['audit_schedule_id'])) {
-            $scheduleId = intval($schedRow['audit_schedule_id']);
-        } else {
-            $schedStmt2 = $db->prepare("SELECT audit_schedule_id FROM audit_schedule_id WHERE serviceca_id = ? ORDER BY audit_schedule_id DESC LIMIT 1");
-            $schedStmt2->execute(array($serviceId));
-            $schedRow2 = $schedStmt2->fetch(PDO::FETCH_ASSOC);
-            if ($schedRow2 && !empty($schedRow2['audit_schedule_id'])) {
-                $scheduleId = intval($schedRow2['audit_schedule_id']);
-            } else {
-                $schedStmt3 = $db->prepare("SELECT audit_schedule_id FROM audit_schedule_id WHERE customer_ca_id = ? ORDER BY audit_schedule_id DESC LIMIT 1");
-                $schedStmt3->execute(array($customerId));
-                $schedRow3 = $schedStmt3->fetch(PDO::FETCH_ASSOC);
-                if ($schedRow3 && !empty($schedRow3['audit_schedule_id'])) {
-                    $scheduleId = intval($schedRow3['audit_schedule_id']);
-                }
-            }
+        $tempNoti = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'Stage_I_Audit_Notification_' . $cleanClientName . '_' . uniqid() . '.pdf';
+        if (file_put_contents($tempNoti, $pdfBinaryNoti) === false) {
+            throw new Exception('Failed to write Stage I Audit Notification PDF.');
         }
+        $attachments[] = $tempNoti;
 
+        // 2. Plan
+        $scheduleId = $planIdFromReq;
         if ($scheduleId <= 0) {
-            throw new Exception("Cannot send only notification! Stage 1 Audit Plan is not generated yet. Please make/generate the audit plan first.");
+            $schedStmt = $db->prepare("SELECT audit_schedule_id FROM audit_schedule_id WHERE serviceca_id = ? ORDER BY audit_schedule_id DESC LIMIT 1");
+            $schedStmt->execute(array($serviceId));
+            $schedRow = $schedStmt->fetch(PDO::FETCH_ASSOC);
+            if ($schedRow && !empty($schedRow['audit_schedule_id'])) {
+                $scheduleId = intval($schedRow['audit_schedule_id']);
+            }
         }
-
+        if ($scheduleId <= 0) {
+            throw new Exception("Cannot send only notification! Make audit plan also. (Stage I Audit Plan is not generated yet)");
+        }
         $pdfBinaryPlan = aitfGeneratePdfBinary(__DIR__ . '/AuditSchedule.php', array(
             'auditscheduleid' => $scheduleId,
             'customerid' => $customerId,
             'serviceid' => $serviceId,
             'output_mode' => 'S'
         ));
-
         if (!is_string($pdfBinaryPlan) || strlen($pdfBinaryPlan) <= 100) {
-            throw new Exception("Unable to generate Stage 1 Audit Plan PDF. Please ensure the audit plan is properly configured.");
+            throw new Exception("Unable to generate Stage I Audit Plan PDF. Please ensure the audit plan is properly configured.");
         }
-
-        $tempFilePlan = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'Stage_I_Audit_Plan_' . $cleanClientName . '_' . uniqid() . '.pdf';
-        if (file_put_contents($tempFilePlan, $pdfBinaryPlan) === false) {
-            throw new Exception("Failed to create Stage 1 Audit Plan PDF file.");
+        $tempPlan = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'Stage_I_Audit_Plan_' . $cleanClientName . '_' . uniqid() . '.pdf';
+        if (file_put_contents($tempPlan, $pdfBinaryPlan) === false) {
+            throw new Exception('Failed to write Stage I Audit Plan PDF.');
         }
-        $attachments[] = $tempFilePlan;
+        $attachments[] = $tempPlan;
 
-    } else {
-        // Stage 2
-        // 1. Get Stage II notification record
-        $notificationStmt = $db->prepare("SELECT audit_dates FROM stage_twoaudit_id WHERE audit_stageii_id = ? AND customer_id = ? AND service_id = ? LIMIT 1");
-        $notificationStmt->execute(array($auditId, $customerId, $serviceId));
+    } else if ($stage === 'stage2') {
+        // 1. Notification
+        $notificationStmt = $db->prepare("SELECT audit_dates FROM stage_twoaudit_id WHERE audit_stageii_id = ? LIMIT 1");
+        $notificationStmt->execute(array($auditId));
         $notification = $notificationStmt->fetch(PDO::FETCH_ASSOC);
-
         if (!$notification) {
-            $notificationStmt = $db->prepare("SELECT audit_dates FROM stage_twoaudit_id WHERE audit_stageii_id = ? LIMIT 1");
-            $notificationStmt->execute(array($auditId));
-            $notification = $notificationStmt->fetch(PDO::FETCH_ASSOC);
+            throw new Exception('Stage II notification record not found.');
         }
+        $auditDates = trim($notification['audit_dates'] ?? '');
 
-        if (!$notification) {
-            throw new Exception('Stage II notification not found.');
-        }
-
-        $auditDates = isset($notification['audit_dates']) ? trim($notification['audit_dates']) : '';
-
-        // 2. Generate Stage 2 Notification PDF
-        $pdfBinary1 = aitfGeneratePdfBinary(__DIR__ . '/AuditNotificationStage2.php', array(
+        $pdfBinaryNoti = aitfGeneratePdfBinary(__DIR__ . '/AuditNotificationStage2.php', array(
             'notificationid' => $auditId,
+            'customerid' => $customerId,
+            'serviceid' => $serviceId,
             'output_mode' => 'S'
         ));
-
-        if (is_string($pdfBinary1) && strlen($pdfBinary1) > 100) {
-            $tempFile1 = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'Stage_II_Audit_Notification_' . $cleanClientName . '_' . uniqid() . '.pdf';
-            if (file_put_contents($tempFile1, $pdfBinary1) !== false) {
-                $attachments[] = $tempFile1;
-            }
+        if (!is_string($pdfBinaryNoti) || strlen($pdfBinaryNoti) <= 100) {
+            throw new Exception('Unable to generate Stage II Audit Notification PDF.');
         }
-
-        // 3. Find and Generate Stage 2 Audit Plan PDF
-        $schedule2Id = 0;
-        $sched2Stmt = $db->prepare("SELECT audit_scheduleii_id FROM audit_scheduleii_id WHERE ca_service = ? AND ca_customer = ? ORDER BY audit_scheduleii_id DESC LIMIT 1");
-        $sched2Stmt->execute(array($serviceId, $customerId));
-        $sched2Row = $sched2Stmt->fetch(PDO::FETCH_ASSOC);
-        if ($sched2Row && !empty($sched2Row['audit_scheduleii_id'])) {
-            $schedule2Id = intval($sched2Row['audit_scheduleii_id']);
-        } else {
-            $sched2Stmt2 = $db->prepare("SELECT audit_scheduleii_id FROM audit_scheduleii_id WHERE ca_service = ? ORDER BY audit_scheduleii_id DESC LIMIT 1");
-            $sched2Stmt2->execute(array($serviceId));
-            $sched2Row2 = $sched2Stmt2->fetch(PDO::FETCH_ASSOC);
-            if ($sched2Row2 && !empty($sched2Row2['audit_scheduleii_id'])) {
-                $schedule2Id = intval($sched2Row2['audit_scheduleii_id']);
-            } else {
-                $sched2Stmt3 = $db->prepare("SELECT audit_scheduleii_id FROM audit_scheduleii_id WHERE ca_customer = ? ORDER BY audit_scheduleii_id DESC LIMIT 1");
-                $sched2Stmt3->execute(array($customerId));
-                $sched2Row3 = $sched2Stmt3->fetch(PDO::FETCH_ASSOC);
-                if ($sched2Row3 && !empty($sched2Row3['audit_scheduleii_id'])) {
-                    $schedule2Id = intval($sched2Row3['audit_scheduleii_id']);
-                }
-            }
+        $tempNoti = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'Stage_II_Audit_Notification_' . $cleanClientName . '_' . uniqid() . '.pdf';
+        if (file_put_contents($tempNoti, $pdfBinaryNoti) === false) {
+            throw new Exception('Failed to write Stage II Audit Notification PDF.');
         }
+        $attachments[] = $tempNoti;
 
+        // 2. Plan
+        $schedule2Id = $planIdFromReq;
         if ($schedule2Id <= 0) {
-            throw new Exception("Cannot send only notification! Stage 2 Audit Plan is not generated yet. Please make/generate the audit plan first.");
+            $sched2Stmt = $db->prepare("SELECT audit_scheduleii_id FROM audit_scheduleii_id WHERE ca_service = ? ORDER BY audit_scheduleii_id DESC LIMIT 1");
+            $sched2Stmt->execute(array($serviceId));
+            $sched2Row = $sched2Stmt->fetch(PDO::FETCH_ASSOC);
+            if ($sched2Row && !empty($sched2Row['audit_scheduleii_id'])) {
+                $schedule2Id = intval($sched2Row['audit_scheduleii_id']);
+            }
         }
-
+        if ($schedule2Id <= 0) {
+            throw new Exception("Cannot send only notification! Make audit plan also. (Stage II Audit Plan is not generated yet)");
+        }
         $pdfBinaryPlan2 = aitfGeneratePdfBinary(__DIR__ . '/SurveillanceAudit2.php', array(
             'auditnotiid' => $schedule2Id,
             'customerid' => $customerId,
             'serviceid' => $serviceId,
             'output_mode' => 'S'
         ));
-
         if (!is_string($pdfBinaryPlan2) || strlen($pdfBinaryPlan2) <= 100) {
-            throw new Exception("Unable to generate Stage 2 Audit Plan PDF. Please ensure the audit plan is properly configured.");
+            throw new Exception("Unable to generate Stage II Audit Plan PDF. Please ensure the audit plan is properly configured.");
         }
+        $tempPlan2 = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'Stage_II_Audit_Plan_' . $cleanClientName . '_' . uniqid() . '.pdf';
+        if (file_put_contents($tempPlan2, $pdfBinaryPlan2) === false) {
+            throw new Exception('Failed to write Stage II Audit Plan PDF.');
+        }
+        $attachments[] = $tempPlan2;
 
-        $tempFilePlan2 = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'Stage_II_Audit_Plan_' . $cleanClientName . '_' . uniqid() . '.pdf';
-        if (file_put_contents($tempFilePlan2, $pdfBinaryPlan2) === false) {
-            throw new Exception("Failed to create Stage 2 Audit Plan PDF file.");
+    } else if ($stage === 'sai') {
+        // SA-I Notification (from stage_oneaudit_id, rendered by AuditNotificationandAssignment.php)
+        $notificationStmt = $db->prepare("SELECT audit_dates FROM stage_oneaudit_id WHERE audit_stage_id = ? LIMIT 1");
+        $notificationStmt->execute(array($auditId));
+        $notification = $notificationStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$notification) {
+            throw new Exception('SA-I notification record not found.');
         }
-        $attachments[] = $tempFilePlan2;
+        $auditDates = trim($notification['audit_dates'] ?? '');
+
+        $pdfBinaryNoti = aitfGeneratePdfBinary(__DIR__ . '/AuditNotificationandAssignment.php', array(
+            'auditid' => $auditId,
+            'customerid' => $customerId,
+            'serviceid' => $serviceId,
+            'output_mode' => 'S'
+        ));
+        if (!is_string($pdfBinaryNoti) || strlen($pdfBinaryNoti) <= 100) {
+            throw new Exception('Unable to generate SA-I Audit Notification PDF.');
+        }
+        $tempNoti = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'SA_I_Audit_Notification_' . $cleanClientName . '_' . uniqid() . '.pdf';
+        if (file_put_contents($tempNoti, $pdfBinaryNoti) === false) {
+            throw new Exception('Failed to write SA-I Audit Notification PDF.');
+        }
+        $attachments[] = $tempNoti;
+
+        // SA-I Audit Plan (from servelance_1_id, rendered by Servelance1.php)
+        $planId = $planIdFromReq;
+        if ($planId <= 0) {
+            $pStmt = $db->prepare("SELECT servelance_id FROM servelance_1_id WHERE service_id = ? ORDER BY servelance_id DESC LIMIT 1");
+            $pStmt->execute(array($serviceId));
+            $pRow = $pStmt->fetch(PDO::FETCH_ASSOC);
+            if ($pRow && !empty($pRow['servelance_id'])) {
+                $planId = intval($pRow['servelance_id']);
+            }
+        }
+        if ($planId <= 0) {
+            throw new Exception("Cannot send only notification! Make audit plan also. (SA-I Audit Plan is not generated yet)");
+        }
+        $pdfBinaryPlan = aitfGeneratePdfBinary(__DIR__ . '/Servelance1.php', array(
+            'auditnotiid' => $planId,
+            'customerid' => $customerId,
+            'serviceid' => $serviceId,
+            'output_mode' => 'S'
+        ));
+        if (!is_string($pdfBinaryPlan) || strlen($pdfBinaryPlan) <= 100) {
+            throw new Exception("Unable to generate SA-I Audit Plan PDF. Please ensure the audit plan is properly configured.");
+        }
+        $tempPlan = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'SA_I_Audit_Plan_' . $cleanClientName . '_' . uniqid() . '.pdf';
+        if (file_put_contents($tempPlan, $pdfBinaryPlan) === false) {
+            throw new Exception('Failed to write SA-I Audit Plan PDF.');
+        }
+        $attachments[] = $tempPlan;
+
+    } else if ($stage === 'saii') {
+        // SA-II Notification (from stage_oneaudit_id, rendered by AuditNotificationandAssignment.php)
+        $notificationStmt = $db->prepare("SELECT audit_dates FROM stage_oneaudit_id WHERE audit_stage_id = ? LIMIT 1");
+        $notificationStmt->execute(array($auditId));
+        $notification = $notificationStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$notification) {
+            throw new Exception('SA-II notification record not found.');
+        }
+        $auditDates = trim($notification['audit_dates'] ?? '');
+
+        $pdfBinaryNoti = aitfGeneratePdfBinary(__DIR__ . '/AuditNotificationandAssignment.php', array(
+            'auditid' => $auditId,
+            'customerid' => $customerId,
+            'serviceid' => $serviceId,
+            'output_mode' => 'S'
+        ));
+        if (!is_string($pdfBinaryNoti) || strlen($pdfBinaryNoti) <= 100) {
+            throw new Exception('Unable to generate SA-II Audit Notification PDF.');
+        }
+        $tempNoti = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'SA_II_Audit_Notification_' . $cleanClientName . '_' . uniqid() . '.pdf';
+        if (file_put_contents($tempNoti, $pdfBinaryNoti) === false) {
+            throw new Exception('Failed to write SA-II Audit Notification PDF.');
+        }
+        $attachments[] = $tempNoti;
+
+        // SA-II Audit Plan (from servelance_1_id, rendered by Servelance2.php)
+        $planId = $planIdFromReq;
+        if ($planId <= 0) {
+            $pStmt = $db->prepare("SELECT servelance_id FROM servelance_1_id WHERE service_id = ? ORDER BY servelance_id DESC LIMIT 1");
+            $pStmt->execute(array($serviceId));
+            $pRow = $pStmt->fetch(PDO::FETCH_ASSOC);
+            if ($pRow && !empty($pRow['servelance_id'])) {
+                $planId = intval($pRow['servelance_id']);
+            }
+        }
+        if ($planId <= 0) {
+            throw new Exception("Cannot send only notification! Make audit plan also. (SA-II Audit Plan is not generated yet)");
+        }
+        $pdfBinaryPlan = aitfGeneratePdfBinary(__DIR__ . '/Servelance2.php', array(
+            'auditnotiid' => $planId,
+            'customerid' => $customerId,
+            'serviceid' => $serviceId,
+            'output_mode' => 'S'
+        ));
+        if (!is_string($pdfBinaryPlan) || strlen($pdfBinaryPlan) <= 100) {
+            throw new Exception("Unable to generate SA-II Audit Plan PDF. Please ensure the audit plan is properly configured.");
+        }
+        $tempPlan = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'SA_II_Audit_Plan_' . $cleanClientName . '_' . uniqid() . '.pdf';
+        if (file_put_contents($tempPlan, $pdfBinaryPlan) === false) {
+            throw new Exception('Failed to write SA-II Audit Plan PDF.');
+        }
+        $attachments[] = $tempPlan;
+
+    } else if ($stage === 'rc') {
+        // RC Notification (from stage_oneaudit_id, rendered by AuditNotificationandAssignment.php)
+        $notificationStmt = $db->prepare("SELECT audit_dates FROM stage_oneaudit_id WHERE audit_stage_id = ? LIMIT 1");
+        $notificationStmt->execute(array($auditId));
+        $notification = $notificationStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$notification) {
+            throw new Exception('RC notification record not found.');
+        }
+        $auditDates = trim($notification['audit_dates'] ?? '');
+
+        $pdfBinaryNoti = aitfGeneratePdfBinary(__DIR__ . '/AuditNotificationandAssignment.php', array(
+            'auditid' => $auditId,
+            'customerid' => $customerId,
+            'serviceid' => $serviceId,
+            'output_mode' => 'S'
+        ));
+        if (!is_string($pdfBinaryNoti) || strlen($pdfBinaryNoti) <= 100) {
+            throw new Exception('Unable to generate RC Audit Notification PDF.');
+        }
+        $tempNoti = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'RC_Audit_Notification_' . $cleanClientName . '_' . uniqid() . '.pdf';
+        if (file_put_contents($tempNoti, $pdfBinaryNoti) === false) {
+            throw new Exception('Failed to write RC Audit Notification PDF.');
+        }
+        $attachments[] = $tempNoti;
+
+        // RC Audit Plan (from audit_scheduleii_id, rendered by SurveillanceAudit2.php)
+        $scheduleId = $planIdFromReq;
+        if ($scheduleId <= 0) {
+            $pStmt = $db->prepare("SELECT audit_scheduleii_id FROM audit_scheduleii_id WHERE ca_service = ? ORDER BY audit_scheduleii_id DESC LIMIT 1");
+            $pStmt->execute(array($serviceId));
+            $pRow = $pStmt->fetch(PDO::FETCH_ASSOC);
+            if ($pRow && !empty($pRow['audit_scheduleii_id'])) {
+                $scheduleId = intval($pRow['audit_scheduleii_id']);
+            }
+        }
+        if ($scheduleId <= 0) {
+            throw new Exception("Cannot send only notification! Make audit plan also. (RC Audit Plan is not generated yet)");
+        }
+        $pdfBinaryPlan = aitfGeneratePdfBinary(__DIR__ . '/SurveillanceAudit2.php', array(
+            'auditnotiid' => $scheduleId,
+            'customerid' => $customerId,
+            'serviceid' => $serviceId,
+            'output_mode' => 'S'
+        ));
+        if (!is_string($pdfBinaryPlan) || strlen($pdfBinaryPlan) <= 100) {
+            throw new Exception("Unable to generate RC Audit Plan PDF. Please ensure the audit plan is properly configured.");
+        }
+        $tempPlan = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'RC_Audit_Plan_' . $cleanClientName . '_' . uniqid() . '.pdf';
+        if (file_put_contents($tempPlan, $pdfBinaryPlan) === false) {
+            throw new Exception('Failed to write RC Audit Plan PDF.');
+        }
+        $attachments[] = $tempPlan;
     }
 
     if (count($attachments) < 2) {
         throw new Exception('Cannot send email! Both Audit Notification and Audit Plan PDFs must be generated together.');
     }
-
 
     // 4. Create Email Body for Client
     $subject = $stageLabel . ' Audit Notification and Audit Plan - ' . $customer['customer_name'];
@@ -285,12 +512,10 @@ try {
     $body .= '<div style="margin-top: 20px; font-size: 13.5px; color: #475569;">';
     $body .= '<strong>Attachments:</strong><br>';
     $body .= '1. ' . htmlspecialchars($stageLabel) . ' Audit Notification<br>';
-    if (count($attachments) > 1) {
-        $body .= '2. ' . htmlspecialchars($stageLabel) . ' Audit Plan<br>';
-    }
+    $body .= '2. ' . htmlspecialchars($stageLabel) . ' Audit Plan<br>';
     $body .= '</div>';
 
-    // Signoff
+    // Standardized Signoff
     $body .= '<div style="margin-top: 28px; border-top: 1px solid #e2e8f0; padding-top: 18px;">';
     $body .= '<p style="margin: 0 0 6px; color: #475569;">Regards,</p>';
     $body .= '<p style="margin: 0; line-height: 1.45;">';
@@ -307,7 +532,6 @@ try {
     $body .= 'Email: <a href="mailto:certification@aitf.co.in" style="color: #2563eb; text-decoration: none;">certification@aitf.co.in</a> | Website: <a href="https://www.aitf.co.in" target="_blank" style="color: #2563eb; text-decoration: none;">www.aitf.co.in</a>';
     $body .= '</div>';
     $body .= '</body></html>';
-
 
     // 5. Send email to client with CC: aitfmcl@gmail.com
     $mailSender = new AITFServiceEmailSender();
@@ -360,47 +584,23 @@ try {
             error_log("sendStageNotificationMail: Failed to send confirmation email to certification@aitf.co.in: " . $confirmEx->getMessage());
         }
 
-        // 7. Record entry in ca_service_dates for sent tracking
+        // 7. Record entry in audit_notification_sent_log for sent tracking
         try {
-            $actionName = ($stage === 'stage2') ? 'Stage 2 Notification' : 'Stage 1 Notification';
-
-            $mainServiceId = 0;
-            $stmtCa = $db->prepare("SELECT service FROM service_type_ca WHERE ca_id = ? LIMIT 1");
-            $stmtCa->execute(array($serviceId));
-            $caRow = $stmtCa->fetch(PDO::FETCH_ASSOC);
-            if ($caRow && !empty($caRow['service'])) {
-                $mainServiceId = intval($caRow['service']);
-            } else {
-                $stmtSvc = $db->prepare("SELECT service_id FROM service WHERE service_id = ? LIMIT 1");
-                $stmtSvc->execute(array($serviceId));
-                $svcRow = $stmtSvc->fetch(PDO::FETCH_ASSOC);
-                if ($svcRow && !empty($svcRow['service_id'])) {
-                    $mainServiceId = intval($svcRow['service_id']);
-                } else {
-                    $stmtSvcMax = $db->prepare("SELECT max(service_id) as max_svc FROM service WHERE customer_id = ?");
-                    $stmtSvcMax->execute(array($customerId));
-                    $maxRow = $stmtSvcMax->fetch(PDO::FETCH_ASSOC);
-                    if ($maxRow && !empty($maxRow['max_svc'])) {
-                        $mainServiceId = intval($maxRow['max_svc']);
-                    }
-                }
-            }
-
             if ($mainServiceId > 0) {
-                $checkDateStmt = $db->prepare("SELECT action_id FROM ca_service_dates WHERE service_id = ? AND action = ? AND is_deleted = 'N' LIMIT 1");
+                $checkDateStmt = $db->prepare("SELECT id FROM audit_notification_sent_log WHERE service_id = ? AND action = ? AND is_deleted = 'N' LIMIT 1");
                 $checkDateStmt->execute(array($mainServiceId, $actionName));
                 $existingDate = $checkDateStmt->fetch(PDO::FETCH_ASSOC);
 
                 if ($existingDate) {
-                    $updateDateStmt = $db->prepare("UPDATE ca_service_dates SET sent_date = ?, status = 'sent', due_date = COALESCE(due_date, ?) WHERE action_id = ?");
-                    $updateDateStmt->execute(array($nowDate, $nowDate, $existingDate['action_id']));
+                    $updateDateStmt = $db->prepare("UPDATE audit_notification_sent_log SET sent_date = ?, status = 'sent', recipient_email = ?, sent_by = ?, customer_id = ?, stage = ? WHERE id = ?");
+                    $updateDateStmt->execute(array($nowDate, $finalRecipientEmail, $sentBy, $customerId, $stage, $existingDate['id']));
                 } else {
-                    $insertDateStmt = $db->prepare("INSERT INTO ca_service_dates (service_id, action, due_date, sent_date, status, is_deleted) VALUES (?, ?, ?, ?, 'sent', 'N')");
-                    $insertDateStmt->execute(array($mainServiceId, $actionName, $nowDate, $nowDate));
+                    $insertDateStmt = $db->prepare("INSERT INTO audit_notification_sent_log (service_id, customer_id, stage, action, sent_date, recipient_email, sent_by, status, is_deleted) VALUES (?, ?, ?, ?, ?, ?, ?, 'sent', 'N')");
+                    $insertDateStmt->execute(array($mainServiceId, $customerId, $stage, $actionName, $nowDate, $finalRecipientEmail, $sentBy));
                 }
             }
         } catch (Exception $dbEx) {
-            error_log("sendStageNotificationMail: Failed to record ca_service_dates entry: " . $dbEx->getMessage());
+            error_log("sendStageNotificationMail: Failed to record audit_notification_sent_log entry: " . $dbEx->getMessage());
         }
 
         $message = $stageLabel . ' Notification and Audit Plan successfully sent to ' . $finalRecipientEmail . ' (CC: ' . $ccEmail . ').';

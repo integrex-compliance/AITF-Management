@@ -1,5 +1,6 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
+date_default_timezone_set('Asia/Kolkata');
 
 require_once __DIR__ . '/include/session_helper.php';
 aitf_start_session();
