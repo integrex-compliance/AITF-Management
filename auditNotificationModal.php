@@ -27,8 +27,10 @@ $statement->execute();
 $standardsList = $statement->fetchAll();
 
 foreach ($auditors as $name) {
+    $audEmail = trim($name['auditor_email'] ?? '');
+    $audDisplay = $name['auditor_name'] . ($audEmail !== '' ? ' (' . $audEmail . ')' : '');
     $allAuditorsid .= $name['auditors_id'] . ",";
-    $allAuditors .= $name['auditor_name'] . ",";
+    $allAuditors .= $audDisplay . ",";
     $allAuditorsContact .= $name['auditor_name'] . " - " . $name['auditor_number'] . ",";
     $allContact .= $name['auditor_number'] . ",";
 }
@@ -240,12 +242,12 @@ foreach ($auditors as $name) {
                                     id="notification_details" style="width: 100%">
                                     <thead>
                                         <tr>
-                                            <th class="" width="20%" style="padding: 2px"><small>Auditor Name</small>
+                                            <th class="" width="40%" style="padding: 2px"><small>Auditor Name</small>
                                             </th>
-                                            <th class="" width="15%" style="padding: 2px"><small>Category </small></th>
+                                            <th class="" width="25%" style="padding: 2px"><small>Category </small></th>
                                             <!--<th class="" width="35%" style="padding: 2px"><small>Contact Number</small></th>-->
-                                            <th class="" width="10%" style="padding: 2px"><small>Work Days</small></th>
-                                            <th class="" width="10%" style="padding: 2px"><small>Acceptance</small>
+                                            <th class="" width="15%" style="padding: 2px"><small>Work Days</small></th>
+                                            <th class="" width="20%" style="padding: 2px"><small>Acceptance</small>
                                                 <a class="btn btn-xs btn-info addAuditLink pull-right" data-row-id=""
                                                     data-row-count="" title="Add new cb row"
                                                     style="padding: 1px 5px;"><i class="fa fa-plus-circle fa-lg "
@@ -256,20 +258,24 @@ foreach ($auditors as $name) {
                                     <tbody class="editedNotification">
                                         <tr class="audit_subsection previousCBData" id="cb_subsection_0"
                                             style="display: ">
-                                            <td class="" width="20%" style="padding: 2px;">
+                                            <td class="" width="40%" style="padding: 2px;">
                                                 <div class="table-edit-control">
                                                     <!--<input type="text" data-row-id="" class="contractAuditorName" id="contractAuditorName" name="contractAuditorName" value="" placeholder=""/>-->
                                                     <select class="contractAuditorName form-control"
-                                                        id="contractAuditorName" name="contractAuditorName" required>
+                                                        id="contractAuditorName" name="contractAuditorName" required style="width: 100%; min-width: 260px;">
                                                         <option value="">Choose Auditors</option>
-                                                        <?php foreach ($auditors as $name) { ?>
-                                                            <option value="<?php echo $name['auditors_id'] ?>">
-                                                                <?php echo $name['auditor_name'] ?></option>
+                                                        <?php foreach ($auditors as $name) { 
+                                                            $audEmail = trim($name['auditor_email'] ?? '');
+                                                            $audDisplay = $name['auditor_name'] . ($audEmail !== '' ? ' (' . $audEmail . ')' : '');
+                                                        ?>
+                                                            <option value="<?php echo $name['auditors_id'] ?>" data-email="<?php echo htmlspecialchars($audEmail); ?>">
+                                                                <?php echo htmlspecialchars($audDisplay); ?>
+                                                            </option>
                                                         <?php } ?>
                                                     </select>
                                                 </div>
                                             </td>
-                                            <td class="" width="20%" style="padding: 2px;">
+                                            <td class="" width="25%" style="padding: 2px;">
                                                 <div class="table-edit-control">
                                                     <select class="auditorCategory form-control" id="auditorCategory"
                                                         name="auditorCategory" required>
@@ -1089,15 +1095,15 @@ foreach ($auditors as $name) {
                             var option3 = '<option value="' + data[1][key]['audit_contact'] + '"selected>' + data[1][key]['auditor_name'] + ' - ' + data[1][key]['audit_contact'] + '</option>';
                             //                        var option2 = '<option value="' + data[1][key]['auditor_name'] + '"selected>' + data[1][key]['auditor_name'] + '</option>';
                             $('.editedNotification').append('<tr class="audit_subsection removable_auditor_info" id="cb_subsection_0" style="display: ">\n\
-                                                        <td class="" width="20%" style="padding:2px;">\n\
+                                                        <td class="" width="40%" style="padding:2px;">\n\
                                                         <div class="table-edit-control">\n\
-                                                          <select data-row-id="" class="contractAuditorName form-control" id="contractAuditorName" name="contractAuditorName">\n\
-                                                       ' + option2 + '  \n\
-                                                     ' + option + '\n\
+                                                          <select data-row-id="" class="contractAuditorName form-control" id="contractAuditorName" name="contractAuditorName" style="width:100%;min-width:260px;">\n\
+                                                        ' + option2 + '  \n\
+                                                      ' + option + '\n\
                                                           </select>\n\
                                                         </div>\n\
                                                         </td>\n\
-                                                        <td class="" width="20%" style="padding:2px;">\n\
+                                                        <td class="" width="25%" style="padding:2px;">\n\
         <div class="table-edit-control">\n\
             <select class="auditorCategory form-control" id="auditorCategory" name="auditorCategory" required>\n\
                 <option value="">Choose Category</option>\n\

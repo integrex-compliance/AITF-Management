@@ -93,7 +93,7 @@ if(isset($_GET['customerId']) && !empty($_GET['customerId']) && isset($_GET['con
         $statement->execute();
         $notificationDetails = $statement->fetch();
         
-        $notificationRows = "SELECT * FROM stage_audit_one WHERE audit_stage_id = :id";
+        $notificationRows = "SELECT sao.*, a.auditor_email FROM stage_audit_one sao LEFT JOIN auditors a ON sao.auditor_id = a.auditors_id WHERE sao.audit_stage_id = :id";
         $statement = $db->prepare($notificationRows);
         $statement->bindParam(':id', $_GET['notificationId']);
         $statement->execute();
@@ -458,7 +458,7 @@ if(isset($_GET['customerId']) && !empty($_GET['customerId']) && isset($_GET['con
         $statement->execute();
         $stage2IdInfo = $statement->fetch();
         
-        $stage2Audit = "SELECT * FROM stage_audit_two WHERE audit_stageii_id = :id";
+        $stage2Audit = "SELECT sat.*, a.auditor_email FROM stage_audit_two sat LEFT JOIN auditors a ON sat.auditor_id = a.auditors_id WHERE sat.audit_stageii_id = :id";
         $statement = $db->prepare($stage2Audit);
         $statement->bindParam(':id',$_GET['notificationiiId']);
         $statement->execute();

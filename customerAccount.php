@@ -16406,7 +16406,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     '<div style="padding: 24px; text-align: center;">' +
                     '<i class="fa fa-envelope fa-3x" style="color: #2196F3; margin-bottom: 16px;"></i>' +
                     '<h3 style="margin: 0 0 12px 0; font-size: 22px; color: #333;">' + title + '</h3>' +
-                    '<p style="margin: 0; font-size: 15px; color: #666; line-height: 1.6;">' + message + '</p>' +
+                    '<div style="margin: 0; font-size: 14.5px; color: #666; line-height: 1.6;">' + message + '</div>' +
                     '</div>' +
                     '<div style="border-top: 1px solid #eee; padding: 16px 24px; text-align: right; display: flex; gap: 12px; justify-content: flex-end;">' +
                     '<button class="styled-confirm-cancel" style="background: #e0e0e0; color: #666; border: none; padding: 10px 24px; border-radius: 6px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s;">Cancel</button>' +
@@ -16503,52 +16503,80 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     return false;
                 }
 
-                var confirmMsg = 'Are you sure you want to send the ' + serviceName + ' Audit Notification and Audit Plan to the client via email?';
-                showStyledConfirm(
-                    'Send Email Confirmation',
-                    confirmMsg,
-                    function () {
-                        if (typeof ShowProgressAnimation === 'function') {
-                            ShowProgressAnimation();
-                        }
+                // Fetch recipient & auditor details dynamically for confirmation alert
+                $.ajax({
+                    url: 'sendStageNotificationMail.php',
+                    type: 'GET',
+                    data: {
+                        action: 'get_recipients',
+                        customer: payload.customer,
+                        audit: payload.audit,
+                        stage: payload.stage
+                    },
+                    dataType: 'json'
+                }).always(function (res) {
+                    var clientEmail = (res && res.to_email) ? res.to_email : ($btn.attr('data-clientemail') || 'Client Email');
+                    var officeCc = (res && res.cc_office) ? res.cc_office : 'aitfmcl@gmail.com';
+                    var auditorEmails = (res && res.auditor_emails && res.auditor_emails.length) 
+                        ? res.auditor_emails.join(', ') 
+                        : '<span style="color:#b45309;font-style:italic;">No auditor email configured</span>';
 
-                        $btn.prop('disabled', true).addClass('disabled');
+                    var confirmHtml = '<div style="margin-bottom: 14px; font-size: 14px; color: #475569; line-height: 1.5;">' +
+                        'Are you sure you want to send the <strong>' + serviceName + ' Audit Notification and Audit Plan</strong> to the client via email?' +
+                        '</div>' +
+                        '<div style="background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #0284c7; border-radius: 6px; padding: 12px 16px; text-align: left; font-size: 13px; line-height: 1.8;">' +
+                        '<div><strong style="color: #0f172a;"><i class="fa fa-envelope-o" style="color: #0284c7; width: 16px;"></i> To:</strong> <span style="color: #2563eb; font-weight: 600;">' + $('<div>').text(clientEmail).html() + '</span></div>' +
+                        '<div><strong style="color: #0f172a;"><i class="fa fa-copy" style="color: #64748b; width: 16px;"></i> CC:</strong> <span style="color: #475569; font-weight: 600;">' + $('<div>').text(officeCc).html() + '</span></div>' +
+                        '<div><strong style="color: #0f172a;"><i class="fa fa-user" style="color: #10b981; width: 16px;"></i> CC:</strong> <span style="color: #0f172a; font-weight: 600;">' + (auditorEmails.indexOf('<span') !== -1 ? auditorEmails : $('<div>').text(auditorEmails).html()) + '</span></div>' +
+                        '</div>';
 
-                        $.ajax({
-                            url: 'sendStageNotificationMail.php',
-                            type: 'POST',
-                            data: payload,
-                            dataType: 'json'
-                        }).done(function (res) {
-                            if (res && res.success) {
-                                var sentDateStr = res.sent_at || 'Just now';
-                                showStyledAlert('Success', res.message || (serviceName + ' notification and plan sent successfully.'), 'success');
-                                $btn.replaceWith('<span class="sentAuditNotificationBadge pull-right" data-stage="' + payload.stage + '" data-servicename="' + serviceName + '" data-sentdate="' + sentDateStr + '" title="Sent on ' + sentDateStr + '" style="display: inline-flex; align-items: center; justify-content: center; height: 17px; line-height: 17px; padding: 0 6px; margin-top: 3px; margin-right: 5px; background-color: #16a34a; color: #ffffff; font-size: 10px; font-weight: 700; border-radius: 3px; cursor: pointer; vertical-align: middle; box-sizing: border-box; text-transform: none; white-space: nowrap;"><i class="fa fa-check-circle" style="font-size: 9.5px; margin-right: 3px; color: #ffffff;"></i> Mail Sent</span>');
-                            } else {
-                                showStyledAlert('Error', (res && res.message) ? res.message : 'Unable to send email right now.', 'error');
+                    showStyledConfirm(
+                        'Send Email Confirmation',
+                        confirmHtml,
+                        function () {
+                            if (typeof ShowProgressAnimation === 'function') {
+                                ShowProgressAnimation();
                             }
-                        }).fail(function (xhr, status, error) {
-                            var message = 'Unable to send email right now. Please try again.';
-                            if (xhr && xhr.responseJSON && xhr.responseJSON.message) {
-                                message = xhr.responseJSON.message;
-                            } else if (xhr && typeof xhr.responseText === 'string' && xhr.responseText.trim() !== '') {
-                                try {
-                                    var parsed = JSON.parse(xhr.responseText);
-                                    if (parsed && parsed.message) {
-                                        message = parsed.message;
-                                    }
-                                } catch (e) {
+
+                            $btn.prop('disabled', true).addClass('disabled');
+
+                            $.ajax({
+                                url: 'sendStageNotificationMail.php',
+                                type: 'POST',
+                                data: payload,
+                                dataType: 'json'
+                            }).done(function (res) {
+                                if (res && res.success) {
+                                    var sentDateStr = res.sent_at || 'Just now';
+                                    showStyledAlert('Success', res.message || (serviceName + ' notification and plan sent successfully.'), 'success');
+                                    $btn.replaceWith('<span class="sentAuditNotificationBadge pull-right" data-stage="' + payload.stage + '" data-servicename="' + serviceName + '" data-sentdate="' + sentDateStr + '" title="Sent on ' + sentDateStr + '" style="display: inline-flex; align-items: center; justify-content: center; height: 17px; line-height: 17px; padding: 0 6px; margin-top: 3px; margin-right: 5px; background-color: #16a34a; color: #ffffff; font-size: 10px; font-weight: 700; border-radius: 3px; cursor: pointer; vertical-align: middle; box-sizing: border-box; text-transform: none; white-space: nowrap;"><i class="fa fa-check-circle" style="font-size: 9.5px; margin-right: 3px; color: #ffffff;"></i> Mail Sent</span>');
+                                } else {
+                                    showStyledAlert('Error', (res && res.message) ? res.message : 'Unable to send email right now.', 'error');
                                 }
-                            }
-                            showStyledAlert('Error', message, 'error');
-                        }).always(function () {
-                            $btn.prop('disabled', false).removeClass('disabled');
-                            if (typeof HideProgressAnimation === 'function') {
-                                HideProgressAnimation();
-                            }
-                        });
-                    }
-                );
+                            }).fail(function (xhr, status, error) {
+                                var message = 'Unable to send email right now. Please try again.';
+                                if (xhr && xhr.responseJSON && xhr.responseJSON.message) {
+                                    message = xhr.responseJSON.message;
+                                } else if (xhr && typeof xhr.responseText === 'string' && xhr.responseText.trim() !== '') {
+                                    try {
+                                        var parsed = JSON.parse(xhr.responseText);
+                                        if (parsed && parsed.message) {
+                                            message = parsed.message;
+                                        }
+                                    } catch (e) {
+                                        message = xhr.responseText.substring(0, 200);
+                                    }
+                                }
+                                showStyledAlert('Error', message, 'error');
+                            }).always(function () {
+                                $btn.prop('disabled', false).removeClass('disabled');
+                                if (typeof HideProgressAnimation === 'function') {
+                                    HideProgressAnimation();
+                                }
+                            });
+                        }
+                    );
+                });
             });
 
             $('.downloadCustomersatisfaction').click(function () {

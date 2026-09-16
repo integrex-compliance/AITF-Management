@@ -64,6 +64,66 @@ try {
         }
     }
 
+    // Quick API endpoint to fetch recipients (Client email + Office CC + Auditor CC) for confirmation alert
+    $reqAction = $_GET['action'] ?? $_POST['action'] ?? '';
+    if ($reqAction === 'get_recipients') {
+        $reqCustId = intval($_GET['customer'] ?? $_POST['customer'] ?? 0);
+        $reqAuditId = intval($_GET['audit'] ?? $_POST['audit'] ?? 0);
+        $reqStage = strtolower(trim($_GET['stage'] ?? $_POST['stage'] ?? ''));
+
+        if ($reqStage === 'sa1' || $reqStage === 'sa-1' || $reqStage === 'sa_1') $reqStage = 'sai';
+        if ($reqStage === 'sa2' || $reqStage === 'sa-2' || $reqStage === 'sa_2') $reqStage = 'saii';
+
+        $clientEmail = '';
+        if ($reqCustId > 0) {
+            $cStmt = $db->prepare("SELECT email_id, customer_name FROM customer_info WHERE id = ? LIMIT 1");
+            $cStmt->execute(array($reqCustId));
+            $cRow = $cStmt->fetch(PDO::FETCH_ASSOC);
+            if ($cRow) {
+                $clientEmail = trim($cRow['email_id'] ?? '');
+            }
+        }
+
+        $auditorEmails = array();
+        $auditorNames = array();
+        if ($reqAuditId > 0) {
+            if ($reqStage === 'stage2') {
+                $aStmt = $db->prepare("SELECT a.auditor_name, a.auditor_email FROM stage_audit_two sat JOIN auditors a ON sat.auditor_id = a.auditors_id WHERE sat.audit_stageii_id = ?");
+                $aStmt->execute(array($reqAuditId));
+                $aRows = $aStmt->fetchAll(PDO::FETCH_ASSOC);
+            } else {
+                $aStmt = $db->prepare("SELECT a.auditor_name, a.auditor_email FROM stage_audit_one sao JOIN auditors a ON sao.auditor_id = a.auditors_id WHERE sao.audit_stage_id = ?");
+                $aStmt->execute(array($reqAuditId));
+                $aRows = $aStmt->fetchAll(PDO::FETCH_ASSOC);
+                if (empty($aRows)) {
+                    $aStmt2 = $db->prepare("SELECT a.auditor_name, a.auditor_email FROM notification_auditor na JOIN auditors a ON na.auditor_id = a.auditors_id WHERE na.notification_id = ?");
+                    $aStmt2->execute(array($reqAuditId));
+                    $aRows = $aStmt2->fetchAll(PDO::FETCH_ASSOC);
+                }
+            }
+
+            foreach ($aRows as $ar) {
+                $nm = trim($ar['auditor_name'] ?? '');
+                $em = trim($ar['auditor_email'] ?? '');
+                if ($nm !== '' && !in_array($nm, $auditorNames, true)) {
+                    $auditorNames[] = $nm;
+                }
+                if ($em !== '' && filter_var($em, FILTER_VALIDATE_EMAIL) && !in_array($em, $auditorEmails, true)) {
+                    $auditorEmails[] = $em;
+                }
+            }
+        }
+
+        echo json_encode(array(
+            'success' => true,
+            'to_email' => $clientEmail,
+            'cc_office' => 'aitfmcl@gmail.com',
+            'auditor_emails' => $auditorEmails,
+            'auditor_names' => $auditorNames
+        ));
+        exit;
+    }
+
     $customerId = isset($_POST['customer']) ? intval($_POST['customer']) : 0;
     $serviceId = isset($_POST['service']) ? intval($_POST['service']) : 0;
     $universalServiceId = isset($_POST['universalservice']) ? intval($_POST['universalservice']) : 0;
@@ -537,9 +597,43 @@ try {
     $body .= '</div>';
     $body .= '</body></html>';
 
-    // 5. Send email to client with CC: aitfmcl@gmail.com
+    // 5. Send email to client with CC: aitfmcl@gmail.com and CC: Auditor(s)
     $mailSender = new AITFServiceEmailSender();
-    $ccEmail = 'aitfmcl@gmail.com';
+    $officeCc = 'aitfmcl@gmail.com';
+    $ccEmails = array($officeCc);
+
+    // Fetch auditor emails for this notification
+    $auditorEmails = array();
+    try {
+        if ($stage === 'stage2') {
+            $aStmt = $db->prepare("SELECT a.auditor_name, a.auditor_email FROM stage_audit_two sat JOIN auditors a ON sat.auditor_id = a.auditors_id WHERE sat.audit_stageii_id = ?");
+            $aStmt->execute(array($auditId));
+            $aRows = $aStmt->fetchAll(PDO::FETCH_ASSOC);
+        } else {
+            $aStmt = $db->prepare("SELECT a.auditor_name, a.auditor_email FROM stage_audit_one sao JOIN auditors a ON sao.auditor_id = a.auditors_id WHERE sao.audit_stage_id = ?");
+            $aStmt->execute(array($auditId));
+            $aRows = $aStmt->fetchAll(PDO::FETCH_ASSOC);
+            if (empty($aRows)) {
+                $aStmt2 = $db->prepare("SELECT a.auditor_name, a.auditor_email FROM notification_auditor na JOIN auditors a ON na.auditor_id = a.auditors_id WHERE na.notification_id = ?");
+                $aStmt2->execute(array($auditId));
+                $aRows = $aStmt2->fetchAll(PDO::FETCH_ASSOC);
+            }
+        }
+        foreach ($aRows as $ar) {
+            $em = trim($ar['auditor_email'] ?? '');
+            if ($em !== '' && filter_var($em, FILTER_VALIDATE_EMAIL) && !in_array($em, $auditorEmails, true)) {
+                $auditorEmails[] = $em;
+            }
+        }
+    } catch (Exception $audEx) {
+        error_log("sendStageNotificationMail: Failed to fetch auditor emails for CC: " . $audEx->getMessage());
+    }
+
+    foreach ($auditorEmails as $aMail) {
+        if (!in_array($aMail, $ccEmails, true)) {
+            $ccEmails[] = $aMail;
+        }
+    }
 
     try {
         $mailSender->sendMultipleAttachmentsEmail(
@@ -548,7 +642,7 @@ try {
             $body,
             $subject,
             $attachments,
-            $ccEmail
+            $ccEmails
         );
 
         $nowDate = date('Y-m-d H:i:s');
@@ -562,8 +656,11 @@ try {
             $confirmBody .= 'This is an automated confirmation that the <strong>' . htmlspecialchars($stageLabel) . ' Audit Notification and Audit Plan</strong> have been successfully emailed to the client.<br><br>';
             $confirmBody .= '<div style="background:#f8fafc; border:1px solid #cbd5e1; border-left:4px solid #10b981; padding:12px 16px; border-radius:4px; margin-bottom:15px;">';
             $confirmBody .= '<p style="margin:4px 0;"><strong>Client Name:</strong> <span style="color:#0f172a; font-weight:600;">' . htmlspecialchars($customer['customer_name']) . '</span></p>';
-            $confirmBody .= '<p style="margin:4px 0;"><strong>Recipient Email:</strong> <span style="color:#2563eb; font-weight:600;">' . htmlspecialchars($finalRecipientEmail) . '</span></p>';
-            $confirmBody .= '<p style="margin:4px 0;"><strong>CC:</strong> ' . htmlspecialchars($ccEmail) . '</p>';
+            $confirmBody .= '<p style="margin:4px 0;"><strong>Recipient Email (Client):</strong> <span style="color:#2563eb; font-weight:600;">' . htmlspecialchars($finalRecipientEmail) . '</span></p>';
+            $confirmBody .= '<p style="margin:4px 0;"><strong>CC (Office):</strong> ' . htmlspecialchars($officeCc) . '</p>';
+            if (!empty($auditorEmails)) {
+                $confirmBody .= '<p style="margin:4px 0;"><strong>CC (Auditor):</strong> <span style="color:#0f172a; font-weight:600;">' . htmlspecialchars(implode(', ', $auditorEmails)) . '</span></p>';
+            }
             if (!empty($customer['unique_id'])) {
                 $confirmBody .= '<p style="margin:4px 0;"><strong>Agreement / Unique ID:</strong> ' . htmlspecialchars($customer['unique_id']) . '</p>';
             }
@@ -607,7 +704,7 @@ try {
             error_log("sendStageNotificationMail: Failed to record audit_notification_sent_log entry: " . $dbEx->getMessage());
         }
 
-        $message = $stageLabel . ' Notification and Audit Plan successfully sent to ' . $finalRecipientEmail . ' (CC: ' . $ccEmail . ').';
+        $message = $stageLabel . ' Notification and Audit Plan successfully sent to ' . $finalRecipientEmail . ' (CC: ' . implode(', ', $ccEmails) . ').';
         echo json_encode(array(
             'success' => true,
             'message' => $message,

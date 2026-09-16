@@ -27,12 +27,14 @@ $auditorOptionsHtml = '<option value="">Choose Auditors</option>';
 $categoryOptionsHtml = '<option value="">Choose Category</option>';
 
 foreach ($auditors as $name) {
+    $audEmail = trim($name['auditor_email'] ?? '');
+    $audDisplay = $name['auditor_name'] . ($audEmail !== '' ? ' (' . $audEmail . ')' : '');
     $allAuditorsid .= $name['auditors_id'] . ",";
-    $allAuditors .= $name['auditor_name'] . ",";
+    $allAuditors .= $audDisplay . ",";
     $allAuditorsContact .= $name['auditor_name'] . " - " . $name['auditor_number'] . ",";
     $allContact .= $name['auditor_number'] . ",";
-    $auditorOptionsHtml .= '<option value="' . htmlspecialchars($name['auditors_id'], ENT_QUOTES, 'UTF-8') . '">'
-        . htmlspecialchars($name['auditor_name'], ENT_QUOTES, 'UTF-8') . '</option>';
+    $auditorOptionsHtml .= '<option value="' . htmlspecialchars($name['auditors_id'], ENT_QUOTES, 'UTF-8') . '" data-email="' . htmlspecialchars($audEmail, ENT_QUOTES, 'UTF-8') . '">'
+        . htmlspecialchars($audDisplay, ENT_QUOTES, 'UTF-8') . '</option>';
 }
 
 foreach ($category as $name) {
@@ -236,13 +238,13 @@ foreach ($category as $name) {
                                     id="notification_detailsii" style="width: 100%">
                                     <thead>
                                         <tr>
-                                            <th class="" width="20%" style="padding: 2px">
+                                            <th class="" width="40%" style="padding: 2px">
                                                 <small>Auditor Name</small>
                                             </th>
-                                            <th class="" width="20%" style="padding: 2px">
+                                            <th class="" width="25%" style="padding: 2px">
                                                 <small>Category</small>
                                             </th>
-                                            <th class="" width="20%" style="padding: 2px">
+                                            <th class="" width="15%" style="padding: 2px">
                                                 <small>Work Days</small>
                                             </th>
                                             <th class="" width="20%" style="padding: 2px">
@@ -258,22 +260,17 @@ foreach ($category as $name) {
                                     <tbody class="editTableDiv">
                                         <tr class="audit_subsectionii previousCBData" id="cb_subsection_0"
                                             style="display: ">
-                                            <td class="" width="20%" style="padding: 2px;">
+                                            <td class="" width="40%" style="padding: 2px;">
                                                 <div class="table-edit-control">
                                                     <!--<input type="text" data-row-id="" class="contractAuditorNameii" id="contractAuditorNameii" name="contractAuditorNameii" value="" placeholder=""/>-->
                                                     <select class="contractAuditorNameii form-control"
                                                         id="contractAuditorNameii" name="contractAuditorNameii"
-                                                        required>
-                                                        <option value="">Choose Auditors</option>
-                                                        <?php foreach ($auditors as $name) { ?>
-                                                            <option value="<?php echo $name['auditors_id'] ?>">
-                                                                <?php echo $name['auditor_name'] ?>
-                                                            </option>
-                                                        <?php } ?>
+                                                        required style="width: 100%; min-width: 260px;">
+                                                        <?php echo $auditorOptionsHtml; ?>
                                                     </select>
                                                 </div>
                                             </td>
-                                            <td class="" width="20%" style="padding: 2px;">
+                                            <td class="" width="25%" style="padding: 2px;">
                                                 <div class="table-edit-control">
                                                     <select class="auditorCategoryii form-control"
                                                         id="auditorCategoryii" name="auditorCategoryii" required>
@@ -404,11 +401,11 @@ foreach ($category as $name) {
         $workDays.val(auditor.audit_wokrdays || '');
         $acceptance.val(auditor.auditor_acceptance || '');
 
-        $row.append($('<td width="20%" style="padding:2px;"><div class="table-edit-control"></div></td>')
+        $row.append($('<td width="40%" style="padding:2px;"><div class="table-edit-control"></div></td>')
             .find('.table-edit-control').append($auditorSelect).end());
-        $row.append($('<td width="20%" style="padding:2px;"><div class="table-edit-control"></div></td>')
+        $row.append($('<td width="25%" style="padding:2px;"><div class="table-edit-control"></div></td>')
             .find('.table-edit-control').append($categorySelect).end());
-        $row.append($('<td width="20%" style="padding:2px;"><div class="table-edit-control"></div></td>')
+        $row.append($('<td width="15%" style="padding:2px;"><div class="table-edit-control"></div></td>')
             .find('.table-edit-control').append($workDays).end());
         $row.append($('<td width="20%" style="padding:2px;"><div class="table-edit-control"></div></td>')
             .find('.table-edit-control').append($acceptance).end());
