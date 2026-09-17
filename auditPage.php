@@ -358,40 +358,553 @@
             }
         }
     }
+
+    $totalAuditsCount = count($auditRowDetails);
+    $totalAuditorsCount = count($auditorsList);
+    $dateConflictCount = count($auditConflictGroups);
+    $memberConflictCount = count($memberConflictGroups);
     ?>
 
     <style>
-        .custom-float-label-control {
-            margin-bottom: 0em;
+        /* =====================================================================
+           AUDIT RECORDS — MODERN CLEAN SAAS DESIGN SYSTEM (masterCreator Theme)
+           ===================================================================== */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+        body, #wrapper {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f8fafc;
+            color: #0f172a;
+            -webkit-font-smoothing: antialiased;
         }
 
-        #tab_customer_list tbody tr.audit-conflict-row td {
-            background-color: #fee2e2 !important;
-            color: #7f1d1d;
+        .audit-page-container {
+            max-width: 1540px;
+            margin: 0 auto;
+            padding: 14px 20px 60px 20px;
         }
 
-        #tab_customer_list tbody tr.audit-conflict-row small,
-        #tab_customer_list tbody tr.audit-conflict-row span {
-            color: #7f1d1d;
+        /* =====================================================================
+           COMPACT HERO HEADER
+           ===================================================================== */
+        .ap-hero-header {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #eff6ff 100%);
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 10px 18px;
+            box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+            margin-bottom: 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ap-hero-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #0d4d8b 0%, #2563eb 50%, #38bdf8 100%);
+        }
+
+        .ap-hero-title {
+            font-size: 17px;
+            font-weight: 800;
+            color: #0f172a;
+            margin: 0;
+            letter-spacing: -0.01em;
+            display: flex;
+            align-items: center;
+        }
+
+        .ap-hero-stats {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .ap-stat-pill {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 6px 12px;
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+
+        .ap-stat-pill:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.04);
+        }
+
+        .ap-stat-pill.pill-danger {
+            background: #fff5f5;
+            border-color: #fecaca;
+        }
+
+        .ap-stat-pill.pill-warning {
+            background: #fffaf5;
+            border-color: #fed7aa;
+        }
+
+        .ap-stat-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+
+        .ap-stat-icon.icon-blue { background: #eff6ff; color: #2563eb; }
+        .ap-stat-icon.icon-purple { background: #f5f3ff; color: #7c3aed; }
+        .ap-stat-icon.icon-red { background: #fef2f2; color: #dc2626; }
+        .ap-stat-icon.icon-orange { background: #fff7ed; color: #ea580c; }
+        .ap-stat-icon.icon-green { background: #ecfdf5; color: #059669; }
+
+        .ap-stat-num {
+            font-size: 14px;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1;
+        }
+
+        .ap-stat-lbl {
+            font-size: 9.5px;
             font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            line-height: 1;
+            margin-top: 2px;
         }
 
+        /* =====================================================================
+           FILTER TOOLBAR (masterCreator Theme)
+           ===================================================================== */
+        .ap-filter-panel {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 0 0 16px 0;
+            padding: 12px 16px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+        }
+
+        .ap-filter-item {
+            position: relative;
+        }
+
+        .ap-filter-item.ap-filter-search {
+            flex: 1 1 260px;
+            min-width: 220px;
+        }
+
+        .ap-filter-item.ap-filter-search i {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            font-size: 13px;
+            pointer-events: none;
+        }
+
+        .ap-filter-item.ap-filter-search input {
+            padding-left: 34px !important;
+        }
+
+        .ap-filter-item.ap-filter-select {
+            flex: 0 1 190px;
+            min-width: 160px;
+        }
+
+        .ap-filter-item.ap-filter-date {
+            flex: 0 1 135px;
+            min-width: 115px;
+        }
+
+        .ap-filter-item.ap-filter-btn {
+            flex: 0 0 auto;
+        }
+
+        .ap-filter-item input,
+        .ap-filter-item select {
+            width: 100% !important;
+            height: 38px !important;
+            padding: 6px 12px !important;
+            border: 1.5px solid #cbd5e1 !important;
+            border-radius: 8px !important;
+            box-sizing: border-box !important;
+            font-size: 13px !important;
+            font-weight: 500 !important;
+            background-color: #f8fafc !important;
+            color: #0f172a !important;
+            transition: all 0.15s ease !important;
+        }
+
+        .ap-filter-item select {
+            padding-right: 32px !important;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+            background-repeat: no-repeat !important;
+            background-position: right 10px center !important;
+            background-size: 11px !important;
+            appearance: none !important;
+            -webkit-appearance: none !important;
+            -moz-appearance: none !important;
+            cursor: pointer !important;
+        }
+
+        .ap-filter-item input::placeholder {
+            color: #94a3b8 !important;
+        }
+
+        .ap-filter-item input:focus,
+        .ap-filter-item select:focus {
+            border-color: #0d4d8b !important;
+            background-color: #ffffff !important;
+            outline: none !important;
+            box-shadow: 0 0 0 3px rgba(13, 77, 139, 0.12) !important;
+        }
+
+        #auditClientSearch:-webkit-autofill,
+        #auditClientSearch:-webkit-autofill:hover, 
+        #auditClientSearch:-webkit-autofill:focus,
+        #auditClientSearch:-webkit-autofill:active {
+            -webkit-box-shadow: 0 0 0 1000px #f8fafc inset !important;
+            -webkit-text-fill-color: #0f172a !important;
+            transition: background-color 5000s ease-in-out 0s !important;
+        }
+
+        .ap-btn-reset {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            height: 38px;
+            padding: 0 14px;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            background: #f8fafc;
+            color: #475569;
+            font-size: 12.5px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .ap-btn-reset:hover {
+            background: #f1f5f9;
+            color: #0f172a;
+            border-color: #94a3b8;
+        }
+
+        /* =====================================================================
+           MAIN CARD & TABLE (masterCreator Theme)
+           ===================================================================== */
+        .ap-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+
+        .ap-card-header {
+            background: linear-gradient(135deg, #0d4d8b 0%, #1e40af 100%) !important;
+            padding: 12px 20px !important;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #ffffff;
+            box-shadow: 0 2px 8px rgba(13, 77, 139, 0.15);
+        }
+
+        .ap-card-title {
+            font-size: 13.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #ffffff !important;
+        }
+
+        .ap-card-header-stats {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .ap-count-badge {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-size: 11.5px;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .ap-conflict-badge {
+            background: #fee2e2;
+            border: 1px solid #fca5a5;
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-size: 11.5px;
+            font-weight: 800;
+            color: #b91c1c;
+        }
+
+        .ap-card-body {
+            padding: 0;
+        }
+
+        .ap-table {
+            width: 100% !important;
+            margin-bottom: 0 !important;
+            border-collapse: collapse !important;
+        }
+
+        .ap-table thead th {
+            background: #f8fafc !important;
+            border: none !important;
+            border-bottom: 2px solid #e2e8f0 !important;
+            padding: 12px 16px !important;
+            font-size: 11.5px !important;
+            font-weight: 700 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.5px !important;
+            color: #475569 !important;
+            vertical-align: middle !important;
+        }
+
+        .ap-table tbody td {
+            border: none !important;
+            border-bottom: 1px solid #f1f5f9 !important;
+            padding: 11px 16px !important;
+            font-size: 13px !important;
+            color: #334155 !important;
+            vertical-align: middle !important;
+            transition: background 0.15s ease !important;
+        }
+
+        .ap-table tbody tr:last-child td {
+            border-bottom: none !important;
+        }
+
+        .ap-table tbody tr:nth-of-type(even) td {
+            background-color: #fbfcfd !important;
+        }
+
+        .ap-table tbody tr:hover td {
+            background: #f1f5f9 !important;
+        }
+
+        .ap-table tbody tr {
+            cursor: pointer;
+        }
+
+        /* Critical overrides: Prevent css/app.css (.table-striped span { display:none }) from hiding spans */
+        #tab_customer_list td span,
+        #tab_customer_list th span,
+        .ap-table td span,
+        .ap-table th span {
+            display: inline-block !important;
+        }
+
+        #tab_customer_list td .ap-badge,
+        .ap-table td .ap-badge {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+
+        #tab_customer_list td .ap-date-badge,
+        .ap-table td .ap-date-badge {
+            display: inline-flex !important;
+            align-items: center !important;
+        }
+
+        #tab_customer_list td .ap-uid-badge,
+        .ap-table td .ap-uid-badge {
+            display: inline-block !important;
+        }
+
+        #tab_customer_list td .ap-status-tag,
+        .ap-table td .ap-status-tag {
+            display: inline-block !important;
+        }
+
+        #tab_customer_list td .ap-audit-status,
+        .ap-table td .ap-audit-status {
+            display: inline !important;
+        }
+
+        #tab_customer_list td .ap-next-service,
+        .ap-table td .ap-next-service {
+            display: inline !important;
+        }
+
+        /* Sorting helper token is strictly hidden */
+        #tab_customer_list td span.ap-sort-prefix,
+        #tab_customer_list td span[style*="display:none"],
+        #tab_customer_list td span[style*="display: none"],
+        .ap-table td span.ap-sort-prefix {
+            display: none !important;
+        }
+
+        /* Service Type Badges */
+        .ap-badge {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 3px 8px !important;
+            border-radius: 6px !important;
+            font-size: 11px !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.3px !important;
+            line-height: 1.2 !important;
+            text-transform: uppercase !important;
+        }
+        .ap-badge-st1 { background: #eff6ff !important; color: #1d4ed8 !important; border: 1px solid #bfdbfe !important; }
+        .ap-badge-st2 { background: #e0e7ff !important; color: #4338ca !important; border: 1px solid #c7d2fe !important; }
+        .ap-badge-sai { background: #ecfdf5 !important; color: #047857 !important; border: 1px solid #a7f3d0 !important; }
+        .ap-badge-saii { background: #f0fdfa !important; color: #0f766e !important; border: 1px solid #99f6e4 !important; }
+        .ap-badge-rc { background: #faf5ff !important; color: #7e22ce !important; border: 1px solid #e9d5ff !important; }
+        .ap-badge-sp { background: #fffbeb !important; color: #b45309 !important; border: 1px solid #fde68a !important; }
+        .ap-badge-ta { background: #ecfeff !important; color: #0e7490 !important; border: 1px solid #a5f3fc !important; }
+        .ap-badge-default { background: #f1f5f9 !important; color: #475569 !important; border: 1px solid #cbd5e1 !important; }
+
+        .ap-uid-badge {
+            font-size: 12px !important;
+            font-weight: 700 !important;
+            color: #0d4d8b !important;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+            background: #eff6ff !important;
+            padding: 2px 7px !important;
+            border-radius: 4px !important;
+            border: 1px solid #dbeafe !important;
+            display: inline-block !important;
+        }
+
+        .ap-client-name {
+            font-weight: 700 !important;
+            color: #0f172a !important;
+            font-size: 13px !important;
+            line-height: 1.3 !important;
+        }
+
+        .ap-status-tag {
+            display: inline-block !important;
+            padding: 2px 8px !important;
+            border-radius: 4px !important;
+            font-size: 11px !important;
+            font-weight: 600 !important;
+            background: #f8fafc !important;
+            color: #475569 !important;
+            border: 1px solid #e2e8f0 !important;
+        }
+
+        .ap-auditor {
+            font-size: 12.5px !important;
+            font-weight: 600 !important;
+            color: #334155 !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 5px !important;
+        }
+
+        .ap-date-badge {
+            font-size: 12px !important;
+            font-weight: 600 !important;
+            color: #334155 !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 5px !important;
+            background: #f8fafc !important;
+            border: 1px solid #e2e8f0 !important;
+            padding: 2px 7px !important;
+            border-radius: 5px !important;
+            white-space: nowrap !important;
+        }
+
+        .ap-present-status {
+            font-size: 12px !important;
+            line-height: 1.3 !important;
+        }
+
+        .ap-audit-status {
+            font-weight: 600 !important;
+            color: #1e293b !important;
+            display: inline !important;
+        }
+
+        .ap-next-service {
+            font-size: 11px !important;
+            color: #64748b !important;
+            margin-left: 2px !important;
+            display: inline !important;
+        }
+
+        /* Conflict row styling */
+        #tab_customer_list tbody tr.audit-conflict-row td {
+            background-color: #fff1f2 !important;
+            color: #9f1239 !important;
+        }
+
+        #tab_customer_list tbody tr.audit-conflict-row:hover td {
+            background-color: #ffe4e6 !important;
+        }
+
+        #tab_customer_list tbody tr.audit-conflict-row td:first-child {
+            border-left: 3px solid #e11d48 !important;
+        }
+
+        /* =====================================================================
+           CONFLICT SLIDE PANELS & TABS
+           ===================================================================== */
         .audit-conflict-tab {
             position: fixed;
             right: 0;
             top: 210px;
             z-index: 9998;
             border: 0;
-            border-radius: 6px 0 0 6px;
-            background: #b91c1c;
-            color: #fff;a
+            border-radius: 8px 0 0 8px;
+            background: linear-gradient(135deg, #b91c1c 0%, #dc2626 100%);
+            color: #ffffff;
+            font-family: 'Inter', sans-serif;
             font-size: 12px;
             font-weight: 700;
-            letter-spacing: 0;
-            padding: 10px 12px;
+            letter-spacing: 0.3px;
+            padding: 12px 14px;
             writing-mode: vertical-rl;
             text-orientation: mixed;
-            box-shadow: 0 8px 22px rgba(15, 23, 42, 0.25);
+            box-shadow: -2px 4px 16px rgba(185, 28, 28, 0.35);
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .audit-conflict-tab:hover {
+            transform: translateX(-3px);
+            box-shadow: -4px 6px 20px rgba(185, 28, 28, 0.45);
         }
 
         .member-conflict-tab {
@@ -400,57 +913,57 @@
             top: 360px;
             z-index: 9998;
             border: 0;
-            border-radius: 6px 0 0 6px;
-            background: #ea580c;
-            /* Distinct orange for member conflict */
-            color: #fff;
+            border-radius: 8px 0 0 8px;
+            background: linear-gradient(135deg, #c2410c 0%, #ea580c 100%);
+            color: #ffffff;
+            font-family: 'Inter', sans-serif;
             font-size: 12px;
             font-weight: 700;
-            letter-spacing: 0;
-            padding: 10px 12px;
+            letter-spacing: 0.3px;
+            padding: 12px 14px;
             writing-mode: vertical-rl;
             text-orientation: mixed;
-            box-shadow: 0 8px 22px rgba(15, 23, 42, 0.25);
+            box-shadow: -2px 4px 16px rgba(234, 88, 12, 0.35);
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .member-conflict-tab:hover {
+            transform: translateX(-3px);
+            box-shadow: -4px 6px 20px rgba(234, 88, 12, 0.45);
         }
 
         .audit-conflict-count {
             display: inline-block;
-            min-width: 18px;
-            margin-top: 7px;
+            min-width: 20px;
+            height: 20px;
+            margin-top: 8px;
             border-radius: 999px;
-            background: #fff;
+            background: #ffffff;
             color: #b91c1c;
-            line-height: 18px;
+            font-weight: 800;
+            font-size: 11px;
+            line-height: 20px;
             text-align: center;
             writing-mode: horizontal-tb;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.15);
         }
 
-        .audit-conflict-panel {
-            position: fixed;
-            top: 0;
-            right: -430px;
-            z-index: 9999;
-            width: 420px;
-            max-width: calc(100vw - 24px);
-            height: 100vh;
-            background: #ffffff;
-            bottom: 0;
-            background: #fff;
-            box-shadow: -10px 0 30px rgba(15, 23, 42, 0.1);
-            transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            display: flex;
-            flex-direction: column;
+        .member-conflict-tab .audit-conflict-count {
+            color: #ea580c;
         }
 
+        .audit-conflict-panel,
         .member-conflict-panel {
             position: fixed;
             top: 0;
-            right: -430px;
+            right: -450px;
             z-index: 9999;
-            width: 420px;
-            bottom: 0;
-            background: #fff;
-            box-shadow: -10px 0 30px rgba(15, 23, 42, 0.1);
+            width: 440px;
+            max-width: calc(100vw - 24px);
+            height: 100vh;
+            background: #ffffff;
+            box-shadow: -10px 0 30px rgba(15, 23, 42, 0.15);
             transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             flex-direction: column;
@@ -460,51 +973,90 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 14px 16px;
-            background: #7f1d1d;
-            color: #fff;
+            padding: 16px 20px;
+            background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%);
+            color: #ffffff;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .member-conflict-panel .audit-conflict-panel-header {
+            background: linear-gradient(135deg, #9a3412 0%, #ea580c 100%) !important;
         }
 
         .audit-conflict-panel-title {
             margin: 0;
             font-size: 15px;
-            font-weight: 700;
+            font-weight: 800;
+            letter-spacing: -0.01em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .audit-conflict-close {
             border: 0;
-            background: transparent;
-            color: #fff;
-            font-size: 24px;
+            background: rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+            font-size: 20px;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             line-height: 1;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .audit-conflict-close:hover {
+            background: rgba(255, 255, 255, 0.3);
         }
 
         .audit-conflict-panel-body {
-            height: calc(100vh - 54px);
+            flex: 1;
             overflow-y: auto;
-            padding: 12px;
+            padding: 16px;
+            background: #f8fafc;
+        }
+
+        .audit-conflict-panel-body::-webkit-scrollbar {
+            width: 6px;
+        }
+        .audit-conflict-panel-body::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
         }
 
         .audit-conflict-empty {
-            margin: 8px 0 0;
-            padding: 12px;
-            border: 1px solid #dcfce7;
+            padding: 16px;
+            border: 1px solid #bbf7d0;
+            border-radius: 8px;
             background: #f0fdf4;
             color: #166534;
             font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .audit-conflict-card {
             border: 1px solid #fecaca;
             border-left: 4px solid #b91c1c;
-            border-radius: 6px;
-            margin-bottom: 10px;
-            background: #fff7f7;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            background: #ffffff;
+            box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+            overflow: hidden;
         }
 
         .audit-conflict-card-head {
-            padding: 10px 12px;
-            border-bottom: 1px solid #fecaca;
+            padding: 10px 14px;
+            background: #fff5f5;
+            border-bottom: 1px solid #fee2e2;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .audit-conflict-card-title {
@@ -515,13 +1067,16 @@
 
         .audit-conflict-card-meta {
             color: #991b1b;
-            font-size: 12px;
-            margin-top: 3px;
+            font-size: 11px;
+            font-weight: 700;
+            background: #fee2e2;
+            padding: 2px 8px;
+            border-radius: 999px;
         }
 
         .audit-conflict-item {
-            padding: 9px 12px;
-            border-top: 1px solid #fee2e2;
+            padding: 10px 14px;
+            border-top: 1px solid #f1f5f9;
         }
 
         .audit-conflict-item:first-child {
@@ -529,15 +1084,15 @@
         }
 
         .audit-conflict-client {
-            color: #111827;
+            color: #0f172a;
             font-size: 13px;
             font-weight: 700;
         }
 
         .audit-conflict-detail {
-            color: #4b5563;
+            color: #64748b;
             font-size: 12px;
-            margin-top: 2px;
+            margin-top: 3px;
         }
 
         /* ===== Modern DataTable Footer (Showing entries + Pagination) ===== */
@@ -572,20 +1127,26 @@
         }
         .dataTables_wrapper .dataTables_paginate .pagination > li > a,
         .dataTables_wrapper .dataTables_paginate .pagination > li > span {
-            color: #163c6e;
+            color: #0d4d8b;
             border-color: #e2e8f0;
             font-size: 12.5px;
             font-weight: 600;
             padding: 6px 12px;
             border-radius: 6px;
             margin: 0 2px;
+            transition: all 0.15s ease;
+        }
+        .dataTables_wrapper .dataTables_paginate .pagination > li > a:hover {
+            background-color: #eff6ff;
+            border-color: #bfdbfe;
+            color: #2563eb;
         }
         .dataTables_wrapper .dataTables_paginate .pagination > .active > a,
         .dataTables_wrapper .dataTables_paginate .pagination > .active > span {
-            background: linear-gradient(135deg, #163c6e 0%, #1e4b8a 100%) !important;
-            border-color: #163c6e !important;
+            background: linear-gradient(135deg, #0d4d8b 0%, #1e40af 100%) !important;
+            border-color: #0d4d8b !important;
             color: #ffffff !important;
-            box-shadow: 0 2px 6px rgba(22, 60, 110, 0.25);
+            box-shadow: 0 2px 6px rgba(13, 77, 139, 0.25);
         }
         .dataTables_wrapper .dataTables_paginate .pagination > .disabled > a,
         .dataTables_wrapper .dataTables_paginate .pagination > .disabled > span {
@@ -594,111 +1155,383 @@
             background-color: #f8fafc !important;
         }
 
+        /* jQuery UI Datepicker Modernization */
+        .ui-datepicker {
+            background: #ffffff;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 10px !important;
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.1) !important;
+            padding: 10px !important;
+            font-family: 'Inter', sans-serif !important;
+            z-index: 9999 !important;
+        }
+        .ui-datepicker .ui-datepicker-header {
+            background: linear-gradient(135deg, #0d4d8b 0%, #1e40af 100%) !important;
+            color: #ffffff !important;
+            border: none !important;
+            border-radius: 6px !important;
+            font-weight: 700 !important;
+            padding: 6px 0 !important;
+        }
+        .ui-datepicker .ui-datepicker-title select {
+            color: #0f172a !important;
+            border-radius: 4px !important;
+            padding: 2px 4px !important;
+            font-weight: 600 !important;
+            font-size: 12px !important;
+            margin: 0 2px !important;
+        }
+        .ui-datepicker th {
+            font-size: 11px !important;
+            font-weight: 700 !important;
+            color: #64748b !important;
+            text-transform: uppercase !important;
+            padding: 6px 2px !important;
+        }
+        .ui-datepicker td span,
+        .ui-datepicker td a {
+            text-align: center !important;
+            padding: 6px 4px !important;
+            border-radius: 6px !important;
+            font-size: 12px !important;
+            font-weight: 600 !important;
+            color: #1e293b !important;
+        }
+        .ui-datepicker td a:hover {
+            background: #eff6ff !important;
+            color: #2563eb !important;
+            border-color: #bfdbfe !important;
+        }
+        .ui-datepicker td .ui-state-active {
+            background: #0d4d8b !important;
+            color: #ffffff !important;
+            border-color: #0d4d8b !important;
+        }
+
+        /* =====================================================================
+           DARK MODE SUPPORT
+           ===================================================================== */
+        html.theme-dark {
+            --hpd-bg: #0a0e14;
+            --hpd-surface: #111722;
+            --hpd-surface-2: #161d2b;
+            --hpd-border: #232c3d;
+            --hpd-border-2: #2e3a4f;
+            --hpd-text: #dbe3f0;
+            --hpd-text-dim: #93a1b8;
+            --hpd-text-faint: #6b7890;
+            --hpd-accent: #4a9eff;
+        }
+
+        html.theme-dark body, 
+        html.theme-dark #page-content-wrapper,
+        html.theme-dark .page-content.inset {
+            background: var(--hpd-bg);
+            color: var(--hpd-text);
+        }
+
+        html.theme-dark .ap-hero-header {
+            background: linear-gradient(135deg, #111722 0%, #0d131e 100%);
+            border-color: var(--hpd-border);
+        }
+        html.theme-dark .ap-hero-title { color: #f8fafc; }
+        html.theme-dark .ap-stat-pill {
+            background: var(--hpd-surface);
+            border-color: var(--hpd-border);
+        }
+        html.theme-dark .ap-stat-pill.pill-danger {
+            background: #2a1014;
+            border-color: #7f1d1d;
+        }
+        html.theme-dark .ap-stat-pill.pill-warning {
+            background: #2c160c;
+            border-color: #9a3412;
+        }
+        html.theme-dark .ap-stat-num { color: #f8fafc; }
+        html.theme-dark .ap-stat-lbl { color: var(--hpd-text-dim); }
+
+        html.theme-dark .ap-filter-panel {
+            background: var(--hpd-surface);
+            border-color: var(--hpd-border);
+        }
+        html.theme-dark .ap-filter-item input,
+        html.theme-dark .ap-filter-item select {
+            background-color: var(--hpd-surface-2) !important;
+            border-color: var(--hpd-border-2) !important;
+            color: var(--hpd-text) !important;
+        }
+        html.theme-dark .ap-filter-item input:focus,
+        html.theme-dark .ap-filter-item select:focus {
+            border-color: var(--hpd-accent) !important;
+            box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.18) !important;
+        }
+        html.theme-dark .ap-btn-reset {
+            background: var(--hpd-surface-2);
+            border-color: var(--hpd-border-2);
+            color: var(--hpd-text);
+        }
+        html.theme-dark .ap-btn-reset:hover {
+            background: var(--hpd-border-2);
+            color: #ffffff;
+        }
+
+        html.theme-dark .ap-card {
+            background: var(--hpd-surface);
+            border-color: var(--hpd-border);
+        }
+        html.theme-dark .ap-card-header {
+            background: linear-gradient(135deg, #16243d 0%, #0d1b33 100%) !important;
+            border-bottom: 1px solid var(--hpd-border-2);
+        }
+        html.theme-dark .ap-table thead th {
+            background: var(--hpd-surface-2) !important;
+            border-bottom-color: var(--hpd-border-2) !important;
+            color: var(--hpd-text-dim) !important;
+        }
+        html.theme-dark .ap-table tbody td {
+            background: var(--hpd-surface) !important;
+            border-bottom-color: var(--hpd-border) !important;
+            color: var(--hpd-text) !important;
+        }
+        html.theme-dark .ap-table tbody tr:hover td {
+            background: var(--hpd-surface-2) !important;
+        }
+
+        html.theme-dark #tab_customer_list tbody tr.audit-conflict-row td {
+            background-color: #3b1118 !important;
+            color: #fca5a5 !important;
+        }
+        html.theme-dark #tab_customer_list tbody tr.audit-conflict-row:hover td {
+            background-color: #4c1722 !important;
+        }
+
+        html.theme-dark .ap-uid-badge {
+            background: rgba(37, 99, 235, 0.2);
+            border-color: rgba(37, 99, 235, 0.4);
+            color: #93c5fd;
+        }
+        html.theme-dark .ap-client-name { color: #f8fafc; }
+        html.theme-dark .ap-status-tag {
+            background: var(--hpd-surface-2);
+            border-color: var(--hpd-border-2);
+            color: var(--hpd-text-dim);
+        }
+        html.theme-dark .ap-auditor { color: var(--hpd-text); }
+        html.theme-dark .ap-date-badge {
+            background: var(--hpd-surface-2);
+            border-color: var(--hpd-border-2);
+            color: var(--hpd-text);
+        }
+        html.theme-dark .ap-audit-status { color: #f8fafc; }
+        html.theme-dark .ap-next-service { color: var(--hpd-text-dim); }
+
+        html.theme-dark .audit-conflict-panel,
+        html.theme-dark .member-conflict-panel {
+            background: var(--hpd-surface);
+        }
+        html.theme-dark .audit-conflict-panel-body {
+            background: var(--hpd-bg);
+        }
+        html.theme-dark .audit-conflict-card {
+            background: var(--hpd-surface);
+            border-color: #7f1d1d;
+        }
+        html.theme-dark .audit-conflict-card-head {
+            background: #2a1014;
+            border-bottom-color: #7f1d1d;
+        }
+        html.theme-dark .audit-conflict-card-title { color: #fca5a5; }
+        html.theme-dark .audit-conflict-card-meta {
+            background: #3b1118;
+            color: #fca5a5;
+        }
+        html.theme-dark .audit-conflict-item {
+            border-top-color: var(--hpd-border);
+        }
+        html.theme-dark .audit-conflict-client { color: #f8fafc; }
+        html.theme-dark .audit-conflict-detail { color: var(--hpd-text-dim); }
+
         html.theme-dark .dt-bottom-row {
-            border-top-color: #334155 !important;
-            background: #111827 !important;
+            border-top-color: var(--hpd-border) !important;
+            background: var(--hpd-surface) !important;
         }
         html.theme-dark .dataTables_wrapper .dataTables_info {
-            color: #94a3b8 !important;
+            color: var(--hpd-text-dim) !important;
         }
         html.theme-dark .dataTables_wrapper .dataTables_paginate .pagination > li > a,
         html.theme-dark .dataTables_wrapper .dataTables_paginate .pagination > li > span {
-            background-color: #1f2937 !important;
-            border-color: #374151 !important;
-            color: #e5e7eb !important;
+            background-color: var(--hpd-surface-2) !important;
+            border-color: var(--hpd-border-2) !important;
+            color: var(--hpd-text) !important;
         }
         html.theme-dark .dataTables_wrapper .dataTables_paginate .pagination > .active > a,
         html.theme-dark .dataTables_wrapper .dataTables_paginate .pagination > .active > span {
-            background: #3b82f6 !important;
-            border-color: #3b82f6 !important;
+            background: #2563eb !important;
+            border-color: #2563eb !important;
             color: #ffffff !important;
         }
         html.theme-dark .dataTables_wrapper .dataTables_paginate .pagination > .disabled > a,
         html.theme-dark .dataTables_wrapper .dataTables_paginate .pagination > .disabled > span {
-            background-color: #111827 !important;
-            border-color: #374151 !important;
-            color: #64748b !important;
+            background-color: var(--hpd-surface) !important;
+            border-color: var(--hpd-border) !important;
+            color: var(--hpd-text-faint) !important;
+        }
+
+        html.theme-dark .ui-datepicker {
+            background: var(--hpd-surface) !important;
+            border-color: var(--hpd-border) !important;
+            color: var(--hpd-text) !important;
+        }
+        html.theme-dark .ui-datepicker td span,
+        html.theme-dark .ui-datepicker td a {
+            color: var(--hpd-text) !important;
+        }
+        html.theme-dark .ui-datepicker td a:hover {
+            background: var(--hpd-surface-2) !important;
+            color: var(--hpd-accent) !important;
         }
     </style>
 
     <div id="page-content-wrapper">
         <div class="page-content inset">
-            <div class="container">
+            <div class="container-fluid audit-page-container">
 
-                <div class="row">
-                    <div class="col-sm-12 main_content" style="">
-                        <div class="row" style="padding-top:10px;">
-
-                            <div class="col-sm-2 float-label-control custom-float-label-control">
-                                <select name="service-type" class="form-control service-type" id="service-type">
-                                    <option value="">Select Service Type</option>
-                                    <option value="ST-1">ST-1</option>
-                                    <option value="ST-2">ST-2</option>
-                                    <?php foreach ($servicesTypes as $service) { ?>
-                                        <?php if ($service['service_type'] === 'CA') {
-                                            continue;
-                                        } ?>
-                                        <option value="<?php echo $service['service_type'] ?>">
-                                            <?php echo $service['service_type'] ?>
-                                        </option>
-                                    <?php } ?>
-
-                                </select>
-                            </div>
-                            <div class="col-sm-2 float-label-control custom-float-label-control">
-                                <select name="auditors" class="form-control auditor-filter" id="auditor-filter">
-                                    <option value="">Select Auditor</option>
-                                    <?php foreach ($auditorsList as $auditor) { ?>
-                                        <option
-                                            value="<?php echo htmlspecialchars($auditor['auditor_name'], ENT_QUOTES, 'UTF-8') ?>">
-                                            <?php echo htmlspecialchars($auditor['auditor_name'], ENT_QUOTES, 'UTF-8') ?>
-                                        </option>
-                                    <?php } ?>
-                                </select>
-                            </div>
-                            <div class="col-sm-2 float-label-control custom-float-label-control">
-                                <input type="text" class="filterFromDate form-control" id="filterFromDate" name="filterFromDate"
-                                    placeholder="Audit Date From" value="" autocomplete="off">
-                            </div>
-                            <div class="col-sm-2 form-group float-label-control custom-float-label-control">
-                                <input type="text" class="filterToDate form-control" id="filterToDate" name="filterToDate"
-                                    placeholder="Audit Date To" value="" autocomplete="off">
-                            </div>
-                            <div class="col-sm-4 float-label-control custom-float-label-control">
-                                <input type="text" class="form-control auditClientSearch" id="auditClientSearch"
-                                    placeholder="Search by client name or unique ID" autocomplete="off">
+                <!-- Compact Hero Header (masterCreator Theme) -->
+                <div class="ap-hero-header">
+                    <div class="ap-hero-left">
+                        <h1 class="ap-hero-title">
+                            <i class="fa fa-calendar-check-o" style="color: #0d4d8b; font-size: 17px; margin-right: 8px;"></i> Audit Records
+                        </h1>
+                    </div>
+                    <div class="ap-hero-stats">
+                        <div class="ap-stat-pill">
+                            <span class="ap-stat-icon icon-blue"><i class="fa fa-calendar"></i></span>
+                            <div>
+                                <div class="ap-stat-num"><?php echo $totalAuditsCount; ?></div>
+                                <div class="ap-stat-lbl">Total Audits</div>
                             </div>
                         </div>
+                        <div class="ap-stat-pill">
+                            <span class="ap-stat-icon icon-purple"><i class="fa fa-user-secret"></i></span>
+                            <div>
+                                <div class="ap-stat-num"><?php echo $totalAuditorsCount; ?></div>
+                                <div class="ap-stat-lbl">Auditors</div>
+                            </div>
+                        </div>
+                        <?php if ($auditDateConflictVisible) { ?>
+                        <div class="ap-stat-pill <?php echo $dateConflictCount > 0 ? 'pill-danger' : ''; ?>" id="heroDateConflictPill" style="cursor: pointer;" title="Click to view Date Conflicts">
+                            <span class="ap-stat-icon icon-red"><i class="fa fa-calendar-times-o"></i></span>
+                            <div>
+                                <div class="ap-stat-num" style="<?php echo $dateConflictCount > 0 ? 'color: #dc2626;' : ''; ?>"><?php echo $dateConflictCount; ?></div>
+                                <div class="ap-stat-lbl" style="<?php echo $dateConflictCount > 0 ? 'color: #dc2626;' : ''; ?>">Date Conflicts</div>
+                            </div>
+                        </div>
+                        <?php } ?>
+                        <?php if ($auditMemberConflictVisible) { ?>
+                        <div class="ap-stat-pill <?php echo $memberConflictCount > 0 ? 'pill-warning' : ''; ?>" id="heroMemberConflictPill" style="cursor: pointer;" title="Click to view Member Conflicts">
+                            <span class="ap-stat-icon icon-orange"><i class="fa fa-users"></i></span>
+                            <div>
+                                <div class="ap-stat-num" style="<?php echo $memberConflictCount > 0 ? 'color: #ea580c;' : ''; ?>"><?php echo $memberConflictCount; ?></div>
+                                <div class="ap-stat-lbl" style="<?php echo $memberConflictCount > 0 ? 'color: #ea580c;' : ''; ?>">Member Conflicts</div>
+                            </div>
+                        </div>
+                        <?php } ?>
                     </div>
                 </div>
 
-                <div class="row clearfix">
-                    <div class="col-sm-12 main_content table-responsive">
-                        <table class="table table-hover table-sortable table-striped" id="tab_customer_list"
-                            width="100%">
+                <!-- Decoy inputs to capture browser credential autofill -->
+                <div style="position: absolute; left: -9999px; top: -9999px; width: 0; height: 0; overflow: hidden;" aria-hidden="true" tabindex="-1">
+                    <input type="text" name="fake_username_prevent_autofill" tabindex="-1" autocomplete="username">
+                    <input type="password" name="fake_password_prevent_autofill" tabindex="-1" autocomplete="current-password">
+                </div>
+
+                <!-- Modern SaaS Filter Toolbar -->
+                <div class="ap-filter-panel">
+                    <div class="ap-filter-item ap-filter-search">
+                        <i class="fa fa-search"></i>
+                        <input type="search" class="form-control auditClientSearch" id="auditClientSearch"
+                            name="search_client_filter_no_autofill"
+                            placeholder="Search by client name or unique ID..."
+                            autocomplete="new-password"
+                            autocorrect="off"
+                            autocapitalize="off"
+                            spellcheck="false"
+                            data-lpignore="true"
+                            data-1p-ignore="true"
+                            data-form-type="other"
+                            value=""
+                            readonly
+                            onfocus="this.removeAttribute('readonly');"
+                            onmouseover="this.removeAttribute('readonly');">
+                    </div>
+                    <div class="ap-filter-item ap-filter-select">
+                        <select name="service-type" class="form-control service-type" id="service-type">
+                            <option value="">All Service Types</option>
+                            <option value="ST-1">ST-1</option>
+                            <option value="ST-2">ST-2</option>
+                            <?php foreach ($servicesTypes as $service) { ?>
+                                <?php if ($service['service_type'] === 'CA') {
+                                    continue;
+                                } ?>
+                                <option value="<?php echo htmlspecialchars($service['service_type'], ENT_QUOTES, 'UTF-8'); ?>">
+                                    <?php echo htmlspecialchars($service['service_type'], ENT_QUOTES, 'UTF-8'); ?>
+                                </option>
+                            <?php } ?>
+                        </select>
+                    </div>
+                    <div class="ap-filter-item ap-filter-select">
+                        <select name="auditors" class="form-control auditor-filter" id="auditor-filter">
+                            <option value="">All Auditors</option>
+                            <?php foreach ($auditorsList as $auditor) { ?>
+                                <option value="<?php echo htmlspecialchars($auditor['auditor_name'], ENT_QUOTES, 'UTF-8'); ?>">
+                                    <?php echo htmlspecialchars($auditor['auditor_name'], ENT_QUOTES, 'UTF-8'); ?>
+                                </option>
+                            <?php } ?>
+                        </select>
+                    </div>
+                    <div class="ap-filter-item ap-filter-date">
+                        <input type="text" class="filterFromDate form-control" id="filterFromDate" name="filterFromDate"
+                            placeholder="Date From" value="" autocomplete="off">
+                    </div>
+                    <div class="ap-filter-item ap-filter-date">
+                        <input type="text" class="filterToDate form-control" id="filterToDate" name="filterToDate"
+                            placeholder="Date To" value="" autocomplete="off">
+                    </div>
+                    <div class="ap-filter-item ap-filter-btn">
+                        <button type="button" class="ap-btn-reset" id="btnResetAuditFilters" title="Reset all filters">
+                            <i class="fa fa-refresh"></i> Reset
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Main Data Card -->
+                <div class="ap-card">
+                    <div class="ap-card-header">
+                        <h3 class="ap-card-title">
+                            <i class="fa fa-list-ul"></i> Audit Records List
+                        </h3>
+                        <div class="ap-card-header-stats">
+                            <span class="ap-count-badge">
+                                <i class="fa fa-database"></i> <?php echo $totalAuditsCount; ?> Records
+                            </span>
+                            <?php if ($dateConflictCount > 0) { ?>
+                                <span class="ap-conflict-badge">
+                                    <i class="fa fa-exclamation-triangle"></i> <?php echo $dateConflictCount; ?> Date Conflicts
+                                </span>
+                            <?php } ?>
+                        </div>
+                    </div>
+                    <div class="ap-card-body table-responsive">
+                        <table class="table ap-table table-hover" id="tab_customer_list" width="100%">
                             <thead>
                                 <tr>
-                                    <th class="">
-                                        <small><a>Unique ID</a></small>
-                                    </th>
-                                    <th class="">
-                                        <small><a>Client Name</a></small>
-                                    </th>
-                                    <th class="">
-                                        <small><a>Service Type</a></small>
-                                    </th>
-                                    <th class="">
-                                        <small><a>Service Status</a></small>
-                                    </th>
-                                    <th class="">
-                                        <small><a>Auditor(s)</a></small>
-                                    </th>
-                                    <th class="">
-                                        <small><a>Audit Date(s)</a></small>
-                                    </th>
-                                    <th class="">
-                                        <small><a>Present Status</a></small>
-                                    </th>
+                                    <th>Unique ID</th>
+                                    <th>Client Name</th>
+                                    <th>Service Type</th>
+                                    <th>Service Status</th>
+                                    <th>Auditor(s)</th>
+                                    <th>Audit Date(s)</th>
+                                    <th>Present Status</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -706,6 +1539,12 @@
                                 foreach ($allMarketingInfo as $marketingDetail) {
                                     $auditrDetails = "";
                                     $auditDateDetails = "";
+                                    $uniqueIdVal = trim((string)($marketingDetail['unique_id'] ?? ''));
+                                    $clientNameVal = trim((string)($marketingDetail['customer_name'] ?? ''));
+                                    $serviceStatusVal = trim((string)($marketingDetail['service_status'] ?? ''));
+                                    $presentStatusVal = trim((string)($marketingDetail['audit_status'] ?? ''));
+                                    $nextServiceVal = trim((string)($marketingDetail['next_service'] ?? ''));
+
                                     if ($marketingDetail["service_type"] == "CA") {
                                         $auditDetails = isset($caMap[$marketingDetail['service_id']]) ? $caMap[$marketingDetail['service_id']] : null;
                                         if (!$auditDetails) {
@@ -713,89 +1552,75 @@
                                         }
                                         $auditdates1 = explode(',', $auditDetails["audit_date"]);
                                         $auditConflictClass = auditPageConflictClass($auditConflictRows, $marketingDetail, 'ST-1');
+                                        $st1AuditorVal = trim((string)($auditDetails["stage1_auditor"] ?? ''));
+                                        $st1DateVal = trim((string)($auditDetails["audit_date"] ?? ''));
                                         ?>
                                         <tr id='addr<?php echo $marketingDetail['id'] ?>'
                                             class="<?php echo $auditConflictClass; ?>"
                                             title="<?php echo $auditConflictClass ? 'Same auditor has another audit on this date' : ''; ?>">
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                data-name="name"
-                                                style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <small><?php echo $marketingDetail['unique_id'] ?></small>
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <span class="ap-uid-badge"><?php echo $uniqueIdVal !== '' ? htmlspecialchars($uniqueIdVal, ENT_QUOTES, 'UTF-8') : '&mdash;'; ?></span>
                                             </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                data-name="name"
-                                                style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <small><?php echo $marketingDetail['customer_name'] ?></small>
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <div class="ap-client-name"><?php echo $clientNameVal !== '' ? htmlspecialchars($clientNameVal, ENT_QUOTES, 'UTF-8') : '&mdash;'; ?></div>
                                             </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                data-name="name"
-                                                style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <small>ST-1</small>
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <span class="ap-badge ap-badge-st1">ST-1</span>
                                             </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                data-name="name"
-                                                style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <small><?php echo $marketingDetail['service_status'] ?></small>
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <span class="ap-status-tag"><?php echo $serviceStatusVal !== '' ? htmlspecialchars($serviceStatusVal, ENT_QUOTES, 'UTF-8') : '&mdash;'; ?></span>
                                             </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                data-name="name"
-                                                style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <small><?php echo $auditDetails["stage1_auditor"]; ?></small>
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <div class="ap-auditor"><i class="fa fa-user-circle-o" style="color: #64748b; margin-right: 4px;"></i><?php echo $st1AuditorVal !== '' ? htmlspecialchars($st1AuditorVal, ENT_QUOTES, 'UTF-8') : '<span style="color: #94a3b8; font-style: italic; font-weight: normal;">Not Assigned</span>'; ?></div>
                                             </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                data-name="name"
-                                                style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <span><?php echo $auditdates1[0] ?>~</span><small><?php echo $auditDetails["audit_date"] ?></small>
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <span class="ap-sort-prefix" style="display:none !important;"><?php echo htmlspecialchars($auditdates1[0] ?? '', ENT_QUOTES, 'UTF-8'); ?>~</span>
+                                                <span class="ap-date-badge"><i class="fa fa-calendar-o" style="color: #64748b; margin-right: 4px;"></i><?php echo $st1DateVal !== '' ? htmlspecialchars($st1DateVal, ENT_QUOTES, 'UTF-8') : '&mdash;'; ?></span>
                                             </td>
-                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                data-name="name"
-                                                style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                <small><?php echo $marketingDetail['audit_status'] ?>
-                                                    (<?php echo $marketingDetail["next_service"] ?>)</small>
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <div class="ap-present-status">
+                                                    <span class="ap-audit-status"><?php echo $presentStatusVal !== '' ? htmlspecialchars($presentStatusVal, ENT_QUOTES, 'UTF-8') : '&mdash;'; ?></span>
+                                                    <?php if ($nextServiceVal !== '') { ?>
+                                                        <span class="ap-next-service">(<?php echo htmlspecialchars($nextServiceVal, ENT_QUOTES, 'UTF-8'); ?>)</span>
+                                                    <?php } ?>
+                                                </div>
                                             </td>
                                         </tr>
                                         <?php if ($auditDetails["stage2_audit"] != "") {
                                             $auditdatest2 = explode(',', $auditDetails["stage2_audit"]);
                                             $auditConflictClass = auditPageConflictClass($auditConflictRows, $marketingDetail, 'ST-2');
+                                            $st2AuditorVal = trim((string)($auditDetails["stage2_auditor"] ?? ''));
+                                            $st2DateVal = trim((string)($auditDetails["stage2_audit"] ?? ''));
                                             ?>
                                             <tr id='addr<?php echo $marketingDetail['id'] ?>'
                                                 class="<?php echo $auditConflictClass; ?>"
                                                 title="<?php echo $auditConflictClass ? 'Same auditor has another audit on this date' : ''; ?>">
-                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                    data-name="name"
-                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                    <small><?php echo $marketingDetail['unique_id'] ?></small>
+                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                    <span class="ap-uid-badge"><?php echo $uniqueIdVal !== '' ? htmlspecialchars($uniqueIdVal, ENT_QUOTES, 'UTF-8') : '&mdash;'; ?></span>
                                                 </td>
-                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                    data-name="name"
-                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                    <small><?php echo $marketingDetail['customer_name'] ?></small>
+                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                    <div class="ap-client-name"><?php echo $clientNameVal !== '' ? htmlspecialchars($clientNameVal, ENT_QUOTES, 'UTF-8') : '&mdash;'; ?></div>
                                                 </td>
-                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                    data-name="name"
-                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                    <small>ST-2</small>
+                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                    <span class="ap-badge ap-badge-st2">ST-2</span>
                                                 </td>
-                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                    data-name="name"
-                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                    <small><?php echo $marketingDetail['service_status'] ?></small>
+                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                    <span class="ap-status-tag"><?php echo $serviceStatusVal !== '' ? htmlspecialchars($serviceStatusVal, ENT_QUOTES, 'UTF-8') : '&mdash;'; ?></span>
                                                 </td>
-                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                    data-name="name"
-                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                    <small><?php echo $auditDetails["stage2_auditor"]; ?></small>
+                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                    <div class="ap-auditor"><i class="fa fa-user-circle-o" style="color: #64748b; margin-right: 4px;"></i><?php echo $st2AuditorVal !== '' ? htmlspecialchars($st2AuditorVal, ENT_QUOTES, 'UTF-8') : '<span style="color: #94a3b8; font-style: italic; font-weight: normal;">Not Assigned</span>'; ?></div>
                                                 </td>
-                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                    data-name="name"
-                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                    <span><?php echo $auditdatest2[0] ?>~</span><small><?php echo $auditDetails["stage2_audit"] ?></small>
+                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                    <span class="ap-sort-prefix" style="display:none !important;"><?php echo htmlspecialchars($auditdatest2[0] ?? '', ENT_QUOTES, 'UTF-8'); ?>~</span>
+                                                    <span class="ap-date-badge"><i class="fa fa-calendar-o" style="color: #64748b; margin-right: 4px;"></i><?php echo $st2DateVal !== '' ? htmlspecialchars($st2DateVal, ENT_QUOTES, 'UTF-8') : '&mdash;'; ?></span>
                                                 </td>
-                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                    data-name="name"
-                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                    <small><?php echo $marketingDetail['audit_status'] ?>
-                                                        (<?php echo $marketingDetail["next_service"] ?>)</small>
+                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                    <div class="ap-present-status">
+                                                        <span class="ap-audit-status"><?php echo $presentStatusVal !== '' ? htmlspecialchars($presentStatusVal, ENT_QUOTES, 'UTF-8') : '&mdash;'; ?></span>
+                                                        <?php if ($nextServiceVal !== '') { ?>
+                                                            <span class="ap-next-service">(<?php echo htmlspecialchars($nextServiceVal, ENT_QUOTES, 'UTF-8'); ?>)</span>
+                                                        <?php } ?>
+                                                    </div>
                                                 </td>
                                             </tr>
                                             <?php
@@ -806,47 +1631,40 @@
                                             continue;
                                         }
                                         $auditConflictClass = auditPageConflictClass($auditConflictRows, $marketingDetail, 'SA-I');
+                                        $saiAuditorVal = trim((string)($auditDetails["auditors"] ?? ''));
+                                        $saiDateVal = trim((string)($auditDetails["audit_date"] ?? ''));
                                         ?>
-                                            <tr id='addr<?php echo $marketingDetail['id'] ?>'
-                                                class="<?php echo $auditConflictClass; ?>"
-                                                title="<?php echo $auditConflictClass ? 'Same auditor has another audit on this date' : ''; ?>">
-                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                    data-name="name"
-                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                    <small><?php echo $marketingDetail['unique_id'] ?></small>
-                                                </td>
-                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                    data-name="name"
-                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                    <small><?php echo $marketingDetail['customer_name'] ?></small>
-                                                </td>
-                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                    data-name="name"
-                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                    <small><?php echo $marketingDetail['service_type'] ?></small>
-                                                </td>
-                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                    data-name="name"
-                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                    <small><?php echo $marketingDetail['service_status'] ?></small>
-                                                </td>
-                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                    data-name="name"
-                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                    <small><?php echo $auditDetails["auditors"]; ?></small>
-                                                </td>
-                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                    data-name="name"
-                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                    <span><?php echo simpleDateConversion($marketingDetail["audit_date"]) ?>~</span><small><?php echo $auditDetails["audit_date"] ?></small>
-                                                </td>
-                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                    data-name="name"
-                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                    <small><?php echo $marketingDetail['audit_status'] ?>
-                                                        (<?php echo $marketingDetail["next_service"] ?>)</small>
-                                                </td>
-                                            </tr>
+                                        <tr id='addr<?php echo $marketingDetail['id'] ?>'
+                                            class="<?php echo $auditConflictClass; ?>"
+                                            title="<?php echo $auditConflictClass ? 'Same auditor has another audit on this date' : ''; ?>">
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <span class="ap-uid-badge"><?php echo $uniqueIdVal !== '' ? htmlspecialchars($uniqueIdVal, ENT_QUOTES, 'UTF-8') : '&mdash;'; ?></span>
+                                            </td>
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <div class="ap-client-name"><?php echo $clientNameVal !== '' ? htmlspecialchars($clientNameVal, ENT_QUOTES, 'UTF-8') : '&mdash;'; ?></div>
+                                            </td>
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <span class="ap-badge ap-badge-sai">SA-I</span>
+                                            </td>
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <span class="ap-status-tag"><?php echo $serviceStatusVal !== '' ? htmlspecialchars($serviceStatusVal, ENT_QUOTES, 'UTF-8') : '&mdash;'; ?></span>
+                                            </td>
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <div class="ap-auditor"><i class="fa fa-user-circle-o" style="color: #64748b; margin-right: 4px;"></i><?php echo $saiAuditorVal !== '' ? htmlspecialchars($saiAuditorVal, ENT_QUOTES, 'UTF-8') : '<span style="color: #94a3b8; font-style: italic; font-weight: normal;">Not Assigned</span>'; ?></div>
+                                            </td>
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <span class="ap-sort-prefix" style="display:none !important;"><?php echo htmlspecialchars(simpleDateConversion($marketingDetail["audit_date"]), ENT_QUOTES, 'UTF-8'); ?>~</span>
+                                                <span class="ap-date-badge"><i class="fa fa-calendar-o" style="color: #64748b; margin-right: 4px;"></i><?php echo $saiDateVal !== '' ? htmlspecialchars($saiDateVal, ENT_QUOTES, 'UTF-8') : '&mdash;'; ?></span>
+                                            </td>
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <div class="ap-present-status">
+                                                    <span class="ap-audit-status"><?php echo $presentStatusVal !== '' ? htmlspecialchars($presentStatusVal, ENT_QUOTES, 'UTF-8') : '&mdash;'; ?></span>
+                                                    <?php if ($nextServiceVal !== '') { ?>
+                                                        <span class="ap-next-service">(<?php echo htmlspecialchars($nextServiceVal, ENT_QUOTES, 'UTF-8'); ?>)</span>
+                                                    <?php } ?>
+                                                </div>
+                                            </td>
+                                        </tr>
                                         <?php
                                     } else if ($marketingDetail["service_type"] == "SA-II") {
                                         $auditDetails = isset($saiiMap[$marketingDetail['service_id']]) ? $saiiMap[$marketingDetail['service_id']] : null;
@@ -854,47 +1672,40 @@
                                             continue;
                                         }
                                         $auditConflictClass = auditPageConflictClass($auditConflictRows, $marketingDetail, 'SA-II');
+                                        $saiiAuditorVal = trim((string)($auditDetails["auditors"] ?? ''));
+                                        $saiiDateVal = trim((string)($auditDetails["audit_date"] ?? ''));
                                         ?>
-                                                <tr id='addr<?php echo $marketingDetail['id'] ?>'
-                                                    class="<?php echo $auditConflictClass; ?>"
-                                                    title="<?php echo $auditConflictClass ? 'Same auditor has another audit on this date' : ''; ?>">
-                                                    <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                        data-name="name"
-                                                        style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                        <small><?php echo $marketingDetail['unique_id'] ?></small>
-                                                    </td>
-                                                    <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                        data-name="name"
-                                                        style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                        <small><?php echo $marketingDetail['customer_name'] ?></small>
-                                                    </td>
-                                                    <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                        data-name="name"
-                                                        style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                        <small><?php echo $marketingDetail['service_type'] ?></small>
-                                                    </td>
-                                                    <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                        data-name="name"
-                                                        style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                        <small><?php echo $marketingDetail['service_status'] ?></small>
-                                                    </td>
-                                                    <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                        data-name="name"
-                                                        style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                        <small><?php echo $auditDetails["auditors"]; ?></small>
-                                                    </td>
-                                                    <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                        data-name="name"
-                                                        style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                        <span><?php echo simpleDateConversion($marketingDetail["audit_date"]) ?>~</span><small><?php echo $auditDetails["audit_date"] ?></small>
-                                                    </td>
-                                                    <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                        data-name="name"
-                                                        style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                        <small><?php echo $marketingDetail['audit_status'] ?>
-                                                            (<?php echo $marketingDetail["next_service"] ?>)</small>
-                                                    </td>
-                                                </tr>
+                                        <tr id='addr<?php echo $marketingDetail['id'] ?>'
+                                            class="<?php echo $auditConflictClass; ?>"
+                                            title="<?php echo $auditConflictClass ? 'Same auditor has another audit on this date' : ''; ?>">
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <span class="ap-uid-badge"><?php echo $uniqueIdVal !== '' ? htmlspecialchars($uniqueIdVal, ENT_QUOTES, 'UTF-8') : '&mdash;'; ?></span>
+                                            </td>
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <div class="ap-client-name"><?php echo $clientNameVal !== '' ? htmlspecialchars($clientNameVal, ENT_QUOTES, 'UTF-8') : '&mdash;'; ?></div>
+                                            </td>
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <span class="ap-badge ap-badge-saii">SA-II</span>
+                                            </td>
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <span class="ap-status-tag"><?php echo $serviceStatusVal !== '' ? htmlspecialchars($serviceStatusVal, ENT_QUOTES, 'UTF-8') : '&mdash;'; ?></span>
+                                            </td>
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <div class="ap-auditor"><i class="fa fa-user-circle-o" style="color: #64748b; margin-right: 4px;"></i><?php echo $saiiAuditorVal !== '' ? htmlspecialchars($saiiAuditorVal, ENT_QUOTES, 'UTF-8') : '<span style="color: #94a3b8; font-style: italic; font-weight: normal;">Not Assigned</span>'; ?></div>
+                                            </td>
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <span class="ap-sort-prefix" style="display:none !important;"><?php echo htmlspecialchars(simpleDateConversion($marketingDetail["audit_date"]), ENT_QUOTES, 'UTF-8'); ?>~</span>
+                                                <span class="ap-date-badge"><i class="fa fa-calendar-o" style="color: #64748b; margin-right: 4px;"></i><?php echo $saiiDateVal !== '' ? htmlspecialchars($saiiDateVal, ENT_QUOTES, 'UTF-8') : '&mdash;'; ?></span>
+                                            </td>
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <div class="ap-present-status">
+                                                    <span class="ap-audit-status"><?php echo $presentStatusVal !== '' ? htmlspecialchars($presentStatusVal, ENT_QUOTES, 'UTF-8') : '&mdash;'; ?></span>
+                                                    <?php if ($nextServiceVal !== '') { ?>
+                                                        <span class="ap-next-service">(<?php echo htmlspecialchars($nextServiceVal, ENT_QUOTES, 'UTF-8'); ?>)</span>
+                                                    <?php } ?>
+                                                </div>
+                                            </td>
+                                        </tr>
                                         <?php
                                     } else if ($marketingDetail["service_type"] == "RC") {
                                         $auditDetails = isset($rcMap[$marketingDetail['service_id']]) ? $rcMap[$marketingDetail['service_id']] : null;
@@ -902,47 +1713,40 @@
                                             continue;
                                         }
                                         $auditConflictClass = auditPageConflictClass($auditConflictRows, $marketingDetail, 'RC');
+                                        $rcAuditorVal = trim((string)($auditDetails["auditors"] ?? ''));
+                                        $rcDateVal = trim((string)($auditDetails["audit_date"] ?? ''));
                                         ?>
-                                                    <tr id='addr<?php echo $marketingDetail['id'] ?>'
-                                                        class="<?php echo $auditConflictClass; ?>"
-                                                        title="<?php echo $auditConflictClass ? 'Same auditor has another audit on this date' : ''; ?>">
-                                                        <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                            data-name="name"
-                                                            style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                            <small><?php echo $marketingDetail['unique_id'] ?></small>
-                                                        </td>
-                                                        <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                            data-name="name"
-                                                            style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                            <small><?php echo $marketingDetail['customer_name'] ?></small>
-                                                        </td>
-                                                        <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                            data-name="name"
-                                                            style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                            <small><?php echo $marketingDetail['service_type'] ?></small>
-                                                        </td>
-                                                        <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                            data-name="name"
-                                                            style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                            <small><?php echo $marketingDetail['service_status'] ?></small>
-                                                        </td>
-                                                        <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                            data-name="name"
-                                                            style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                            <small><?php echo $auditDetails["auditors"]; ?></small>
-                                                        </td>
-                                                        <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                            data-name="name"
-                                                            style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                            <span><?php echo simpleDateConversion($marketingDetail["audit_date"]) ?>~</span><small><?php echo $auditDetails["audit_date"] ?></small>
-                                                        </td>
-                                                        <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                            data-name="name"
-                                                            style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                            <small><?php echo $marketingDetail['audit_status'] ?>
-                                                                (<?php echo $marketingDetail["next_service"] ?>)</small>
-                                                        </td>
-                                                    </tr>
+                                        <tr id='addr<?php echo $marketingDetail['id'] ?>'
+                                            class="<?php echo $auditConflictClass; ?>"
+                                            title="<?php echo $auditConflictClass ? 'Same auditor has another audit on this date' : ''; ?>">
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <span class="ap-uid-badge"><?php echo $uniqueIdVal !== '' ? htmlspecialchars($uniqueIdVal, ENT_QUOTES, 'UTF-8') : '&mdash;'; ?></span>
+                                            </td>
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <div class="ap-client-name"><?php echo $clientNameVal !== '' ? htmlspecialchars($clientNameVal, ENT_QUOTES, 'UTF-8') : '&mdash;'; ?></div>
+                                            </td>
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <span class="ap-badge ap-badge-rc">RC</span>
+                                            </td>
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <span class="ap-status-tag"><?php echo $serviceStatusVal !== '' ? htmlspecialchars($serviceStatusVal, ENT_QUOTES, 'UTF-8') : '&mdash;'; ?></span>
+                                            </td>
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <div class="ap-auditor"><i class="fa fa-user-circle-o" style="color: #64748b; margin-right: 4px;"></i><?php echo $rcAuditorVal !== '' ? htmlspecialchars($rcAuditorVal, ENT_QUOTES, 'UTF-8') : '<span style="color: #94a3b8; font-style: italic; font-weight: normal;">Not Assigned</span>'; ?></div>
+                                            </td>
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <span class="ap-sort-prefix" style="display:none !important;"><?php echo htmlspecialchars(simpleDateConversion($marketingDetail["audit_date"]), ENT_QUOTES, 'UTF-8'); ?>~</span>
+                                                <span class="ap-date-badge"><i class="fa fa-calendar-o" style="color: #64748b; margin-right: 4px;"></i><?php echo $rcDateVal !== '' ? htmlspecialchars($rcDateVal, ENT_QUOTES, 'UTF-8') : '&mdash;'; ?></span>
+                                            </td>
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <div class="ap-present-status">
+                                                    <span class="ap-audit-status"><?php echo $presentStatusVal !== '' ? htmlspecialchars($presentStatusVal, ENT_QUOTES, 'UTF-8') : '&mdash;'; ?></span>
+                                                    <?php if ($nextServiceVal !== '') { ?>
+                                                        <span class="ap-next-service">(<?php echo htmlspecialchars($nextServiceVal, ENT_QUOTES, 'UTF-8'); ?>)</span>
+                                                    <?php } ?>
+                                                </div>
+                                            </td>
+                                        </tr>
                                         <?php
                                     } else if ($marketingDetail["service_type"] == "SP") {
                                         $auditDetails = isset($spMap[$marketingDetail['service_id']]) ? $spMap[$marketingDetail['service_id']] : null;
@@ -950,47 +1754,40 @@
                                             continue;
                                         }
                                         $auditConflictClass = auditPageConflictClass($auditConflictRows, $marketingDetail, 'SP');
+                                        $spAuditorVal = trim((string)($auditDetails["auditors"] ?? ''));
+                                        $spDateVal = trim((string)($auditDetails["audit_date"] ?? ''));
                                         ?>
-                                                        <tr id='addr<?php echo $marketingDetail['id'] ?>'
-                                                            class="<?php echo $auditConflictClass; ?>"
-                                                            title="<?php echo $auditConflictClass ? 'Same auditor has another audit on this date' : ''; ?>">
-                                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                                data-name="name"
-                                                                style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                                <small><?php echo $marketingDetail['unique_id'] ?></small>
-                                                            </td>
-                                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                                data-name="name"
-                                                                style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                                <small><?php echo $marketingDetail['customer_name'] ?></small>
-                                                            </td>
-                                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                                data-name="name"
-                                                                style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                                <small><?php echo $marketingDetail['service_type'] ?></small>
-                                                            </td>
-                                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                                data-name="name"
-                                                                style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                                <small><?php echo $marketingDetail['service_status'] ?></small>
-                                                            </td>
-                                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                                data-name="name"
-                                                                style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                                <small><?php echo $auditDetails["auditors"]; ?></small>
-                                                            </td>
-                                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                                data-name="name"
-                                                                style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                                <span><?php echo simpleDateConversion($marketingDetail["audit_date"]) ?>~</span><small><?php echo $auditDetails["audit_date"] ?></small>
-                                                            </td>
-                                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                                data-name="name"
-                                                                style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                                <small><?php echo $marketingDetail['audit_status'] ?>
-                                                                    (<?php echo $marketingDetail["next_service"] ?>)</small>
-                                                            </td>
-                                                        </tr>
+                                        <tr id='addr<?php echo $marketingDetail['id'] ?>'
+                                            class="<?php echo $auditConflictClass; ?>"
+                                            title="<?php echo $auditConflictClass ? 'Same auditor has another audit on this date' : ''; ?>">
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <span class="ap-uid-badge"><?php echo $uniqueIdVal !== '' ? htmlspecialchars($uniqueIdVal, ENT_QUOTES, 'UTF-8') : '&mdash;'; ?></span>
+                                            </td>
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <div class="ap-client-name"><?php echo $clientNameVal !== '' ? htmlspecialchars($clientNameVal, ENT_QUOTES, 'UTF-8') : '&mdash;'; ?></div>
+                                            </td>
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <span class="ap-badge ap-badge-sp">SP</span>
+                                            </td>
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <span class="ap-status-tag"><?php echo $serviceStatusVal !== '' ? htmlspecialchars($serviceStatusVal, ENT_QUOTES, 'UTF-8') : '&mdash;'; ?></span>
+                                            </td>
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <div class="ap-auditor"><i class="fa fa-user-circle-o" style="color: #64748b; margin-right: 4px;"></i><?php echo $spAuditorVal !== '' ? htmlspecialchars($spAuditorVal, ENT_QUOTES, 'UTF-8') : '<span style="color: #94a3b8; font-style: italic; font-weight: normal;">Not Assigned</span>'; ?></div>
+                                            </td>
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <span class="ap-sort-prefix" style="display:none !important;"><?php echo htmlspecialchars(simpleDateConversion($marketingDetail["audit_date"]), ENT_QUOTES, 'UTF-8'); ?>~</span>
+                                                <span class="ap-date-badge"><i class="fa fa-calendar-o" style="color: #64748b; margin-right: 4px;"></i><?php echo $spDateVal !== '' ? htmlspecialchars($spDateVal, ENT_QUOTES, 'UTF-8') : '&mdash;'; ?></span>
+                                            </td>
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <div class="ap-present-status">
+                                                    <span class="ap-audit-status"><?php echo $presentStatusVal !== '' ? htmlspecialchars($presentStatusVal, ENT_QUOTES, 'UTF-8') : '&mdash;'; ?></span>
+                                                    <?php if ($nextServiceVal !== '') { ?>
+                                                        <span class="ap-next-service">(<?php echo htmlspecialchars($nextServiceVal, ENT_QUOTES, 'UTF-8'); ?>)</span>
+                                                    <?php } ?>
+                                                </div>
+                                            </td>
+                                        </tr>
                                         <?php
                                     } else if ($marketingDetail["service_type"] == "TA") {
                                         $auditDetails = isset($taMap[$marketingDetail['service_id']]) ? $taMap[$marketingDetail['service_id']] : null;
@@ -1001,47 +1798,40 @@
                                         $auditrDetails = $auditDetails["auditors"];
                                         $auditDateDetails = $auditDetails["audit_date"];
                                         $auditConflictClass = auditPageConflictClass($auditConflictRows, $marketingDetail, 'TA');
+                                        $taAuditorVal = trim((string)($auditrDetails ?? ''));
+                                        $taDateVal = trim((string)($auditDateDetails ?? ''));
                                         ?>
-                                                            <tr id='addr<?php echo $marketingDetail['id'] ?>'
-                                                                class="<?php echo $auditConflictClass; ?>"
-                                                                title="<?php echo $auditConflictClass ? 'Same auditor has another audit on this date' : ''; ?>">
-                                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                                    data-name="name"
-                                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                                    <small><?php echo $marketingDetail['unique_id'] ?></small>
-                                                                </td>
-                                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                                    data-name="name"
-                                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                                    <small><?php echo $marketingDetail['customer_name'] ?></small>
-                                                                </td>
-                                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                                    data-name="name"
-                                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                                    <small><?php echo $marketingDetail['service_type'] ?></small>
-                                                                </td>
-                                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                                    data-name="name"
-                                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                                    <small><?php echo $marketingDetail['service_status'] ?></small>
-                                                                </td>
-                                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                                    data-name="name"
-                                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                                    <small><?php echo $auditrDetails; ?></small>
-                                                                </td>
-                                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                                    data-name="name"
-                                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                                    <span><?php echo simpleDateConversion($marketingDetail["audit_date"]) ?>~</span><small><?php echo $auditDateDetails ?></small>
-                                                                </td>
-                                                                <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>"
-                                                                    data-name="name"
-                                                                    style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; border-left: 1px solid #ffffff">
-                                                                    <small><?php echo $marketingDetail['audit_status'] ?>
-                                                                        (<?php echo $marketingDetail["next_service"] ?>)</small>
-                                                                </td>
-                                                            </tr>
+                                        <tr id='addr<?php echo $marketingDetail['id'] ?>'
+                                            class="<?php echo $auditConflictClass; ?>"
+                                            title="<?php echo $auditConflictClass ? 'Same auditor has another audit on this date' : ''; ?>">
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <span class="ap-uid-badge"><?php echo $uniqueIdVal !== '' ? htmlspecialchars($uniqueIdVal, ENT_QUOTES, 'UTF-8') : '&mdash;'; ?></span>
+                                            </td>
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <div class="ap-client-name"><?php echo $clientNameVal !== '' ? htmlspecialchars($clientNameVal, ENT_QUOTES, 'UTF-8') : '&mdash;'; ?></div>
+                                            </td>
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <span class="ap-badge ap-badge-ta">TA</span>
+                                            </td>
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <span class="ap-status-tag"><?php echo $serviceStatusVal !== '' ? htmlspecialchars($serviceStatusVal, ENT_QUOTES, 'UTF-8') : '&mdash;'; ?></span>
+                                            </td>
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <div class="ap-auditor"><i class="fa fa-user-circle-o" style="color: #64748b; margin-right: 4px;"></i><?php echo $taAuditorVal !== '' ? htmlspecialchars($taAuditorVal, ENT_QUOTES, 'UTF-8') : '<span style="color: #94a3b8; font-style: italic; font-weight: normal;">Not Assigned</span>'; ?></div>
+                                            </td>
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <span class="ap-sort-prefix" style="display:none !important;"><?php echo htmlspecialchars(simpleDateConversion($marketingDetail["audit_date"]), ENT_QUOTES, 'UTF-8'); ?>~</span>
+                                                <span class="ap-date-badge"><i class="fa fa-calendar-o" style="color: #64748b; margin-right: 4px;"></i><?php echo $taDateVal !== '' ? htmlspecialchars($taDateVal, ENT_QUOTES, 'UTF-8') : '&mdash;'; ?></span>
+                                            </td>
+                                            <td class="customerAccount" data-id="<?php echo $marketingDetail['id'] ?>" data-name="name">
+                                                <div class="ap-present-status">
+                                                    <span class="ap-audit-status"><?php echo $presentStatusVal !== '' ? htmlspecialchars($presentStatusVal, ENT_QUOTES, 'UTF-8') : '&mdash;'; ?></span>
+                                                    <?php if ($nextServiceVal !== '') { ?>
+                                                        <span class="ap-next-service">(<?php echo htmlspecialchars($nextServiceVal, ENT_QUOTES, 'UTF-8'); ?>)</span>
+                                                    <?php } ?>
+                                                </div>
+                                            </td>
+                                        </tr>
                                     <?php }
                                 }
                                 ?>
@@ -1055,25 +1845,26 @@
 </div>
 
 <?php if ($auditDateConflictVisible) { ?>
-    <button type="button" class="audit-conflict-tab" id="auditConflictTab" title="Check Date  conflict">
+    <button type="button" class="audit-conflict-tab" id="auditConflictTab" title="Check Date conflict">
         Date Conflict
         <span class="audit-conflict-count"><?php echo count($auditConflictGroups); ?></span>
     </button>
 
     <div class="audit-conflict-panel" id="auditConflictPanel" aria-hidden="true">
         <div class="audit-conflict-panel-header">
-            <h4 class="audit-conflict-panel-title">Check Date Conflict</h4>
+            <h4 class="audit-conflict-panel-title"><i class="fa fa-calendar-times-o"></i> Check Date Conflict</h4>
             <button type="button" class="audit-conflict-close" id="auditConflictClose" aria-label="Close">&times;</button>
         </div>
         <div class="audit-conflict-panel-body">
             <?php if (empty($auditConflictGroups)) { ?>
-                <div class="audit-conflict-empty">No same-day auditor conflicts found.</div>
+                <div class="audit-conflict-empty"><i class="fa fa-check-circle"></i> No same-day auditor conflicts found.</div>
             <?php } else { ?>
                 <?php foreach ($auditConflictGroups as $conflictGroup) { ?>
                     <div class="audit-conflict-card">
                         <div class="audit-conflict-card-head">
                             <div class="audit-conflict-card-title">
-                                <?php echo htmlspecialchars($conflictGroup['date'], ENT_QUOTES, 'UTF-8'); ?> -
+                                <i class="fa fa-calendar-o" style="margin-right: 4px;"></i>
+                                <?php echo htmlspecialchars($conflictGroup['date'], ENT_QUOTES, 'UTF-8'); ?> &mdash;
                                 <?php echo htmlspecialchars($conflictGroup['auditor'], ENT_QUOTES, 'UTF-8'); ?>
                             </div>
                             <div class="audit-conflict-card-meta">
@@ -1087,12 +1878,12 @@
                                         <?php echo htmlspecialchars($conflictRow['customer_name'], ENT_QUOTES, 'UTF-8'); ?>
                                     </div>
                                     <div class="audit-conflict-detail">
-                                        <?php echo htmlspecialchars($conflictRow['unique_id'], ENT_QUOTES, 'UTF-8'); ?> |
-                                        <?php echo htmlspecialchars($conflictRow['service_type'], ENT_QUOTES, 'UTF-8'); ?> |
-                                        <?php echo htmlspecialchars($conflictRow['dates'], ENT_QUOTES, 'UTF-8'); ?>
+                                        <span class="ap-uid-badge" style="font-size: 11px; padding: 1px 5px;"><?php echo htmlspecialchars($conflictRow['unique_id'], ENT_QUOTES, 'UTF-8'); ?></span> |
+                                        <span class="ap-badge ap-badge-st1" style="font-size: 10px; padding: 1px 6px;"><?php echo htmlspecialchars($conflictRow['service_type'], ENT_QUOTES, 'UTF-8'); ?></span> |
+                                        <i class="fa fa-calendar-o"></i> <?php echo htmlspecialchars($conflictRow['dates'], ENT_QUOTES, 'UTF-8'); ?>
                                     </div>
-                                    <div class="audit-conflict-detail">
-                                        Status: <?php echo htmlspecialchars($conflictRow['audit_status'], ENT_QUOTES, 'UTF-8'); ?>
+                                    <div class="audit-conflict-detail" style="margin-top: 4px;">
+                                        Status: <strong><?php echo htmlspecialchars($conflictRow['audit_status'], ENT_QUOTES, 'UTF-8'); ?></strong>
                                         (<?php echo htmlspecialchars($conflictRow['next_service'], ENT_QUOTES, 'UTF-8'); ?>)
                                     </div>
                                 </div>
@@ -1112,20 +1903,20 @@
     </button>
 
     <div class="member-conflict-panel" id="memberConflictPanel" aria-hidden="true">
-        <div class="audit-conflict-panel-header" style="background: #ea580c;">
-            <h4 class="audit-conflict-panel-title">Check Member Conflict</h4>
+        <div class="audit-conflict-panel-header" style="background: linear-gradient(135deg, #c2410c 0%, #ea580c 100%);">
+            <h4 class="audit-conflict-panel-title"><i class="fa fa-users"></i> Check Member Conflict</h4>
             <button type="button" class="audit-conflict-close" id="memberConflictClose" aria-label="Close">&times;</button>
         </div>
         <div class="audit-conflict-panel-body">
             <?php if (empty($memberConflictGroups)) { ?>
-                <div class="audit-conflict-empty">No member conflicts found.</div>
+                <div class="audit-conflict-empty"><i class="fa fa-check-circle"></i> No member conflicts found.</div>
             <?php } else { ?>
                 <?php foreach ($memberConflictGroups as $conflict) { ?>
-                    <div class="audit-conflict-card">
-                        <div class="audit-conflict-card-head">
-                            <div class="audit-conflict-card-title">
-                                <?php echo htmlspecialchars($conflict['unique_id'], ENT_QUOTES, 'UTF-8'); ?> -
-                                <?php echo htmlspecialchars($conflict['service_type'], ENT_QUOTES, 'UTF-8'); ?>
+                    <div class="audit-conflict-card" style="border-left-color: #ea580c;">
+                        <div class="audit-conflict-card-head" style="background: #fffaf5; border-bottom-color: #ffedd5;">
+                            <div class="audit-conflict-card-title" style="color: #9a3412;">
+                                <?php echo htmlspecialchars($conflict['unique_id'], ENT_QUOTES, 'UTF-8'); ?> &mdash;
+                                <span class="ap-badge ap-badge-st1" style="font-size: 10px; padding: 1px 6px;"><?php echo htmlspecialchars($conflict['service_type'], ENT_QUOTES, 'UTF-8'); ?></span>
                             </div>
                         </div>
                         <div>
@@ -1134,7 +1925,7 @@
                                     <?php echo htmlspecialchars($conflict['customer_name'], ENT_QUOTES, 'UTF-8'); ?>
                                 </div>
                                 <?php foreach ($conflict['reasons'] as $reason) { ?>
-                                    <div class="audit-conflict-detail" style="color: #b91c1c; font-weight: 500;">
+                                    <div class="audit-conflict-detail" style="color: #b91c1c; font-weight: 600; margin-top: 3px;">
                                         &bull; <?php echo htmlspecialchars($reason, ENT_QUOTES, 'UTF-8'); ?>
                                     </div>
                                 <?php } ?>
@@ -1169,28 +1960,93 @@
                   .toLowerCase();
     }
 
-    function parseAuditRowDate(dateStr) {
+    function parseDateToObj(dateStr) {
         if (!dateStr) return null;
         dateStr = dateStr.replace(/<[^>]*>/g, "").trim();
-        if (!dateStr || dateStr === '0000-00-00') return null;
+        if (!dateStr || dateStr === '0000-00-00' || dateStr === '&mdash;' || dateStr === '—') return null;
 
         var parts = dateStr.split(/[.\-\/]/);
         if (parts.length === 3) {
+            var p0 = parseInt(parts[0], 10);
+            var p1 = parseInt(parts[1], 10);
+            var p2 = parseInt(parts[2], 10);
             if (parts[0].length === 4) {
                 // YYYY-MM-DD
-                return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+                return new Date(p0, p1 - 1, p2, 0, 0, 0, 0);
             } else if (parts[2].length === 4) {
-                // DD-MM-YYYY or DD.MM.YYYY
-                return new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
+                // DD.MM.YYYY
+                return new Date(p2, p1 - 1, p0, 0, 0, 0, 0);
+            } else if (parts[2].length === 2) {
+                // DD.MM.YY
+                var yr = p2 < 50 ? 2000 + p2 : 1900 + p2;
+                return new Date(yr, p1 - 1, p0, 0, 0, 0, 0);
             }
         }
         var d = new Date(dateStr);
         return isNaN(d.getTime()) ? null : d;
     }
 
+    function extractDatesFromCell(cellContent) {
+        if (!cellContent) return [];
+        var clean = cellContent.replace(/<[^>]*>/g, " ");
+        var matches = clean.match(/\b(?:\d{1,2}[.\-\/]\d{1,2}[.\-\/]\d{2,4}|\d{4}[.\-\/]\d{1,2}[.\-\/]\d{1,2})\b/g);
+        if (!matches) return [];
+        var dates = [];
+        for (var i = 0; i < matches.length; i++) {
+            var d = parseDateToObj(matches[i]);
+            if (d) dates.push(d);
+        }
+        return dates;
+    }
+
+    function isAuditDateInRange(cellContent, fromDateStr, toDateStr) {
+        var fromDateObj = parseDateToObj(fromDateStr);
+        var toDateObj = parseDateToObj(toDateStr);
+        if (toDateObj) {
+            toDateObj.setHours(23, 59, 59, 999);
+        }
+        if (fromDateObj) {
+            fromDateObj.setHours(0, 0, 0, 0);
+        }
+
+        var rowDates = extractDatesFromCell(cellContent);
+        if (rowDates.length === 0) {
+            return false;
+        }
+
+        // If at least one date in the row is within [fromDate, toDate]
+        for (var i = 0; i < rowDates.length; i++) {
+            var d = rowDates[i];
+            var afterFrom = fromDateObj ? (d >= fromDateObj) : true;
+            var beforeTo = toDateObj ? (d <= toDateObj) : true;
+            if (afterFrom && beforeTo) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function compareMinDates(fromDateStr, toDateStr) {
+        var f = parseDateToObj(fromDateStr);
+        var t = parseDateToObj(toDateStr);
+        if (!f || !t) return true;
+        return f <= t;
+    }
+
     var isMarketingHead = <?php echo $isMarketingHead ? 'true' : 'false'; ?>;
     var isOfficeStaff = <?php echo $isOfficeStaff ? 'true' : 'false'; ?>;
     var isRestrictedRole = <?php echo $isRestrictedRole ? 'true' : 'false'; ?>;
+
+    function validateDateRange() {
+        var fromDate = ($("#filterFromDate").val() || $(".filterFromDate").val() || "").trim();
+        var toDate = ($("#filterToDate").val() || $(".filterToDate").val() || "").trim();
+        if (fromDate !== "" && toDate !== "") {
+            if (!compareMinDates(fromDate, toDate)) {
+                alert("To Date cannot be before From Date");
+                $("#filterToDate, .filterToDate").val("");
+            }
+        }
+    }
 
     $('#filterFromDate').datepicker({
         minDate: '-100Y',
@@ -1198,7 +2054,11 @@
         changeYear: true,
         changeMonth: true,
         yearRange: "-20:+100",
-        dateFormat: 'dd.mm.yy'
+        dateFormat: 'dd.mm.yy',
+        onSelect: function () {
+            validateDateRange();
+            table.draw();
+        }
     });
 
     $("#filterFromDate").keydown(function (e) {
@@ -1211,58 +2071,18 @@
         changeYear: true,
         changeMonth: true,
         yearRange: "-20:+100",
-        dateFormat: 'dd.mm.yy'
+        dateFormat: 'dd.mm.yy',
+        onSelect: function () {
+            validateDateRange();
+            table.draw();
+        }
     });
 
     $("#filterToDate").keydown(function (e) {
         //            e.preventDefault();
     });
 
-    function compareMinDates(filterDate, rowDate) {
-        var filterDateSplit = filterDate.split(".");
-        var rowDateSplit = rowDate.split(".");
-        if (filterDateSplit[2] < rowDateSplit[2]) {
-            return true;
-        } else if (filterDateSplit[2] == rowDateSplit[2]) {
-            if (filterDateSplit[1] < rowDateSplit[1]) {
-                return true;
-            } else if (filterDateSplit[1] == rowDateSplit[1]) {
-                if (filterDateSplit[0] < rowDateSplit[0]) {
-                    return true;
-                } else if (filterDateSplit[0] == rowDateSplit[0]) {
-                    return true;
-                } else {
-                    return false;
-                }
-            }
-        }
-        return false;
-    }
-
-    function compareMaxDates(filterDate, rowDate) {
-        var filterDateSplit = filterDate.split(".");
-        var rowDateSplit = rowDate.split(".");
-        //year comparison
-        if (filterDateSplit[2] > rowDateSplit[2]) {
-            return true;
-        } else if (filterDateSplit[2] == rowDateSplit[2]) {
-            if (filterDateSplit[1] > rowDateSplit[1]) {
-                return true;
-            } else if (filterDateSplit[1] == rowDateSplit[1]) {
-                if (filterDateSplit[0] > rowDateSplit[0]) {
-                    return true;
-                } else if (filterDateSplit[0] == rowDateSplit[0]) {
-                    return true;
-                } else {
-                    return false;
-                }
-            }
-        }
-        return false;
-    }
-
-    //for filtering
-
+    // DataTable custom multi-filter logic
     $.fn.DataTable.ext.search.push(
         function (settings, data, dataIndex) {
             var tableId = settings.nTable.id;
@@ -1270,21 +2090,19 @@
                 return true;
             }
 
-            var serviceType = ($(".service-type").val() || "").trim();
-            var auditor = ($(".auditor-filter").val() || "").trim();
-            var fromDate = ($(".filterFromDate").val() || "").trim();
-            var toDate = ($(".filterToDate").val() || "").trim();
-            var clientSearch = ($("#auditClientSearch").val() || "").trim();
+            var serviceType = ($("#service-type").val() || $(".service-type").val() || "").trim();
+            var auditor = ($("#auditor-filter").val() || $(".auditor-filter").val() || "").trim();
+            var fromDate = ($("#filterFromDate").val() || $(".filterFromDate").val() || "").trim();
+            var toDate = ($("#filterToDate").val() || $(".filterToDate").val() || "").trim();
+            var rawClientSearch = ($("#auditClientSearch").val() || $(".auditClientSearch").val() || "").trim();
+            // If browser autofills user email (e.g. mainadmin@aitf.com), ignore it in table filter
+            var clientSearch = (rawClientSearch.indexOf('@') !== -1 || rawClientSearch.toLowerCase() === 'mainadmin@aitf.com') ? "" : rawClientSearch;
 
             var rowUniqueId = normalizeSearchText(data[0] || "");
             var rowClient = normalizeSearchText(data[1] || "");
             var servieTypeStr = (data[2] || "").replace(/<[^>]*>/g, "").trim();
             var auditorStr = (data[4] || "").replace(/<[^>]*>/g, "").trim();
-
-            var dateValue = data[5] || "";
-            var dateSplit = dateValue.split("~");
-            var rowDateStr = (dateSplit.length > 0 ? dateSplit[0] : dateValue).replace(/<[^>]*>/g, "").trim();
-            var rowDateObj = parseAuditRowDate(rowDateStr);
+            var cellDateContent = data[5] || "";
 
             // 1. Service Type filter
             if (serviceType !== "") {
@@ -1300,15 +2118,15 @@
                 }
             }
 
+            // 3. Client Search (search by client name or unique ID):
             var searchVal = normalizeSearchText(clientSearch);
             var now = new Date();
             var firstDayOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
-            var isCurrentOrRecent = (rowDateObj && rowDateObj >= firstDayOfPrevMonth);
+            var rowDates = extractDatesFromCell(cellDateContent);
+            var latestRowDate = rowDates.length > 0 ? rowDates[rowDates.length - 1] : null;
+            var isCurrentOrRecent = (latestRowDate && latestRowDate >= firstDayOfPrevMonth);
 
-            // 3. Client Search (search by client name or unique ID):
-            // When client search has text, show all matching records.
-            // When client search is empty, restrict view to current month + past 1 month (for marketing & office staff roles).
-            if (clientSearch !== "") {
+            if (searchVal !== "") {
                 var isMatch = (rowClient.indexOf(searchVal) !== -1 || rowUniqueId.indexOf(searchVal) !== -1);
                 if (!isMatch) {
                     return false;
@@ -1322,7 +2140,9 @@
                 }
             } else {
                 // When client search is empty:
-                if (isRestrictedRole) {
+                // If any filter is active (serviceType, auditor, fromDate, toDate), do NOT hide records for restricted roles
+                var hasActiveFilter = (serviceType !== "" || auditor !== "" || fromDate !== "" || toDate !== "");
+                if (isRestrictedRole && !hasActiveFilter) {
                     if (!isCurrentOrRecent) {
                         return false;
                     }
@@ -1331,12 +2151,7 @@
 
             // 4. Explicit From Date and To Date range filters
             if (fromDate !== "" || toDate !== "") {
-                if (!rowDateStr) {
-                    return false;
-                }
-                var isfromDate = (fromDate !== "") ? compareMinDates(fromDate, rowDateStr) : true;
-                var isToDate = (toDate !== "") ? compareMaxDates(toDate, rowDateStr) : true;
-                if (!(isfromDate && isToDate)) {
+                if (!isAuditDateInRange(cellDateContent, fromDate, toDate)) {
                     return false;
                 }
             }
@@ -1346,33 +2161,44 @@
     );
 
     $(document).ready(function () {
-        $('#auditConflictTab').click(function () {
+        $('#auditConflictTab, #heroDateConflictPill').click(function () {
             $('#auditConflictPanel').css('right', '0').attr('aria-hidden', 'false');
         });
 
         $('#auditConflictClose').click(function () {
-            $('#auditConflictPanel').css('right', '-430px').attr('aria-hidden', 'true');
+            $('#auditConflictPanel').css('right', '-450px').attr('aria-hidden', 'true');
         });
 
-        $('#memberConflictTab').click(function () {
+        $('#memberConflictTab, #heroMemberConflictPill').click(function () {
             $('#memberConflictPanel').css('right', '0').attr('aria-hidden', 'false');
         });
 
         $('#memberConflictClose').click(function () {
-            $('#memberConflictPanel').css('right', '-430px').attr('aria-hidden', 'true');
+            $('#memberConflictPanel').css('right', '-450px').attr('aria-hidden', 'true');
+        });
+
+        $('#btnResetAuditFilters').click(function () {
+            $('#service-type').val('');
+            $('#auditor-filter').val('');
+            $('#filterFromDate').val('');
+            $('#filterToDate').val('');
+            $('#auditClientSearch').val('');
+            table.draw();
         });
 
         $(document).mouseup(function (e) {
             var container = $("#auditConflictPanel");
             var tab = $("#auditConflictTab");
-            if (!container.is(e.target) && container.has(e.target).length === 0 && !tab.is(e.target) && tab.has(e.target).length === 0) {
-                container.css('right', '-430px').attr('aria-hidden', 'true');
+            var pill1 = $("#heroDateConflictPill");
+            if (!container.is(e.target) && container.has(e.target).length === 0 && !tab.is(e.target) && tab.has(e.target).length === 0 && !pill1.is(e.target) && pill1.has(e.target).length === 0) {
+                container.css('right', '-450px').attr('aria-hidden', 'true');
             }
 
             var mContainer = $("#memberConflictPanel");
             var mTab = $("#memberConflictTab");
-            if (!mContainer.is(e.target) && mContainer.has(e.target).length === 0 && !mTab.is(e.target) && mTab.has(e.target).length === 0) {
-                mContainer.css('right', '-430px').attr('aria-hidden', 'true');
+            var pill2 = $("#heroMemberConflictPill");
+            if (!mContainer.is(e.target) && mContainer.has(e.target).length === 0 && !mTab.is(e.target) && mTab.has(e.target).length === 0 && !pill2.is(e.target) && pill2.has(e.target).length === 0) {
+                mContainer.css('right', '-450px').attr('aria-hidden', 'true');
             }
         });
 
@@ -1381,6 +2207,24 @@
         }, 200);
 
         $('#auditClientSearch').on('input keyup change', debouncedAuditSearch);
+
+        // Actively detect and wipe browser credential autofill (e.g. mainadmin@aitf.com) from search
+        function clearAutofilledSearch() {
+            var $search = $('#auditClientSearch');
+            var val = ($search.val() || '').trim();
+            if (val.indexOf('@') !== -1 || val.toLowerCase() === 'mainadmin@aitf.com') {
+                $search.val('');
+                if (typeof table !== 'undefined') {
+                    table.draw();
+                }
+            }
+        }
+
+        clearAutofilledSearch();
+        setTimeout(clearAutofilledSearch, 50);
+        setTimeout(clearAutofilledSearch, 150);
+        setTimeout(clearAutofilledSearch, 400);
+        setTimeout(clearAutofilledSearch, 1000);
 
         $('.customerAccount').click(function () {
             var customerID = $(this).attr('data-id');
@@ -1471,16 +2315,8 @@
     });
     table.columns.adjust().draw();
 
-    $('.service-type, .auditor-filter, .filterFromDate, .filterToDate').change(function () {
-        var fromDate = $(".filterFromDate").val();
-        var toDate = $(".filterToDate").val();
-        if (fromDate != "" && toDate != "") {
-            if (!compareMinDates(fromDate, toDate)) {
-                alert("To Date can't be after From Date");
-                $(".filterToDate").val("");
-            }
-        }
-        //            alert("t");
+    $('.service-type, .auditor-filter, .filterFromDate, .filterToDate, #service-type, #auditor-filter, #filterFromDate, #filterToDate').on('change input', function () {
+        validateDateRange();
         table.draw();
     });
 
