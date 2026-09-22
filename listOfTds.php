@@ -39,24 +39,27 @@
         }
     }
 
-    $allTds = "SELECT ci.id, customer_name,ci.unique_id,ps.customer_id,ps.service_type as tds, ps.amount_decided,ps.payment_received,ps.payment_date,ps.comment,ps.payment_id, svc.service_id, svc.service_type
+    $allTds = "SELECT ci.id, customer_name,ci.unique_id,ps.customer_id,ps.service_type as tds, 
+               COALESCE(NULLIF(ps.tds_amount, 0), ps.amount_decided, ps.payment_received) as amount_decided,
+               COALESCE(NULLIF(ps.tds_amount, 0), ps.payment_received, ps.amount_decided) as payment_received,
+               ps.payment_date,ps.comment,ps.payment_id, svc.service_id, svc.service_type
                FROM customer_info ci
                left join payment_system ps ON ci.id=ps.customer_id
                left join service svc on ps.customer_id = svc.customer_id
-               WHERE svc.service_id = (select max(tmp.service_id) from service tmp where tmp.customer_id = ci.id)
-               and ps.service_type LIKE '%tds%'";
+               WHERE (svc.service_id = (select max(tmp.service_id) from service tmp where tmp.customer_id = ci.id) OR svc.service_id IS NULL)
+               and (ps.service_type LIKE '%tds%' OR (ps.tds_amount IS NOT NULL AND ps.tds_amount > 0))";
 
     $params = [];
     if ($status == 'received') {
-        $allTds .= " AND ps.payment_received > 0";
+        $allTds .= " AND (ps.payment_received > 0 OR ps.tds_amount > 0)";
     } elseif ($status == 'not_received') {
-        $allTds .= " AND (ps.payment_received IS NULL OR ps.payment_received = 0 OR ps.payment_received = '' OR ps.payment_received = '0.00' OR ps.payment_received = '0')";
+        $allTds .= " AND (ps.payment_received IS NULL OR ps.payment_received = 0 OR ps.payment_received = '' OR ps.payment_received = '0.00' OR ps.payment_received = '0') AND (ps.tds_amount IS NULL OR ps.tds_amount = 0)";
     }
 
     if ($sortOrder == 'high') {
-        $allTds .= " ORDER BY CAST(ps.amount_decided AS DECIMAL(10,2)) DESC";
+        $allTds .= " ORDER BY CAST(COALESCE(NULLIF(ps.tds_amount, 0), ps.amount_decided, ps.payment_received) AS DECIMAL(10,2)) DESC";
     } elseif ($sortOrder == 'low') {
-        $allTds .= " ORDER BY CAST(ps.amount_decided AS DECIMAL(10,2)) ASC";
+        $allTds .= " ORDER BY CAST(COALESCE(NULLIF(ps.tds_amount, 0), ps.amount_decided, ps.payment_received) AS DECIMAL(10,2)) ASC";
     } else {
         $allTds .= " ORDER BY ci.id DESC";
     }
@@ -67,6 +70,7 @@
     }
     $statement->execute();
     $listOfTds = $statement->fetchAll();
+
 
     // Also fetch TDS from new Statement system (statement_payments where tds_decided > 0)
     $newTdsQuery = "SELECT ci.id, ci.customer_name, ci.unique_id, sp.customer_id, 
@@ -531,7 +535,7 @@
                                         <div class="invoice-filter-item item-action">
                                             <label>Action</label>
                                             <button type="button" class="btn-premium btn-solid-primary downloadTdsReport">
-                                                <i class="fa fa-cloud-download" style="font-size: 15px;"></i> Download Report
+                                                <i class="fa fa-cloud-download" style="font-size: 14px;"></i> Report
                                             </button>
                                         </div>
                                     </div>
@@ -658,6 +662,7 @@
         </div>
     </div>
 </div>
+
 
 <script type="text/javascript">
     function debounce(callback, delay) {
@@ -1064,6 +1069,8 @@
             $('.newCustomer').show();
             $(".addNewCustomer").hide();
         });
+
+
 
         table.columns.adjust().draw();
     });

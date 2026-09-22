@@ -45,10 +45,17 @@ if (isset($_GET['auditors_Id']) && !empty($_GET['auditors_Id']) && isset($_GET['
     }
 } else if (isset($_GET['auditorId']) && !empty($_GET['auditorId'])) {
     try {
+        require_once __DIR__ . '/include/auditor_division_helper.php';
         $removeAuditors = "DELETE FROM auditors WHERE auditors_id = :auditorId";
         $statement = $db->prepare($removeAuditors);
         $statement->bindParam(':auditorId', $_GET['auditorId']);
         $statement->execute();
+
+        try {
+            $delDiv = $db->prepare("DELETE FROM auditor_divisions WHERE auditor_id = :auditorId");
+            $delDiv->bindParam(':auditorId', $_GET['auditorId']);
+            $delDiv->execute();
+        } catch (Exception $e) {}
 
         $auditors = "SELECT * from auditors";
         $statement = $db->prepare($auditors);
@@ -123,11 +130,16 @@ if (isset($_GET['auditors_Id']) && !empty($_GET['auditors_Id']) && isset($_GET['
     }
 } else if (isset($_GET['auditor_Id']) && !empty($_GET['auditor_Id'])) {
     try {
+        require_once __DIR__ . '/include/auditor_division_helper.php';
         $auditor = "SELECT * FROM auditors WHERE auditors_id = :id";
         $statement = $db->prepare($auditor);
         $statement->bindParam(':id', $_GET['auditor_Id']);
         $statement->execute();
-        $auditorInfo = $statement->fetch();
+        $auditorInfo = $statement->fetch(PDO::FETCH_ASSOC);
+        if ($auditorInfo) {
+            $auditorInfo['assigned_divisions'] = aitf_get_auditor_divisions($db, (int)$_GET['auditor_Id']);
+            $auditorInfo['assigned_divisions_str'] = implode(', ', $auditorInfo['assigned_divisions']);
+        }
         echo json_encode($auditorInfo);
     } catch (Exception $ex) {
         

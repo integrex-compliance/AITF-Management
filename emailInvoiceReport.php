@@ -36,7 +36,7 @@ if ($format !== 'pdf' && $format !== 'excel') {
     $format = 'excel';
 }
 
-$typeLabel = ($invoiceType == 'proforma') ? 'PROFORMA' : 'FINAL';
+$typeLabel = ($invoiceType === 'proforma') ? 'PROFORMA' : (($invoiceType === 'pending') ? 'PENDING' : 'FINAL');
 
 try {
     invoiceReportLog('mail.fetch.start', [

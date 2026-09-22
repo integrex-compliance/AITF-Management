@@ -92,7 +92,7 @@ if (!function_exists('aitf_auto_sync_schema')) {
                                 'sent' as status,
                                 c.is_deleted
                             FROM ca_service_dates c
-                            LEFT JOIN service s ON c.service_id = s.id
+                            LEFT JOIN service s ON c.service_id = s.service_id
                             WHERE c.action LIKE '%Notification%'
                             AND NOT EXISTS (
                                 SELECT 1 FROM audit_notification_sent_log l 
@@ -106,6 +106,30 @@ if (!function_exists('aitf_auto_sync_schema')) {
                 }
             } catch (Throwable $e) {
                 error_log("audit_notification_sent_log creation error: " . $e->getMessage());
+            }
+
+            // 2b. Ensure certificate_sent_log table exists for certificate upload emails
+            try {
+                $db->exec("CREATE TABLE IF NOT EXISTS `certificate_sent_log` (
+                    `id` INT AUTO_INCREMENT PRIMARY KEY,
+                    `service_id` INT NOT NULL DEFAULT 0,
+                    `customer_id` INT NOT NULL DEFAULT 0,
+                    `service_type_id` INT NOT NULL DEFAULT 0,
+                    `stage` VARCHAR(50) NOT NULL,
+                    `certificate_path` VARCHAR(500) NULL,
+                    `standard` VARCHAR(255) NULL,
+                    `sent_date` DATETIME NULL,
+                    `recipient_email` VARCHAR(255) NULL,
+                    `cc_emails` VARCHAR(500) NULL,
+                    `sent_by` VARCHAR(100) NULL,
+                    `status` VARCHAR(20) DEFAULT 'sent',
+                    `is_deleted` VARCHAR(5) DEFAULT 'N',
+                    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    INDEX `idx_cert_service_stage` (`service_id`, `stage`),
+                    INDEX `idx_cert_cust_stage` (`customer_id`, `stage`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+            } catch (Throwable $e) {
+                error_log("certificate_sent_log creation error: " . $e->getMessage());
             }
 
             // 3. Ensure ca_service_dates.sent_date column is DATE (not DATETIME)
@@ -188,6 +212,53 @@ if (!function_exists('aitf_auto_sync_schema')) {
                     }
                 }
             } catch (Throwable $e) {}
+
+            // 10. Ensure invoice_details reminder and due date columns
+            try {
+                $invCols = [];
+                $invStmt = $db->query("SHOW COLUMNS FROM `invoice_details`");
+                if ($invStmt) {
+                    while ($col = $invStmt->fetch(PDO::FETCH_ASSOC)) {
+                        $invCols[strtolower($col['Field'])] = true;
+                    }
+                }
+                if (!empty($invCols)) {
+                    if (!isset($invCols['reminder_sent_count'])) {
+                        $db->exec("ALTER TABLE `invoice_details` ADD COLUMN `reminder_sent_count` INT NOT NULL DEFAULT 0");
+                    }
+                    if (!isset($invCols['reminder_last_sent'])) {
+                        $db->exec("ALTER TABLE `invoice_details` ADD COLUMN `reminder_last_sent` DATETIME NULL");
+                    }
+                    if (!isset($invCols['reminder_last_to'])) {
+                        $db->exec("ALTER TABLE `invoice_details` ADD COLUMN `reminder_last_to` VARCHAR(255) NULL");
+                    }
+                    if (!isset($invCols['payment_due_date'])) {
+                        $db->exec("ALTER TABLE `invoice_details` ADD COLUMN `payment_due_date` DATE NULL");
+                    }
+                }
+            } catch (Throwable $e) {
+                error_log("invoice_details columns sync error: " . $e->getMessage());
+            }
+
+            // 11. Ensure payment_system tds_amount column exists
+            try {
+                $payStmt = $db->query("SHOW COLUMNS FROM `payment_system` LIKE 'tds_amount'");
+                if (!$payStmt || !$payStmt->fetch()) {
+                    $db->exec("ALTER TABLE `payment_system` ADD COLUMN `tds_amount` DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER `payment_received`");
+                }
+            } catch (Throwable $e) {
+                error_log("payment_system tds_amount sync error: " . $e->getMessage());
+            }
+
+            // 12. Ensure payment_system discount_amount column exists
+            try {
+                $payStmt = $db->query("SHOW COLUMNS FROM `payment_system` LIKE 'discount_amount'");
+                if (!$payStmt || !$payStmt->fetch()) {
+                    $db->exec("ALTER TABLE `payment_system` ADD COLUMN `discount_amount` DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER `tds_amount`");
+                }
+            } catch (Throwable $e) {
+                error_log("payment_system discount_amount sync error: " . $e->getMessage());
+            }
 
             $alreadySynced = true;
         } catch (Throwable $e) {

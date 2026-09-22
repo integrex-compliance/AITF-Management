@@ -37,8 +37,8 @@ class REPORTPDF extends TCPDF {
         // Subtitle
         $this->SetFont('helvetica', 'B', 15);
         $this->SetX(50);
-        $type = ($this->reportType == 'proforma') ? 'PROFORMA' : 'FINAL';
-        $this->Cell(237, 10, $type . ' TAX INVOICE REPORT', 0, 1, 'C');
+        $type = ($this->reportType == 'proforma') ? 'PROFORMA' : (($this->reportType == 'pending') ? 'PENDING & FOLLOW UP' : 'FINAL');
+        $this->Cell(237, 10, $type . ' INVOICE REPORT', 0, 1, 'C');
 
         // Filters metadata
         $filters = "";

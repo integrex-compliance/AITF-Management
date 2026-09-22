@@ -8,6 +8,8 @@
     include 'dbConnect.php';
     include_once './include/customer_feature_flags.php';
     require_once './utility.php';
+    require_once './include/schema_auto_sync.php';
+    aitf_auto_sync_schema($db);
 
     $invRole = trim($_SESSION['role'] ?? '');
     $isMarketingHead = in_array($invRole, array('Marketing Head', 'Marketing Executive'), true)
@@ -32,6 +34,22 @@
     $statement = $db->prepare($finalInvoice);
     $statement->execute();
     $finalDetails = $statement->fetchAll();
+
+    // Query pending invoices for Pending & Follow Up tab (where payment is not received and amount > 0)
+    $pendingInvoice = "SELECT id.invoice_id, id.customer_id, id.profarma_prefix, id.invoice_no, id.final_prefix, id.final_invoice_no, 
+                              id.invoice_date, id.state, id.state_code, id.net_price, id.igst, id.cgst, id.sgst, id.tax_type, 
+                              id.final_amount, id.invoice_type, id.pro_inv_sent_count, id.final_inv_sent_count, 
+                              COALESCE(id.reminder_sent_count, 0) as reminder_sent_count, id.reminder_last_sent, id.payment_due_date, 
+                              id.invoice_status, ci.customer_name, ci.audit_status, ci.contact_person, ci.contact, ci.email_id, ci.gstin_no 
+                       FROM invoice_details id 
+                       LEFT JOIN customer_info ci ON id.customer_id = ci.id 
+                       WHERE id.is_deleted = 'No' 
+                         AND (id.invoice_status <> 'Rcv' OR id.invoice_status IS NULL) 
+                         AND (CAST(id.final_amount AS DECIMAL(12,2)) > 0) 
+                       ORDER BY id.invoice_date DESC, id.invoice_id DESC";
+    $statement = $db->prepare($pendingInvoice);
+    $statement->execute();
+    $pendingDetails = $statement->fetchAll(PDO::FETCH_ASSOC);
 
     $firmDetails = "SELECT * FROM consulting_firm";
     $statement = $db->prepare($firmDetails);
@@ -60,6 +78,18 @@
         $stmtSvc->execute($finalIds);
         foreach ($stmtSvc->fetchAll(PDO::FETCH_ASSOC) as $row) {
             $finalSvcMap[$row['invoice_ids']][] = $row['service_desc'];
+        }
+    }
+
+    $pendingSvcMap = array();
+    if (!empty($pendingDetails)) {
+        $pendingIds = array_column($pendingDetails, 'invoice_id');
+        $placeholders = implode(',', array_fill(0, count($pendingIds), '?'));
+        $svcSql = "SELECT invoice_ids, service_desc FROM invoice_services WHERE invoice_ids IN ($placeholders)";
+        $stmtSvc = $db->prepare($svcSql);
+        $stmtSvc->execute($pendingIds);
+        foreach ($stmtSvc->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $pendingSvcMap[$row['invoice_ids']][] = $row['service_desc'];
         }
     }
 
@@ -115,7 +145,7 @@
         }
         .customerAccount { cursor: pointer; }
 
-        #table_proforma_invoice thead th, #table_final_invoice thead th {
+        #table_proforma_invoice thead th, #table_final_invoice thead th, #table_pending_invoice thead th {
             background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%) !important;
             border: 0 !important;
             border-bottom: 1px solid #e2e8f0 !important;
@@ -125,7 +155,7 @@
             top: 0;
             z-index: 2;
         }
-        #table_proforma_invoice thead th a, #table_final_invoice thead th a {
+        #table_proforma_invoice thead th a, #table_final_invoice thead th a, #table_pending_invoice thead th a {
             color: #0f172a !important;
             text-decoration: none !important;
             font-weight: 700;
@@ -183,7 +213,7 @@
             background-color: #dcfce7;
             color: #16a34a !important;
         }
-        .table td a.mailProformaInvoice:hover, .table td a.mailInvoice:hover {
+        .table td a.mailProformaInvoice:hover, .table td a.mailInvoice:hover, .table td a.mailPendingReminder:hover {
             background-color: #ede9fe;
             color: #7c3aed !important;
         }
@@ -377,7 +407,8 @@
         .btn-soft-filled:active { background-color: #c2ddff; }
 
         #table_proforma_invoice_filter,
-        #table_final_invoice_filter {
+        #table_final_invoice_filter,
+        #table_pending_invoice_filter {
             display: none;
         }
 
@@ -493,12 +524,14 @@
         }
         html.theme-dark .table small { color: var(--hpd-text-dim); }
         html.theme-dark #table_proforma_invoice thead th,
-        html.theme-dark #table_final_invoice thead th {
+        html.theme-dark #table_final_invoice thead th,
+        html.theme-dark #table_pending_invoice thead th {
             background: linear-gradient(180deg, #161d2b 0%, #121926 100%) !important;
             border-bottom: 1px solid var(--hpd-border-2) !important;
         }
         html.theme-dark #table_proforma_invoice thead th a,
-        html.theme-dark #table_final_invoice thead th a { color: #aeb9cc !important; }
+        html.theme-dark #table_final_invoice thead th a,
+        html.theme-dark #table_pending_invoice thead th a { color: #aeb9cc !important; }
         html.theme-dark .table tbody td {
             border-bottom: 1px solid var(--hpd-border) !important;
             color: var(--hpd-text);
@@ -529,7 +562,8 @@
         html.theme-dark .table td a.viewInvoice:hover,
         html.theme-dark .table td a.viewFinalInvoice:hover { background-color: rgba(22,163,74,0.22); color: #86efac !important; }
         html.theme-dark .table td a.mailProformaInvoice:hover,
-        html.theme-dark .table td a.mailInvoice:hover { background-color: rgba(124,58,237,0.22); color: #c4b5fd !important; }
+        html.theme-dark .table td a.mailInvoice:hover,
+        html.theme-dark .table td a.mailPendingReminder:hover { background-color: rgba(124,58,237,0.22); color: #c4b5fd !important; }
         html.theme-dark .table td a.deleteInvoice:hover { background-color: rgba(220,38,38,0.22); color: #fca5a5 !important; }
 
         /* Dark mode DataTable footer */
@@ -759,12 +793,126 @@
             </div>
         </div>
 
+        <!-- Pending Payment Reminder Modal -->
+        <div class="modal fade" id="pending-invoice-reminder-modal" tabindex="-1" role="dialog" aria-labelledby="pendingModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg" style="max-width: 720px;">
+                <div class="modal-content" style="border-radius: 16px; overflow: hidden; border: 0; box-shadow: 0 20px 60px rgba(15,23,42,0.28);">
+                    <div class="modal-header" style="background: linear-gradient(135deg, #0d4d8b 0%, #1468b3 100%); color: #fff; padding: 16px 22px;">
+                        <button type="button" class="close" data-dismiss="modal" style="color: #fff; opacity: 0.9; font-size: 24px;"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="pendingModalLabel" style="font-weight: 700; font-size: 16px; display: flex; align-items: center; gap: 8px;">
+                            <i class="fa fa-envelope-o" style="font-size: 18px;"></i> Send Pending Payment Reminder
+                        </h4>
+                    </div>
+                    <form id="pendingReminderForm" method="post" action="sendPendingInvoiceReminder.php">
+                        <div class="modal-body" style="padding: 22px 24px; max-height: 75vh; overflow-y: auto;">
+                            <div id="pendingReminderAlert" style="display:none;" class="alert"></div>
+
+                            <!-- Client & Invoice summary header card -->
+                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 18px; margin-bottom: 18px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                                    <div>
+                                        <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; color: #64748b;">Client Name</span>
+                                        <h4 id="remindClientNameHeader" style="margin: 2px 0 0; color: #0f172a; font-weight: 700; font-size: 16px;"></h4>
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <span id="remindInvoiceTypeBadge" class="badge" style="background: #0d4d8b; font-size: 12px; padding: 5px 10px; border-radius: 6px;"></span>
+                                        <div id="remindInvoiceNoHeader" style="font-size: 13px; font-weight: 700; color: #334155; margin-top: 3px;"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Input Grid -->
+                            <div class="row">
+                                <div class="col-sm-12 form-group">
+                                    <label style="font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px;">Client Email Address(es) <span style="color: #dc2626;">*</span></label>
+                                    <div class="input-group">
+                                        <span class="input-group-addon" style="background: #f8fafc; border-color: #d8dee9;"><i class="fa fa-envelope text-primary"></i></span>
+                                        <input type="text" class="form-control" id="remindRecipientEmail" name="recipient_email" required placeholder="client@example.com (comma separated for multiple)" style="height: 40px; border-radius: 0 8px 8px 0; border-color: #d8dee9; font-size: 13.5px;">
+                                    </div>
+                                    <small class="text-muted" style="font-size: 11.5px; margin-top: 3px; display: block;">Separate multiple email addresses with commas.</small>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-sm-4 form-group">
+                                    <label style="font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase;">Total Invoice Amount (₹)</label>
+                                    <input type="text" class="form-control" id="remindTotalAmount" name="total_amount" readonly style="height: 38px; border-radius: 8px; background: #f1f5f9; font-weight: 700; color: #0f172a;">
+                                </div>
+                                <div class="col-sm-4 form-group">
+                                    <label style="font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase;">Amount Paid (₹)</label>
+                                    <input type="number" step="0.01" class="form-control" id="remindPaidAmount" name="paid_amount" value="0.00" style="height: 38px; border-radius: 8px; border-color: #d8dee9; font-weight: 600; color: #0f172a;">
+                                </div>
+                                <div class="col-sm-4 form-group">
+                                    <label style="font-size: 11px; font-weight: 700; color: #dc2626; text-transform: uppercase;">Outstanding Amount (₹)</label>
+                                    <input type="text" class="form-control" id="remindPendingAmount" name="pending_amount" readonly style="height: 38px; border-radius: 8px; background: #fef2f2; border-color: #fecaca; font-weight: 800; color: #b91c1c;">
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-sm-6 form-group">
+                                    <label style="font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase;">Invoice Date</label>
+                                    <input type="text" class="form-control" id="remindInvoiceDate" name="invoice_date" readonly style="height: 38px; border-radius: 8px; background: #f8fafc; font-weight: 600;">
+                                </div>
+                                <div class="col-sm-6 form-group">
+                                    <label style="font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase;">Payment Due Date <span style="color: #dc2626;">*</span></label>
+                                    <input type="text" class="form-control" id="remindDueDate" name="due_date" required placeholder="DD.MM.YYYY" style="height: 38px; border-radius: 8px; border-color: #d8dee9; font-weight: 600;">
+                                </div>
+                            </div>
+
+                            <div class="form-group" style="margin-bottom: 14px;">
+                                <label style="font-weight: 600; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; color: #334155;">
+                                    <input type="checkbox" id="remindAttachPdf" name="attach_pdf" value="1" checked style="margin: 0; width: 16px; height: 16px;">
+                                    Attach Invoice PDF to Email
+                                </label>
+                            </div>
+
+                            <!-- Collapsible Email Preview -->
+                            <div style="margin-top: 10px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                    <label style="font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; margin: 0;">
+                                        <i class="fa fa-eye"></i> Email Content Preview
+                                    </label>
+                                    <span style="font-size: 11.5px; color: #64748b;">(Updates dynamically with changes above)</span>
+                                </div>
+                                <div id="remindEmailPreviewBox" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 16px; font-size: 13px; color: #334155; line-height: 1.6; max-height: 220px; overflow-y: auto; white-space: pre-wrap; font-family: 'Inter', sans-serif;"></div>
+                            </div>
+
+                            <div style="margin-top: 14px; padding: 10px 14px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; font-size: 12px; color: #166534;">
+                                <i class="fa fa-info-circle"></i> <strong>Note:</strong> Email will be sent with CC to <strong>aitfmcl@gmail.com</strong> &amp; <strong>aitfacct@gmail.com</strong>. Confirmation copy will be delivered to <strong>certification@aitf.co.in</strong>.
+                            </div>
+
+                            <!-- Hidden inputs -->
+                            <input type="hidden" id="remindInvoiceId" name="invoice_id" value="">
+                            <input type="hidden" id="remindCustomerId" name="customer_id" value="">
+                            <input type="hidden" id="remindInvoiceNo" name="invoice_number" value="">
+                            <input type="hidden" id="remindClientName" name="client_name" value="">
+                            <input type="hidden" id="remindInvoiceType" name="invoice_type" value="">
+                            <input type="hidden" name="is_ajax" value="1">
+                        </div>
+
+                        <div class="modal-footer" style="padding: 14px 24px; background: #f8fafc; border-top: 1px solid #eef2f6;">
+                            <button type="button" class="btn btn-default" data-dismiss="modal" style="border-radius: 8px; padding: 8px 18px; font-weight: 600;">Cancel</button>
+                            <button type="submit" class="btn btn-primary" id="btnSendPendingReminder" style="background: linear-gradient(135deg, #0d4d8b 0%, #1468b3 100%); border: none; border-radius: 8px; padding: 8px 24px; font-weight: 600; box-shadow: 0 4px 12px rgba(13, 77, 139, 0.25);">
+                                <i class="fa fa-paper-plane" style="margin-right: 5px;"></i> Send Reminder Email
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
         <!-- Keep all page content within the page-content inset div! -->
         <!-- Premium Toolbar: Tabs + Filters on one line -->
         <div class="invoice-toolbar">
             <nav class="invoice-tabs-nav" role="tablist" aria-label="Invoice Tabs">
                 <button type="button" class="invoice-tab active" data-target="finalPanel" role="tab" aria-selected="true">Final Invoice</button>
                 <button type="button" class="invoice-tab" data-target="proformaPanel" role="tab" aria-selected="false">Proforma Invoice</button>
+                <button type="button" class="invoice-tab" data-target="pendingPanel" role="tab" aria-selected="false">
+                    Pending &amp; Follow Up 
+                    <span class="badge" style="background:#e11d48; color:#ffffff; font-size:11px; padding:3px 7px; margin-left:6px; border-radius:10px; font-weight:700;">
+                        <?php echo count($pendingDetails); ?>
+                    </span>
+                </button>
             </nav>
             <!-- Final Invoice filters (shown by default) -->
             <div class="filter-set active" data-for="finalPanel">
@@ -806,6 +954,34 @@
                     </button>
                 </div>
             </div>
+            <!-- Pending & Follow Up filters -->
+            <div class="filter-set" data-for="pendingPanel">
+                <div class="filter-field">
+                    <label for="pendingFromDate">From Date</label>
+                    <input type="text" class="pendingFromDate" id="pendingFromDate" name="pendingFromDate" placeholder="From Date" value="" autocomplete="off">
+                </div>
+                <div class="filter-field">
+                    <label for="pendingToDate">To Date</label>
+                    <input type="text" class="pendingToDate" id="pendingToDate" name="pendingToDate" placeholder="To Date" value="" autocomplete="off">
+                </div>
+                <div class="filter-field">
+                    <label for="pendingClientSearch">Client Name / Invoice No</label>
+                    <input type="text" id="pendingClientSearch" placeholder="Search by client or invoice no" autocomplete="off">
+                </div>
+                <div class="filter-field" style="max-width: 170px;">
+                    <label for="pendingTypeFilter">Invoice Type</label>
+                    <select id="pendingTypeFilter" class="form-control" style="height:42px; border-radius:10px; font-size:13.5px; border-color:#d8dee9;">
+                        <option value="">All Types</option>
+                        <option value="Final">Final Invoice</option>
+                        <option value="Proforma">Proforma Invoice</option>
+                    </select>
+                </div>
+                <div class="filter-field btn-col" <?php echo $restrictInvoiceList ? 'title="Limited access allowed by director"' : ''; ?>>
+                    <button type="button" class="btn-download downloadPendingReport" <?php echo $restrictInvoiceList ? 'disabled style="cursor: not-allowed; pointer-events: none; opacity: 0.6;"' : ''; ?>>
+                        <i class="fa fa-cloud-download" style="font-size: 15px;"></i> Download Report
+                    </button>
+                </div>
+            </div>
         </div>
 
         <div class="page-content inset">
@@ -826,7 +1002,7 @@
                     <?php if ($restrictInvoiceList) { ?>
                         <style>
                             /* Hide table body content initially to prevent flashing restricted data during load */
-                            #table_final_invoice tbody, #table_proforma_invoice tbody {
+                            #table_final_invoice tbody, #table_proforma_invoice tbody, #table_pending_invoice tbody {
                                 visibility: hidden;
                             }
                         </style>
@@ -847,6 +1023,7 @@
                                 
                                 setupExactSearch('finalClientSearch', 'table_final_invoice');
                                 setupExactSearch('proformaClientSearch', 'table_proforma_invoice');
+                                setupExactSearch('pendingClientSearch', 'table_pending_invoice');
                                 
                                 // Custom DataTables filter to enforce EXACT matching for client name or invoice no
                                 $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
@@ -914,8 +1091,8 @@
                 // --- END RBAC FILTER 2.0 ---
 
                 
-                                    if (tableId === 'table_final_invoice' || tableId === 'table_proforma_invoice') {
-                                        var searchInputId = (tableId === 'table_final_invoice') ? 'finalClientSearch' : 'proformaClientSearch';
+                                    if (tableId === 'table_final_invoice' || tableId === 'table_proforma_invoice' || tableId === 'table_pending_invoice') {
+                                        var searchInputId = (tableId === 'table_final_invoice') ? 'finalClientSearch' : ((tableId === 'table_pending_invoice') ? 'pendingClientSearch' : 'proformaClientSearch');
                                         var clientSearchVal = $('#' + searchInputId).val() || '';
                                         var dtSearchVal = settings.oPreviousSearch.sSearch || '';
                                         
@@ -959,6 +1136,10 @@
                                     if ($.fn.DataTable.isDataTable('#table_proforma_invoice')) {
                                         $('#table_proforma_invoice').DataTable().draw();
                                         $('#table_proforma_invoice tbody').css('visibility', 'visible');
+                                    }
+                                    if ($.fn.DataTable.isDataTable('#table_pending_invoice')) {
+                                        $('#table_pending_invoice').DataTable().draw();
+                                        $('#table_pending_invoice tbody').css('visibility', 'visible');
                                     }
                                     
                                     // Ensure global search boxes redraw correctly for the custom filter
@@ -1215,6 +1396,150 @@
                                 </div>
                     </div><!-- /invoice-table-card -->
                     </div><!-- /finalPanel -->
+
+                    <div id="pendingPanel" class="invoice-tab-panel">
+                    <div class="invoice-table-card">
+                        <div class="row clearfix">
+                            <div class="col-md-12 table-responsive">
+                                <table class="table table-bordered table-striped table-hover table-sortable" id="table_pending_invoice">
+                                    <thead>
+                                        <tr>
+                                            <th><small><a>Sr.</a></small></th>
+                                            <th><small><a>Client Name</a></small></th>
+                                            <th><small><a>GSTIN No</a></small></th>
+                                            <th><small><a>Invoice No.</a></small></th>
+                                            <th><small><a>Date</a></small></th>
+                                            <th><small><a>Type</a></small></th>
+                                            <th><small><a>Total Amount</a></small></th>
+                                            <th><small><a>Amount Paid</a></small></th>
+                                            <th><small><a>Outstanding</a></small></th>
+                                            <th><small><a>Due Date</a></small></th>
+                                            <th><small><a>Particulars</a></small></th>
+                                            <th><small><a>Reminder Status</a></small></th>
+                                            <th><small><a>Action</a></small></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php
+                                        $pendingCount = 0;
+                                        foreach ($pendingDetails as $pending) {
+                                            $pendingCount++;
+                                            $isPendingProforma = ($pending['invoice_type'] === 'proforma');
+                                            $pTypeLabel = $isPendingProforma ? 'Proforma Invoice' : 'Final Invoice';
+                                            
+                                            $pInvoiceNo = '';
+                                            if ($isPendingProforma) {
+                                                $pInvoiceNo = trim((string)$pending['profarma_prefix']) !== '' ? $pending['profarma_prefix'] . '-' . $pending['invoice_no'] : $pending['invoice_no'];
+                                            } else {
+                                                $pInvoiceNo = trim((string)$pending['final_prefix']) !== '' ? $pending['final_prefix'] . '-' . $pending['final_invoice_no'] : $pending['final_invoice_no'];
+                                            }
+
+                                            $pTotalAmt = (float) str_replace(',', '', (string)$pending['final_amount']);
+                                            $pTotalAmtFormatted = number_format($pTotalAmt, 2);
+                                            $pPaidAmtFormatted = '0.00';
+                                            $pPendingAmtFormatted = $pTotalAmtFormatted;
+
+                                            // Due date
+                                            $pDueDate = '';
+                                            if (!empty($pending['payment_due_date'])) {
+                                                $pDueDate = date('d.m.Y', strtotime($pending['payment_due_date']));
+                                            } elseif (!empty($pending['invoice_date'])) {
+                                                $pDueDate = date('d.m.Y', strtotime($pending['invoice_date'] . ' + 15 days'));
+                                            }
+
+                                            // Particulars
+                                            $pParticulars = '';
+                                            if (isset($pendingSvcMap[$pending['invoice_id']])) {
+                                                $pParticulars = implode(', ', $pendingSvcMap[$pending['invoice_id']]);
+                                            }
+
+                                            // Reminder badge
+                                            $remCount = (int)($pending['reminder_sent_count'] ?? 0);
+                                            $remStatusBadge = '';
+                                            if ($remCount === 0) {
+                                                $remStatusBadge = '<span class="badge" style="background:#f1f5f9; color:#64748b; font-weight:600; font-size:11.5px; border-radius:6px; padding:4px 8px;"><i class="fa fa-clock-o"></i> Not Sent</span>';
+                                            } else {
+                                                $lastSentDateStr = !empty($pending['reminder_last_sent']) ? date('d.m.Y', strtotime($pending['reminder_last_sent'])) : '';
+                                                $remStatusBadge = '<span class="badge" style="background:#dcfce7; color:#15803d; font-weight:700; font-size:11.5px; border-radius:6px; padding:4px 8px;"><i class="fa fa-check-circle"></i> Sent (' . $remCount . ')</span>';
+                                                if ($lastSentDateStr !== '') {
+                                                    $remStatusBadge .= '<br><small style="color:#64748b; font-size:11px;">' . $lastSentDateStr . '</small>';
+                                                }
+                                            }
+
+                                            $typeBadge = $isPendingProforma 
+                                                ? '<span class="badge" style="background:#fef3c7; color:#92400e; font-weight:600; font-size:11px; padding:3px 8px; border-radius:6px;">Proforma</span>'
+                                                : '<span class="badge" style="background:#e0f2fe; color:#0369a1; font-weight:600; font-size:11px; padding:3px 8px; border-radius:6px;">Final</span>';
+                                            ?>
+                                            <tr class="payment-not-rcv" data-inv-date="<?php echo $pending['invoice_date']; ?>" data-client-status="<?php echo $pending['audit_status'] ?? ''; ?>">
+                                                <td class="customerAccount" data-id="<?php echo $pending['customer_id']; ?>">
+                                                    <small><?php echo $pendingCount; ?></small>
+                                                </td>
+                                                <td class="customerAccount" data-id="<?php echo $pending['customer_id']; ?>">
+                                                    <small><strong><?php echo htmlspecialchars($pending['customer_name'] ?? ''); ?></strong></small>
+                                                </td>
+                                                <td class="customerAccount" data-id="<?php echo $pending['customer_id']; ?>">
+                                                    <small><?php echo htmlspecialchars($pending['gstin_no'] ?? ''); ?></small>
+                                                </td>
+                                                <td class="customerAccount" data-id="<?php echo $pending['customer_id']; ?>">
+                                                    <small><?php echo htmlspecialchars($pInvoiceNo); ?></small>
+                                                </td>
+                                                <td class="customerAccount" data-id="<?php echo $pending['customer_id']; ?>">
+                                                    <small><span><?php echo simpleDateConversion($pending['invoice_date']); ?>~</span><?php echo simpleDateConversion($pending['invoice_date']); ?></small>
+                                                </td>
+                                                <td>
+                                                    <?php echo $typeBadge; ?>
+                                                </td>
+                                                <td class="customerAccount" data-id="<?php echo $pending['customer_id']; ?>">
+                                                    <small>₹<?php echo $pTotalAmtFormatted; ?></small>
+                                                </td>
+                                                <td class="customerAccount" data-id="<?php echo $pending['customer_id']; ?>">
+                                                    <small>₹<?php echo $pPaidAmtFormatted; ?></small>
+                                                </td>
+                                                <td class="customerAccount" data-id="<?php echo $pending['customer_id']; ?>">
+                                                    <small style="color:#b91c1c; font-weight:800;">₹<?php echo $pPendingAmtFormatted; ?></small>
+                                                </td>
+                                                <td>
+                                                    <small style="font-weight:600;"><?php echo $pDueDate; ?></small>
+                                                </td>
+                                                <td class="customerAccount" data-id="<?php echo $pending['customer_id']; ?>">
+                                                    <small><?php echo htmlspecialchars($pParticulars); ?></small>
+                                                </td>
+                                                <td class="reminderStatusCell">
+                                                    <?php echo $remStatusBadge; ?>
+                                                </td>
+                                                <td>
+                                                    <a class="mailPendingReminder"
+                                                       data-invoice-id="<?php echo $pending['invoice_id']; ?>"
+                                                       data-customer-id="<?php echo $pending['customer_id']; ?>"
+                                                       data-client-name="<?php echo htmlspecialchars($pending['customer_name'] ?? '', ENT_QUOTES); ?>"
+                                                       data-invoice-no="<?php echo htmlspecialchars($pInvoiceNo, ENT_QUOTES); ?>"
+                                                       data-invoice-date="<?php echo date('d.m.Y', strtotime($pending['invoice_date'])); ?>"
+                                                       data-invoice-type="<?php echo htmlspecialchars($pTypeLabel, ENT_QUOTES); ?>"
+                                                       data-total-amount="<?php echo htmlspecialchars($pTotalAmtFormatted, ENT_QUOTES); ?>"
+                                                       data-paid-amount="<?php echo htmlspecialchars($pPaidAmtFormatted, ENT_QUOTES); ?>"
+                                                       data-pending-amount="<?php echo htmlspecialchars($pPendingAmtFormatted, ENT_QUOTES); ?>"
+                                                       data-due-date="<?php echo htmlspecialchars($pDueDate, ENT_QUOTES); ?>"
+                                                       data-email="<?php echo htmlspecialchars($pending['email_id'] ?? '', ENT_QUOTES); ?>"
+                                                       data-reminder-count="<?php echo $remCount; ?>"
+                                                       title="Send Payment Reminder Email"
+                                                       style="padding: 1px 5px; color:#2563eb;">
+                                                        <i class="fa fa-envelope" style="padding:3px; color:#2563eb;"></i>
+                                                    </a>
+                                                    <?php if ($isPendingProforma) { ?>
+                                                        <a class="viewInvoice" data-firm="1" data-customer="<?php echo $pending['customer_id']; ?>" data-id="<?php echo $pending['invoice_id']; ?>" title="Proforma Invoice PDF" style="padding: 1px 5px;"><i class="fa fa-file-pdf-o" style="padding:3px"></i></a>
+                                                    <?php } else { ?>
+                                                        <a class="viewFinalInvoice" data-firm="1" data-customer="<?php echo $pending['customer_id']; ?>" data-id="<?php echo $pending['invoice_id']; ?>" title="Final Invoice PDF" style="padding: 1px 5px;"><i class="fa fa-file-pdf-o" style="padding:3px"></i></a>
+                                                    <?php } ?>
+                                                    <a class="customerAccount" data-id="<?php echo $pending['customer_id']; ?>" title="View Customer Account" style="padding: 1px 5px;"><i class="fa fa-user" style="padding:3px"></i></a>
+                                                </td>
+                                            </tr>
+                                        <?php } ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div><!-- /invoice-table-card -->
+                    </div><!-- /pendingPanel -->
                 </div>
             </div>
         </div>
@@ -1460,6 +1785,47 @@
         }
     });
 
+    var pendingTable = $('#table_pending_invoice').DataTable({
+        "sScrollX": "100%",
+        "scrollY": '70vh',
+        "scrollCollapse": true,
+        "paging": true,
+        "ordering": false,
+        "lengthChange": false,
+        "autoWidth": false,
+        "pageLength": 50,
+        "info": true,
+        "dom": "tr<'row dt-bottom-row'<'col-sm-6 col-xs-12'i><'col-sm-6 col-xs-12'p>>",
+        "columnDefs": [
+            { "width": "4%", "targets": 0 },   // Sr.
+            { "width": "15%", "targets": 1 },  // Client Name
+            { "width": "9%", "targets": 2 },   // GSTIN No
+            { "width": "9%", "targets": 3 },   // Invoice No
+            { "width": "7%", "targets": 4 },   // Date
+            { "width": "6%", "targets": 5 },   // Type
+            { "width": "8%", "targets": 6 },   // Total Amount
+            { "width": "7%", "targets": 7 },   // Amount Paid
+            { "width": "8%", "targets": 8 },   // Outstanding
+            { "width": "7%", "targets": 9 },   // Due Date
+            { "width": "11%", "targets": 10 }, // Particulars
+            { "width": "9%", "targets": 11 },  // Reminder Status
+            { "width": "6%", "targets": 12 }   // Action
+        ],
+        "language": {
+            "emptyTable": "No pending invoices found",
+            "zeroRecords": "No pending invoice found matching search criteria",
+            "info": "Showing _START_ to _END_ of _TOTAL_ entries",
+            "infoEmpty": "Showing 0 to 0 of 0 entries",
+            "infoFiltered": "(filtered from _MAX_ total entries)",
+            "paginate": {
+                "first": "First",
+                "last": "Last",
+                "next": "Next",
+                "previous": "Previous"
+            }
+        }
+    });
+
     $('.filterFromDate, .filterToDate').change(function () {
         var fromDate = $(".filterFromDate").val();
         var toDate = $(".filterToDate").val();
@@ -1482,6 +1848,22 @@
             }
         }
         proformaTable.draw();
+    });
+
+    $('.pendingFromDate, .pendingToDate').change(function () {
+        var fromDate = $(".pendingFromDate").val();
+        var toDate = $(".pendingToDate").val();
+        if (fromDate != "" && toDate != "") {
+            if (!compareMinDates(fromDate, toDate)) {
+                alert("To Date, From Date se chhoti nahi ho sakti");
+                $(".pendingToDate").val("");
+            }
+        }
+        pendingTable.draw();
+    });
+
+    $('#pendingTypeFilter').change(function () {
+        pendingTable.draw();
     });
 
     function ShowProgressAnimation() {
@@ -1554,13 +1936,14 @@
     $.fn.DataTable.ext.search.push(
             function (settings, data, dataIndex) {
                 var tableId = settings.nTable.id;
-                if (tableId !== 'table_final_invoice' && tableId !== 'table_proforma_invoice') {
+                if (tableId !== 'table_final_invoice' && tableId !== 'table_proforma_invoice' && tableId !== 'table_pending_invoice') {
                     return true;
                 }
 
                 var fromDate = "";
                 var toDate = "";
                 var clientSearch = "";
+                var typeFilter = "";
                 if (tableId === 'table_final_invoice') {
                     fromDate = $(".filterFromDate").val() || $("#filterFromDate").val() || "";
                     toDate = $(".filterToDate").val() || $("#filterToDate").val() || "";
@@ -1569,6 +1952,18 @@
                     fromDate = $(".proformaFromDate").val() || $("#proformaFromDate").val() || "";
                     toDate = $(".proformaToDate").val() || $("#proformaToDate").val() || "";
                     clientSearch = ($('#proformaClientSearch').val() || "").trim();
+                } else if (tableId === 'table_pending_invoice') {
+                    fromDate = $(".pendingFromDate").val() || $("#pendingFromDate").val() || "";
+                    toDate = $(".pendingToDate").val() || $("#pendingToDate").val() || "";
+                    clientSearch = ($('#pendingClientSearch').val() || "").trim();
+                    typeFilter = ($('#pendingTypeFilter').val() || "").trim().toLowerCase();
+                }
+
+                if (tableId === 'table_pending_invoice' && typeFilter !== "") {
+                    var rowType = normalizeSearchText(data[5] || "");
+                    if (rowType.indexOf(typeFilter) === -1) {
+                        return false;
+                    }
                 }
 
                 var rowClient = normalizeSearchText(data[1] || "");
@@ -1655,9 +2050,15 @@
                     proformaTable.columns.adjust().draw();
                 } else if (target === 'finalPanel' && typeof finalTable !== 'undefined') {
                     finalTable.columns.adjust().draw();
+                } else if (target === 'pendingPanel' && typeof pendingTable !== 'undefined') {
+                    pendingTable.columns.adjust().draw();
                 }
             }, 50);
         });
+
+        if (window.location.hash === '#pendingPanel' || window.location.hash === '#pending') {
+            $('.invoice-tab[data-target="pendingPanel"]').trigger('click');
+        }
 
         var debouncedProformaSearch = debounce(function () {
             proformaTable.draw();
@@ -1667,8 +2068,13 @@
             finalTable.draw();
         }, 200);
 
+        var debouncedPendingSearch = debounce(function () {
+            pendingTable.draw();
+        }, 200);
+
         $('#proformaClientSearch').on('input keyup change', debouncedProformaSearch);
         $('#finalClientSearch').on('input keyup change', debouncedFinalSearch);
+        $('#pendingClientSearch').on('input keyup change', debouncedPendingSearch);
 
         // Holds the report parameters chosen when a Download Report button is clicked.
         var pendingReport = null;
@@ -1835,6 +2241,15 @@
             });
         });
 
+        $('.downloadPendingReport').click(function () {
+            openFormatChooser({
+                invoiceType: 'pending',
+                fromDate: $('#pendingFromDate').val(),
+                toDate: $('#pendingToDate').val(),
+                clientName: $('#pendingClientSearch').val()
+            });
+        });
+
         $('#filterFromDate').datepicker({
             minDate: '-100Y',
             maxDate: '+100Y',
@@ -1858,6 +2273,15 @@
         });
 
         $('#proformaFromDate, #proformaToDate').datepicker({
+            minDate: '-100Y',
+            maxDate: '+100Y',
+            changeYear: true,
+            changeMonth: true,
+            yearRange: "-20:+100",
+            dateFormat: 'dd.mm.yy'
+        });
+
+        $('#pendingFromDate, #pendingToDate, #remindDueDate').datepicker({
             minDate: '-100Y',
             maxDate: '+100Y',
             changeYear: true,
@@ -1947,6 +2371,169 @@
             $(".finalInvoiceid").val("");
 
             $("#final-invoice-msg-sent").modal("hide");
+        });
+
+        // ===== Pending Payment Reminder Modal & Handlers =====
+        function updateEmailPreview() {
+            var clientName = $('#remindClientName').val() || 'Valued Client';
+            var invoiceNo = $('#remindInvoiceNo').val() || '';
+            var invoiceDate = $('#remindInvoiceDate').val() || '';
+            var invoiceType = $('#remindInvoiceType').val() || '';
+            var totalAmountStr = ($('#remindTotalAmount').val() || '0.00').toString();
+            var totalFloat = parseFloat(totalAmountStr.replace(/,/g, '')) || 0;
+            var paidAmountVal = $('#remindPaidAmount').val();
+            var paidFloat = parseFloat(paidAmountVal) || 0;
+            if (paidFloat < 0) {
+                paidFloat = 0;
+            }
+            var pendingFloat = Math.max(0, totalFloat - paidFloat);
+
+            var totalFormatted = totalFloat.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            var paidFormatted = paidFloat.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            var pendingFormatted = pendingFloat.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            var dueDate = $('#remindDueDate').val() || '';
+
+            $('#remindPendingAmount').val(pendingFormatted);
+
+            var previewText = "Dear " + clientName + ",\n\n"
+                + "Greetings from  A.I.T.F. (Assessment And Institute for Technical Forum).\n\n"
+                + "We hope you are doing well.\n\n"
+                + "This is a gentle reminder regarding the pending payment against the invoice issued by AITF MANAGEMENT CERTIFICATION LIMITED.\n\n"
+                + "Please find the invoice details below for your reference:\n\n"
+                + " Invoice Details:\n"
+                + " Invoice Number: " + invoiceNo + "\n"
+                + " Invoice Date: " + invoiceDate + "\n"
+                + " Invoice Type: " + invoiceType + "\n"
+                + " Total Invoice Amount: ₹" + totalFormatted + "\n"
+                + " Amount Paid: ₹" + paidFormatted + "\n"
+                + " Outstanding Amount: ₹" + pendingFormatted + "\n"
+                + " Payment Due Date: " + dueDate + "\n\n"
+                + "As per our records, the outstanding amount of ₹" + pendingFormatted + " is still pending against the above-mentioned invoice.\n\n"
+                + "We kindly request you to arrange the payment at your earliest convenience. If the payment has already been processed, please share the payment confirmation or transaction details so that we can update our records accordingly.\n\n"
+                + "If you have any queries regarding the invoice or require any clarification regarding the outstanding amount, please feel free to contact us.\n\n"
+                + "We sincerely appreciate your association with AITF MANAGEMENT CERTIFICATION LIMITED and look forward to your prompt response.\n\n"
+                + "Thank you for your time and cooperation.\n\n"
+                + "Best Regards,\n"
+                + "Accounts & Finance Team\n"
+                + "AITF MANAGEMENT CERTIFICATION LIMITED\n"
+                + "Phone: +91 9222 1836\n"
+                + "Email: aitfacct@gmail.com\n"
+                + "Website: www.aitf.co.in";
+
+            $('#remindEmailPreviewBox').text(previewText);
+        }
+
+        $('#remindPaidAmount').on('input change', function () {
+            updateEmailPreview();
+        });
+
+        $('#remindDueDate').on('input change', function () {
+            updateEmailPreview();
+        });
+
+        // Click handler for mail icon in pending table
+        $(document).on('click', '.mailPendingReminder', function (e) {
+            e.preventDefault();
+            var $btn = $(this);
+            var invoiceId = $btn.data('invoice-id');
+            var customerId = $btn.data('customer-id');
+            var clientName = $btn.data('client-name') || '';
+            var invoiceNo = $btn.data('invoice-no') || '';
+            var invoiceDate = $btn.data('invoice-date') || '';
+            var invoiceType = $btn.data('invoice-type') || '';
+            var totalAmount = $btn.data('total-amount') || '0.00';
+            var paidAmount = $btn.data('paid-amount') || '0.00';
+            var pendingAmount = $btn.data('pending-amount') || totalAmount;
+            var dueDate = $btn.data('due-date') || '';
+            var email = $btn.data('email') || '';
+
+            $('#remindInvoiceId').val(invoiceId);
+            $('#remindCustomerId').val(customerId);
+            $('#remindClientName').val(clientName);
+            $('#remindInvoiceNo').val(invoiceNo);
+            $('#remindInvoiceType').val(invoiceType);
+
+            $('#remindClientNameHeader').text(clientName || 'Client');
+            $('#remindInvoiceNoHeader').text(invoiceNo);
+            $('#remindInvoiceTypeBadge').text(invoiceType);
+
+            $('#remindRecipientEmail').val(email);
+            $('#remindTotalAmount').val(totalAmount);
+            $('#remindPaidAmount').val(paidAmount);
+            $('#remindPendingAmount').val(pendingAmount);
+            $('#remindInvoiceDate').val(invoiceDate);
+            $('#remindDueDate').val(dueDate);
+
+            $('#pendingReminderAlert').hide().removeClass('alert-success alert-danger alert-info').text('');
+            $('#btnSendPendingReminder').prop('disabled', false).html('<i class="fa fa-paper-plane" style="margin-right: 5px;"></i> Send Reminder Email');
+
+            updateEmailPreview();
+            $('#pending-invoice-reminder-modal').modal('show');
+        });
+
+        // AJAX submit handler for the pending reminder form
+        $('#pendingReminderForm').on('submit', function (e) {
+            e.preventDefault();
+            var $form = $(this);
+            var $submitBtn = $('#btnSendPendingReminder');
+            var $alert = $('#pendingReminderAlert');
+            var email = $.trim($('#remindRecipientEmail').val());
+            var dueDate = $.trim($('#remindDueDate').val());
+
+            if (!email) {
+                $alert.removeClass('alert-success alert-info').addClass('alert-danger').html('<i class="fa fa-exclamation-circle"></i> Please enter recipient client email address.').show();
+                $('#remindRecipientEmail').focus();
+                return;
+            }
+
+            if (!dueDate) {
+                $alert.removeClass('alert-success alert-info').addClass('alert-danger').html('<i class="fa fa-exclamation-circle"></i> Please specify payment due date.').show();
+                $('#remindDueDate').focus();
+                return;
+            }
+
+            $submitBtn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Sending Reminder...');
+            $alert.removeClass('alert-danger alert-success').addClass('alert-info').html('<i class="fa fa-spinner fa-spin"></i> Sending reminder email, please wait...').show();
+
+            var currentInvoiceId = $('#remindInvoiceId').val();
+
+            $.ajax({
+                url: $form.attr('action'),
+                type: 'POST',
+                data: $form.serialize(),
+                dataType: 'json',
+                success: function (res) {
+                    if (res && res.success) {
+                        $alert.removeClass('alert-info alert-danger').addClass('alert-success').html('<i class="fa fa-check-circle"></i> ' + (res.message || 'Payment reminder sent successfully.')).show();
+
+                        // Update reminder status badge in the table
+                        var newCount = res.new_count || 1;
+                        var sentDate = res.sent_date || '';
+                        var $row = $('a.mailPendingReminder[data-invoice-id="' + currentInvoiceId + '"]').closest('tr');
+                        if ($row.length) {
+                            var newBadgeHtml = '<span class="badge" style="background:#dcfce7; color:#15803d; font-weight:700; font-size:11.5px; border-radius:6px; padding:4px 8px;"><i class="fa fa-check-circle"></i> Sent (' + newCount + ')</span>';
+                            if (sentDate) {
+                                newBadgeHtml += '<br><small style="color:#64748b; font-size:11px;">' + sentDate + '</small>';
+                            }
+                            $row.find('.reminderStatusCell').html(newBadgeHtml);
+                            $row.find('.mailPendingReminder').data('reminder-count', newCount);
+                        }
+
+                        setTimeout(function () {
+                            $('#pending-invoice-reminder-modal').modal('hide');
+                            $submitBtn.prop('disabled', false).html('<i class="fa fa-paper-plane" style="margin-right: 5px;"></i> Send Reminder Email');
+                        }, 1800);
+                    } else {
+                        var errMsg = (res && res.message) ? res.message : 'Could not send reminder email. Please try again.';
+                        $alert.removeClass('alert-info alert-success').addClass('alert-danger').html('<i class="fa fa-exclamation-triangle"></i> ' + errMsg).show();
+                        $submitBtn.prop('disabled', false).html('<i class="fa fa-paper-plane" style="margin-right: 5px;"></i> Send Reminder Email');
+                    }
+                },
+                error: function (xhr, status, error) {
+                    $alert.removeClass('alert-info alert-success').addClass('alert-danger').html('<i class="fa fa-exclamation-triangle"></i> Network or server error occurred while sending email. Please try again.').show();
+                    $submitBtn.prop('disabled', false).html('<i class="fa fa-paper-plane" style="margin-right: 5px;"></i> Send Reminder Email');
+                }
+            });
         });
 
         $('.customerAccount').click(function () {
@@ -2208,6 +2795,9 @@
             if ($.fn.DataTable.isDataTable('#table_final_invoice')) {
                 $('#table_final_invoice').DataTable().draw();
             }
+            if ($.fn.DataTable.isDataTable('#table_pending_invoice')) {
+                $('#table_pending_invoice').DataTable().draw();
+            }
         }, 500);
 
         $("body").on("click", ".deleteInvoice", function () {
@@ -2232,6 +2822,5 @@
 
     });
 </script>
-t>
 
 

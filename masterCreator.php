@@ -6,6 +6,7 @@
     include_once './dbConnect.php';
     include_once './include/customer_feature_flags.php';
     require_once __DIR__ . '/include/auditor_portal_helper.php';
+    require_once __DIR__ . '/include/auditor_division_helper.php';
     require_once __DIR__ . '/include/rbac_helper.php';
     require_once __DIR__ . '/include/staff_guidelines_lib.php';
     date_default_timezone_set('Asia/Kolkata');
@@ -17,6 +18,7 @@
 
     $featureToggleMessage = '';
     aitf_ensure_auditor_portal_schema($db);
+    aitf_ensure_auditor_division_schema($db);
     $auditorKeyMessage = trim((string)($_SESSION['auditor_key_notice'] ?? ''));
     unset($_SESSION['auditor_key_notice']);
     $canManageCustomerFeatureToggles = Utitlity::checkForUserMainAdmin();
@@ -62,6 +64,7 @@
     $statement = $db->prepare($auditors);
     $statement->execute();
     $auditorsList = $statement->fetchAll();
+    $auditorDivisionsMap = aitf_get_auditor_divisions_map($db);
 
     //  Taxation
     $taxations = "SELECT * from taxation";
@@ -245,12 +248,20 @@
                         <div class="row" style="">
                             <div class="well" style="max-height: 200px; overflow: auto;">
                                 <ul class="list-group checked-list-box operateAuditors">
-                                    <?php foreach ($auditorsList as $auditor) { ?>
-                                        <li class="list-group-item" data-auditor-id="<?php echo (int)$auditor['auditors_id']; ?>">
-                                            <a class="editAuditor" data-id="<?php echo $auditor['auditors_id'] ?>"
+                                    <?php foreach ($auditorsList as $auditor) { 
+                                        $audId = (int)$auditor['auditors_id'];
+                                        $assignedDivs = isset($auditorDivisionsMap[$audId]) ? $auditorDivisionsMap[$audId] : array();
+                                    ?>
+                                        <li class="list-group-item" data-auditor-id="<?php echo $audId; ?>">
+                                            <a class="editAuditor" data-id="<?php echo $audId; ?>"
                                                 style="float: left"><i
                                                     class="fa fa-pencil-square"></i></a>&emsp;<?php echo $auditor['auditor_name'] ?>
-                                            <a class="deleteAuditor" data-id="<?php echo $auditor['auditors_id'] ?>"
+                                            <?php if (!empty($assignedDivs)) { ?>
+                                                <span class="label label-info auditor-division-tag" style="font-size: 10px; background-color: #2563eb; margin-left: 6px; padding: 2px 6px; border-radius: 3px;" title="Assigned Divisions: <?php echo htmlspecialchars(implode(', ', $assignedDivs)); ?>"><i class="fa fa-tags"></i> Div: <?php echo htmlspecialchars(implode(', ', $assignedDivs)); ?></span>
+                                            <?php } else { ?>
+                                                <span class="label label-default auditor-division-tag" style="font-size: 10px; color: #94a3b8; background-color: #f1f5f9; border: 1px dashed #cbd5e1; margin-left: 6px; padding: 2px 6px; border-radius: 3px;" title="No division assigned"><i class="fa fa-tags"></i> No Div</span>
+                                            <?php } ?>
+                                            <a class="deleteAuditor" data-id="<?php echo $audId; ?>"
                                                 style="float: right"><i class="fa fa-trash"></i></a>
                                             <button type="button"
                                                 class="btn btn-xs btn-primary generateAuditorKey"
@@ -1600,6 +1611,73 @@
                 });
             });
 
+            /* --- NACE Code / Division Assignment UI Handlers in Master Creator --- */
+            function updateNacodeSelectionDisplay() {
+                var checkedDivs = [];
+                $('.nacodeDivisionCheckbox:checked').each(function () {
+                    checkedDivs.push($(this).val());
+                });
+
+                var count = checkedDivs.length;
+                $('.nacodeSelectedCount').text(count + ' Selected');
+
+                if (count === 0) {
+                    $('.nacodeSummaryText').text('Click to assign Divisions...').css('color', '#475569');
+                    $('.nacodeSelectedBadges').empty();
+                } else {
+                    var summaryStr = count === 1 ? '1 Division (' + checkedDivs[0] + ')' : count + ' Divisions (' + checkedDivs.join(', ') + ')';
+                    $('.nacodeSummaryText').text(summaryStr).css('color', '#1e40af');
+
+                    var badgesHtml = '';
+                    checkedDivs.forEach(function (code) {
+                        badgesHtml += '<span class="badge" style="background:#dbeafe; color:#1e40af; border:1px solid #bfdbfe; font-size:11px; padding:3px 7px; border-radius:12px; font-weight:600; display:inline-flex; align-items:center; gap:4px;">' +
+                            'Div ' + code + ' <a href="javascript:void(0)" class="nacodeRemoveBadge" data-val="' + code + '" style="color:#1e40af; text-decoration:none; margin-left:2px; font-size:12px;" title="Remove Division ' + code + '">&times;</a></span>';
+                    });
+                    $('.nacodeSelectedBadges').html(badgesHtml);
+                }
+            }
+
+            $(document).on('change', '.nacodeDivisionCheckbox', function () {
+                updateNacodeSelectionDisplay();
+            });
+
+            $(document).on('click', '.nacodeRemoveBadge', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var divVal = $(this).attr('data-val');
+                $('.nacodeDivisionCheckbox[value="' + divVal + '"]').prop('checked', false).trigger('change');
+            });
+
+            $(document).on('click', '.nacodeSelectAllBtn', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                $('.nacodeItemLabel:visible .nacodeDivisionCheckbox').prop('checked', true);
+                updateNacodeSelectionDisplay();
+            });
+
+            $(document).on('click', '.nacodeClearAllBtn', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                $('.nacodeDivisionCheckbox').prop('checked', false);
+                updateNacodeSelectionDisplay();
+            });
+
+            $(document).on('keyup input', '.nacodeFilterInput', function () {
+                var term = $(this).val().toLowerCase().trim();
+                $('.nacodeItemLabel').each(function () {
+                    var searchData = $(this).attr('data-search') || '';
+                    if (!term || searchData.indexOf(term) !== -1) {
+                        $(this).show();
+                    } else {
+                        $(this).hide();
+                    }
+                });
+            });
+
+            $(document).on('click', '.nacodeDropdownMenu', function (e) {
+                e.stopPropagation();
+            });
+
             $('body').on('click', ".editAuditor", function (e) {
                 //            var auditorid = $(this).attr('data-id');
                 $.ajax({
@@ -1616,18 +1694,19 @@
                         $(".auditor_id").val(data['auditors_id']);
                         $(".auditorabbr").val(data['abbrevation']);
                         $(".isReviewerCheckbox").prop("checked", data['is_reviewer'] == 1);
+                        
+                        $('.nacodeDivisionCheckbox').prop('checked', false);
+                        $('.nacodeFilterInput').val('');
+                        $('.nacodeItemLabel').show();
+                        if (data['assigned_divisions'] && Array.isArray(data['assigned_divisions'])) {
+                            data['assigned_divisions'].forEach(function(code) {
+                                $('.nacodeDivisionCheckbox[value="' + code + '"]').prop('checked', true);
+                            });
+                        }
+                        updateNacodeSelectionDisplay();
+
                         $("input").trigger("change");
                         $(".auditoradd").modal("show");
-                        //                    alert(data);
-                        //                        $('.newAuditors').empty();
-                        //                        $('.newAuditors').append('<div class="col-sm-12"><div class="well" style="height: 100px;">\n\
-                        //                                            <div class="col-sm-12 form-group float-label-control">\n\
-                        //                                            <input type="text" name="newAuditorsInput" class="form-control newAuditorsInput" id="newAuditorsInput" placeholder="New Auditors" value="' + data['auditor_name'] + '"></div>\n\
-                        //                                            <a class="btn btn-info btn-xs createAuditors" style="float: right;"><i class="fa fa-check"></i></a>\n\
-                        //                                            <input type="hidden" class="auditorId" name="auditorId" value="' + data['auditors_id'] + '">\n\
-                        //                                            <div id="newAuditorsError" style="display: none">\n\
-                        //                                            <small><span id="newAuditorsErrorMsg" style="color: #c9513c; font-style: italic;" ></span></small>\n\
-                        //                                            </div></div></div>');
                     },
                     error: function (data, status, err) {
                         alert(status);
@@ -2154,6 +2233,10 @@
                 $(".auditor_id").val("");
                 $(".auditorabbr").val("");
                 $(".isReviewerCheckbox").prop("checked", false);
+                $('.nacodeDivisionCheckbox').prop('checked', false);
+                $('.nacodeFilterInput').val('');
+                $('.nacodeItemLabel').show();
+                updateNacodeSelectionDisplay();
                 $(".auditoradd").modal("show");
                 //                $('.newAuditors').empty();
                 //                $('.newAuditors').append('<div class="col-sm-12"><div class="well" style="height: 100px;">\n\

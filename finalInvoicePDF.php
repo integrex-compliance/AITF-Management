@@ -54,6 +54,10 @@ if (!empty($_POST['invoiceconsultingFirmName'])) {
     $customerId = $_POST['invoiceconsultingFirmName'];
 } elseif (!empty($_POST['invoiceCustomerId'])) {
     $customerId = $_POST['invoiceCustomerId'];
+} elseif (!empty($_GET['invoiceCustomerId'])) {
+    $customerId = $_GET['invoiceCustomerId'];
+} elseif (!empty($_REQUEST['customer_id'])) {
+    $customerId = $_REQUEST['customer_id'];
 }
 
 $customerInfo = array();
@@ -374,19 +378,30 @@ if (isset($_POST['invoiceId']) && !empty($_POST['invoiceId'])) {
     $stateCode = $innvoice['state_code'];
 }
 
-if (isset($_POST['invoiceid']) && !empty($_POST['invoiceid'])) {
+$targetInvoiceId = !empty($_POST['invoiceid']) ? $_POST['invoiceid'] : (!empty($_GET['invoiceid']) ? $_GET['invoiceid'] : (!empty($_REQUEST['invoiceid']) ? $_REQUEST['invoiceid'] : ''));
+
+if (!empty($targetInvoiceId)) {
 
     $invoiceInfo = "SELECT * FROM invoice_details WHERE invoice_id = :id";
     $statement = $db->prepare($invoiceInfo);
-    $statement->bindParam(':id', $_POST['invoiceid']);
+    $statement->bindParam(':id', $targetInvoiceId);
     $statement->execute();
     $innvoice = $statement->fetch();
 
     $invoiceDetail = "SELECT * FROM invoice_services WHERE invoice_ids = :id";
     $statement = $db->prepare($invoiceDetail);
-    $statement->bindParam(':id', $_POST['invoiceid']);
+    $statement->bindParam(':id', $targetInvoiceId);
     $statement->execute();
     $invoiceSvc = $statement->fetchAll();
+
+    if (empty($customerInfo) && !empty($innvoice['customer_id'])) {
+        $customerId = $innvoice['customer_id'];
+        $customer = "SELECT * FROM customer_info WHERE id = :id";
+        $statement = $db->prepare($customer);
+        $statement->bindParam(':id', $customerId);
+        $statement->execute();
+        $customerInfo = $statement->fetch();
+    }
 
     $invno = $innvoice['final_invoice_no'];
     $invDate = $innvoice['invoice_date'];

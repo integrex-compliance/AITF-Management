@@ -6,6 +6,8 @@
  */
 
 include_once './dbConnect.php';
+require_once __DIR__ . '/include/auditor_division_helper.php';
+aitf_ensure_auditor_division_schema($db);
 date_default_timezone_set('Asia/Kolkata');
 
 $allAuditorsContact = "";
@@ -232,6 +234,7 @@ foreach ($category as $name) {
                         </div>
                     </div>
                     <div class="formNotificationDiv" style="display: none;">
+                        <div class="auditor-division-banner-s2" style="display:none; margin: 10px 0;"></div>
                         <div class="row">
                             <div class="col-sm-12 table-responsive">
                                 <table class="table table-bordered table-hover table-sortable service_details"
@@ -373,8 +376,64 @@ foreach ($category as $name) {
 </div>
 
 <script type="text/javascript">
-    var auditIIAuditorOptionsHtml = <?php echo json_encode($auditorOptionsHtml, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
+    var auditIIDefaultAuditorOptionsHtml = <?php echo json_encode($auditorOptionsHtml, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
+    var auditIIAuditorOptionsHtml = auditIIDefaultAuditorOptionsHtml;
     var auditIICategoryOptionsHtml = <?php echo json_encode($categoryOptionsHtml, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
+    var aitfNotificationEligibleAuditorsII = [];
+    var aitfNotificationClientDivisionsII = [];
+    var aitfNotificationHasDivisionsII = false;
+
+    function updateDivisionAlertBannerII(hasDiv, divs, audCount) {
+        var $banner = $('.auditor-division-banner-s2');
+        if (!hasDiv) {
+            $banner.html('<div class="alert alert-info" style="padding: 6px 12px; margin-bottom: 10px; font-size: 12px;"><i class="fa fa-info-circle"></i> <strong>Note:</strong> No division assigned to this client in Contract Review yet. Showing all auditors.</div>').show();
+        } else if (audCount === 0) {
+            $banner.html('<div class="alert alert-warning" style="padding: 6px 12px; margin-bottom: 10px; font-size: 12px;"><i class="fa fa-exclamation-triangle"></i> <strong>No auditors found</strong> for Client Division(s): <strong>' + divs.join(', ') + '</strong>. Please assign this division to auditors in <a href="masterCreator.php" target="_blank" style="text-decoration: underline; font-weight: bold;">Master Creator</a>.</div>').show();
+        } else {
+            $banner.html('<div class="alert alert-success" style="padding: 6px 12px; margin-bottom: 10px; font-size: 12px;"><i class="fa fa-check-circle"></i> <strong>Client Division(s):</strong> <strong>' + divs.join(', ') + '</strong> &mdash; Showing ' + audCount + ' eligible auditor(s) assigned to this division in Master Creator.</div>').show();
+        }
+    }
+
+    function loadEligibleAuditorsForStageII(customerId, serviceId, callback) {
+        $.ajax({
+            url: "getEligibleAuditors.php",
+            type: "GET",
+            dataType: "json",
+            data: {
+                customerid: customerId,
+                serviceid: serviceId
+            },
+            success: function(resp) {
+                aitfNotificationHasDivisionsII = !!(resp && resp.has_divisions);
+                aitfNotificationClientDivisionsII = (resp && resp.client_divisions) ? resp.client_divisions : [];
+                aitfNotificationEligibleAuditorsII = (resp && resp.auditors) ? resp.auditors : [];
+
+                var optionsHtml = '<option value="">Choose Auditors</option>';
+                if (aitfNotificationHasDivisionsII && aitfNotificationEligibleAuditorsII.length === 0) {
+                    optionsHtml += '<option value="" disabled>No auditors assigned to Division ' + aitfNotificationClientDivisionsII.join(', ') + ' in Master Creator</option>';
+                } else {
+                    var list = aitfNotificationHasDivisionsII ? aitfNotificationEligibleAuditorsII : ((resp && resp.all_auditors) ? resp.all_auditors : []);
+                    $.each(list, function(i, a) {
+                        var email = (a.auditor_email && a.auditor_email.trim() !== '') ? ' (' + a.auditor_email.trim() + ')' : '';
+                        optionsHtml += '<option value="' + a.auditors_id + '" data-email="' + (a.auditor_email || '') + '">' + a.auditor_name + email + '</option>';
+                    });
+                }
+                auditIIAuditorOptionsHtml = optionsHtml;
+                updateDivisionAlertBannerII(aitfNotificationHasDivisionsII, aitfNotificationClientDivisionsII, aitfNotificationEligibleAuditorsII.length);
+                if (typeof callback === 'function') {
+                    callback(resp);
+                }
+            },
+            error: function() {
+                auditIIAuditorOptionsHtml = auditIIDefaultAuditorOptionsHtml;
+                aitfNotificationHasDivisionsII = false;
+                updateDivisionAlertBannerII(false, [], 0);
+                if (typeof callback === 'function') {
+                    callback(null);
+                }
+            }
+        });
+    }
 
     function buildAuditIIAuditorRow(auditor) {
         auditor = auditor || {};
@@ -630,16 +689,21 @@ foreach ($category as $name) {
         });
 
         $(document).on('click', '.createAuditNotificationii', function () {
-            //            alert('ho');
-            $('.auditii-noti-customer').val($(this).attr('data-customer'));
-            $('.auditii-noti-service').val($(this).attr('data-service'));
+            var custId = $(this).attr('data-customer');
+            var svcId = $(this).attr('data-service');
+            $('.auditii-noti-customer').val(custId);
+            $('.auditii-noti-service').val(svcId);
+            loadAppointedReviewersForAuditorCheckII(custId, svcId);
+            loadEligibleAuditorsForStageII(custId, svcId, function() {
+                resetAuditIIAuditorRows();
+            });
             $.ajax({
                 url: "getClientInfo.php",
                 type: "GET",
                 dataType: "json",
                 data: {
-                    customerID: $(this).attr('data-customer'),
-                    serviceID: $(this).attr('data-service'),
+                    customerID: custId,
+                    serviceID: svcId,
                 },
                 success: function (data) {
                     //                    alert(data[3]['schedule_app_standard']);
@@ -653,7 +717,6 @@ foreach ($category as $name) {
                     $('.auditiiDesignation').val(data[1]['audit_designation']);
                     //                    $('.auditiiDates').val(moment(data[3]['schedule_audit_date']).format('DD.MM.YYYY'));
                     $('.auditiiStandard').val(data[3]['schedule_app_standard']);
-                    resetAuditIIAuditorRows();
                     $('input[type="text"]').trigger('change');
                     $('.auditiiLocation').trigger('change');
                     $('#auditNotificationII').modal('show');
@@ -665,15 +728,20 @@ foreach ($category as $name) {
         });
 
         $(document).on('click', '.editAuditNotificationii', function () {
-            $.ajax({
-                url: "contractDetails.php",
-                type: "GET",
-                dataType: "json",
-                data: {
-                    notificationiiId: $(this).attr('data-notification'),
-                    serviceiiId: $(this).attr('data-service'),
-                },
-                success: function (data) {
+            var notifId = $(this).attr('data-notification');
+            var svcId = $(this).attr('data-service');
+            var custId = $(this).attr('data-customer') || $('.auditii-noti-customer').val();
+            loadAppointedReviewersForAuditorCheckII(custId, svcId);
+            loadEligibleAuditorsForStageII(custId, svcId, function() {
+                $.ajax({
+                    url: "contractDetails.php",
+                    type: "GET",
+                    dataType: "json",
+                    data: {
+                        notificationiiId: notifId,
+                        serviceiiId: svcId,
+                    },
+                    success: function (data) {
                     $('.editTableDiv').empty();
                     $('.auditiiForOrg').val(data[0]['for_org']);
                     $('.intimationDateii').val(moment(data[0]['intimation_date']).format('DD.MM.YYYY'));

@@ -138,7 +138,7 @@ try {
     exit;
 }
 
-$typeLabel = ($invoiceType == 'proforma') ? 'PROFORMA' : 'FINAL';
+$typeLabel = ($invoiceType == 'proforma') ? 'PROFORMA' : (($invoiceType == 'pending') ? 'PENDING' : 'FINAL');
 $fileName  = 'Invoice_Report_' . $typeLabel . '_' . date('Ymd_His') . '.xlsx';
 
 $invoiceExportStage = 'sending Excel response';

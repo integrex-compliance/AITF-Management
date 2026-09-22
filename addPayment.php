@@ -3,6 +3,7 @@
 session_start();
 include_once './dbConnect.php';
 date_default_timezone_set('Asia/Kolkata');
+$req = array_merge($_GET, $_POST);
 /*
  * To change this license header, choose License Headers in Project Properties.
  * To change this template file, choose Tools | Templates
@@ -45,17 +46,105 @@ if(isset($_GET["inv_id"]) && !empty($_GET["inv_id"])){
     }
 }
 
-if (isset($_GET['payid']) && !empty($_GET['payid'])) {
+if (isset($req['action']) && $req['action'] === 'saveDiscount') {
+    header('Content-Type: application/json');
     try {
-        $customer = $_GET['customer'];
-        $payid = $_GET['payid'];
-        $servicetypes = explode('~', $_GET['serviceType']);
-        $decidedamount = explode('~', $_GET['decidedAmount']);
-        $paymentreceived = explode('~', $_GET['paymentReceived']);
-        $depositdate = explode('~', $_GET['depositDate']);
-        $chequedetails = explode('~', $_GET['chequeDetails']);
-        $rowi_ds = explode('~', $_GET['rowids']);
-        $dlt_rows = explode('~', $_GET['dltRows']);
+        $customerId = $req['customer_id'] ?? '';
+        $discountAmount = floatval($req['discount_amount'] ?? 0);
+        $discountDateStr = $req['discount_date'] ?? '';
+        $invoiceNo = trim($req['invoice_no'] ?? '');
+        $invoiceId = trim($req['invoice_id'] ?? '');
+        $remarks = trim($req['remarks'] ?? 'Short Paid');
+
+        if (empty($customerId) || $discountAmount <= 0) {
+            echo json_encode(['success' => false, 'message' => 'Invalid customer or discount amount.']);
+            exit;
+        }
+
+        $date = !empty($discountDateStr) ? date("Y-m-d", strtotime($discountDateStr)) : date("Y-m-d");
+
+        $findPayId = "SELECT payment_sy_id FROM payment_system WHERE customer_id = :id ORDER BY payment_id DESC LIMIT 1";
+        $stmt = $db->prepare($findPayId);
+        $stmt->bindParam(':id', $customerId);
+        $stmt->execute();
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!empty($row['payment_sy_id'])) {
+            $pay_id = $row['payment_sy_id'];
+        } else {
+            $insertPayId = "INSERT INTO payment_system_id (customer_id) VALUES (:customer)";
+            $stmt = $db->prepare($insertPayId);
+            $stmt->bindParam(':customer', $customerId);
+            $stmt->execute();
+            $pay_id = $db->lastInsertId();
+        }
+
+        $serviceType = !empty($req['service_type']) ? trim($req['service_type']) : "Discount";
+        $zero = 0.00;
+        
+        $chequeDetails = !empty($invoiceNo) ? $invoiceNo : $remarks;
+        $comment = !empty($invoiceNo) ? ("Discount against Invoice " . $invoiceNo . ($remarks && $remarks !== $invoiceNo ? " (" . $remarks . ")" : "")) : $remarks;
+
+        $insertDiscount = "INSERT INTO payment_system (payment_sy_id, customer_id, service_type, amount_decided, payment_received, tds_amount, discount_amount, payment_date, cheque_details, balance, comment) "
+            . "VALUES (:payid, :customer, :services, :decideAmount, :rcvAmount, :tdsAmount, :discountAmount, :payDate, :checkdetails, :balance, :comment)";
+        $stmt = $db->prepare($insertDiscount);
+        $stmt->bindParam(':payid', $pay_id);
+        $stmt->bindParam(':customer', $customerId);
+        $stmt->bindParam(':services', $serviceType);
+        $stmt->bindParam(':decideAmount', $discountAmount);
+        $stmt->bindParam(':rcvAmount', $zero);
+        $stmt->bindParam(':tdsAmount', $zero);
+        $stmt->bindParam(':discountAmount', $discountAmount);
+        $stmt->bindParam(':payDate', $date);
+        $stmt->bindParam(':checkdetails', $chequeDetails);
+        $stmt->bindParam(':balance', $zero);
+        $stmt->bindParam(':comment', $comment);
+        $stmt->execute();
+
+        if (empty($invoiceId) && !empty($invoiceNo)) {
+            $parts = explode('-', $invoiceNo, 2);
+            if (count($parts) === 2) {
+                $findInv = "SELECT invoice_id FROM invoice_details WHERE customer_id = :cid AND final_prefix = :pfx AND final_invoice_no = :no LIMIT 1";
+                $st = $db->prepare($findInv);
+                $st->bindParam(':cid', $customerId);
+                $st->bindParam(':pfx', $parts[0]);
+                $st->bindParam(':no', $parts[1]);
+                $st->execute();
+                $invRow = $st->fetch(PDO::FETCH_ASSOC);
+                if ($invRow && !empty($invRow['invoice_id'])) {
+                    $invoiceId = $invRow['invoice_id'];
+                }
+            }
+        }
+
+        if (!empty($invoiceId)) {
+            $updInv = "UPDATE `invoice_details` SET `invoice_status`= 'Rcv' WHERE `invoice_id` = :invid";
+            $stmt = $db->prepare($updInv);
+            $stmt->bindParam(':invid', $invoiceId);
+            $stmt->execute();
+        }
+
+        echo json_encode(['success' => true, 'message' => 'Discount settlement saved successfully.']);
+        exit;
+    } catch (Exception $ex) {
+        echo json_encode(['success' => false, 'message' => $ex->getMessage()]);
+        exit;
+    }
+}
+
+if (isset($req['payid']) && !empty($req['payid'])) {
+    try {
+        $customer = $req['customer'];
+        $payid = $req['payid'];
+        $servicetypes = explode('~', $req['serviceType']);
+        $decidedamount = explode('~', $req['decidedAmount']);
+        $paymentreceived = explode('~', $req['paymentReceived']);
+        $tdsamounts = isset($req['tdsAmount']) ? explode('~', $req['tdsAmount']) : [];
+        $discountamounts = isset($req['discountAmount']) ? explode('~', $req['discountAmount']) : [];
+        $depositdate = explode('~', $req['depositDate']);
+        $chequedetails = explode('~', $req['chequeDetails']);
+        $rowi_ds = explode('~', $req['rowids']);
+        $dlt_rows = explode('~', $req['dltRows'] ?? '');
 //        echo $depositdate;
         for ($i = 0; $i < count($servicetypes); ++$i) {
             if ($servicetypes[$i] != "") {
@@ -64,7 +153,24 @@ if (isset($_GET['payid']) && !empty($_GET['payid'])) {
                 else
                     $date = date("Y-m-d", strtotime($depositdate[$i]));
 
-                $balance = $decidedamount[$i] - $paymentreceived[$i];
+                $decidedVal = floatval($decidedamount[$i] ?? 0);
+                $receivedVal = floatval($paymentreceived[$i] ?? 0);
+                $tdsVal = floatval($tdsamounts[$i] ?? 0);
+                $discountVal = floatval($discountamounts[$i] ?? 0);
+                $chkDetails = $chequedetails[$i] ?? '';
+                $isTds = (stripos($servicetypes[$i], 'tds') !== false);
+                $isDiscount = (stripos($servicetypes[$i], 'discount') !== false || stripos($servicetypes[$i], 'short') !== false);
+
+                // If this is a dedicated TDS row with only TDS entered, mirror to payment_received for legacy compatibility
+                if ($isTds && $tdsVal > 0 && $receivedVal == 0) {
+                    $receivedVal = $tdsVal;
+                }
+                if ($isDiscount && $discountVal == 0 && $receivedVal > 0) {
+                    $discountVal = $receivedVal;
+                }
+
+                $balance = $decidedVal - ($receivedVal + $tdsVal + $discountVal);
+
                 if (array_key_exists($i, $rowi_ds) && $rowi_ds[$i] != "" && $rowi_ds != null) {
                     if (in_array($rowi_ds[$i], $dlt_rows)) {
                         $dltRow = "DELETE FROM payment_system WHERE payment_sy_id = :payid and payment_id = :rowid";
@@ -74,13 +180,16 @@ if (isset($_GET['payid']) && !empty($_GET['payid'])) {
                         $statement->execute();
 //                        echo 'in delete ';
                     } else {
-                        $updateFayInfo = "UPDATE payment_system SET service_type = :services, amount_decided = :decideAmount, payment_received = :rcvAmount, payment_date = :payDate, cheque_details = :checkdetails, balance = :balance WHERE payment_id = :rowid and payment_sy_id = :payid";
+                        $updateFayInfo = "UPDATE payment_system SET service_type = :services, amount_decided = :decideAmount, payment_received = :rcvAmount, tds_amount = :tdsAmount, discount_amount = :discountAmount, payment_date = :payDate, cheque_details = :checkdetails, balance = :balance, comment = :comment WHERE payment_id = :rowid and payment_sy_id = :payid";
                         $statement = $db->prepare($updateFayInfo);
+                        $statement->bindParam(':comment', $chkDetails);
                         $statement->bindParam(':services', $servicetypes[$i]);
-                        $statement->bindParam(':decideAmount', $decidedamount[$i]);
-                        $statement->bindParam(':rcvAmount', $paymentreceived[$i]);
+                        $statement->bindParam(':decideAmount', $decidedVal);
+                        $statement->bindParam(':rcvAmount', $receivedVal);
+                        $statement->bindParam(':tdsAmount', $tdsVal);
+                        $statement->bindParam(':discountAmount', $discountVal);
                         $statement->bindParam(':payDate', $date);
-                        $statement->bindParam(':checkdetails', $chequedetails[$i]);
+                        $statement->bindParam(':checkdetails', $chkDetails);
                         $statement->bindParam(':balance', $balance);
                         $statement->bindParam(':rowid', $rowi_ds[$i]);
                         $statement->bindParam(':payid', $payid);
@@ -88,16 +197,19 @@ if (isset($_GET['payid']) && !empty($_GET['payid'])) {
 //                        echo 'in update ';
                     }
                 } else {
-                    $paymentDetails = "INSERT INTO payment_system (payment_sy_id, customer_id, service_type, amount_decided, payment_received, payment_date, cheque_details, balance) VALUES (:payid, :customer, :services, :decideAmount, :rcvAmount, :payDate, :checkdetails, :balance)";
+                    $paymentDetails = "INSERT INTO payment_system (payment_sy_id, customer_id, service_type, amount_decided, payment_received, tds_amount, discount_amount, payment_date, cheque_details, balance, comment) VALUES (:payid, :customer, :services, :decideAmount, :rcvAmount, :tdsAmount, :discountAmount, :payDate, :checkdetails, :balance, :comment)";
                     $statement = $db->prepare($paymentDetails);
                     $statement->bindParam(':payid', $payid);
                     $statement->bindParam(':customer', $customer);
                     $statement->bindParam(':services', $servicetypes[$i]);
-                    $statement->bindParam(':decideAmount', $decidedamount[$i]);
-                    $statement->bindParam(':rcvAmount', $paymentreceived[$i]);
+                    $statement->bindParam(':decideAmount', $decidedVal);
+                    $statement->bindParam(':rcvAmount', $receivedVal);
+                    $statement->bindParam(':tdsAmount', $tdsVal);
+                    $statement->bindParam(':discountAmount', $discountVal);
                     $statement->bindParam(':payDate', $date);
-                    $statement->bindParam(':checkdetails', $chequedetails[$i]);
+                    $statement->bindParam(':checkdetails', $chkDetails);
                     $statement->bindParam(':balance', $balance);
+                    $statement->bindParam(':comment', $chkDetails);
                     $statement->execute();
 //                    echo 'in insert';
                 }
@@ -108,14 +220,16 @@ if (isset($_GET['payid']) && !empty($_GET['payid'])) {
         echo $ex;
     }
 } else {
-    if (isset($_GET['customer']) && !empty($_GET['customer'])) {
+    if (isset($req['customer']) && !empty($req['customer'])) {
         try {
-            $customer = $_GET['customer'];
-            $servicetypes = explode('~', $_GET['serviceType']);
-            $decidedamount = explode('~', $_GET['decidedAmount']);
-            $paymentreceived = explode('~', $_GET['paymentReceived']);
-            $depositdate = explode('~', $_GET['depositDate']);
-            $chequedetails = explode('~', $_GET['chequeDetails']);
+            $customer = $req['customer'];
+            $servicetypes = explode('~', $req['serviceType']);
+            $decidedamount = explode('~', $req['decidedAmount']);
+            $paymentreceived = explode('~', $req['paymentReceived']);
+            $tdsamounts = isset($req['tdsAmount']) ? explode('~', $req['tdsAmount']) : [];
+            $discountamounts = isset($req['discountAmount']) ? explode('~', $req['discountAmount']) : [];
+            $depositdate = explode('~', $req['depositDate']);
+            $chequedetails = explode('~', $req['chequeDetails']);
 
             $payid = "INSERT INTO payment_system_id (customer_id) VALUES (:customer)";
             $statement = $db->prepare($payid);
@@ -137,19 +251,37 @@ if (isset($_GET['payid']) && !empty($_GET['payid'])) {
                     else
                         $date = date("Y-m-d", strtotime($depositdate[$i]));
 
-                    $balance = $decidedamount[$i] - $paymentreceived[$i];
+                    $decidedVal = floatval($decidedamount[$i] ?? 0);
+                    $receivedVal = floatval($paymentreceived[$i] ?? 0);
+                    $tdsVal = floatval($tdsamounts[$i] ?? 0);
+                    $discountVal = floatval($discountamounts[$i] ?? 0);
+                    $chkDetails = $chequedetails[$i] ?? '';
+                    $isTds = (stripos($servicetypes[$i], 'tds') !== false);
+                    $isDiscount = (stripos($servicetypes[$i], 'discount') !== false || stripos($servicetypes[$i], 'short') !== false);
 
-                    $paymentDetails = "INSERT INTO payment_system (payment_sy_id, customer_id, service_type, amount_decided, payment_received, payment_date, cheque_details, balance)"
-                            . " VALUES (:payid, :customer, :services, :decideAmount, :rcvAmount, :payDate, :checkdetails, :balance)";
+                    if ($isTds && $tdsVal > 0 && $receivedVal == 0) {
+                        $receivedVal = $tdsVal;
+                    }
+                    if ($isDiscount && $discountVal == 0 && $receivedVal > 0) {
+                        $discountVal = $receivedVal;
+                    }
+
+                    $balance = $decidedVal - ($receivedVal + $tdsVal + $discountVal);
+
+                    $paymentDetails = "INSERT INTO payment_system (payment_sy_id, customer_id, service_type, amount_decided, payment_received, tds_amount, discount_amount, payment_date, cheque_details, balance, comment)"
+                            . " VALUES (:payid, :customer, :services, :decideAmount, :rcvAmount, :tdsAmount, :discountAmount, :payDate, :checkdetails, :balance, :comment)";
                     $statement = $db->prepare($paymentDetails);
                     $statement->bindParam(':payid', $pay_id);
                     $statement->bindParam(':customer', $customer);
                     $statement->bindParam(':services', $servicetypes[$i]);
-                    $statement->bindParam(':decideAmount', $decidedamount[$i]);
-                    $statement->bindParam(':rcvAmount', $paymentreceived[$i]);
+                    $statement->bindParam(':decideAmount', $decidedVal);
+                    $statement->bindParam(':rcvAmount', $receivedVal);
+                    $statement->bindParam(':tdsAmount', $tdsVal);
+                    $statement->bindParam(':discountAmount', $discountVal);
                     $statement->bindParam(':payDate', $date);
-                    $statement->bindParam(':checkdetails', $chequedetails[$i]);
+                    $statement->bindParam(':checkdetails', $chkDetails);
                     $statement->bindParam(':balance', $balance);
+                    $statement->bindParam(':comment', $chkDetails);
                     $statement->execute();
                 }
             }

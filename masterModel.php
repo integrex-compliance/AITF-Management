@@ -186,6 +186,55 @@ $iafList = $statement->fetchAll();
                             </div>
                         </div>
                         <div class="row">
+                            <div class="col-sm-12 form-group" style="margin-top: 5px; margin-bottom: 12px;">
+                                <label style="font-weight: 600; color: #1e3a8a; display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                                    <span><i class="fa fa-tags"></i> NACE Code / Division Assignment</span>
+                                    <small class="text-muted nacodeSelectedCount" style="font-weight: normal; color: #64748b;">0 Selected</small>
+                                </label>
+                                <div class="dropdown nacode-assignment-wrapper" style="position: relative;">
+                                    <button type="button" class="btn btn-default btn-block dropdown-toggle nacodeDropdownToggleBtn" id="nacodeDropdownToggleBtn" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="text-align: left; display: flex; justify-content: space-between; align-items: center; padding: 7px 12px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; box-shadow: none;">
+                                        <span class="nacodeSummaryText" style="color: #475569; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                            Click to assign Divisions...
+                                        </span>
+                                        <span class="caret" style="margin-left: 8px; color: #64748b;"></span>
+                                    </button>
+                                    <div class="dropdown-menu nacodeDropdownMenu" aria-labelledby="nacodeDropdownToggleBtn" style="width: 100%; min-width: 320px; max-height: 280px; overflow-y: auto; padding: 10px; border-radius: 6px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); border: 1px solid #cbd5e1; z-index: 1060;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #e2e8f0;">
+                                            <span style="font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px;">Select Divisions</span>
+                                            <div>
+                                                <button type="button" class="btn btn-xs btn-link nacodeSelectAllBtn" style="padding: 0 4px; font-size: 11px; color: #2563eb; text-decoration: none; font-weight: 600;">Select All</button>
+                                                <span style="color: #cbd5e1;">|</span>
+                                                <button type="button" class="btn btn-xs btn-link nacodeClearAllBtn" style="padding: 0 4px; font-size: 11px; color: #ef4444; text-decoration: none; font-weight: 600;">Clear</button>
+                                            </div>
+                                        </div>
+                                        <div style="margin-bottom: 8px;">
+                                            <input type="text" class="form-control input-sm nacodeFilterInput" placeholder="Filter divisions..." style="font-size: 12px; height: 28px; padding: 4px 8px; border-radius: 4px;">
+                                        </div>
+                                        <div class="nacodeCheckboxList" style="display: flex; flex-direction: column; gap: 3px;">
+                                            <?php 
+                                            $sortedDivs = !empty($iafList) ? $iafList : array();
+                                            usort($sortedDivs, function($a, $b) {
+                                                return ((int)$a['iaf_code'] <=> (int)$b['iaf_code']) ?: strcmp($a['iaf_code'], $b['iaf_code']);
+                                            });
+                                            foreach ($sortedDivs as $iaf) { 
+                                                $divCode = htmlspecialchars(trim($iaf['iaf_code']), ENT_QUOTES, 'UTF-8');
+                                                $divDesc = htmlspecialchars(trim($iaf['iaf_desc']), ENT_QUOTES, 'UTF-8');
+                                            ?>
+                                                <label class="nacodeItemLabel" data-search="<?php echo strtolower($divCode . ' ' . $divDesc); ?>" style="display: flex; align-items: flex-start; gap: 8px; margin: 0; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-weight: normal; font-size: 12px; color: #1e293b; transition: background 0.15s; user-select: none;">
+                                                    <input type="checkbox" name="assigned_divisions[]" value="<?php echo $divCode; ?>" class="nacodeDivisionCheckbox" style="margin: 2px 0 0 0; width: 15px; height: 15px; flex-shrink: 0; cursor: pointer;">
+                                                    <span style="line-height: 1.3;">
+                                                        <strong style="color: #0f172a;">Division <?php echo $divCode; ?></strong> - <span style="color: #475569;"><?php echo $divDesc; ?></span>
+                                                    </span>
+                                                </label>
+                                            <?php } ?>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="nacodeSelectedBadges" style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 5px;"></div>
+                                <small class="text-muted" style="display: block; margin-top: 4px; font-size: 11.5px;">Only auditors assigned to a client's division will be selectable during CA and SA-1 auditor assignment.</small>
+                            </div>
+                        </div>
+                        <div class="row">
                             <div class="col-sm-12 form-group" style="padding-top: 5px;">
                                 <label style="cursor: pointer; font-weight: 500; display: flex; align-items: center; gap: 8px;">
                                     <input type="checkbox" class="isReviewerCheckbox" id="isReviewerCheckbox" name="is_reviewer" value="1" style="width: 16px; height: 16px; margin: 0;">

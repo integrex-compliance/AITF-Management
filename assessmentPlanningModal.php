@@ -7,10 +7,12 @@
  *
  */
 include_once './dbConnect.php';
+require_once __DIR__ . '/include/auditor_division_helper.php';
+aitf_ensure_auditor_division_schema($db);
 date_default_timezone_set('Asia/Kolkata');
 
 $allAuditors = "";
-$sql = "SELECT auditor_name FROM auditors";
+$sql = "SELECT auditors_id, auditor_name, auditor_email FROM auditors ORDER BY auditor_name ASC";
 $statement = $db->prepare($sql);
 $statement->execute();
 $auditors = $statement->fetchAll();
@@ -288,6 +290,7 @@ foreach ($auditors as $name) {
                         </div>
                         <div class="row " style="">
                             <div class="col-sm-12"><label>Proposed Audit Team</label></div>
+                            <div class="col-sm-12 auditor-division-banner-ap" style="display:none; margin: 8px 0;"></div>
                         </div>
                         <div class="row " style="">
                             <div class="col-sm-6 form-group float-label-control">
@@ -477,19 +480,98 @@ foreach ($auditors as $name) {
         //                            </div>\n\
         //                        </div>');
         //    });
-        $('.newCodeAuditorAdd').click(function () {
+        var aitfAPEligibleAuditors = [];
+        var aitfAPClientDivisions = [];
+        var aitfAPHasDivisions = false;
+        var aitfAPAllAuditors = <?php echo json_encode($auditors, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
 
-            var allAuditors = ("<?php echo $allAuditors; ?>");
-            var auditors = allAuditors.split(',');
-            var option = "";
-            for (var key in auditors) {
-                if (auditors[key] != null && auditors[key] != "") {
-                    option += '<option value="' + auditors[key] + '">' + auditors[key] + '</option>';
+        function renderAPLeadAuditorOptions(selectedName) {
+            var html = '<option value="">Choose Lead Auditors</option>';
+            var list = aitfAPHasDivisions ? aitfAPEligibleAuditors : aitfAPAllAuditors;
+            var found = false;
+
+            if (aitfAPHasDivisions && (!list || list.length === 0)) {
+                html += '<option value="" disabled>No auditors assigned to Division ' + aitfAPClientDivisions.join(', ') + ' in Master Creator</option>';
+            } else if (list && list.length > 0) {
+                for (var i = 0; i < list.length; i++) {
+                    var name = list[i].auditor_name;
+                    var isSel = (selectedName && selectedName.trim() === name.trim());
+                    if (isSel) found = true;
+                    html += '<option value="' + name + '"' + (isSel ? ' selected' : '') + '>' + name + '</option>';
                 }
             }
+            if (selectedName && !found && selectedName.trim() !== '') {
+                html += '<option value="' + selectedName + '" selected>' + selectedName + '</option>';
+            }
+            return html;
+        }
+
+        function renderAPAuditorOptions(selectedName) {
+            var html = '<option value="">Choose Auditors</option>';
+            var list = aitfAPHasDivisions ? aitfAPEligibleAuditors : aitfAPAllAuditors;
+            var found = false;
+
+            if (aitfAPHasDivisions && (!list || list.length === 0)) {
+                html += '<option value="" disabled>No auditors assigned to Division ' + aitfAPClientDivisions.join(', ') + ' in Master Creator</option>';
+            } else if (list && list.length > 0) {
+                for (var i = 0; i < list.length; i++) {
+                    var name = list[i].auditor_name;
+                    var isSel = (selectedName && selectedName.trim() === name.trim());
+                    if (isSel) found = true;
+                    html += '<option value="' + name + '"' + (isSel ? ' selected' : '') + '>' + name + '</option>';
+                }
+            }
+            if (selectedName && !found && selectedName.trim() !== '') {
+                html += '<option value="' + selectedName + '" selected>' + selectedName + '</option>';
+            }
+            return html;
+        }
+
+        function updateDivisionAlertBannerAP(hasDiv, divs, audCount) {
+            var $banner = $('.auditor-division-banner-ap');
+            if (!hasDiv) {
+                $banner.html('<div class="alert alert-info" style="padding: 6px 12px; margin-bottom: 10px; font-size: 12px;"><i class="fa fa-info-circle"></i> <strong>Note:</strong> No division assigned to this client in Contract Review yet. Showing all auditors.</div>').show();
+            } else if (audCount === 0) {
+                $banner.html('<div class="alert alert-warning" style="padding: 6px 12px; margin-bottom: 10px; font-size: 12px;"><i class="fa fa-exclamation-triangle"></i> <strong>No auditors found</strong> for Client Division(s): <strong>' + divs.join(', ') + '</strong>. Please assign this division to auditors in <a href="masterCreator.php" target="_blank" style="text-decoration: underline; font-weight: bold;">Master Creator</a>.</div>').show();
+            } else {
+                $banner.html('<div class="alert alert-success" style="padding: 6px 12px; margin-bottom: 10px; font-size: 12px;"><i class="fa fa-check-circle"></i> <strong>Client Division(s):</strong> <strong>' + divs.join(', ') + '</strong> &mdash; Showing ' + audCount + ' eligible auditor(s) assigned to this division in Master Creator.</div>').show();
+            }
+        }
+
+        function loadEligibleAuditorsForAssessment(customerId, serviceId, callback) {
+            $.ajax({
+                url: "getEligibleAuditors.php",
+                type: "GET",
+                dataType: "json",
+                data: {
+                    customerid: customerId,
+                    serviceid: serviceId
+                },
+                success: function(resp) {
+                    aitfAPHasDivisions = !!(resp && resp.has_divisions);
+                    aitfAPClientDivisions = (resp && resp.client_divisions) ? resp.client_divisions : [];
+                    aitfAPEligibleAuditors = (resp && resp.auditors) ? resp.auditors : [];
+                    updateDivisionAlertBannerAP(aitfAPHasDivisions, aitfAPClientDivisions, aitfAPEligibleAuditors.length);
+                    if (typeof callback === 'function') {
+                        callback(resp);
+                    }
+                },
+                error: function() {
+                    aitfAPHasDivisions = false;
+                    updateDivisionAlertBannerAP(false, [], 0);
+                    if (typeof callback === 'function') {
+                        callback(null);
+                    }
+                }
+            });
+        }
+        window.loadEligibleAuditorsForAssessment = loadEligibleAuditorsForAssessment;
+        window.renderAPLeadAuditorOptions = renderAPLeadAuditorOptions;
+        window.renderAPAuditorOptions = renderAPAuditorOptions;
+
+        $(document).on('click', '.newCodeAuditorAdd', function () {
             var autitorsSelect = '<select class="assessmentAuditors form-control" id="assessmentAuditors" name="assessmentAuditors">\n\
-                                    <option value="" disabled selected>Choose Auditors</option>\n\
-                                        ' + option + '\n\
+                                    ' + renderAPAuditorOptions('') + '\n\
                                 </select>';
 
             $('.multipleCodeAuditor').append('<div class="row newCodeAuditorParent" style="">\n\
@@ -597,17 +679,24 @@ foreach ($auditors as $name) {
 
         $assessmentIafCode = "";
 
-        $('.addAssessmentPlanning').click(function () {
-            //            alert($(this).attr('data-service'));
-            $('.assessmentUserId').val($(this).attr('data-customer'));
-            $('.assessmentServiceId').val($(this).attr('data-service'));
+        $(document).on('click', '.addAssessmentPlanning', function () {
+            var customerId = $(this).attr('data-customer');
+            var serviceId = $(this).attr('data-service');
+            $('.assessmentUserId').val(customerId);
+            $('.assessmentServiceId').val(serviceId);
+            $('.multipleCodeAuditor').empty();
+            loadAppointedReviewersForAssessmentPlan(customerId, serviceId);
+            loadEligibleAuditorsForAssessment(customerId, serviceId, function() {
+                $('.assessmentLeadAuditor').html(renderAPLeadAuditorOptions(''));
+                $('.assessmentAuditors').first().html(renderAPAuditorOptions(''));
+            });
             $.ajax({
                 url: "getClientInfo.php",
                 type: "GET",
                 dataType: "json",
                 data: {
-                    customid: $(this).attr('data-customer'),
-                    svcID: $(this).attr('data-service')
+                    customid: customerId,
+                    svcID: serviceId
                 },
                 success: function (data) {
                     //scope, 
@@ -641,16 +730,21 @@ foreach ($auditors as $name) {
                 $(this).prop('checked', true);
             }
         });
-        $('.editAssessmentPlanning').click(function () {
+        $(document).on('click', '.editAssessmentPlanning', function () {
+            var assessmentId = $(this).attr('data-assessment');
+            var customerId = $(this).attr('data-customer');
+            var serviceId = $(this).attr('data-service');
             $.ajax({
                 url: "getAssessmentPlanning.php",
                 type: "GET",
                 dataType: "json",
                 data: {
-                    assessmentId: $(this).attr('data-assessment'),
+                    assessmentId: assessmentId,
                 },
                 success: function (data) {
-                    $('.assessmentUserId').val(data['customer_id']);
+                    var custId = customerId || data['customer_id'];
+                    var svcId = serviceId || data['service_id'];
+                    $('.assessmentUserId').val(custId);
                     $('.assessmentId').val(data['assessment_id']);
                     $('.appClient').val(data['app_client_name']);
                     $('.refNo').val(data['app_client_ref']);
@@ -701,40 +795,46 @@ foreach ($auditors as $name) {
                         $(".assessmentRenewal").prop("disabled", false);
                         $(".modification").prop("disabled", false);
                     }
-                    var Auditor = data['auditors'].split(', ');
-                    var AuditorChk = data['code_auditor'].split(',');
-                    var auditorCodeLen = Auditor.length;
-                    var auditorCodeChkLen = AuditorChk.length;
-                    var max = (Math.max(auditorCodeLen, auditorCodeChkLen));
-                    for (var key = 0; key < max; key++) {
-                        var aud = key <= auditorCodeLen && Auditor[key] != null && Auditor[key] != "" ? Auditor[key] : "";
-                        var chk = key <= auditorCodeChkLen && AuditorChk[key] != null && AuditorChk[key] != "" ? AuditorChk[key] : "";
-                        //                        alert(chk);
-                        if (key == 0) {
-                            $('.assessmentAuditors').val(aud);
-                            if (chk != "")
-                                $('.codeAuditor').prop('checked', true);
-                        } else {
-                            //                alert(chk);
-                            if (chk == "Auditors" && chk != "") {
-                                var chkval = "checked";
-                            } else {
-                                var chkval = "";
-                            }
 
-                            $('.multipleCodeAuditor').append('<div class="row newCodeAuditorParent" style="">\n\
-                            <div class="col-sm-6 form-group float-label-control">\n\
-                                <label>Lead Auditor</label>\n\
-                                <input type="text" class="assessmentAuditors" id="assessmentAuditors" name="assessmentAuditors" value="' + aud + '" placeholder="Auditors" >\n\
-                            </div>\n\
-                            <div class="col-sm-3" align="">Code Auditor<span> <input class="codeAuditor" type="checkbox" name="codeAuditor" value="Auditors" ' + chkval + '></span>\n\
-                            </div>\n\
-                            <div class="col-sm-3 deleteCodeAuditorParent" align="">\n\
-                                <a class="removeCodeAuditor" style="float: right" title="Remove Auditors"><i class="fa fa-remove"></i></a>\n\
-                            </div>\n\
-                        </div>');
+                    loadAppointedReviewersForAssessmentPlan(custId, svcId);
+                    loadEligibleAuditorsForAssessment(custId, svcId, function() {
+                        var leadAud = data['lead_auditor'] || '';
+                        $('.assessmentLeadAuditor').html(renderAPLeadAuditorOptions(leadAud)).val(leadAud);
+
+                        $('.multipleCodeAuditor').empty();
+                        var Auditor = (data['auditors'] || '').split(', ');
+                        var AuditorChk = (data['code_auditor'] || '').split(',');
+                        var auditorCodeLen = Auditor.length;
+                        var auditorCodeChkLen = AuditorChk.length;
+                        var max = (Math.max(auditorCodeLen, auditorCodeChkLen));
+                        for (var key = 0; key < max; key++) {
+                            var aud = key < auditorCodeLen && Auditor[key] != null && Auditor[key] != "" ? Auditor[key].trim() : "";
+                            var chk = key < auditorCodeChkLen && AuditorChk[key] != null && AuditorChk[key] != "" ? AuditorChk[key].trim() : "";
+                            if (key == 0) {
+                                $('.assessmentAuditors').first().html(renderAPAuditorOptions(aud)).val(aud);
+                                if (chk != "") {
+                                    $('.codeAuditor').first().prop('checked', true);
+                                } else {
+                                    $('.codeAuditor').first().prop('checked', false);
+                                }
+                            } else {
+                                var chkval = (chk == "Auditors" || chk != "") ? "checked" : "";
+                                var selHtml = '<select class="assessmentAuditors form-control" name="assessmentAuditors">' + renderAPAuditorOptions(aud) + '</select>';
+                                $('.multipleCodeAuditor').append('<div class="row newCodeAuditorParent" style="">\n\
+                                <div class="col-sm-6 form-group float-label-control">\n\
+                                    <label>Auditor</label>\n\
+                                    ' + selHtml + '\n\
+                                </div>\n\
+                                <div class="col-sm-3" align="">Code Auditor<span> <input class="codeAuditor" type="checkbox" name="codeAuditor" value="Auditors" ' + chkval + '></span>\n\
+                                </div>\n\
+                                <div class="col-sm-3 deleteCodeAuditorParent" align="">\n\
+                                    <a class="removeCodeAuditor" style="float: right" title="Remove Auditors"><i class="fa fa-remove"></i></a>\n\
+                                </div>\n\
+                            </div>');
+                            }
                         }
-                    }
+                    });
+
                     $('.assessmentDocumentReview').val(data['document_review']);
                     $('.assessmentDicRevPropDate').val(data['document_review_date']);
                     $('.assessmentStageI').val(data['stage_1']);

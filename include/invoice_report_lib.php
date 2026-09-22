@@ -144,13 +144,21 @@ if (!function_exists('convertToWord')) {
  * @return array ['invoices' => [...], 'svcMap' => [invoice_id => [descs]]]
  */
 function fetchInvoiceReportData($db, $invoiceType, $fromDate, $toDate, $clientName) {
-    $sql = "SELECT id.invoice_id, id.customer_id, id.profarma_prefix, id.invoice_no, id.final_prefix, id.final_invoice_no,
-                   id.invoice_date, id.final_amount, id.igst, id.cgst, id.sgst, id.tax_type, id.invoice_status, ci.customer_name, ci.gstin_no
-            FROM invoice_details id
-            LEFT JOIN customer_info ci ON id.customer_id = ci.id
-            WHERE id.invoice_type = :invoiceType AND id.is_deleted = 'No'";
-
-    $params = [':invoiceType' => $invoiceType];
+    if ($invoiceType === 'pending') {
+        $sql = "SELECT id.invoice_id, id.customer_id, id.profarma_prefix, id.invoice_no, id.final_prefix, id.final_invoice_no,
+                       id.invoice_date, id.final_amount, id.igst, id.cgst, id.sgst, id.tax_type, id.invoice_type, id.invoice_status, ci.customer_name, ci.gstin_no
+                FROM invoice_details id
+                LEFT JOIN customer_info ci ON id.customer_id = ci.id
+                WHERE id.is_deleted = 'No' AND (id.invoice_status <> 'Rcv' OR id.invoice_status IS NULL) AND CAST(id.final_amount AS DECIMAL(12,2)) > 0";
+        $params = [];
+    } else {
+        $sql = "SELECT id.invoice_id, id.customer_id, id.profarma_prefix, id.invoice_no, id.final_prefix, id.final_invoice_no,
+                       id.invoice_date, id.final_amount, id.igst, id.cgst, id.sgst, id.tax_type, id.invoice_type, id.invoice_status, ci.customer_name, ci.gstin_no
+                FROM invoice_details id
+                LEFT JOIN customer_info ci ON id.customer_id = ci.id
+                WHERE id.invoice_type = :invoiceType AND id.is_deleted = 'No'";
+        $params = [':invoiceType' => $invoiceType];
+    }
 
     $invRole = trim($_SESSION['role'] ?? '');
     $isMarketingHead = in_array($invRole, array('Marketing Head', 'Marketing Executive'), true)

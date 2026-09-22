@@ -295,4 +295,101 @@ if (!function_exists('aitfLoadPHPMailer')) {
 
         return 'invoicePage.php?mailsend=0&mailerror=' . urlencode($message);
     }
+
+    function aitfBuildPendingPaymentReminderMailBody($clientName, $invoiceNumber, $invoiceDate, $invoiceType, $totalAmount, $paidAmount, $pendingAmount, $dueDate, $isHtml = true) {
+        $clientName = trim((string) $clientName) !== '' ? trim((string) $clientName) : 'Valued Client';
+        $invoiceNumber = trim((string) $invoiceNumber);
+        $invoiceDate = trim((string) $invoiceDate);
+        $invoiceType = trim((string) $invoiceType);
+        $totalAmount = is_numeric(str_replace(',', '', (string) $totalAmount)) ? number_format((float) str_replace(',', '', (string) $totalAmount), 2) : (string) $totalAmount;
+        $paidAmount = is_numeric(str_replace(',', '', (string) $paidAmount)) ? number_format((float) str_replace(',', '', (string) $paidAmount), 2) : (string) $paidAmount;
+        $pendingAmount = is_numeric(str_replace(',', '', (string) $pendingAmount)) ? number_format((float) str_replace(',', '', (string) $pendingAmount), 2) : (string) $pendingAmount;
+        $dueDate = trim((string) $dueDate);
+
+        if (!$isHtml) {
+            return "Dear {$clientName},\n\n"
+                . "Greetings from  A.I.T.F. (Assessment And Institute for Technical Forum).\n\n"
+                . "We hope you are doing well.\n\n"
+                . "This is a gentle reminder regarding the pending payment against the invoice issued by AITF MANAGEMENT CERTIFICATION LIMITED.\n\n"
+                . "Please find the invoice details below for your reference:\n\n"
+                . " Invoice Details:\n"
+                . " Invoice Number: {$invoiceNumber}\n"
+                . " Invoice Date: {$invoiceDate}\n"
+                . " Invoice Type: {$invoiceType}\n"
+                . " Total Invoice Amount: ₹{$totalAmount}\n"
+                . " Amount Paid: ₹{$paidAmount}\n"
+                . " Outstanding Amount: ₹{$pendingAmount}\n"
+                . " Payment Due Date: {$dueDate}\n\n"
+                . "As per our records, the outstanding amount of ₹{$pendingAmount} is still pending against the above-mentioned invoice.\n\n"
+                . "We kindly request you to arrange the payment at your earliest convenience. If the payment has already been processed, please share the payment confirmation or transaction details so that we can update our records accordingly.\n\n"
+                . "If you have any queries regarding the invoice or require any clarification regarding the outstanding amount, please feel free to contact us.\n\n"
+                . "We sincerely appreciate your association with AITF MANAGEMENT CERTIFICATION LIMITED and look forward to your prompt response.\n\n"
+                . "Thank you for your time and cooperation.\n\n"
+                . "Best Regards,\n"
+                . "Accounts & Finance Team\n"
+                . "AITF MANAGEMENT CERTIFICATION LIMITED\n"
+                . "Phone: +91 9222 1836\n"
+                . "Email: aitfacct@gmail.com\n"
+                . "Website: www.aitf.co.in";
+        }
+
+        $escClientName = aitfInvoiceEscape($clientName);
+        $escInvoiceNumber = aitfInvoiceEscape($invoiceNumber);
+        $escInvoiceDate = aitfInvoiceEscape($invoiceDate);
+        $escInvoiceType = aitfInvoiceEscape($invoiceType);
+        $escTotalAmount = aitfInvoiceEscape($totalAmount);
+        $escPaidAmount = aitfInvoiceEscape($paidAmount);
+        $escPendingAmount = aitfInvoiceEscape($pendingAmount);
+        $escDueDate = aitfInvoiceEscape($dueDate);
+
+        return '<html><head><meta charset="utf-8">'
+            . '<style>'
+            . 'body { font-family: "Segoe UI", Arial, sans-serif; font-size: 14.5px; line-height: 1.65; color: #1e293b; background-color: #f8fafc; margin: 0; padding: 24px; }'
+            . '.mail-card { max-width: 650px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 28px; box-shadow: 0 4px 16px rgba(15,23,42,0.06); }'
+            . '.header-badge { display: inline-block; padding: 4px 12px; border-radius: 999px; background: #fee2e2; color: #b91c1c; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px; }'
+            . '.details-card { background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #0d4d8b; border-radius: 8px; padding: 18px 22px; margin: 20px 0; }'
+            . '.details-title { font-size: 15px; font-weight: 700; color: #0d4d8b; margin-bottom: 14px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; }'
+            . '.details-table { width: 100%; border-collapse: collapse; font-size: 14px; }'
+            . '.details-table td { padding: 7px 4px; vertical-align: top; }'
+            . '.details-table td.lbl { width: 44%; color: #64748b; font-weight: 600; }'
+            . '.details-table td.val { width: 56%; color: #0f172a; font-weight: 700; }'
+            . '.outstanding-highlight td { color: #dc2626 !important; font-size: 15px !important; font-weight: 800 !important; }'
+            . '.footer-section { margin-top: 28px; padding-top: 20px; border-top: 2px solid #e2e8f0; font-size: 13.5px; color: #475569; }'
+            . '</style></head>'
+            . '<body>'
+            . '<div class="mail-card">'
+            . '<div class="header-badge">Payment Reminder</div>'
+            . '<p>Dear <strong>' . $escClientName . '</strong>,</p>'
+            . '<p>Greetings from &nbsp;<strong>A.I.T.F. (Assessment And Institute for Technical Forum)</strong>.</p>'
+            . '<p>We hope you are doing well.</p>'
+            . '<p>This is a gentle reminder regarding the pending payment against the invoice issued by <strong>AITF MANAGEMENT CERTIFICATION LIMITED</strong>.</p>'
+            . '<p>Please find the invoice details below for your reference:</p>'
+            . '<div class="details-card">'
+            . '<div class="details-title">Invoice Details:</div>'
+            . '<table class="details-table">'
+            . '<tr><td class="lbl">Invoice Number:</td><td class="val">' . $escInvoiceNumber . '</td></tr>'
+            . '<tr><td class="lbl">Invoice Date:</td><td class="val">' . $escInvoiceDate . '</td></tr>'
+            . '<tr><td class="lbl">Invoice Type:</td><td class="val">' . $escInvoiceType . '</td></tr>'
+            . '<tr><td class="lbl">Total Invoice Amount:</td><td class="val">&#8377;' . $escTotalAmount . '</td></tr>'
+            . '<tr><td class="lbl">Amount Paid:</td><td class="val">&#8377;' . $escPaidAmount . '</td></tr>'
+            . '<tr class="outstanding-highlight"><td class="lbl" style="color: #dc2626;">Outstanding Amount:</td><td class="val" style="color: #dc2626;">&#8377;' . $escPendingAmount . '</td></tr>'
+            . '<tr><td class="lbl">Payment Due Date:</td><td class="val">' . $escDueDate . '</td></tr>'
+            . '</table>'
+            . '</div>'
+            . '<p>As per our records, the outstanding amount of <strong style="color: #dc2626;">&#8377;' . $escPendingAmount . '</strong> is still pending against the above-mentioned invoice.</p>'
+            . '<p>We kindly request you to arrange the payment at your earliest convenience. If the payment has already been processed, please share the payment confirmation or transaction details so that we can update our records accordingly.</p>'
+            . '<p>If you have any queries regarding the invoice or require any clarification regarding the outstanding amount, please feel free to contact us.</p>'
+            . '<p>We sincerely appreciate your association with <strong>AITF MANAGEMENT CERTIFICATION LIMITED</strong> and look forward to your prompt response.</p>'
+            . '<p>Thank you for your time and cooperation.</p>'
+            . '<div class="footer-section">'
+            . '<p style="margin:0 0 4px 0;"><strong>Best Regards,</strong></p>'
+            . '<p style="margin:0 0 2px 0;">Accounts &amp; Finance Team</p>'
+            . '<p style="margin:0 0 8px 0; font-weight: 700; color: #0d4d8b;">AITF MANAGEMENT CERTIFICATION LIMITED</p>'
+            . '<p style="margin:0 0 3px 0;">Phone: +91 9222 1836</p>'
+            . '<p style="margin:0 0 3px 0;">Email: <a href="mailto:aitfacct@gmail.com" style="color: #0d4d8b; text-decoration: none;">aitfacct@gmail.com</a></p>'
+            . '<p style="margin:0;">Website: <a href="http://www.aitf.co.in" style="color: #0d4d8b; text-decoration: none;">www.aitf.co.in</a></p>'
+            . '</div>'
+            . '</div>'
+            . '</body></html>';
+    }
 }

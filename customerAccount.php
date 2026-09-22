@@ -98,6 +98,51 @@ if ($currentRole === 'client' || $currentRole === 'external') {
         }
     }
 
+    if (!function_exists('aitfGetCertificateSentInfo')) {
+        function aitfGetCertificateSentInfo($db, $serviceUniversalId, $stage = '', $customerId = null)
+        {
+            if (!$db) {
+                return null;
+            }
+            try {
+                if (!empty($serviceUniversalId)) {
+                    if (!empty($stage)) {
+                        $sql = "SELECT id, service_id, customer_id, stage, sent_date, recipient_email, sent_by, status 
+                                FROM certificate_sent_log 
+                                WHERE service_id = ? AND stage = ? AND status = 'sent' AND (is_deleted = 'N' OR is_deleted IS NULL) 
+                                ORDER BY id DESC LIMIT 1";
+                        $stmt = $db->prepare($sql);
+                        $stmt->execute(array($serviceUniversalId, $stage));
+                    } else {
+                        $sql = "SELECT id, service_id, customer_id, stage, sent_date, recipient_email, sent_by, status 
+                                FROM certificate_sent_log 
+                                WHERE service_id = ? AND status = 'sent' AND (is_deleted = 'N' OR is_deleted IS NULL) 
+                                ORDER BY id DESC LIMIT 1";
+                        $stmt = $db->prepare($sql);
+                        $stmt->execute(array($serviceUniversalId));
+                    }
+                    $res = $stmt->fetch(PDO::FETCH_ASSOC);
+                    if ($res) {
+                        return $res;
+                    }
+                }
+                if (!empty($customerId) && !empty($stage)) {
+                    $sql2 = "SELECT id, service_id, customer_id, stage, sent_date, recipient_email, sent_by, status 
+                             FROM certificate_sent_log 
+                             WHERE customer_id = ? AND stage = ? AND status = 'sent' AND (is_deleted = 'N' OR is_deleted IS NULL) 
+                             ORDER BY id DESC LIMIT 1";
+                    $stmt2 = $db->prepare($sql2);
+                    $stmt2->execute(array($customerId, $stage));
+                    $res2 = $stmt2->fetch(PDO::FETCH_ASSOC);
+                    return $res2 ?: null;
+                }
+                return null;
+            } catch (Throwable $e) {
+                return null;
+            }
+        }
+    }
+
     if (!function_exists('caDateGraphTargetForEntry')) {
         function caDateGraphTargetForEntry($serviceType, $label, $source, $typedServiceId)
         {
@@ -1475,13 +1520,17 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             $statement->execute();
             $servicetype = $statement->fetch();
 
-            $invoice = "SELECT * FROM `invoice_details` WHERE invoice_type = 'final' and customer_id = :id";
+            $invoice = "SELECT * FROM `invoice_details` WHERE invoice_type = 'final' and customer_id = :id AND (is_deleted = 'No' OR is_deleted IS NULL) ORDER BY invoice_id ASC";
             $statement = $db->prepare($invoice);
             $statement->bindParam(':id', $_GET['customerid']);
             $statement->execute();
             $invoiceList = $statement->fetchAll();
 
-            $paymentrcv = "SELECT SUM(payment_received) as payment_sum FROM `payment_system` WHERE customer_id = :id";
+            $paymentrcv = "SELECT 
+                SUM(CASE WHEN (discount_amount > 0 OR service_type LIKE '%tds%' OR service_type LIKE '%discount%' OR service_type LIKE '%short%') THEN 0 ELSE payment_received END) as payment_sum,
+                SUM(CASE WHEN tds_amount > 0 THEN tds_amount WHEN service_type LIKE '%tds%' THEN payment_received ELSE 0 END) as tds_sum,
+                SUM(CASE WHEN discount_amount > 0 THEN discount_amount WHEN (service_type LIKE '%discount%' OR service_type LIKE '%short%') THEN payment_received ELSE 0 END) as discount_sum
+                FROM `payment_system` WHERE customer_id = :id";
             $statement = $db->prepare($paymentrcv);
             $statement->bindParam(':id', $_GET['customerid']);
             $statement->execute();
@@ -1493,7 +1542,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             $statement->execute();
             $balanceTotal = $statement->fetch();
 
-            $invoiceRcv = "SELECT SUM(final_amount) as invoice_sum FROM `invoice_details` WHERE customer_id = :id AND invoice_type = 'final'";
+            $invoiceRcv = "SELECT SUM(final_amount) as invoice_sum FROM `invoice_details` WHERE customer_id = :id AND invoice_type = 'final' AND (is_deleted = 'No' OR is_deleted IS NULL)";
             $statement = $db->prepare($invoiceRcv);
             $statement->bindParam(':id', $_GET['customerid']);
             $statement->execute();
@@ -1559,31 +1608,218 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             position: fixed;
             top: 0;
             left: 0;
-            background: rgba(255, 255, 255, 0.5);
             width: 100%;
             height: 100%;
-            z-index: 1;
+            background: rgba(15, 23, 42, 0.65) !important;
+            backdrop-filter: blur(8px) !important;
+            -webkit-backdrop-filter: blur(8px) !important;
+            z-index: 9999999 !important;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #loading-div-background[style*="display: block"],
+        #loading-div-background.is-active {
+            display: flex !important;
         }
 
         #loading-div {
-            width: 300px;
-            height: 150px;
-            background-color: #fff;
-            color: #1468b3;
-            border: 5px solid #1468b3;
-            text-align: center;
-            color: #202020;
+            width: 360px;
+            max-width: 90vw;
+            background: #ffffff !important;
+            border-radius: 20px !important;
+            padding: 34px 28px 28px !important;
+            text-align: center !important;
+            color: #0f172a !important;
+            position: relative;
+            left: auto !important;
+            top: auto !important;
+            margin: auto !important;
+            border: 1px solid rgba(226, 232, 240, 0.8) !important;
+            box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(226, 232, 240, 0.9) !important;
+            animation: aitfPopIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            box-sizing: border-box !important;
+        }
+
+        .modern-spinner-wrap {
+            width: 74px;
+            height: 74px;
+            margin: 0 auto 18px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modern-spinner-ring {
+            width: 74px;
+            height: 74px;
+            border-radius: 50%;
+            border: 3.5px solid #e0f2fe;
+            border-top-color: #0284c7;
+            border-right-color: #38bdf8;
+            animation: modernSpin 0.9s cubic-bezier(0.55, 0.15, 0.45, 0.85) infinite;
             position: absolute;
-            left: 50%;
-            top: 50%;
-            margin-left: -150px;
-            margin-top: -100px;
-            -webkit-border-radius: 5px;
-            -moz-border-radius: 5px;
-            border-radius: 5px;
-            opacity: 1.0;
-            behavior: url("/css/pie/PIE.htc");
-            /* HANDLES IE */
+            top: 0;
+            left: 0;
+            box-sizing: border-box;
+        }
+
+        .modern-spinner-center {
+            width: 46px;
+            height: 46px;
+            background: #f0f9ff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: iconPulse 1.8s ease-in-out infinite;
+        }
+
+        .modern-spinner-center i {
+            font-size: 20px;
+            color: #0284c7;
+            margin-left: -1px;
+            margin-top: 1px;
+        }
+
+        #loading-div .loading-title {
+            margin: 0 0 6px 0 !important;
+            font-size: 19px !important;
+            font-weight: 700 !important;
+            color: #0f172a !important;
+            letter-spacing: -0.2px !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+        }
+
+        #loading-div .loading-subtitle {
+            margin: 0 0 20px 0 !important;
+            font-size: 13px !important;
+            color: #64748b !important;
+            line-height: 1.5 !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+        }
+
+        .loading-progress-track {
+            width: 100%;
+            height: 4px;
+            background: #f1f5f9;
+            border-radius: 999px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .loading-progress-bar {
+            height: 100%;
+            width: 45%;
+            background: linear-gradient(90deg, #0284c7, #38bdf8, #6366f1);
+            border-radius: 999px;
+            position: absolute;
+            animation: modernIndeterminate 1.4s infinite cubic-bezier(0.65, 0.815, 0.735, 0.395);
+        }
+
+        @keyframes modernSpin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes iconPulse {
+            0%, 100% { transform: scale(1); opacity: 0.9; }
+            50% { transform: scale(1.1); opacity: 1; }
+        }
+
+        @keyframes modernIndeterminate {
+            0% { left: -45%; width: 45%; }
+            50% { left: 25%; width: 65%; }
+            100% { left: 100%; width: 45%; }
+        }
+
+        @keyframes aitfPopIn {
+            0% { opacity: 0; transform: scale(0.92) translateY(8px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        html.theme-dark #loading-div {
+            background: #1e293b !important;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+        }
+        html.theme-dark #loading-div .loading-title {
+            color: #f8fafc !important;
+        }
+        html.theme-dark #loading-div .loading-subtitle {
+            color: #94a3b8 !important;
+        }
+        html.theme-dark .modern-spinner-center {
+            background: #0f172a !important;
+        }
+        html.theme-dark .loading-progress-track {
+            background: #334155 !important;
+        }
+
+        /* Modern SweetAlert2 Enhancements */
+        .swal2-container.swal2-backdrop-show {
+            backdrop-filter: blur(8px) !important;
+            -webkit-backdrop-filter: blur(8px) !important;
+            background: rgba(15, 23, 42, 0.65) !important;
+        }
+
+        .swal2-popup {
+            border-radius: 20px !important;
+            padding: 30px 26px !important;
+            box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(226, 232, 240, 0.9) !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+        }
+
+        .swal2-title {
+            font-size: 20px !important;
+            font-weight: 700 !important;
+            color: #0f172a !important;
+            letter-spacing: -0.2px !important;
+        }
+
+        .swal2-html-container {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+            color: #475569 !important;
+            line-height: 1.6 !important;
+        }
+
+        .swal2-actions {
+            margin-top: 22px !important;
+            gap: 12px !important;
+        }
+
+        .swal2-actions .swal2-confirm,
+        .swal2-actions .swal2-cancel {
+            border-radius: 10px !important;
+            font-weight: 600 !important;
+            padding: 10px 22px !important;
+            font-size: 13.5px !important;
+            transition: all 0.2s ease !important;
+        }
+
+        .swal2-actions .swal2-confirm:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(15, 39, 66, 0.25) !important;
+        }
+
+        .swal2-loader {
+            border-color: #0284c7 transparent #0284c7 transparent !important;
+            border-width: 3.5px !important;
+            width: 48px !important;
+            height: 48px !important;
+            margin: 16px auto !important;
+        }
+
+        html.theme-dark .swal2-popup {
+            background: #1e293b !important;
+            border-color: rgba(51, 65, 85, 0.8) !important;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
+        }
+        html.theme-dark .swal2-title {
+            color: #f8fafc !important;
+        }
+        html.theme-dark .swal2-html-container {
+            color: #cbd5e1 !important;
         }
 
         .demoPadder {
@@ -3821,6 +4057,43 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             vertical-align: middle !important;
         }
 
+        .sentCertificateBadge {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            height: 17px !important;
+            line-height: 17px !important;
+            padding: 0 6px !important;
+            margin-top: 3px !important;
+            margin-right: 5px !important;
+            margin-bottom: 0 !important;
+            margin-left: 0 !important;
+            background-color: #16a34a !important;
+            color: #ffffff !important;
+            font-size: 10px !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.2px !important;
+            border-radius: 3px !important;
+            cursor: pointer !important;
+            box-sizing: border-box !important;
+            vertical-align: middle !important;
+            text-transform: none !important;
+            white-space: nowrap !important;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15) !important;
+        }
+        .sentCertificateBadge:hover {
+            background-color: #15803d !important;
+            color: #ffffff !important;
+        }
+        .sentCertificateBadge i.fa {
+            font-size: 9.5px !important;
+            line-height: 17px !important;
+            margin-right: 3px !important;
+            color: #ffffff !important;
+            display: inline-block !important;
+            vertical-align: middle !important;
+        }
+
         /* CA Top Audit Planning Controls (Labels & Inputs) */
         .servicebox-bunch .float-label-control label {
             color: #0d4d8b !important;
@@ -4408,13 +4681,11 @@ if ($currentRole === 'client' || $currentRole === 'external') {
         }
 
         /* ---------- 9. Loading overlays / panels ---------- */
-        html.theme-dark #loading-div-background,
         html.theme-dark #loading-div-background-resend,
         html.theme-dark #loading-div-background-meetedit {
             background: rgba(11, 17, 27, 0.6) !important;
         }
 
-        html.theme-dark #loading-div,
         html.theme-dark #loading-div-user-info {
             background-color: var(--ca-surface) !important;
             color: var(--ca-text) !important;
@@ -4732,12 +5003,18 @@ if ($currentRole === 'client' || $currentRole === 'external') {
     <div id="page-content-wrapper">
 
         <div id="loading-div-background">
-            <div id="loading-div" class="ui-corner-all text-center">
-                <h1><i class="fa fa-spinner fa-spin"></i></h1>
-                <h4 class="meeting-loading-info"> Please wait...</h4>
-                <!--                <progress id="progressBar" value="0" max="100" style="width:300px;"></progress>
-                <h3 id="status"></h3>
-                <p id="loaded_n_total"></p>-->
+            <div id="loading-div">
+                <div class="modern-spinner-wrap">
+                    <div class="modern-spinner-ring"></div>
+                    <div class="modern-spinner-center">
+                        <i class="fa fa-paper-plane"></i>
+                    </div>
+                </div>
+                <h3 class="loading-title">Please wait...</h3>
+                <p class="loading-subtitle">Processing and sending your request...</p>
+                <div class="loading-progress-track">
+                    <div class="loading-progress-bar"></div>
+                </div>
             </div>
         </div>
 
@@ -5529,102 +5806,149 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         <div class="row">
                             <div class="col-xs-8 table-responsive">
                                 <div class="row">
-                                    <div class="col-xs-12  text-center btn qms_complete_btn">
-                                        <span><i class="fa ">Payments</i></span>
+                                    <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 10px;">
+                                        <span style="flex-grow: 1; text-align: center; font-weight: 700;"><i class="fa ">Payments</i></span>
+                                        <button type="button" class="btn btn-xs openDiscountModalBtn" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: #ffffff; border: 1px solid #5b21b6; font-weight: 700; border-radius: 4px; padding: 2px 9px; box-shadow: 0 1px 3px rgba(0,0,0,0.3); text-transform: none; display: inline-flex; align-items: center; gap: 4px;" title="Add Discount (Short Paid) Settlement">
+                                            <i class="fa fa-tag"></i> Discount (Short Paid)
+                                        </button>
                                     </div>
                                 </div>
-                                <div class="row">
-                                    <table class="table table-bordered table-hover table-sortable service_details"
-                                        id="service_details">
-                                        <thead>
-                                            <tr>
-                                                <th class="" width="10%" style="padding: 2px">
-                                                    <small>Service Type</small>
-                                                </th>
-                                                <th class="" width="13%" style="padding: 2px">
-                                                    <small>Amount Decided</small>
-                                                </th>
-                                                <th class="" width="13%" style="padding: 2px">
-                                                    <small>Payment received</small>
-                                                </th>
-                                                <th class="" width="14%" style="padding: 2px">
-                                                    <small>Date</small>
-                                                </th>
-                                                <th class="" width="13%" style="padding: 2px">
-                                                    <small>Instrument</small>
-                                                </th>
-                                                <th class="" width="11%" style="padding: 2px">
-                                                    <small>Balance</small>
-                                                </th>
-                                                <th class="" width="4%" style="padding: 2px">
-                                                    <a class="btn btn-xs btn-info cbAddLink pull-right" data-row-id="<?php if (isset($payId))
-                            echo $payId; ?>" data-row-count="<?php echo $payCount['totalpayrow'] ?>"
-                                                    title="Add new row" style="padding: 1px 5px;">
-                                                    <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
-                                                </a>
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="">
-                                        <?php
-                                        if ($payCount['totalpayrow'] > 0) {
-                                            foreach ($paymentInfo as $payInfo) {
-                                                ?>
-                                                <tr class="cb_subsection previousCBData pamentrow<?php echo $payInfo["payment_id"] ?>"
-                                                    id="cb_subsection_0" style="display: ">
-                                                    <td class="" style="padding: 0px;">
-                                                        <div class="table-edit-control"><label></label>
-                                                            <input type="text" data_row_id="" class="serviceTypeName"
-                                                                name="serviceTypeName"
-                                                                value="<?php echo $payInfo['service_type'] ?>" placeholder="" />
-                                                        </div>
-                                                    </td>
-                                                    <td class="" style="padding: 0px;">
-                                                        <div class="table-edit-control"><label></label>
-                                                            <input type="number" min="1" data_row_id=""
-                                                                class="serviceAmountDecided" name="serviceAmountDecided"
-                                                                value="<?php echo $payInfo['amount_decided'] ?>"
-                                                                placeholder="" />
-                                                        </div>
-                                                    </td>
-                                                    <td class="" style="padding: 0px;">
-                                                        <div class="table-edit-control"><label></label>
-                                                            <input type="number" min="1" data_row_id=""
-                                                                class="servicePaymentReceived" name="servicePaymentReceived"
-                                                                value="<?php echo $payInfo['payment_received'] ?>"
-                                                                placeholder="" />
-                                                        </div>
-                                                    </td>
-                                                    <td class="" style="padding: 0px;">
-                                                        <div class="table-edit-control"><label></label>
-                                                            <input type="text" data_row_id="" class="paymentDepositDate"
+                                 <style>
+                                     #service_details {
+                                         table-layout: fixed;
+                                         width: 100%;
+                                     }
+                                     #service_details th, #service_details td {
+                                         overflow: hidden;
+                                         text-overflow: ellipsis;
+                                         white-space: nowrap;
+                                     }
+                                     #service_details .table-edit-control input {
+                                         width: 100% !important;
+                                         box-sizing: border-box !important;
+                                     }
+                                 </style>
+                                 <div class="row">
+                                     <table class="table table-bordered table-hover table-sortable service_details"
+                                         id="service_details">
+                                         <thead>
+                                              <tr>
+                                                 <th class="" width="17%" style="padding: 2px">
+                                                     <small>Service Type</small>
+                                                 </th>
+                                                 <th class="" width="17%" style="padding: 2px">
+                                                     <small>Payment received</small>
+                                                 </th>
+                                                 <th class="" width="16%" style="padding: 2px; background-color: #fef3c7; color: #b45309; border-bottom: 2px solid #f59e0b; text-align: center;">
+                                                     <small style="font-weight: 700;"><i class="fa fa-percent" style="font-size: 10px; margin-right: 2px;"></i> TDS</small>
+                                                 </th>
+                                                 <th class="" width="15%" style="padding: 2px">
+                                                     <small>Date</small>
+                                                 </th>
+                                                 <th class="" width="15%" style="padding: 2px">
+                                                     <small>Instrument</small>
+                                                 </th>
+                                                 <th class="" width="13%" style="padding: 2px">
+                                                     <small>Balance</small>
+                                                 </th>
+                                                 <th class="" width="7%" style="padding: 2px; text-align: right;">
+                                                     <a class="btn btn-xs btn-info cbAddLink pull-right" data-row-id="<?php if (isset($payId))
+                             echo $payId; ?>" data-row-count="<?php echo $payCount['totalpayrow'] ?>"
+                                                     title="Add new row" style="padding: 1px 5px;">
+                                                     <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                                 </a>
+                                             </th>
+                                         </tr>
+                                     </thead>
+                                     <tbody class="">
+                                         <?php
+                                         if ($payCount['totalpayrow'] > 0) {
+                                             foreach ($paymentInfo as $payInfo) {
+                                                 $isDiscountRow = (floatval($payInfo['discount_amount'] ?? 0) > 0 || stripos($payInfo['service_type'] ?? '', 'discount') !== false || stripos($payInfo['service_type'] ?? '', 'short') !== false);
+                                                 $isLegacyTdsRow = (stripos($payInfo['service_type'] ?? '', 'tds') !== false && floatval($payInfo['tds_amount'] ?? 0) == 0 && !$isDiscountRow);
+
+                                                 $discountVal = floatval($payInfo['discount_amount'] ?? 0);
+                                                 if ($discountVal == 0 && $isDiscountRow) {
+                                                    $discountVal = floatval($payInfo['payment_received'] ?? 0);
+                                                 }
+
+                                                 $displayRcv = ($isLegacyTdsRow || $isDiscountRow) ? '' : (floatval($payInfo['payment_received'] ?? 0) > 0 ? $payInfo['payment_received'] : ($payInfo['payment_received'] === '0' || $payInfo['payment_received'] === 0 ? '0' : ''));
+                                                 $displayTds = floatval($payInfo['tds_amount'] ?? 0) > 0 ? $payInfo['tds_amount'] : ($isLegacyTdsRow && floatval($payInfo['payment_received'] ?? 0) > 0 ? $payInfo['payment_received'] : '');
+                                                 $displayDiscount = ($discountVal > 0) ? $discountVal : '';
+                                                 ?>
+                                                 <tr class="cb_subsection previousCBData pamentrow<?php echo $payInfo["payment_id"] ?> <?php echo $isDiscountRow ? 'discount-settlement-row' : ''; ?>"
+                                                     id="cb_subsection_0" style="<?php echo $isDiscountRow ? 'background-color: #faf5ff !important; border-left: 4px solid #8b5cf6 !important;' : ''; ?>">
+                                                     <td class="" style="padding: 0px; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ''; ?>">
+                                                         <div class="table-edit-control"><label></label>
+                                                             <input type="text" data_row_id="" class="serviceTypeName"
+                                                                 name="serviceTypeName"
+                                                                 value="<?php echo htmlspecialchars($payInfo['service_type'] ?? ''); ?>" placeholder="" style="<?php echo $isDiscountRow ? 'font-weight: 700; color: #6d28d9;' : ''; ?>" />
+                                                         </div>
+                                                     </td>
+                                                     <td class="" style="padding: 0px; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ''; ?>">
+                                                         <div class="table-edit-control"><label></label>
+                                                             <input type="hidden" data_row_id=""
+                                                                 class="serviceAmountDecided" name="serviceAmountDecided"
+                                                                 value="<?php echo htmlspecialchars((floatval($displayRcv) + floatval($displayTds) + floatval($displayDiscount)) ?: ($payInfo['amount_decided'] ?? '')); ?>" />
+                                                             <input type="hidden" data_row_id=""
+                                                                 class="serviceDiscountAmount" name="serviceDiscountAmount"
+                                                                 value="<?php echo htmlspecialchars($displayDiscount); ?>" />
+                                                             <?php if ($isDiscountRow) { ?>
+                                                                 <input type="text" readonly
+                                                                     class="serviceDiscountDisplay"
+                                                                     value="<?php echo number_format($discountVal, 2, '.', ''); ?>"
+                                                                     title="Discount Settled: ₹<?php echo number_format($discountVal, 2, '.', ''); ?>"
+                                                                     style="background-color: #faf5ff; border-bottom: 1px solid #8b5cf6; color: #6d28d9; font-weight: 700; text-align: right;" />
+                                                                 <input type="hidden" data_row_id=""
+                                                                     class="servicePaymentReceived" name="servicePaymentReceived"
+                                                                     value="0" />
+                                                             <?php } else { ?>
+                                                                 <input type="number" step="any" min="0" data_row_id=""
+                                                                     class="servicePaymentReceived" name="servicePaymentReceived"
+                                                                     value="<?php echo htmlspecialchars($displayRcv); ?>"
+                                                                     placeholder="" />
+                                                             <?php } ?>
+                                                         </div>
+                                                     </td>
+                                                     <td class="" style="padding: 0px; background-color: <?php echo $isDiscountRow ? '#faf5ff' : '#fffbeb'; ?>;">
+                                                         <div class="table-edit-control"><label></label>
+                                                             <input type="number" step="any" min="0" data_row_id=""
+                                                                 class="serviceTdsAmount" name="serviceTdsAmount"
+                                                                 value="<?php echo htmlspecialchars($displayTds); ?>"
+                                                                 placeholder=""
+                                                                 style="background-color: <?php echo $isDiscountRow ? '#faf5ff' : '#fffbeb'; ?>; border-bottom: 1px solid #f59e0b; color: #b45309; font-weight: 700; text-align: right;" />
+                                                         </div>
+                                                     </td>
+                                                     <td class="" style="padding: 0px; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ''; ?>">
+                                                         <div class="table-edit-control"><label></label>
+                                                             <input type="text" data_row_id="" class="paymentDepositDate"
                                                                 name="paymentDepositDate"
-                                                                value="<?php if (isset($payInfo['payment_date']))
-                                                                    echo date("d.m.Y", strtotime($payInfo['payment_date'])) ?>" placeholder="">
+                                                                value="<?php if (isset($payInfo['payment_date']) && !empty($payInfo['payment_date']) && $payInfo['payment_date'] != '0000-00-00')
+                                                                    echo date("d.m.Y", strtotime($payInfo['payment_date'])) ?>" placeholder="DD.MM.YYYY">
                                                             </div>
                                                         </td>
-                                                        <td class="" style="padding: 0px;">
+                                                        <td class="" style="padding: 0px; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ''; ?>">
                                                             <div class="table-edit-control"><label></label>
                                                                 <input type="text" data_row_id="" class="serviceChequeDetails"
                                                                     name="serviceChequeDetails"
-                                                                    value="<?php echo $payInfo['cheque_details'] ?>"
+                                                                    value="<?php echo htmlspecialchars($payInfo['cheque_details'] ?? ''); ?>"
                                                                 placeholder="" />
                                                         </div>
                                                     </td>
-                                                    <td class="" style="padding: 0px;">
+                                                    <td class="" style="padding: 0px; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ''; ?>">
                                                         <div class="table-edit-control"><label></label>
                                                             <input type="text" data_row_id="" class="serviceBalance"
-                                                                name="serviceBalance" value="<?php echo $payInfo['balance'] ?>"
+                                                                name="serviceBalance" value="<?php echo htmlspecialchars($payInfo['balance'] ?? '0.00'); ?>"
                                                                 placeholder="" readonly="" />
                                                         </div>
                                                     </td>
-                                                    <td class="" style="padding: 0px;">
+                                                    <td class="" style="padding: 0px; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ''; ?>">
                                                         <div class="table-edit-control">
                                                             <a class="infoDelete"
                                                                 data-row-id="<?php echo $payInfo['payment_id'] ?>"
                                                                 value="<?php echo $payInfo['payment_id'] ?>"><i
                                                                     class="fa fa-trash-o pull-right "
-                                                                    style="padding-right: 10px;"
+                                                                    style="padding-right: 10px; color: #ef4444;"
                                                                     title="Delete Row Details"></i></a>
                                                             <!--<input type="checkbox" class="infoDelete" data-row-id="<?php echo $payInfo['payment_id'] ?>" value="<?php echo $payInfo['payment_id'] ?>">-->
                                                             <input type="hidden" data-row-id="" class="row-id" name="row-id"
@@ -5645,22 +5969,29 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 </td>
                                                 <td class="" style="padding: 0px;">
                                                     <div class="table-edit-control"><label></label>
-                                                        <input type="number" min="1" data_row_id=""
+                                                        <input type="hidden" data_row_id=""
                                                             class="serviceAmountDecided" name="serviceAmountDecided"
+                                                            value="" />
+                                                        <input type="hidden" data_row_id=""
+                                                            class="serviceDiscountAmount" name="serviceDiscountAmount"
+                                                            value="" />
+                                                        <input type="number" step="any" min="0" data_row_id=""
+                                                            class="servicePaymentReceived" name="servicePaymentReceived"
                                                             value="" placeholder="" />
                                                     </div>
                                                 </td>
-                                                <td class="" style="padding: 0px;">
+                                                <td class="" style="padding: 0px; background-color: #fffbeb;">
                                                     <div class="table-edit-control"><label></label>
-                                                        <input type="number" min="1" data_row_id=""
-                                                            class="servicePaymentReceived" name="servicePaymentReceived"
-                                                            value="" placeholder="" />
+                                                        <input type="number" step="any" min="0" data_row_id=""
+                                                            class="serviceTdsAmount" name="serviceTdsAmount"
+                                                            value="" placeholder=""
+                                                            style="background-color: #fffbeb; border-bottom: 1px solid #f59e0b; color: #b45309; font-weight: 700; text-align: right;" />
                                                     </div>
                                                 </td>
                                                 <td class="" style="padding: 0px;">
                                                     <div class="table-edit-control"><label></label>
                                                         <input type="text" data_row_id="" class="paymentDepositDate"
-                                                            name="paymentDepositDate" value="" placeholder="">
+                                                            name="paymentDepositDate" value="" placeholder="DD.MM.YYYY">
                                                     </div>
                                                 </td>
                                                 <td class="" style="padding: 0px;">
@@ -5691,35 +6022,49 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                     <span><i class="fa ">Invoice</i></span>
                                 </div>
                             </div>
+                            <style>
+                                .invoiceStatusBtn:hover {
+                                    filter: brightness(0.9);
+                                    box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+                                }
+                                .invoiceStatusBtn:active {
+                                    transform: scale(0.97);
+                                }
+                                .openInvoicePdfLink {
+                                    color: #dc2626 !important;
+                                    transition: transform 0.15s ease, color 0.15s ease;
+                                }
+                                .openInvoicePdfLink:hover {
+                                    color: #b91c1c !important;
+                                    transform: scale(1.22);
+                                }
+                            </style>
                             <div class="row">
                                 <table class="table table-bordered table-hover table-sortable service_details"
-                                    id="service_details">
+                                    id="invoice_service_details">
                                     <thead>
                                         <tr>
-                                            <th class="" width="20%" style="padding: 2px">
+                                            <th class="" width="30%" style="padding: 3px 2px; text-align: center;">
                                                 <small>Invoice No.</small>
                                             </th>
-                                            <th class="" width="13%" style="padding: 2px">
+                                            <th class="" width="22%" style="padding: 3px 2px; text-align: center;">
                                                 <small>Date</small>
                                             </th>
-                                            <th class="" width="13%" style="padding: 2px">
+                                            <th class="" width="24%" style="padding: 3px 2px; text-align: center;">
                                                 <small>Amount</small>
                                             </th>
-                                            <th class="" width="5%" style="padding: 2px">
+                                            <th class="" width="24%" style="padding: 3px 2px; text-align: center;">
                                                 <small>Status</small>
                                             </th>
                                         </tr>
                                     </thead>
                                     <tbody class="">
                                         <?php
+                                        $totalInvoiceSumComputed = 0;
                                         foreach ($invoiceList as $invoiceinfo) {
-                                            if ($invoiceinfo["invoice_status"] == "NotRcv") {
-                                                $inv = "";
-                                                $title = "Patment Not Received";
-                                            } else if ($invoiceinfo["invoice_status"] == "Rcv") {
-                                                $inv = "checked";
-                                                $title = "Patment Received";
-                                            }
+                                            $totalInvoiceSumComputed += floatval($invoiceinfo['final_amount'] ?? 0);
+                                            $isPaid = ($invoiceinfo["invoice_status"] == "Rcv");
+                                            $invoicePdfUrl = "finalInvoicePDF.php?invoiceid=" . urlencode($invoiceinfo["invoice_id"]) . "&invoiceCustomerId=" . urlencode($_GET["customerid"]);
                                             ?>
                                             <tr class="cb_subsection" id="cb_subsection_0" style="display: ">
                                                 <td class="viewFinalInvoice"
@@ -5729,7 +6074,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                     <div class="table-edit-control"><label></label>
                                                         <input type="text" data_row_id="" class="invoiceNo" name="invoiceNo"
                                                             value="<?php echo $invoiceinfo['final_prefix'] . '-' . $invoiceinfo['final_invoice_no'] ?>"
-                                                            readonly="" />
+                                                            readonly="" style="cursor: pointer;" title="Click to view PDF in new tab" />
                                                     </div>
                                                 </td>
                                                 <td class="viewFinalInvoice"
@@ -5754,25 +6099,48 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                             readonly="" />
                                                     </div>
                                                 </td>
-                                                <td class="" style="padding: 0px;">
-                                                    <a class="editFinalInvoice"
-                                                        data-customer="<?php echo $_GET['customerid'] ?>"
-                                                        data-id="<?php echo $invoiceinfo["invoice_id"] ?>"
-                                                        title="Edit Final Invoice" style="padding: 1px 5px; "><i
-                                                            class="fa fa-pencil-square" style="padding:3px"></i></a>
-                                                    <input type="checkbox" class="invoiceStatus"
-                                                        data-row-id="<?php echo $invoiceinfo['invoice_id'] ?>"
-                                                        title="<?php echo $title ?>" <?php echo $inv; ?>>
+                                                <td class="" style="padding: 2px 4px; text-align: center; vertical-align: middle; white-space: nowrap;">
+                                                    <div style="display: inline-flex; align-items: center; justify-content: center; gap: 5px;">
+                                                        <a href="<?php echo $invoicePdfUrl; ?>"
+                                                            target="_blank"
+                                                            class="openInvoicePdfLink"
+                                                            title="Open Invoice PDF (New Tab)"
+                                                            style="color: #dc2626; padding: 2px 4px; display: inline-block; cursor: pointer; text-decoration: none;">
+                                                            <i class="fa fa-file-pdf-o" style="font-size: 15px; vertical-align: middle;"></i>
+                                                        </a>
+                                                        <a class="editFinalInvoice"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-id="<?php echo $invoiceinfo["invoice_id"] ?>"
+                                                            title="Edit Final Invoice" style="color: #0284c7; padding: 2px 4px; display: inline-block; cursor: pointer;">
+                                                            <i class="fa fa-pencil-square" style="font-size: 14px; vertical-align: middle;"></i>
+                                                        </a>
+                                                        <button type="button" class="btn btn-xs invoiceStatusBtn <?php echo ($isPaid ? 'btn-invoice-paid' : 'btn-invoice-unpaid'); ?>"
+                                                            data-row-id="<?php echo $invoiceinfo['invoice_id'] ?>"
+                                                            data-status="<?php echo ($isPaid ? 'Rcv' : 'NotRcv'); ?>"
+                                                            title="<?php echo ($isPaid ? 'Payment Received - Click to mark as Unpaid' : 'Payment Not Received - Click to mark as Paid'); ?>"
+                                                            style="padding: 2px 8px; font-size: 10.5px; font-weight: 700; border-radius: 4px; min-width: 58px; transition: all 0.2s ease; cursor: pointer; <?php echo ($isPaid ? 'background-color: #16a34a; border-color: #15803d; color: #ffffff;' : 'background-color: #ef4444; border-color: #dc2626; color: #ffffff;'); ?>">
+                                                            <i class="fa <?php echo ($isPaid ? 'fa-check' : 'fa-times'); ?>"></i> <?php echo ($isPaid ? 'Paid' : 'Unpaid'); ?>
+                                                        </button>
+                                                    </div>
                                                 </td>
-                                                <!--                                                    <td class="" style="padding: 0px;">
-                                                        <div class="table-edit-control">
-                                                            <a class="editFinalInvoice" data-customer="<?php echo $final['customer_id'] ?>" data-id="<?php echo $final['invoice_id'] ?>" title="Edit Final Invoice" style="padding: 1px 5px; "><i class="fa fa-pencil-square" style="padding:3px"></i></a>
-                                                            <input type="checkbox" class="invoiceStatus" data-row-id="<?php echo $invoiceinfo['invoice_id'] ?>" title="<?php echo $title ?>" <?php echo $inv; ?>>
-                                                        </div>
-                                                    </td>-->
                                             </tr>
                                         <?php } ?>
                                     </tbody>
+                                    <tfoot>
+                                        <tr style="background-color: #f1f5f9; font-weight: bold; border-top: 2px solid #0d4d8b;">
+                                            <td colspan="2" style="text-align: right; padding: 4px 6px; vertical-align: middle; color: #0d4d8b;">
+                                                <small style="font-weight: 700; font-size: 11px;">TOTAL INVOICE (<?php echo count($invoiceList); ?>):</small>
+                                            </td>
+                                            <td style="padding: 0px; vertical-align: middle;">
+                                                <div class="table-edit-control">
+                                                    <input type="text" id="totalInvoiceTableSum" value="<?php echo number_format($totalInvoiceSumComputed, 2, '.', ''); ?>" style="font-weight: bold; color: #0d4d8b; background: #e0f2fe; text-align: center; border: 1px solid #bae6fd; font-size: 12px; height: 26px; padding: 0;" readonly title="Total Invoicing Amount" />
+                                                </div>
+                                            </td>
+                                            <td style="text-align: center; vertical-align: middle; padding: 2px;">
+                                                <span class="badge" style="background-color: #0d4d8b; font-size: 10px;"><?php echo count($invoiceList); ?></span>
+                                            </td>
+                                        </tr>
+                                    </tfoot>
                                 </table>
                             </div>
                         </div>
@@ -5786,33 +6154,135 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         <div class="col-xs-12">
                             <div class="row">
                                 <div class="col-xs-12  text-center btn qms_complete_btn">
-                                    <span><i class="fa ">Payment Summery</i></span>
+                                    <span><i class="fa fa-calculator" style="margin-right: 5px;"></i>Payment Summary</span>
                                 </div>
                             </div>
                             <div class="row">
                                 <table class="table table-bordered table-hover table-sortable service_details"
-                                    id="service_details">
+                                    id="payment_summary_table">
                                     <thead>
                                         <tr>
-                                            <th class="" width="20%" style="padding: 2px">
-                                                <small>Total Receivable Amount (
-                                                    <?php echo $balanceTotal["balance_sum"] ?> )</small>
+                                            <th class="" width="20%" style="padding: 6px 8px; text-align: center; vertical-align: middle;">
+                                                <?php $totalInvoiceAmount = floatval($invoiceTotal["invoice_sum"] ?? 0); ?>
+                                                <small style="font-weight: 700; color: #475569; text-transform: uppercase; font-size: 10.5px;">Grand Total:</small>
+                                                <strong style="color: #0284c7; font-size: 13.5px; margin-left: 4px;">
+                                                    ₹<span id="summaryTotalAmount"><?php echo number_format($totalInvoiceAmount, 2, '.', ''); ?></span>
+                                                </strong>
+                                                <span id="summaryReceivableAmount" style="display: none;"><?php echo number_format($totalInvoiceAmount, 2, '.', ''); ?></span>
+                                                <span id="summaryInvoicingAmount" style="display: none;"><?php echo number_format($totalInvoiceAmount, 2, '.', ''); ?></span>
                                             </th>
-                                            <th class="" width="20%" style="padding: 2px">
-                                                <small>Total Amount Received (
-                                                    <?php echo $paymentTotal["payment_sum"] ?> )</small>
+                                            <th class="" width="20%" style="padding: 6px 8px; text-align: center; vertical-align: middle;">
+                                                <?php $totalPaymentReceived = floatval($paymentTotal["payment_sum"] ?? 0); ?>
+                                                <small style="font-weight: 700; color: #475569; text-transform: uppercase; font-size: 10.5px;">Received Amount:</small>
+                                                <strong style="color: #16a34a; font-size: 13.5px; margin-left: 4px;">
+                                                    ₹<span id="summaryReceivedAmount"><?php echo number_format($totalPaymentReceived, 2, '.', ''); ?></span>
+                                                </strong>
                                             </th>
-                                            <th class="" width="20%" style="padding: 2px">
-                                                <small>Total Invoicing Amount (
-                                                    <?php echo $invoiceTotal["invoice_sum"] ?> )</small>
+                                            <th class="" width="20%" style="padding: 6px 8px; text-align: center; vertical-align: middle; background-color: #fffbeb;">
+                                                <?php $totalTdsAmount = floatval($paymentTotal["tds_sum"] ?? 0); ?>
+                                                <small style="font-weight: 700; color: #b45309; text-transform: uppercase; font-size: 10.5px;"><i class="fa fa-percent" style="font-size: 9px; margin-right: 2px;"></i> TDS Amount:</small>
+                                                <strong style="color: #d97706; font-size: 13.5px; margin-left: 4px;">
+                                                    ₹<span id="summaryTdsAmount"><?php echo number_format($totalTdsAmount, 2, '.', ''); ?></span>
+                                                </strong>
                                             </th>
-                                            <th class="" width="20%" style="padding: 2px">
-                                                <?php $difference = $invoiceTotal["invoice_sum"] - $paymentTotal["payment_sum"]; ?>
-                                                <small>Balance( <?php echo $difference; ?> )</small>
+                                            <th class="" width="20%" style="padding: 6px 8px; text-align: center; vertical-align: middle; background-color: #faf5ff; border: 1px solid #d8b4fe;">
+                                                <?php $totalDiscountAmount = floatval($paymentTotal["discount_sum"] ?? 0); ?>
+                                                <small style="font-weight: 700; color: #6d28d9; text-transform: uppercase; font-size: 10.5px;"><i class="fa fa-tag" style="font-size: 9px; margin-right: 2px;"></i> Discount (Short):</small>
+                                                <strong style="color: #7c3aed; font-size: 13.5px; margin-left: 4px;">
+                                                    ₹<span id="summaryDiscountAmount"><?php echo number_format($totalDiscountAmount, 2, '.', ''); ?></span>
+                                                </strong>
+                                            </th>
+                                            <th class="" width="20%" style="padding: 6px 8px; text-align: center; vertical-align: middle;">
+                                                <?php $difference = $totalInvoiceAmount - $totalPaymentReceived - $totalTdsAmount - $totalDiscountAmount; ?>
+                                                <small style="font-weight: 700; color: #475569; text-transform: uppercase; font-size: 10.5px;">Remaining Amount:</small>
+                                                <strong style="color: <?php echo ($difference > 0 ? '#dc2626' : '#16a34a'); ?>; font-size: 13.5px; margin-left: 4px;">
+                                                    ₹<span id="summaryRemainingAmount"><?php echo number_format($difference, 2, '.', ''); ?></span>
+                                                </strong>
+                                                <span id="summaryBalanceAmount" style="display: none;"><?php echo number_format($difference, 2, '.', ''); ?></span>
                                             </th>
                                         </tr>
                                     </thead>
                                 </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Discount / Short Paid Settlement Modal -->
+                    <div class="modal fade" id="discountModal" tabindex="-1" role="dialog" aria-labelledby="discountModalLabel" aria-hidden="true">
+                        <div class="modal-dialog" style="max-width: 480px; margin-top: 80px;">
+                            <div class="modal-content" style="border-radius: 8px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.25); border: none;">
+                                <div class="modal-header" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #ffffff; padding: 12px 18px;">
+                                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true" style="color: #ffffff; opacity: 0.9; font-size: 22px;">&times;</button>
+                                    <h4 class="modal-title" id="discountModalLabel" style="font-weight: 700; font-size: 16px; margin: 0; display: flex; align-items: center; gap: 8px;">
+                                        <i class="fa fa-tags"></i> Discount (Short Paid) Settlement
+                                    </h4>
+                                </div>
+                                <div class="modal-body" style="padding: 20px; background-color: #f8fafc;">
+                                    <!-- Remaining Balance Box -->
+                                    <div style="background-color: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 6px; padding: 12px 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+                                        <div>
+                                            <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #6d28d9;">Current Remaining Balance:</span>
+                                            <div style="font-size: 20px; font-weight: 800; color: #4c1d95;">
+                                                ₹<span id="discountModalRemainingBalance">0.00</span>
+                                            </div>
+                                        </div>
+                                        <button type="button" class="btn btn-sm" id="btnAutoFillFullBalance" style="background-color: #8b5cf6; color: #fff; border: none; font-weight: 600; font-size: 11.5px; border-radius: 4px; padding: 6px 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.15);" title="Auto-fill the full remaining balance as discount to settle account">
+                                            <i class="fa fa-bolt"></i> Settle Full Balance
+                                        </button>
+                                    </div>
+
+                                    <form id="discountSettlementForm">
+                                        <div class="form-group" style="margin-bottom: 14px;">
+                                            <label style="font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 4px;">
+                                                Discount / Short Paid Amount <span style="color: #ef4444;">*</span>
+                                            </label>
+                                            <div class="input-group">
+                                                <span class="input-group-addon" style="background-color: #ede9fe; border-color: #c4b5fd; color: #6d28d9; font-weight: 700;">₹</span>
+                                                <input type="number" step="any" min="0.01" class="form-control" id="modalDiscountAmount" name="modalDiscountAmount" placeholder="Enter discount amount" required style="font-size: 15px; font-weight: 700; color: #1e1b4b; border-color: #c4b5fd;" />
+                                            </div>
+                                            <small style="color: #64748b; font-size: 11px;">This amount will be settled and deducted from the remaining balance.</small>
+                                        </div>
+
+                                        <div class="form-group" style="margin-bottom: 14px;">
+                                            <label style="font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 4px;">
+                                                <i class="fa fa-file-text-o" style="color: #7c3aed; margin-right: 4px;"></i> Discount Against Invoice No. <span style="color: #ef4444;">*</span>
+                                            </label>
+                                            <select class="form-control" id="modalDiscountInvoice" name="modalDiscountInvoice" required style="font-size: 13px; font-weight: 600; color: #1e1b4b; border-color: #c4b5fd; background-color: #f5f3ff;">
+                                                <?php if (!empty($invoiceList) && count($invoiceList) > 0) { ?>
+                                                    <?php foreach ($invoiceList as $idx => $inv) { 
+                                                        $fullInvNo = $inv['final_prefix'] . '-' . $inv['final_invoice_no'];
+                                                        $invAmt = floatval($inv['final_amount'] ?? 0);
+                                                    ?>
+                                                        <option value="<?php echo htmlspecialchars($fullInvNo); ?>" 
+                                                            data-amount="<?php echo $invAmt; ?>" 
+                                                            data-id="<?php echo $inv['invoice_id']; ?>"
+                                                            <?php echo $idx === 0 ? 'selected' : ''; ?>>
+                                                            <?php echo htmlspecialchars($fullInvNo . ' (₹' . number_format($invAmt, 2, '.', '') . ')'); ?>
+                                                        </option>
+                                                    <?php } ?>
+                                                <?php } else { ?>
+                                                    <option value="">No Invoices Found</option>
+                                                <?php } ?>
+                                            </select>
+                                            <small style="color: #64748b; font-size: 11px;">Select the invoice against which this discount is settled.</small>
+                                            <input type="hidden" id="modalDiscountInvoiceId" name="modalDiscountInvoiceId" value="<?php echo (!empty($invoiceList) && isset($invoiceList[0]['invoice_id'])) ? $invoiceList[0]['invoice_id'] : ''; ?>" />
+                                            <input type="hidden" id="modalDiscountDate" name="modalDiscountDate" value="<?php echo date('d.m.Y'); ?>" />
+                                        </div>
+
+                                        <div class="form-group" style="margin-bottom: 8px;">
+                                            <label style="font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 4px;">
+                                                Remarks / Reason
+                                            </label>
+                                            <input type="text" class="form-control" id="modalDiscountRemarks" name="modalDiscountRemarks" value="Short Paid" placeholder="Reason or reference" style="font-size: 13px;" />
+                                        </div>
+                                    </form>
+                                </div>
+                                <div class="modal-footer" style="background-color: #f1f5f9; padding: 10px 18px; border-top: 1px solid #e2e8f0;">
+                                    <button type="button" class="btn btn-default" data-dismiss="modal" style="font-size: 12px; font-weight: 600;">Cancel</button>
+                                    <button type="button" class="btn" id="btnSaveDiscountSettlement" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #ffffff; border: none; font-size: 12.5px; font-weight: 700; padding: 6px 16px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">
+                                        <i class="fa fa-check-circle" style="margin-right: 4px;"></i> Save &amp; Settle Discount
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -6984,6 +7454,35 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                     <i class="fa fa-download"></i>
                                                                 </a>
                                                             </span>
+                                                        <?php }
+                                                        $caCertSentInfo = aitfGetCertificateSentInfo($db, $caservice['service'] ?? null, 'ca', $_GET['customerid'] ?? null);
+                                                        if ($caCertSentInfo) {
+                                                            $caCertSentDate = !empty($caCertSentInfo['sent_date']) ? aitfFormatNotificationSentDate($caCertSentInfo['sent_date']) : '';
+                                                            $caCertSentTo = $caCertSentInfo['recipient_email'] ?? '';
+                                                        ?>
+                                                            <span class="sentCertificateBadge pull-right"
+                                                                data-stage="ca"
+                                                                data-servicename="CA"
+                                                                data-sentdate="<?php echo htmlspecialchars($caCertSentDate); ?>"
+                                                                data-sentto="<?php echo htmlspecialchars($caCertSentTo); ?>"
+                                                                title="Certificate sent on <?php echo htmlspecialchars($caCertSentDate); ?>">
+                                                                <i class="fa fa-check-circle"></i> Mail Sent
+                                                            </span>
+                                                        <?php } else { ?>
+                                                            <span style="padding-right: 5px">
+                                                                <a class="sendCertificateMailBtn"
+                                                                    data-stage="ca"
+                                                                    data-customer="<?php echo $_GET['customerid']; ?>"
+                                                                    data-service="<?php echo $caservice['ca_id']; ?>"
+                                                                    data-universalservice="<?php echo $caservice['service'] ?? ''; ?>"
+                                                                    data-crr="<?php echo !empty($caservice['crr_id']) ? $caservice['crr_id'] : ''; ?>"
+                                                                    data-servicename="CA"
+                                                                    data-certpath="<?php echo htmlspecialchars($caservice['certificate_print'] ?? ''); ?>"
+                                                                    title="Send Certificate by Email"
+                                                                    style="padding: 1px 5px; color: #0275d8; cursor: pointer;">
+                                                                    <i class="fa fa-envelope fa-lg"></i>
+                                                                </a>
+                                                            </span>
                                                         <?php } ?>
                                                     </div>
                                                 <?php } ?>
@@ -8111,6 +8610,35 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                         href="<?php echo $saiService['certificate_print'] ?>" data-id=""
                                                                         download class="customerReviewFileDownload"><i
                                                                             class="fa fa-download"></i></a></span>
+                                                            <?php }
+                                                            $saiCertSentInfo = aitfGetCertificateSentInfo($db, $saiService['service'] ?? null, 'sai', $_GET['customerid'] ?? null);
+                                                            if ($saiCertSentInfo) {
+                                                                $saiCertSentDate = !empty($saiCertSentInfo['sent_date']) ? aitfFormatNotificationSentDate($saiCertSentInfo['sent_date']) : '';
+                                                                $saiCertSentTo = $saiCertSentInfo['recipient_email'] ?? '';
+                                                            ?>
+                                                                <span class="sentCertificateBadge pull-right"
+                                                                    data-stage="sai"
+                                                                    data-servicename="SA-I"
+                                                                    data-sentdate="<?php echo htmlspecialchars($saiCertSentDate); ?>"
+                                                                    data-sentto="<?php echo htmlspecialchars($saiCertSentTo); ?>"
+                                                                    title="Certificate sent on <?php echo htmlspecialchars($saiCertSentDate); ?>">
+                                                                    <i class="fa fa-check-circle"></i> Mail Sent
+                                                                </span>
+                                                            <?php } else { ?>
+                                                                <span style="padding-right: 5px">
+                                                                    <a class="sendCertificateMailBtn"
+                                                                        data-stage="sai"
+                                                                        data-customer="<?php echo $_GET['customerid']; ?>"
+                                                                        data-service="<?php echo $saiService['sai_id']; ?>"
+                                                                        data-universalservice="<?php echo $saiService['service'] ?? ''; ?>"
+                                                                        data-crr="<?php echo !empty($saiService['crr_id']) ? $saiService['crr_id'] : ''; ?>"
+                                                                        data-servicename="SA-I"
+                                                                        data-certpath="<?php echo htmlspecialchars($saiService['certificate_print'] ?? ''); ?>"
+                                                                        title="Send Certificate by Email"
+                                                                        style="padding: 1px 5px; color: #0275d8; cursor: pointer;">
+                                                                        <i class="fa fa-envelope fa-lg"></i>
+                                                                    </a>
+                                                                </span>
                                                             <?php } ?>
                                                         </div>
                                                     </div>
@@ -9155,17 +9683,46 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                         class="updateCertificatePrint input-certificate-print-form<?php echo $saiiService['saii_id'] ?>" />
                                                                 </span>
                                                             <?php } ?>
-                                                            <?php if (isset($saiiService['certificate_print']) && !empty($saiiService['certificate_print'])) { ?>
-                                                                <span style="padding-right: 5px">
-                                                                    <a href="<?php echo $saiiService['certificate_print'] ?>" data-id=""
-                                                                        download class="customerReviewsaiiFileDownload">
-                                                                        <i class="fa fa-download"></i>
-                                                                    </a>
-                                                                </span>
-                                                            <?php } ?>
-                                                        </div>
-                                                    </div>
-                                                <?php } ?>
+                                                             <?php if (isset($saiiService['certificate_print']) && !empty($saiiService['certificate_print'])) { ?>
+                                                                 <span style="padding-right: 5px">
+                                                                     <a href="<?php echo $saiiService['certificate_print'] ?>" data-id=""
+                                                                         download class="customerReviewsaiiFileDownload">
+                                                                         <i class="fa fa-download"></i>
+                                                                     </a>
+                                                                 </span>
+                                                             <?php }
+                                                             $saiiCertSentInfo = aitfGetCertificateSentInfo($db, $saiiService['service'] ?? null, 'saii', $_GET['customerid'] ?? null);
+                                                             if ($saiiCertSentInfo) {
+                                                                 $saiiCertSentDate = !empty($saiiCertSentInfo['sent_date']) ? aitfFormatNotificationSentDate($saiiCertSentInfo['sent_date']) : '';
+                                                                 $saiiCertSentTo = $saiiCertSentInfo['recipient_email'] ?? '';
+                                                             ?>
+                                                                 <span class="sentCertificateBadge pull-right"
+                                                                     data-stage="saii"
+                                                                     data-servicename="SA-II"
+                                                                     data-sentdate="<?php echo htmlspecialchars($saiiCertSentDate); ?>"
+                                                                     data-sentto="<?php echo htmlspecialchars($saiiCertSentTo); ?>"
+                                                                     title="Certificate sent on <?php echo htmlspecialchars($saiiCertSentDate); ?>">
+                                                                     <i class="fa fa-check-circle"></i> Mail Sent
+                                                                 </span>
+                                                             <?php } else { ?>
+                                                                 <span style="padding-right: 5px">
+                                                                     <a class="sendCertificateMailBtn"
+                                                                         data-stage="saii"
+                                                                         data-customer="<?php echo $_GET['customerid']; ?>"
+                                                                         data-service="<?php echo $saiiService['saii_id']; ?>"
+                                                                         data-universalservice="<?php echo $saiiService['service'] ?? ''; ?>"
+                                                                         data-crr="<?php echo !empty($saiiService['crr_id']) ? $saiiService['crr_id'] : ''; ?>"
+                                                                         data-servicename="SA-II"
+                                                                         data-certpath="<?php echo htmlspecialchars($saiiService['certificate_print'] ?? ''); ?>"
+                                                                         title="Send Certificate by Email"
+                                                                         style="padding: 1px 5px; color: #0275d8; cursor: pointer;">
+                                                                         <i class="fa fa-envelope fa-lg"></i>
+                                                                     </a>
+                                                                 </span>
+                                                             <?php } ?>
+                                                         </div>
+                                                     </div>
+                                                 <?php } ?>
                                             </div>
                                         </div>
                                         <div class="col-sm-6">
@@ -10062,6 +10619,35 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                     <a href="<?php echo $rcServiceinfo['certificate_print'] ?>"
                                                                         data-id="" download class="customerReviewFileDownload">
                                                                         <i class="fa fa-download"></i>
+                                                                    </a>
+                                                                </span>
+                                                            <?php }
+                                                            $rcCertSentInfo = aitfGetCertificateSentInfo($db, $rcServiceinfo['service'] ?? null, 'rc', $_GET['customerid'] ?? null);
+                                                            if ($rcCertSentInfo) {
+                                                                $rcCertSentDate = !empty($rcCertSentInfo['sent_date']) ? aitfFormatNotificationSentDate($rcCertSentInfo['sent_date']) : '';
+                                                                $rcCertSentTo = $rcCertSentInfo['recipient_email'] ?? '';
+                                                            ?>
+                                                                <span class="sentCertificateBadge pull-right"
+                                                                    data-stage="rc"
+                                                                    data-servicename="RC"
+                                                                    data-sentdate="<?php echo htmlspecialchars($rcCertSentDate); ?>"
+                                                                    data-sentto="<?php echo htmlspecialchars($rcCertSentTo); ?>"
+                                                                    title="Certificate sent on <?php echo htmlspecialchars($rcCertSentDate); ?>">
+                                                                    <i class="fa fa-check-circle"></i> Mail Sent
+                                                                </span>
+                                                            <?php } else { ?>
+                                                                <span style="padding-right: 5px">
+                                                                    <a class="sendCertificateMailBtn"
+                                                                        data-stage="rc"
+                                                                        data-customer="<?php echo $_GET['customerid']; ?>"
+                                                                        data-service="<?php echo $rcServiceinfo['rc_id']; ?>"
+                                                                        data-universalservice="<?php echo $rcServiceinfo['service'] ?? ''; ?>"
+                                                                        data-crr="<?php echo !empty($rcServiceinfo['crr_id']) ? $rcServiceinfo['crr_id'] : ''; ?>"
+                                                                        data-servicename="RC"
+                                                                        data-certpath="<?php echo htmlspecialchars($rcServiceinfo['certificate_print'] ?? ''); ?>"
+                                                                        title="Send Certificate by Email"
+                                                                        style="padding: 1px 5px; color: #0275d8; cursor: pointer;">
+                                                                        <i class="fa fa-envelope fa-lg"></i>
                                                                     </a>
                                                                 </span>
                                                             <?php } ?>
@@ -11993,7 +12579,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
     </div>
 
     <div id="delete-details" style="display: none">
-        <div id="loading-div" class="ui-corner-all">
+        <div class="legacy-dialog-box ui-corner-all" style="width: 300px; padding: 20px; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; text-align: center; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10000; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
             <span style="font-size: 30pt;"><i style="padding: 5px;" class="fa fa-warning text-warning"></i></span>
             <div><span style="font-size: 11pt; padding: 10px" class="text-primary meeting-cancel-confirm-message">
                     Are you sure that you want to delete details?</span>
@@ -12008,7 +12594,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
     </div>
 
     <div id="addCRsvc" style="display: none">
-        <div id="loading-div" class="ui-corner-all">
+        <div class="legacy-dialog-box ui-corner-all" style="width: 300px; padding: 20px; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; text-align: center; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10000; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
             <span style="font-size: 30pt;"><i style="padding: 5px;" class="fa fa-warning text-warning"></i></span>
             <div><span style="font-size: 11pt; padding: 10px" class="text-primary meeting-cancel-confirm-message">
                     Please add Contract Review before this service</span>
@@ -13244,16 +13830,24 @@ if ($currentRole === 'client' || $currentRole === 'external') {
         }
         // progress bar ends here
 
-        function ShowProgressAnimation() {
-            //        alert("called");
-            $("#loading-div-background").show();
-            //        $("#loading-div-background-resend").show();
+        function ShowProgressAnimation(title, subtitle) {
+            if (title) {
+                $("#loading-div .loading-title").text(title);
+            } else {
+                $("#loading-div .loading-title").text("Please wait...");
+            }
+            if (subtitle) {
+                $("#loading-div .loading-subtitle").text(subtitle).show();
+            } else {
+                $("#loading-div .loading-subtitle").text("Processing and sending your request...").show();
+            }
+            $("#loading-div-background").css('display', 'flex').hide().fadeIn(180);
         }
 
         function HideProgressAnimation() {
-            //        alert("called");
-            $("#loading-div-background").hide();
-            //        $("#loading-div-background-resend").show();
+            $("#loading-div-background").fadeOut(180, function () {
+                $(this).css('display', 'none');
+            });
         }
 
         $actionRowId = "";
@@ -13409,19 +14003,13 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 form.submit();
             });
 
-            $('.viewFinalInvoice').click(function () {
+            $('.viewFinalInvoice').click(function (e) {
+                if ($(e.target).closest('a').length) {
+                    return; // Link has href and target="_blank"
+                }
                 var customerID = $(this).attr('data-customer');
-                var firmId = '1';
                 var invoiceid = $(this).attr('data-id');
-                // open popup
-                var url = 'finalInvoicePDF.php'
-                var form = $('<form action="' + url + '" method="post" target="_blank">' +
-                    '<input type="hidden" name="invoiceCustomerId" value="' + customerID + '" />' +
-                    '<input type="hidden" name="invoiceFirmId" value="' + firmId + '" />' +
-                    '<input type="hidden" name="invoiceid" value="' + invoiceid + '" />' +
-                    '</form>');
-                $('body').append(form);
-                form.submit();
+                window.open('finalInvoicePDF.php?invoiceid=' + encodeURIComponent(invoiceid) + '&invoiceCustomerId=' + encodeURIComponent(customerID), '_blank');
             });
 
             $(".payment-title").click(function () {
@@ -15136,16 +15724,17 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         if (result.isConfirmed) {
                             var finalEmail = result.value;
 
-                            Swal.fire({
-                                title: 'Sending Agreement...',
-                                html: '<div style="font-size:14px;color:#475569;margin-top:10px;">Generating Certification Agreement PDF and sending email to <strong>' + $('<div>').text(finalEmail).html() + '</strong>.<br><br>Please wait...</div>',
-                                allowOutsideClick: false,
-                                allowEscapeKey: false,
-                                showConfirmButton: false,
-                                didOpen: function () {
-                                    Swal.showLoading();
-                                }
-                            });
+                            if (typeof Swal !== 'undefined' && Swal.close) {
+                                Swal.close();
+                            }
+                            if (typeof ShowProgressAnimation === 'function') {
+                                ShowProgressAnimation(
+                                    'Sending Agreement...',
+                                    'Generating Certification Agreement PDF and sending email to ' + finalEmail + '...'
+                                );
+                            }
+
+                            $btn.prop('disabled', true).addClass('disabled');
 
                             $.ajax({
                                 url: 'sendAgreementMail.php',
@@ -15157,6 +15746,12 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                     certification: certificationId,
                                     saiicount: serviceCount,
                                     email: finalEmail
+                                },
+                                complete: function () {
+                                    $btn.prop('disabled', false).removeClass('disabled');
+                                    if (typeof HideProgressAnimation === 'function') {
+                                        HideProgressAnimation();
+                                    }
                                 },
                                 success: function (response) {
                                     if (response && response.success) {
@@ -15915,6 +16510,15 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         $('input[type="text"]').trigger('change');
                         $('.assessmentLocation').trigger('change');
 
+                        if (typeof window.loadEligibleAuditorsForAssessment === 'function') {
+                            window.loadEligibleAuditorsForAssessment(customerId, serviceId, function() {
+                                if (typeof window.renderAPLeadAuditorOptions === 'function') {
+                                    $('.assessmentLeadAuditor').html(window.renderAPLeadAuditorOptions(''));
+                                    $('.assessmentAuditors').first().html(window.renderAPAuditorOptions(''));
+                                }
+                            });
+                        }
+
                         $('#assessmentModal').modal('show');
 
                         // Initialize date pickers for Assessment Planning form
@@ -16067,12 +16671,16 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         $('input[type="text"]').trigger('change');
                         $('.assessmentLocation').trigger('change');
 
-                        $('#assessmentModal').modal('show');
-
-                        // Initialize date pickers and populate ALL auditors AFTER modal is shown
-                        setTimeout(function () {
+                        function populateAuditorsAfterFilter() {
                             // Clear additional auditors container
                             $('.multipleCodeAuditor').empty();
+
+                            var leadAud = data['lead_auditor'] || '';
+                            if (typeof window.renderAPLeadAuditorOptions === 'function') {
+                                $('.assessmentLeadAuditor').html(window.renderAPLeadAuditorOptions(leadAud)).val(leadAud);
+                            } else {
+                                $('.assessmentLeadAuditor').val(leadAud);
+                            }
 
                             if (auditorsData.auditors && auditorsData.auditors.trim() != '') {
                                 var auditors = auditorsData.auditors.split(', ');
@@ -16087,8 +16695,12 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                 if (auditors[0] && auditors[0].trim() != '') {
                                     var firstAuditor = auditors[0].trim();
                                     console.log('Setting first auditor in main dropdown:', firstAuditor);
-                                    $('.assessmentAuditors').val(firstAuditor);
-                                    $('.codeAuditor').prop('checked', codeAuditors[0] && codeAuditors[0].trim() != "");
+                                    if (typeof window.renderAPAuditorOptions === 'function') {
+                                        $('.assessmentAuditors').first().html(window.renderAPAuditorOptions(firstAuditor)).val(firstAuditor);
+                                    } else {
+                                        $('.assessmentAuditors').val(firstAuditor);
+                                    }
+                                    $('.codeAuditor').first().prop('checked', codeAuditors[0] && codeAuditors[0].trim() != "");
                                     console.log('First auditor value set to:', $('.assessmentAuditors').val());
 
                                     // Trigger change to ensure float label works
@@ -16100,15 +16712,21 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                 // Add additional auditors dynamically (starting from index 1)
                                 for (var i = 1; i < auditors.length; i++) {
                                     if (auditors[i] && auditors[i].trim() != '') {
-                                        var optionHtml = '<option value="" disabled>Choose Auditors</option>';
-                                        $('.assessmentAuditors option').each(function () {
-                                            var optVal = $(this).val();
-                                            var optText = $(this).text();
-                                            if (optVal && optVal.trim() != '') {
-                                                var selected = (optVal.trim() === auditors[i].trim()) ? 'selected' : '';
-                                                optionHtml += '<option value="' + optVal + '" ' + selected + '>' + optText + '</option>';
-                                            }
-                                        });
+                                        var currentAud = auditors[i].trim();
+                                        var optionHtml = (typeof window.renderAPAuditorOptions === 'function')
+                                            ? window.renderAPAuditorOptions(currentAud)
+                                            : (function () {
+                                                var opt = '<option value="" disabled>Choose Auditors</option>';
+                                                $('.assessmentAuditors option').each(function () {
+                                                    var optVal = $(this).val();
+                                                    var optText = $(this).text();
+                                                    if (optVal && optVal.trim() != '') {
+                                                        var selected = (optVal.trim() === currentAud) ? 'selected' : '';
+                                                        opt += '<option value="' + optVal + '" ' + selected + '>' + optText + '</option>';
+                                                    }
+                                                });
+                                                return opt;
+                                            })();
 
                                         var isCodeAuditor = codeAuditors[i] && codeAuditors[i].trim() != "";
                                         var checkedAttr = isCodeAuditor ? 'checked' : '';
@@ -16131,6 +16749,21 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                         $('.multipleCodeAuditor').append(auditorRow);
                                     }
                                 }
+                            }
+                        }
+
+                        if (typeof window.loadEligibleAuditorsForAssessment === 'function') {
+                            window.loadEligibleAuditorsForAssessment(customerId, serviceId, function () {
+                                populateAuditorsAfterFilter();
+                            });
+                        }
+
+                        $('#assessmentModal').modal('show');
+
+                        // Initialize date pickers and populate ALL auditors AFTER modal is shown
+                        setTimeout(function () {
+                            if (typeof window.loadEligibleAuditorsForAssessment !== 'function') {
+                                populateAuditorsAfterFilter();
                             }
 
                             // Initialize datepickers
@@ -16535,7 +17168,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         confirmHtml,
                         function () {
                             if (typeof ShowProgressAnimation === 'function') {
-                                ShowProgressAnimation();
+                                ShowProgressAnimation('Sending Notification...', 'Dispatching audit notification and plan by email...');
                             }
 
                             $btn.prop('disabled', true).addClass('disabled');
@@ -16576,6 +17209,191 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                             });
                         }
                     );
+                });
+            });
+
+            // Certificate Upload Mail - Badge click (already sent info)
+            $(document).on('click', '.sentCertificateBadge', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var sName = $(this).attr('data-servicename') || 'Certificate';
+                var sDate = $(this).attr('data-sentdate') || '';
+                var sTo = $(this).attr('data-sentto') || '';
+
+                var sentDetailHtml = '<div style="text-align:center;font-size:14px;color:#334155;line-height:1.6;margin-top:10px;">' +
+                    '<div style="width:58px;height:58px;border-radius:50%;background:#dcfce7;color:#16a34a;display:inline-flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:12px;"><i class="fa fa-certificate"></i></div>' +
+                    '<p style="font-size:16px;font-weight:700;color:#0f172a;margin-bottom:8px;">Certificate Already Sent</p>' +
+                    '<p style="font-size:13px;color:#64748b;margin-bottom:14px;">The ' + $('<div>').text(sName).html() + ' certificate has already been emailed to this client.</p>' +
+                    '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #10b981;border-radius:6px;padding:12px 16px;text-align:left;display:inline-block;width:100%;box-sizing:border-box;">' +
+                    (sTo ? '<div style="margin-bottom:6px;"><strong>Sent To:</strong> <span style="color:#2563eb;font-weight:600;">' + $('<div>').text(sTo).html() + '</span></div>' : '') +
+                    (sDate ? '<div><strong>Sent Date & Time:</strong> <span style="color:#0f172a;font-weight:600;"><i class="fa fa-clock-o" style="color:#0284c7;"></i> ' + $('<div>').text(sDate).html() + '</span></div>' : '') +
+                    '</div>' +
+                    '</div>';
+
+                if (typeof Swal !== 'undefined' && Swal.fire) {
+                    Swal.fire({
+                        title: '',
+                        html: sentDetailHtml,
+                        confirmButtonColor: '#0F2742',
+                        confirmButtonText: '<i class="fa fa-check"></i> OK'
+                    });
+                } else if (typeof showStyledAlert === 'function') {
+                    showStyledAlert('Already Sent', sName + ' Certificate has already been sent' + (sDate ? ' on ' + sDate : '') + (sTo ? ' to ' + sTo : '') + '.\n\nDuplicate sending is not allowed.', 'info');
+                } else {
+                    alert(sName + ' Certificate has already been sent' + (sDate ? ' on ' + sDate : '') + (sTo ? ' to ' + sTo : '') + '.');
+                }
+            });
+
+            // Certificate Upload Mail - Send button click
+            $(document).on('click', '.sendCertificateMailBtn', function (e) {
+                e.preventDefault();
+                var $btn = $(this);
+                var payload = {
+                    customer: $btn.attr('data-customer') || '',
+                    service: $btn.attr('data-service') || '',
+                    universalservice: $btn.attr('data-universalservice') || '',
+                    crr: $btn.attr('data-crr') || '',
+                    stage: $btn.attr('data-stage') || 'ca',
+                    certpath: $btn.attr('data-certpath') || ''
+                };
+                var serviceName = $btn.attr('data-servicename') || payload.stage.toUpperCase();
+
+                // Validate if certificate is uploaded
+                if (!payload.certpath || payload.certpath.trim() === '') {
+                    var noCertMsg = serviceName + ' Certificate has not been uploaded yet. Please upload the certificate first before sending email.';
+                    if (typeof showStyledAlert === 'function') {
+                        showStyledAlert('Certificate Required', noCertMsg, 'error');
+                    } else {
+                        alert(noCertMsg);
+                    }
+                    return false;
+                }
+
+                if (typeof ShowProgressAnimation === 'function') {
+                    ShowProgressAnimation('Loading Details...', 'Preparing certificate email details...');
+                }
+
+                // Fetch details dynamically for stylish confirmation modal
+                $.ajax({
+                    url: 'sendCertificateUploadMail.php',
+                    type: 'GET',
+                    data: {
+                        action: 'get_details',
+                        customer: payload.customer,
+                        service: payload.service,
+                        universalservice: payload.universalservice,
+                        crr: payload.crr,
+                        stage: payload.stage
+                    },
+                    dataType: 'json'
+                }).always(function () {
+                    if (typeof HideProgressAnimation === 'function') {
+                        HideProgressAnimation();
+                    }
+                }).done(function (res) {
+                    if (!res || !res.success) {
+                        var errMsg = (res && res.message) ? res.message : 'Unable to fetch client details.';
+                        if (typeof showStyledAlert === 'function') {
+                            showStyledAlert('Error', errMsg, 'error');
+                        } else {
+                            alert(errMsg);
+                        }
+                        return;
+                    }
+
+                    if (!res.has_certificate && (!payload.certpath || payload.certpath.trim() === '')) {
+                        showStyledAlert('Certificate Required', 'Certificate has not been uploaded yet. Please upload the certificate first.', 'error');
+                        return;
+                    }
+
+                    var clientEmail = res.to_email || '';
+                    if (!clientEmail || clientEmail.trim() === '') {
+                        showStyledAlert('Email Required', 'Client email address is missing for this customer. Please update customer email in profile first.', 'error');
+                        return;
+                    }
+
+                    if (res.already_sent) {
+                        showStyledAlert('Already Sent', serviceName + ' Certificate has already been sent on ' + res.sent_date + ' to ' + clientEmail + '.\n\nDuplicate sending is not allowed.', 'info');
+                        return;
+                    }
+
+                    var orgName = res.customer_name || 'Organization';
+                    var standardName = res.standard || 'ISO Standard';
+                    var officeCc = res.cc_office || 'aitfmcl@gmail.com';
+                    var confirmEmail = res.confirmation_email || 'certification@aitf.co.in';
+
+                    var confirmHtml = '<div style="margin-bottom: 14px; font-size: 14px; color: #475569; line-height: 1.5;">' +
+                        'Are you sure you want to send the <strong>' + serviceName + ' Certificate</strong> via email to the client?' +
+                        '</div>' +
+                        '<div style="background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #0284c7; border-radius: 6px; padding: 12px 16px; text-align: left; font-size: 13px; line-height: 1.8;">' +
+                        '<div><strong style="color: #0f172a;"><i class="fa fa-building-o" style="color: #0284c7; width: 16px;"></i> Organization:</strong> <span style="color: #0f172a; font-weight: 600;">' + $('<div>').text(orgName).html() + '</span></div>' +
+                        '<div><strong style="color: #0f172a;"><i class="fa fa-certificate" style="color: #f59e0b; width: 16px;"></i> Standard:</strong> <span style="color: #d97706; font-weight: 600;">' + $('<div>').text(standardName).html() + '</span></div>' +
+                        '<div><strong style="color: #0f172a;"><i class="fa fa-envelope-o" style="color: #0284c7; width: 16px;"></i> To:</strong> <span style="color: #2563eb; font-weight: 600;">' + $('<div>').text(clientEmail).html() + '</span></div>' +
+                        '<div><strong style="color: #0f172a;"><i class="fa fa-copy" style="color: #64748b; width: 16px;"></i> CC:</strong> <span style="color: #475569; font-weight: 600;">' + $('<div>').text(officeCc).html() + '</span></div>' +
+                        '<div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #cbd5e1; font-size: 12px; color: #16a34a;"><i class="fa fa-check-circle" style="color:#16a34a;"></i> A confirmation copy will be sent to <strong>' + $('<div>').text(confirmEmail).html() + '</strong> upon dispatch.</div>' +
+                        '</div>';
+
+                    showStyledConfirm(
+                        'Send Certificate Confirmation',
+                        confirmHtml,
+                        function () {
+                            if (typeof ShowProgressAnimation === 'function') {
+                                ShowProgressAnimation('Sending Certificate...', 'Preparing attachments and dispatching email to client & office copy...');
+                            }
+
+                            $btn.prop('disabled', true).addClass('disabled');
+
+                            $.ajax({
+                                url: 'sendCertificateUploadMail.php',
+                                type: 'POST',
+                                data: payload,
+                                dataType: 'json'
+                            }).done(function (sendRes) {
+                                if (sendRes && sendRes.success) {
+                                    var sentDateStr = sendRes.sent_at || 'Just now';
+                                    var sentRecipient = sendRes.recipient || clientEmail;
+                                    showStyledAlert('Success', sendRes.message || (serviceName + ' Certificate sent successfully to client.'), 'success');
+
+                                    var badgeHtml = '<span class="sentCertificateBadge pull-right" ' +
+                                        'data-stage="' + payload.stage + '" ' +
+                                        'data-servicename="' + serviceName + '" ' +
+                                        'data-sentdate="' + $('<div>').text(sentDateStr).html() + '" ' +
+                                        'data-sentto="' + $('<div>').text(sentRecipient).html() + '" ' +
+                                        'title="Certificate sent on ' + $('<div>').text(sentDateStr).html() + '" ' +
+                                        'style="display: inline-flex; align-items: center; justify-content: center; height: 17px; line-height: 17px; padding: 0 6px; margin-top: 3px; margin-right: 5px; background-color: #16a34a; color: #ffffff; font-size: 10px; font-weight: 700; border-radius: 3px; cursor: pointer; vertical-align: middle; box-sizing: border-box; text-transform: none; white-space: nowrap;">' +
+                                        '<i class="fa fa-check-circle" style="font-size: 9.5px; margin-right: 3px; color: #ffffff;"></i> Mail Sent' +
+                                        '</span>';
+
+                                    var $target = $btn.closest('span').length ? $btn.closest('span') : $btn;
+                                    $target.replaceWith(badgeHtml);
+                                } else {
+                                    showStyledAlert('Error', (sendRes && sendRes.message) ? sendRes.message : 'Unable to send certificate email right now.', 'error');
+                                }
+                            }).fail(function (xhr, status, error) {
+                                var message = 'Unable to send certificate email right now. Please try again.';
+                                if (xhr && xhr.responseJSON && xhr.responseJSON.message) {
+                                    message = xhr.responseJSON.message;
+                                } else if (xhr && typeof xhr.responseText === 'string' && xhr.responseText.trim() !== '') {
+                                    try {
+                                        var parsed = JSON.parse(xhr.responseText);
+                                        if (parsed && parsed.message) {
+                                            message = parsed.message;
+                                        }
+                                    } catch (e) {
+                                        message = xhr.responseText.substring(0, 200);
+                                    }
+                                }
+                                showStyledAlert('Error', message, 'error');
+                            }).always(function () {
+                                $btn.prop('disabled', false).removeClass('disabled');
+                                if (typeof HideProgressAnimation === 'function') {
+                                    HideProgressAnimation();
+                                }
+                            });
+                        }
+                    );
+                }).fail(function () {
+                    showStyledAlert('Error', 'Failed to connect to server. Please try again.', 'error');
                 });
             });
 
@@ -20280,26 +21098,16 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             });
 
             $(document.body).on('click', '.cbAddLink', function () {
-                //             alert($(this).data("row-count"));
                 $newCount = 0;
                 $rowCB = $(this).data("row-count");
-                //            alert($rowCB);
                 if ($rowCB == "") {
                     $rowCB = 1;
                 }
-                //            alert("$rowCB -> " + $rowCB);
-                //            $rowId = 1;
-                //                    if($rowId==""){
-                //                        $newCount=1;
-                //                    }
-                //            alert("$rowId" + $rowId);
                 $count = $rowCB + 1;
-                //            alert("in");
                 var table = document.getElementById("service_details");
                 var row = table.insertRow($count);
                 $(this).data("row-count", $rowCB + 1);
-                //            $('.cbAddLinkForAdmin[data-row-id="' + $rowId + '"]').data("row-count", $rowCB + 1);
-                //            alert($(this).data("row-count"));
+
                 var cell1 = row.insertCell(0);
                 var cell2 = row.insertCell(1);
                 var cell3 = row.insertCell(2);
@@ -20307,31 +21115,31 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 var cell5 = row.insertCell(4);
                 var cell6 = row.insertCell(5);
                 var cell7 = row.insertCell(6);
-                //                var cell8 = row.insertCell(7);
-                //            var cell8 = row.insertCell(7);
-                //            var cell9 = row.insertCell(8);
+
                 cell1.style.padding = "0px";
                 cell2.style.padding = "0px";
                 cell3.style.padding = "0px";
+                cell3.style.backgroundColor = "#fffbeb";
                 cell4.style.padding = "0px";
                 cell5.style.padding = "0px";
                 cell6.style.padding = "0px";
                 cell7.style.padding = "0px";
-                //                cell8.style.padding = "0px";
-                //            cell9.style.padding = "0px";
+
+                var summaryState = (typeof recalculatePaymentSystem === 'function') ? recalculatePaymentSystem() : null;
+                var remAmount = (summaryState && summaryState.remainingBalance > 0) ? summaryState.remainingBalance.toFixed(2) : '';
+
                 cell1.innerHTML = '<div class="table-edit-control"><label></label><input type="text" data-row-id="" class="serviceTypeName" name="serviceTypeName" placeholder="" /></div>';
-                cell2.innerHTML = '<div class="table-edit-control"><label></label><input type="number" min="1" data-row-id="" class="serviceAmountDecided" name="serviceAmountDecided" placeholder="" /></div>';
-                cell3.innerHTML = '<div class="table-edit-control"><label></label><input type="number" min="1" data-row-id="" class="servicePaymentReceived" name="servicePaymentReceived" placeholder="" /></div>';
-                cell4.innerHTML = '<div class="table-edit-control"><label></label><input type="text" data-row-id="" class="paymentDepositDate"  name="paymentDepositDate" placeholder="" /></div>';
+                cell2.innerHTML = '<div class="table-edit-control"><label></label><input type="hidden" data-row-id="" class="serviceAmountDecided" name="serviceAmountDecided" value="' + remAmount + '" /><input type="hidden" data-row-id="" class="serviceDiscountAmount" name="serviceDiscountAmount" value="0" /><input type="number" step="any" min="0" data-row-id="" class="servicePaymentReceived" name="servicePaymentReceived" value="' + remAmount + '" placeholder="" /></div>';
+                cell3.innerHTML = '<div class="table-edit-control"><label></label><input type="number" step="any" min="0" data-row-id="" class="serviceTdsAmount" name="serviceTdsAmount" value="" placeholder="" style="background-color: #fffbeb; border-bottom: 1px solid #f59e0b; color: #b45309; font-weight: 700; text-align: right;" /></div>';
+                cell4.innerHTML = '<div class="table-edit-control"><label></label><input type="text" data-row-id="" class="paymentDepositDate" name="paymentDepositDate" placeholder="DD.MM.YYYY" /></div>';
                 cell5.innerHTML = '<div class="table-edit-control"><label></label><input type="text" data-row-id="" class="serviceChequeDetails" name="serviceChequeDetails" placeholder="" /></div>';
-                cell6.innerHTML = '<div class="table-edit-control"><label></label><input type="text" data-row-id="" class="serviceBalance" name="serviceBalance" readonly="" placeholder="" /></div><input type="hidden" data-row-id="" class="row-id" id="row-id" name="row-id" value="">';
-                cell7.innerHTML = '<div class="table-edit-control"><label></label></div>';
-                //            cell8.innerHTML = '<a class="cbComment" data-row-id="' + $rowId + '"><i class="fa fa-comment-o" aria-hidden="true"></i></a><input type="hidden" class="cb-row-id" id="cb-row-id" name="cb-row-id" data-row-id="' + $rowId + '" value="">';
+                cell6.innerHTML = '<div class="table-edit-control"><label></label><input type="text" data-row-id="" class="serviceBalance" name="serviceBalance" value="0.00" readonly="" placeholder="" /></div><input type="hidden" data-row-id="" class="row-id" id="row-id" name="row-id" value="">';
+                cell7.innerHTML = '<div class="table-edit-control" style="text-align: center;"><a class="removeNewPaymentRow" style="color: #ef4444; cursor: pointer; padding: 2px 5px;" title="Remove Row"><i class="fa fa-trash-o"></i></a></div>';
                 row.className = "cb_subsection";
-                //            $tmpCbCount = $tmpCbCount + 1;             $(this).data("row-count", $count);
 
-                //            alert("out");
-
+                if (typeof recalculatePaymentSystem === 'function') {
+                    recalculatePaymentSystem();
+                }
             });
 
             $(document).off('focus.customerAccount', '.info-review-date');
@@ -20607,100 +21415,353 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             });
         });
 
-        $(".invoiceStatus").click(function () {
-            $invid = $(this).attr("data-row-id");
-            //            alert($(this).attr("data-row-id"));
-            if ($(this).is(":checked")) {
-                //                alert("checked");
-                $.ajax({
-                    url: "addPayment.php",
-                    type: "GET",
-                    //                    dataType: "json",
-                    data: {
-                        invid: $invid,
-                    },
-                    success: function (data) {
-                        //                        $(".pamentrow" + payrowid).hide();
-                        //                        alert(data);
-                        //                        $('#delete-details').hide();
-                    }
-                });
+        $(document).on('click', '.invoiceStatusBtn', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var $btn = $(this);
+            var invid = $btn.attr("data-row-id");
+            var currentStatus = $btn.attr("data-status");
+            var isCurrentlyPaid = (currentStatus === "Rcv");
+            var newStatus = isCurrentlyPaid ? "NotRcv" : "Rcv";
+
+            $btn.prop('disabled', true);
+            $btn.html('<i class="fa fa-spinner fa-spin"></i>');
+
+            var ajaxData = {};
+            if (newStatus === "Rcv") {
+                ajaxData.invid = invid;
             } else {
-                //                alert("un-checked");
-                $.ajax({
-                    url: "addPayment.php",
-                    type: "GET",
-                    //                    dataType: "json",
-                    data: {
-                        inv_id: $invid,
-                    },
-                    success: function (data) {
-                        //                        $(".pamentrow" + payrowid).hide();
-                        //                        alert(data);
-                        //                        $('#delete-details').hide();
-                    }
-                });
+                ajaxData.inv_id = invid;
             }
+
+            $.ajax({
+                url: "addPayment.php",
+                type: "GET",
+                data: ajaxData,
+                success: function (data) {
+                    $btn.prop('disabled', false);
+                    if (newStatus === "Rcv") {
+                        $btn.attr("data-status", "Rcv")
+                            .removeClass("btn-invoice-unpaid")
+                            .addClass("btn-invoice-paid")
+                            .css({
+                                "background-color": "#16a34a",
+                                "border-color": "#15803d",
+                                "color": "#ffffff"
+                            })
+                            .attr("title", "Payment Received - Click to mark as Unpaid")
+                            .html('<i class="fa fa-check"></i> Paid');
+                    } else {
+                        $btn.attr("data-status", "NotRcv")
+                            .removeClass("btn-invoice-paid")
+                            .addClass("btn-invoice-unpaid")
+                            .css({
+                                "background-color": "#ef4444",
+                                "border-color": "#dc2626",
+                                "color": "#ffffff"
+                            })
+                            .attr("title", "Payment Not Received - Click to mark as Paid")
+                            .html('<i class="fa fa-times"></i> Unpaid');
+                    }
+                },
+                error: function (xhr, status, err) {
+                    $btn.prop('disabled', false);
+                    alert("Error updating invoice payment status: " + status);
+                    if (isCurrentlyPaid) {
+                        $btn.html('<i class="fa fa-check"></i> Paid');
+                    } else {
+                        $btn.html('<i class="fa fa-times"></i> Unpaid');
+                    }
+                }
+            });
+        });
+
+        function recalculatePaymentSystem() {
+            var totalInvoice = 0;
+            $("#invoice_service_details .invoiceAmount").each(function () {
+                var v = parseFloat($(this).val()) || 0;
+                totalInvoice += v;
+            });
+            $("#totalInvoiceTableSum").val(totalInvoice.toFixed(2));
+
+            var totalReceived = 0;
+            var totalTds = 0;
+            var totalDiscount = 0;
+
+            $("#service_details tbody tr.cb_subsection").each(function () {
+                var $row = $(this);
+                var sType = ($row.find(".serviceTypeName").val() || "").trim().toLowerCase();
+                var received = parseFloat($row.find(".servicePaymentReceived").val()) || 0;
+                var tds = parseFloat($row.find(".serviceTdsAmount").val()) || 0;
+                var discount = parseFloat($row.find(".serviceDiscountAmount").val()) || 0;
+
+                var isDiscountRow = ($row.hasClass('discount-settlement-row') || discount > 0 || sType.indexOf("discount") !== -1 || sType.indexOf("short") !== -1);
+
+                if (isDiscountRow) {
+                    if (discount === 0 && received > 0) {
+                        discount = received;
+                    }
+                    received = 0;
+                    $row.find(".servicePaymentReceived").val(0);
+                    $row.find(".serviceDiscountAmount").val(discount);
+                    $row.find(".serviceAmountDecided").val(discount.toFixed(2));
+                    $row.find(".serviceBalance").val("0.00");
+                    totalDiscount += discount;
+                    return;
+                }
+
+                if (sType.indexOf("tds") !== -1 && tds === 0 && received > 0) {
+                    tds = received;
+                    received = 0;
+                }
+
+                $row.find(".serviceAmountDecided").val((received + tds).toFixed(2));
+                $row.find(".serviceBalance").val("0.00");
+
+                totalReceived += received;
+                totalTds += tds;
+            });
+
+            var masterFinal = totalInvoice;
+            var balanceRemaining = masterFinal - totalReceived - totalTds - totalDiscount;
+
+            $("#summaryTotalAmount").text(masterFinal.toFixed(2));
+            $("#summaryReceivedAmount").text(totalReceived.toFixed(2));
+            $("#summaryTdsAmount").text(totalTds.toFixed(2));
+            $("#summaryDiscountAmount").text(totalDiscount.toFixed(2));
+            $("#summaryRemainingAmount").text(balanceRemaining.toFixed(2));
+
+            if (balanceRemaining > 0) {
+                $("#summaryRemainingAmount").parent().css("color", "#dc2626");
+            } else {
+                $("#summaryRemainingAmount").parent().css("color", "#16a34a");
+            }
+
+            $("#summaryReceivableAmount").text(masterFinal.toFixed(2));
+            $("#summaryInvoicingAmount").text(totalInvoice.toFixed(2));
+            $("#summaryBalanceAmount").text(balanceRemaining.toFixed(2));
+
+            return {
+                totalInvoice: totalInvoice,
+                masterFinal: masterFinal,
+                totalReceived: totalReceived,
+                totalTds: totalTds,
+                totalDiscount: totalDiscount,
+                remainingBalance: balanceRemaining
+            };
+        }
+
+        // Live calculation on amount changes
+        $(document).on('input keyup change', '.servicePaymentReceived, .serviceTdsAmount', function () {
+            var $row = $(this).closest('tr');
+            var received = parseFloat($row.find('.servicePaymentReceived').val()) || 0;
+            var tds = parseFloat($row.find('.serviceTdsAmount').val()) || 0;
+
+            if (received < 0) {
+                alert('Payment received cannot be negative.');
+                $row.find('.servicePaymentReceived').val(0);
+                received = 0;
+            }
+            if (tds < 0) {
+                alert('TDS amount cannot be negative.');
+                $row.find('.serviceTdsAmount').val(0);
+                tds = 0;
+            }
+
+            var discount = parseFloat($row.find('.serviceDiscountAmount').val()) || 0;
+            $row.find('.serviceAmountDecided').val((received + tds + discount).toFixed(2));
+            $row.find('.serviceBalance').val('0.00');
+
+            recalculatePaymentSystem();
+        });
+
+        // Remove new unsaved payment row
+        $(document).on('click', '.removeNewPaymentRow', function () {
+            $(this).closest('tr').remove();
+            recalculatePaymentSystem();
+        });
+
+        // Run initial calculation
+        setTimeout(function () {
+            recalculatePaymentSystem();
+        }, 200);
+
+        // Discount (Short Paid) Modal Handlers
+        $(document).on('click', '.openDiscountModalBtn', function (e) {
+            e.preventDefault();
+            var calc = (typeof recalculatePaymentSystem === 'function') ? recalculatePaymentSystem() : null;
+            var rem = (calc && calc.remainingBalance > 0) ? calc.remainingBalance : 0;
+            $("#discountModalRemainingBalance").text(rem.toFixed(2));
+            $("#modalDiscountAmount").val(rem > 0 ? rem.toFixed(2) : '');
+
+            var $firstOpt = $("#modalDiscountInvoice option:selected");
+            if (!$firstOpt.length) {
+                $firstOpt = $("#modalDiscountInvoice option:first");
+            }
+            if ($firstOpt.length) {
+                var invId = $firstOpt.attr('data-id') || '';
+                $("#modalDiscountInvoiceId").val(invId);
+            }
+            $("#discountModal").modal('show');
+        });
+
+        $(document).on('change', '#modalDiscountInvoice', function () {
+            var $opt = $(this).find('option:selected');
+            var invId = $opt.attr('data-id') || '';
+            $("#modalDiscountInvoiceId").val(invId);
+        });
+
+        $(document).on('click', '#btnAutoFillFullBalance', function () {
+            var rem = parseFloat($("#discountModalRemainingBalance").text()) || 0;
+            if (rem <= 0) {
+                alert("Remaining balance is already ₹0.00 or settled.");
+                return;
+            }
+            $("#modalDiscountAmount").val(rem.toFixed(2));
+        });
+
+        $(document).on('click', '#btnSaveDiscountSettlement', function () {
+            var discountAmt = parseFloat($("#modalDiscountAmount").val()) || 0;
+            if (discountAmt <= 0) {
+                alert("Please enter a valid discount amount greater than 0.");
+                $("#modalDiscountAmount").focus();
+                return;
+            }
+
+            var selectedInvNo = $("#modalDiscountInvoice").val() || "";
+            var selectedInvId = $("#modalDiscountInvoiceId").val() || ($("#modalDiscountInvoice").find('option:selected').attr('data-id') || "");
+            var discDate = $("#modalDiscountDate").val() || '<?php echo date('d.m.Y'); ?>';
+            var discRemarks = $("#modalDiscountRemarks").val() || "Short Paid";
+            var customerID = '<?php echo $_GET['customerid'] ?? ''; ?>';
+
+            if (!selectedInvNo) {
+                alert("Please select an invoice number.");
+                $("#modalDiscountInvoice").focus();
+                return;
+            }
+
+            var $btn = $(this);
+            $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Saving...');
+
+            $.ajax({
+                url: 'addPayment.php',
+                type: 'POST',
+                data: {
+                    action: 'saveDiscount',
+                    customer_id: customerID,
+                    discount_amount: discountAmt,
+                    invoice_no: selectedInvNo,
+                    invoice_id: selectedInvId,
+                    discount_date: discDate,
+                    remarks: discRemarks
+                },
+                dataType: 'json',
+                success: function (res) {
+                    $btn.prop('disabled', false).html('<i class="fa fa-check-circle"></i> Save &amp; Settle Discount');
+                    if (res && res.success) {
+                        location.reload(true);
+                    } else {
+                        alert("Error: " + ((res && res.message) ? res.message : "Failed to save discount"));
+                    }
+                },
+                error: function (xhr, status, err) {
+                    $btn.prop('disabled', false).html('<i class="fa fa-check-circle"></i> Save &amp; Settle Discount');
+                    alert("Network/Server error while saving discount: " + status);
+                }
+            });
         });
 
         $('.savePayment').click(function () {
-            //        alert($(this).attr('data-row-id'));
             var paymentID = $(this).attr('data-row-id');
             var customerID = '<?php echo $_GET['customerid'] ?>';
 
+            var hasError = false;
+            var errorMsg = "";
+
             var serviceTypeArray = [];
-            $(".serviceTypeName").each(function () {
-                //            alert($(".serviceTypeName").val());
-                serviceTypeArray.push($(this).val());
-            });
-            var serviceTypeDetails = serviceTypeArray.join("~");
-
             var serviceAmountArray = [];
-            $(".serviceAmountDecided").each(function () {
-                serviceAmountArray.push($(this).val());
-            });
-            var serviceAmountDetails = serviceAmountArray.join("~");
-
             var paymentReceivedArray = [];
-            $(".servicePaymentReceived").each(function () {
-                paymentReceivedArray.push($(this).val());
-            });
-            var paymentReceivedDetails = paymentReceivedArray.join("~");
-
+            var tdsAmountArray = [];
+            var discountAmountArray = [];
             var depositDateArray = [];
-            $(".paymentDepositDate").each(function () {
-                //            alert($(".paymentDepositDate").val());
-                depositDateArray.push($(this).val());
-            });
-            var depositDateDetails = depositDateArray.join("~");
-
             var serviceChequeArray = [];
-            $(".serviceChequeDetails").each(function () {
-                serviceChequeArray.push($(this).val());
-            });
-            var serviceChequeDetails = serviceChequeArray.join("~");
-
             var rowidArray = [];
-            $(".row-id").each(function () {
-                rowidArray.push($(this).val());
-            });
-            var rowidDetails = rowidArray.join("~");
 
-            var infoDeleteArray = [];
-            //            $('.infoDelete').each(function () {
-            //                if ($(this).is(":checked"))
-            //                    infoDeleteArray.push($(this).val());
-            //            });
+            $("#service_details tbody tr.cb_subsection").each(function () {
+                var sType = ($(this).find(".serviceTypeName").val() || "").trim();
+                var received = $(this).find(".servicePaymentReceived").val();
+                var tds = $(this).find(".serviceTdsAmount").val();
+                var discount = $(this).find(".serviceDiscountAmount").val();
+                var dateVal = $(this).find(".paymentDepositDate").val();
+                var chkVal = $(this).find(".serviceChequeDetails").val();
+                var rId = $(this).find(".row-id").val();
+
+                var rcvNum = parseFloat(received) || 0;
+                var tdsNum = parseFloat(tds) || 0;
+                var discNum = parseFloat(discount) || 0;
+
+                if (received !== "" || tds !== "" || discount !== "" || dateVal !== "" || chkVal !== "") {
+                    if (sType === "") {
+                        hasError = true;
+                        errorMsg = "Please enter Service Type for all payment rows.";
+                        return false;
+                    }
+                    if (rcvNum < 0) {
+                        hasError = true;
+                        errorMsg = "Payment received cannot be negative.";
+                        return false;
+                    }
+                    if (tdsNum < 0) {
+                        hasError = true;
+                        errorMsg = "TDS amount cannot be negative.";
+                        return false;
+                    }
+                    if (discNum < 0) {
+                        hasError = true;
+                        errorMsg = "Discount amount cannot be negative.";
+                        return false;
+                    }
+                }
+
+                if (sType !== "") {
+                    serviceTypeArray.push(sType);
+                    serviceAmountArray.push((rcvNum + tdsNum + discNum).toFixed(2));
+                    paymentReceivedArray.push(received || "0");
+                    tdsAmountArray.push(tds || "0");
+                    discountAmountArray.push(discount || "0");
+                    depositDateArray.push(dateVal || "");
+                    serviceChequeArray.push(chkVal || "");
+                    rowidArray.push(rId || "");
+                }
+            });
+
+            if (hasError) {
+                alert(errorMsg);
+                return false;
+            }
+
+            var serviceTypeDetails = serviceTypeArray.join("~");
+            var serviceAmountDetails = serviceAmountArray.join("~");
+            var paymentReceivedDetails = paymentReceivedArray.join("~");
+            var tdsAmountDetails = tdsAmountArray.join("~");
+            var discountAmountDetails = discountAmountArray.join("~");
+            var depositDateDetails = depositDateArray.join("~");
+            var serviceChequeDetails = serviceChequeArray.join("~");
+            var rowidDetails = rowidArray.join("~");
             var dltRowDetails = "";
-            //        alert(depositDateDetails);
+
+            var $saveBtn = $(this);
+            $saveBtn.find('i').removeClass('fa-floppy-o').addClass('fa-spinner fa-spin');
+
             $.ajax({
                 url: "addPayment.php",
-                // dataType: "json",
-                type: 'GET',
+                type: 'POST',
                 data: {
                     serviceType: serviceTypeDetails,
                     decidedAmount: serviceAmountDetails,
                     paymentReceived: paymentReceivedDetails,
+                    tdsAmount: tdsAmountDetails,
+                    discountAmount: discountAmountDetails,
                     depositDate: depositDateDetails,
                     chequeDetails: serviceChequeDetails,
                     customer: customerID,
@@ -20709,19 +21770,13 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     dltRows: dltRowDetails,
                 },
                 success: function (data) {
-                    //                alert(data);
-                    console.log(data);
-                    $(document).ajaxStop(function () {
-                        location.reload(true);
-                    });
+                    location.reload(true);
                 },
                 error: function (data, status, err) {
-                    alert(status);
-                    // alert("Error " + status + "err " + err + " data " + JSON.stringify(data));
-                    //                    alert("There was error while saving data. Please refresh page to see if values are saved or contact support team");
+                    $saveBtn.find('i').removeClass('fa-spinner fa-spin').addClass('fa-floppy-o');
+                    alert("Error saving payment: " + status);
                 }
             });
-
         });
 
         $(document).off('submit.customerAccount', '#informationUpdationReviewForm');
@@ -20958,36 +22013,6 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             border-radius: 15px;
         }
 
-        #loading-div-background {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            background: rgba(255, 255, 255, 0.5);
-            width: 100%;
-            height: 100%;
-        }
-
-        #loading-div {
-            width: 300px;
-            height: 150px;
-            background-color: #fff;
-            color: #1468b3;
-            border: 5px solid #1468b3;
-            text-align: center;
-            color: #202020;
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            margin-left: -150px;
-            margin-top: -100px;
-            -webkit-border-radius: 5px;
-            -moz-border-radius: 5px;
-            border-radius: 5px;
-            opacity: 1.0;
-            behavior: url("/css/pie/PIE.htc");
-            /* HANDLES IE */
-        }
 
         #loading-div-user-info {
             width: 350px;
