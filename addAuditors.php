@@ -12,6 +12,7 @@ date_default_timezone_set('Asia/Kolkata');
 require_once __DIR__ . '/include/auditor_division_helper.php';
 
 $isReviewer = !empty($_POST['is_reviewer']) ? 1 : 0;
+$assignedNaceClasses = isset($_POST['assigned_nace_classes']) ? (array)$_POST['assigned_nace_classes'] : array();
 $assignedDivisions = isset($_POST['assigned_divisions']) ? (array)$_POST['assigned_divisions'] : array();
 
 if(isset($_POST["auditor_id"]) && !empty($_POST["auditor_id"])){
@@ -27,7 +28,11 @@ if(isset($_POST["auditor_id"]) && !empty($_POST["auditor_id"])){
         $statement->bindParam(":isReviewer", $isReviewer, PDO::PARAM_INT);
         $statement->execute();
 
-        aitf_save_auditor_divisions($db, $auditorId, $assignedDivisions);
+        if (!empty($assignedNaceClasses) || isset($_POST['assigned_nace_classes'])) {
+            aitf_save_auditor_nace_classes($db, $auditorId, $assignedNaceClasses);
+        } else {
+            aitf_save_auditor_divisions($db, $auditorId, $assignedDivisions);
+        }
 
         header("Location: masterCreator.php");
     } catch (Exception $ex) {
@@ -45,7 +50,11 @@ if(isset($_POST["auditor_id"]) && !empty($_POST["auditor_id"])){
         $statement->execute();
 
         $newAuditorId = (int)$db->lastInsertId();
-        aitf_save_auditor_divisions($db, $newAuditorId, $assignedDivisions);
+        if (!empty($assignedNaceClasses) || isset($_POST['assigned_nace_classes'])) {
+            aitf_save_auditor_nace_classes($db, $newAuditorId, $assignedNaceClasses);
+        } else {
+            aitf_save_auditor_divisions($db, $newAuditorId, $assignedDivisions);
+        }
 
         header("Location: masterCreator.php");
     } catch (Exception $ex) {

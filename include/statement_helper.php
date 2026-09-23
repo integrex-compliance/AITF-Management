@@ -13,6 +13,12 @@ if (!function_exists('aitf_ensure_statement_tables')) {
             return;
         }
 
+        $flagFile = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'aitf_statement_tables.flag';
+        if (file_exists($flagFile) && filemtime($flagFile) >= filemtime(__FILE__) && (time() - filemtime($flagFile) < 43200)) {
+            $tablesChecked = true;
+            return;
+        }
+
         try {
             // 1. statement_payments table
             $db->exec("
@@ -53,6 +59,7 @@ if (!function_exists('aitf_ensure_statement_tables')) {
             ");
 
             $tablesChecked = true;
+            @touch($flagFile);
         } catch (Throwable $e) {
             error_log("aitf_ensure_statement_tables warning: " . $e->getMessage());
         }

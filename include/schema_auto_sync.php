@@ -21,6 +21,12 @@ if (!function_exists('aitf_auto_sync_schema')) {
             return;
         }
 
+        $flagFile = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'aitf_schema_synced.flag';
+        if (file_exists($flagFile) && filemtime($flagFile) >= filemtime(__FILE__) && (time() - filemtime($flagFile) < 43200)) {
+            $alreadySynced = true;
+            return;
+        }
+
         try {
             // 1. Ensure columns in certification_aggrement & certification_agreement (Agreement mail feature)
             foreach (array('certification_aggrement', 'certification_agreement') as $tbl) {
@@ -260,7 +266,20 @@ if (!function_exists('aitf_auto_sync_schema')) {
                 error_log("payment_system discount_amount sync error: " . $e->getMessage());
             }
 
+            // 13. Ensure ca_service_dates is_intimation_deleted column exists
+            try {
+                $csdStmt = $db->query("SHOW COLUMNS FROM `ca_service_dates` LIKE 'is_intimation_deleted'");
+                if (!$csdStmt || !$csdStmt->fetch()) {
+                    $db->exec("ALTER TABLE `ca_service_dates` ADD COLUMN `is_intimation_deleted` VARCHAR(1) NOT NULL DEFAULT 'N' AFTER `is_deleted`");
+                }
+            } catch (Throwable $e) {
+                error_log("ca_service_dates is_intimation_deleted sync error: " . $e->getMessage());
+            }
+
             $alreadySynced = true;
+            if (isset($flagFile)) {
+                @touch($flagFile);
+            }
         } catch (Throwable $e) {
             error_log("aitf_auto_sync_schema error: " . $e->getMessage());
         }

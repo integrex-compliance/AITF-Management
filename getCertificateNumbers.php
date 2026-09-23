@@ -2,7 +2,7 @@
 /*
  * Fetch all certificate numbers for a customer
  */
-session_start();
+// session_start() removed - read-only query doesn't need session lock
 include_once './dbConnect.php';
 date_default_timezone_set('Asia/Kolkata');
 

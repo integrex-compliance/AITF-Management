@@ -110,6 +110,132 @@ function reset_failed_attempt($db, $identifier, $role) {
     $stmt->execute([':id' => strtolower($identifier), ':role' => $role]);
 }
 
+function aitf_find_matching_clients($db, $identifier) {
+    $raw = trim((string)$identifier);
+    if ($raw === '') return [];
+    $lower = strtolower($raw);
+    $alphanumeric = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $raw));
+    
+    $results = [];
+    $seenIds = [];
+    
+    $addClients = function($rows) use (&$results, &$seenIds) {
+        foreach ($rows as $r) {
+            if (!isset($seenIds[$r['id']])) {
+                $seenIds[$r['id']] = true;
+                $results[] = $r;
+            }
+        }
+    };
+    
+    // 1. Direct exact match on unique_id or email_id or customer_name
+    $stmt = $db->prepare("SELECT * FROM customer_info WHERE is_deleted = 'NO' AND (LOWER(unique_id) = :lower OR LOWER(email_id) = :lower OR LOWER(customer_name) = :lower) ORDER BY (unique_id IS NOT NULL AND unique_id != '') DESC, id DESC");
+    $stmt->execute([':lower' => $lower]);
+    $addClients($stmt->fetchAll(PDO::FETCH_ASSOC));
+    
+    // 2. Direct match on certification_aggrement.aggrement_no
+    $stmt = $db->prepare("SELECT ci.* FROM certification_aggrement ca JOIN customer_info ci ON ca.customer_id = ci.id WHERE ci.is_deleted = 'NO' AND LOWER(ca.aggrement_no) = :lower ORDER BY ca.id DESC");
+    $stmt->execute([':lower' => $lower]);
+    $addClients($stmt->fetchAll(PDO::FETCH_ASSOC));
+    
+    // 3. Email search (handles trailing commas, spaces, multiple comma-separated emails)
+    if (strpos($raw, '@') !== false) {
+        $stmt = $db->prepare("SELECT * FROM customer_info WHERE is_deleted = 'NO' AND LOWER(email_id) LIKE :email ORDER BY id DESC");
+        $stmt->execute([':email' => '%' . $lower . '%']);
+        while ($cand = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $parts = preg_split('/[\s,;]+/', strtolower($cand['email_id'] ?? ''));
+            if (in_array($lower, $parts, true)) {
+                $addClients([$cand]);
+            }
+        }
+    }
+    
+    // 4. Exact alphanumeric match on customer_name (ignores multiple spaces, dots, dashes, special chars)
+    if (strlen($alphanumeric) >= 3) {
+        $stmt = $db->prepare("SELECT * FROM customer_info WHERE is_deleted = 'NO' AND LOWER(REGEXP_REPLACE(customer_name, '[^a-zA-Z0-9]', '')) = :norm ORDER BY (unique_id IS NOT NULL AND unique_id != '') DESC, id DESC");
+        $stmt->execute([':norm' => $alphanumeric]);
+        $addClients($stmt->fetchAll(PDO::FETCH_ASSOC));
+    }
+    
+    // 5. Normalized agreement / unique ID match (ignoring dashes, slashes, spaces)
+    if (strlen($alphanumeric) >= 4) {
+        $stmt = $db->prepare("SELECT * FROM customer_info WHERE is_deleted = 'NO' AND LOWER(REGEXP_REPLACE(unique_id, '[^a-zA-Z0-9]', '')) = :norm ORDER BY id DESC");
+        $stmt->execute([':norm' => $alphanumeric]);
+        $addClients($stmt->fetchAll(PDO::FETCH_ASSOC));
+        
+        $stmt = $db->prepare("SELECT ci.* FROM certification_aggrement ca JOIN customer_info ci ON ca.customer_id = ci.id WHERE ci.is_deleted = 'NO' AND LOWER(REGEXP_REPLACE(ca.aggrement_no, '[^a-zA-Z0-9]', '')) = :norm ORDER BY ca.id DESC");
+        $stmt->execute([':norm' => $alphanumeric]);
+        $addClients($stmt->fetchAll(PDO::FETCH_ASSOC));
+    }
+    
+    // 6. Substring / Prefix match on alphanumeric name
+    if (strlen($alphanumeric) >= 6) {
+        $stmt = $db->prepare("SELECT * FROM customer_info WHERE is_deleted = 'NO' AND LOWER(REGEXP_REPLACE(customer_name, '[^a-zA-Z0-9]', '')) LIKE :pref ORDER BY (unique_id IS NOT NULL AND unique_id != '') DESC, id DESC LIMIT 5");
+        $stmt->execute([':pref' => $alphanumeric . '%']);
+        $addClients($stmt->fetchAll(PDO::FETCH_ASSOC));
+        
+        $strippedInput = preg_replace('/(privatelimited|pvtltd|ltd|limited|works|enterprises|industries)$/i', '', $alphanumeric);
+        if (strlen($strippedInput) >= 5 && $strippedInput !== $alphanumeric) {
+            $stmt = $db->prepare("SELECT * FROM customer_info WHERE is_deleted = 'NO' AND LOWER(REGEXP_REPLACE(REGEXP_REPLACE(customer_name, '[^a-zA-Z0-9]', ''), '(privatelimited|pvtltd|ltd|limited|works|enterprises|industries)', '')) = :norm ORDER BY (unique_id IS NOT NULL AND unique_id != '') DESC, id DESC LIMIT 5");
+            $stmt->execute([':norm' => $strippedInput]);
+            $addClients($stmt->fetchAll(PDO::FETCH_ASSOC));
+        }
+    }
+    
+    return $results;
+}
+
+function aitf_verify_client_password($db, $client, $password) {
+    $rawPass = trim((string)$password);
+    if ($rawPass === '') return false;
+    
+    $normPass = strtoupper(preg_replace('/[^a-zA-Z0-9]/', '', $rawPass));
+    if (empty($normPass)) return false;
+    
+    $candidates = [];
+    
+    if (!empty($client['unique_id'])) {
+        $candidates[] = $client['unique_id'];
+    }
+    
+    $stmt = $db->prepare("SELECT aggrement_no FROM certification_aggrement WHERE customer_id = :cid");
+    $stmt->execute([':cid' => $client['id']]);
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        if (!empty($row['aggrement_no'])) {
+            $candidates[] = $row['aggrement_no'];
+        }
+    }
+    
+    if (!empty($client['certification_no'])) {
+        $candidates[] = $client['certification_no'];
+    }
+    
+    // Also candidate: customer's normalized name (in case user entered client name as pass)
+    $normClientName = strtoupper(preg_replace('/[^a-zA-Z0-9]/', '', $client['customer_name']));
+    if ($normPass === $normClientName) {
+        return true;
+    }
+    if (min(strlen($normPass), strlen($normClientName)) >= 6) {
+        if (strpos($normClientName, $normPass) === 0 || strpos($normPass, $normClientName) === 0) {
+            return true;
+        }
+    }
+    
+    foreach ($candidates as $cand) {
+        $normCand = strtoupper(preg_replace('/[^a-zA-Z0-9]/', '', $cand));
+        if ($normPass === $normCand) {
+            return true;
+        }
+        if (min(strlen($normPass), strlen($normCand)) >= 6) {
+            if (strpos($normCand, $normPass) === 0 || strpos($normPass, $normCand) === 0) {
+                return true;
+            }
+        }
+    }
+    
+    return false;
+}
+
 function send_lockout_email($db, $identifier, $role, $durationStr) {
     $email = ''; $name = 'User';
     if ($role === 'Director') {
@@ -124,9 +250,13 @@ function send_lockout_email($db, $identifier, $role, $durationStr) {
         $stmt->execute([':id' => strtolower($identifier)]);
         if ($aud = $stmt->fetch(PDO::FETCH_ASSOC)) { $email = $aud['login_email']; $name = $aud['auditor_name']; }
     } elseif ($role === 'Client') {
-        $stmt = $db->prepare("SELECT email_id, customer_name FROM customer_info WHERE LOWER(email_id) = :id OR unique_id = :id OR LOWER(customer_name) = :id LIMIT 1");
-        $stmt->execute([':id' => strtolower($identifier)]);
-        if ($cli = $stmt->fetch(PDO::FETCH_ASSOC)) { $email = $cli['email_id']; $name = $cli['customer_name']; }
+        $matching = aitf_find_matching_clients($db, $identifier);
+        if (!empty($matching)) {
+            $cli = $matching[0];
+            $name = $cli['customer_name'];
+            $emails = preg_split('/[\s,;]+/', trim($cli['email_id'] ?? ''));
+            $email = !empty($emails[0]) ? $emails[0] : '';
+        }
     }
     if ($email && filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $subject = 'Security Alert: AITF Account Locked';
@@ -181,9 +311,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         
         // 4. Client
         if (!$foundRole) {
-            $stmt = $db->prepare("SELECT * FROM customer_info WHERE LOWER(email_id) = :id OR unique_id = :id OR LOWER(customer_name) = :id LIMIT 1");
-            $stmt->execute([':id' => strtolower($identifier)]);
-            if ($client = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $matchingClients = aitf_find_matching_clients($db, $identifier);
+            if (!empty($matchingClients)) {
                 $foundRole = 'Client';
             }
         }
@@ -191,7 +320,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         if ($foundRole) {
             echo json_encode(['success' => true, 'role' => $foundRole]);
         } else {
-            echo json_encode(['success' => false, 'message' => 'We cannot find an account with that email/ID.']);
+            echo json_encode(['success' => false, 'message' => 'We cannot find an account with that email, username, or ID.']);
         }
         exit;
     }
@@ -290,23 +419,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $redirectUrl = 'auditorDashboard.php';
             }
         } elseif ($role === 'Client') {
-            $stmt = $db->prepare("SELECT * FROM customer_info WHERE unique_id = :pass LIMIT 1");
-            $stmt->execute([':pass' => $password]);
-            $customerinfo = $stmt->fetch(PDO::FETCH_ASSOC);
-            if ($customerinfo) {
-                $input = strtoupper(preg_replace("/[^a-zA-Z]+/", "", $identifier));
-                $cname = strtoupper(preg_replace("/[^a-zA-Z]+/", "", $customerinfo['customer_name']));
-                
-                if (strpos($cname, $input) !== false || strtolower($identifier) === strtolower($customerinfo['email_id'] ?? '')) {
-                    $_SESSION['username'] = $customerinfo['customer_name'];
-                    $_SESSION['id'] = $customerinfo['id'];
-                    $_SESSION['role'] = "client";
-                    $_SESSION['uniqueid'] = $customerinfo['unique_id'];
-                    aitf_mark_session_authenticated();
-                    aitf_record_login_activity($db, ['user_id'=>$customerinfo['id'], 'user_name'=>$customerinfo['customer_name'], 'email_id'=>$customerinfo['email_id']??'', 'role'=>'client', 'e_id'=>$customerinfo['unique_id']??'']);
-                    $loginSuccess = true;
-                    $redirectUrl = 'clientportal.php';
+            $matchingClients = aitf_find_matching_clients($db, $identifier);
+            
+            // Fallback: If not found by identifier, try finding by password (agreement no)
+            if (empty($matchingClients)) {
+                $rawPass = trim($password);
+                $normPass = strtoupper(preg_replace('/[^a-zA-Z0-9]/', '', $rawPass));
+                if (!empty($normPass)) {
+                    $stmt = $db->prepare("SELECT * FROM customer_info WHERE is_deleted = 'NO' AND LOWER(REGEXP_REPLACE(unique_id, '[^a-zA-Z0-9]', '')) = :norm ORDER BY id DESC");
+                    $stmt->execute([':norm' => strtolower($normPass)]);
+                    $matchingClients = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                    
+                    if (empty($matchingClients)) {
+                        $stmt = $db->prepare("SELECT ci.* FROM certification_aggrement ca JOIN customer_info ci ON ca.customer_id = ci.id WHERE ci.is_deleted = 'NO' AND LOWER(REGEXP_REPLACE(ca.aggrement_no, '[^a-zA-Z0-9]', '')) = :norm ORDER BY ca.id DESC");
+                        $stmt->execute([':norm' => strtolower($normPass)]);
+                        $matchingClients = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                    }
                 }
+            }
+            
+            $matchedClient = null;
+            foreach ($matchingClients as $clientCandidate) {
+                if (aitf_verify_client_password($db, $clientCandidate, $password)) {
+                    $matchedClient = $clientCandidate;
+                    break;
+                }
+            }
+            
+            if ($matchedClient) {
+                // If unique_id is empty on customer_info, auto-populate it with agreement number
+                if (empty($matchedClient['unique_id']) && !empty($password)) {
+                    try {
+                        $db->prepare("UPDATE customer_info SET unique_id = :uid WHERE id = :id")->execute([':uid' => trim($password), ':id' => $matchedClient['id']]);
+                        $matchedClient['unique_id'] = trim($password);
+                    } catch (Exception $e) {}
+                }
+                
+                $_SESSION['username'] = $matchedClient['customer_name'];
+                $_SESSION['id'] = $matchedClient['id'];
+                $_SESSION['role'] = "client";
+                $_SESSION['uniqueid'] = !empty($matchedClient['unique_id']) ? $matchedClient['unique_id'] : trim($password);
+                aitf_mark_session_authenticated();
+                aitf_record_login_activity($db, [
+                    'user_id' => $matchedClient['id'],
+                    'user_name' => $matchedClient['customer_name'],
+                    'email_id' => $matchedClient['email_id'] ?? '',
+                    'role' => 'client',
+                    'e_id' => $matchedClient['unique_id'] ?? ''
+                ]);
+                $loginSuccess = true;
+                $redirectUrl = 'clientportal.php';
             }
         }
         
@@ -315,7 +477,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             echo json_encode(['success' => true, 'redirect' => $redirectUrl]);
         } else {
             $rlInfo = record_failed_attempt($db, $identifier, $role);
-            $msg = 'Invalid password.';
+            $msg = ($role === 'Client') ? 'Invalid agreement number / password.' : 'Invalid password.';
             $lockoutTime = null;
             $sendEmail = false; $emailDuration = '';
             
@@ -526,7 +688,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         <h2>Sign in</h2>
         <form id="form-check" onsubmit="event.preventDefault(); checkAccount();">
             <label for="identifier">Username</label>
-            <input type="text" id="identifier" name="identifier" required autocomplete="username">
+            <input type="text" id="identifier" name="identifier" required autocomplete="username" placeholder="Company Name, Email, or Agreement No.">
             <button type="submit" class="amazon-btn" id="btn-continue">
                 <span class="amazon-spinner" id="spin-continue"></span> Continue
             </button>
@@ -545,8 +707,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         </div>
         <form id="form-login" onsubmit="event.preventDefault(); submitLogin();">
             <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 5px;">
-                <label for="password" style="margin-bottom: 0;">Password</label>
-                <a href="#" onclick="showError('To reset your password, please contact your Administrator or Managing Director.'); return false;" style="font-size: 13px; color: #2563eb; text-decoration: none;">Forgot your password?</a>
+                <label for="password" id="label-password" style="margin-bottom: 0;">Password</label>
+                <a href="#" id="link-forgot-pass" onclick="showError('To reset your password, please contact your Administrator or Managing Director.'); return false;" style="font-size: 13px; color: #2563eb; text-decoration: none;">Forgot your password?</a>
             </div>
             <div style="position: relative; margin-bottom: 15px;">
                 <input type="password" id="password" name="password" required autocomplete="current-password" style="margin-bottom: 0; padding-right: 40px;">
@@ -711,6 +873,24 @@ function checkAccount() {
             currentRole = data.role;
             currentIdentifier = identifier;
             document.getElementById('display-identifier').innerText = identifier;
+            const passLabel = document.getElementById('label-password');
+            const passInput = document.getElementById('password');
+            const forgotLink = document.getElementById('link-forgot-pass');
+            if (currentRole === 'Client') {
+                if (passLabel) passLabel.innerText = 'Agreement Number (Password)';
+                if (passInput) passInput.placeholder = 'Enter your Agreement No.';
+                if (forgotLink) {
+                    forgotLink.innerText = 'Need help?';
+                    forgotLink.setAttribute('onclick', "showError('Your password is the Agreement Number sent in your Certification Service Agreement email. Please check your email or contact AITF support.'); return false;");
+                }
+            } else {
+                if (passLabel) passLabel.innerText = 'Password';
+                if (passInput) passInput.placeholder = '';
+                if (forgotLink) {
+                    forgotLink.innerText = 'Forgot your password?';
+                    forgotLink.setAttribute('onclick', "showError('To reset your password, please contact your Administrator or Managing Director.'); return false;");
+                }
+            }
             showPanel('panel-signin-2');
             document.getElementById('password').focus();
         } else {

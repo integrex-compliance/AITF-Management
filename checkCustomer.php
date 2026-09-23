@@ -6,7 +6,6 @@
  * and open the template in the editor.
  */
 
-session_start();
 include_once './dbConnect.php';
 include_once './include/certification_cycle_helper.php';
 date_default_timezone_set('Asia/Kolkata');

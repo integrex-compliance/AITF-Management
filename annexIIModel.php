@@ -897,156 +897,159 @@ function removeUnwantedOptions(selector, optionsToRemove) {
         });
 
         // code by appa for Review Report (Annex II) Update
-        $('.stageIIAudit').click(function () {
-            $('.service_Id').val($(this).attr('data-service'));
-            $('.customer_Id').val($(this).attr('data-customer'));
-            loadServiceAuditorsForAnnexII($(this).attr('data-service'), $(this).attr('data-customer'));
+        $(document).on('click', '.stageIIAudit', function () {
+            var $btn = $(this);
+            var originalHtml = $btn.html();
+            $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i>');
+            var restoreBtn = function() {
+                $btn.prop('disabled', false).html(originalHtml);
+            };
+
+            var serviceId = $(this).attr('data-service');
+            var customerId = $(this).attr('data-customer');
+
+            $('.service_Id').val(serviceId);
+            $('.customer_Id').val(customerId);
+            loadServiceAuditorsForAnnexII(serviceId, customerId);
+
             $.ajax({
                 url: "getClientInfo.php",
                 type: "GET",
                 dataType: "json",
                 data: {
-                    customer_ID: $(this).attr('data-customer'),
-                    service_ID: $(this).attr('data-service'),
+                    customer_ID: customerId,
+                    service_ID: serviceId,
                 },
                 success: function (data)
                 {
-                    $('.auditOrganisationII').val(data[0]['customer_name']);
-//                    $('.auditDateII').val(moment(data[1]['audit_dates']).format('DD.MM.YYYY'));
+                    try {
+                        if (!data || !data[0]) {
+                            restoreBtn();
+                            alert("Data not found");
+                            return;
+                        }
+                        $('.auditOrganisationII').val(data[0]['customer_name'] || '');
 
-let leadAuditors = [];
-let leadAuditors1 = [];
-                                        if (data[12] && typeof data[12] === 'object') {
-    for (const key in data[12]) {
-        if (data[12].hasOwnProperty(key)) {
-            if (data[12][key]["auditor_category"] == "Team Leader"){
-                                const combined = data[12][key].auditor_name + ' (' + data[12][key].auditor_category + ')';
-        leadAuditors.push(combined);
-        leadAuditors1.push(data[12][key].auditor_name);
-                }else if(data[12][key]["auditor_category"] == "Auditor"){
-                                        const combined = data[12][key].auditor_name + ' (' + data[12][key].auditor_category + ')';
-        leadAuditors.push(combined);
-                leadAuditors1.push(data[12][key].auditor_name);
+                        let leadAuditors = [];
+                        let leadAuditors1 = [];
+                        if (data[12] && typeof data[12] === 'object') {
+                            for (const key in data[12]) {
+                                if (data[12].hasOwnProperty(key)) {
+                                    const combined = (data[12][key].auditor_name || '') + ' (' + (data[12][key].auditor_category || '') + ')';
+                                    leadAuditors.push(combined);
+                                    leadAuditors1.push(data[12][key].auditor_name || '');
+                                }
+                            }
+                        }
 
-                }else if(data[12][key]["auditor_category"] == "Technical Expert"){
-                                        const combined = data[12][key].auditor_name + ' (' + data[12][key].auditor_category + ')';
-        leadAuditors.push(combined);
-                leadAuditors1.push(data[12][key].auditor_name);
+                        let leadAuditorString = leadAuditors.join(', ');
+                        $('.leadAuditorII').val(leadAuditorString);
 
-                }
-        else{
-                                const combined = data[12][key].auditor_name + ' (' + data[12][key].auditor_category + ')';
-        leadAuditors.push(combined);
-                leadAuditors1.push(data[12][key].auditor_name);
-        }}
-    }
-} else {
-    console.error('auditnotifi1 is not a valid object or is empty.');
-}
+                        const optionsToRemove = [];
+                        leadAuditors1.forEach(auditor => {
+                            if (auditor) optionsToRemove.push(auditor);
+                        });
+                        removeUnwantedOptions('.ReviewerName', optionsToRemove);
 
-let leadAuditorString = leadAuditors.join(', ');
-$leadauditor = leadAuditorString;
-let leadAuditorString1 = leadAuditors1.join(', ');
-const optionsToRemove = [];
-const leadAuditorsArray = leadAuditorString1.split(', ');
-leadAuditorsArray.forEach(auditor => {
-  optionsToRemove.push(auditor);
-});
-removeUnwantedOptions('.ReviewerName', optionsToRemove);
-
-                    $('.leadAuditorII').val($leadauditor);
-                    
-                    $('.referenceNumberII').val(data[9]['aggrement_no']);
-                    var auditDate = data[1]['audit_dates'].split(', ');
-                    var auditDateLen = auditDate.length;
-                    var max = (Math.max(auditDateLen));
-//                    alert(personLen);
-                    for (var key = 0; key < max; key++) {
-                        var no = key <= auditDateLen && auditDate[key] != null && auditDate[key] != "" ? auditDate[key] : "";
-                        $('.auditDateII').val(no);
+                        $('.referenceNumberII').val((data[9] && data[9]['aggrement_no']) ? data[9]['aggrement_no'] : '');
+                        var rawAuditDate = (data[1] && data[1]['audit_dates']) ? data[1]['audit_dates'] : '';
+                        var auditDate = rawAuditDate ? rawAuditDate.split(', ') : [];
+                        var auditDateLen = auditDate.length;
+                        for (var key = 0; key < auditDateLen; key++) {
+                            var no = auditDate[key] ? auditDate[key] : "";
+                            $('.auditDateII').val(no);
+                        }
+                        $('.auditDateII').val(rawAuditDate);
+                        $('input[type="text"]').trigger('change');
+                        $('#reviewReport1').modal('show');
+                    } catch (e) {
+                        console.error("Error in stageIIAudit handler:", e);
+                    } finally {
+                        restoreBtn();
                     }
-                    $('.auditDateII').val(data[1]['audit_dates']);
-                    $('input[type="text"]').trigger('change');
-                    $('#reviewReport1').modal('show');
                 },
                 error: function (data, status, err)
                 {
+                    restoreBtn();
                     alert(status);
                 }
             });
         });
 
-        $('.stageIIAuditSai').click(function () {
-            $('.service_Id').val($(this).attr('data-service'));
-            $('.customer_Id').val($(this).attr('data-customer'));
-            loadServiceAuditorsForAnnexII($(this).attr('data-service'), $(this).attr('data-customer'));
+        $(document).on('click', '.stageIIAuditSai', function () {
+            var $btn = $(this);
+            var originalHtml = $btn.html();
+            $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i>');
+            var restoreBtn = function() {
+                $btn.prop('disabled', false).html(originalHtml);
+            };
+
+            var serviceId = $(this).attr('data-service');
+            var customerId = $(this).attr('data-customer');
+
+            $('.service_Id').val(serviceId);
+            $('.customer_Id').val(customerId);
+            loadServiceAuditorsForAnnexII(serviceId, customerId);
+
             $.ajax({
                 url: "getClientInfo.php",
                 type: "GET",
                 dataType: "json",
                 data: {
-                    customerIDAnx: $(this).attr('data-customer'),
-                    serviceIDAnx: $(this).attr('data-service'),
+                    customerIDAnx: customerId,
+                    serviceIDAnx: serviceId,
                 },
                 success: function (data)
                 {
-                    $('.auditOrganisationII').val(data[0]['customer_name']);
-//                    $('.auditDateII').val(moment(data[1]['audit_dates']).format('DD.MM.YYYY'));
-let leadAuditors = [];
-let leadAuditors1 = [];
-                                        if (data[5] && typeof data[5] === 'object') {
-    for (const key in data[5]) {
-        if (data[5].hasOwnProperty(key)) {
-            if (data[5][key]["auditor_category"] == "Team Leader"){
-                                const combined = data[5][key].auditor_name + ' (' + data[5][key].auditor_category + ')';
-        leadAuditors.push(combined);
-        leadAuditors1.push(data[5][key].auditor_name);
-                }else if(data[5][key]["auditor_category"] == "Auditor"){
-                                        const combined = data[5][key].auditor_name + ' (' + data[5][key].auditor_category + ')';
-        leadAuditors.push(combined);
-                leadAuditors1.push(data[5][key].auditor_name);
+                    try {
+                        if (!data || !data[0]) {
+                            restoreBtn();
+                            alert("Data not found");
+                            return;
+                        }
+                        $('.auditOrganisationII').val(data[0]['customer_name'] || '');
 
-                }else if(data[5][key]["auditor_category"] == "Technical Expert"){
-                                        const combined = data[5][key].auditor_name + ' (' + data[5][key].auditor_category + ')';
-        leadAuditors.push(combined);
-                leadAuditors1.push(data[5][key].auditor_name);
+                        let leadAuditors = [];
+                        let leadAuditors1 = [];
+                        if (data[5] && typeof data[5] === 'object') {
+                            for (const key in data[5]) {
+                                if (data[5].hasOwnProperty(key)) {
+                                    const combined = (data[5][key].auditor_name || '') + ' (' + (data[5][key].auditor_category || '') + ')';
+                                    leadAuditors.push(combined);
+                                    leadAuditors1.push(data[5][key].auditor_name || '');
+                                }
+                            }
+                        }
 
-                }
-        else{
-                                const combined = data[5][key].auditor_name + ' (' + data[5][key].auditor_category + ')';
-        leadAuditors.push(combined);
-                leadAuditors1.push(data[5][key].auditor_name);
-        }}
-    }
-} else {
-    console.error('auditnotifi1 is not a valid object or is empty.');
-}
+                        let leadAuditorString = leadAuditors.join(', ');
+                        $('.leadAuditorII').val(leadAuditorString);
 
-let leadAuditorString = leadAuditors.join(', ');
-$leadauditor = leadAuditorString;
-let leadAuditorString1 = leadAuditors1.join(', ');
-const optionsToRemove = [];
-const leadAuditorsArray = leadAuditorString1.split(', ');
-leadAuditorsArray.forEach(auditor => {
-  optionsToRemove.push(auditor);
-});
-removeUnwantedOptions('.ReviewerName', optionsToRemove);
-                    $('.leadAuditorII').val($leadauditor);
-                    $('.referenceNumberII').val(data[4]['aggrement_no']);
-                    var auditDate = data[1]['audit_dates'].split(', ');
-                    var auditDateLen = auditDate.length;
-                    var max = (Math.max(auditDateLen));
-//                    alert(personLen);
-                    for (var key = 0; key < max; key++) {
-                        var no = key <= auditDateLen && auditDate[key] != null && auditDate[key] != "" ? auditDate[key] : "";
-                        $('.auditDateII').val(no);
+                        const optionsToRemove = [];
+                        leadAuditors1.forEach(auditor => {
+                            if (auditor) optionsToRemove.push(auditor);
+                        });
+                        removeUnwantedOptions('.ReviewerName', optionsToRemove);
+
+                        $('.referenceNumberII').val((data[4] && data[4]['aggrement_no']) ? data[4]['aggrement_no'] : '');
+                        var rawAuditDate = (data[1] && data[1]['audit_dates']) ? data[1]['audit_dates'] : '';
+                        var auditDate = rawAuditDate ? rawAuditDate.split(', ') : [];
+                        var auditDateLen = auditDate.length;
+                        for (var key = 0; key < auditDateLen; key++) {
+                            var no = auditDate[key] ? auditDate[key] : "";
+                            $('.auditDateII').val(no);
+                        }
+                        $('.auditDateII').val(rawAuditDate);
+                        $('input[type="text"]').trigger('change');
+                        $('#reviewReport1').modal('show');
+                    } catch (e) {
+                        console.error("Error in stageIIAuditSai handler:", e);
+                    } finally {
+                        restoreBtn();
                     }
-                    $('.auditDateII').val(data[1]['audit_dates']);
-                    $('input[type="text"]').trigger('change');
-                    $('#reviewReport1').modal('show');
                 },
                 error: function (data, status, err)
                 {
+                    restoreBtn();
                     alert(status);
                 }
             });
@@ -1099,376 +1102,361 @@ removeUnwantedOptions('.ReviewerName', optionsToRemove);
             }
         });
 
-        $('.editstageIIAudit2 ').click(function () {
-            $(".service_id").val($(this).attr("data-service"));
-            //alert($(".service_id").val());
-            // alert($(this).attr('data-notification'));
-            $('.service_Id_Edit').val($(this).attr('data-service'));
-            $('.customer_Id_Edit').val($(this).attr('data-customer'));
-            $('.review_report_id').val($(this).attr('data-notification'));
-            loadServiceAuditorsForAnnexII($(this).attr('data-service'), $(this).attr('data-customer'));
+        $(document).on('click', '.editstageIIAudit2', function () {
+            var $btn = $(this);
+            var originalHtml = $btn.html();
+            $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i>');
+            var restoreBtn = function() {
+                $btn.prop('disabled', false).html(originalHtml);
+            };
+
+            var serviceId = $(this).attr("data-service");
+            var customerId = $(this).attr("data-customer");
+            var reportId = $(this).attr("data-notification");
+
+            $(".service_id").val(serviceId);
+            $('.service_Id_Edit').val(serviceId);
+            $('.customer_Id_Edit').val(customerId);
+            $('.review_report_id').val(reportId);
+            loadServiceAuditorsForAnnexII(serviceId, customerId);
 
             $.ajax({
                 url: "reviewReportData.php",
                 type: "GET",
                 dataType: "json",
                 data: {
-                    report_Id: $(this).attr('data-notification'),
-                    service_id: $(this).attr('data-service')
+                    report_Id: reportId,
+                    service_id: serviceId
                 },
                 success: function (data)
                 {
-                                        //alert(data[0]["accepted"]);
-                    $('.auditOrganisationIIEdit').val(data[0]['audit_Organisation']);
-                    if (data[4]['audit_dates'] == "" || data[4]['audit_dates'] == null)
-                        $audit_dates = data[5]['audit_dates'];
-                    else
-                        $audit_dates = data[4]['audit_dates'];
-                    $('.auditDateIIEdit').val($audit_dates);
-                    if (data[0]['review_date'] == "" || data[0]['review_date'] == null)
-                        $review_date = "";
-                    else
-                        $review_date = moment(data[0]['review_date']).format('DD.MM.YYYY');
-                    $('.reviewDateAnnexEdit').val($review_date);
-                    let leadAuditors = [];
-                    let leadAuditors1 = [];
-if (data[2] && typeof data[2] === 'object') {
-    for (const key in data[2]) {
-        if (data[2].hasOwnProperty(key)) {
-            if (data[2][key]["auditor_category"] == "Team Leader"){
-            const combined = data[2][key].auditor_name + ' (' + data[2][key].auditor_category + ')';
-        leadAuditors.push(combined);
-        leadAuditors1.push(data[2][key].auditor_name);
-                }else if(data[2][key]["auditor_category"] == "Auditor"){
-                    const combined = data[2][key].auditor_name + ' (' + data[2][key].auditor_category + ')';
-        leadAuditors.push(combined);
-                leadAuditors1.push(data[2][key].auditor_name);
+                    try {
+                        if (!data || !data[0]) {
+                            restoreBtn();
+                            alert("Data not found");
+                            return;
+                        }
+                        $('.auditOrganisationIIEdit').val(data[0]['audit_Organisation'] || "");
+                        var $audit_dates = "";
+                        if (data[4] && data[4]['audit_dates']) {
+                            $audit_dates = data[4]['audit_dates'];
+                        } else if (data[5] && data[5]['audit_dates']) {
+                            $audit_dates = data[5]['audit_dates'];
+                        }
+                        $('.auditDateIIEdit').val($audit_dates);
+                        var $review_date = "";
+                        if (data[0]['review_date']) {
+                            $review_date = moment(data[0]['review_date']).format('DD.MM.YYYY');
+                        }
+                        $('.reviewDateAnnexEdit').val($review_date);
+                        let leadAuditors = [];
+                        let leadAuditors1 = [];
+                        if (data[2] && typeof data[2] === 'object') {
+                            for (const key in data[2]) {
+                                if (data[2].hasOwnProperty(key)) {
+                                    const combined = (data[2][key].auditor_name || '') + ' (' + (data[2][key].auditor_category || '') + ')';
+                                    leadAuditors.push(combined);
+                                    leadAuditors1.push(data[2][key].auditor_name || '');
+                                }
+                            }
+                        }
 
-                }else if(data[2][key]["auditor_category"] == "Technical Expert"){
-                    const combined = data[2][key].auditor_name + ' (' + data[2][key].auditor_category + ')';
-        leadAuditors.push(combined);
-                leadAuditors1.push(data[2][key].auditor_name);
+                        let leadAuditorString = leadAuditors.join(', ');
+                        $('.leadAuditorIIEdit').val(leadAuditorString);
+                        const optionsToRemove = [];
+                        leadAuditors1.forEach(auditor => {
+                            if (auditor) optionsToRemove.push(auditor);
+                        });
+                        removeUnwantedOptions('.reviewerNameEdit', optionsToRemove);
 
-                }
-        else{
-            const combined = data[2][key].auditor_name + ' (' + data[2][key].auditor_category + ')';
-        leadAuditors.push(combined);
-                leadAuditors1.push(data[2][key].auditor_name);
+                        $('.referenceNumberIIEdit').val(data[0]['reference_number'] || "");
+                        $('.editauditInpard[value = "' + data[0]["initial"] + '"]').prop('checked', true);
+                        $('.editacceptedII[value = "' + data[0]["accepted"] + '"]').prop('checked', true).trigger('change');
 
-        }}
-    }
-} else {
-    console.error('auditnotifi1 is not a valid object or is empty.');
-}
-
-let leadAuditorString = leadAuditors.join(', ');
-$leadauditor = leadAuditorString;
-let leadAuditorString1 = leadAuditors1.join(', ');
-const optionsToRemove = [];
-const leadAuditorsArray = leadAuditorString1.split(', ');
-leadAuditorsArray.forEach(auditor => {
-  optionsToRemove.push(auditor);
-});
-removeUnwantedOptions('.reviewerNameEdit', optionsToRemove);
-
-                    $('.leadAuditorIIEdit').val($leadauditor);
-                    $('.referenceNumberIIEdit').val(data[0]['reference_number']);
-                    $('.editauditInpard[value = "' + data[0]["initial"] + '"]').prop('checked', true);
-                    $('.editacceptedII[value = "' + data[0]["accepted"] + '"]').prop('checked', true).trigger('change');
-
-                    $('.ReviewerCommentsEdit').val(data[0]['reviewer_comments']);
-                    $('.ReviewerNameEdit').val(data[0]['ReviewerName']); 
-                    if (data[0]["remark_check"] == "YES")
-                    {
-                        $('.eremark').prop('checked', true);
-                        $('.eremark').val("YES");
-                    } else if (data[0]["remark_check"] == "NO")
-                    {
-                        $('.eremark').prop('checked', false);
-                        $('.eremark').val("NO");
+                        $('.ReviewerCommentsEdit').val(data[0]['reviewer_comments'] || "");
+                        $('.ReviewerNameEdit').val(data[0]['ReviewerName'] || ""); 
+                        if (data[0]["remark_check"] == "YES") {
+                            $('.eremark').prop('checked', true).val("YES");
+                        } else if (data[0]["remark_check"] == "NO") {
+                            $('.eremark').prop('checked', false).val("NO");
+                        }
+                        $('.editstageII').empty();
+                        if (data[1]) {
+                            for (var key in data[1]) {
+                                $('.editstageII').append('<div class="row" style=""> \n\
+                                                            <div class="col-xs-6 audit_aspectII "> \n\
+                                                            <font size="2">' + (data[1][key]['audit_aspect_ii'] || '') + '</font> \n\
+                                                            </div> \n\
+                                                            <div class="col-xs-3 form-group float-label-control"> \n\
+                                                            <select name="audit_responseII" class="form-control audit_responseII_Edit" id="audit_responseII" required> \n\
+                                                            <option value="' + (data[1][key]['audit_response_ii'] || '') + '">' + (data[1][key]['audit_response_ii'] || '') + '</option> \n\
+                                                            <option value="Yes">Yes</option> \n\
+                                                            <option value="No">No</option> \n\
+                                                            <option value="NA">NA</option> \n\
+                                                            </select> \n\
+                                                            </div> \n\
+                                                            <div class="col-xs-3 form-group float-label-control"> \n\
+                                                            <label></label> \n\
+                                                            <input type="text" class="remarkII_Edit" id="remarkII" name="remarkII" value="' + (data[1][key]['remark_ii'] || '') + '" placeholder="IF ANY" > \n\
+                                                            </div> \n\
+                                                            <input type="hidden" class="audit_aspect_hiddenII_Edit" name="audit_aspect_hiddenII" value="' + (data[1][key]['audit_aspect_ii'] || '') + '" >  \n\
+                                                            <input type="hidden" class="audit_id" name="audit_id" value="' + (data[1][key]['id_ii'] || '') + '" >  \n\
+                                                            </div> \n\
+                                                            <br>');
+                            }
+                        }
+                        $('input[type="text"]').trigger('change');
+                        $('#updatestageII').modal('show');
+                    } catch (e) {
+                        console.error("Error in editstageIIAudit2:", e);
+                    } finally {
+                        restoreBtn();
                     }
-                    $('.editstageII').empty();
-                    for (var key in data[1]) {
-                        $('.editstageII').append('<div class="row" style=""> \n\
-                                                    <div class="col-xs-6 audit_aspectII "> \n\
-                                                    <font size="2">' + data[1][key]['audit_aspect_ii'] + '</font> \n\
-                                                    </div> \n\
-                                                    <div class="col-xs-3 form-group float-label-control"> \n\
-                                                    <select name="audit_responseII" class="form-control audit_responseII_Edit" id="audit_responseII" required> \n\
-                                                    <option value="' + data[1][key]['audit_response_ii'] + '">' + data[1][key]['audit_response_ii'] + '</option> \n\
-                                                    <option value="Yes">Yes</option> \n\
-                                                    <option value="No">No</option> \n\
-                                                    <option value="NA">NA</option> \n\
-                                                    </select> \n\
-                                                    </div> \n\
-                                                    <div class="col-xs-3 form-group float-label-control"> \n\
-                                                    <label></label> \n\
-                                                    <input type="text" class="remarkII_Edit" id="remarkII" name="remarkII" value="' + data[1][key]['remark_ii'] + '" placeholder="IF ANY" > \n\
-                                                    </div> \n\
-                                                    <input type="hidden" class="audit_aspect_hiddenII_Edit" name="audit_aspect_hiddenII" value="' + data[1][key]['audit_aspect_ii'] + '" >  \n\
-                                                    <input type="hidden" class="audit_id" name="audit_id" value="' + data[1][key]['id_ii'] + '" >  \n\
-                                                    </div> \n\
-                                                    <br>');
-                    }
-                    $('input[type="text"]').trigger('change');
-                    //                    $('textarea').trigger('change');
-
-                    $('#updatestageII').modal('show');
                 },
                 error: function (data, status, err)
                 {
+                    restoreBtn();
                     alert(status);
                 }
             });
         });
 
-        $('.editstageIIAudit2Sii ').click(function () {
-            // alert($(this).attr('data-notification'));
-            $('.service_Id_Edit').val($(this).attr('data-service'));
-            $('.customer_Id_Edit').val($(this).attr('data-customer'));
-            $('.review_report_id').val($(this).attr('data-notification'));
-            loadServiceAuditorsForAnnexII($(this).attr('data-service'), $(this).attr('data-customer'));
+        $(document).on('click', '.editstageIIAudit2Sii', function () {
+            var $btn = $(this);
+            var originalHtml = $btn.html();
+            $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i>');
+            var restoreBtn = function() {
+                $btn.prop('disabled', false).html(originalHtml);
+            };
+
+            var serviceId = $(this).attr('data-service');
+            var customerId = $(this).attr('data-customer');
+            var reportId = $(this).attr('data-notification');
+
+            $('.service_Id_Edit').val(serviceId);
+            $('.customer_Id_Edit').val(customerId);
+            $('.review_report_id').val(reportId);
+            loadServiceAuditorsForAnnexII(serviceId, customerId);
 
             $.ajax({
                 url: "reviewReportData.php",
                 type: "GET",
                 dataType: "json",
                 data: {
-                    report_Id: $(this).attr('data-notification'),
-                    service_id: $(this).attr('data-service')
+                    report_Id: reportId,
+                    service_id: serviceId
                 },
                 success: function (data)
                 {
-                    //alert(data);
-                    $('.auditOrganisationIIEdit').val(data[0]['audit_Organisation']);
-                    if (data[0]['audit_dates'] == "" || data[0]['audit_dates'] == null)
-                        $audit_dates = "";
-                    else
-                        $audit_dates = moment(data[0]['audit_dates']).format('DD.MM.YYYY');
-                    $('.auditDateIIEdit').val($audit_dates);
-                    alert("hi");
-                    let leadAuditors = [];
-                    if (data[2] && typeof data[2] === 'object') {
-    for (const key in data[2]) {
-        if (data[2].hasOwnProperty(key)) {
-            if (data[2][key]["auditor_category"] == "Team Leader"){
-            leadAuditors.push(data[2][key].auditor_name);
-                }else if(data[2][key]["auditor_category"] == "Auditor"){
-                    leadAuditors.push(data[2][key].auditor_name);
-                }else if(data[2][key]["auditor_category"] == "Technical Expert"){
-                    leadAuditors.push(data[2][key].auditor_name);
-                }
-        else{
-            leadAuditors.push(data[2][key].auditor_name);
-        }}
-    }
-} else {
-    console.error('auditnotifi1 is not a valid object or is empty.');
-}
-if (data[3] && typeof data[3] === 'object') {
-    for (const key in data[3]) {
-        if (data[3].hasOwnProperty(key)) {
-            if (data[3][key]["auditor_category"] == "Team Leader"){
-            leadAuditors.push(data[3][key].auditor_name);
-                }else if(data[3][key]["auditor_category"] == "Auditor"){
-                    leadAuditors.push(data[3][key].auditor_name);
-                }else if(data[3][key]["auditor_category"] == "Technical Expert"){
-                    leadAuditors.push(data[3][key].auditor_name);
-                }
-        else{
-            leadAuditors.push(data[3][key].auditor_name);
-        }}
-    }
-} else {
-    console.error('auditnotifi1 is not a valid object or is empty.');
-}
+                    try {
+                        if (!data || !data[0]) {
+                            restoreBtn();
+                            alert("Data not found");
+                            return;
+                        }
+                        $('.auditOrganisationIIEdit').val(data[0]['audit_Organisation'] || "");
+                        var $audit_dates = "";
+                        if (data[0]['audit_dates']) {
+                            $audit_dates = moment(data[0]['audit_dates']).format('DD.MM.YYYY');
+                        }
+                        $('.auditDateIIEdit').val($audit_dates);
 
-let leadAuditorString = leadAuditors.join(', ');
-$leadauditor = leadAuditorString;
+                        let leadAuditors = [];
+                        if (data[2] && typeof data[2] === 'object') {
+                            for (const key in data[2]) {
+                                if (data[2].hasOwnProperty(key)) {
+                                    leadAuditors.push(data[2][key].auditor_name || '');
+                                }
+                            }
+                        }
+                        if (data[3] && typeof data[3] === 'object') {
+                            for (const key in data[3]) {
+                                if (data[3].hasOwnProperty(key)) {
+                                    leadAuditors.push(data[3][key].auditor_name || '');
+                                }
+                            }
+                        }
 
-                    $('.leadAuditorIIEdit').val($leadauditor);
-                    $('.referenceNumberIIEdit').val(data[0]['reference_number']);
+                        let leadAuditorString = leadAuditors.join(', ');
+                        $('.leadAuditorIIEdit').val(leadAuditorString);
+                        $('.referenceNumberIIEdit').val(data[0]['reference_number'] || "");
 
-                    $('.editauditInpard[value = "' + data[0]["initial"] + '"]').prop('checked', true);
-                    $('.editacceptedII[value = "' + data[0]["accepted"] + '"]').prop('checked', true);
-                    $('.formNo2').val(data[0]['form_no']);
-                    $('.rev2').val(data[0]['rev']);
-                    if (data[0]["remark_check"] == "YES")
-                        $('.eremark').prop("cheked", true);
-                    else if (data[0]["remark_check"] == "NO")
-                        $('.eremark').prop("cheked", false);
-                    if (data[0]['date_rev'] == "" || data[0]['date_rev'] == null)
-                        $date_rev = "";
-                    else
-                        $date_rev = moment(data[0]['date_rev']).format('DD.MM.YYYY');
-                    $('.revDateII2').val($date_rev);
-                    $('.isueEdit2').val(data[0]['issue']);
-                    if (data[0]['date_issue'] == "" || data[0]['date_issue'] == null)
-                        $date_issue = "";
-                    else
-                        $date_issue = moment(data[0]['date_issue']).format('DD.MM.YYYY');
-                    $('.isueDateIIEdit').val($date_issue);
-                    $('.ReviewerCommentsEdit').val(data[0]['reviewer_comments']);
-                    $('.ReviewerNameEdit').val(data[0]['ReviewerName']); 
+                        $('.editauditInpard[value = "' + data[0]["initial"] + '"]').prop('checked', true);
+                        $('.editacceptedII[value = "' + data[0]["accepted"] + '"]').prop('checked', true);
+                        $('.formNo2').val(data[0]['form_no'] || "");
+                        $('.rev2').val(data[0]['rev'] || "");
+                        if (data[0]["remark_check"] == "YES")
+                            $('.eremark').prop("checked", true);
+                        else if (data[0]["remark_check"] == "NO")
+                            $('.eremark').prop("checked", false);
+                        var $date_rev = "";
+                        if (data[0]['date_rev'])
+                            $date_rev = moment(data[0]['date_rev']).format('DD.MM.YYYY');
+                        $('.revDateII2').val($date_rev);
+                        $('.isueEdit2').val(data[0]['issue'] || "");
+                        var $date_issue = "";
+                        if (data[0]['date_issue'])
+                            $date_issue = moment(data[0]['date_issue']).format('DD.MM.YYYY');
+                        $('.isueDateIIEdit').val($date_issue);
+                        $('.ReviewerCommentsEdit').val(data[0]['reviewer_comments'] || "");
+                        $('.ReviewerNameEdit').val(data[0]['ReviewerName'] || ""); 
 
-                    $('.editstageII').empty();
-                    for (var key in data[1]) {
-                        // var option= data[1][key]['audit_response_ii'] ;
-
-                        $('.editstageII').append('  <div class="row" style=""> \n\
-                 <div class="col-xs-6 audit_aspectII "> \n\
-               <font size="2">' + data[1][key]['audit_aspect_ii'] + '</font> \n\
-               </div> \n\
-                <div class="col-xs-3 form-group float-label-control"> \n\
-                                                <select name="audit_responseII" class="form-control audit_responseII_Edit" id="audit_responseII" required> \n\
-                                                    <option value="' + data[1][key]['audit_response_ii'] + '">' + data[1][key]['audit_response_ii'] + '</option> \n\
-                                                    <option value="Yes">Yes</option> \n\
-                                                    <option value="No">No</option> \n\
-                                                    <option value="NA">NA</option> \n\
-                                                </select> \n\
-                                            </div> \n\
-                   <div class="col-xs-3 form-group float-label-control"> \n\
-                <label></label> \n\
-                  <input type="text" class="remarkII_Edit" id="remarkII" name="remarkII" value="' + data[1][key]['remark_ii'] + '" placeholder="IF ANY" required > \n\
-                </div> \n\
-                <input type="hidden" class="audit_aspect_hiddenII_Edit" name="audit_aspect_hiddenII" value="' + data[1][key]['audit_aspect_ii'] + '" >  \n\
-               <input type="hidden" class="audit_id" name="audit_id" value="' + data[1][key]['id_ii'] + '" >  \n\
-                                                                        </div> \n\
-                                                                        <br>');
+                        $('.editstageII').empty();
+                        if (data[1]) {
+                            for (var key in data[1]) {
+                                $('.editstageII').append('  <div class="row" style=""> \n\
+                         <div class="col-xs-6 audit_aspectII "> \n\
+                       <font size="2">' + (data[1][key]['audit_aspect_ii'] || '') + '</font> \n\
+                       </div> \n\
+                        <div class="col-xs-3 form-group float-label-control"> \n\
+                                                        <select name="audit_responseII" class="form-control audit_responseII_Edit" id="audit_responseII" required> \n\
+                                                            <option value="' + (data[1][key]['audit_response_ii'] || '') + '">' + (data[1][key]['audit_response_ii'] || '') + '</option> \n\
+                                                            <option value="Yes">Yes</option> \n\
+                                                            <option value="No">No</option> \n\
+                                                            <option value="NA">NA</option> \n\
+                                                        </select> \n\
+                                                    </div> \n\
+                           <div class="col-xs-3 form-group float-label-control"> \n\
+                        <label></label> \n\
+                          <input type="text" class="remarkII_Edit" id="remarkII" name="remarkII" value="' + (data[1][key]['remark_ii'] || '') + '" placeholder="IF ANY" required > \n\
+                        </div> \n\
+                        <input type="hidden" class="audit_aspect_hiddenII_Edit" name="audit_aspect_hiddenII" value="' + (data[1][key]['audit_aspect_ii'] || '') + '" >  \n\
+                       <input type="hidden" class="audit_id" name="audit_id" value="' + (data[1][key]['id_ii'] || '') + '" >  \n\
+                                                                                </div> \n\
+                                                                                <br>');
+                            }
+                        }
+                        $('input[type="text"]').trigger('change');
+                        $('#updatestageII').modal('show');
+                    } catch (e) {
+                        console.error("Error in editstageIIAudit2Sii:", e);
+                    } finally {
+                        restoreBtn();
                     }
-                    $('input[type="text"]').trigger('change');
-                    //                    $('textarea').trigger('change');
-
-                    $('#updatestageII').modal('show');
                 },
                 error: function (data, status, err)
                 {
+                    restoreBtn();
                     alert(status);
                 }
             });
         });
 
-        $('.editstageIIAudit2SP').click(function () {
-            // alert($(this).attr('data-notification'));
-            $('.service_Id_Edit').val($(this).attr('data-service'));
-            $('.customer_Id_Edit').val($(this).attr('data-customer'));
-            $('.review_report_id').val($(this).attr('data-notification'));
-            loadServiceAuditorsForAnnexII($(this).attr('data-service'), $(this).attr('data-customer'));
+        $(document).on('click', '.editstageIIAudit2SP', function () {
+            var $btn = $(this);
+            var originalHtml = $btn.html();
+            $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i>');
+            var restoreBtn = function() {
+                $btn.prop('disabled', false).html(originalHtml);
+            };
+
+            var serviceId = $(this).attr('data-service');
+            var customerId = $(this).attr('data-customer');
+            var reportId = $(this).attr('data-notification');
+
+            $('.service_Id_Edit').val(serviceId);
+            $('.customer_Id_Edit').val(customerId);
+            $('.review_report_id').val(reportId);
+            loadServiceAuditorsForAnnexII(serviceId, customerId);
 
             $.ajax({
                 url: "reviewReportData.php",
                 type: "GET",
                 dataType: "json",
                 data: {
-                    report_Id: $(this).attr('data-notification'),
-                    service_id: $(this).attr('data-service')
+                    report_Id: reportId,
+                    service_id: serviceId
                 },
                 success: function (data)
                 {
-                    //alert(data);
-                    $('.auditOrganisationIIEdit').val(data[0]['audit_Organisation']);
-                    if (data[0]['audit_dates'] == "" || data[0]['audit_dates'] == null)
-                        $audit_dates = "";
-                    else
-                        $audit_dates = moment(data[0]['audit_dates']).format('DD.MM.YYYY');
-                    $('.auditDateIIEdit').val($audit_dates);
-                    let leadAuditors = [];
-                    if (data[2] && typeof data[2] === 'object') {
-    for (const key in data[2]) {
-        if (data[2].hasOwnProperty(key)) {
-            if (data[2][key]["auditor_category"] == "Team Leader"){
-            leadAuditors.push(data[2][key].auditor_name);
-                }else if(data[2][key]["auditor_category"] == "Auditor"){
-                    leadAuditors.push(data[2][key].auditor_name);
-                }else if(data[2][key]["auditor_category"] == "Technical Expert"){
-                    leadAuditors.push(data[2][key].auditor_name);
-                }
-        else{
-            leadAuditors.push(data[2][key].auditor_name);
-        }}
-    }
-} else {
-    console.error('auditnotifi1 is not a valid object or is empty.');
-}
-if (data[3] && typeof data[3] === 'object') {
-    for (const key in data[3]) {
-        if (data[3].hasOwnProperty(key)) {
-            if (data[3][key]["auditor_category"] == "Team Leader"){
-            leadAuditors.push(data[3][key].auditor_name);
-                }else if(data[3][key]["auditor_category"] == "Auditor"){
-                    leadAuditors.push(data[3][key].auditor_name);
-                }else if(data[3][key]["auditor_category"] == "Technical Expert"){
-                    leadAuditors.push(data[3][key].auditor_name);
-                }
-        else{
-            leadAuditors.push(data[3][key].auditor_name);
-        }}
-    }
-} else {
-    console.error('auditnotifi1 is not a valid object or is empty.');
-}
+                    try {
+                        if (!data || !data[0]) {
+                            restoreBtn();
+                            alert("Data not found");
+                            return;
+                        }
+                        $('.auditOrganisationIIEdit').val(data[0]['audit_Organisation'] || "");
+                        var $audit_dates = "";
+                        if (data[0]['audit_dates'])
+                            $audit_dates = moment(data[0]['audit_dates']).format('DD.MM.YYYY');
+                        $('.auditDateIIEdit').val($audit_dates);
 
-let leadAuditorString = leadAuditors.join(', ');
-$leadauditor = leadAuditorString;
+                        let leadAuditors = [];
+                        if (data[2] && typeof data[2] === 'object') {
+                            for (const key in data[2]) {
+                                if (data[2].hasOwnProperty(key)) {
+                                    leadAuditors.push(data[2][key].auditor_name || '');
+                                }
+                            }
+                        }
+                        if (data[3] && typeof data[3] === 'object') {
+                            for (const key in data[3]) {
+                                if (data[3].hasOwnProperty(key)) {
+                                    leadAuditors.push(data[3][key].auditor_name || '');
+                                }
+                            }
+                        }
 
-                    $('.leadAuditorIIEdit').val($leadauditor);
-                    $('.referenceNumberIIEdit').val(data[0]['reference_number']);
+                        let leadAuditorString = leadAuditors.join(', ');
+                        $('.leadAuditorIIEdit').val(leadAuditorString);
+                        $('.referenceNumberIIEdit').val(data[0]['reference_number'] || "");
 
-                    $('.editauditInpard[value = "' + data[0]["initial"] + '"]').prop('checked', true);
-                    $('.editacceptedII[value = "' + data[0]["accepted"] + '"]').prop('checked', true);
-                    $('.formNo2').val(data[0]['form_no']);
-                    $('.rev2').val(data[0]['rev']);
-                    if (data[0]["remark_check"] == "YES")
-                        $('.eremark').prop("cheked", true);
-                    else if (data[0]["remark_check"] == "NO")
-                        $('.eremark').prop("cheked", false);
-                    if (data[0]['date_rev'] == "" || data[0]['date_rev'] == null)
-                        $date_rev = "";
-                    else
-                        $date_rev = moment(data[0]['date_rev']).format('DD.MM.YYYY');
-                    $('.revDateII2').val($date_rev);
-                    $('.isueEdit2').val(data[0]['issue']);
-                    if (data[0]['date_issue'] == "" || data[0]['date_issue'] == null)
-                        $date_issue = "";
-                    else
-                        $date_issue = moment(data[0]['date_issue']).format('DD.MM.YYYY');
-                    $('.isueDateIIEdit').val($date_issue);
-                    $('.ReviewerCommentsEdit').val(data[0]['reviewer_comments']); 
-                    $('.ReviewerNameEdit').val(data[0]['ReviewerName']); 
-                    
+                        $('.editauditInpard[value = "' + data[0]["initial"] + '"]').prop('checked', true);
+                        $('.editacceptedII[value = "' + data[0]["accepted"] + '"]').prop('checked', true);
+                        $('.formNo2').val(data[0]['form_no'] || "");
+                        $('.rev2').val(data[0]['rev'] || "");
+                        if (data[0]["remark_check"] == "YES")
+                            $('.eremark').prop("checked", true);
+                        else if (data[0]["remark_check"] == "NO")
+                            $('.eremark').prop("checked", false);
+                        var $date_rev = "";
+                        if (data[0]['date_rev'])
+                            $date_rev = moment(data[0]['date_rev']).format('DD.MM.YYYY');
+                        $('.revDateII2').val($date_rev);
+                        $('.isueEdit2').val(data[0]['issue'] || "");
+                        var $date_issue = "";
+                        if (data[0]['date_issue'])
+                            $date_issue = moment(data[0]['date_issue']).format('DD.MM.YYYY');
+                        $('.isueDateIIEdit').val($date_issue);
+                        $('.ReviewerCommentsEdit').val(data[0]['reviewer_comments'] || ""); 
+                        $('.ReviewerNameEdit').val(data[0]['ReviewerName'] || ""); 
 
-                    $('.editstageII').empty();
-                    for (var key in data[1]) {
-                        // var option= data[1][key]['audit_response_ii'] ;
-
-                        $('.editstageII').append('  <div class="row" style=""> \n\
-                 <div class="col-xs-6 audit_aspectII "> \n\
-               <font size="2">' + data[1][key]['audit_aspect_ii'] + '</font> \n\
-               </div> \n\
-                <div class="col-xs-3 form-group float-label-control"> \n\
-                                                <select name="audit_responseII" class="form-control audit_responseII_Edit" id="audit_responseII" required> \n\
-                                                    <option value="' + data[1][key]['audit_response_ii'] + '">' + data[1][key]['audit_response_ii'] + '</option> \n\
-                                                    <option value="Yes">Yes</option> \n\
-                                                    <option value="No">No</option> \n\
-                                                    <option value="NA">NA</option> \n\
-                                                </select> \n\
-                                            </div> \n\
-                   <div class="col-xs-3 form-group float-label-control"> \n\
-                <label></label> \n\
-                  <input type="text" class="remarkII_Edit" id="remarkII" name="remarkII" value="' + data[1][key]['remark_ii'] + '" placeholder="IF ANY" required > \n\
-                </div> \n\
-                <input type="hidden" class="audit_aspect_hiddenII_Edit" name="audit_aspect_hiddenII" value="' + data[1][key]['audit_aspect_ii'] + '" >  \n\
-               <input type="hidden" class="audit_id" name="audit_id" value="' + data[1][key]['id_ii'] + '" >  \n\
-                                                                        </div> \n\
-                                                                        <br>');
+                        $('.editstageII').empty();
+                        if (data[1]) {
+                            for (var key in data[1]) {
+                                $('.editstageII').append('  <div class="row" style=""> \n\
+                         <div class="col-xs-6 audit_aspectII "> \n\
+                       <font size="2">' + (data[1][key]['audit_aspect_ii'] || '') + '</font> \n\
+                       </div> \n\
+                        <div class="col-xs-3 form-group float-label-control"> \n\
+                                                        <select name="audit_responseII" class="form-control audit_responseII_Edit" id="audit_responseII" required> \n\
+                                                            <option value="' + (data[1][key]['audit_response_ii'] || '') + '">' + (data[1][key]['audit_response_ii'] || '') + '</option> \n\
+                                                            <option value="Yes">Yes</option> \n\
+                                                            <option value="No">No</option> \n\
+                                                            <option value="NA">NA</option> \n\
+                                                        </select> \n\
+                                                    </div> \n\
+                           <div class="col-xs-3 form-group float-label-control"> \n\
+                        <label></label> \n\
+                          <input type="text" class="remarkII_Edit" id="remarkII" name="remarkII" value="' + (data[1][key]['remark_ii'] || '') + '" placeholder="IF ANY" required > \n\
+                        </div> \n\
+                        <input type="hidden" class="audit_aspect_hiddenII_Edit" name="audit_aspect_hiddenII" value="' + (data[1][key]['audit_aspect_ii'] || '') + '" >  \n\
+                       <input type="hidden" class="audit_id" name="audit_id" value="' + (data[1][key]['id_ii'] || '') + '" >  \n\
+                                                                                </div> \n\
+                                                                                <br>');
+                            }
+                        }
+                        $('input[type="text"]').trigger('change');
+                        $('#updatestageII').modal('show');
+                    } catch (e) {
+                        console.error("Error in editstageIIAudit2SP:", e);
+                    } finally {
+                        restoreBtn();
                     }
-                    $('input[type="text"]').trigger('change');
-                    //                    $('textarea').trigger('change');
-
-                    $('#updatestageII').modal('show');
                 },
                 error: function (data, status, err)
                 {
+                    restoreBtn();
                     alert(status);
                 }
             });

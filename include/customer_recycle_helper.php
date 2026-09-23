@@ -9,6 +9,12 @@ if (!function_exists('aitfEnsureRecycleSchema')) {
         static $checked = false;
         if ($checked) return;
 
+        $flagFile = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'aitf_recycle_schema.flag';
+        if (file_exists($flagFile) && filemtime($flagFile) >= filemtime(__FILE__) && (time() - filemtime($flagFile) < 43200)) {
+            $checked = true;
+            return;
+        }
+
         try {
             // 1. service table
             $cols = $db->query("SHOW COLUMNS FROM `service` LIKE 'is_deleted'")->fetchAll();
@@ -33,6 +39,7 @@ if (!function_exists('aitfEnsureRecycleSchema')) {
             if (empty($colsCustDate)) {
                 $db->exec("ALTER TABLE `customer_info` ADD COLUMN `deleted_date` DATETIME NULL");
             }
+            @touch($flagFile);
         } catch (Exception $e) {
             error_log("Recycle Schema Migration Error: " . $e->getMessage());
         }

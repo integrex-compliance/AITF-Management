@@ -1,8 +1,5 @@
 <?php
-
-
-
-session_start();
+header('Content-Type: application/json; charset=utf-8');
 include_once './dbConnect.php';
 include_once './include/cdc_office_use.php';
 include_once './include/cdc_audit_date_sync.php';

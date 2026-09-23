@@ -311,23 +311,49 @@
 
         //        code by Pallavi to add customer survey 
 
-        $('.createCustomerSurvey').click(function () {
-            var svctype = $(this).attr('data-svc');
+        $(document).off('click', '.createCustomerSurvey').on('click', '.createCustomerSurvey', function (e) {
+            e.preventDefault();
+            var $btn = $(this);
+            if ($btn.css('pointer-events') === 'none' || $btn.data('loading')) {
+                return false;
+            }
+            $btn.data('loading', true);
+            var $icon = $btn.find('i');
+            var origClass = $icon.attr('class') || 'fa fa-plus-circle fa-lg';
+            $icon.attr('class', 'fa fa-spinner fa-spin fa-lg');
+            $btn.css('pointer-events', 'none');
+
+            var btnRestored = false;
+            function restoreBtn() {
+                if (!btnRestored) {
+                    btnRestored = true;
+                    $icon.attr('class', origClass);
+                    $btn.css('pointer-events', '');
+                    $btn.removeData('loading');
+                }
+            }
+
+            var svctype = $btn.attr('data-svc');
+            var custId = $btn.attr('data-customer');
+            var svcId = $btn.attr('data-service');
+            var svc1Id = $btn.attr('data-service1');
+            var dataId = $btn.attr('data-id');
             $('.survey-service-type').val(svctype);
-            $('.survey-service-id').val($(this).attr('data-service'));
-            $('.survey-customer-id').val($(this).attr('data-customer'));
-            $('.cs-service-id').val($(this).attr('data-id'));
+            $('.survey-service-id').val(svcId);
+            $('.survey-customer-id').val(custId);
+            $('.cs-service-id').val(dataId);
             $.ajax({
                 url: "getClientInfo.php",
                 type: "GET",
                 dataType: "json",
                 data: {
-                    cdccustomer_ID: $(this).attr('data-customer'),
-                    cdcservice_ID: $(this).attr('data-service'),
-                    crsvc_id: $(this).attr('data-service1'),
+                    cdccustomer_ID: custId,
+                    cdcservice_ID: svcId,
+                    crsvc_id: svc1Id,
                 },
                 success: function (data)
                 {
+                    try {
 //                    alert(data[2]['audit_dates']+" -> "+data[4]['schedule_audit_date']);
                     $('.auditOrg').val(data[0]['customer_name']);
 //                    $('.survayAuditDates').val(moment(data[2]['audit_dates']).format('DD.MM.YYYY'));
@@ -451,30 +477,65 @@
                     $('input[type="text"]').trigger('change');
                     $('input[type="number"]').trigger('change');
                     $('#customerSurvey').modal('show');
+                    } catch (err) {
+                        console.error("Error populating customer survey data:", err);
+                    } finally {
+                        restoreBtn();
+                    }
                 },
                 error: function (data, status, err)
                 {
+                    restoreBtn();
                     alert(status);
+                },
+                complete: function ()
+                {
+                    restoreBtn();
                 }
             });
         });
 
-        $('.editCustomerSurvey').click(function () {
-            var svctype = $(this).attr('data-svc');
+        $(document).off('click', '.editCustomerSurvey').on('click', '.editCustomerSurvey', function (e) {
+            e.preventDefault();
+            var $btn = $(this);
+            if ($btn.css('pointer-events') === 'none' || $btn.data('loading')) {
+                return false;
+            }
+            $btn.data('loading', true);
+            var $icon = $btn.find('i');
+            var origClass = $icon.attr('class') || 'fa fa-pencil-square fa-lg';
+            $icon.attr('class', 'fa fa-spinner fa-spin fa-lg');
+            $btn.css('pointer-events', 'none');
+
+            var btnRestored = false;
+            function restoreBtn() {
+                if (!btnRestored) {
+                    btnRestored = true;
+                    $icon.attr('class', origClass);
+                    $btn.css('pointer-events', '');
+                    $btn.removeData('loading');
+                }
+            }
+
+            var svctype = $btn.attr('data-svc');
+            var rowId = $btn.attr('data-row-id');
+            var serviceId = $btn.attr('data-service');
+            var dataId = $btn.attr('data-id');
             $('.survey-service-type').val(svctype);
-            $('.cs-service-id').val($(this).attr('data-id'));
+            $('.cs-service-id').val(dataId);
 //            alert($(this).attr('data-row-id'));
             $.ajax({
                 url: "contractDetails.php",
                 type: "GET",
                 dataType: "json",
                 data: {
-                    survay_id: $(this).attr('data-row-id'),
-                    survay_service: $(this).attr('data-service'),
+                    survay_id: rowId,
+                    survay_service: serviceId,
 //                    survay_customer: $(this).attr('data-customer'),
                 },
                 success: function (data)
                 {
+                    try {
 //                    alert(data[0]["initial_cert"]);
                     $('.auditorRating').empty();
 
@@ -550,10 +611,20 @@
 //                    $('.addCustomerSurveyPdf').hide();
 
                     $('#customerSurvey').modal('show');
+                    } catch (err) {
+                        console.error("Error populating edit customer survey data:", err);
+                    } finally {
+                        restoreBtn();
+                    }
                 },
                 error: function (data, status, err)
                 {
+                    restoreBtn();
                     alert(status);
+                },
+                complete: function ()
+                {
+                    restoreBtn();
                 }
             });
         });

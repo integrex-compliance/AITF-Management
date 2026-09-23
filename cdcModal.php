@@ -3341,7 +3341,28 @@ $auditorsList = $statement->fetchAll();
         });
         //  code by appa for Review CdcReport Add
         $(document).off('click.cdcModal', '.cdcReport');
-        $(document).on('click.cdcModal', '.cdcReport', function () {
+        $(document).on('click.cdcModal', '.cdcReport', function (e) {
+            if (e) e.preventDefault();
+            var $btn = $(this);
+            if ($btn.css('pointer-events') === 'none' || $btn.data('loading')) {
+                return false;
+            }
+            $btn.data('loading', true);
+            var $icon = $btn.find('i');
+            var origClass = $icon.attr('class') || 'fa fa-plus-circle fa-lg';
+            $icon.attr('class', 'fa fa-spinner fa-spin fa-lg');
+            $btn.css('pointer-events', 'none');
+
+            var btnRestored = false;
+            function restoreBtn() {
+                if (!btnRestored) {
+                    btnRestored = true;
+                    $icon.attr('class', origClass);
+                    $btn.css('pointer-events', '');
+                    $btn.removeData('loading');
+                }
+            }
+
             // Clear the saved data flag when opening new CDC
             $('#cdcOfficeContainer').removeData('hasSavedOfficeData');
             $('.crr_Id').val('');
@@ -3349,24 +3370,31 @@ $auditorsList = $statement->fetchAll();
             $('#iso_metadata').val('');
             window.cdcIsoMetadata = [];
 
-            var customerAttr = $(this).attr('data-customer');
+            var customerAttr = $btn.attr('data-customer');
+            var svcId = $btn.attr('data-service');
+            var svc1Id = $btn.attr('data-service1');
+            var dataId = $btn.attr('data-id');
+            var auditData = $btn.attr('audit-data');
+            var svcTypeAttr = $btn.attr('data-svctype');
+
             updateBaseCustomerId(customerAttr);
-            $cdcbyservice = (this).hasAttribute('data-svctype') ? $(this).attr('data-svctype') : '';
-            $('.service_Id').val($(this).attr('data-service'));
-            $('.customer_Id').val($(this).attr('data-customer'));
-            $('.uni_serviceid').val($(this).attr('data-id'));
-            $('.audit_type').val($(this).attr('audit-data'));
-            $(".servicetype").val($(this).attr("data-svctype"));
+            $cdcbyservice = (this).hasAttribute('data-svctype') ? svcTypeAttr : '';
+            $('.service_Id').val(svcId);
+            $('.customer_Id').val(customerAttr);
+            $('.uni_serviceid').val(dataId);
+            $('.audit_type').val(auditData);
+            $(".servicetype").val(svcTypeAttr);
             $.ajax({
                 url: "getClientInfo.php",
                 type: "GET",
                 dataType: "json",
                 data: {
                     cdccustomer_ID: customerAttr,
-                    cdcservice_ID: $(this).attr('data-service'),
-                    crsvc_id: $(this).attr('data-service1'),
+                    cdcservice_ID: svcId,
+                    crsvc_id: svc1Id,
                 },
                 success: function (data) {
+                    try {
                     console.log('CDC Modal Data:', data);
                     console.log('Audit Application Data (data[1]):', data[1]);
                     if (data[1]) {
@@ -3803,9 +3831,18 @@ $auditorsList = $statement->fetchAll();
                     setTimeout(function () {
                         checkCDCStatus();
                     }, 200);
+                    } catch (err) {
+                        console.error("Error populating CDC data:", err);
+                    } finally {
+                        restoreBtn();
+                    }
                 },
                 error: function (data, status, err) {
+                    restoreBtn();
                     alert(status);
+                },
+                complete: function () {
+                    restoreBtn();
                 }
             });
             //            $('.update_cdc').hide();
@@ -3905,30 +3942,57 @@ $auditorsList = $statement->fetchAll();
 
         //  code by appa for Review CdcReport Update
         $(document).off('click.cdcModal', '.editcdcReport');
-        $(document).on('click.cdcModal', '.editcdcReport', function () {
+        $(document).on('click.cdcModal', '.editcdcReport', function (e) {
+            if (e) e.preventDefault();
+            var $btn = $(this);
+            if ($btn.css('pointer-events') === 'none' || $btn.data('loading')) {
+                return false;
+            }
+            $btn.data('loading', true);
+            var $icon = $btn.find('i');
+            var origClass = $icon.attr('class') || 'fa fa-pencil-square fa-lg';
+            $icon.attr('class', 'fa fa-spinner fa-spin fa-lg');
+            $btn.css('pointer-events', 'none');
+
+            var btnRestored = false;
+            function restoreBtn() {
+                if (!btnRestored) {
+                    btnRestored = true;
+                    $icon.attr('class', origClass);
+                    $btn.css('pointer-events', '');
+                    $btn.removeData('loading');
+                }
+            }
+
             // Clear the saved data flag when opening edit CDC - will be set if has saved office data
             $('#cdcOfficeContainer').removeData('hasSavedOfficeData');
             $('#iso_metadata').val('');
             window.cdcIsoMetadata = [];
 
-            var customerAttr = $(this).attr('data-customer');
+            var customerAttr = $btn.attr('data-customer');
+            var svcId = $btn.attr('data-service');
+            var dataId = $btn.attr('data-id');
+            var notifId = $btn.attr('data-notification');
+            var svcTypeAttr = $btn.attr('data-svctype');
+
             updateBaseCustomerId(customerAttr);
-            $cdcbyservice = (this).hasAttribute('data-svctype') ? $(this).attr('data-svctype') : '';
-            $('.service_Id').val($(this).attr('data-service'));
-            $('.customer_Id').val($(this).attr('data-customer'));
-            $('.uni_serviceid').val($(this).attr('data-id'));
-            $('.crr_Id').val($(this).attr('data-notification'));
-            $(".servicetype").val($(this).attr("data-svctype"));
-            console.log('CDC Edit - crr_Id set to:', $(this).attr('data-notification'));
+            $cdcbyservice = (this).hasAttribute('data-svctype') ? svcTypeAttr : '';
+            $('.service_Id').val(svcId);
+            $('.customer_Id').val(customerAttr);
+            $('.uni_serviceid').val(dataId);
+            $('.crr_Id').val(notifId);
+            $(".servicetype").val(svcTypeAttr);
+            console.log('CDC Edit - crr_Id set to:', notifId);
             $.ajax({
                 url: "reviewReportData.php",
                 type: "GET",
                 dataType: "json",
                 data: {
-                    crr_Id: $(this).attr('data-notification'),
-                    service: $(this).attr('data-service')
+                    crr_Id: notifId,
+                    service: svcId
                 },
                 success: function (data) {
+                    try {
                     console.log('=== EDIT CDC - FULL DATA DUMP ===');
                     console.log('Full data array:', data);
                     console.log('data.length:', data ? data.length : 'N/A');
@@ -4500,9 +4564,18 @@ $auditorsList = $statement->fetchAll();
 
                     // for edit temp
                     //                    alert(data[1]["review_date"]);
+                    } catch (err) {
+                        console.error("Error populating CDC data:", err);
+                    } finally {
+                        restoreBtn();
+                    }
                 },
                 error: function (data, status, err) {
+                    restoreBtn();
                     alert(status);
+                },
+                complete: function () {
+                    restoreBtn();
                 }
             });
         });

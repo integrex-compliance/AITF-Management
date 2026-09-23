@@ -25,19 +25,52 @@ if (isset($_POST["certificationComment"]) && !empty($_POST["certificationComment
     $statement->execute();
     echo "success";
 } else if (isset($_POST['rowid']) && !empty($_POST['rowid'])) {
-//    echo $_POST['rowid']; die;
     try {
-        $sql = "UPDATE `ca_service_dates` SET `is_deleted`= 'Y', sent_date = '0000-00-00' WHERE `action_id` = :id";
-        $statement = $db->prepare($sql);
-        $statement->bindParam(":id", $_POST['rowid']);
-        $statement->execute();
-        if (isset($_POST["page"]) && !empty($_POST["page"])) {
+        if (isset($_POST["page"]) && $_POST["page"] === "sentintimation") {
+            // Deleting from sentintimation history
+            $sql = "UPDATE `ca_service_dates` SET `is_deleted`= 'Y', sent_date = '0000-00-00' WHERE `action_id` = :id";
+            $statement = $db->prepare($sql);
+            $statement->bindParam(":id", $_POST['rowid']);
+            $statement->execute();
             header("Location: sentintimation.php");
-        } else {
+            exit;
+        } else if (isset($_POST["restore_intimation"]) && $_POST["restore_intimation"] == "1") {
+            // Restore a previously hidden letter back to intimationLetter.php
+            $sql = "UPDATE `ca_service_dates` SET `is_intimation_deleted`= 'N' WHERE `action_id` = :id";
+            $statement = $db->prepare($sql);
+            $statement->bindParam(":id", $_POST['rowid']);
+            $statement->execute();
+            if (isset($_POST["ajax"]) && $_POST["ajax"] == "1") {
+                header('Content-Type: application/json');
+                echo json_encode(array('status' => 'success'));
+                exit;
+            }
             header("Location: intimationLetter.php");
+            exit;
+        } else {
+            // Deleting from intimationLetter.php:
+            // ONLY remove from intimationLetter.php (Due Letters queue)!
+            // Keep completely intact in customer account "Letters & Actions" table (is_deleted remains 'N')
+            $sql = "UPDATE `ca_service_dates` SET `is_intimation_deleted`= 'Y' WHERE `action_id` = :id";
+            $statement = $db->prepare($sql);
+            $statement->bindParam(":id", $_POST['rowid']);
+            $statement->execute();
+            if (isset($_POST["ajax"]) && $_POST["ajax"] == "1") {
+                header('Content-Type: application/json');
+                echo json_encode(array('status' => 'success'));
+                exit;
+            }
+            header("Location: intimationLetter.php");
+            exit;
         }
     } catch (Exception $ex) {
-        
+        if (isset($_POST["ajax"]) && $_POST["ajax"] == "1") {
+            header('Content-Type: application/json');
+            echo json_encode(array('status' => 'error', 'message' => $ex->getMessage()));
+            exit;
+        }
+        header("Location: intimationLetter.php");
+        exit;
     }
 } else if (isset($_POST["rowidac"]) && !empty($_POST["rowidac"]) && isset($_POST["customer"]) && !empty($_POST["customer"])) {
     try {

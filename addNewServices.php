@@ -55,6 +55,9 @@ if (isset($_GET['auditors_Id']) && !empty($_GET['auditors_Id']) && isset($_GET['
             $delDiv = $db->prepare("DELETE FROM auditor_divisions WHERE auditor_id = :auditorId");
             $delDiv->bindParam(':auditorId', $_GET['auditorId']);
             $delDiv->execute();
+            $delNace = $db->prepare("DELETE FROM auditor_nace_classes WHERE auditor_id = :auditorId");
+            $delNace->bindParam(':auditorId', $_GET['auditorId']);
+            $delNace->execute();
         } catch (Exception $e) {}
 
         $auditors = "SELECT * from auditors";
@@ -139,6 +142,8 @@ if (isset($_GET['auditors_Id']) && !empty($_GET['auditors_Id']) && isset($_GET['
         if ($auditorInfo) {
             $auditorInfo['assigned_divisions'] = aitf_get_auditor_divisions($db, (int)$_GET['auditor_Id']);
             $auditorInfo['assigned_divisions_str'] = implode(', ', $auditorInfo['assigned_divisions']);
+            $auditorInfo['assigned_nace_classes'] = aitf_get_auditor_nace_classes($db, (int)$_GET['auditor_Id']);
+            $auditorInfo['assigned_nace_classes_str'] = implode(', ', $auditorInfo['assigned_nace_classes']);
         }
         echo json_encode($auditorInfo);
     } catch (Exception $ex) {

@@ -5051,6 +5051,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             } elseif (isset($_GET['reviewer_conflict'])) {
                 $auditAppConflictMsg = 'Reviewer and Auditor cannot be the same!';
             }
+            session_write_close();
             if (!empty($auditAppConflictMsg)): ?>
             <script>
             $(document).ready(function() {
@@ -16514,7 +16515,10 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                             window.loadEligibleAuditorsForAssessment(customerId, serviceId, function() {
                                 if (typeof window.renderAPLeadAuditorOptions === 'function') {
                                     $('.assessmentLeadAuditor').html(window.renderAPLeadAuditorOptions(''));
-                                    $('.assessmentAuditors').first().html(window.renderAPAuditorOptions(''));
+                                    var renderSupportFn = (typeof window.renderAPAllAuditorOptions === 'function')
+                                        ? window.renderAPAllAuditorOptions
+                                        : window.renderAPAuditorOptions;
+                                    $('.assessmentAuditors').first().html(renderSupportFn(''));
                                 }
                             });
                         }
@@ -16695,8 +16699,11 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                 if (auditors[0] && auditors[0].trim() != '') {
                                     var firstAuditor = auditors[0].trim();
                                     console.log('Setting first auditor in main dropdown:', firstAuditor);
-                                    if (typeof window.renderAPAuditorOptions === 'function') {
-                                        $('.assessmentAuditors').first().html(window.renderAPAuditorOptions(firstAuditor)).val(firstAuditor);
+                                    var renderSupportFn = (typeof window.renderAPAllAuditorOptions === 'function')
+                                        ? window.renderAPAllAuditorOptions
+                                        : window.renderAPAuditorOptions;
+                                    if (typeof renderSupportFn === 'function') {
+                                        $('.assessmentAuditors').first().html(renderSupportFn(firstAuditor)).val(firstAuditor);
                                     } else {
                                         $('.assessmentAuditors').val(firstAuditor);
                                     }
@@ -16713,20 +16720,23 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                 for (var i = 1; i < auditors.length; i++) {
                                     if (auditors[i] && auditors[i].trim() != '') {
                                         var currentAud = auditors[i].trim();
-                                        var optionHtml = (typeof window.renderAPAuditorOptions === 'function')
-                                            ? window.renderAPAuditorOptions(currentAud)
-                                            : (function () {
-                                                var opt = '<option value="" disabled>Choose Auditors</option>';
-                                                $('.assessmentAuditors option').each(function () {
-                                                    var optVal = $(this).val();
-                                                    var optText = $(this).text();
-                                                    if (optVal && optVal.trim() != '') {
-                                                        var selected = (optVal.trim() === currentAud) ? 'selected' : '';
-                                                        opt += '<option value="' + optVal + '" ' + selected + '>' + optText + '</option>';
-                                                    }
-                                                });
-                                                return opt;
-                                            })();
+                                        var optionHtml = '';
+                                        if (typeof window.renderAPAllAuditorOptions === 'function') {
+                                            optionHtml = window.renderAPAllAuditorOptions(currentAud);
+                                        } else if (typeof window.renderAPAuditorOptions === 'function') {
+                                            optionHtml = window.renderAPAuditorOptions(currentAud);
+                                        } else {
+                                            var opt = '<option value="" disabled>Choose Auditors</option>';
+                                            $('.assessmentAuditors option').each(function () {
+                                                var optVal = $(this).val();
+                                                var optText = $(this).text();
+                                                if (optVal && optVal.trim() != '') {
+                                                    var selected = (optVal.trim() === currentAud) ? 'selected' : '';
+                                                    opt += '<option value="' + optVal + '" ' + selected + '>' + optText + '</option>';
+                                                }
+                                            });
+                                            optionHtml = opt;
+                                        }
 
                                         var isCodeAuditor = codeAuditors[i] && codeAuditors[i].trim() != "";
                                         var checkedAttr = isCodeAuditor ? 'checked' : '';
@@ -17846,12 +17856,33 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 return svcType;
             }
 
-            $('.editCDC').click(function () {
+            $(document).off('click', '.editCDC').on('click', '.editCDC', function (e) {
+                e.preventDefault();
+                var $btn = $(this);
+                if ($btn.css('pointer-events') === 'none' || $btn.data('loading')) {
+                    return false;
+                }
+                $btn.data('loading', true);
+                var $icon = $btn.find('i');
+                var origClass = $icon.attr('class') || 'fa fa-pencil-square fa-lg';
+                $icon.attr('class', 'fa fa-spinner fa-spin fa-lg');
+                $btn.css('pointer-events', 'none');
+
+                var btnRestored = false;
+                function restoreBtn() {
+                    if (!btnRestored) {
+                        btnRestored = true;
+                        $icon.attr('class', origClass);
+                        $btn.css('pointer-events', '');
+                        $btn.removeData('loading');
+                    }
+                }
+
                 console.log('=== Edit CDC Button Clicked ===');
                 console.log('Button element:', this);
-                console.log('All data attributes:', $(this).data());
+                console.log('All data attributes:', $btn.data());
 
-                var svcType = $(this).attr('data-svctype');
+                var svcType = $btn.attr('data-svctype');
                 console.log('data-svctype attribute:', svcType);
 
                 if (!svcType || svcType === '') {
@@ -17859,7 +17890,9 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     console.log('Service type was empty, using default: CA');
                 }
 
-                var customerId = $(this).attr('data-customer');
+                var customerId = $btn.attr('data-customer');
+                var serviceId = $btn.attr('data-service');
+                var notifId = $btn.attr('data-notification');
                 console.log('Edit CDC clicked - Service Type (original):', svcType, 'Customer ID:', customerId);
                 svcType = convertServiceType(svcType); // Convert SA-I to SA1, SA-II to SA2
                 console.log('Edit CDC clicked - Service Type (converted):', svcType);
@@ -17868,9 +17901,9 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 if (typeof updateBaseCustomerId === 'function') {
                     updateBaseCustomerId(customerId);
                 }
-                $('.service_Id').val($(this).attr('data-service'));
+                $('.service_Id').val(serviceId);
                 $('.customer_Id').val(customerId);
-                $('.crr_Id').val($(this).attr('data-notification'));
+                $('.crr_Id').val(notifId);
                 $('.servicetype').val(svcType);
 
                 $.ajax({
@@ -17878,10 +17911,11 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     type: "GET",
                     dataType: "json",
                     data: {
-                        crr_Id: $(this).attr('data-notification'),
-                        service: $(this).attr('data-service')
+                        crr_Id: notifId,
+                        service: serviceId
                     },
                     success: function (response) {
+                        try {
                         // reviewReportData.php returns an array,
                         // CDC core data is at index 0, stage audit dates at indexes 5 and 6
                         var data = response[0] || response;
@@ -18264,9 +18298,18 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         }
 
                         validateCDC();
+                        } catch (err) {
+                            console.error("Error populating CDC data:", err);
+                        } finally {
+                            restoreBtn();
+                        }
                     },
                     error: function (data, status, err) {
+                        restoreBtn();
                         alert(status);
+                    },
+                    complete: function () {
+                        restoreBtn();
                     }
                 });
             });
@@ -19133,10 +19176,32 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 $('#cdcModel').modal('show');
             });
 
-            $('.editCDCRC').click(function () {
-                var svcType = $(this).attr('data-svctype') || 'RC';
-                var customerId = $(this).attr('data-customer');
-                var serviceId = $(this).attr('data-service');
+            $(document).off('click', '.editCDCRC').on('click', '.editCDCRC', function (e) {
+                e.preventDefault();
+                var $btn = $(this);
+                if ($btn.css('pointer-events') === 'none' || $btn.data('loading')) {
+                    return false;
+                }
+                $btn.data('loading', true);
+                var $icon = $btn.find('i');
+                var origClass = $icon.attr('class') || 'fa fa-pencil-square fa-lg';
+                $icon.attr('class', 'fa fa-spinner fa-spin fa-lg');
+                $btn.css('pointer-events', 'none');
+
+                var btnRestored = false;
+                function restoreBtn() {
+                    if (!btnRestored) {
+                        btnRestored = true;
+                        $icon.attr('class', origClass);
+                        $btn.css('pointer-events', '');
+                        $btn.removeData('loading');
+                    }
+                }
+
+                var svcType = $btn.attr('data-svctype') || 'RC';
+                var customerId = $btn.attr('data-customer');
+                var serviceId = $btn.attr('data-service');
+                var notifId = $btn.attr('data-notification');
                 console.log('Edit CDC RC clicked - Service Type (original):', svcType, 'Customer ID:', customerId);
                 svcType = convertServiceType(svcType); // Convert SA-I to SA1, SA-II to SA2
                 console.log('Edit CDC RC clicked - Service Type (converted):', svcType);
@@ -19146,7 +19211,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 }
                 $('.service_Id').val(serviceId);
                 $('.customer_Id').val(customerId);
-                $('.crr_Id').val($(this).attr('data-notification'));
+                $('.crr_Id').val(notifId);
                 $('.servicetype').val(svcType);
 
                 $.ajax({
@@ -19154,10 +19219,11 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     type: "GET",
                     dataType: "json",
                     data: {
-                        crr_Id: $(this).attr('data-notification'),
+                        crr_Id: notifId,
                         service: serviceId
                     },
                     success: function (response) {
+                        try {
                         // reviewReportData.php returns an array, CDC data is at index 0
                         var data = response[0] || response;
 
@@ -19462,9 +19528,18 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         }
 
                         $('#cdcModel').modal('show');
+                        } catch (err) {
+                            console.error("Error populating CDC RC data:", err);
+                        } finally {
+                            restoreBtn();
+                        }
                     },
                     error: function (data, status, err) {
+                        restoreBtn();
                         alert(status);
+                    },
+                    complete: function () {
+                        restoreBtn();
                     }
                 });
             });
@@ -19499,19 +19574,41 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 $('#customerSurvey').modal('show');
             });
 
-            $('.editRCCustomerSurvey').click(function () {
-                //            alert($(this).attr('data-row-id'));
+            $(document).off('click', '.editRCCustomerSurvey').on('click', '.editRCCustomerSurvey', function (e) {
+                e.preventDefault();
+                var $btn = $(this);
+                if ($btn.css('pointer-events') === 'none' || $btn.data('loading')) {
+                    return false;
+                }
+                $btn.data('loading', true);
+                var $icon = $btn.find('i');
+                var origClass = $icon.attr('class') || 'fa fa-pencil-square fa-lg';
+                $icon.attr('class', 'fa fa-spinner fa-spin fa-lg');
+                $btn.css('pointer-events', 'none');
+
+                var btnRestored = false;
+                function restoreBtn() {
+                    if (!btnRestored) {
+                        btnRestored = true;
+                        $icon.attr('class', origClass);
+                        $btn.css('pointer-events', '');
+                        $btn.removeData('loading');
+                    }
+                }
+
+                var rowId = $btn.attr('data-row-id');
+                var serviceId = $btn.attr('data-service');
+
                 $.ajax({
                     url: "contractDetails.php",
                     type: "GET",
                     dataType: "json",
                     data: {
-                        survay_id: $(this).attr('data-row-id'),
-                        survay_service: $(this).attr('data-service'),
-                        //                    survay_customer: $(this).attr('data-customer'),
+                        survay_id: rowId,
+                        survay_service: serviceId,
                     },
                     success: function (data) {
-                        //                    alert(data);                                            
+                        try {
                         $('.auditorRating').empty();
 
                         $('.survay-id').val(data[0]['survey_id']);
@@ -19589,9 +19686,18 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         //                    $('textarea').trigger('change');
                         $('.addCustomerSurveyPdf').hide();
                         $('#customerSurvey').modal('show');
+                        } catch (err) {
+                            console.error("Error populating RC Customer Survey data:", err);
+                        } finally {
+                            restoreBtn();
+                        }
                     },
                     error: function (data, status, err) {
+                        restoreBtn();
                         alert(status);
+                    },
+                    complete: function () {
+                        restoreBtn();
                     }
                 });
             });
@@ -20528,19 +20634,41 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             //            $('#customerSurvey').modal('show');
             //        });
 
-            $('.editCustomerSurveySii').click(function () {
-                //            alert($(this).attr('data-row-id'));
+            $(document).off('click', '.editCustomerSurveySii').on('click', '.editCustomerSurveySii', function (e) {
+                e.preventDefault();
+                var $btn = $(this);
+                if ($btn.css('pointer-events') === 'none' || $btn.data('loading')) {
+                    return false;
+                }
+                $btn.data('loading', true);
+                var $icon = $btn.find('i');
+                var origClass = $icon.attr('class') || 'fa fa-pencil-square fa-lg';
+                $icon.attr('class', 'fa fa-spinner fa-spin fa-lg');
+                $btn.css('pointer-events', 'none');
+
+                var btnRestored = false;
+                function restoreBtn() {
+                    if (!btnRestored) {
+                        btnRestored = true;
+                        $icon.attr('class', origClass);
+                        $btn.css('pointer-events', '');
+                        $btn.removeData('loading');
+                    }
+                }
+
+                var rowId = $btn.attr('data-row-id');
+                var serviceId = $btn.attr('data-service');
+
                 $.ajax({
                     url: "contractDetails.php",
                     type: "GET",
                     dataType: "json",
                     data: {
-                        survay_id: $(this).attr('data-row-id'),
-                        survay_service: $(this).attr('data-service'),
-                        //                    survay_customer: $(this).attr('data-customer'),
+                        survay_id: rowId,
+                        survay_service: serviceId,
                     },
                     success: function (data) {
-                        //                    alert(data);
+                        try {
                         $('.auditorRating').empty();
 
                         $('.survay-id').val(data[0]['survey_id']);
@@ -20626,9 +20754,18 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         //                    $('textarea').trigger('change');
                         $('.addCustomerSurveyPdf').hide();
                         $('#customerSurvey').modal('show');
+                        } catch (err) {
+                            console.error("Error populating SA-II Customer Survey data:", err);
+                        } finally {
+                            restoreBtn();
+                        }
                     },
                     error: function (data, status, err) {
+                        restoreBtn();
                         alert(status);
+                    },
+                    complete: function () {
+                        restoreBtn();
                     }
                 });
             });

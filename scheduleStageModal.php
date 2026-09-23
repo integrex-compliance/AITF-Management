@@ -753,7 +753,14 @@ Planning, Review Inputs, review Outputs, Minutes of the Meeting, Top Management 
             $(this).parent("div.removestage1schedulecol").parent('div.stage1schedulerow').remove();
         });
 
-        $('.createStageSchedule').click(function () {
+        $(document).on('click', '.createStageSchedule', function () {
+            var $btn = $(this);
+            var originalHtml = $btn.html();
+            $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i>');
+            var restoreBtn = function() {
+                $btn.prop('disabled', false).html(originalHtml);
+            };
+
             var customerId = $(this).attr('data-customer');
             var serviceId = $(this).attr('data-service');
             $('.schedule-customer-id').val(customerId);
@@ -769,84 +776,83 @@ Planning, Review Inputs, review Outputs, Minutes of the Meeting, Top Management 
                 },
                 success: function (data)
                 {
-                    if (data[4]?.aif_code === undefined) {
-  // Assuming data[0].aif_nace is a string
-  const aifnaceString = data[0].aif_nace;
+                    try {
+                        if (!data || !data[0]) {
+                            restoreBtn();
+                            alert("Data not found");
+                            return;
+                        }
+                        if (data[4]?.aif_code === undefined) {
+                            const aifnaceString = data[0].aif_nace || "";
+                            const [iafcode, iafnace, iafclass] = aifnaceString
+                                .split(',')
+                                .map(value => value.split('/'))
+                                .reduce((acc, [code, nace, cls]) => {
+                                    acc[0].push(code || "");
+                                    acc[1].push(nace || "");
+                                    acc[2].push(cls || "");
+                                    return acc;
+                                }, [[], [], []]);
 
-  const [iafcode, iafnace, iafclass] = aifnaceString
-    .split(',')
-    .map(value => value.split('/'))
-    .reduce((acc, [code, nace, cls]) => {
-      acc[0].push(code);
-      acc[1].push(nace);
-      acc[2].push(cls);
-      return acc;
-    }, [[], [], []]);
+                            $('.scheduleIAFcode').val(iafcode.join(','));
+                            $('.scheduleNacecode').val(iafnace.join(','));
+                            $('.scheduleNaceclass').val(iafclass.join(','));
+                            $('.scheduleScope').val(data[0].scope || "");
+                        } else {
+                            $('.scheduleIAFcode').val((data[7] && data[7]['iaf_code']) ? data[7]['iaf_code'] : "");
+                            $(".scheduleNacecode").val((data[7] && data[7]["nace_codes"]) ? data[7]["nace_codes"] : "");
+                            $('.scheduleScope').val((data[4] && data[4]['proposed_scope']) ? data[4]['proposed_scope'] : "");
+                        }
 
-  $('.scheduleIAFcode').val(iafcode.join(','));
-  $('.scheduleNacecode').val(iafnace.join(','));
-  $('.scheduleNaceclass').val(iafclass.join(','));
-  $('.scheduleScope').val(data[0].scope);
-} else {
-                        $('.scheduleIAFcode').val(data[7]['iaf_code']);
-                        $(".scheduleNacecode").val(data[7]["nace_codes"]);
-                        $('.scheduleScope').val(data[4]['proposed_scope']);
+                        $('.scheduleAuditType').val((data[1] && data[1]["special_audit"]) ? data[1]["special_audit"] : "");
+                        $('.scheduleClientName').val(data[0]['customer_name'] || "");
+                        $('.scheduleAddress').val(data[0]['address'] || "");
+                        if (data[0] && data[0]['unique_id'] != null && data[0]['unique_id'] !== "") {
+                            $('.scheduleRefNo').val(data[0]['unique_id']);
+                            $('.scheduleRefNo').trigger('change');
+                        }
+                        $('.scheduleContactPerson').val(data[0]['contact_person'] || "");
+                        if (data[3] && data[3]['certification']) {
+                            $('.scheduleAppStandard').val(data[3]['certification']);
+                        } else if (data[1] && data[1]['audit_standard']) {
+                            $('.scheduleAppStandard').val(data[1]['audit_standard']);
+                        }
+                        $('.scheduleMandays').val(data[5] || "");
+                        var auditors = "";
+                        var auditorsabv = "";
+                        if (data[6]) {
+                            for (var key in data[6]) {
+                                auditors += (data[6][key].auditor_name || '') + ' (' + (data[6][key].auditor_category || '') + ')';
+                                auditorsabv += (data[6][key]["auditor_abbrivation"] || '');
+                                if (key !== Object.keys(data[6])[Object.keys(data[6]).length - 1]) {
+                                    auditors += ", ";
+                                    auditorsabv += ", ";
+                                }
+                            }
+                        }
+
+                        $('.scheduleAuditor').val(auditors);
+                        $('.scheduleAuditorSms1').val(auditorsabv);
+                        var rawAuditDate = (data[1] && data[1]['audit_dates']) ? data[1]['audit_dates'] : '';
+                        var auditDate = rawAuditDate ? rawAuditDate.split(', ') : [];
+                        var auditDateLen = auditDate.length;
+                        for (var key = 0; key < auditDateLen; key++) {
+                            var no = auditDate[key] ? auditDate[key] : "";
+                            $('.scheduleAuditDate').val(no);
+                            $('.scheduleDate').val(no);
+                        }
+                        $('input[type="text"]').trigger('change');
+                        $('.scheduleAddress').trigger('change');
+                        $('#scheduleStageI').modal('show');
+                    } catch (e) {
+                        console.error("Error in createStageSchedule:", e);
+                    } finally {
+                        restoreBtn();
                     }
-//            if (serviceType != "" || serviceType != null) {
-//            $('.scheduleAuditType').val(serviceType);
-//            }
-//                    alert(data[1]["special_audit"]);
-                    $('.scheduleAuditType').val(data[1]["special_audit"]);
-//                    $('.scheduleAuditType').val(data[7]["nace_codes"]);
-                    $('.scheduleClientName').val(data[0]['customer_name']);
-                    $('.scheduleAddress').val(data[0]['address']);
-                    if (data[0] && data[0]['unique_id'] != null && data[0]['unique_id'] !== "") {
-                        $('.scheduleRefNo').val(data[0]['unique_id']);
-                        $('.scheduleRefNo').trigger('change');
-                    }
-                    $('.scheduleContactPerson').val(data[0]['contact_person']);
-//                    alert(data[1]['audit_standard']);
-//                    alert(data[3]['certification']);
-                    if (data[3]['certification']) {
-//                        alert("in if");
-                        $('.scheduleAppStandard').val(data[3]['certification']);
-                    } else {
-//                        alert("in else");
-                        $('.scheduleAppStandard').val(data[1]['audit_standard']);
-                    }
-                    $('.scheduleMandays').val(data[5]);
-                    var auditors = "";
-                    var auditorsabv = "";
-for (var key in data[6]) {
-    auditors += data[6][key].auditor_name + ' (' + data[6][key].auditor_category + ')';
-    auditorsabv += data[6][key]["auditor_abbrivation"];
-    if (key !== Object.keys(data[6])[Object.keys(data[6]).length - 1]) {
-        auditors += ", ";
-        auditorsabv += ", ";
-    }
-}
-//                    alert(auditors);
-//                    $('.scheduleAuditDate').val(moment(data[1]['audit_dates']).format('DD.MM.YYYY'));
-                    $('.scheduleAuditor').val(auditors);
-//                    $('.scheduleDate').val(moment(data[1]['audit_dates']).format('DD.MM.YYYY'));
-//                    $('.scheduleAuditorSms1').val(data[2]['auditor_name']);
-                    $('.scheduleAuditorSms1').val(auditorsabv);
-                    var auditDate = data[1]['audit_dates'].split(', ');
-                    var auditDateLen = auditDate.length;
-                    var max = (Math.max(auditDateLen));
-//                    alert(personLen);
-                    for (var key = 0; key < max; key++) {
-                        var no = key <= auditDateLen && auditDate[key] != null && auditDate[key] != "" ? auditDate[key] : "";
-                        $('.scheduleAuditDate').val(no);
-                        $('.scheduleDate').val(no);
-                    }
-                    $('input[type="text"]').trigger('change');
-                    $('.scheduleAddress').trigger('change');
-//                    alert("in");
-                    $('#scheduleStageI').modal('show');
                 },
                 error: function (data, status, err)
                 {
+                    restoreBtn();
                     alert(status);
                 }
             });
@@ -879,134 +885,132 @@ for (var key in data[6]) {
                                         </div>');
         });
 
-        $('.editStageSchedule').click(function () {
+        $(document).on('click', '.editStageSchedule', function () {
+            var $btn = $(this);
+            var originalHtml = $btn.html();
+            $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i>');
+            var restoreBtn = function() {
+                $btn.prop('disabled', false).html(originalHtml);
+            };
+
             var customerId = $(this).attr('data-customer');
             var serviceId = $(this).attr('data-service');
+            var rowId = $(this).attr('data-row-id');
+
             $('.schedule-service-id-edit').val(serviceId);
             $('.schedule-customer-id-edit').val(customerId);
-            $('.schedule-audit-id-edit').val($(this).attr('data-row-id'));
+            $('.schedule-audit-id-edit').val(rowId);
+
             $.ajax({
                 url: "contractDetails.php",
                 type: "GET",
                 dataType: "json",
                 data: {
-                    scheduleId: $(this).attr('data-row-id'),
+                    scheduleId: rowId,
                     serviceID: serviceId,
                 },
                 success: function (data)
                 {
-//                    alert(data);
-                    $('.scheduleClientNameEdit').val(data[0]['client_name']);
-                    $('.scheduleRefNoEdit').val(data[0]['ref_no']);
-                    $('.scheduleAddressEdit').val(data[0]['schedule_address']);
-                    $('.scheduleContactPersonEdit').val(data[0]['schedule_contact_person']);
-                    $('.scheduleScopeEdit').val(data[0]['schedule_scope']);
-                    $('.scheduleAppStandardEdit').val(data[0]['schedule_app_standard']);
-                    $('.scheduleIAFcodeEdit').val(data[0]['schedule_aifcode']);
-                    $('.scheduleNacecodeEdit').val(data[0]['schedule_nacfcode']);
-                    $('.scheduleNaceclassEdit').val(data[0]['schedule_naceclass']);
-                    $('.scheduleAuditTypeEdit').val(data[0]['schedule_audit_type']);
-                    $('.scheduleMandaysEdit').val(data[0]['schedule_mandays']);
-                    $.ajax({
-                        url: "getClientInfo.php",
-                        type: "GET",
-                        dataType: "json",
-                        data: {
-                            customer_id: customerId,
-                            service_id: serviceId,
-                        },
-                        success: function (clientData) {
-                            if (clientData && clientData[0] && clientData[0]['unique_id'] != null && clientData[0]['unique_id'] !== "") {
-                                $('.scheduleRefNoEdit').val(clientData[0]['unique_id']);
-                                $('.scheduleRefNoEdit').trigger('change');
+                    try {
+                        if (!data || !data[0]) {
+                            restoreBtn();
+                            alert("Data not found");
+                            return;
+                        }
+                        $('.scheduleClientNameEdit').val(data[0]['client_name'] || "");
+                        $('.scheduleRefNoEdit').val(data[0]['ref_no'] || "");
+                        $('.scheduleAddressEdit').val(data[0]['schedule_address'] || "");
+                        $('.scheduleContactPersonEdit').val(data[0]['schedule_contact_person'] || "");
+                        $('.scheduleScopeEdit').val(data[0]['schedule_scope'] || "");
+                        $('.scheduleAppStandardEdit').val(data[0]['schedule_app_standard'] || "");
+                        $('.scheduleIAFcodeEdit').val(data[0]['schedule_aifcode'] || "");
+                        $('.scheduleNacecodeEdit').val(data[0]['schedule_nacfcode'] || "");
+                        $('.scheduleNaceclassEdit').val(data[0]['schedule_naceclass'] || "");
+                        $('.scheduleAuditTypeEdit').val(data[0]['schedule_audit_type'] || "");
+                        $('.scheduleMandaysEdit').val(data[0]['schedule_mandays'] || "");
+
+                        // Non-blocking fetch for client info
+                        $.ajax({
+                            url: "getClientInfo.php",
+                            type: "GET",
+                            dataType: "json",
+                            data: {
+                                customer_id: customerId,
+                                service_id: serviceId,
+                            },
+                            success: function (clientData) {
+                                if (clientData && clientData[0] && clientData[0]['unique_id'] != null && clientData[0]['unique_id'] !== "") {
+                                    $('.scheduleRefNoEdit').val(clientData[0]['unique_id']);
+                                    $('.scheduleRefNoEdit').trigger('change');
+                                }
+                            }
+                        });
+
+                        var $schedule_audit_date = "";
+                        if (data[0]['schedule_audit_date'])
+                            $schedule_audit_date = moment(data[0]['schedule_audit_date']).format('DD.MM.YYYY');
+                        var $stageAuditDates = (data[4] && data[4]['audit_dates']) ? data[4]['audit_dates'] : $schedule_audit_date;
+                        $('.scheduleAuditDateEdit').val($stageAuditDates);
+
+                        let leadAuditors = [];
+                        if (data[2] && typeof data[2] === 'object') {
+                            for (const key in data[2]) {
+                                if (data[2].hasOwnProperty(key)) {
+                                    const combined = (data[2][key].auditor_name || '') + ' (' + (data[2][key].auditor_category || '') + ')';
+                                    leadAuditors.push(combined);
+                                }
                             }
                         }
-                    });
-                    if (data[0]['schedule_audit_date'] == "" || data[0]['schedule_audit_date'] == null)
-                        $schedule_audit_date = "";
-                    else
-                        $schedule_audit_date = moment(data[0]['schedule_audit_date']).format('DD.MM.YYYY');
-                    $('.scheduleAuditDateEdit').val(data[4]['audit_dates']);
-                                        let leadAuditors = [];
-                                        if (data[2] && typeof data[2] === 'object') {
-    for (const key in data[2]) {
-        if (data[2].hasOwnProperty(key)) {
-            if (data[2][key]["auditor_category"] == "Team Leader"){
-                        const combined = data[2][key].auditor_name + ' (' + data[2][key].auditor_category + ')';
-        leadAuditors.push(combined);
-                }else if(data[2][key]["auditor_category"] == "Auditor"){
-                                const combined = data[2][key].auditor_name + ' (' + data[2][key].auditor_category + ')';
-        leadAuditors.push(combined);
-                }else if(data[2][key]["auditor_category"] == "Technical Expert"){
-                                const combined = data[2][key].auditor_name + ' (' + data[2][key].auditor_category + ')';
-        leadAuditors.push(combined);
-                }
-        else{
-                        const combined = data[2][key].auditor_name + ' (' + data[2][key].auditor_category + ')';
-        leadAuditors.push(combined);
-        }}
-    }
-} else {
-    console.error('auditnotifi1 is not a valid object or is empty.');
-}
 
-let leadAuditorString = leadAuditors.join(', ');
-$leadauditor = leadAuditorString;
-                    $('.scheduleAuditorEdit').val($leadauditor);
-                    $(".editlunch").val(data[0]["break"]);
-                    $(".edittimeFrom").val(data[0]["break_from"]);
-                    $(".edittimeTo").val(data[0]["break_to"]);
-                    var allAuditors = ("<?php echo $allAuditors; ?>");
-                    var auditors = allAuditors.split(',');
-                    var option = "";
-                    for (var key in auditors) {
-                        if (auditors[key] != null && auditors[key] != "") {
-                            option += '<option value="' + auditors[key] + '">' + auditors[key] + '</option>';
-                        }
-                    }
-                    $('.editSchedules').empty();
-                    for (var key in data[1]) {
-                        var option2 = '<option value="' + data[1][key]['schedule_auditors'] + '"selected>' + data[1][key]['schedule_auditors'] + '</option>';
-                        if (data[1][key]['schedule_dates'] == "" || data[1][key]['schedule_dates'] == null) {
-                            $schedule_dates = "";
-                        } else {
-//                            $schedule_dates = moment(data[1][key]['schedule_dates']).format('DD.MM.YYYY');
-                            $schedule_dates = data[1][key]['schedule_dates'];
-                        }
+                        let leadAuditorString = leadAuditors.join(', ');
+                        $('.scheduleAuditorEdit').val(leadAuditorString);
+                        $(".editlunch").val(data[0]["break"] || "");
+                        $(".edittimeFrom").val(data[0]["break_from"] || "");
+                        $(".edittimeTo").val(data[0]["break_to"] || "");
 
-                        //changes by Appa
-                        $('.editSchedules').append('<div class="row stage1schedulerow" style="">\n\
-                                                        <div class="col-sm-11 form-group float-label-control">\n\
-                                                            <div class="row form-group float-label-control" style="">\n\
-                                                                <textarea rows="3" class="scheduleActivityEdit" name="scheduleActivityEdit">' + data[1][key]["schedule_activity"] + '\</textarea>\n\
-                                                            </div>\n\
-                                                            <div class="row " style=""> \n\
-                                                                <div class="col-sm-4 form-group ">\n\
-                                                                    <label class="dispClass">Date(s):</label>\n\
-                                                                    <input type="text" data-row-id="" class="scheduleDateEdit" name="scheduleDateEdit" id="scheduleDateEdit" value="' + $schedule_dates + '" placeholder="Date" required/>\n\
+                        $('.editSchedules').empty();
+                        if (data[1]) {
+                            for (var key in data[1]) {
+                                var $schedule_dates = data[1][key]['schedule_dates'] || "";
+
+                                $('.editSchedules').append('<div class="row stage1schedulerow" style="">\n\
+                                                                <div class="col-sm-11 form-group float-label-control">\n\
+                                                                    <div class="row form-group float-label-control" style="">\n\
+                                                                        <textarea rows="3" class="scheduleActivityEdit" name="scheduleActivityEdit">' + (data[1][key]["schedule_activity"] || '') + '\</textarea>\n\
+                                                                    </div>\n\
+                                                                    <div class="row " style=""> \n\
+                                                                        <div class="col-sm-4 form-group ">\n\
+                                                                            <label class="dispClass">Date(s):</label>\n\
+                                                                            <input type="text" data-row-id="" class="scheduleDateEdit" name="scheduleDateEdit" id="scheduleDateEdit" value="' + $schedule_dates + '" placeholder="Date" required/>\n\
+                                                                        </div>\n\
+                                                                        <div class="col-sm-4 form-group ">\n\
+                                                                            <label class="dispClass">Time:</label>\n\
+                                                                            <input type="text" data-row-id="" class="scheduleTimeEdit" id="scheduleTimeEdit" name="scheduleTimeEdit" value="' + (data[1][key]['schedule_time'] || '') + '" placeholder="Time" required/>\n\
+                                                                        </div>\n\
+                                                                        <div class="col-sm-4 form-group ">\n\
+                                                                            <label class="dispClass">Auditor:</label>\n\
+                                                                            <input type="text" data-row-id="" class="scheduleAuditorEditCs" id="scheduleAuditorEditCs" name="scheduleAuditorEditCs"  placeholder="Auditor" value="' + (data[1][key]['schedule_auditors'] || '') + '">\n\
+                                                                        </div>\n\
+                                                                    </div><hr>\n\
                                                                 </div>\n\
-                                                                <div class="col-sm-4 form-group ">\n\
-                                                                    <label class="dispClass">Time:</label>\n\
-                                                                    <input type="text" data-row-id="" class="scheduleTimeEdit" id="scheduleTimeEdit" name="scheduleTimeEdit" value="' + data[1][key]['schedule_time'] + '" placeholder="Time" required/>\n\
+                                                                <div class="col-sm-1 removestage1schedulecol">\n\
+                                                                    <a class="removestage1schedule"><i class="fa fa-times"></i></a>\n\
+                                                                    <a class="addSchedule"><i class="fa fa-plus"></i></a>\n\
                                                                 </div>\n\
-                                                                <div class="col-sm-4 form-group ">\n\
-                                                                    <label class="dispClass">Auditor:</label>\n\
-                                                                    <input type="text" data-row-id="" class="scheduleAuditorEditCs" id="scheduleAuditorEditCs" name="scheduleAuditorEditCs"  placeholder="Auditor" value="' + data[1][key]['schedule_auditors'] + '">\n\
-                                                                </div>\n\
-                                                            </div><hr>\n\
-                                                        </div>\n\
-                                                        <div class="col-sm-1 removestage1schedulecol">\n\
-                                                            <a class="removestage1schedule"><i class="fa fa-times"></i></a>\n\
-                                                            <a class="addSchedule"><i class="fa fa-plus"></i></a>\n\
-                                                        </div>\n\
-                                                    </div>');
+                                                            </div>');
+                            }
+                        }
+                        $('input[type="text"]').trigger('change');
+                        $('#scheduleStageIEdit').modal('show');
+                    } catch (e) {
+                        console.error("Error in editStageSchedule:", e);
+                    } finally {
+                        restoreBtn();
                     }
-                    $('input[type="text"]').trigger('change');
-                    //                    $('textarea').trigger('change');
-                    $('#scheduleStageIEdit').modal('show');
                 },
                 error: function (data, status, err)
                 {
+                    restoreBtn();
                     alert(status);
                 }
             });

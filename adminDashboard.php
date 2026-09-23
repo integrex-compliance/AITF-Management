@@ -397,7 +397,7 @@
     if ($letterStatus === 'sent') {
         $letterWhere .= " AND svcdt.status = 'sent'";
     } else if ($letterStatus === 'pending') {
-        $letterWhere .= " AND svcdt.status <> 'sent' AND svcdt.due_date <= CURDATE()";
+        $letterWhere .= " AND svcdt.status <> 'sent' AND svcdt.due_date <= CURDATE() AND (svcdt.is_intimation_deleted IS NULL OR svcdt.is_intimation_deleted = 'N')";
     } else if ($letterStatus === 'upcoming') {
         $letterWhere .= " AND svcdt.status <> 'sent' AND svcdt.due_date > CURDATE()";
     }
@@ -432,8 +432,8 @@
     $invoiceTrendDiff = (float) (isset($invoiceTrendLast['amount']) ? $invoiceTrendLast['amount'] : 0) - (float) (isset($invoiceTrendFirst['amount']) ? $invoiceTrendFirst['amount'] : 0);
     $invoiceTrendDirection = $invoiceTrendDiff > 0 ? 'up' : ($invoiceTrendDiff < 0 ? 'down' : 'flat');
 
-    $letterTotals = dashFetchOne($db, "SELECT COUNT(*) total_letters, SUM(CASE WHEN svcdt.status = 'sent' THEN 1 ELSE 0 END) sent_letters, SUM(CASE WHEN svcdt.status <> 'sent' AND svcdt.due_date <= CURDATE() THEN 1 ELSE 0 END) due_letters, SUM(CASE WHEN svcdt.status <> 'sent' AND svcdt.due_date > CURDATE() THEN 1 ELSE 0 END) upcoming_letters FROM ca_service_dates svcdt LEFT JOIN service svc ON svcdt.service_id = svc.service_id LEFT JOIN customer_info ci ON svc.customer_id = ci.id $letterWhere", $letterParams);
-    $letterActionRows = dashFetchAll($db, "SELECT svcdt.action label, COUNT(*) total, SUM(CASE WHEN svcdt.status = 'sent' THEN 1 ELSE 0 END) sent, SUM(CASE WHEN svcdt.status <> 'sent' AND svcdt.due_date <= CURDATE() THEN 1 ELSE 0 END) due FROM ca_service_dates svcdt LEFT JOIN service svc ON svcdt.service_id = svc.service_id LEFT JOIN customer_info ci ON svc.customer_id = ci.id $letterWhere GROUP BY svcdt.action ORDER BY total DESC", $letterParams);
+    $letterTotals = dashFetchOne($db, "SELECT COUNT(*) total_letters, SUM(CASE WHEN svcdt.status = 'sent' THEN 1 ELSE 0 END) sent_letters, SUM(CASE WHEN svcdt.status <> 'sent' AND svcdt.due_date <= CURDATE() AND (svcdt.is_intimation_deleted IS NULL OR svcdt.is_intimation_deleted = 'N') THEN 1 ELSE 0 END) due_letters, SUM(CASE WHEN svcdt.status <> 'sent' AND svcdt.due_date > CURDATE() THEN 1 ELSE 0 END) upcoming_letters FROM ca_service_dates svcdt LEFT JOIN service svc ON svcdt.service_id = svc.service_id LEFT JOIN customer_info ci ON svc.customer_id = ci.id $letterWhere", $letterParams);
+    $letterActionRows = dashFetchAll($db, "SELECT svcdt.action label, COUNT(*) total, SUM(CASE WHEN svcdt.status = 'sent' THEN 1 ELSE 0 END) sent, SUM(CASE WHEN svcdt.status <> 'sent' AND svcdt.due_date <= CURDATE() AND (svcdt.is_intimation_deleted IS NULL OR svcdt.is_intimation_deleted = 'N') THEN 1 ELSE 0 END) due FROM ca_service_dates svcdt LEFT JOIN service svc ON svcdt.service_id = svc.service_id LEFT JOIN customer_info ci ON svc.customer_id = ci.id $letterWhere GROUP BY svcdt.action ORDER BY total DESC", $letterParams);
     $recentLetters = dashFetchAll($db, "SELECT ci.id customer_id, ci.customer_name, svc.service_type, svcdt.action, svcdt.due_date, svcdt.sent_date, svcdt.status FROM ca_service_dates svcdt LEFT JOIN service svc ON svcdt.service_id = svc.service_id LEFT JOIN customer_info ci ON svc.customer_id = ci.id $letterWhere ORDER BY svcdt.due_date DESC, svcdt.action_id DESC LIMIT 8", $letterParams);
 
     // Lists for Modal view

@@ -240,21 +240,23 @@ foreach ($category as $name) {
                                 <table class="table table-bordered table-hover table-sortable service_details"
                                     id="notification_detailsii" style="width: 100%">
                                     <thead>
-                                        <tr>
-                                            <th class="" width="40%" style="padding: 2px">
-                                                <small>Auditor Name</small>
+                                        <tr style="background: #f8fafc;">
+                                            <th width="36%" style="padding: 8px 6px; vertical-align: middle;">
+                                                <small style="font-weight: 700; color: #475569; text-transform: uppercase;">Auditor Name</small>
                                             </th>
-                                            <th class="" width="25%" style="padding: 2px">
-                                                <small>Category</small>
+                                            <th width="24%" style="padding: 8px 6px; vertical-align: middle;">
+                                                <small style="font-weight: 700; color: #475569; text-transform: uppercase;">Category</small>
                                             </th>
-                                            <th class="" width="15%" style="padding: 2px">
-                                                <small>Work Days</small>
+                                            <th width="14%" style="padding: 8px 6px; vertical-align: middle;">
+                                                <small style="font-weight: 700; color: #475569; text-transform: uppercase;">Work Days</small>
                                             </th>
-                                            <th class="" width="20%" style="padding: 2px">
-                                                <small>Acceptance</small>
-                                                <a class="btn btn-xs btn-info addAuditLinkii pull-right" data-row-id=""
-                                                    data-row-count="" title="Add new cb row" style="padding: 1px 5px;">
-                                                    <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
+                                            <th width="16%" style="padding: 8px 6px; vertical-align: middle;">
+                                                <small style="font-weight: 700; color: #475569; text-transform: uppercase;">Acceptance</small>
+                                            </th>
+                                            <th width="10%" style="padding: 8px 6px; text-align: center; vertical-align: middle;">
+                                                <a class="btn btn-xs btn-primary addAuditLinkii" data-row-id=""
+                                                    data-row-count="" title="Add Auditor" style="padding: 3px 8px; border-radius: 4px; font-weight: 600;">
+                                                    <i class="fa fa-plus"></i> Add
                                                 </a>
                                             </th>
                                         </tr>
@@ -263,20 +265,20 @@ foreach ($category as $name) {
                                     <tbody class="editTableDiv">
                                         <tr class="audit_subsectionii previousCBData" id="cb_subsection_0"
                                             style="display: ">
-                                            <td class="" width="40%" style="padding: 2px;">
+                                            <td width="36%" style="padding: 6px; vertical-align: middle;">
                                                 <div class="table-edit-control">
                                                     <!--<input type="text" data-row-id="" class="contractAuditorNameii" id="contractAuditorNameii" name="contractAuditorNameii" value="" placeholder=""/>-->
                                                     <select class="contractAuditorNameii form-control"
                                                         id="contractAuditorNameii" name="contractAuditorNameii"
-                                                        required style="width: 100%; min-width: 260px;">
+                                                        required style="width: 100%;">
                                                         <?php echo $auditorOptionsHtml; ?>
                                                     </select>
                                                 </div>
                                             </td>
-                                            <td class="" width="25%" style="padding: 2px;">
+                                            <td width="24%" style="padding: 6px; vertical-align: middle;">
                                                 <div class="table-edit-control">
                                                     <select class="auditorCategoryii form-control"
-                                                        id="auditorCategoryii" name="auditorCategoryii" required>
+                                                        id="auditorCategoryii" name="auditorCategoryii" required style="width: 100%;">
                                                         <option value="">Choose Category</option>
                                                         <?php foreach ($category as $name) { ?>
                                                             <option value="<?php echo $name['categories_name'] ?>">
@@ -286,22 +288,25 @@ foreach ($category as $name) {
                                                     </select>
                                                 </div>
                                             </td>
-                                            <td class="" width="20%" style="padding: 2px;">
+                                            <td width="14%" style="padding: 6px; vertical-align: middle;">
                                                 <div class="table-edit-control">
-                                                    <input type="text" min="1" data-row-id="" class="auditorWorkii"
+                                                    <input type="text" min="1" data-row-id="" class="auditorWorkii form-control"
                                                         id="auditorWorkii" name="depositWorkii" value="" placeholder=""
-                                                        required>
+                                                        required style="width: 100%;">
                                                 </div>
                                             </td>
-                                            <td class="" width="20%" style="padding: 2px;">
+                                            <td width="16%" style="padding: 6px; vertical-align: middle;">
                                                 <div class="table-edit-control">
                                                     <select class="auditorAcceptanceii form-control"
-                                                        id="auditorAcceptanceii" name="auditorAcceptanceii" required>
+                                                        id="auditorAcceptanceii" name="auditorAcceptanceii" required style="width: 100%;">
                                                         <option value="">Select</option>
                                                         <option value="Yes">Yes</option>
                                                         <option value="No">No</option>
                                                     </select>
                                                 </div>
+                                            </td>
+                                            <td width="10%" style="padding: 6px; text-align: center; vertical-align: middle; color: #94a3b8;">
+                                                &mdash;
                                             </td>
                                         </tr>
                                     </tbody>
@@ -380,19 +385,249 @@ foreach ($category as $name) {
     var auditIIAuditorOptionsHtml = auditIIDefaultAuditorOptionsHtml;
     var auditIICategoryOptionsHtml = <?php echo json_encode($categoryOptionsHtml, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
     var aitfNotificationEligibleAuditorsII = [];
+    var aitfNotificationAllAuditorsII = <?php echo json_encode($auditors, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
+    var aitfNotificationClientNaceClassesII = [];
+    var aitfNotificationHasNaceClassesII = false;
     var aitfNotificationClientDivisionsII = [];
     var aitfNotificationHasDivisionsII = false;
 
-    function updateDivisionAlertBannerII(hasDiv, divs, audCount) {
-        var $banner = $('.auditor-division-banner-s2');
-        if (!hasDiv) {
-            $banner.html('<div class="alert alert-info" style="padding: 6px 12px; margin-bottom: 10px; font-size: 12px;"><i class="fa fa-info-circle"></i> <strong>Note:</strong> No division assigned to this client in Contract Review yet. Showing all auditors.</div>').show();
-        } else if (audCount === 0) {
-            $banner.html('<div class="alert alert-warning" style="padding: 6px 12px; margin-bottom: 10px; font-size: 12px;"><i class="fa fa-exclamation-triangle"></i> <strong>No auditors found</strong> for Client Division(s): <strong>' + divs.join(', ') + '</strong>. Please assign this division to auditors in <a href="masterCreator.php" target="_blank" style="text-decoration: underline; font-weight: bold;">Master Creator</a>.</div>').show();
+    function isAuditorIdQualifiedII(aid) {
+        if (!aid) return false;
+        aid = String(aid).trim();
+        if (!aitfNotificationHasNaceClassesII && !aitfNotificationHasDivisionsII) {
+            return true;
+        }
+        var eligible = aitfNotificationEligibleAuditorsII || [];
+        for (var i = 0; i < eligible.length; i++) {
+            if (String(eligible[i].auditors_id).trim() === aid) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function hasAtLeastOneQualifiedAuditorII() {
+        if (!aitfNotificationHasNaceClassesII && !aitfNotificationHasDivisionsII) {
+            return true;
+        }
+        var anyQualified = false;
+        $('.contractAuditorNameii').each(function () {
+            var val = String($(this).val() || '').trim();
+            if (val !== '' && isAuditorIdQualifiedII(val)) {
+                anyQualified = true;
+                return false;
+            }
+        });
+        return anyQualified;
+    }
+
+    function updateAuditorRowVisualStatusII($select) {
+        var val = String($select.val() || '').trim();
+        var $row = $select.closest('tr');
+        var $parent = $select.closest('.table-edit-control');
+        $parent.find('.auditor-qualified-badge-ii').remove();
+
+        if (!val || val === '') {
+            $row.css({
+                'background-color': '',
+                'border-left': ''
+            });
+            $select.css({
+                'border': '',
+                'background-color': '',
+                'color': '',
+                'font-weight': '',
+                'box-shadow': ''
+            });
+            return;
+        }
+
+        if (isAuditorIdQualifiedII(val)) {
+            $row.css({
+                'background-color': '#f4fbf6',
+                'border-left': '4px solid #28a745'
+            });
+            $select.css({
+                'border': '1.5px solid #28a745',
+                'background-color': '#ffffff',
+                'color': '#155724',
+                'font-weight': '600',
+                'box-shadow': '0 0 0 1px rgba(40,167,69,0.15)'
+            });
+            $select.after('<div class="auditor-qualified-badge-ii" style="margin-top: 4px;"><span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; background: #e8f5e9; color: #1e7e34; border: 1px solid #c3e6cb;"><i class="fa fa-check-circle" style="color: #28a745;"></i> Code Qualified</span></div>');
         } else {
-            $banner.html('<div class="alert alert-success" style="padding: 6px 12px; margin-bottom: 10px; font-size: 12px;"><i class="fa fa-check-circle"></i> <strong>Client Division(s):</strong> <strong>' + divs.join(', ') + '</strong> &mdash; Showing ' + audCount + ' eligible auditor(s) assigned to this division in Master Creator.</div>').show();
+            $row.css({
+                'background-color': '#ffffff',
+                'border-left': '4px solid transparent'
+            });
+            $select.css({
+                'border': '1px solid #ced4da',
+                'background-color': '#ffffff',
+                'color': '#495057',
+                'font-weight': 'normal',
+                'box-shadow': 'none'
+            });
         }
     }
+
+    function renderNotificationAuditorOptionsII(selectedAuditorId, fallbackName) {
+        var html = '<option value="">Choose Auditors</option>';
+        var list = aitfNotificationAllAuditorsII;
+        var foundSelected = false;
+
+        if (list && list.length > 0) {
+            for (var i = 0; i < list.length; i++) {
+                var a = list[i];
+                var aid = String(a.auditors_id);
+                var isSel = (selectedAuditorId && String(selectedAuditorId) === aid);
+                if (isSel) foundSelected = true;
+                var isQual = isAuditorIdQualifiedII(aid);
+                var qualBadge = isQual ? ' ✓ [Qualified]' : '';
+                var optStyle = isQual ? 'font-weight: bold; color: #155724;' : '';
+                var optTitle = a.auditor_name + (a.auditor_email ? ' (' + a.auditor_email + ')' : '');
+                html += '<option value="' + aid + '"' + (isSel ? ' selected' : '') + ' data-email="' + (a.auditor_email || '') + '" title="' + optTitle + '" data-qualified="' + (isQual ? '1' : '0') + '" style="' + optStyle + '">' + a.auditor_name + qualBadge + '</option>';
+            }
+        }
+
+        if (selectedAuditorId && !foundSelected && fallbackName) {
+            var isQualFb = isAuditorIdQualifiedII(selectedAuditorId);
+            var qualBadgeFb = isQualFb ? ' ✓ [Qualified]' : '';
+            html += '<option value="' + selectedAuditorId + '" selected data-qualified="' + (isQualFb ? '1' : '0') + '">' + fallbackName + qualBadgeFb + '</option>';
+        }
+
+        return html;
+    }
+
+    function renderNotificationAllAuditorOptionsII(selectedAuditorId, fallbackName) {
+        return renderNotificationAuditorOptionsII(selectedAuditorId, fallbackName);
+    }
+
+    function syncAuditorSelectOptionsII() {
+        var selectedAuditorIds = [];
+        $('.contractAuditorNameii').each(function () {
+            var val = String($(this).val() || '').trim();
+            if (val !== '') {
+                selectedAuditorIds.push(val);
+            }
+        });
+
+        $('.contractAuditorNameii').each(function () {
+            var currentVal = String($(this).val() || '').trim();
+            updateAuditorRowVisualStatusII($(this));
+            $(this).find('option').each(function () {
+                var optVal = String($(this).val() || '').trim();
+                if (optVal === '') {
+                    $(this).prop('disabled', false).css('display', '');
+                    return;
+                }
+                if (optVal === currentVal) {
+                    $(this).prop('disabled', false).css('display', '');
+                    return;
+                }
+                if (selectedAuditorIds.indexOf(optVal) !== -1) {
+                    $(this).prop('disabled', true).css('display', 'none');
+                } else {
+                    $(this).prop('disabled', false).css('display', '');
+                }
+            });
+        });
+    }
+
+    function updateDivisionAlertBannerII(resp) {
+        var $banner = $('.auditor-division-banner-s2');
+        if (!resp || (!resp.has_nace_classes && !resp.has_divisions)) {
+            $banner.html('<div class="alert alert-info" style="padding: 10px 16px; margin-bottom: 14px; font-size: 13px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; border: 1px solid #bce8f1; background: #f4fbfd;"><div style="display: flex; align-items: center; gap: 10px;"><i class="fa fa-info-circle" style="font-size: 17px; color: #17a2b8;"></i> <span><strong>Note:</strong> No NACE Class assigned to this client in Contract Review yet. Showing all auditors.</span></div></div>').show();
+        } else if (resp.has_nace_classes) {
+            var classes = resp.client_nace_classes || [];
+            var audCount = (resp.auditors) ? resp.auditors.length : 0;
+            var classLabel = (classes.length > 1) ? 'Client NACE Classes' : 'Client NACE Class';
+            var classesBadge = '<span style="background: #16a34a; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 700; margin: 0 4px; letter-spacing: 0.3px;">' + classes.join(', ') + '</span>';
+            if (audCount === 0) {
+                $banner.html('<div class="alert alert-warning" style="padding: 10px 16px; margin-bottom: 14px; font-size: 13px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; border: 1px solid #ffeeba; background: #fffdf5;"><div style="display: flex; align-items: center; gap: 10px;"><i class="fa fa-exclamation-triangle" style="font-size: 17px; color: #ffc107;"></i> <span><strong>No Qualified auditors found</strong> for ' + classLabel + ': ' + classesBadge + '. Please assign this NACE Class in <a href="masterCreator.php" target="_blank" style="text-decoration: underline; font-weight: bold; color: #856404;">Master Creator</a>.</span></div></div>').show();
+            } else {
+                $banner.html('<div class="alert alert-success" style="padding: 10px 16px; margin-bottom: 14px; font-size: 13px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; background: linear-gradient(135deg, #f0fdf4 0%, #eafbf0 100%); border: 1px solid #bbf7d0; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">' +
+                    '<div style="display: flex; align-items: center; gap: 10px;">' +
+                        '<i class="fa fa-check-circle" style="font-size: 18px; color: #16a34a;"></i> ' +
+                        '<span style="color: #166534; font-weight: 500;"><strong>' + classLabel + ':</strong> ' + classesBadge + ' &mdash; Showing <strong>' + audCount + '</strong> Qualified auditors.</span>' +
+                    '</div>' +
+                    '<button type="button" class="btn btn-xs btn-view-qualified-auditors-s2" style="font-weight: 600; padding: 5px 14px; color: #15803d; background: #ffffff; border: 1.5px solid #22c55e; border-radius: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.06); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 12px;" title="Click to view qualified auditors list">' +
+                        '<i class="fa fa-eye" style="color: #16a34a;"></i> View Qualified Auditors (' + audCount + ')' +
+                    '</button>' +
+                '</div>').show();
+            }
+        } else {
+            var divs = resp.client_divisions || [];
+            var audCount = (resp.auditors) ? resp.auditors.length : 0;
+            var divLabel = (divs.length > 1) ? 'Client Divisions' : 'Client Division';
+            var divsBadge = '<span style="background: #16a34a; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 700; margin: 0 4px; letter-spacing: 0.3px;">' + divs.join(', ') + '</span>';
+            if (audCount === 0) {
+                $banner.html('<div class="alert alert-warning" style="padding: 10px 16px; margin-bottom: 14px; font-size: 13px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; border: 1px solid #ffeeba; background: #fffdf5;"><div style="display: flex; align-items: center; gap: 10px;"><i class="fa fa-exclamation-triangle" style="font-size: 17px; color: #ffc107;"></i> <span><strong>No Qualified auditors found</strong> for ' + divLabel + ': ' + divsBadge + '. Please assign this division in <a href="masterCreator.php" target="_blank" style="text-decoration: underline; font-weight: bold; color: #856404;">Master Creator</a>.</span></div></div>').show();
+            } else {
+                $banner.html('<div class="alert alert-success" style="padding: 10px 16px; margin-bottom: 14px; font-size: 13px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; background: linear-gradient(135deg, #f0fdf4 0%, #eafbf0 100%); border: 1px solid #bbf7d0; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">' +
+                    '<div style="display: flex; align-items: center; gap: 10px;">' +
+                        '<i class="fa fa-check-circle" style="font-size: 18px; color: #16a34a;"></i> ' +
+                        '<span style="color: #166534; font-weight: 500;"><strong>' + divLabel + ':</strong> ' + divsBadge + ' &mdash; Showing <strong>' + audCount + '</strong> Qualified auditors.</span>' +
+                    '</div>' +
+                    '<button type="button" class="btn btn-xs btn-view-qualified-auditors-s2" style="font-weight: 600; padding: 5px 14px; color: #15803d; background: #ffffff; border: 1.5px solid #22c55e; border-radius: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.06); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 12px;" title="Click to view qualified auditors list">' +
+                        '<i class="fa fa-eye" style="color: #16a34a;"></i> View Qualified Auditors (' + audCount + ')' +
+                    '</button>' +
+                '</div>').show();
+            }
+        }
+    }
+
+    $(document).on('click', '.btn-view-qualified-auditors-s2', function (e) {
+        e.preventDefault();
+        var list = aitfNotificationEligibleAuditorsII || [];
+        var codeText = aitfNotificationHasNaceClassesII 
+            ? ('Client NACE Class: ' + (aitfNotificationClientNaceClassesII || []).join(', '))
+            : ('Client Division: ' + (aitfNotificationClientDivisionsII || []).join(', '));
+        
+        if (!list || list.length === 0) {
+            if (typeof Swal !== 'undefined' && Swal.fire) {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'No Qualified Auditors Found',
+                    text: 'No auditors have been assigned to ' + codeText + ' in Master Creator.',
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#0F2742'
+                });
+            } else {
+                alert('No qualified auditors found for ' + codeText);
+            }
+            return;
+        }
+
+        var tableHtml = '<div style="text-align: left; max-height: 350px; overflow-y: auto;">' +
+            '<p style="font-size: 13px; color: #555; margin-bottom: 10px;">Below are the auditors qualified for <strong>' + codeText + '</strong>:</p>' +
+            '<table class="table table-bordered table-striped" style="font-size: 12px; margin-bottom: 0;">' +
+            '<thead><tr style="background: #0F2742; color: #fff;"><th>#</th><th>Auditor Name</th><th>Email</th><th>Assigned Classes / Divisions</th></tr></thead>' +
+            '<tbody>';
+        
+        for (var i = 0; i < list.length; i++) {
+            var aud = list[i];
+            var assignedInfo = aud.assigned_nace_classes_display || aud.assigned_divisions_display || '-';
+            tableHtml += '<tr>' +
+                '<td>' + (i + 1) + '</td>' +
+                '<td style="font-weight: 600; color: #0F2742;">' + (aud.auditor_name || '-') + '</td>' +
+                '<td>' + (aud.auditor_email || '-') + '</td>' +
+                '<td><span class="badge" style="background: #28a745;">' + assignedInfo + '</span></td>' +
+                '</tr>';
+        }
+        tableHtml += '</tbody></table></div>';
+
+        if (typeof Swal !== 'undefined' && Swal.fire) {
+            Swal.fire({
+                title: '<span style="font-size: 18px; color: #0F2742;"><i class="fa fa-users" style="color: #28a745;"></i> Qualified Auditors (' + list.length + ')</span>',
+                html: tableHtml,
+                width: '650px',
+                confirmButtonText: 'Close',
+                confirmButtonColor: '#0F2742'
+            });
+        } else {
+            alert('Qualified Auditors:\n' + list.map(function(a) { return a.auditor_name + ' (' + a.auditor_email + ')'; }).join('\n'));
+        }
+    });
 
     function loadEligibleAuditorsForStageII(customerId, serviceId, callback) {
         $.ajax({
@@ -404,30 +639,25 @@ foreach ($category as $name) {
                 serviceid: serviceId
             },
             success: function(resp) {
+                aitfNotificationHasNaceClassesII = !!(resp && resp.has_nace_classes);
+                aitfNotificationClientNaceClassesII = (resp && resp.client_nace_classes) ? resp.client_nace_classes : [];
                 aitfNotificationHasDivisionsII = !!(resp && resp.has_divisions);
                 aitfNotificationClientDivisionsII = (resp && resp.client_divisions) ? resp.client_divisions : [];
                 aitfNotificationEligibleAuditorsII = (resp && resp.auditors) ? resp.auditors : [];
-
-                var optionsHtml = '<option value="">Choose Auditors</option>';
-                if (aitfNotificationHasDivisionsII && aitfNotificationEligibleAuditorsII.length === 0) {
-                    optionsHtml += '<option value="" disabled>No auditors assigned to Division ' + aitfNotificationClientDivisionsII.join(', ') + ' in Master Creator</option>';
-                } else {
-                    var list = aitfNotificationHasDivisionsII ? aitfNotificationEligibleAuditorsII : ((resp && resp.all_auditors) ? resp.all_auditors : []);
-                    $.each(list, function(i, a) {
-                        var email = (a.auditor_email && a.auditor_email.trim() !== '') ? ' (' + a.auditor_email.trim() + ')' : '';
-                        optionsHtml += '<option value="' + a.auditors_id + '" data-email="' + (a.auditor_email || '') + '">' + a.auditor_name + email + '</option>';
-                    });
+                if (resp && resp.all_auditors) {
+                    aitfNotificationAllAuditorsII = resp.all_auditors;
                 }
-                auditIIAuditorOptionsHtml = optionsHtml;
-                updateDivisionAlertBannerII(aitfNotificationHasDivisionsII, aitfNotificationClientDivisionsII, aitfNotificationEligibleAuditorsII.length);
+                auditIIAuditorOptionsHtml = renderNotificationAuditorOptionsII('');
+                updateDivisionAlertBannerII(resp);
                 if (typeof callback === 'function') {
                     callback(resp);
                 }
             },
             error: function() {
                 auditIIAuditorOptionsHtml = auditIIDefaultAuditorOptionsHtml;
+                aitfNotificationHasNaceClassesII = false;
                 aitfNotificationHasDivisionsII = false;
-                updateDivisionAlertBannerII(false, [], 0);
+                updateDivisionAlertBannerII(null);
                 if (typeof callback === 'function') {
                     callback(null);
                 }
@@ -439,47 +669,48 @@ foreach ($category as $name) {
         auditor = auditor || {};
 
         var $row = $('<tr class="audit_subsectionii previousCBData"></tr>');
-        var $auditorSelect = $('<select class="contractAuditorNameii form-control" name="contractAuditorNameii" required></select>')
-            .html(auditIIAuditorOptionsHtml);
+        var optHtml = auditor.isSecondOrLater
+            ? renderNotificationAllAuditorOptionsII(auditor.auditor_id, auditor.auditor_name)
+            : renderNotificationAuditorOptionsII(auditor.auditor_id, auditor.auditor_name);
+
+        var $auditorSelect = $('<select class="contractAuditorNameii form-control" name="contractAuditorNameii" required style="width: 100%; min-width: 260px;"></select>')
+            .html(optHtml);
         var $categorySelect = $('<select class="auditorCategoryii form-control" name="auditorCategoryii" required></select>')
             .html(auditIICategoryOptionsHtml);
         var $workDays = $('<input type="text" min="1" class="auditorWorkii form-control" name="auditorWorkii" required>');
         var $acceptance = $('<select class="auditorAcceptanceii form-control" name="auditorAcceptanceii" required>'
             + '<option value="">Select</option><option value="Yes">Yes</option><option value="No">No</option></select>');
 
-        if (auditor.auditor_id && !$auditorSelect.find('option').filter(function () {
-            return $(this).val() == auditor.auditor_id;
-        }).length) {
-            $auditorSelect.append($('<option></option>')
-                .val(auditor.auditor_id)
-                .text(auditor.auditor_name || auditor.auditor_id));
+        if (auditor.auditor_id) {
+            $auditorSelect.val(auditor.auditor_id);
         }
-
-        $auditorSelect.val(auditor.auditor_id || '');
         $categorySelect.val(auditor.auditor_category || '');
         $workDays.val(auditor.audit_wokrdays || '');
         $acceptance.val(auditor.auditor_acceptance || '');
 
-        $row.append($('<td width="40%" style="padding:2px;"><div class="table-edit-control"></div></td>')
+        $row.append($('<td width="36%" style="padding: 6px; vertical-align: middle;"><div class="table-edit-control"></div></td>')
             .find('.table-edit-control').append($auditorSelect).end());
-        $row.append($('<td width="25%" style="padding:2px;"><div class="table-edit-control"></div></td>')
+        $row.append($('<td width="24%" style="padding: 6px; vertical-align: middle;"><div class="table-edit-control"></div></td>')
             .find('.table-edit-control').append($categorySelect).end());
-        $row.append($('<td width="15%" style="padding:2px;"><div class="table-edit-control"></div></td>')
+        $row.append($('<td width="14%" style="padding: 6px; vertical-align: middle;"><div class="table-edit-control"></div></td>')
             .find('.table-edit-control').append($workDays).end());
-        $row.append($('<td width="20%" style="padding:2px;"><div class="table-edit-control"></div></td>')
+        $row.append($('<td width="16%" style="padding: 6px; vertical-align: middle;"><div class="table-edit-control"></div></td>')
             .find('.table-edit-control').append($acceptance).end());
 
         if (auditor.removable) {
-            $row.append('<td width="10%" style="padding:2px;"><button type="button" class="btn btn-sm btn-danger removeRowButton">Remove</button></td>');
+            $row.append('<td width="10%" style="padding: 6px; text-align: center; vertical-align: middle;"><button type="button" class="btn btn-sm btn-danger removeRowButton" style="padding: 3px 8px; border-radius: 4px;">Remove</button></td>');
+        } else {
+            $row.append('<td width="10%" style="padding: 6px; text-align: center; vertical-align: middle; color: #94a3b8;">&mdash;</td>');
         }
 
         return $row;
     }
 
     function resetAuditIIAuditorRows() {
-        $('.editTableDiv').empty().append(buildAuditIIAuditorRow());
+        $('.editTableDiv').empty().append(buildAuditIIAuditorRow({ removable: false, isSecondOrLater: false }));
         $rowCounter = 1;
         $rowCB = 1;
+        syncAuditorSelectOptionsII();
     }
 
     var aitfAppointedReviewersII = [];
@@ -688,9 +919,22 @@ foreach ($category as $name) {
             }
         });
 
-        $(document).on('click', '.createAuditNotificationii', function () {
-            var custId = $(this).attr('data-customer');
-            var svcId = $(this).attr('data-service');
+        $(document).on('click', '.createAuditNotificationii', function (e) {
+            e.preventDefault();
+            var $btn = $(this);
+            var custId = $btn.attr('data-customer');
+            var svcId = $btn.attr('data-service');
+
+            var $icon = $btn.find('i');
+            var origClass = $icon.attr('class') || 'fa fa-plus-circle fa-lg';
+            $icon.attr('class', 'fa fa-spinner fa-spin fa-lg');
+            $btn.css('pointer-events', 'none');
+
+            function restoreCreateBtn() {
+                $icon.attr('class', origClass);
+                $btn.css('pointer-events', '');
+            }
+
             $('.auditii-noti-customer').val(custId);
             $('.auditii-noti-service').val(svcId);
             loadAppointedReviewersForAuditorCheckII(custId, svcId);
@@ -706,157 +950,312 @@ foreach ($category as $name) {
                     serviceID: svcId,
                 },
                 success: function (data) {
-                    //                    alert(data[3]['schedule_app_standard']);
-                    $('.auditiiForOrg').val(data[0]['customer_name']);
-                    //                    $('.intimationDateii').val(moment(data[1]['audit_dates']).format('DD.MM.YYYY'));
-                    $('.auditiiLocation').val(data[0]['address']);
-                    $('.auditiiReferance').val(data[0]['unique_id']);
-                    $('.auditiiTelephone').val(data[0]['contact']);
-                    $('.auditiiEmail').val(data[0]['email_id']);
-                    $('.auditiiContactPerson').val(data[1]['audit_contact_person']);
-                    $('.auditiiDesignation').val(data[1]['audit_designation']);
-                    //                    $('.auditiiDates').val(moment(data[3]['schedule_audit_date']).format('DD.MM.YYYY'));
-                    $('.auditiiStandard').val(data[3]['schedule_app_standard']);
-                    $('input[type="text"]').trigger('change');
-                    $('.auditiiLocation').trigger('change');
-                    $('#auditNotificationII').modal('show');
+                    restoreCreateBtn();
+                    if (!data || !data[0]) {
+                        alert("Could not load client info.");
+                        return;
+                    }
+                    try {
+                        $('.auditiiForOrg').val((data[0] && data[0]['customer_name']) || '');
+                        $('.auditiiLocation').val((data[0] && data[0]['address']) || '');
+                        $('.auditiiReferance').val((data[0] && data[0]['unique_id']) || '');
+                        $('.auditiiTelephone').val((data[0] && data[0]['contact']) || '');
+                        $('.auditiiEmail').val((data[0] && data[0]['email_id']) || '');
+                        $('.auditiiContactPerson').val((data[1] && data[1]['audit_contact_person']) || '');
+                        $('.auditiiDesignation').val((data[1] && data[1]['audit_designation']) || '');
+                        var stdVal = (data[3] && data[3]['schedule_app_standard']) || (data[1] && data[1]['certification']) || '';
+                        $('.auditiiStandard').val(stdVal);
+                        $('input[type="text"]').trigger('change');
+                        $('.auditiiLocation').trigger('change');
+                        $('#auditNotificationII').modal('show');
+                    } catch (e) {
+                        console.error("Error setting create Stage II fields:", e);
+                        $('#auditNotificationII').modal('show');
+                    }
                 },
                 error: function (data, status, err) {
-                    alert(status);
+                    restoreCreateBtn();
+                    alert("Error loading client info: " + (status || err));
                 }
             });
         });
 
-        $(document).on('click', '.editAuditNotificationii', function () {
-            var notifId = $(this).attr('data-notification');
-            var svcId = $(this).attr('data-service');
-            var custId = $(this).attr('data-customer') || $('.auditii-noti-customer').val();
+        $(document).on('click', '.editAuditNotificationii', function (e) {
+            e.preventDefault();
+            var $btn = $(this);
+            var notifId = $btn.attr('data-notification');
+            var svcId = $btn.attr('data-service');
+            var custId = $btn.attr('data-customer') || $('.auditii-noti-customer').val();
+
+            if (!notifId || !svcId) {
+                alert('Notification details missing.');
+                return;
+            }
+
+            // Visual feedback: show spinner on clicked icon
+            var $icon = $btn.find('i');
+            var origClass = $icon.attr('class') || 'fa fa-pencil-square fa-lg';
+            $icon.attr('class', 'fa fa-spinner fa-spin fa-lg');
+            $btn.css('pointer-events', 'none');
+
+            var btnRestored = false;
+            function restoreBtn() {
+                if (!btnRestored) {
+                    btnRestored = true;
+                    $icon.attr('class', origClass);
+                    $btn.css('pointer-events', '');
+                }
+            }
+
+            // Fire conflict check in background
             loadAppointedReviewersForAuditorCheckII(custId, svcId);
-            loadEligibleAuditorsForStageII(custId, svcId, function() {
+
+            // Fire eligible auditors in parallel
+            loadEligibleAuditorsForStageII(custId, svcId, function(resp) {
+                syncAuditorSelectOptionsII();
+            });
+
+            // Fire contract details simultaneously
+            $.ajax({
+                url: "contractDetails.php",
+                type: "GET",
+                dataType: "json",
+                data: {
+                    notificationiiId: notifId,
+                    serviceiiId: svcId
+                },
+                success: function (data) {
+                    restoreBtn();
+                    if (!data || !data[0]) {
+                        alert("Could not load notification details.");
+                        return;
+                    }
+
+                    try {
+                        $('.editTableDiv').empty();
+                        var main = data[0] || {};
+                        var rows = data[1] || [];
+
+                        $('.auditiiForOrg').val(main['for_org'] || '');
+
+                        var intimDate = main['intimation_date'];
+                        if (intimDate && intimDate !== '0000-00-00' && typeof moment !== 'undefined') {
+                            $('.intimationDateii').val(moment(intimDate).format('DD.MM.YYYY'));
+                        } else {
+                            $('.intimationDateii').val(intimDate || '');
+                        }
+
+                        $('.auditiiLocation').val(main['location'] || '');
+                        $('.auditiiReferance').val(main['audit_ref_no'] || '');
+                        $('.auditiiStandard').val(main['audit_standard'] || '');
+                        $('.auditiiContactPerson').val(main['audit_contact_person'] || '');
+                        $('.auditiiDesignation').val(main['audit_designation'] || '');
+                        $('.auditiiTelephone').val(main['audit_telephone'] || '');
+                        $('.auditiiEmail').val(main['audit_email'] || '');
+
+                        if (main['stage_ii_of']) {
+                            $('.stage-ii[value="' + main['stage_ii_of'] + '"]').prop('checked', true);
+                        }
+                        $('.audtii-noti-id').val(main['audit_stageii_id'] || notifId);
+                        $('.auditii-noti-customer').val(main['customer_id'] || custId);
+                        $('.auditii-noti-service').val(main['service_id'] || svcId);
+                        $('.tllastedit').val(main['auditor_check_last_two'] || '');
+                        $('.tllastyc').val(main['auditor_check_comm'] || '');
+                        if (main['auditor_check_last_two'] === "YES") {
+                            $('.tllasty').prop('checked', true);
+                        } else if (main['auditor_check_last_two'] === "NO") {
+                            $('.tllastn').prop('checked', true);
+                        }
+
+                        $(".newAuditiiDatesEdit").empty();
+                        $(".newAuditiiDates").empty();
+                        var rawAuditDate = (main['audit_dates'] && typeof main['audit_dates'] === 'string') ? main['audit_dates'] : '';
+                        var auditDate = rawAuditDate ? rawAuditDate.split(/,\s*/) : [];
+                        var auditDateLen = auditDate.length;
+
+                        for (var key = 0; key < auditDateLen; key++) {
+                            var no = auditDate[key] ? String(auditDate[key]).trim() : '';
+                            if (key === 0) {
+                                $('.auditiiDates').val(no);
+                            } else if (no !== '') {
+                                $(".newAuditiiDates").append('<div class="row newAuditiiRowParent">\n\
+                                        <div class="col-sm-10 form-group float-label-control">\n\
+                                            <label>Audit date(s):</label>\n\
+                                            <input type="text" class="auditiiDates" name="auditiiDates" placeholder="Audit date(s):" value="' + no + '" required>\n\
+                                        </div>\n\
+                                        <div class="col-sm-1 form-group float-label-control deleteNewAuditiiParent">\n\
+                                            <a class="removeAuditiiDate" style="" title="Remove Multiple AuditDates"><i class="fa fa-remove"></i></a>\n\
+                                        </div>\n\
+                                    </div>');
+                            }
+                        }
+                        if (auditDateLen === 0) {
+                            $('.auditiiDates').val('');
+                        }
+
+                        $rowCounter = 0;
+                        if (rows && rows.length > 0) {
+                            for (var r = 0; r < rows.length; r++) {
+                                $rowCounter++;
+                                var isFirst = ($rowCounter === 1);
+                                var audId = rows[r]['auditor_id'] || '';
+                                var audName = rows[r]['auditor_name'] || '';
+                                var rowOptions = isFirst
+                                    ? renderNotificationAuditorOptionsII(audId, audName)
+                                    : renderNotificationAllAuditorOptionsII(audId, audName);
+                                var removeBtnHtml = isFirst
+                                    ? '<td width="10%" style="padding: 6px; text-align: center; vertical-align: middle; color: #94a3b8;">&mdash;</td>'
+                                    : '<td width="10%" style="padding: 6px; text-align: center; vertical-align: middle;"><button type="button" class="btn btn-sm btn-danger removeRowButton" style="padding: 3px 8px; border-radius: 4px;">Remove</button></td>';
+
+                                $('.editTableDiv').append('<tr class="audit_subsectionii previousCBData" id="cb_subsection_' + r + '">\n\
+                                    <td width="36%" style="padding: 6px; vertical-align: middle;">\n\
+                                        <div class="table-edit-control">\n\
+                                            <select data-row-id="" class="contractAuditorNameii form-control" id="contractAuditorNameii" name="contractAuditorNameii" style="width: 100%;">\n\
+                                                ' + rowOptions + '\n\
+                                            </select>\n\
+                                        </div>\n\
+                                    </td>\n\
+                                    <td width="24%" style="padding: 6px; vertical-align: middle;">\n\
+                                        <div class="table-edit-control">\n\
+                                            <select class="auditorCategoryii form-control" name="auditorCategoryii" required style="width: 100%;">\n\
+                                                ' + auditIICategoryOptionsHtml + '\n\
+                                            </select>\n\
+                                        </div>\n\
+                                    </td>\n\
+                                    <td width="14%" style="padding: 6px; vertical-align: middle;">\n\
+                                        <div class="table-edit-control">\n\
+                                            <input type="text" min="1" data-row-id="" class="auditorWorkii form-control" id="auditorWorkii" name="auditorWorkii" value="' + (rows[r]['audit_wokrdays'] || '') + '" placeholder="" style="width: 100%;">\n\
+                                        </div>\n\
+                                    </td>\n\
+                                    <td width="16%" style="padding: 6px; vertical-align: middle;">\n\
+                                        <div class="table-edit-control">\n\
+                                            <select class="auditorAcceptanceii form-control" id="auditorAcceptanceii" name="auditorAcceptanceii" style="width: 100%;">\n\
+                                                <option value="' + (rows[r]['auditor_acceptance'] || '') + '">' + (rows[r]['auditor_acceptance'] || 'Select') + '</option><option value="">Select</option><option value="Yes">Yes</option><option value="No">No</option></select></div>\n\
+                                    </td>\n\
+                                    ' + removeBtnHtml + '\n\
+                                </tr>');
+
+                                var newAuditorCategorySelect = $('.editTableDiv').find('.auditorCategoryii').last();
+                                if (rows[r]['auditor_category']) {
+                                    newAuditorCategorySelect.val(rows[r]['auditor_category']);
+                                }
+                            }
+                        }
+                        if ($rowCounter === 0) {
+                            $('.editTableDiv').append(buildAuditIIAuditorRow({ removable: false, isSecondOrLater: false }));
+                        }
+
+                        $rowCounter = $('.editTableDiv tr').length;
+                        $rowCB = $rowCounter;
+                        syncAuditorSelectOptionsII();
+
+                        if (main["auditor_check_last_two"] === "YES") {
+                            $('.tllasty1').prop("checked", true);
+                        } else if (main["auditor_check_last_two"] === "No" || main["auditor_check_last_two"] === "NO") {
+                            $('.tllastn2').prop("checked", true);
+                        }
+                        $(".tllastedit1").val(main["auditor_check_last_two"] || '');
+                        $('input[type="text"]').trigger('change');
+                        $('input[type="number"]').trigger('change');
+                        $('.auditiiLocation').trigger('change');
+                        $('.appointedby').val(main['appointed_by'] || '');
+                        $('.mcldesignation').val(main['mcl_designation'] || '');
+
+                        $('#auditNotificationII').modal('show');
+                    } catch (e) {
+                        console.error('Error populating Stage II Notification form:', e);
+                        $('#auditNotificationII').modal('show');
+                    }
+                },
+                error: function (xhr, status, err) {
+                    restoreBtn();
+                    alert("Error loading notification: " + (status || err));
+                }
+            });
+        });
+
+        $(document).on('focus mousedown', '.contractAuditorNameii', function () {
+            syncAuditorSelectOptionsII();
+        });
+
+        $(document).on('change', ".contractAuditorNameii", function () {
+            var $select = $(this);
+            var auditorId = $select.val();
+            var auditorName = $select.find('option:selected').text().trim();
+            if (!auditorId) {
+                syncAuditorSelectOptionsII();
+                return;
+            }
+
+            var isDuplicate = false;
+            $('.contractAuditorNameii').not($select).each(function () {
+                var otherVal = String($(this).val() || '').trim();
+                if (otherVal !== '' && otherVal === String(auditorId).trim()) {
+                    isDuplicate = true;
+                    return false;
+                }
+            });
+            if (isDuplicate) {
+                if (typeof Swal !== 'undefined' && Swal.fire) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Auditor Already Selected',
+                        text: (auditorName ? auditorName : 'This auditor') + ' is already selected in this audit team. Please choose a different auditor.',
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#0F2742'
+                    });
+                } else {
+                    alert((auditorName ? auditorName : 'This auditor') + ' is already selected in this audit team. Please choose a different auditor.');
+                }
+                $select.val("");
+                syncAuditorSelectOptionsII();
+                return;
+            }
+
+            var conflict = checkAuditorConflictWithReviewersII(auditorId, auditorName);
+            if (conflict) {
+                showAuditorReviewerConflictDialogueII(auditorName, conflict);
+                $select.val("");
+                syncAuditorSelectOptionsII();
+                return;
+            }
+
+            var custId = $('.auditii-noti-customer').val() || $('.customerId').val();
+            if (custId) {
                 $.ajax({
-                    url: "contractDetails.php",
+                    url: "getNotificationInfo.php",
                     type: "GET",
                     dataType: "json",
                     data: {
-                        notificationiiId: notifId,
-                        serviceiiId: svcId,
+                        customerid: custId,
+                        auditorid: auditorId,
                     },
                     success: function (data) {
-                    $('.editTableDiv').empty();
-                    $('.auditiiForOrg').val(data[0]['for_org']);
-                    $('.intimationDateii').val(moment(data[0]['intimation_date']).format('DD.MM.YYYY'));
-                    $('.auditiiLocation').val(data[0]['location']);
-                    $('.auditiiReferance').val(data[0]['audit_ref_no']);
-                    $('.auditiiStandard').val(data[0]['audit_standard']);
-                    $('.auditiiContactPerson').val(data[0]['audit_contact_person']);
-                    //                    $('.auditiiDates').val(moment(data[0]['audit_dates']).format('DD.MM.YYYY'));
-                    $('.auditiiDesignation').val(data[0]['audit_designation']);
-                    $('.auditiiTelephone').val(data[0]['audit_telephone']);
-                    $('.auditiiEmail').val(data[0]['audit_email']);
-                    $('.stage-ii[value = "' + data[0]["stage_ii_of"] + '"]').prop('checked', true);
-                    $('.audtii-noti-id').val(data[0]['audit_stageii_id']);
-                    $('.auditii-noti-customer').val(data[0]['customer_id']);
-                    $('.auditii-noti-service').val(data[0]['service_id']);
-                    $('.tllastedit').val(data[0]['auditor_check_last_two']);
-                    $('.tllastyc').val(data[0]['auditor_check_comm']);
-                    if (data[0]['auditor_check_last_two'] == "YES") {
-                        $('.tllasty').prop('checked', true);
-
-                    } else if (data[0]['auditor_check_last_two'] == "NO") {
-                        $('.tllastn').prop('checked', true);
-                    }
-
-                    $(".newAuditiiDatesEdit").empty();
-                    var auditDate = data[0]['audit_dates'].split(', ');
-                    var auditDateLen = auditDate.length;
-                    var max = (Math.max(auditDateLen));
-                    //                    alert(personLen);
-                    for (var key = 0; key < max; key++) {
-                        //                        alert(auditDate[key]);
-                        //                        var no=contact[key];                        
-                        var no = key <= auditDateLen && auditDate[key] != null && auditDate[key] != "" ? auditDate[key] : "";
-
-                        if (key == 0) {
-                            $('.auditiiDates').val(no);
+                        if (data == '2') {
+                            if (typeof Swal !== 'undefined' && Swal.fire) {
+                                Swal.fire({
+                                    icon: 'warning',
+                                    title: 'Lead Auditor Limit',
+                                    text: 'For previous two services acted as Lead Auditor',
+                                    confirmButtonText: 'OK',
+                                    confirmButtonColor: '#0F2742'
+                                });
+                            } else {
+                                alert('For previous two services acted as Lead Auditor');
+                            }
+                            $select.val("");
+                            syncAuditorSelectOptionsII();
                         } else {
-                            $(".newAuditiiDates").empty();
-                            $(".newAuditiiDates").append('<div class="row newAuditiiRowParent">\n\
-                                    <div class="col-sm-10 form-group float-label-control">\n\
-                                        <label>Audit date(s):</label>\n\
-                                        <input type="text" class="auditiiDates" name="auditiiDates" placeholder="Audit date(s):" value="' + no + '" required>\n\
-                                    </div>\n\
-                                    <div class="col-sm-1 form-group float-label-control deleteNewAuditiiParent">\n\
-                                        <a class="removeAuditiiDate" style="" title="Remove Multiple AuditDates"><i class="fa fa-remove"></i></a>\n\
-                                    </div>\n\
-                                </div>');
+                            syncAuditorSelectOptionsII();
                         }
+                    },
+                    error: function () {
+                        syncAuditorSelectOptionsII();
                     }
-
-                    var option = auditIIAuditorOptionsHtml;
-                    $rowCounter = 0;
-                    for (var key in data[1]) {
-                        $rowCounter++;
-                        var option2 = '<option value="' + data[1][key]['auditor_id'] + '"selected>' + data[1][key]['auditor_name'] + '</option>';
-                        var option3 = '<option value="' + data[1][key]['audit_contact'] + '"selected>' + data[1][key]['auditor_name'] + ' - ' + data[1][key]['audit_contact'] + '</option>';
-                        //                        var option2 = '<option value="' + data[1][key]['auditor_name'] + '"selected>' + data[1][key]['auditor_name'] + '</option>';
-                        $('.editTableDiv').append('<tr class="audit_subsectionii previousCBData" id="cb_subsection_0" style="display: ">\n\
-                                                        <td class="" width="20%" style="padding:2px;">\n\
-                                                        <div class="table-edit-control">\n\
-                                                          <select data-row-id="" class="contractAuditorNameii form-control" id="contractAuditorNameii" name="contractAuditorNameii">\n\
-                                                       ' + option2 + '  \n\
-                                                     ' + option + '\n\
-                                                          </select>\n\
-                                                        </div>\n\
-                                                        </td>\n\
-                                                        <td class="" width="20%" style="padding:2px;">\n\
-        <div class="table-edit-control">\n\
-            <select class="auditorCategoryii form-control" name="auditorCategoryii" required>\n\
-                ' + auditIICategoryOptionsHtml + '\n\
-            </select>\n\
-        </div >\n\
-    </td >\n\
-                            <td class="" width="20%" style="padding:2px;">\n\
-                                <div class="table-edit-control">\n\
-                                    <input type="text" min="1" data-row-id="" class="auditorWorkii" id="auditorWorkii" name="auditorWorkii" value="' + data[1][key]['audit_wokrdays'] + '" placeholder="">\n\
-                                </div>\n\
-                            </td>\n\
-                            <td class="" width="20%" style="padding:2px;">\n\
-                                <div class="table-edit-control">\n\
-                                    <select class="auditorAcceptanceii form-control" id="auditorAcceptanceii" name="auditorAcceptanceii" >\n\
-                                        <option value="' + data[1][key]['auditor_acceptance'] + '">' + data[1][key]['auditor_acceptance'] + '</option><option value="">Select</option><option value="Yes">Yes</option><option value="No">No</option></select></div>\n\
-                            </td>\n\
-                            <td class="" width="10%" style="padding:2px;">\
-                                <button type="button" class="btn btn-danger removeRowButton">Remove</button>\
-                            </td>\
-                                                        </tr > ');
-                                                        const newAuditorCategorySelect = $('.editTableDiv').find('.auditorCategoryii').last();
-
-                        // Set the selected value based on `data[1][key]['auditor_category']`
-                        newAuditorCategorySelect.val(data[1][key]['auditor_category']);
-                    }
-                    if (!data[1] || !data[1].length) {
-                        $('.editTableDiv').append(buildAuditIIAuditorRow());
-                    }
-                    $rowCounter = $('.editTableDiv tr').length;
-                    $rowCB = $rowCounter;
-                    //                    alert(data[0]["auditor_check_last_two"]);
-                    if (data[0]["auditor_check_last_two"] == "YES") {
-                        $('.tllasty1').prop("checked", true);
-                    } else if (data[0]["auditor_check_last_two"] == "No") {
-                        $('.tllastn2').prop("checked", true);
-                    }
-                    $(".tllastedit1").val(data[0]["auditor_check_last_two"]);
-                    $('input[type="text"]').trigger('change');
-                    $('input[type="number"]').trigger('change');
-                    $('.auditiiLocation').trigger('change');
-                    $('.appointedby').val(data[0]['appointed_by']);
-                    $('.mcldesignation').val(data[0]['mcl_designation']);
-                    $('#auditNotificationII').modal('show');
-                },
-                error: function (data, status, err) {
-                    alert(status);
-                }
-            });
+                });
+            } else {
+                syncAuditorSelectOptionsII();
+            }
         });
 
         $('.downloadAuditNotificationii').click(function () {
@@ -873,6 +1272,52 @@ foreach ($category as $name) {
 
             if (validateStage2()) {
                 e.preventDefault();
+                return;
+            }
+
+            if (!hasAtLeastOneQualifiedAuditorII()) {
+                e.preventDefault();
+                if (typeof Swal !== 'undefined' && Swal.fire) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Qualified Auditor Required',
+                        text: 'Atleast one qualifed auditor needs to be in the team',
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#0F2742'
+                    });
+                } else {
+                    alert('Atleast one qualifed auditor needs to be in the team');
+                }
+                return;
+            }
+
+            var seenAuditors = {};
+            var hasDuplicateAuditor = false;
+            var duplicateAuditorName = "";
+            $('.contractAuditorNameii').each(function () {
+                var val = String($(this).val() || '').trim();
+                if (val !== '') {
+                    if (seenAuditors[val]) {
+                        hasDuplicateAuditor = true;
+                        duplicateAuditorName = $(this).find('option:selected').text().trim();
+                        return false;
+                    }
+                    seenAuditors[val] = true;
+                }
+            });
+            if (hasDuplicateAuditor) {
+                e.preventDefault();
+                if (typeof Swal !== 'undefined' && Swal.fire) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Duplicate Auditor',
+                        text: (duplicateAuditorName ? duplicateAuditorName : 'An auditor') + ' is selected multiple times. Please assign unique auditors.',
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#0F2742'
+                    });
+                } else {
+                    alert('Duplicate auditor selected in audit team.');
+                }
                 return;
             }
 
@@ -915,9 +1360,11 @@ foreach ($category as $name) {
 
         $(document.body).on('click', '.addAuditLinkii', function (e) {
             e.preventDefault();
-            $('.editTableDiv').append(buildAuditIIAuditorRow({ removable: true }));
+
+            $('.editTableDiv').append(buildAuditIIAuditorRow({ removable: true, isSecondOrLater: true }));
             $rowCounter = $('.editTableDiv tr').length;
             $rowCB = $rowCounter;
+            syncAuditorSelectOptionsII();
 
         });
 
@@ -926,6 +1373,7 @@ foreach ($category as $name) {
             $(this).closest('tr').remove();
             $rowCounter = $('.editTableDiv tr').length;
             $rowCB = $rowCounter;
+            syncAuditorSelectOptionsII();
         });
 
     });

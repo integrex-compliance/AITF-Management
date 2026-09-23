@@ -160,6 +160,7 @@ function isAuthorizedRequest() {
 if (!isAuthorizedRequest()) {
     outputJSON(array('error' => 'Unauthorized'), 401);
 }
+session_write_close();
 
 if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
     try {

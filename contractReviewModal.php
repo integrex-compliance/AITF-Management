@@ -1215,15 +1215,23 @@ $(document.body).on('click', '.check9', function () {
             });
         });
 
-        $('.updateContractReview').click(function () {
-//            alert($(this).attr('data-contract'));
-//            alert($(this).attr('data-customer'));data-service
-            var customerId = $(this).attr('data-customer');
-            var contractId = $(this).attr('data-contract');
-            var serviceId = $(this).attr('data-service');
+        $(document).on('click', '.updateContractReview', function (e) {
+            e.preventDefault();
+            var $btn = $(this);
+            var customerId = $btn.attr('data-customer');
+            var contractId = $btn.attr('data-contract');
+            var serviceId = $btn.attr('data-service');
             
-            console.log('Contract Review Edit - Opening for Customer:', customerId, 'Service:', serviceId, 'Contract:', contractId);
-            
+            var $icon = $btn.find('i');
+            var origClass = $icon.attr('class') || 'fa fa-pencil-square fa-lg';
+            $icon.attr('class', 'fa fa-spinner fa-spin fa-lg');
+            $btn.css('pointer-events', 'none');
+
+            function restoreReviewBtn() {
+                $icon.attr('class', origClass);
+                $btn.css('pointer-events', '');
+            }
+
             $('.edit-customer-id').val(customerId);
             $('.contract-id').val(contractId);
             $('.edit-service-id').val(serviceId);
@@ -1241,13 +1249,16 @@ $(document.body).on('click', '.check9', function () {
                 },
                 success: function (data)
                 {
-                    console.log('Contract Review Edit - Received data:', data);
-                    
-                    $('.editContractCustomer').val(data[0]['customer_name']);
-                    $('.editCustomerAddress').val(data[0]['address']);
-                    
-                    // ALWAYS fetch fresh agreement number from database
-                    var agreementNo = data[0]['unique_id'] || '';
+                    restoreReviewBtn();
+                    if (!data || !data[0]) {
+                        alert("Could not load contract review details.");
+                        return;
+                    }
+                    try {
+                        $('.editContractCustomer').val(data[0]['customer_name'] || '');
+                        $('.editCustomerAddress').val(data[0]['address'] || '');
+                        
+                        var agreementNo = data[0]['unique_id'] || '';
                     console.log('Contract Review Edit - Agreement from contractDetails:', agreementNo);
                     
                     // If empty, fetch from getClientInfo or get_allotment_only
@@ -1402,10 +1413,15 @@ $(document.body).on('click', '.check9', function () {
                     $('input[type="text"]').trigger('change');
 //                    $('textarea').trigger('change');
                     $('#editContractReview').modal('show');
+                    } catch (e) {
+                        console.error("Error populating contract review form:", e);
+                        $('#editContractReview').modal('show');
+                    }
                 },
                 error: function (data, status, err)
                 {
-                    alert(status);
+                    restoreReviewBtn();
+                    alert("Error loading contract review: " + (status || err));
                 }
             });
         });

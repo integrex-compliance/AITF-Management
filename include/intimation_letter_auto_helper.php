@@ -396,6 +396,7 @@ function aitfFetchAutoIntimationCandidates($db, $limit = 25, $backlogDays = null
             INNER JOIN service s ON csd.service_id = s.service_id
             INNER JOIN customer_info ci ON s.customer_id = ci.id
             WHERE csd.is_deleted = 'N'
+            AND (csd.is_intimation_deleted IS NULL OR csd.is_intimation_deleted = 'N')
             AND ci.is_deleted <> 'YES'
             AND (ci.audit_status IS NULL OR ci.audit_status NOT IN ('Withdrawn', 'Application canceled'))
             AND csd.action IN ($placeholders)

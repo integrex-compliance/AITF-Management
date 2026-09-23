@@ -65,6 +65,7 @@
     $statement->execute();
     $auditorsList = $statement->fetchAll();
     $auditorDivisionsMap = aitf_get_auditor_divisions_map($db);
+    $auditorNaceClassesMap = aitf_get_auditor_nace_classes_map($db);
 
     //  Taxation
     $taxations = "SELECT * from taxation";
@@ -250,16 +251,19 @@
                                 <ul class="list-group checked-list-box operateAuditors">
                                     <?php foreach ($auditorsList as $auditor) { 
                                         $audId = (int)$auditor['auditors_id'];
+                                        $assignedClasses = isset($auditorNaceClassesMap[$audId]) ? $auditorNaceClassesMap[$audId] : array();
                                         $assignedDivs = isset($auditorDivisionsMap[$audId]) ? $auditorDivisionsMap[$audId] : array();
                                     ?>
                                         <li class="list-group-item" data-auditor-id="<?php echo $audId; ?>">
                                             <a class="editAuditor" data-id="<?php echo $audId; ?>"
                                                 style="float: left"><i
                                                     class="fa fa-pencil-square"></i></a>&emsp;<?php echo $auditor['auditor_name'] ?>
-                                            <?php if (!empty($assignedDivs)) { ?>
-                                                <span class="label label-info auditor-division-tag" style="font-size: 10px; background-color: #2563eb; margin-left: 6px; padding: 2px 6px; border-radius: 3px;" title="Assigned Divisions: <?php echo htmlspecialchars(implode(', ', $assignedDivs)); ?>"><i class="fa fa-tags"></i> Div: <?php echo htmlspecialchars(implode(', ', $assignedDivs)); ?></span>
+                                            <?php if (!empty($assignedClasses)) { ?>
+                                                <span class="label label-info auditor-division-tag" style="font-size: 10px; background-color: #2563eb; margin-left: 6px; padding: 2px 6px; border-radius: 3px;" title="Assigned NACE Classes: <?php echo htmlspecialchars(implode(', ', $assignedClasses)); ?>"><i class="fa fa-tags"></i> Class: <?php echo htmlspecialchars(implode(', ', $assignedClasses)); ?></span>
+                                            <?php } elseif (!empty($assignedDivs)) { ?>
+                                                <span class="label label-info auditor-division-tag" style="font-size: 10px; background-color: #0284c7; margin-left: 6px; padding: 2px 6px; border-radius: 3px;" title="Assigned Divisions: <?php echo htmlspecialchars(implode(', ', $assignedDivs)); ?>"><i class="fa fa-tags"></i> Div: <?php echo htmlspecialchars(implode(', ', $assignedDivs)); ?></span>
                                             <?php } else { ?>
-                                                <span class="label label-default auditor-division-tag" style="font-size: 10px; color: #94a3b8; background-color: #f1f5f9; border: 1px dashed #cbd5e1; margin-left: 6px; padding: 2px 6px; border-radius: 3px;" title="No division assigned"><i class="fa fa-tags"></i> No Div</span>
+                                                <span class="label label-default auditor-division-tag" style="font-size: 10px; color: #94a3b8; background-color: #f1f5f9; border: 1px dashed #cbd5e1; margin-left: 6px; padding: 2px 6px; border-radius: 3px;" title="No NACE class assigned"><i class="fa fa-tags"></i> No Class</span>
                                             <?php } ?>
                                             <a class="deleteAuditor" data-id="<?php echo $audId; ?>"
                                                 style="float: right"><i class="fa fa-trash"></i></a>
@@ -1611,65 +1615,85 @@
                 });
             });
 
-            /* --- NACE Code / Division Assignment UI Handlers in Master Creator --- */
+            /* --- NACE Class Assignment UI Handlers in Master Creator --- */
             function updateNacodeSelectionDisplay() {
-                var checkedDivs = [];
-                $('.nacodeDivisionCheckbox:checked').each(function () {
-                    checkedDivs.push($(this).val());
+                var checkedClasses = [];
+                $('.nacodeClassCheckbox:checked').each(function () {
+                    checkedClasses.push($(this).val());
                 });
 
-                var count = checkedDivs.length;
+                var count = checkedClasses.length;
                 $('.nacodeSelectedCount').text(count + ' Selected');
 
                 if (count === 0) {
-                    $('.nacodeSummaryText').text('Click to assign Divisions...').css('color', '#475569');
+                    $('.nacodeSummaryText').text('Click to assign NACE Classes...').css('color', '#475569');
                     $('.nacodeSelectedBadges').empty();
                 } else {
-                    var summaryStr = count === 1 ? '1 Division (' + checkedDivs[0] + ')' : count + ' Divisions (' + checkedDivs.join(', ') + ')';
+                    var summaryStr = count <= 4 ? count + ' Classes (' + checkedClasses.join(', ') + ')' : count + ' NACE Classes Selected';
                     $('.nacodeSummaryText').text(summaryStr).css('color', '#1e40af');
 
                     var badgesHtml = '';
-                    checkedDivs.forEach(function (code) {
+                    checkedClasses.forEach(function (code) {
                         badgesHtml += '<span class="badge" style="background:#dbeafe; color:#1e40af; border:1px solid #bfdbfe; font-size:11px; padding:3px 7px; border-radius:12px; font-weight:600; display:inline-flex; align-items:center; gap:4px;">' +
-                            'Div ' + code + ' <a href="javascript:void(0)" class="nacodeRemoveBadge" data-val="' + code + '" style="color:#1e40af; text-decoration:none; margin-left:2px; font-size:12px;" title="Remove Division ' + code + '">&times;</a></span>';
+                            code + ' <a href="javascript:void(0)" class="nacodeRemoveBadge" data-val="' + code + '" style="color:#1e40af; text-decoration:none; margin-left:2px; font-size:12px;" title="Remove Class ' + code + '">&times;</a></span>';
                     });
                     $('.nacodeSelectedBadges').html(badgesHtml);
                 }
             }
 
-            $(document).on('change', '.nacodeDivisionCheckbox', function () {
+            $(document).on('change', '.nacodeClassCheckbox', function () {
                 updateNacodeSelectionDisplay();
             });
 
             $(document).on('click', '.nacodeRemoveBadge', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
-                var divVal = $(this).attr('data-val');
-                $('.nacodeDivisionCheckbox[value="' + divVal + '"]').prop('checked', false).trigger('change');
+                var clsVal = $(this).attr('data-val');
+                $('.nacodeClassCheckbox[value="' + clsVal + '"]').prop('checked', false).trigger('change');
+            });
+
+            $(document).on('click', '.nacodeSelectGroupBtn', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var divCode = $(this).attr('data-division');
+                var $checkboxes = $('.nacodeDiv-' + divCode + ':visible');
+                var allChecked = $checkboxes.length > 0 && $checkboxes.filter(':checked').length === $checkboxes.length;
+                $checkboxes.prop('checked', !allChecked);
+                updateNacodeSelectionDisplay();
             });
 
             $(document).on('click', '.nacodeSelectAllBtn', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
-                $('.nacodeItemLabel:visible .nacodeDivisionCheckbox').prop('checked', true);
+                $('.nacodeItemLabel:visible .nacodeClassCheckbox').prop('checked', true);
                 updateNacodeSelectionDisplay();
             });
 
             $(document).on('click', '.nacodeClearAllBtn', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
-                $('.nacodeDivisionCheckbox').prop('checked', false);
+                $('.nacodeClassCheckbox').prop('checked', false);
                 updateNacodeSelectionDisplay();
             });
 
             $(document).on('keyup input', '.nacodeFilterInput', function () {
                 var term = $(this).val().toLowerCase().trim();
-                $('.nacodeItemLabel').each(function () {
-                    var searchData = $(this).attr('data-search') || '';
-                    if (!term || searchData.indexOf(term) !== -1) {
-                        $(this).show();
+                $('.nacodeDivisionSection').each(function () {
+                    var $sec = $(this);
+                    var hasVisible = false;
+                    $sec.find('.nacodeItemLabel').each(function () {
+                        var searchData = $(this).attr('data-search') || '';
+                        if (!term || searchData.indexOf(term) !== -1) {
+                            $(this).show();
+                            hasVisible = true;
+                        } else {
+                            $(this).hide();
+                        }
+                    });
+                    if (hasVisible) {
+                        $sec.show();
                     } else {
-                        $(this).hide();
+                        $sec.hide();
                     }
                 });
             });
@@ -1695,12 +1719,12 @@
                         $(".auditorabbr").val(data['abbrevation']);
                         $(".isReviewerCheckbox").prop("checked", data['is_reviewer'] == 1);
                         
-                        $('.nacodeDivisionCheckbox').prop('checked', false);
+                        $('.nacodeClassCheckbox').prop('checked', false);
                         $('.nacodeFilterInput').val('');
-                        $('.nacodeItemLabel').show();
-                        if (data['assigned_divisions'] && Array.isArray(data['assigned_divisions'])) {
-                            data['assigned_divisions'].forEach(function(code) {
-                                $('.nacodeDivisionCheckbox[value="' + code + '"]').prop('checked', true);
+                        $('.nacodeItemLabel, .nacodeDivisionSection').show();
+                        if (data['assigned_nace_classes'] && Array.isArray(data['assigned_nace_classes'])) {
+                            data['assigned_nace_classes'].forEach(function(code) {
+                                $('.nacodeClassCheckbox[value="' + code + '"]').prop('checked', true);
                             });
                         }
                         updateNacodeSelectionDisplay();
@@ -2233,9 +2257,9 @@
                 $(".auditor_id").val("");
                 $(".auditorabbr").val("");
                 $(".isReviewerCheckbox").prop("checked", false);
-                $('.nacodeDivisionCheckbox').prop('checked', false);
+                $('.nacodeClassCheckbox').prop('checked', false);
                 $('.nacodeFilterInput').val('');
-                $('.nacodeItemLabel').show();
+                $('.nacodeItemLabel, .nacodeDivisionSection').show();
                 updateNacodeSelectionDisplay();
                 $(".auditoradd").modal("show");
                 //                $('.newAuditors').empty();

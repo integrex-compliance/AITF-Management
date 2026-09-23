@@ -560,147 +560,167 @@
 
     $(document).ready(function () {
 
-        $('.createControlFormat2').click(function () {
-//            alert($(this).attr('data-service'));
-            $('.control-format2-service').val($(this).attr('data-service'));
-            $('.control-format2-customer').val($(this).attr('data-customer'));
-            $('.cf-service-id').val($(this).attr('data-id'));
-//            alert($('.control-format2-service').val());
+        $(document).on('click', '.createControlFormat2', function () {
+            var $btn = $(this);
+            var originalHtml = $btn.html();
+            $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i>');
+            var restoreBtn = function() {
+                $btn.prop('disabled', false).html(originalHtml);
+            };
+
+            var serviceId = $(this).attr('data-service');
+            var customerId = $(this).attr('data-customer');
+            var id = $(this).attr('data-id');
+
+            $('.control-format2-service').val(serviceId);
+            $('.control-format2-customer').val(customerId);
+            $('.cf-service-id').val(id);
+
             $.ajax({
                 url: "getClientInfo.php",
                 type: "GET",
                 dataType: "json",
                 data: {
-                    cfcustomer_id: $(this).attr('data-customer'),
-                    cfservice_id: $(this).attr('data-service'),
+                    cfcustomer_id: customerId,
+                    cfservice_id: serviceId,
                 },
                 success: function (data)
                 {
-//                    alert(data);
-                    $('.controlFormat2ClientName').val(data[0]['customer_name']);
-                    $('.controlFormat2Address').val(data[0]['address']);
-                    $('.controlFormat2RefNo').val(data[0]['certification_no']);
-                    $('.controlFormat2CertDate').val(moment(data[2]['revDatecdc']).format('DD.MM.YYYY'));
-//                    if (data[1]['audit_dates'] == undefined) {
-//                        var auditDate = data[3]['audit_dates'].split(', ');
-//                        var auditDateLen = auditDate.length;
-//                        var max = (Math.max(auditDateLen));
-////                    alert(personLen);
-//                        for (var key = 0; key < max; key++) {
-//                            var no = key <= auditDateLen && auditDate[key] != null && auditDate[key] != "" ? auditDate[key] : "";
-//                            $('.controlFormat2CertDate').val(no);
-//                        }
-//                    } else {
-//                        var auditDate = data[1]['audit_dates'].split(', ');
-//                        var auditDateLen = auditDate.length;
-//                        var max = (Math.max(auditDateLen));
-////                    alert(personLen);
-//                        for (var key = 0; key < max; key++) {
-//                            var no = key <= auditDateLen && auditDate[key] != null && auditDate[key] != "" ? auditDate[key] : "";
-//                            $('.controlFormat2CertDate').val(no);
-//                        }
-//                    }//                    
-                    $('input[type="text"]').trigger('change');
-//                    $('textarea').trigger('change');
+                    try {
+                        if (!data || !data[0]) {
+                            restoreBtn();
+                            alert("Data not found");
+                            return;
+                        }
+                        $('.controlFormat2ClientName').val(data[0]['customer_name'] || '');
+                        $('.controlFormat2Address').val(data[0]['address'] || '');
+                        $('.controlFormat2RefNo').val(data[0]['certification_no'] || '');
+                        var certDate = (data[2] && data[2]['revDatecdc']) ? moment(data[2]['revDatecdc']).format('DD.MM.YYYY') : '';
+                        $('.controlFormat2CertDate').val(certDate);
+                        $('input[type="text"]').trigger('change');
 
-                    $('#controlFormat2').modal('show');
+                        $('#controlFormat2').modal('show');
+                    } catch (e) {
+                        console.error("Error in createControlFormat2:", e);
+                    } finally {
+                        restoreBtn();
+                    }
                 },
                 error: function (data, status, err)
                 {
+                    restoreBtn();
                     alert(status);
                 }
             });
         });
 
-        $('.editControlFormat2').click(function () {
-            //alert($(this).attr('data-notification'));
+        $(document).on('click', '.editControlFormat2', function () {
+            var $btn = $(this);
+            var originalHtml = $btn.html();
+            $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i>');
+            var restoreBtn = function() {
+                $btn.prop('disabled', false).html(originalHtml);
+            };
+
+            var notificationId = $(this).attr('data-notification');
+            var serviceId = $(this).attr('data-service');
+
             $.ajax({
                 url: "contractDetails.php",
                 type: "GET",
                 dataType: "json",
                 data: {
-                    control2_id: $(this).attr('data-notification'),
-                    service2_Id: $(this).attr('data-service')
+                    control2_id: notificationId,
+                    service2_Id: serviceId
                 },
                 success: function (data)
                 {
-//                    alert(data[0]['remarks']);
-                    $('.editControl2').empty();
-                    $('.controlFormat2ClientName').val(data[0]['control2_client']);
-                    $('.controlFormat2RefNo').val(data[0]['control2_ref_no']);
-                    $('.controlFormat2Address').val(data[0]['control2_address']);
-                    $('.cf2remark').val(data[0]['remarks']);
-                    $('.reviewer').val(data[0]['username']);
-
-                    if (data[0]['review_date'] == "" || data[0]['review_date'] == null)
-                        $review_date = "";
-                    else
-                        $review_date = moment(data[0]['review_date']).format('DD.MM.YYYY');
-                    $('.reviewDateControl2').val($review_date);
-
-                    if (data[0]['control2_date'] == "" || data[0]['control2_date'] == null)
-                        $control2_date = "";
-                    else
-                        $control2_date = moment(data[0]['control2_date']).format('DD.MM.YYYY');
-                    $('.controlFormat2CertDate').val($control2_date);
-                    $('.control-format2-service').val(data[0]['caservice_id']);
-                    $('.control-format2-customer').val(data[0]['customer_id']);
-                    $('.control-format2-id').val(data[0]['control2_id']);
-                    //alert( $('.control-format2-id').val());
-                    for (var key in data[1]) {
-                        var srnum = data[1][key]['control2_sr'];
-                        if (srnum != null && srnum != "" && srnum == 1) {
-                            $('.editControl2').append('<div class="row" ><div class="col-sm-12"><strong>' + data[1][key]['control2_title'] + '</strong></div></div>');
+                    try {
+                        if (!data || !data[0]) {
+                            restoreBtn();
+                            alert("Data not found");
+                            return;
                         }
-//                        alert(data[1][key]['comments2']);
-                        $('.editControl2').append('<div class="row" >\n\
-                                                <div class="col-sm-12">\n\
-                                                <span>' + data[1][key]['control2_question'] + '</span>\n\
-                                                </div>\n\
-                                                <input type="hidden" class="hiddenQuestion2" name="hiddenQuestion2" value="' + data[1][key]['control2_question'] + '">\n\
-                                                <input type="hidden" class="hiddensrno2" name="hiddensrno2" value="' + data[1][key]['control2_sr'] + '">\n\
-                                                <input type="hidden" class="hiddentitle2" name="hiddentitle2" value="' + data[1][key]['control2_title'] + '">\n\
-                                                <input type="hidden" class="controlidhidden" name="controlidhidden" value="' + data[1][key]['control_format2_id'] + '">\n\
-                                                </div>\n\
-                                                <div class="row" style="padding-top: 12px" >\n\
-                                                <div class="col-xs-3 form-group">\n\
-                                                <label class="dispClass">Comments</label>\n\
-                                                <select name="controlFormat2Comment" class="form-control controlFormat2Comment" id="controlFormat2Comment" >\n\
-                                                <option value="' + data[1][key]['comments2'] + '">' + data[1][key]['comments2'] + '</option>\n\
-                                                <option value="Yes">Yes</option>\n\
-                                                <option value="No">No</option>\n\
-                                                </select>\n\
-                                                </div>\n\
-                                                <div class="col-xs-3 form-group">\n\
-                                                <label class="dispClass">Risk, if any</label>\n\
-                                                <select name="controlFormat2Risk" class="form-control controlFormat2Risk" id="controlFormat2Risk" >\n\
-                                                <option value="' + data[1][key]['risks2'] + '">' + data[1][key]['risks2'] + '</option>\n\
-                                                <option value="Yes">Yes</option>\n\
-                                                <option value="No">No</option>\n\
-                                                </select>\n\
-                                                </div>\n\
-                                                <div class="col-sm-3 form-group ">\n\
-                                                <label class="dispClass">Degree of Risk</label>\n\
-                                                <select name="controlFormat2RiskDegree" class="form-control controlFormat2RiskDegree" id="controlFormat2RiskDegree" >\n\
-                                                <option value="' + data[1][key]['risk_degree2'] + '">' + data[1][key]['risk_degree2'] + '</option>\n\
-                                                <option value="High">High</option>\n\
-                                                <option value="Low">Low</option>\n\
-                                                </select>\n\
-                                                </div>\n\
-                                                <div class="col-sm-3 form-group ">\n\
-                                                <label class="dispClass">Controls</label>\n\
-                                                <input type="text" class="controlFormat2Controls" id="controlFormat2Controls" name="controlFormat2Controls" value="' + data[1][key]['controls2'] + '" placeholder="Controls">\n\
-                                                </div>\n\
-                                                </div>');
+                        $('.editControl2').empty();
+                        $('.controlFormat2ClientName').val(data[0]['control2_client'] || '');
+                        $('.controlFormat2RefNo').val(data[0]['control2_ref_no'] || '');
+                        $('.controlFormat2Address').val(data[0]['control2_address'] || '');
+                        $('.cf2remark').val(data[0]['remarks'] || '');
+                        $('.reviewer').val(data[0]['username'] || '');
+
+                        var $review_date = "";
+                        if (data[0]['review_date'])
+                            $review_date = moment(data[0]['review_date']).format('DD.MM.YYYY');
+                        $('.reviewDateControl2').val($review_date);
+
+                        var $control2_date = "";
+                        if (data[0]['control2_date'])
+                            $control2_date = moment(data[0]['control2_date']).format('DD.MM.YYYY');
+                        $('.controlFormat2CertDate').val($control2_date);
+                        $('.control-format2-service').val(data[0]['caservice_id'] || '');
+                        $('.control-format2-customer').val(data[0]['customer_id'] || '');
+                        $('.control-format2-id').val(data[0]['control2_id'] || '');
+
+                        if (data[1]) {
+                            for (var key in data[1]) {
+                                var srnum = data[1][key]['control2_sr'];
+                                if (srnum != null && srnum != "" && srnum == 1) {
+                                    $('.editControl2').append('<div class="row" ><div class="col-sm-12"><strong>' + (data[1][key]['control2_title'] || '') + '</strong></div></div>');
+                                }
+                                $('.editControl2').append('<div class="row" >\n\
+                                                        <div class="col-sm-12">\n\
+                                                        <span>' + (data[1][key]['control2_question'] || '') + '</span>\n\
+                                                        </div>\n\
+                                                        <input type="hidden" class="hiddenQuestion2" name="hiddenQuestion2" value="' + (data[1][key]['control2_question'] || '') + '">\n\
+                                                        <input type="hidden" class="hiddensrno2" name="hiddensrno2" value="' + (data[1][key]['control2_sr'] || '') + '">\n\
+                                                        <input type="hidden" class="hiddentitle2" name="hiddentitle2" value="' + (data[1][key]['control2_title'] || '') + '">\n\
+                                                        <input type="hidden" class="controlidhidden" name="controlidhidden" value="' + (data[1][key]['control_format2_id'] || '') + '">\n\
+                                                        </div>\n\
+                                                        <div class="row" style="padding-top: 12px" >\n\
+                                                        <div class="col-xs-3 form-group">\n\
+                                                        <label class="dispClass">Comments</label>\n\
+                                                        <select name="controlFormat2Comment" class="form-control controlFormat2Comment" id="controlFormat2Comment" >\n\
+                                                        <option value="' + (data[1][key]['comments2'] || '') + '">' + (data[1][key]['comments2'] || '') + '</option>\n\
+                                                        <option value="Yes">Yes</option>\n\
+                                                        <option value="No">No</option>\n\
+                                                        </select>\n\
+                                                        </div>\n\
+                                                        <div class="col-xs-3 form-group">\n\
+                                                        <label class="dispClass">Risk, if any</label>\n\
+                                                        <select name="controlFormat2Risk" class="form-control controlFormat2Risk" id="controlFormat2Risk" >\n\
+                                                        <option value="' + (data[1][key]['risks2'] || '') + '">' + (data[1][key]['risks2'] || '') + '</option>\n\
+                                                        <option value="Yes">Yes</option>\n\
+                                                        <option value="No">No</option>\n\
+                                                        </select>\n\
+                                                        </div>\n\
+                                                        <div class="col-sm-3 form-group ">\n\
+                                                        <label class="dispClass">Degree of Risk</label>\n\
+                                                        <select name="controlFormat2RiskDegree" class="form-control controlFormat2RiskDegree" id="controlFormat2RiskDegree" >\n\
+                                                        <option value="' + (data[1][key]['risk_degree2'] || '') + '">' + (data[1][key]['risk_degree2'] || '') + '</option>\n\
+                                                        <option value="High">High</option>\n\
+                                                        <option value="Low">Low</option>\n\
+                                                        </select>\n\
+                                                        </div>\n\
+                                                        <div class="col-sm-3 form-group ">\n\
+                                                        <label class="dispClass">Controls</label>\n\
+                                                        <input type="text" class="controlFormat2Controls" id="controlFormat2Controls" name="controlFormat2Controls" value="' + (data[1][key]['controls2'] || '') + '" placeholder="Controls">\n\
+                                                        </div>\n\
+                                                        </div>');
+                            }
+                        }
+                        $('input[type="text"]').trigger('change');
+                        $('.cf2remark').trigger('change');
+                        $('.pdfControlFormat2').hide();
+                        $('#controlFormat2').modal('show');
+                    } catch (e) {
+                        console.error("Error in editControlFormat2:", e);
+                    } finally {
+                        restoreBtn();
                     }
-                    $('input[type="text"]').trigger('change');
-                    $('.cf2remark').trigger('change');
-                    $('.pdfControlFormat2').hide();
-                    $('#controlFormat2').modal('show');
-                    // $('.addControlFormat2').show();
                 },
                 error: function (data, status, err)
                 {
+                    restoreBtn();
                     alert(status);
                 }
             });

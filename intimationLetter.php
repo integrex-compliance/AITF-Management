@@ -9,38 +9,39 @@
     include_once './include/certification_cycle_helper.php';
 
     $excludeWithdrawn = " AND (ci.audit_status IS NULL OR ci.audit_status <> 'Withdrawn')";
+    $notDeletedIntimation = " AND (svcdt.is_intimation_deleted IS NULL OR svcdt.is_intimation_deleted = 'N')";
     $latestCertificationService = aitfLatestCertificationServiceSubquery('ci');
-    $notice = "SELECT ci.id, customer_name, unique_id, svc.service_id, service_type, svcdt.due_date, svcdt.sent_date, action, action_id FROM customer_info ci left join service svc on ci.id = svc.customer_id left join ca_service_dates svcdt on svc.service_id = svcdt.service_id where svc.service_id = ".$latestCertificationService." and (action = 'Suspension Reminder') and due_date <= now() and status != 'sent' and svcdt.is_deleted = 'N'".$excludeWithdrawn;
+    $notice = "SELECT ci.id, customer_name, unique_id, svc.service_id, service_type, svcdt.due_date, svcdt.sent_date, action, action_id FROM customer_info ci left join service svc on ci.id = svc.customer_id left join ca_service_dates svcdt on svc.service_id = svcdt.service_id where svc.service_id = ".$latestCertificationService." and (action = 'Suspension Reminder') and due_date <= now() and status != 'sent' and svcdt.is_deleted = 'N'".$notDeletedIntimation.$excludeWithdrawn;
     $statement = $db->prepare($notice);
     $statement->execute();
     $noticeDue = $statement->fetchAll();
 
-    $reminder = "SELECT ci.id, customer_name, unique_id, svc.service_id, service_type, svcdt.due_date, svcdt.sent_date, action, action_id FROM customer_info ci left join service svc on ci.id = svc.customer_id left join ca_service_dates svcdt on svc.service_id = svcdt.service_id where svc.service_id = ".$latestCertificationService." and (action = 'Suspend Letter') and due_date <= now() and status != 'sent' and svcdt.is_deleted = 'N'".$excludeWithdrawn;
+    $reminder = "SELECT ci.id, customer_name, unique_id, svc.service_id, service_type, svcdt.due_date, svcdt.sent_date, action, action_id FROM customer_info ci left join service svc on ci.id = svc.customer_id left join ca_service_dates svcdt on svc.service_id = svcdt.service_id where svc.service_id = ".$latestCertificationService." and (action = 'Suspend Letter') and due_date <= now() and status != 'sent' and svcdt.is_deleted = 'N'".$notDeletedIntimation.$excludeWithdrawn;
     $statement = $db->prepare($reminder);
     $statement->execute();
     $reminderDue = $statement->fetchAll();
 
-	$suspension = "SELECT ci.id, customer_name, unique_id, svc.service_id, service_type, svcdt.due_date, svcdt.sent_date, action, action_id FROM customer_info ci left join service svc on ci.id = svc.customer_id left join ca_service_dates svcdt on svc.service_id = svcdt.service_id where svc.service_id = ".$latestCertificationService." and (action = 'Withdrawal Reminder' or action = 'Withdrawal Reminder') and due_date <= now() and status != 'sent' and svcdt.is_deleted = 'N'".$excludeWithdrawn;
+	$suspension = "SELECT ci.id, customer_name, unique_id, svc.service_id, service_type, svcdt.due_date, svcdt.sent_date, action, action_id FROM customer_info ci left join service svc on ci.id = svc.customer_id left join ca_service_dates svcdt on svc.service_id = svcdt.service_id where svc.service_id = ".$latestCertificationService." and (action = 'Withdrawal Reminder' or action = 'Withdrawal Reminder') and due_date <= now() and status != 'sent' and svcdt.is_deleted = 'N'".$notDeletedIntimation.$excludeWithdrawn;
     $statement = $db->prepare($suspension);
     $statement->execute();
     $suspensionDue = $statement->fetchAll();
     
-    $withdrawn = "SELECT ci.id, customer_name, unique_id, svc.service_id, service_type, svcdt.due_date, svcdt.sent_date, action, action_id FROM customer_info ci left join service svc on ci.id = svc.customer_id left join ca_service_dates svcdt on svc.service_id = svcdt.service_id where svc.service_id = ".$latestCertificationService." and (action = 'Withdrawal Letter' or action = 'Withdraw Letter') and due_date <= now() and status != 'sent' and svcdt.is_deleted = 'N'".$excludeWithdrawn;
+    $withdrawn = "SELECT ci.id, customer_name, unique_id, svc.service_id, service_type, svcdt.due_date, svcdt.sent_date, action, action_id FROM customer_info ci left join service svc on ci.id = svc.customer_id left join ca_service_dates svcdt on svc.service_id = svcdt.service_id where svc.service_id = ".$latestCertificationService." and (action = 'Withdrawal Letter' or action = 'Withdraw Letter') and due_date <= now() and status != 'sent' and svcdt.is_deleted = 'N'".$notDeletedIntimation.$excludeWithdrawn;
     $statement = $db->prepare($withdrawn);
     $statement->execute();
     $withdrawnDue = $statement->fetchAll();
 
-	$expireReminder1 = "SELECT ci.id, customer_name, unique_id, svc.service_id, service_type, svcdt.due_date, svcdt.sent_date, action, action_id FROM customer_info ci left join service svc on ci.id = svc.customer_id left join ca_service_dates svcdt on svc.service_id = svcdt.service_id where svc.service_id = ".$latestCertificationService." and (action = '1st Reminder') and due_date <= now() and status != 'sent' and svcdt.is_deleted = 'N'".$excludeWithdrawn;
+	$expireReminder1 = "SELECT ci.id, customer_name, unique_id, svc.service_id, service_type, svcdt.due_date, svcdt.sent_date, action, action_id FROM customer_info ci left join service svc on ci.id = svc.customer_id left join ca_service_dates svcdt on svc.service_id = svcdt.service_id where svc.service_id = ".$latestCertificationService." and (action = '1st Reminder') and due_date <= now() and status != 'sent' and svcdt.is_deleted = 'N'".$notDeletedIntimation.$excludeWithdrawn;
     $statement = $db->prepare($expireReminder1);
     $statement->execute();
     $expireReminderDue1 = $statement->fetchAll();
 	
-	$expireReminder2 = "SELECT ci.id, customer_name, unique_id, svc.service_id, service_type, svcdt.due_date, svcdt.sent_date, action, action_id FROM customer_info ci left join service svc on ci.id = svc.customer_id left join ca_service_dates svcdt on svc.service_id = svcdt.service_id where svc.service_id = ".$latestCertificationService." and (action = '2nd Reminder') and due_date <= now() and status != 'sent' and svcdt.is_deleted = 'N'".$excludeWithdrawn;
+	$expireReminder2 = "SELECT ci.id, customer_name, unique_id, svc.service_id, service_type, svcdt.due_date, svcdt.sent_date, action, action_id FROM customer_info ci left join service svc on ci.id = svc.customer_id left join ca_service_dates svcdt on svc.service_id = svcdt.service_id where svc.service_id = ".$latestCertificationService." and (action = '2nd Reminder') and due_date <= now() and status != 'sent' and svcdt.is_deleted = 'N'".$notDeletedIntimation.$excludeWithdrawn;
     $statement = $db->prepare($expireReminder2);
     $statement->execute();
     $expireReminderDue2 = $statement->fetchAll();
 	
-    $expired = "SELECT ci.id, customer_name, unique_id, svc.service_id, service_type, svcdt.due_date, svcdt.sent_date, action, action_id FROM customer_info ci left join service svc on ci.id = svc.customer_id left join ca_service_dates svcdt on svc.service_id = svcdt.service_id where svc.service_id = ".$latestCertificationService." and action = 'Expire Letter' and due_date <= now() and status != 'sent' and svcdt.is_deleted = 'N'".$excludeWithdrawn;
+    $expired = "SELECT ci.id, customer_name, unique_id, svc.service_id, service_type, svcdt.due_date, svcdt.sent_date, action, action_id FROM customer_info ci left join service svc on ci.id = svc.customer_id left join ca_service_dates svcdt on svc.service_id = svcdt.service_id where svc.service_id = ".$latestCertificationService." and action = 'Expire Letter' and due_date <= now() and status != 'sent' and svcdt.is_deleted = 'N'".$notDeletedIntimation.$excludeWithdrawn;
     $statement = $db->prepare($expired);
     $statement->execute();
     $expireDue = $statement->fetchAll();
@@ -1033,7 +1034,6 @@
             </div>
         </div>
 
-
         <div id="loading-div-background" >
             <div id="loading-div" class="ui-corner-all text-center">
                 <h1><i class="fa fa-spinner fa-spin" ></i></h1>
@@ -1209,7 +1209,7 @@
                                                         <a class="PreviewPDF btn btn-default btn-xs btn-info" title="Generate" data-letterType='<?php echo $notiInfo['action'] ?>' data-customer='<?php echo $notiInfo['id'] ?>' data-service='<?php echo $notiInfo['service_id'] ?>' data-action ="<?php echo $notiInfo['action_id'] ?>" data-servicetype="<?php echo $notiInfo["service_type"] ?>" style="float: right;">PDF <i class="fa fa-file-pdf-o"></i></a>
                                                         <a class="SendMailToCust btn btn-default btn-xs btn-info" title="Send" data-letterType='<?php echo $notiInfo['action'] ?>' data-customer='<?php echo $notiInfo['id'] ?>' data-service='<?php echo $notiInfo['service_id'] ?>' data-action ="<?php echo $notiInfo['action_id'] ?>" data-servicetype="<?php echo $notiInfo["service_type"] ?>" style="float: right; margin-right: 10px">Generate <i class="fa fa-envelope-o"></i></a>
                                                         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
-                                                            <a class="deleteLetter btn btn-default btn-xs btn-info" title="Generate" data-customer='<?php echo $notiInfo['id'] ?>' data-service='<?php echo $notiInfo['service_id'] ?>' data-action ="<?php echo $notiInfo['action_id'] ?>" style="float: right; margin-right: 10px">Delete <i class="fa fa-trash"></i></a>
+                                                            <a class="deleteLetter btn btn-default btn-xs btn-info" title="Remove from this page" data-customer='<?php echo $notiInfo['id'] ?>' data-service='<?php echo $notiInfo['service_id'] ?>' data-action ="<?php echo $notiInfo['action_id'] ?>" style="float: right; margin-right: 10px">Delete <i class="fa fa-trash"></i></a>
                                                         <?php } ?>
                                                         <p class="desc text-primary customerName" data-id="<?php echo $notiInfo['id'] ?>" title="Action item description" > <?php echo $notiInfo['customer_name'] ?></p>
                                                         <p class="other-info">
@@ -1240,7 +1240,7 @@
                                                         <a class="PreviewPDF btn btn-default btn-xs btn-info"     title="Generate" data-letterType='<?php echo $reminderInfo['action'] ?>' data-customer='<?php echo $reminderInfo['id'] ?>' data-service='<?php echo $reminderInfo['service_id'] ?>' data-action ="<?php echo $reminderInfo['action_id'] ?>" data-servicetype="<?php echo $reminderInfo["service_type"] ?>" style="float: right; ">PDF <i class="fa fa-file-pdf-o"></i></a>                                                        
                                                         <a class="SendMailToCust btn btn-default btn-xs btn-info" title="Generate" data-letterType='<?php echo $reminderInfo['action'] ?>' data-customer='<?php echo $reminderInfo['id'] ?>' data-service='<?php echo $reminderInfo['service_id'] ?>' data-action ="<?php echo $reminderInfo['action_id'] ?>" data-servicetype="<?php echo $reminderInfo["service_type"] ?>" style="float: right; margin-right: 10px">Generate <i class="fa fa-envelope-o"></i></a>
                                                         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
-                                                            <a class="deleteLetter btn btn-default btn-xs btn-info" title="Generate" data-customer='<?php echo $reminderInfo['id'] ?>' data-service='<?php echo $reminderInfo['service_id'] ?>' data-action ="<?php echo $reminderInfo['action_id'] ?>" style="float: right; margin-right: 10px">Delete <i class="fa fa-trash"></i></a>
+                                                            <a class="deleteLetter btn btn-default btn-xs btn-info" title="Remove from this page" data-customer='<?php echo $reminderInfo['id'] ?>' data-service='<?php echo $reminderInfo['service_id'] ?>' data-action ="<?php echo $reminderInfo['action_id'] ?>" style="float: right; margin-right: 10px">Delete <i class="fa fa-trash"></i></a>
                                                         <?php } ?>
                                                         <p class="desc text-primary customerName" data-id="<?php echo $reminderInfo['id'] ?>" title="Action item description" > <?php echo $reminderInfo['customer_name'] ?></p>
                                                         <p class="other-info">
@@ -1273,7 +1273,7 @@
                                                         <a class="PreviewPDF btn btn-default btn-xs btn-info" title="Generate"     data-letterType='<?php echo $suspensionInfo['action'] ?>' data-action ="<?php echo $suspensionInfo['action_id'] ?>" data-customer='<?php echo $suspensionInfo['id'] ?>' data-service='<?php echo $suspensionInfo['service_id'] ?>' data-servicetype="<?php echo $suspensionInfo["service_type"] ?>" data-servicetype="<?php echo $suspensionInfo["service_type"] ?>" style="float: right">PDF <i class="fa fa-file-pdf-o"></i></a>                                                        
                                                         <a class="SendMailToCust btn btn-default btn-xs btn-info" title="Generate" data-letterType='<?php echo $suspensionInfo['action'] ?>' data-customer='<?php echo $suspensionInfo['id'] ?>' data-service='<?php echo $suspensionInfo['service_id'] ?>' data-action ="<?php echo $suspensionInfo['action_id'] ?>" data-servicetype="<?php echo $suspensionInfo["service_type"] ?>" style="float: right; margin-right: 10px">Generate <i class="fa fa-envelope-o"></i></a>
                                                         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
-                                                            <a class="deleteLetter btn btn-default btn-xs btn-info" title="Generate" data-customer='<?php echo $suspensionInfo['id'] ?>' data-service='<?php echo $suspensionInfo['service_id'] ?>' data-action ="<?php echo $suspensionInfo['action_id'] ?>" style="float: right; margin-right: 10px">Delete <i class="fa fa-trash"></i></a>
+                                                            <a class="deleteLetter btn btn-default btn-xs btn-info" title="Remove from this page" data-customer='<?php echo $suspensionInfo['id'] ?>' data-service='<?php echo $suspensionInfo['service_id'] ?>' data-action ="<?php echo $suspensionInfo['action_id'] ?>" style="float: right; margin-right: 10px">Delete <i class="fa fa-trash"></i></a>
                                                         <?php } ?>
                                                         <p class="desc text-primary customerName" data-id="<?php echo $suspensionInfo['id'] ?>" title="Action item description" > <?php echo $suspensionInfo['customer_name'] ?></p>
                                                         <p class="other-info">
@@ -1303,7 +1303,7 @@
                                                         <a class="PreviewPDF btn btn-default btn-xs btn-info" title="Generate" data-letterType='<?php echo $withdrawnInfo['action'] ?>' data-action ="<?php echo $withdrawnInfo['action_id'] ?>" data-customer='<?php echo $withdrawnInfo['id'] ?>' data-service='<?php echo $withdrawnInfo['service_id'] ?>' data-servicetype="<?php echo $withdrawnInfo["service_type"] ?>" style="float: right">PDF <i class="fa fa-file-pdf-o"></i></a>                                                        
                                                         <a class="SendMailToCust btn btn-default btn-xs btn-info" title="Generate" data-letterType='<?php echo $withdrawnInfo['action'] ?>' data-customer='<?php echo $withdrawnInfo['id'] ?>' data-service='<?php echo $withdrawnInfo['service_id'] ?>' data-action ="<?php echo $withdrawnInfo['action_id'] ?>" data-servicetype="<?php echo $withdrawnInfo["service_type"] ?>" style="float: right; margin-right: 10px">Generate <i class="fa fa-envelope-o"></i></a>
                                                         <?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
-                                                            <a class="deleteLetter btn btn-default btn-xs btn-info" title="Delete" data-customer='<?php echo $withdrawnInfo['id'] ?>' data-service='<?php echo $withdrawnInfo['service_id'] ?>' data-action ="<?php echo $withdrawnInfo['action_id'] ?>" style="float: right; margin-right: 10px">Delete <i class="fa fa-trash"></i></a>
+                                                            <a class="deleteLetter btn btn-default btn-xs btn-info" title="Remove from this page" data-customer='<?php echo $withdrawnInfo['id'] ?>' data-service='<?php echo $withdrawnInfo['service_id'] ?>' data-action ="<?php echo $withdrawnInfo['action_id'] ?>" style="float: right; margin-right: 10px">Delete <i class="fa fa-trash"></i></a>
                                                         <?php } ?>
                                                         <p class="desc text-primary customerName" data-id="<?php echo $withdrawnInfo['id'] ?>" title="Action item description" > <?php echo $withdrawnInfo['customer_name'] ?></p>
                                                         <p class="other-info">
@@ -1342,7 +1342,7 @@
 													<a class="PreviewPDF btn btn-default btn-xs btn-info" title="Generate" data-letterType='<?php echo $expireReminderInfo1['action'] ?>' data-action ="<?php echo $expireReminderInfo1['action_id'] ?>" data-customer='<?php echo $expireReminderInfo1['id'] ?>' data-service='<?php echo $expireReminderInfo1['service_id'] ?>' data-servicetype="<?php echo $expireReminderInfo1["service_type"] ?>" data-servicetype="<?php echo $expireReminderInfo1["service_type"] ?>" style="float: right">PDF <i class="fa fa-file-pdf-o"></i></a>                                                        
 													<a class="SendMailToCust btn btn-default btn-xs btn-info" title="Generate" data-letterType='<?php echo $expireReminderInfo1['action'] ?>' data-customer='<?php echo $expireReminderInfo1['id'] ?>' data-service='<?php echo $expireReminderInfo1['service_id'] ?>' data-action ="<?php echo $expireReminderInfo1['action_id'] ?>" data-servicetype="<?php echo $expireReminderInfo1["service_type"] ?>" style="float: right; margin-right: 10px">Generate <i class="fa fa-envelope-o"></i></a>
 													<?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
-														<a class="deleteLetter btn btn-default btn-xs btn-info" title="Generate" data-customer='<?php echo $expireReminderInfo1['id'] ?>' data-service='<?php echo $expireReminderInfo1['service_id'] ?>' data-action ="<?php echo $expireReminderInfo1['action_id'] ?>" style="float: right; margin-right: 10px">Delete <i class="fa fa-trash"></i></a>
+														<a class="deleteLetter btn btn-default btn-xs btn-info" title="Remove from this page" data-customer='<?php echo $expireReminderInfo1['id'] ?>' data-service='<?php echo $expireReminderInfo1['service_id'] ?>' data-action ="<?php echo $expireReminderInfo1['action_id'] ?>" style="float: right; margin-right: 10px">Delete <i class="fa fa-trash"></i></a>
 													<?php } ?>
 													<p class="desc text-primary customerName" data-id="<?php echo $expireReminderInfo1['id'] ?>" title="Action item description" > <?php echo $expireReminderInfo1['customer_name'] ?></p>
 													<p class="other-info">
@@ -1370,7 +1370,7 @@
 													<a class="PreviewPDF btn btn-default btn-xs btn-info" title="Generate" data-letterType='<?php echo $expireReminderInfo2['action'] ?>' data-action ="<?php echo $expireReminderInfo2['action_id'] ?>" data-customer='<?php echo $expireReminderInfo2['id'] ?>' data-service='<?php echo $expireReminderInfo2['service_id'] ?>' data-servicetype="<?php echo $expireReminderInfo2["service_type"] ?>" data-servicetype="<?php echo $expireReminderInfo2["service_type"] ?>" style="float: right">PDF <i class="fa fa-file-pdf-o"></i></a>                                                        
 													<a class="SendMailToCust btn btn-default btn-xs btn-info" title="Generate" data-letterType='<?php echo $expireReminderInfo2['action'] ?>' data-customer='<?php echo $expireReminderInfo2['id'] ?>' data-service='<?php echo $expireReminderInfo2['service_id'] ?>' data-action ="<?php echo $expireReminderInfo2['action_id'] ?>" data-servicetype="<?php echo $expireReminderInfo2["service_type"] ?>" style="float: right; margin-right: 10px">Generate <i class="fa fa-envelope-o"></i></a>
 													<?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
-														<a class="deleteLetter btn btn-default btn-xs btn-info" title="Generate" data-customer='<?php echo $expireReminderInfo2['id'] ?>' data-service='<?php echo $expireReminderInfo2['service_id'] ?>' data-action ="<?php echo $expireReminderInfo2['action_id'] ?>" style="float: right; margin-right: 10px">Delete <i class="fa fa-trash"></i></a>
+														<a class="deleteLetter btn btn-default btn-xs btn-info" title="Remove from this page" data-customer='<?php echo $expireReminderInfo2['id'] ?>' data-service='<?php echo $expireReminderInfo2['service_id'] ?>' data-action ="<?php echo $expireReminderInfo2['action_id'] ?>" style="float: right; margin-right: 10px">Delete <i class="fa fa-trash"></i></a>
 													<?php } ?>
 													<p class="desc text-primary customerName" data-id="<?php echo $expireReminderInfo2['id'] ?>" title="Action item description" > <?php echo $expireReminderInfo2['customer_name'] ?></p>
 													<p class="other-info">
@@ -1400,7 +1400,7 @@
 													<a class="PreviewPDF btn btn-default btn-xs btn-info" title="Generate" data-letterType='<?php echo $expireInfo['action'] ?>' data-action ="<?php echo $expireInfo['action_id'] ?>" data-customer='<?php echo $expireInfo['id'] ?>' data-service='<?php echo $expireInfo['service_id'] ?>' data-servicetype="<?php echo $expireInfo["service_type"] ?>" data-servicetype="<?php echo $expireInfo["service_type"] ?>" style="float: right">PDF <i class="fa fa-file-pdf-o"></i></a>                                                        
 													<a class="SendMailToCust btn btn-default btn-xs btn-info" title="Generate" data-letterType='<?php echo $expireInfo['action'] ?>' data-customer='<?php echo $expireInfo['id'] ?>' data-service='<?php echo $expireInfo['service_id'] ?>' data-action ="<?php echo $expireInfo['action_id'] ?>" data-servicetype="<?php echo $expireInfo["service_type"] ?>" style="float: right; margin-right: 10px">Generate <i class="fa fa-envelope-o"></i></a>
 													<?php if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff()) { ?>
-														<a class="deleteLetter btn btn-default btn-xs btn-info" title="Generate" data-customer='<?php echo $expireInfo['id'] ?>' data-service='<?php echo $expireInfo['service_id'] ?>' data-action ="<?php echo $expireInfo['action_id'] ?>" style="float: right; margin-right: 10px">Delete <i class="fa fa-trash"></i></a>
+														<a class="deleteLetter btn btn-default btn-xs btn-info" title="Remove from this page" data-customer='<?php echo $expireInfo['id'] ?>' data-service='<?php echo $expireInfo['service_id'] ?>' data-action ="<?php echo $expireInfo['action_id'] ?>" style="float: right; margin-right: 10px">Delete <i class="fa fa-trash"></i></a>
 													<?php } ?>
 													<p class="desc text-primary customerName" data-id="<?php echo $expireInfo['id'] ?>" title="Action item description" > <?php echo $expireInfo['customer_name'] ?></p>
 													<p class="other-info">
@@ -2008,11 +2008,17 @@
             }
         })();
 
-        $(".deleteLetter").click(function () {
+        $(".deleteLetter").click(function (e) {
+            e.preventDefault();
             var rowid = $(this).attr("data-action");
-            var url = 'addComments.php'
+            if (!confirm("Are you sure you want to remove this letter from this page?\n\nNote: This will remove it only from this page. Its entry will remain intact in Letters & Actions.")) {
+                return false;
+            }
+            var url = 'addComments.php';
             var form = $('<form action="' + url + '" method="post">' +
                     '<input type="hidden" name="rowid" value="' + rowid + '" />' +
+                    '<input type="hidden" name="page" value="intimationLetter" />' +
+                    '<input type="hidden" name="intimation_delete" value="1" />' +
                     '</form>');
             $('body').append(form);
             form.submit();

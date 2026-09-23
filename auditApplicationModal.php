@@ -1407,22 +1407,39 @@ $('.addApplication').click(function (e) {
             });
         });
 
-        $('.editAuditApp').click(function () {
-            var page = $(this).attr("data-page");
-            var customerid = $(this).attr('data-customer');
+        $(document).on('click', '.editAuditApp', function (e) {
+            e.preventDefault();
+            var $btn = $(this);
+            var $icon = $btn.find('i');
+            var origClass = $icon.attr('class') || 'fa fa-pencil-square fa-lg';
+            $icon.attr('class', 'fa fa-spinner fa-spin fa-lg');
+            $btn.css('pointer-events', 'none');
+
+            function restoreAppBtn() {
+                $icon.attr('class', origClass);
+                $btn.css('pointer-events', '');
+            }
+
+            var page = $btn.attr("data-page");
+            var customerid = $btn.attr('data-customer');
             $.ajax({
                 url: "getAuditApplication.php",
                 type: "GET",
                 dataType: "json",
                 data: {
-                    auditAppId: $(this).attr('data-audit'),
+                    auditAppId: $btn.attr('data-audit'),
                 },
                 success: function (data)
                 {
-//                    alert(data); 
-                    $('.customerId').val(customerid);
-                    $('.auditId').val(data[0]['audit_id']);
-                    $('.serviceId').val(data[0]['service_id'] || '');
+                    restoreAppBtn();
+                    if (!data || !data[0]) {
+                        alert("Could not load application details.");
+                        return;
+                    }
+                    try {
+                        $('.customerId').val(customerid);
+                        $('.auditId').val(data[0]['audit_id']);
+                        $('.serviceId').val(data[0]['service_id'] || '');
                     $('.unisvcId').val(data[0]['uni_svc_id'] || '');
                     $('#revConflictError').hide();
                     loadAssignedAuditorsForConflictCheck(customerid, data[0]['service_id'] || data[0]['uni_svc_id']);
@@ -1558,10 +1575,12 @@ if (data[0]['applicationfor4'] === 'Yes') {
                         $('.reviewer_name').val("");
                     }
                     $('.anyComment').val("");
-                    var a = data[0]['certification'].split(',');
-                    var b = data[0]['accereditation_requirement'].split(',');
-                    $('.certificationStandard').val(a[0]).trigger('change');
-                    $('.accreditation').val(b[0]);
+                    var rawCert = data[0]['certification'] || '';
+                    var rawAcc = data[0]['accereditation_requirement'] || '';
+                    var a = rawCert ? rawCert.split(',') : [];
+                    var b = rawAcc ? rawAcc.split(',') : [];
+                    $('.certificationStandard').val(a[0] || '').trigger('change');
+                    $('.accreditation').val(b[0] || '');
                     if (a.length > 1) {
                         for (let i = 1; i < a.length; i++) {
                             const newSection1 = $('.basiccert').first().clone();
@@ -1573,48 +1592,49 @@ if (data[0]['applicationfor4'] === 'Yes') {
                         }
                     }
 
-                    if (data[1]["iaf_type"] == "customize") {
+                    if (data[1] && data[1]["iaf_type"] == "customize") {
                         $(".customizeiafnace").val("customizecodes");
                         $('.iaf_code').attr("disabled", true);
                         $('.nace-code').attr("disabled", true);
                         $(".customizeiaf_code").val(data[1]["iaf_code"]);
                         $(".customize_nace").val(data[1]["nace_codes"]);
                         $(".newIafToApplication").show();
-                    } else if (data[1]["iaf_type"] == "basic") {
+                    } else if (data[1] && data[1]["iaf_type"] == "basic") {
                         //alert("hi");
                         $('.newNaceCoderow').empty();
-var x = data[1]['iaf_code'].split(',');
-var y = data[1]['nace_codes'].split(',');
-var z = data[1]['nace_class'].split(',');
-$('.iaf_code').val(x[0]).trigger('change');
-setTimeout(function() {
-  $('.nace-code').val(y[0]).trigger('change');
-    setTimeout(function() {
-    $('.nace-class').val(z[0]).trigger('change');
-  }, 2000);
-}, 2000);
-if (x.length > 1) {
-    for (let i = 1; i < x.length; i++) {
-        // Clone the existing section
-        const newSection = $('.basicIaf').first().clone();
-        newSection.append('<a class="removeAddNewSection" style="" title="Remove"><i class="fa fa-remove"></i></a>');
+                        var x = (data[1]['iaf_code'] || '').split(',');
+                        var y = (data[1]['nace_codes'] || '').split(',');
+                        var z = (data[1]['nace_class'] || '').split(',');
+                        $('.iaf_code').val(x[0] || '').trigger('change');
+                        setTimeout(function() {
+                          $('.nace-code').val(y[0] || '').trigger('change');
+                            setTimeout(function() {
+                            $('.nace-class').val(z[0] || '').trigger('change');
+                          }, 2000);
+                        }, 2000);
+                        if (x.length > 1) {
+                            for (let i = 1; i < x.length; i++) {
+                                // Clone the existing section
+                                const newSection = $('.basicIaf').first().clone();
+                                newSection.append('<a class="removeAddNewSection" style="" title="Remove"><i class="fa fa-remove"></i></a>');
 
-        // Remove any existing values from cloned section
-        newSection.find('select').val('');
+                                // Remove any existing values from cloned section
+                                newSection.find('select').val('');
 
-        // Append the cloned section to the parent container
-        $('.addNewSection').parent().append(newSection);
+                                // Append the cloned section to the parent container
+                                $('.addNewSection').parent().append(newSection);
 
-        // Populate the values in the cloned section
-        newSection.find('.iaf_code').val(x[i]).trigger('change');
-        setTimeout(function() {
-            newSection.find('.nace-code').val(y[i]).trigger('change');
-            setTimeout(function() {
-                newSection.find('.nace-class').val(z[i]).trigger('change');;
-            }, 2500);
-        }, 2500);
-    }
-}}
+                                // Populate the values in the cloned section
+                                newSection.find('.iaf_code').val(x[i]).trigger('change');
+                                setTimeout(function() {
+                                    newSection.find('.nace-code').val(y[i]).trigger('change');
+                                    setTimeout(function() {
+                                        newSection.find('.nace-class').val(z[i]).trigger('change');;
+                                    }, 2500);
+                                }, 2500);
+                            }
+                        }
+                    }
                     $(".pageview").val(page);
                     $(".nacecode").trigger('change');
                     $(".proposed-scope").trigger('change');
@@ -1623,10 +1643,15 @@ if (x.length > 1) {
 //                    $('textarea').trigger('change');
 //                    $('.Generate').hide();
                     $('#auditApplication').modal('show');
+                    } catch (e) {
+                        console.error("Error setting edit Audit Application fields:", e);
+                        $('#auditApplication').modal('show');
+                    }
                 },
                 error: function (data, status, err)
                 {
-//                    alert(status);
+                    restoreAppBtn();
+                    alert("Error loading application: " + (status || err));
                 }
             });
         });

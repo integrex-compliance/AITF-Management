@@ -1,8 +1,5 @@
 <?php
 header('Content-Type: application/json');
-
-require_once __DIR__ . '/include/session_helper.php';
-aitf_start_session();
 require_once __DIR__ . '/dbConnect.php';
 require_once __DIR__ . '/include/reviewer_conflict_helper.php';
 

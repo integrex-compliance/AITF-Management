@@ -11,17 +11,29 @@ if (!isset($_SESSION['login_activity_id']) || empty($_SESSION['login_activity_id
     exit;
 }
 
+$userId = isset($_SESSION['id']) ? (int)$_SESSION['id'] : 0;
+$activityId = (int)$_SESSION['login_activity_id'];
+session_write_close();
+
 include_once './dbConnect.php';
 
 try {
-    // Ensure table exists for screen time tracking
-    $db->exec("CREATE TABLE IF NOT EXISTS user_daily_screen_time (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT,
-        record_date DATE,
-        total_seconds INT DEFAULT 0,
-        UNIQUE KEY user_date (user_id, record_date)
-    )");
+    static $screenTimeTableChecked = false;
+    if (!$screenTimeTableChecked) {
+        $screenTimeTableChecked = true;
+        try {
+            $chkScreen = $db->query("SHOW TABLES LIKE 'user_daily_screen_time'");
+            if (!$chkScreen || $chkScreen->rowCount() === 0) {
+                $db->exec("CREATE TABLE IF NOT EXISTS user_daily_screen_time (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT,
+                    record_date DATE,
+                    total_seconds INT DEFAULT 0,
+                    UNIQUE KEY user_date (user_id, record_date)
+                )");
+            }
+        } catch (Exception $e) {}
+    }
 
     $isActive = true;
     $delta = 0;
@@ -44,9 +56,6 @@ try {
     
     // Safety check so users can't artificially inflate time drastically in one ping
     if ($delta > 60) $delta = 60;
-    
-    $userId = isset($_SESSION['id']) ? (int)$_SESSION['id'] : 0;
-    $activityId = (int)$_SESSION['login_activity_id'];
 
     // If userId is 0 (e.g. Director), try to fetch the actual user_id from the login_activity record
     if ($userId <= 0 && $activityId > 0) {

@@ -993,11 +993,19 @@ $(".clientreferance").click(function () {
 
     $(document).ready(function () {
         //        code by Pallavi to add control format 1
-        $('.createControlFormat1').click(function () {
-            $('.control-format-service').val($(this).attr('data-service'));
-            $('.control-format-customer').val($(this).attr('data-customer'));
-            
+        $(document).on('click', '.createControlFormat1', function () {
+            var $btn = $(this);
+            var originalHtml = $btn.html();
+            $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i>');
+            var restoreBtn = function() {
+                $btn.prop('disabled', false).html(originalHtml);
+            };
+
             var customerId = $(this).attr('data-customer');
+            var serviceId = $(this).attr('data-service');
+
+            $('.control-format-service').val(serviceId);
+            $('.control-format-customer').val(customerId);
             
             $.ajax({
                 url: "getClientInfo.php",
@@ -1005,254 +1013,261 @@ $(".clientreferance").click(function () {
                 dataType: "json",
                 data: {
                     cfcustomer_id: customerId,
-                    cfservice_id: $(this).attr('data-service'),
+                    cfservice_id: serviceId,
                 },
                 success: function (data)
                 {
-                    $('.controlFormat1ClientName').val(data[0]['customer_name']);
-                    $('.controlFormat1Address').val(data[0]['address']);
-                    $('.controlFormat1CertDate').val(moment(data[2]['revDatecdc']).format('DD.MM.YYYY'));
-                    
-                    // Fetch certificate numbers for this customer
-                    console.log('Fetching certificates for customer ID:', customerId);
-                    $.ajax({
-                        url: "getCertificateNumbers.php",
-                        type: "GET",
-                        dataType: "json",
-                        data: {
-                            customer_id: customerId
-                        },
-                        success: function(certData) {
-                            console.log('Certificate data received:', certData);
-                            $('#certificateNumbersContainer').empty();
-                            
-                            if (certData.success && certData.count > 0) {
-                                console.log('Creating', certData.count, 'certificate fields');
-                                // Create a field for each certificate
-                                certData.certificates.forEach(function(cert, index) {
-                                    console.log('Adding certificate field', (index + 1), ':', cert.certificate_no);
-                                    var certField = '<div class="form-group float-label-control" style="margin-bottom: 10px;">' +
-                                        '<label>Certificate No. ' + (index + 1) + ':</label>' +
-                                        '<input type="text" class="controlFormat1RefNo" name="controlFormat1RefNo[]" ' +
-                                        'placeholder="Certificate No.:" value="' + cert.certificate_no + '" required>' +
-                                        '</div>';
-                                    $('#certificateNumbersContainer').append(certField);
-                                });
-                            } else {
-                                console.log('No certificates found, using fallback with certification_no:', data[0]['certification_no']);
-                                // Fallback: Check if certification_no has comma-separated values
-                                var certNo = data[0]['certification_no'] || '';
-                                if (certNo && certNo.indexOf(',') !== -1) {
-                                    // Multiple certificates separated by comma
-                                    var certNumbers = certNo.split(',');
-                                    console.log('Found', certNumbers.length, 'comma-separated certificates');
-                                    certNumbers.forEach(function(cert, index) {
-                                        cert = cert.trim();
-                                        if (cert) {
-                                            var certField = '<div class="form-group float-label-control" style="margin-bottom: 10px;">' +
-                                                '<label>Certificate No. ' + (index + 1) + ':</label>' +
-                                                '<input type="text" class="controlFormat1RefNo" name="controlFormat1RefNo[]" ' +
-                                                'placeholder="Certificate No.:" value="' + cert + '" required>' +
-                                                '</div>';
-                                            $('#certificateNumbersContainer').append(certField);
-                                        }
+                    try {
+                        if (!data || !data[0]) {
+                            restoreBtn();
+                            alert("Data not found");
+                            return;
+                        }
+                        $('.controlFormat1ClientName').val(data[0]['customer_name'] || '');
+                        $('.controlFormat1Address').val(data[0]['address'] || '');
+                        var certDate = (data[2] && data[2]['revDatecdc']) ? moment(data[2]['revDatecdc']).format('DD.MM.YYYY') : '';
+                        $('.controlFormat1CertDate').val(certDate);
+                        
+                        $.ajax({
+                            url: "getCertificateNumbers.php",
+                            type: "GET",
+                            dataType: "json",
+                            data: {
+                                customer_id: customerId
+                            },
+                            success: function(certData) {
+                                $('#certificateNumbersContainer').empty();
+                                
+                                if (certData && certData.success && certData.count > 0) {
+                                    certData.certificates.forEach(function(cert, index) {
+                                        var certField = '<div class="form-group float-label-control" style="margin-bottom: 10px;">' +
+                                            '<label>Certificate No. ' + (index + 1) + ':</label>' +
+                                            '<input type="text" class="controlFormat1RefNo" name="controlFormat1RefNo[]" ' +
+                                            'placeholder="Certificate No.:" value="' + cert.certificate_no + '" required>' +
+                                            '</div>';
+                                        $('#certificateNumbersContainer').append(certField);
                                     });
                                 } else {
-                                    // Single certificate
-                                    var certField = '<div class="form-group float-label-control">' +
-                                        '<label>Certificate No.:</label>' +
-                                        '<input type="text" class="controlFormat1RefNo" name="controlFormat1RefNo" ' +
-                                        'placeholder="Certificate No.:" value="' + certNo + '" required>' +
-                                        '</div>';
-                                    $('#certificateNumbersContainer').append(certField);
+                                    var certNo = data[0]['certification_no'] || '';
+                                    if (certNo && certNo.indexOf(',') !== -1) {
+                                        var certNumbers = certNo.split(',');
+                                        certNumbers.forEach(function(cert, index) {
+                                            cert = cert.trim();
+                                            if (cert) {
+                                                var certField = '<div class="form-group float-label-control" style="margin-bottom: 10px;">' +
+                                                    '<label>Certificate No. ' + (index + 1) + ':</label>' +
+                                                    '<input type="text" class="controlFormat1RefNo" name="controlFormat1RefNo[]" ' +
+                                                    'placeholder="Certificate No.:" value="' + cert + '" required>' +
+                                                    '</div>';
+                                                $('#certificateNumbersContainer').append(certField);
+                                            }
+                                        });
+                                    } else {
+                                        var certField = '<div class="form-group float-label-control">' +
+                                            '<label>Certificate No.:</label>' +
+                                            '<input type="text" class="controlFormat1RefNo" name="controlFormat1RefNo" ' +
+                                            'placeholder="Certificate No.:" value="' + certNo + '" required>' +
+                                            '</div>';
+                                        $('#certificateNumbersContainer').append(certField);
+                                    }
                                 }
+                                $('input[type="text"]').trigger('change');
+                            },
+                            error: function() {
+                                $('#certificateNumbersContainer').empty();
+                                var certField = '<div class="form-group float-label-control">' +
+                                    '<label>Certificate No.:</label>' +
+                                    '<input type="text" class="controlFormat1RefNo" name="controlFormat1RefNo" ' +
+                                    'placeholder="Certificate No.:" value="' + (data[0]['certification_no'] || '') + '" required>' +
+                                    '</div>';
+                                $('#certificateNumbersContainer').append(certField);
+                                $('input[type="text"]').trigger('change');
                             }
-                            
-                            $('input[type="text"]').trigger('change');
-                        },
-                        error: function(xhr, status, error) {
-                            console.error('Error fetching certificates:', status, error);
-                            console.error('Response:', xhr.responseText);
-                            // Fallback to single field on error
-                            $('#certificateNumbersContainer').empty();
-                            var certField = '<div class="form-group float-label-control">' +
-                                '<label>Certificate No.:</label>' +
-                                '<input type="text" class="controlFormat1RefNo" name="controlFormat1RefNo" ' +
-                                'placeholder="Certificate No.:" value="' + (data[0]['certification_no'] || '') + '" required>' +
-                                '</div>';
-                            $('#certificateNumbersContainer').append(certField);
-                            $('input[type="text"]').trigger('change');
-                        }
-                    });
-                    
-                    $('#controlFormat1').modal('show');
+                        });
+                        
+                        $('#controlFormat1').modal('show');
+                    } catch (e) {
+                        console.error("Error in createControlFormat1:", e);
+                    } finally {
+                        restoreBtn();
+                    }
                 },
                 error: function (data, status, err)
                 {
+                    restoreBtn();
                     alert(status);
                 }
             });
         });
 
         //code need to be reconstruct by Pallavi
-        $('.editControlFormat1').click(function () {
+        $(document).on('click', '.editControlFormat1', function () {
+            var $btn = $(this);
+            var originalHtml = $btn.html();
+            $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i>');
+            var restoreBtn = function() {
+                $btn.prop('disabled', false).html(originalHtml);
+            };
+
             var customerId = $(this).attr('data-customer');
+            var serviceId = $(this).attr('data-service');
+            var rowId = $(this).attr('data-row-id');
             
             $.ajax({
                 url: "contractDetails.php",
                 type: "GET",
                 dataType: "json",
                 data: {
-                    control_Id: $(this).attr('data-row-id'),
-                    serviceId: $(this).attr('data-service'),
+                    control_Id: rowId,
+                    serviceId: serviceId,
                 },
                 success: function (data)
                 {
-//                    alert(data);
-                    $('.control-format-id').val(data[0]['control_id']);
-                    $('.control-format-customer').val(data[0]['customer_id']);
-                    $('.control-format-service').val(data[0]['caservice_id']);
-                    $('.controlFormat1ClientName').val(data[0]['control_client']);
-                    $('.controlformatcliref').val(data[0]['cert_type']);
-                    $('.controlFormat1Address').val(data[0]['control_address']);
-                    
-                    // Fetch certificate numbers for this customer
-                    var actualCustomerId = customerId || data[0]['customer_id'];
-                    $.ajax({
-                        url: "getCertificateNumbers.php",
-                        type: "GET",
-                        dataType: "json",
-                        data: {
-                            customer_id: actualCustomerId
-                        },
-                        success: function(certData) {
-                            $('#certificateNumbersContainer').empty();
-                            
-                            if (certData.success && certData.count > 0) {
-                                // Create a field for each certificate
-                                certData.certificates.forEach(function(cert, index) {
-                                    var certField = '<div class="form-group float-label-control" style="margin-bottom: 10px;">' +
-                                        '<label>Certificate No. ' + (index + 1) + ':</label>' +
-                                        '<input type="text" class="controlFormat1RefNo" name="controlFormat1RefNo[]" ' +
-                                        'placeholder="Certificate No.:" value="' + cert.certificate_no + '" required>' +
-                                        '</div>';
-                                    $('#certificateNumbersContainer').append(certField);
-                                });
-                            } else {
-                                // Fallback: Check if control_ref_no has comma-separated values
-                                var certNo = data[0]['control_ref_no'] || '';
-                                if (certNo && certNo.indexOf(',') !== -1) {
-                                    // Multiple certificates separated by comma
-                                    var certNumbers = certNo.split(',');
-                                    certNumbers.forEach(function(cert, index) {
-                                        cert = cert.trim();
-                                        if (cert) {
-                                            var certField = '<div class="form-group float-label-control" style="margin-bottom: 10px;">' +
-                                                '<label>Certificate No. ' + (index + 1) + ':</label>' +
-                                                '<input type="text" class="controlFormat1RefNo" name="controlFormat1RefNo[]" ' +
-                                                'placeholder="Certificate No.:" value="' + cert + '" required>' +
-                                                '</div>';
-                                            $('#certificateNumbersContainer').append(certField);
-                                        }
+                    try {
+                        if (!data || !data[0]) {
+                            restoreBtn();
+                            alert("Data not found");
+                            return;
+                        }
+                        $('.control-format-id').val(data[0]['control_id'] || '');
+                        $('.control-format-customer').val(data[0]['customer_id'] || '');
+                        $('.control-format-service').val(data[0]['caservice_id'] || '');
+                        $('.controlFormat1ClientName').val(data[0]['control_client'] || '');
+                        $('.controlformatcliref').val(data[0]['cert_type'] || '');
+                        $('.controlFormat1Address').val(data[0]['control_address'] || '');
+                        
+                        var actualCustomerId = customerId || data[0]['customer_id'];
+                        $.ajax({
+                            url: "getCertificateNumbers.php",
+                            type: "GET",
+                            dataType: "json",
+                            data: {
+                                customer_id: actualCustomerId
+                            },
+                            success: function(certData) {
+                                $('#certificateNumbersContainer').empty();
+                                
+                                if (certData && certData.success && certData.count > 0) {
+                                    certData.certificates.forEach(function(cert, index) {
+                                        var certField = '<div class="form-group float-label-control" style="margin-bottom: 10px;">' +
+                                            '<label>Certificate No. ' + (index + 1) + ':</label>' +
+                                            '<input type="text" class="controlFormat1RefNo" name="controlFormat1RefNo[]" ' +
+                                            'placeholder="Certificate No.:" value="' + cert.certificate_no + '" required>' +
+                                            '</div>';
+                                        $('#certificateNumbersContainer').append(certField);
                                     });
                                 } else {
-                                    // Single certificate
-                                    var certField = '<div class="form-group float-label-control">' +
-                                        '<label>Certificate No.:</label>' +
-                                        '<input type="text" class="controlFormat1RefNo" name="controlFormat1RefNo" ' +
-                                        'placeholder="Certificate No.:" value="' + certNo + '" required>' +
-                                        '</div>';
-                                    $('#certificateNumbersContainer').append(certField);
+                                    var certNo = data[0]['control_ref_no'] || '';
+                                    if (certNo && certNo.indexOf(',') !== -1) {
+                                        var certNumbers = certNo.split(',');
+                                        certNumbers.forEach(function(cert, index) {
+                                            cert = cert.trim();
+                                            if (cert) {
+                                                var certField = '<div class="form-group float-label-control" style="margin-bottom: 10px;">' +
+                                                    '<label>Certificate No. ' + (index + 1) + ':</label>' +
+                                                    '<input type="text" class="controlFormat1RefNo" name="controlFormat1RefNo[]" ' +
+                                                    'placeholder="Certificate No.:" value="' + cert + '" required>' +
+                                                    '</div>';
+                                                $('#certificateNumbersContainer').append(certField);
+                                            }
+                                        });
+                                    } else {
+                                        var certField = '<div class="form-group float-label-control">' +
+                                            '<label>Certificate No.:</label>' +
+                                            '<input type="text" class="controlFormat1RefNo" name="controlFormat1RefNo" ' +
+                                            'placeholder="Certificate No.:" value="' + certNo + '" required>' +
+                                            '</div>';
+                                        $('#certificateNumbersContainer').append(certField);
+                                    }
                                 }
+                                $('input[type="text"]').trigger('change');
+                            },
+                            error: function() {
+                                $('#certificateNumbersContainer').empty();
+                                var certField = '<div class="form-group float-label-control">' +
+                                    '<label>Certificate No.:</label>' +
+                                    '<input type="text" class="controlFormat1RefNo" name="controlFormat1RefNo" ' +
+                                    'placeholder="Certificate No.:" value="' + (data[0]['control_ref_no'] || '') + '" required>' +
+                                    '</div>';
+                                $('#certificateNumbersContainer').append(certField);
+                                $('input[type="text"]').trigger('change');
                             }
-                            
-                            $('input[type="text"]').trigger('change');
-                        },
-                        error: function() {
-                            // Fallback to single field on error
-                            $('#certificateNumbersContainer').empty();
-                            var certField = '<div class="form-group float-label-control">' +
-                                '<label>Certificate No.:</label>' +
-                                '<input type="text" class="controlFormat1RefNo" name="controlFormat1RefNo" ' +
-                                'placeholder="Certificate No.:" value="' + (data[0]['control_ref_no'] || '') + '" required>' +
-                                '</div>';
-                            $('#certificateNumbersContainer').append(certField);
-                            $('input[type="text"]').trigger('change');
-                        }
-                    });
-//                    $('.controlformatcliref').val(data[0]['cert_type']);
-                    if(data[0]['cert_type']=="Initial Certification")
-                    {
-                        $('input:radio[name=clientreferance][value="Initial Certification"]').click();
-                    }
-                    else if(data[0]['cert_type']=="Recertification")
-                    {
-                        $('input:radio[name=clientreferance][value="Recertification"]').click();
-                    }
-                    else
-                    {
-                        $('input:radio[name=clientreferance][value="Other"]').click();
-                        $('.Othertext').val(data[0]['cert_type']);
-                    }
-                    if (data[0]['control_date'] == "" || data[0]['control_date'] == null)
-                        $control_date = "";
-                    else
-                        $control_date = moment(data[0]['control_date']).format('DD.MM.YYYY');
-                    $('.controlFormat1CertDate').val($control_date);
-                    
-                    $('.editdiv').empty();
-                    for (var key in data[1]) {
-                        var srno = data[1][key]['control_sr'];
-                        if (srno != null && srno != "" && srno == 1) {
-                            $('.editdiv').append('<div class="row" ><div class="col-sm-12"><strong>' + data[1][key]['control_title'] + '</strong></div></div>');
+                        });
+
+                        if (data[0]['cert_type'] == "Initial Certification") {
+                            $('input:radio[name=clientreferance][value="Initial Certification"]').click();
+                        } else if (data[0]['cert_type'] == "Recertification") {
+                            $('input:radio[name=clientreferance][value="Recertification"]').click();
+                        } else {
+                            $('input:radio[name=clientreferance][value="Other"]').click();
+                            $('.Othertext').val(data[0]['cert_type'] || '');
                         }
 
-                        $('.editdiv').append('<div class="row" >\n\
-                                <div class="col-sm-12">\n\
-                                    <span>' + data[1][key]['control_question'] + '</span>\n\
-                                </div>\n\
-                                <input type="hidden" class="hiddenQuestion" name="hiddenQuestion" value="' + data[1][key]['control_question'] + '">\n\
-                                <input type="hidden" class="hiddensrno" name="hiddensrno" value="' + data[1][key]['control_sr'] + '">\n\
-                                <input type="hidden" class="hiddentitle" name="hiddentitle" value="' + data[1][key]['control_title'] + '">\n\
-                            </div>\n\
-                            <div class="row" style="padding-top: 12px" >\n\
-                                <div class="col-xs-3 form-group">\n\
-                                    <label class="dispClass">Comments</label>\n\
-                                    <select name="controlFormat1Comment" class="form-control controlFormat1Comment" id="controlFormat1Comment" value="' + data[1][key]['comments'] + '" >\n\
-                                        <option value="' + data[1][key]['comments'] + '">' + data[1][key]['comments'] + '</option>\n\
-                                        <option value="Yes">Yes</option>\n\
-                                        <option value="No">No</option>\n\
-                                    </select>\n\
-                                </div>\n\
-                                <div class="col-xs-3 form-group">\n\
-                                    <label class="dispClass">Risk, if any</label>\n\
-                                    <select name="controlFormat1Risk" class="form-control controlFormat1Risk" id="controlFormat1Risk" >\n\
-                                        <option value="' + data[1][key]['risks'] + '">' + data[1][key]['risks'] + '</option>\n\
-                                        <option value="Yes">Yes</option>\n\
-                                        <option value="No">No</option>\n\
-                                    </select>\n\
-                                </div>\n\
-                                <div class="col-sm-3 form-group ">\n\
-                                    <label class="dispClass">Degree of Risk</label>\n\
-                                    <select name="controlFormat1RiskDegree" class="form-control controlFormat1RiskDegree" id="controlFormat1RiskDegree" >\n\
-                                        <option value="' + data[1][key]['risk_degree'] + '">' + data[1][key]['risk_degree'] + '</option>\n\
-                                        <option value="High">High</option>\n\
-                                        <option value="Low">Low</option>\n\
-                                    </select>\n\
-                                </div>\n\
-                                <div class="col-sm-3 form-group ">\n\
-                                    <label class="dispClass">Controls</label>\n\
-                                    <input type="text" class="controlFormat1Controls" id="controlFormat1Controls" name="controlFormat1Controls" value="' + data[1][key]['controls'] + '" placeholder="Controls">\n\
-                                </div>\n\
-                            </div>');
-                    }                    
-                    $('input[type="text"]').trigger('change');
-//                    $('textarea').trigger('change');
-                    $('.addControlFormat1Pdf').hide();
-                    $('#controlFormat1').modal('show');
+                        var $control_date = "";
+                        if (data[0]['control_date'])
+                            $control_date = moment(data[0]['control_date']).format('DD.MM.YYYY');
+                        $('.controlFormat1CertDate').val($control_date);
+                        
+                        $('.editdiv').empty();
+                        if (data[1]) {
+                            for (var key in data[1]) {
+                                var srno = data[1][key]['control_sr'];
+                                if (srno != null && srno != "" && srno == 1) {
+                                    $('.editdiv').append('<div class="row" ><div class="col-sm-12"><strong>' + (data[1][key]['control_title'] || '') + '</strong></div></div>');
+                                }
+
+                                $('.editdiv').append('<div class="row" >\n\
+                                        <div class="col-sm-12">\n\
+                                            <span>' + (data[1][key]['control_question'] || '') + '</span>\n\
+                                        </div>\n\
+                                        <input type="hidden" class="hiddenQuestion" name="hiddenQuestion" value="' + (data[1][key]['control_question'] || '') + '">\n\
+                                        <input type="hidden" class="hiddensrno" name="hiddensrno" value="' + (data[1][key]['control_sr'] || '') + '">\n\
+                                        <input type="hidden" class="hiddentitle" name="hiddentitle" value="' + (data[1][key]['control_title'] || '') + '">\n\
+                                    </div>\n\
+                                    <div class="row" style="padding-top: 12px" >\n\
+                                        <div class="col-xs-3 form-group">\n\
+                                            <label class="dispClass">Comments</label>\n\
+                                            <select name="controlFormat1Comment" class="form-control controlFormat1Comment" id="controlFormat1Comment" value="' + (data[1][key]['comments'] || '') + '" >\n\
+                                                <option value="' + (data[1][key]['comments'] || '') + '">' + (data[1][key]['comments'] || '') + '</option>\n\
+                                                <option value="Yes">Yes</option>\n\
+                                                <option value="No">No</option>\n\
+                                            </select>\n\
+                                        </div>\n\
+                                        <div class="col-xs-3 form-group">\n\
+                                            <label class="dispClass">Risk, if any</label>\n\
+                                            <select name="controlFormat1Risk" class="form-control controlFormat1Risk" id="controlFormat1Risk" >\n\
+                                                <option value="' + (data[1][key]['risks'] || '') + '">' + (data[1][key]['risks'] || '') + '</option>\n\
+                                                <option value="Yes">Yes</option>\n\
+                                                <option value="No">No</option>\n\
+                                            </select>\n\
+                                        </div>\n\
+                                        <div class="col-sm-3 form-group ">\n\
+                                            <label class="dispClass">Degree of Risk</label>\n\
+                                            <select name="controlFormat1RiskDegree" class="form-control controlFormat1RiskDegree" id="controlFormat1RiskDegree" >\n\
+                                                <option value="' + (data[1][key]['risk_degree'] || '') + '">' + (data[1][key]['risk_degree'] || '') + '</option>\n\
+                                                <option value="High">High</option>\n\
+                                                <option value="Low">Low</option>\n\
+                                            </select>\n\
+                                        </div>\n\
+                                        <div class="col-sm-3 form-group ">\n\
+                                            <label class="dispClass">Controls</label>\n\
+                                            <input type="text" class="controlFormat1Controls" id="controlFormat1Controls" name="controlFormat1Controls" value="' + (data[1][key]['controls'] || '') + '" placeholder="Controls">\n\
+                                        </div>\n\
+                                    </div>');
+                            }
+                        }                    
+                        $('input[type="text"]').trigger('change');
+                        $('.addControlFormat1Pdf').hide();
+                        $('#controlFormat1').modal('show');
+                    } catch (e) {
+                        console.error("Error in editControlFormat1:", e);
+                    } finally {
+                        restoreBtn();
+                    }
                 },
                 error: function (data, status, err)
                 {
+                    restoreBtn();
                     alert(status);
                 }
             });

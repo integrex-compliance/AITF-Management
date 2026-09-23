@@ -5,7 +5,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-session_start();
+header('Content-Type: application/json; charset=utf-8');
 include_once './dbConnect.php';
 date_default_timezone_set('Asia/Kolkata');
 
@@ -101,7 +101,7 @@ if(isset($_GET['customerId']) && !empty($_GET['customerId']) && isset($_GET['con
         
         echo json_encode(array($notificationDetails, $notificationInfo));
     } catch (Exception $ex) {
-        echo $ex;
+        echo json_encode(array(false, array(), 'error' => $ex->getMessage()));
     }
 } else if(isset ($_GET['scheduleId']) && !empty ($_GET['scheduleId']) && isset ($_GET['serviceID']) && !empty ($_GET['serviceID'])){
     try {
@@ -466,7 +466,7 @@ if(isset($_GET['customerId']) && !empty($_GET['customerId']) && isset($_GET['con
         
         echo json_encode(array($stage2IdInfo, $stage2AuditInfo));
     } catch (Exception $ex) {
-    echo $ex;    
+        echo json_encode(array(false, array(), 'error' => $ex->getMessage()));    
     }
 } else if(isset ($_GET['certificationId']) && !empty ($_GET['certificationId']) && isset ($_GET['serviceii_Id']) && !empty ($_GET['serviceii_Id']) && isset ($_GET["customerid"]) && !empty ($_GET["customerid"])){
     try {

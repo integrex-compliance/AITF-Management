@@ -481,62 +481,218 @@ foreach ($auditors as $name) {
         //                        </div>');
         //    });
         var aitfAPEligibleAuditors = [];
+        var aitfAPClientNaceClasses = [];
+        var aitfAPHasNaceClasses = false;
         var aitfAPClientDivisions = [];
         var aitfAPHasDivisions = false;
         var aitfAPAllAuditors = <?php echo json_encode($auditors, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
 
+        function isAuditorNameQualifiedAP(audName) {
+            if (!audName) return false;
+            audName = String(audName).trim();
+            if (!aitfAPHasNaceClasses && !aitfAPHasDivisions) return true;
+            var eligible = aitfAPEligibleAuditors || [];
+            for (var i = 0; i < eligible.length; i++) {
+                if (String(eligible[i].auditor_name || '').trim().toLowerCase() === audName.toLowerCase()) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function hasAtLeastOneQualifiedAuditorAP() {
+            if (!aitfAPHasNaceClasses && !aitfAPHasDivisions) {
+                return true;
+            }
+            var lead = String($('.assessmentLeadAuditor').val() || '').trim();
+            if (lead && isAuditorNameQualifiedAP(lead)) {
+                return true;
+            }
+            var anyQual = false;
+            $('.assessmentAuditors').each(function () {
+                var val = String($(this).val() || '').trim();
+                if (val && isAuditorNameQualifiedAP(val)) {
+                    anyQual = true;
+                    return false;
+                }
+            });
+            return anyQual;
+        }
+
+        function updateAuditorRowVisualStatusAP($select) {
+            var val = String($select.val() || '').trim();
+            var $parent = $select.closest('.form-group');
+            $parent.find('.auditor-qualified-badge-ap').remove();
+
+            var isLead = $select.hasClass('assessmentLeadAuditor');
+            var $chk = isLead ? $('.leadAuditor') : $select.closest('.row').find('.codeAuditor');
+
+            if (!val || val === '') {
+                $select.css({
+                    'border': '',
+                    'background-color': '',
+                    'color': '',
+                    'font-weight': '',
+                    'box-shadow': ''
+                });
+                return;
+            }
+
+            if (isAuditorNameQualifiedAP(val)) {
+                $select.css({
+                    'border': '1.5px solid #28a745',
+                    'background-color': '#ffffff',
+                    'color': '#155724',
+                    'font-weight': '600',
+                    'box-shadow': '0 0 0 1px rgba(40,167,69,0.15)'
+                });
+                $select.after('<div class="auditor-qualified-badge-ap" style="margin-top: 4px;"><span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; background: #e8f5e9; color: #1e7e34; border: 1px solid #c3e6cb;"><i class="fa fa-check-circle" style="color: #28a745;"></i> Code Qualified</span></div>');
+                if ($chk.length) {
+                    $chk.prop('checked', true);
+                }
+            } else {
+                $select.css({
+                    'border': '1px solid #ced4da',
+                    'background-color': '#ffffff',
+                    'color': '#495057',
+                    'font-weight': 'normal',
+                    'box-shadow': 'none'
+                });
+                if ($chk.length) {
+                    $chk.prop('checked', false);
+                }
+            }
+        }
+
         function renderAPLeadAuditorOptions(selectedName) {
             var html = '<option value="">Choose Lead Auditors</option>';
-            var list = aitfAPHasDivisions ? aitfAPEligibleAuditors : aitfAPAllAuditors;
+            var list = aitfAPAllAuditors || [];
             var found = false;
 
-            if (aitfAPHasDivisions && (!list || list.length === 0)) {
-                html += '<option value="" disabled>No auditors assigned to Division ' + aitfAPClientDivisions.join(', ') + ' in Master Creator</option>';
-            } else if (list && list.length > 0) {
+            if (list && list.length > 0) {
                 for (var i = 0; i < list.length; i++) {
-                    var name = list[i].auditor_name;
+                    var a = list[i];
+                    var name = a.auditor_name;
                     var isSel = (selectedName && selectedName.trim() === name.trim());
                     if (isSel) found = true;
-                    html += '<option value="' + name + '"' + (isSel ? ' selected' : '') + '>' + name + '</option>';
+                    var isQual = isAuditorNameQualifiedAP(name);
+                    var qualBadge = isQual ? ' ✓ [Qualified]' : '';
+                    var optStyle = isQual ? 'font-weight: bold; color: #155724;' : '';
+                    var optTitle = name + (a.auditor_email ? ' (' + a.auditor_email + ')' : '');
+                    html += '<option value="' + name + '"' + (isSel ? ' selected' : '') + ' title="' + optTitle + '" data-qualified="' + (isQual ? '1' : '0') + '" style="' + optStyle + '">' + name + qualBadge + '</option>';
                 }
             }
             if (selectedName && !found && selectedName.trim() !== '') {
-                html += '<option value="' + selectedName + '" selected>' + selectedName + '</option>';
+                var isQualFb = isAuditorNameQualifiedAP(selectedName);
+                var qualBadgeFb = isQualFb ? ' ✓ [Qualified]' : '';
+                html += '<option value="' + selectedName + '" selected data-qualified="' + (isQualFb ? '1' : '0') + '">' + selectedName + qualBadgeFb + '</option>';
             }
             return html;
         }
 
         function renderAPAuditorOptions(selectedName) {
-            var html = '<option value="">Choose Auditors</option>';
-            var list = aitfAPHasDivisions ? aitfAPEligibleAuditors : aitfAPAllAuditors;
-            var found = false;
+            return renderAPLeadAuditorOptions(selectedName);
+        }
 
-            if (aitfAPHasDivisions && (!list || list.length === 0)) {
-                html += '<option value="" disabled>No auditors assigned to Division ' + aitfAPClientDivisions.join(', ') + ' in Master Creator</option>';
-            } else if (list && list.length > 0) {
-                for (var i = 0; i < list.length; i++) {
-                    var name = list[i].auditor_name;
-                    var isSel = (selectedName && selectedName.trim() === name.trim());
-                    if (isSel) found = true;
-                    html += '<option value="' + name + '"' + (isSel ? ' selected' : '') + '>' + name + '</option>';
+        function renderAPAllAuditorOptions(selectedName) {
+            return renderAPLeadAuditorOptions(selectedName);
+        }
+
+        function updateDivisionAlertBannerAP(resp) {
+            var $banner = $('.auditor-division-banner-ap');
+            if (!resp || (!resp.has_nace_classes && !resp.has_divisions)) {
+                $banner.html('<div class="alert alert-info" style="padding: 10px 16px; margin-bottom: 14px; font-size: 13px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; border: 1px solid #bce8f1; background: #f4fbfd;"><div style="display: flex; align-items: center; gap: 10px;"><i class="fa fa-info-circle" style="font-size: 17px; color: #17a2b8;"></i> <span><strong>Note:</strong> No NACE Class assigned to this client in Contract Review yet. Showing all auditors.</span></div></div>').show();
+            } else if (resp.has_nace_classes) {
+                var classes = resp.client_nace_classes || [];
+                var audCount = (resp.auditors) ? resp.auditors.length : 0;
+                var classLabel = (classes.length > 1) ? 'Client NACE Classes' : 'Client NACE Class';
+                var classesBadge = '<span style="background: #16a34a; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 700; margin: 0 4px; letter-spacing: 0.3px;">' + classes.join(', ') + '</span>';
+                if (audCount === 0) {
+                    $banner.html('<div class="alert alert-warning" style="padding: 10px 16px; margin-bottom: 14px; font-size: 13px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; border: 1px solid #ffeeba; background: #fffdf5;"><div style="display: flex; align-items: center; gap: 10px;"><i class="fa fa-exclamation-triangle" style="font-size: 17px; color: #ffc107;"></i> <span><strong>No Qualified auditors found</strong> for ' + classLabel + ': ' + classesBadge + '. Please assign this NACE Class in <a href="masterCreator.php" target="_blank" style="text-decoration: underline; font-weight: bold; color: #856404;">Master Creator</a>.</span></div></div>').show();
+                } else {
+                    $banner.html('<div class="alert alert-success" style="padding: 10px 16px; margin-bottom: 14px; font-size: 13px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; background: linear-gradient(135deg, #f0fdf4 0%, #eafbf0 100%); border: 1px solid #bbf7d0; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">' +
+                        '<div style="display: flex; align-items: center; gap: 10px;">' +
+                            '<i class="fa fa-check-circle" style="font-size: 18px; color: #16a34a;"></i> ' +
+                            '<span style="color: #166534; font-weight: 500;"><strong>' + classLabel + ':</strong> ' + classesBadge + ' &mdash; Showing <strong>' + audCount + '</strong> Qualified auditors.</span>' +
+                        '</div>' +
+                        '<button type="button" class="btn btn-xs btn-view-qualified-auditors-ap" style="font-weight: 600; padding: 5px 14px; color: #15803d; background: #ffffff; border: 1.5px solid #22c55e; border-radius: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.06); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 12px;" title="Click to view qualified auditors list">' +
+                            '<i class="fa fa-eye" style="color: #16a34a;"></i> View Qualified Auditors (' + audCount + ')' +
+                        '</button>' +
+                    '</div>').show();
+                }
+            } else {
+                var divs = resp.client_divisions || [];
+                var audCount = (resp.auditors) ? resp.auditors.length : 0;
+                var divLabel = (divs.length > 1) ? 'Client Divisions' : 'Client Division';
+                var divsBadge = '<span style="background: #16a34a; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 700; margin: 0 4px; letter-spacing: 0.3px;">' + divs.join(', ') + '</span>';
+                if (audCount === 0) {
+                    $banner.html('<div class="alert alert-warning" style="padding: 10px 16px; margin-bottom: 14px; font-size: 13px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; border: 1px solid #ffeeba; background: #fffdf5;"><div style="display: flex; align-items: center; gap: 10px;"><i class="fa fa-exclamation-triangle" style="font-size: 17px; color: #ffc107;"></i> <span><strong>No Qualified auditors found</strong> for ' + divLabel + ': ' + divsBadge + '. Please assign this division in <a href="masterCreator.php" target="_blank" style="text-decoration: underline; font-weight: bold; color: #856404;">Master Creator</a>.</span></div></div>').show();
+                } else {
+                    $banner.html('<div class="alert alert-success" style="padding: 10px 16px; margin-bottom: 14px; font-size: 13px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; background: linear-gradient(135deg, #f0fdf4 0%, #eafbf0 100%); border: 1px solid #bbf7d0; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">' +
+                        '<div style="display: flex; align-items: center; gap: 10px;">' +
+                            '<i class="fa fa-check-circle" style="font-size: 18px; color: #16a34a;"></i> ' +
+                            '<span style="color: #166534; font-weight: 500;"><strong>' + divLabel + ':</strong> ' + divsBadge + ' &mdash; Showing <strong>' + audCount + '</strong> Qualified auditors.</span>' +
+                        '</div>' +
+                        '<button type="button" class="btn btn-xs btn-view-qualified-auditors-ap" style="font-weight: 600; padding: 5px 14px; color: #15803d; background: #ffffff; border: 1.5px solid #22c55e; border-radius: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.06); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 12px;" title="Click to view qualified auditors list">' +
+                            '<i class="fa fa-eye" style="color: #16a34a;"></i> View Qualified Auditors (' + audCount + ')' +
+                        '</button>' +
+                    '</div>').show();
                 }
             }
-            if (selectedName && !found && selectedName.trim() !== '') {
-                html += '<option value="' + selectedName + '" selected>' + selectedName + '</option>';
-            }
-            return html;
         }
 
-        function updateDivisionAlertBannerAP(hasDiv, divs, audCount) {
-            var $banner = $('.auditor-division-banner-ap');
-            if (!hasDiv) {
-                $banner.html('<div class="alert alert-info" style="padding: 6px 12px; margin-bottom: 10px; font-size: 12px;"><i class="fa fa-info-circle"></i> <strong>Note:</strong> No division assigned to this client in Contract Review yet. Showing all auditors.</div>').show();
-            } else if (audCount === 0) {
-                $banner.html('<div class="alert alert-warning" style="padding: 6px 12px; margin-bottom: 10px; font-size: 12px;"><i class="fa fa-exclamation-triangle"></i> <strong>No auditors found</strong> for Client Division(s): <strong>' + divs.join(', ') + '</strong>. Please assign this division to auditors in <a href="masterCreator.php" target="_blank" style="text-decoration: underline; font-weight: bold;">Master Creator</a>.</div>').show();
-            } else {
-                $banner.html('<div class="alert alert-success" style="padding: 6px 12px; margin-bottom: 10px; font-size: 12px;"><i class="fa fa-check-circle"></i> <strong>Client Division(s):</strong> <strong>' + divs.join(', ') + '</strong> &mdash; Showing ' + audCount + ' eligible auditor(s) assigned to this division in Master Creator.</div>').show();
+        $(document).on('click', '.btn-view-qualified-auditors-ap', function (e) {
+            e.preventDefault();
+            var list = aitfAPEligibleAuditors || [];
+            var codeText = aitfAPHasNaceClasses 
+                ? ('Client NACE Class: ' + (aitfAPClientNaceClasses || []).join(', '))
+                : ('Client Division: ' + (aitfAPClientDivisions || []).join(', '));
+            
+            if (!list || list.length === 0) {
+                if (typeof Swal !== 'undefined' && Swal.fire) {
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'No Qualified Auditors Found',
+                        text: 'No auditors have been assigned to ' + codeText + ' in Master Creator.',
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#0F2742'
+                    });
+                } else {
+                    alert('No qualified auditors found for ' + codeText);
+                }
+                return;
             }
-        }
+
+            var tableHtml = '<div style="text-align: left; max-height: 350px; overflow-y: auto;">' +
+                '<p style="font-size: 13px; color: #555; margin-bottom: 10px;">Below are the auditors qualified for <strong>' + codeText + '</strong>:</p>' +
+                '<table class="table table-bordered table-striped" style="font-size: 12px; margin-bottom: 0;">' +
+                '<thead><tr style="background: #0F2742; color: #fff;"><th>#</th><th>Auditor Name</th><th>Email</th><th>Assigned Classes / Divisions</th></tr></thead>' +
+                '<tbody>';
+            
+            for (var i = 0; i < list.length; i++) {
+                var aud = list[i];
+                var assignedInfo = aud.assigned_nace_classes_display || aud.assigned_divisions_display || '-';
+                tableHtml += '<tr>' +
+                    '<td>' + (i + 1) + '</td>' +
+                    '<td style="font-weight: 600; color: #0F2742;">' + (aud.auditor_name || '-') + '</td>' +
+                    '<td>' + (aud.auditor_email || '-') + '</td>' +
+                    '<td><span class="badge" style="background: #28a745;">' + assignedInfo + '</span></td>' +
+                    '</tr>';
+            }
+            tableHtml += '</tbody></table></div>';
+
+            if (typeof Swal !== 'undefined' && Swal.fire) {
+                Swal.fire({
+                    title: '<span style="font-size: 18px; color: #0F2742;"><i class="fa fa-users" style="color: #28a745;"></i> Qualified Auditors (' + list.length + ')</span>',
+                    html: tableHtml,
+                    width: '650px',
+                    confirmButtonText: 'Close',
+                    confirmButtonColor: '#0F2742'
+                });
+            } else {
+                alert('Qualified Auditors:\n' + list.map(function(a) { return a.auditor_name + ' (' + a.auditor_email + ')'; }).join('\n'));
+            }
+        });
 
         function loadEligibleAuditorsForAssessment(customerId, serviceId, callback) {
             $.ajax({
@@ -548,35 +704,90 @@ foreach ($auditors as $name) {
                     serviceid: serviceId
                 },
                 success: function(resp) {
+                    aitfAPHasNaceClasses = !!(resp && resp.has_nace_classes);
+                    aitfAPClientNaceClasses = (resp && resp.client_nace_classes) ? resp.client_nace_classes : [];
                     aitfAPHasDivisions = !!(resp && resp.has_divisions);
                     aitfAPClientDivisions = (resp && resp.client_divisions) ? resp.client_divisions : [];
                     aitfAPEligibleAuditors = (resp && resp.auditors) ? resp.auditors : [];
-                    updateDivisionAlertBannerAP(aitfAPHasDivisions, aitfAPClientDivisions, aitfAPEligibleAuditors.length);
+                    if (resp && resp.all_auditors) {
+                        aitfAPAllAuditors = resp.all_auditors;
+                    }
+                    updateDivisionAlertBannerAP(resp);
                     if (typeof callback === 'function') {
                         callback(resp);
                     }
                 },
                 error: function() {
+                    aitfAPHasNaceClasses = false;
                     aitfAPHasDivisions = false;
-                    updateDivisionAlertBannerAP(false, [], 0);
+                    updateDivisionAlertBannerAP(null);
                     if (typeof callback === 'function') {
                         callback(null);
                     }
                 }
             });
         }
+
         window.loadEligibleAuditorsForAssessment = loadEligibleAuditorsForAssessment;
         window.renderAPLeadAuditorOptions = renderAPLeadAuditorOptions;
         window.renderAPAuditorOptions = renderAPAuditorOptions;
+        window.renderAPAllAuditorOptions = renderAPAllAuditorOptions;
+        window.hasAtLeastOneQualifiedAuditorAP = hasAtLeastOneQualifiedAuditorAP;
 
-        $(document).on('click', '.newCodeAuditorAdd', function () {
+        function syncAuditorSelectOptionsAP() {
+            var selectedAuditors = [];
+            var leadAud = String($('.assessmentLeadAuditor').val() || '').trim();
+            if (leadAud !== '') {
+                selectedAuditors.push(leadAud);
+            }
+            $('.assessmentAuditors').each(function () {
+                var val = String($(this).val() || '').trim();
+                if (val !== '') {
+                    selectedAuditors.push(val);
+                }
+            });
+
+            updateAuditorRowVisualStatusAP($('.assessmentLeadAuditor'));
+
+            $('.assessmentLeadAuditor').find('option').each(function () {
+                var optVal = String($(this).val() || '').trim();
+                if (optVal === '' || optVal === leadAud) {
+                    $(this).prop('disabled', false).css('display', '');
+                    return;
+                }
+                if (selectedAuditors.indexOf(optVal) !== -1) {
+                    $(this).prop('disabled', true).css('display', 'none');
+                } else {
+                    $(this).prop('disabled', false).css('display', '');
+                }
+            });
+
+            $('.assessmentAuditors').each(function () {
+                var currentVal = String($(this).val() || '').trim();
+                updateAuditorRowVisualStatusAP($(this));
+                $(this).find('option').each(function () {
+                    var optVal = String($(this).val() || '').trim();
+                    if (optVal === '' || optVal === currentVal) {
+                        $(this).prop('disabled', false).css('display', '');
+                        return;
+                    }
+                    if (selectedAuditors.indexOf(optVal) !== -1) {
+                        $(this).prop('disabled', true).css('display', 'none');
+                    } else {
+                        $(this).prop('disabled', false).css('display', '');
+                    }
+                });
+            });
+        }
+
+        $(document).on('click', '.newCodeAuditorAdd', function (e) {
             var autitorsSelect = '<select class="assessmentAuditors form-control" id="assessmentAuditors" name="assessmentAuditors">\n\
-                                    ' + renderAPAuditorOptions('') + '\n\
+                                    ' + renderAPAllAuditorOptions('') + '\n\
                                 </select>';
 
             $('.multipleCodeAuditor').append('<div class="row newCodeAuditorParent" style="">\n\
                                                 <div class="col-sm-6 form-group float-label-control">\n\
-                                                    <label>Lead Auditor</label>\n\
+                                                    <label>Auditor</label>\n\
                                                     ' + autitorsSelect + '\n\
                                                 </div>\n\
                                                 <div class="col-sm-3" align="">\n\
@@ -586,12 +797,14 @@ foreach ($auditors as $name) {
                                                     <a class="removeCodeAuditor" style="float: right" title="Remove Auditors"><i class="fa fa-remove"></i></a>\n\
                                                 </div>\n\
                                             </div>');
+            syncAuditorSelectOptionsAP();
         });
         //            $('body').on("click", ".removeAuditor", function () {
         //    $(this).parent("div.deleteAuditorParent").parent('div.newAuditorParent').remove();
         //    });
         $('body').on("click", ".removeCodeAuditor", function () {
             $(this).parent("div.deleteCodeAuditorParent").parent('div.newCodeAuditorParent').remove();
+            syncAuditorSelectOptionsAP();
         });
 
         var aitfAppointedReviewersAP = [];
@@ -660,7 +873,151 @@ foreach ($auditors as $name) {
             loadAppointedReviewersForAssessmentPlan($('.assessmentUserId').val(), $('.assessmentServiceId').val());
         });
 
+        $(document).on('focus mousedown', '.assessmentLeadAuditor, .assessmentAuditors', function () {
+            syncAuditorSelectOptionsAP();
+        });
+
+        $(document).on('change', '.assessmentLeadAuditor', function () {
+            var $select = $(this);
+            var audName = $select.val();
+            if (!audName) {
+                syncAuditorSelectOptionsAP();
+                return;
+            }
+            var isDup = false;
+            $('.assessmentAuditors').each(function () {
+                var otherVal = String($(this).val() || '').trim();
+                if (otherVal !== '' && otherVal === String(audName).trim()) {
+                    isDup = true;
+                    return false;
+                }
+            });
+            if (isDup) {
+                if (typeof Swal !== 'undefined' && Swal.fire) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Auditor Already Selected',
+                        text: audName + ' is already selected as a team auditor in this plan. Please choose a different auditor.',
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#0F2742'
+                    });
+                } else {
+                    alert(audName + ' is already selected as a team auditor in this plan. Please choose a different auditor.');
+                }
+                $select.val("");
+                syncAuditorSelectOptionsAP();
+                return;
+            }
+
+            var revConflict = checkAuditorConflictWithReviewersAP(audName);
+            if (revConflict) {
+                showAuditorConflictAP(audName, revConflict);
+                $select.val("");
+                syncAuditorSelectOptionsAP();
+                return;
+            }
+            syncAuditorSelectOptionsAP();
+        });
+
+        $(document).on('change', '.assessmentAuditors', function () {
+            var $select = $(this);
+            var audName = $select.val();
+            if (!audName) {
+                syncAuditorSelectOptionsAP();
+                return;
+            }
+            var isDup = false;
+            var leadAud = String($('.assessmentLeadAuditor').val() || '').trim();
+            if (leadAud !== '' && leadAud === String(audName).trim()) {
+                isDup = true;
+            }
+            if (!isDup) {
+                $('.assessmentAuditors').not($select).each(function () {
+                    var otherVal = String($(this).val() || '').trim();
+                    if (otherVal !== '' && otherVal === String(audName).trim()) {
+                        isDup = true;
+                        return false;
+                    }
+                });
+            }
+            if (isDup) {
+                if (typeof Swal !== 'undefined' && Swal.fire) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Auditor Already Selected',
+                        text: audName + ' is already selected in this audit plan. Please choose a different auditor.',
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#0F2742'
+                    });
+                } else {
+                    alert(audName + ' is already selected in this audit plan. Please choose a different auditor.');
+                }
+                $select.val("");
+                syncAuditorSelectOptionsAP();
+                return;
+            }
+
+            var revConflict = checkAuditorConflictWithReviewersAP(audName);
+            if (revConflict) {
+                showAuditorConflictAP(audName, revConflict);
+                $select.val("");
+                syncAuditorSelectOptionsAP();
+                return;
+            }
+            syncAuditorSelectOptionsAP();
+        });
+
         $('.addAssessment').click(function (e) {
+            if (!hasAtLeastOneQualifiedAuditorAP()) {
+                e.preventDefault();
+                if (typeof Swal !== 'undefined' && Swal.fire) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Qualified Auditor Required',
+                        text: 'Atleast one qualifed auditor needs to be in the team',
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#0F2742'
+                    });
+                } else {
+                    alert('Atleast one qualifed auditor needs to be in the team');
+                }
+                return;
+            }
+
+            var seenAuds = {};
+            var hasDup = false;
+            var dupAudName = "";
+            var lead = String($('.assessmentLeadAuditor').val() || '').trim();
+            if (lead) {
+                seenAuds[lead] = true;
+            }
+            $('.assessmentAuditors').each(function () {
+                var val = String($(this).val() || '').trim();
+                if (val) {
+                    if (seenAuds[val]) {
+                        hasDup = true;
+                        dupAudName = val;
+                        return false;
+                    }
+                    seenAuds[val] = true;
+                }
+            });
+            if (hasDup) {
+                e.preventDefault();
+                if (typeof Swal !== 'undefined' && Swal.fire) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Duplicate Auditor',
+                        text: (dupAudName ? dupAudName : 'An auditor') + ' is selected multiple times in this assessment plan. Please assign unique auditors.',
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#0F2742'
+                    });
+                } else {
+                    alert('Duplicate auditor selected in assessment plan.');
+                }
+                return;
+            }
+
             var AuditorArray = [];
             $('.assessmentAuditors').each(function () {
                 AuditorArray.push($(this).val());
@@ -689,6 +1046,7 @@ foreach ($auditors as $name) {
             loadEligibleAuditorsForAssessment(customerId, serviceId, function() {
                 $('.assessmentLeadAuditor').html(renderAPLeadAuditorOptions(''));
                 $('.assessmentAuditors').first().html(renderAPAuditorOptions(''));
+                syncAuditorSelectOptionsAP();
             });
             $.ajax({
                 url: "getClientInfo.php",
@@ -811,7 +1169,7 @@ foreach ($auditors as $name) {
                             var aud = key < auditorCodeLen && Auditor[key] != null && Auditor[key] != "" ? Auditor[key].trim() : "";
                             var chk = key < auditorCodeChkLen && AuditorChk[key] != null && AuditorChk[key] != "" ? AuditorChk[key].trim() : "";
                             if (key == 0) {
-                                $('.assessmentAuditors').first().html(renderAPAuditorOptions(aud)).val(aud);
+                                $('.assessmentAuditors').first().html(renderAPAllAuditorOptions(aud)).val(aud);
                                 if (chk != "") {
                                     $('.codeAuditor').first().prop('checked', true);
                                 } else {
@@ -819,7 +1177,7 @@ foreach ($auditors as $name) {
                                 }
                             } else {
                                 var chkval = (chk == "Auditors" || chk != "") ? "checked" : "";
-                                var selHtml = '<select class="assessmentAuditors form-control" name="assessmentAuditors">' + renderAPAuditorOptions(aud) + '</select>';
+                                var selHtml = '<select class="assessmentAuditors form-control" name="assessmentAuditors">' + renderAPAllAuditorOptions(aud) + '</select>';
                                 $('.multipleCodeAuditor').append('<div class="row newCodeAuditorParent" style="">\n\
                                 <div class="col-sm-6 form-group float-label-control">\n\
                                     <label>Auditor</label>\n\
@@ -833,6 +1191,7 @@ foreach ($auditors as $name) {
                             </div>');
                             }
                         }
+                        syncAuditorSelectOptionsAP();
                     });
 
                     $('.assessmentDocumentReview').val(data['document_review']);

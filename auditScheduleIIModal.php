@@ -884,21 +884,33 @@ for (var key in data[6]) {
             });
         });
 
-        $('.createStageiiAudit').click(function () {
-//            alert($(this).attr('data-service'));
-            $('.scheduleii-customer-id').val($(this).attr('data-customer'));
-            $('.scheduleii-service-id').val($(this).attr('data-service'));
+        $(document).on('click', '.createStageiiAudit', function (e) {
+            e.preventDefault();
+            var $btn = $(this);
+            var $icon = $btn.find('i');
+            var origClass = $icon.attr('class') || 'fa fa-plus-circle fa-lg';
+            $icon.attr('class', 'fa fa-spinner fa-spin fa-lg');
+            $btn.css('pointer-events', 'none');
+
+            function restoreCreatePlanBtn() {
+                $icon.attr('class', origClass);
+                $btn.css('pointer-events', '');
+            }
+
+            $('.scheduleii-customer-id').val($btn.attr('data-customer'));
+            $('.scheduleii-service-id').val($btn.attr('data-service'));
 
             $.ajax({
                 url: "getClientInfo.php",
                 type: "GET",
                 dataType: "json",
                 data: {
-                    customer_ID: $(this).attr('data-customer'),
-                    service_ID: $(this).attr('data-service'),
+                    customer_ID: $btn.attr('data-customer'),
+                    service_ID: $btn.attr('data-service'),
                 },
                 success: function (data)
                 {
+                    restoreCreatePlanBtn();
                     //alert("hi");
 //                    alert(data[3]['schedule_app_standard']);
 //                    alert(data[6]['audit_standard']);
@@ -999,6 +1011,7 @@ for (var key in data[7]) {
                 },
                 error: function (data, status, err)
                 {
+                    restoreCreatePlanBtn();
                     console.log("AJAX Error:", data);
                     console.log("Status:", status);
                     console.log("Error:", err);
@@ -1021,20 +1034,37 @@ for (var key in data[7]) {
             });
         });
 
-        $('.editStageiiAudit').click(function () {
-            $('.scheduleii-id').val($(this).attr('data-row-id'));
-            $('.scheduleii-customer-id').val($(this).attr('data-customer'));
-            $('.scheduleii-service-id').val($(this).attr('data-service'));
+        $(document).on('click', '.editStageiiAudit', function (e) {
+            e.preventDefault();
+            var $btn = $(this);
+            var $icon = $btn.find('i');
+            var origClass = $icon.attr('class') || 'fa fa-pencil-square fa-lg';
+            $icon.attr('class', 'fa fa-spinner fa-spin fa-lg');
+            $btn.css('pointer-events', 'none');
+
+            function restoreEditPlanBtn() {
+                $icon.attr('class', origClass);
+                $btn.css('pointer-events', '');
+            }
+
+            $('.scheduleii-id').val($btn.attr('data-row-id'));
+            $('.scheduleii-customer-id').val($btn.attr('data-customer'));
+            $('.scheduleii-service-id').val($btn.attr('data-service'));
             $.ajax({
                 url: "contractDetails.php",
                 type: "GET",
                 dataType: "json",
                 data: {
-                    schedule_Id: $(this).attr('data-row-id'),
-                    service_Id: $(this).attr('data-service'),
+                    schedule_Id: $btn.attr('data-row-id'),
+                    service_Id: $btn.attr('data-service'),
                 },
                 success: function (data)
                 {
+                    restoreEditPlanBtn();
+                    if (!data || !data[0]) {
+                        alert("Could not load schedule details.");
+                        return;
+                    }
                     //alert(data[2][0].auditor_name);
                     $('.scheduleIIClientName').val(data[0]['clieint_name']);
                     $('.scheduleIIStandard').val(data[0]['scheduleii_standards']);
@@ -1213,7 +1243,8 @@ $leadauditor1 = leadAuditorString1;
                 },
                 error: function (data, status, err)
                 {
-                    alert(status);
+                    restoreEditPlanBtn();
+                    alert("Error loading schedule: " + (status || err));
                 }
             });
         });

@@ -5,11 +5,13 @@
  * and open the template in the editor.
  */
 include_once './dbConnect.php';
+require_once __DIR__ . '/include/auditor_division_helper.php';
 date_default_timezone_set('Asia/Kolkata');
 $iafCodes = "SELECT * FROM iaf_codes";
 $statement = $db->prepare($iafCodes);
 $statement->execute();
 $iafList = $statement->fetchAll();
+$naceClassesGrouped = aitf_get_all_nace_classes_grouped($db);
 ?>
 <script src="js/form-fancy-control.js"></script>
 <link rel="stylesheet" href="css/float-label.css">
@@ -188,19 +190,19 @@ $iafList = $statement->fetchAll();
                         <div class="row">
                             <div class="col-sm-12 form-group" style="margin-top: 5px; margin-bottom: 12px;">
                                 <label style="font-weight: 600; color: #1e3a8a; display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-                                    <span><i class="fa fa-tags"></i> NACE Code / Division Assignment</span>
+                                    <span><i class="fa fa-tags"></i> NACE Class Assignment</span>
                                     <small class="text-muted nacodeSelectedCount" style="font-weight: normal; color: #64748b;">0 Selected</small>
                                 </label>
                                 <div class="dropdown nacode-assignment-wrapper" style="position: relative;">
                                     <button type="button" class="btn btn-default btn-block dropdown-toggle nacodeDropdownToggleBtn" id="nacodeDropdownToggleBtn" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="text-align: left; display: flex; justify-content: space-between; align-items: center; padding: 7px 12px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; box-shadow: none;">
                                         <span class="nacodeSummaryText" style="color: #475569; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                            Click to assign Divisions...
+                                            Click to assign NACE Classes...
                                         </span>
                                         <span class="caret" style="margin-left: 8px; color: #64748b;"></span>
                                     </button>
-                                    <div class="dropdown-menu nacodeDropdownMenu" aria-labelledby="nacodeDropdownToggleBtn" style="width: 100%; min-width: 320px; max-height: 280px; overflow-y: auto; padding: 10px; border-radius: 6px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); border: 1px solid #cbd5e1; z-index: 1060;">
+                                    <div class="dropdown-menu nacodeDropdownMenu" aria-labelledby="nacodeDropdownToggleBtn" style="width: 100%; min-width: 360px; max-height: 340px; overflow-y: auto; padding: 10px; border-radius: 6px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); border: 1px solid #cbd5e1; z-index: 1060;">
                                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #e2e8f0;">
-                                            <span style="font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px;">Select Divisions</span>
+                                            <span style="font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px;">Select NACE Classes</span>
                                             <div>
                                                 <button type="button" class="btn btn-xs btn-link nacodeSelectAllBtn" style="padding: 0 4px; font-size: 11px; color: #2563eb; text-decoration: none; font-weight: 600;">Select All</button>
                                                 <span style="color: #cbd5e1;">|</span>
@@ -208,30 +210,45 @@ $iafList = $statement->fetchAll();
                                             </div>
                                         </div>
                                         <div style="margin-bottom: 8px;">
-                                            <input type="text" class="form-control input-sm nacodeFilterInput" placeholder="Filter divisions..." style="font-size: 12px; height: 28px; padding: 4px 8px; border-radius: 4px;">
+                                            <input type="text" class="form-control input-sm nacodeFilterInput" placeholder="Search class (e.g. 25.62, machining, metals)..." style="font-size: 12px; height: 28px; padding: 4px 8px; border-radius: 4px;">
                                         </div>
-                                        <div class="nacodeCheckboxList" style="display: flex; flex-direction: column; gap: 3px;">
+                                        <div class="nacodeGroupList" style="display: flex; flex-direction: column; gap: 8px;">
                                             <?php 
-                                            $sortedDivs = !empty($iafList) ? $iafList : array();
-                                            usort($sortedDivs, function($a, $b) {
-                                                return ((int)$a['iaf_code'] <=> (int)$b['iaf_code']) ?: strcmp($a['iaf_code'], $b['iaf_code']);
-                                            });
-                                            foreach ($sortedDivs as $iaf) { 
-                                                $divCode = htmlspecialchars(trim($iaf['iaf_code']), ENT_QUOTES, 'UTF-8');
-                                                $divDesc = htmlspecialchars(trim($iaf['iaf_desc']), ENT_QUOTES, 'UTF-8');
+                                            $naceGroups = !empty($naceClassesGrouped) ? $naceClassesGrouped : array();
+                                            foreach ($naceGroups as $divCode => $group) { 
+                                                $dCode = htmlspecialchars($divCode, ENT_QUOTES, 'UTF-8');
+                                                $dDesc = htmlspecialchars($group['division_desc'], ENT_QUOTES, 'UTF-8');
                                             ?>
-                                                <label class="nacodeItemLabel" data-search="<?php echo strtolower($divCode . ' ' . $divDesc); ?>" style="display: flex; align-items: flex-start; gap: 8px; margin: 0; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-weight: normal; font-size: 12px; color: #1e293b; transition: background 0.15s; user-select: none;">
-                                                    <input type="checkbox" name="assigned_divisions[]" value="<?php echo $divCode; ?>" class="nacodeDivisionCheckbox" style="margin: 2px 0 0 0; width: 15px; height: 15px; flex-shrink: 0; cursor: pointer;">
-                                                    <span style="line-height: 1.3;">
-                                                        <strong style="color: #0f172a;">Division <?php echo $divCode; ?></strong> - <span style="color: #475569;"><?php echo $divDesc; ?></span>
-                                                    </span>
-                                                </label>
+                                                <div class="nacodeDivisionSection" data-division="<?php echo $dCode; ?>" style="border: 1px solid #e2e8f0; border-radius: 5px; overflow: hidden; background: #fff;">
+                                                    <div style="background: #f1f5f9; padding: 5px 8px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0;">
+                                                        <span style="font-size: 11.5px; font-weight: 700; color: #1e3a8a;">
+                                                            Division <?php echo $dCode; ?> <small style="font-weight: normal; color: #475569;">(<?php echo count($group['classes']); ?> classes)</small>
+                                                        </span>
+                                                        <button type="button" class="btn btn-xs btn-link nacodeSelectGroupBtn" data-division="<?php echo $dCode; ?>" style="padding: 0; font-size: 11px; color: #2563eb; text-decoration: none; font-weight: 600;">
+                                                            Select Div <?php echo $dCode; ?>
+                                                        </button>
+                                                    </div>
+                                                    <div class="nacodeGroupItems" style="padding: 4px 6px; display: flex; flex-direction: column; gap: 2px;">
+                                                        <?php foreach ($group['classes'] as $cls) {
+                                                            $cCode = htmlspecialchars($cls['nace_class'], ENT_QUOTES, 'UTF-8');
+                                                            $cDesc = htmlspecialchars($cls['nace_desc'], ENT_QUOTES, 'UTF-8');
+                                                            $searchTerms = strtolower($dCode . ' ' . $dDesc . ' ' . $cCode . ' ' . $cDesc);
+                                                        ?>
+                                                            <label class="nacodeItemLabel" data-search="<?php echo $searchTerms; ?>" data-division="<?php echo $dCode; ?>" style="display: flex; align-items: flex-start; gap: 6px; margin: 0; padding: 3px 6px; border-radius: 3px; cursor: pointer; font-weight: normal; font-size: 11.5px; color: #1e293b; transition: background 0.15s; user-select: none;">
+                                                                <input type="checkbox" name="assigned_nace_classes[]" value="<?php echo $cCode; ?>" class="nacodeClassCheckbox nacodeDiv-<?php echo $dCode; ?>" style="margin: 2px 0 0 0; width: 14px; height: 14px; flex-shrink: 0; cursor: pointer;">
+                                                                <span style="line-height: 1.3;">
+                                                                    <strong style="color: #0f172a;"><?php echo $cCode; ?></strong> &mdash; <span style="color: #475569;"><?php echo $cDesc; ?></span>
+                                                                </span>
+                                                            </label>
+                                                        <?php } ?>
+                                                    </div>
+                                                </div>
                                             <?php } ?>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="nacodeSelectedBadges" style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 5px;"></div>
-                                <small class="text-muted" style="display: block; margin-top: 4px; font-size: 11.5px;">Only auditors assigned to a client's division will be selectable during CA and SA-1 auditor assignment.</small>
+                                <small class="text-muted" style="display: block; margin-top: 4px; font-size: 11.5px;">Only auditors assigned to a client's NACE class will be selectable during CA and SA-1 auditor assignment.</small>
                             </div>
                         </div>
                         <div class="row">

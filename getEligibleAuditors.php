@@ -1,5 +1,4 @@
 <?php
-session_start();
 header('Content-Type: application/json; charset=utf-8');
 include_once './dbConnect.php';
 require_once __DIR__ . '/include/auditor_division_helper.php';
