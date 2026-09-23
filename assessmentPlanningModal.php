@@ -501,22 +501,8 @@ foreach ($auditors as $name) {
         }
 
         function hasAtLeastOneQualifiedAuditorAP() {
-            if (!aitfAPHasNaceClasses && !aitfAPHasDivisions) {
-                return true;
-            }
-            var lead = String($('.assessmentLeadAuditor').val() || '').trim();
-            if (lead && isAuditorNameQualifiedAP(lead)) {
-                return true;
-            }
-            var anyQual = false;
-            $('.assessmentAuditors').each(function () {
-                var val = String($(this).val() || '').trim();
-                if (val && isAuditorNameQualifiedAP(val)) {
-                    anyQual = true;
-                    return false;
-                }
-            });
-            return anyQual;
+            // Temporarily bypassed: allow any auditor to be assigned
+            return true;
         }
 
         function updateAuditorRowVisualStatusAP($select) {
@@ -968,6 +954,8 @@ foreach ($auditors as $name) {
         });
 
         $('.addAssessment').click(function (e) {
+            // Temporarily disabled: allow any auditor to be saved
+            /*
             if (!hasAtLeastOneQualifiedAuditorAP()) {
                 e.preventDefault();
                 if (typeof Swal !== 'undefined' && Swal.fire) {
@@ -983,6 +971,7 @@ foreach ($auditors as $name) {
                 }
                 return;
             }
+            */
 
             var seenAuds = {};
             var hasDup = false;

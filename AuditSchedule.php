@@ -34,6 +34,7 @@ session_start();
 require_once(__DIR__ . '/tcpdf_include.php');
 // code by Pallavi to display pdf
 include_once __DIR__ . '/dbConnect.php';
+require_once __DIR__ . '/include/agreement_sync_helper.php';
 date_default_timezone_set('Asia/Kolkata');
 
 $reqScheduleId = isset($_POST['auditscheduleid']) ? $_POST['auditscheduleid'] : '';
@@ -64,18 +65,29 @@ if (!$stageIInfo && !empty($reqCustomer)) {
 }
 
 $agreementNo = $stageIInfo['ref_no'];
-$stmtCustomer = $db->prepare("SELECT unique_id FROM customer_info WHERE id = :id");
-$stmtCustomer->bindParam(':id', $_POST['customerid']);
-$stmtCustomer->execute();
-$customerRow = $stmtCustomer->fetch();
-if ($customerRow && !empty($customerRow['unique_id'])) {
-    $agreementNo = $customerRow['unique_id'];
-}
-if (!empty($agreementNo) && (!isset($stageIInfo['ref_no']) || trim((string)$stageIInfo['ref_no']) !== trim((string)$agreementNo))) {
-    $stmtUpdate = $db->prepare("UPDATE audit_schedule_id SET ref_no = :ref WHERE audit_schedule_id = :id");
-    $stmtUpdate->bindParam(':ref', $agreementNo);
-    $stmtUpdate->bindParam(':id', $_POST['auditscheduleid']);
-    $stmtUpdate->execute();
+$schedCustId = !empty($_POST['customerid']) ? $_POST['customerid'] : (!empty($stageIInfo['customer_ca_id']) ? $stageIInfo['customer_ca_id'] : null);
+if (!empty($schedCustId)) {
+    if (function_exists('aitf_sync_customer_agreement_numbers')) {
+        $syncedAg = aitf_sync_customer_agreement_numbers($db, $schedCustId);
+        if (!empty($syncedAg)) {
+            $agreementNo = $syncedAg;
+            $stageIInfo['ref_no'] = $syncedAg;
+        }
+    } else {
+        $stmtCustomer = $db->prepare("SELECT unique_id FROM customer_info WHERE id = :id");
+        $stmtCustomer->bindParam(':id', $schedCustId);
+        $stmtCustomer->execute();
+        $customerRow = $stmtCustomer->fetch();
+        if ($customerRow && !empty($customerRow['unique_id'])) {
+            $agreementNo = $customerRow['unique_id'];
+        }
+        if (!empty($agreementNo) && (!isset($stageIInfo['ref_no']) || trim((string)$stageIInfo['ref_no']) !== trim((string)$agreementNo))) {
+            $stmtUpdate = $db->prepare("UPDATE audit_schedule_id SET ref_no = :ref WHERE audit_schedule_id = :id");
+            $stmtUpdate->bindParam(':ref', $agreementNo);
+            $stmtUpdate->bindParam(':id', $_POST['auditscheduleid']);
+            $stmtUpdate->execute();
+        }
+    }
 }
 
 $formNo = $stageIInfo['stage_i_form'];

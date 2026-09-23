@@ -14,6 +14,8 @@
  *    without any manual database intervention.
  */
 
+require_once __DIR__ . '/agreement_sync_helper.php';
+
 if (!function_exists('aitf_auto_sync_schema')) {
     function aitf_auto_sync_schema($db) {
         static $alreadySynced = false;
@@ -274,6 +276,87 @@ if (!function_exists('aitf_auto_sync_schema')) {
                 }
             } catch (Throwable $e) {
                 error_log("ca_service_dates is_intimation_deleted sync error: " . $e->getMessage());
+            }
+
+            // 14. Auto-sync customer_info.unique_id and allotment_count with authoritative certification_aggrement
+            try {
+                require_once __DIR__ . '/agreement_sync_helper.php';
+                aitf_sync_customer_agreement_numbers($db);
+
+                $syncAllotSql = "UPDATE allotment_count ac
+                                 INNER JOIN customer_info ci ON ac.client_id = ci.id
+                                 SET ac.client_count = CAST(SUBSTRING_INDEX(ci.unique_id, '/', -1) AS UNSIGNED)
+                                 WHERE ci.unique_id LIKE 'AITF/%'
+                                   AND ci.unique_id NOT LIKE '% Rc-%'
+                                   AND ci.unique_id NOT LIKE '%-RC-%'
+                                   AND ac.client_count != CAST(SUBSTRING_INDEX(ci.unique_id, '/', -1) AS UNSIGNED)";
+                $db->exec($syncAllotSql);
+
+                // Sync previously saved audit forms reference numbers with current client unique_id
+                $db->exec("UPDATE stage_oneaudit_id soa
+                           INNER JOIN customer_info ci ON soa.ca_customer_id = ci.id
+                           SET soa.audit_ref_no = ci.unique_id
+                           WHERE ci.unique_id IS NOT NULL 
+                             AND ci.unique_id != '' 
+                             AND ci.unique_id NOT LIKE '% Rc-%'
+                             AND ci.unique_id NOT LIKE '%-RC-%'
+                             AND soa.audit_ref_no != ci.unique_id");
+
+                $db->exec("UPDATE audit_schedule_id asi
+                           INNER JOIN customer_info ci ON asi.customer_ca_id = ci.id
+                           SET asi.ref_no = ci.unique_id
+                           WHERE ci.unique_id IS NOT NULL 
+                             AND ci.unique_id != '' 
+                             AND ci.unique_id NOT LIKE '% Rc-%'
+                             AND ci.unique_id NOT LIKE '%-RC-%'
+                             AND asi.ref_no != ci.unique_id");
+
+                $db->exec("UPDATE stage_twoaudit_id sta
+                           INNER JOIN customer_info ci ON sta.customer_id = ci.id
+                           SET sta.audit_ref_no = ci.unique_id
+                           WHERE ci.unique_id IS NOT NULL 
+                             AND ci.unique_id != '' 
+                             AND ci.unique_id NOT LIKE '% Rc-%'
+                             AND ci.unique_id NOT LIKE '%-RC-%'
+                             AND sta.audit_ref_no != ci.unique_id");
+
+                $db->exec("UPDATE stage_i_audit_id sia
+                           INNER JOIN customer_info ci ON sia.customer_id = ci.id
+                           SET sia.referenceNumber = ci.unique_id
+                           WHERE ci.unique_id IS NOT NULL 
+                             AND ci.unique_id != '' 
+                             AND ci.unique_id NOT LIKE '% Rc-%'
+                             AND ci.unique_id NOT LIKE '%-RC-%'
+                             AND sia.referenceNumber != ci.unique_id");
+
+                $db->exec("UPDATE stage_ii_audit_id siia
+                           INNER JOIN customer_info ci ON siia.customer_id = ci.id
+                           SET siia.reference_number = ci.unique_id
+                           WHERE ci.unique_id IS NOT NULL 
+                             AND ci.unique_id != '' 
+                             AND ci.unique_id NOT LIKE '% Rc-%'
+                             AND ci.unique_id NOT LIKE '%-RC-%'
+                             AND siia.reference_number != ci.unique_id");
+
+                $db->exec("UPDATE control_formati_id cfi
+                           INNER JOIN customer_info ci ON cfi.customer_id = ci.id
+                           SET cfi.control_ref_no = ci.unique_id
+                           WHERE ci.unique_id IS NOT NULL 
+                             AND ci.unique_id != '' 
+                             AND ci.unique_id NOT LIKE '% Rc-%'
+                             AND ci.unique_id NOT LIKE '%-RC-%'
+                             AND cfi.control_ref_no != ci.unique_id");
+
+                $db->exec("UPDATE control_formatii_id cfii
+                           INNER JOIN customer_info ci ON cfii.customer_id = ci.id
+                           SET cfii.control2_ref_no = ci.unique_id
+                           WHERE ci.unique_id IS NOT NULL 
+                             AND ci.unique_id != '' 
+                             AND ci.unique_id NOT LIKE '% Rc-%'
+                             AND ci.unique_id NOT LIKE '%-RC-%'
+                             AND cfii.control2_ref_no != ci.unique_id");
+            } catch (Throwable $e) {
+                error_log("agreement auto-sync error: " . $e->getMessage());
             }
 
             $alreadySynced = true;

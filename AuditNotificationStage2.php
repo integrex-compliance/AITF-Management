@@ -34,6 +34,7 @@ session_start();
 require_once(__DIR__ . '/tcpdf_include.php');
 // code by Pallavi to display pdf
 include_once __DIR__ . '/dbConnect.php';
+require_once __DIR__ . '/include/agreement_sync_helper.php';
 date_default_timezone_set('Asia/Kolkata');
 $reqNotiId = isset($_POST['notificationid']) ? $_POST['notificationid'] : (isset($_POST['action']) ? $_POST['action'] : '');
 $reqCustomerId = isset($_POST['customerid']) ? $_POST['customerid'] : (isset($_POST['customer']) ? $_POST['customer'] : '');
@@ -53,6 +54,26 @@ if (!$auditInfo && !empty($reqCustomerId)) {
     $statement->bindParam(':customer', $reqCustomerId);
     $statement->execute();
     $auditInfo = $statement->fetch();
+}
+
+if ($auditInfo) {
+    $targetCustomerId = !empty($auditInfo['customer_id']) ? $auditInfo['customer_id'] : $reqCustomerId;
+    if (!empty($targetCustomerId)) {
+        if (function_exists('aitf_sync_customer_agreement_numbers')) {
+            $syncedNo = aitf_sync_customer_agreement_numbers($db, $targetCustomerId);
+            if (!empty($syncedNo)) {
+                $auditInfo['audit_ref_no'] = $syncedNo;
+            }
+        } else {
+            $stmtCustomer = $db->prepare("SELECT unique_id FROM customer_info WHERE id = :id");
+            $stmtCustomer->bindParam(':id', $targetCustomerId);
+            $stmtCustomer->execute();
+            $customerRow = $stmtCustomer->fetch();
+            if ($customerRow && !empty($customerRow['unique_id'])) {
+                $auditInfo['audit_ref_no'] = $customerRow['unique_id'];
+            }
+        }
+    }
 }
 
 $stage1 = "";

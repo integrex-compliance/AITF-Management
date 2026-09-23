@@ -21,6 +21,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
     include_once './include/cdc_iso_metadata.php';
     include_once './include/cdc_legacy_iso_fallback.php';
     require_once __DIR__ . '/include/iaf_dashboard_data.php';
+    require_once __DIR__ . '/include/agreement_sync_helper.php';
     include_once './informationUpdationReviewModal.php';
     include_once './assessmentPlanningModal.php';
     include_once './modalForms.php';
@@ -1044,7 +1045,17 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 $agreementResult = $agreementStmt->fetch();
 
                 if ($agreementResult && !empty($agreementResult['aggrement_no'])) {
-                    $clientInfo['unique_id'] = $agreementResult['aggrement_no'];
+                    $authAgNo = trim($agreementResult['aggrement_no']);
+                    $origUniqueId = trim((string)($clientInfo['unique_id'] ?? ''));
+                    $clientInfo['unique_id'] = $authAgNo;
+                    if (function_exists('aitf_sync_customer_agreement_numbers')) {
+                        aitf_sync_customer_agreement_numbers($db, $_GET['customerid']);
+                    } else if ($origUniqueId !== $authAgNo) {
+                        try {
+                            $db->prepare("UPDATE customer_info SET unique_id = :ag WHERE id = :cid")
+                               ->execute([':ag' => $authAgNo, ':cid' => $_GET['customerid']]);
+                        } catch (Throwable $e) {}
+                    }
                 } else {
                     // If no agreement found, leave unique_id as is (may be empty or from customer_info table)
                     if (!isset($clientInfo['unique_id'])) {
@@ -1502,7 +1513,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             $statement->execute();
             $applicationStatusOptions = $statement->fetchAll();
 
-            $sql = "SELECT max(service_id) as c_service FROM `service` where customer_id = :id";
+            $sql = "SELECT max(service_id) as c_service FROM `service` where customer_id = :id AND (is_deleted = 'NO' OR is_deleted IS NULL)";
             $statement = $db->prepare($sql);
             $statement->bindParam(':id', $_GET['customerid']);
             $statement->execute();
@@ -1513,6 +1524,11 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             $statement->bindParam(':id', $letestService['c_service']);
             $statement->execute();
             $letestServiceType = $statement->fetch();
+
+            $stmtHasCR = $db->prepare("SELECT service_id FROM `service` WHERE customer_id = :id AND service_type = 'CR' AND (is_deleted = 'NO' OR is_deleted IS NULL) LIMIT 1");
+            $stmtHasCR->bindParam(':id', $_GET['customerid']);
+            $stmtHasCR->execute();
+            $hasActiveCR = (bool) $stmtHasCR->fetch();
 
             $getsvccount = "SELECT service_type from service where service_id = :id";
             $statement = $db->prepare($getsvccount);
@@ -3688,15 +3704,146 @@ if ($currentRole === 'client' || $currentRole === 'external') {
 
         .service_title.payment-title,
         .payment-title {
-            background: linear-gradient(135deg, #047857 0%, #059669 100%) !important;
+            background: linear-gradient(135deg, #c2410c 0%, #ea580c 50%, #f97316 100%) !important;
             color: #ffffff !important;
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
             font-weight: 700 !important;
+            border-radius: 6px 6px 0 0 !important;
+            box-shadow: 0 2px 8px rgba(234, 88, 12, 0.25) !important;
         }
 
         .servicebox .service_title.payment-title + .service_title {
-            background: linear-gradient(135deg, #047857 0%, #059669 100%) !important;
+            background: linear-gradient(135deg, #c2410c 0%, #ea580c 50%, #f97316 100%) !important;
         }
+
+        .payment-title .savePayment i {
+            transition: all 0.2s ease !important;
+        }
+        .payment-title .savePayment:hover i {
+            transform: scale(1.15) !important;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.8) !important;
+        }
+
+        /* ========================================================
+           PAYMENT SYSTEM - COMPLETE ORANGE THEME
+           ======================================================== */
+        .payment-desc {
+            background: #ffffff !important;
+            border: 1.5px solid #fed7aa !important;
+            border-top: none !important;
+            border-radius: 0 0 8px 8px !important;
+            padding: 10px 12px 14px 12px !important;
+            box-shadow: 0 4px 14px rgba(234, 88, 12, 0.08) !important;
+        }
+
+        /* Payment System Section Headers (Invoice, Payments, Payment Summary) */
+        .payment-desc .qms_complete_btn {
+            background: linear-gradient(135deg, #c2410c 0%, #ea580c 60%, #f97316 100%) !important;
+            border: none !important;
+            border-radius: 6px !important;
+            color: #ffffff !important;
+            box-shadow: 0 2px 6px rgba(234, 88, 12, 0.28) !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.3px !important;
+            transition: all 0.2s ease !important;
+        }
+
+        .payment-desc .qms_complete_btn:hover {
+            background: linear-gradient(135deg, #9a3412 0%, #c2410c 60%, #ea580c 100%) !important;
+            box-shadow: 0 4px 12px rgba(234, 88, 12, 0.38) !important;
+            color: #ffffff !important;
+        }
+
+        /* Table Headers in Payment System */
+        .payment-desc .service_details thead th,
+        .payment-desc .service_details thead th small,
+        #invoice_service_details thead th,
+        #invoice_service_details thead th small,
+        #payment_summary_table thead th,
+        #payment_summary_table thead th small {
+            background: #fff7ed !important;
+            color: #c2410c !important;
+            border-bottom: 2px solid #fdba74 !important;
+            font-weight: 700 !important;
+        }
+
+        /* TDS Header */
+        .payment-desc #service_details thead th[style*="#fef3c7"] {
+            background: #ffedd5 !important;
+            color: #9a3412 !important;
+            border-bottom: 2px solid #f97316 !important;
+        }
+
+        /* Input Controls Focus in Payment System */
+        .payment-desc .table-edit-control input:focus,
+        .payment-desc .table-edit-control select:focus,
+        .payment-desc input.form-control:focus {
+            background-color: #ffffff !important;
+            border-color: #ea580c !important;
+            box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.18) !important;
+            outline: none !important;
+        }
+
+        /* Row Hover in Payment System */
+        .payment-desc .service_details tbody tr:hover td {
+            background-color: #fffbf5 !important;
+        }
+
+        /* Add Row (+) Button in Payments Table */
+        .payment-desc .cbAddLink,
+        #service_details .cbAddLink {
+            background: linear-gradient(135deg, #ea580c, #f97316) !important;
+            border: 1px solid #c2410c !important;
+            color: #ffffff !important;
+            box-shadow: 0 1px 3px rgba(234, 88, 12, 0.35) !important;
+            border-radius: 4px !important;
+            padding: 1px 6px !important;
+        }
+        .payment-desc .cbAddLink:hover,
+        #service_details .cbAddLink:hover {
+            background: linear-gradient(135deg, #c2410c, #ea580c) !important;
+            color: #ffffff !important;
+            transform: scale(1.08);
+        }
+
+        /* Invoice Edit Icon */
+        .payment-desc .editFinalInvoice i.fa-pencil-square {
+            color: #ea580c !important;
+            transition: transform 0.15s ease, color 0.15s ease;
+        }
+        .payment-desc .editFinalInvoice:hover i.fa-pencil-square {
+            color: #c2410c !important;
+            transform: scale(1.22);
+        }
+
+        /* Total Invoice Table Footer */
+        #invoice_service_details tfoot tr {
+            background-color: #fff7ed !important;
+            border-top: 2px solid #ea580c !important;
+        }
+        #invoice_service_details tfoot td {
+            color: #c2410c !important;
+        }
+        #invoice_service_details #totalInvoiceTableSum {
+            color: #c2410c !important;
+            background: #ffedd5 !important;
+            border: 1px solid #fdba74 !important;
+            font-weight: 700 !important;
+        }
+        #invoice_service_details tfoot .badge {
+            background-color: #ea580c !important;
+            color: #ffffff !important;
+        }
+
+        /* Payment Summary Grand Total & Card Accent */
+        #payment_summary_table thead th:first-child {
+            background: #fff7ed !important;
+            border-left: 3px solid #ea580c !important;
+        }
+        #payment_summary_table #summaryTotalAmount {
+            color: #ea580c !important;
+        }
+
 
         /* Action Buttons matching masterCreator */
         .qms_complete_btn {
@@ -4386,8 +4533,40 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             color: #fff !important;
         }
 
-        /* Payment System / other coloured title bars -> dark green */
-        html.theme-dark .service_title.payment-title,
+        /* Payment System -> Orange theme in dark mode */
+        html.theme-dark .service_title.payment-title {
+            background: linear-gradient(135deg, #7c2d12 0%, #9a3412 50%, #c2410c 100%) !important;
+            color: #ffffff !important;
+        }
+        html.theme-dark .payment-desc {
+            background: #18181b !important;
+            border-color: #7c2d12 !important;
+        }
+        html.theme-dark .payment-desc .qms_complete_btn {
+            background: linear-gradient(135deg, #9a3412 0%, #c2410c 100%) !important;
+            color: #ffedd5 !important;
+        }
+        html.theme-dark .payment-desc .service_details thead th,
+        html.theme-dark .payment-desc .service_details thead th small,
+        html.theme-dark #invoice_service_details thead th,
+        html.theme-dark #invoice_service_details thead th small,
+        html.theme-dark #payment_summary_table thead th,
+        html.theme-dark #payment_summary_table thead th small {
+            background: #271b14 !important;
+            color: #fb923c !important;
+            border-bottom: 2px solid #9a3412 !important;
+        }
+        html.theme-dark #invoice_service_details tfoot tr {
+            background-color: #271b14 !important;
+            border-top: 2px solid #ea580c !important;
+        }
+        html.theme-dark #invoice_service_details #totalInvoiceTableSum {
+            background: #331f16 !important;
+            color: #fb923c !important;
+            border-color: #9a3412 !important;
+        }
+
+        /* Other coloured title bars -> dark green */
         html.theme-dark [style*="#4CAF50"] {
             background: #1b5e20 !important;
             color: #e5eaf2 !important;
@@ -5805,12 +5984,140 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     </div>
                     <div class="servicebox-data payment-desc" id="servicebox-data" style="display: none;">
                         <div class="row">
+                        <div class="col-xs-4 table-responsive">
+                            <div class="row">
+                                <div class="col-xs-12  text-center btn qms_complete_btn">
+                                    <span><i class="fa ">Invoice</i></span>
+                                </div>
+                            </div>
+                            <style>
+                                .invoiceStatusBtn:hover {
+                                    filter: brightness(0.9);
+                                    box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+                                }
+                                .invoiceStatusBtn:active {
+                                    transform: scale(0.97);
+                                }
+                                .openInvoicePdfLink {
+                                    color: #dc2626 !important;
+                                    transition: transform 0.15s ease, color 0.15s ease;
+                                }
+                                .openInvoicePdfLink:hover {
+                                    color: #b91c1c !important;
+                                    transform: scale(1.22);
+                                }
+                            </style>
+                            <div class="row">
+                                <table class="table table-bordered table-hover table-sortable service_details"
+                                    id="invoice_service_details">
+                                    <thead>
+                                        <tr>
+                                            <th class="" width="30%" style="padding: 3px 2px; text-align: center;">
+                                                <small>Invoice No.</small>
+                                            </th>
+                                            <th class="" width="22%" style="padding: 3px 2px; text-align: center;">
+                                                <small>Date</small>
+                                            </th>
+                                            <th class="" width="24%" style="padding: 3px 2px; text-align: center;">
+                                                <small>Amount</small>
+                                            </th>
+                                            <th class="" width="24%" style="padding: 3px 2px; text-align: center;">
+                                                <small>Status</small>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="">
+                                        <?php
+                                        $totalInvoiceSumComputed = 0;
+                                        foreach ($invoiceList as $invoiceinfo) {
+                                            $totalInvoiceSumComputed += floatval($invoiceinfo['final_amount'] ?? 0);
+                                            $isPaid = ($invoiceinfo["invoice_status"] == "Rcv");
+                                            $invoicePdfUrl = "finalInvoicePDF.php?invoiceid=" . urlencode($invoiceinfo["invoice_id"]) . "&invoiceCustomerId=" . urlencode($_GET["customerid"]);
+                                            ?>
+                                            <tr class="cb_subsection" id="cb_subsection_0" style="display: ">
+                                                <td class="viewFinalInvoice"
+                                                    data-customer="<?php echo $_GET['customerid'] ?>"
+                                                    data-id="<?php echo $invoiceinfo["invoice_id"] ?>"
+                                                    style="padding: 0px;">
+                                                    <div class="table-edit-control"><label></label>
+                                                        <input type="text" data_row_id="" class="invoiceNo" name="invoiceNo"
+                                                            value="<?php echo $invoiceinfo['final_prefix'] . '-' . $invoiceinfo['final_invoice_no'] ?>"
+                                                            readonly="" style="cursor: pointer;" title="Click to view PDF in new tab" />
+                                                    </div>
+                                                </td>
+                                                <td class="viewFinalInvoice"
+                                                    data-customer="<?php echo $_GET['customerid'] ?>"
+                                                    data-id="<?php echo $invoiceinfo["invoice_id"] ?>"
+                                                    style="padding: 0px;">
+                                                    <div class="table-edit-control"><label></label>
+                                                        <input type="text" data_row_id="" class="invoiceDate"
+                                                            name="invoiceDate"
+                                                            value="<?php echo date("d.m.Y", strtotime($invoiceinfo['invoice_date'])) ?>"
+                                                            readonly="" />
+                                                    </div>
+                                                </td>
+                                                <td class="viewFinalInvoice"
+                                                    data-customer="<?php echo $_GET['customerid'] ?>"
+                                                    data-id="<?php echo $invoiceinfo["invoice_id"] ?>"
+                                                    style="padding: 0px;">
+                                                    <div class="table-edit-control"><label></label>
+                                                        <input type="text" data_row_id="" class="invoiceAmount"
+                                                            name="invoiceAmount"
+                                                            value="<?php echo $invoiceinfo['final_amount'] ?>"
+                                                            readonly="" />
+                                                    </div>
+                                                </td>
+                                                <td class="" style="padding: 2px 4px; text-align: center; vertical-align: middle; white-space: nowrap;">
+                                                    <div style="display: inline-flex; align-items: center; justify-content: center; gap: 5px;">
+                                                        <a href="<?php echo $invoicePdfUrl; ?>"
+                                                            target="_blank"
+                                                            class="openInvoicePdfLink"
+                                                            title="Open Invoice PDF (New Tab)"
+                                                            style="color: #dc2626; padding: 2px 4px; display: inline-block; cursor: pointer; text-decoration: none;">
+                                                            <i class="fa fa-file-pdf-o" style="font-size: 15px; vertical-align: middle;"></i>
+                                                        </a>
+                                                        <a class="editFinalInvoice"
+                                                            data-customer="<?php echo $_GET['customerid'] ?>"
+                                                            data-id="<?php echo $invoiceinfo["invoice_id"] ?>"
+                                                            title="Edit Final Invoice" style="color: #ea580c; padding: 2px 4px; display: inline-block; cursor: pointer;">
+                                                            <i class="fa fa-pencil-square" style="font-size: 14px; vertical-align: middle;"></i>
+                                                        </a>
+                                                        <button type="button" class="btn btn-xs invoiceStatusBtn <?php echo ($isPaid ? 'btn-invoice-paid' : 'btn-invoice-unpaid'); ?>"
+                                                            data-row-id="<?php echo $invoiceinfo['invoice_id'] ?>"
+                                                            data-status="<?php echo ($isPaid ? 'Rcv' : 'NotRcv'); ?>"
+                                                            title="<?php echo ($isPaid ? 'Payment Received - Click to mark as Unpaid' : 'Payment Not Received - Click to mark as Paid'); ?>"
+                                                            style="padding: 2px 8px; font-size: 10.5px; font-weight: 700; border-radius: 4px; min-width: 58px; transition: all 0.2s ease; cursor: pointer; <?php echo ($isPaid ? 'background-color: #16a34a; border-color: #15803d; color: #ffffff;' : 'background-color: #ef4444; border-color: #dc2626; color: #ffffff;'); ?>">
+                                                            <i class="fa <?php echo ($isPaid ? 'fa-check' : 'fa-times'); ?>"></i> <?php echo ($isPaid ? 'Paid' : 'Unpaid'); ?>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        <?php } ?>
+                                    </tbody>
+                                    <tfoot>
+                                        <tr style="background-color: #fff7ed; font-weight: bold; border-top: 2px solid #ea580c;">
+                                            <td colspan="2" style="text-align: right; padding: 4px 6px; vertical-align: middle; color: #c2410c;">
+                                                <small style="font-weight: 700; font-size: 11px;">TOTAL INVOICE (<?php echo count($invoiceList); ?>):</small>
+                                            </td>
+                                            <td style="padding: 0px; vertical-align: middle;">
+                                                <div class="table-edit-control">
+                                                    <input type="text" id="totalInvoiceTableSum" value="<?php echo number_format($totalInvoiceSumComputed, 2, '.', ''); ?>" style="font-weight: bold; color: #c2410c; background: #ffedd5; text-align: center; border: 1px solid #fdba74; font-size: 12px; height: 26px; padding: 0;" readonly title="Total Invoicing Amount" />
+                                                </div>
+                                            </td>
+                                            <td style="text-align: center; vertical-align: middle; padding: 2px;">
+                                                <span class="badge" style="background-color: #ea580c; font-size: 10px; color: #ffffff;"><?php echo count($invoiceList); ?></span>
+                                            </td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
                             <div class="col-xs-8 table-responsive">
                                 <div class="row">
                                     <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 10px;">
                                         <span style="flex-grow: 1; text-align: center; font-weight: 700;"><i class="fa ">Payments</i></span>
-                                        <button type="button" class="btn btn-xs openDiscountModalBtn" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: #ffffff; border: 1px solid #5b21b6; font-weight: 700; border-radius: 4px; padding: 2px 9px; box-shadow: 0 1px 3px rgba(0,0,0,0.3); text-transform: none; display: inline-flex; align-items: center; gap: 4px;" title="Add Discount (Short Paid) Settlement">
-                                            <i class="fa fa-tag"></i> Discount (Short Paid)
+                                        <button type="button" class="btn btn-xs openDiscountModalBtn" style="background: #ffffff; color: #c2410c; border: 1px solid #fed7aa; font-weight: 700; border-radius: 4px; padding: 2px 9px; box-shadow: 0 1px 3px rgba(0,0,0,0.15); text-transform: none; display: inline-flex; align-items: center; gap: 4px;" title="Add Discount (Short Paid) Settlement">
+                                            <i class="fa fa-tag" style="color: #ea580c;"></i> Discount (Short Paid)
                                         </button>
                                     </div>
                                 </div>
@@ -6017,134 +6324,6 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                 </table>
                             </div>
                         </div>
-                        <div class="col-xs-4 table-responsive">
-                            <div class="row">
-                                <div class="col-xs-12  text-center btn qms_complete_btn">
-                                    <span><i class="fa ">Invoice</i></span>
-                                </div>
-                            </div>
-                            <style>
-                                .invoiceStatusBtn:hover {
-                                    filter: brightness(0.9);
-                                    box-shadow: 0 1px 4px rgba(0,0,0,0.25);
-                                }
-                                .invoiceStatusBtn:active {
-                                    transform: scale(0.97);
-                                }
-                                .openInvoicePdfLink {
-                                    color: #dc2626 !important;
-                                    transition: transform 0.15s ease, color 0.15s ease;
-                                }
-                                .openInvoicePdfLink:hover {
-                                    color: #b91c1c !important;
-                                    transform: scale(1.22);
-                                }
-                            </style>
-                            <div class="row">
-                                <table class="table table-bordered table-hover table-sortable service_details"
-                                    id="invoice_service_details">
-                                    <thead>
-                                        <tr>
-                                            <th class="" width="30%" style="padding: 3px 2px; text-align: center;">
-                                                <small>Invoice No.</small>
-                                            </th>
-                                            <th class="" width="22%" style="padding: 3px 2px; text-align: center;">
-                                                <small>Date</small>
-                                            </th>
-                                            <th class="" width="24%" style="padding: 3px 2px; text-align: center;">
-                                                <small>Amount</small>
-                                            </th>
-                                            <th class="" width="24%" style="padding: 3px 2px; text-align: center;">
-                                                <small>Status</small>
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="">
-                                        <?php
-                                        $totalInvoiceSumComputed = 0;
-                                        foreach ($invoiceList as $invoiceinfo) {
-                                            $totalInvoiceSumComputed += floatval($invoiceinfo['final_amount'] ?? 0);
-                                            $isPaid = ($invoiceinfo["invoice_status"] == "Rcv");
-                                            $invoicePdfUrl = "finalInvoicePDF.php?invoiceid=" . urlencode($invoiceinfo["invoice_id"]) . "&invoiceCustomerId=" . urlencode($_GET["customerid"]);
-                                            ?>
-                                            <tr class="cb_subsection" id="cb_subsection_0" style="display: ">
-                                                <td class="viewFinalInvoice"
-                                                    data-customer="<?php echo $_GET['customerid'] ?>"
-                                                    data-id="<?php echo $invoiceinfo["invoice_id"] ?>"
-                                                    style="padding: 0px;">
-                                                    <div class="table-edit-control"><label></label>
-                                                        <input type="text" data_row_id="" class="invoiceNo" name="invoiceNo"
-                                                            value="<?php echo $invoiceinfo['final_prefix'] . '-' . $invoiceinfo['final_invoice_no'] ?>"
-                                                            readonly="" style="cursor: pointer;" title="Click to view PDF in new tab" />
-                                                    </div>
-                                                </td>
-                                                <td class="viewFinalInvoice"
-                                                    data-customer="<?php echo $_GET['customerid'] ?>"
-                                                    data-id="<?php echo $invoiceinfo["invoice_id"] ?>"
-                                                    style="padding: 0px;">
-                                                    <div class="table-edit-control"><label></label>
-                                                        <input type="text" data_row_id="" class="invoiceDate"
-                                                            name="invoiceDate"
-                                                            value="<?php echo date("d.m.Y", strtotime($invoiceinfo['invoice_date'])) ?>"
-                                                            readonly="" />
-                                                    </div>
-                                                </td>
-                                                <td class="viewFinalInvoice"
-                                                    data-customer="<?php echo $_GET['customerid'] ?>"
-                                                    data-id="<?php echo $invoiceinfo["invoice_id"] ?>"
-                                                    style="padding: 0px;">
-                                                    <div class="table-edit-control"><label></label>
-                                                        <input type="text" data_row_id="" class="invoiceAmount"
-                                                            name="invoiceAmount"
-                                                            value="<?php echo $invoiceinfo['final_amount'] ?>"
-                                                            readonly="" />
-                                                    </div>
-                                                </td>
-                                                <td class="" style="padding: 2px 4px; text-align: center; vertical-align: middle; white-space: nowrap;">
-                                                    <div style="display: inline-flex; align-items: center; justify-content: center; gap: 5px;">
-                                                        <a href="<?php echo $invoicePdfUrl; ?>"
-                                                            target="_blank"
-                                                            class="openInvoicePdfLink"
-                                                            title="Open Invoice PDF (New Tab)"
-                                                            style="color: #dc2626; padding: 2px 4px; display: inline-block; cursor: pointer; text-decoration: none;">
-                                                            <i class="fa fa-file-pdf-o" style="font-size: 15px; vertical-align: middle;"></i>
-                                                        </a>
-                                                        <a class="editFinalInvoice"
-                                                            data-customer="<?php echo $_GET['customerid'] ?>"
-                                                            data-id="<?php echo $invoiceinfo["invoice_id"] ?>"
-                                                            title="Edit Final Invoice" style="color: #0284c7; padding: 2px 4px; display: inline-block; cursor: pointer;">
-                                                            <i class="fa fa-pencil-square" style="font-size: 14px; vertical-align: middle;"></i>
-                                                        </a>
-                                                        <button type="button" class="btn btn-xs invoiceStatusBtn <?php echo ($isPaid ? 'btn-invoice-paid' : 'btn-invoice-unpaid'); ?>"
-                                                            data-row-id="<?php echo $invoiceinfo['invoice_id'] ?>"
-                                                            data-status="<?php echo ($isPaid ? 'Rcv' : 'NotRcv'); ?>"
-                                                            title="<?php echo ($isPaid ? 'Payment Received - Click to mark as Unpaid' : 'Payment Not Received - Click to mark as Paid'); ?>"
-                                                            style="padding: 2px 8px; font-size: 10.5px; font-weight: 700; border-radius: 4px; min-width: 58px; transition: all 0.2s ease; cursor: pointer; <?php echo ($isPaid ? 'background-color: #16a34a; border-color: #15803d; color: #ffffff;' : 'background-color: #ef4444; border-color: #dc2626; color: #ffffff;'); ?>">
-                                                            <i class="fa <?php echo ($isPaid ? 'fa-check' : 'fa-times'); ?>"></i> <?php echo ($isPaid ? 'Paid' : 'Unpaid'); ?>
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        <?php } ?>
-                                    </tbody>
-                                    <tfoot>
-                                        <tr style="background-color: #f1f5f9; font-weight: bold; border-top: 2px solid #0d4d8b;">
-                                            <td colspan="2" style="text-align: right; padding: 4px 6px; vertical-align: middle; color: #0d4d8b;">
-                                                <small style="font-weight: 700; font-size: 11px;">TOTAL INVOICE (<?php echo count($invoiceList); ?>):</small>
-                                            </td>
-                                            <td style="padding: 0px; vertical-align: middle;">
-                                                <div class="table-edit-control">
-                                                    <input type="text" id="totalInvoiceTableSum" value="<?php echo number_format($totalInvoiceSumComputed, 2, '.', ''); ?>" style="font-weight: bold; color: #0d4d8b; background: #e0f2fe; text-align: center; border: 1px solid #bae6fd; font-size: 12px; height: 26px; padding: 0;" readonly title="Total Invoicing Amount" />
-                                                </div>
-                                            </td>
-                                            <td style="text-align: center; vertical-align: middle; padding: 2px;">
-                                                <span class="badge" style="background-color: #0d4d8b; font-size: 10px;"><?php echo count($invoiceList); ?></span>
-                                            </td>
-                                        </tr>
-                                    </tfoot>
-                                </table>
-                            </div>
-                        </div>
                     </div>
 
                     <div>
@@ -6165,8 +6344,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                         <tr>
                                             <th class="" width="20%" style="padding: 6px 8px; text-align: center; vertical-align: middle;">
                                                 <?php $totalInvoiceAmount = floatval($invoiceTotal["invoice_sum"] ?? 0); ?>
-                                                <small style="font-weight: 700; color: #475569; text-transform: uppercase; font-size: 10.5px;">Grand Total:</small>
-                                                <strong style="color: #0284c7; font-size: 13.5px; margin-left: 4px;">
+                                                <small style="font-weight: 700; color: #c2410c; text-transform: uppercase; font-size: 10.5px;">Grand Total:</small>
+                                                <strong style="color: #ea580c; font-size: 13.5px; margin-left: 4px;">
                                                     ₹<span id="summaryTotalAmount"><?php echo number_format($totalInvoiceAmount, 2, '.', ''); ?></span>
                                                 </strong>
                                                 <span id="summaryReceivableAmount" style="display: none;"><?php echo number_format($totalInvoiceAmount, 2, '.', ''); ?></span>
@@ -6186,10 +6365,10 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                     ₹<span id="summaryTdsAmount"><?php echo number_format($totalTdsAmount, 2, '.', ''); ?></span>
                                                 </strong>
                                             </th>
-                                            <th class="" width="20%" style="padding: 6px 8px; text-align: center; vertical-align: middle; background-color: #faf5ff; border: 1px solid #d8b4fe;">
+                                            <th class="" width="20%" style="padding: 6px 8px; text-align: center; vertical-align: middle; background-color: #fff7ed; border: 1px solid #fed7aa;">
                                                 <?php $totalDiscountAmount = floatval($paymentTotal["discount_sum"] ?? 0); ?>
-                                                <small style="font-weight: 700; color: #6d28d9; text-transform: uppercase; font-size: 10.5px;"><i class="fa fa-tag" style="font-size: 9px; margin-right: 2px;"></i> Discount (Short):</small>
-                                                <strong style="color: #7c3aed; font-size: 13.5px; margin-left: 4px;">
+                                                <small style="font-weight: 700; color: #c2410c; text-transform: uppercase; font-size: 10.5px;"><i class="fa fa-tag" style="font-size: 9px; margin-right: 2px;"></i> Discount (Short):</small>
+                                                <strong style="color: #ea580c; font-size: 13.5px; margin-left: 4px;">
                                                     ₹<span id="summaryDiscountAmount"><?php echo number_format($totalDiscountAmount, 2, '.', ''); ?></span>
                                                 </strong>
                                             </th>
@@ -6212,7 +6391,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     <div class="modal fade" id="discountModal" tabindex="-1" role="dialog" aria-labelledby="discountModalLabel" aria-hidden="true">
                         <div class="modal-dialog" style="max-width: 480px; margin-top: 80px;">
                             <div class="modal-content" style="border-radius: 8px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.25); border: none;">
-                                <div class="modal-header" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #ffffff; padding: 12px 18px;">
+                                <div class="modal-header" style="background: linear-gradient(135deg, #c2410c, #ea580c); color: #ffffff; padding: 12px 18px;">
                                     <button type="button" class="close" data-dismiss="modal" aria-hidden="true" style="color: #ffffff; opacity: 0.9; font-size: 22px;">&times;</button>
                                     <h4 class="modal-title" id="discountModalLabel" style="font-weight: 700; font-size: 16px; margin: 0; display: flex; align-items: center; gap: 8px;">
                                         <i class="fa fa-tags"></i> Discount (Short Paid) Settlement
@@ -6220,14 +6399,14 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                 </div>
                                 <div class="modal-body" style="padding: 20px; background-color: #f8fafc;">
                                     <!-- Remaining Balance Box -->
-                                    <div style="background-color: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 6px; padding: 12px 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+                                    <div style="background-color: #fff7ed; border: 1px solid #fed7aa; border-radius: 6px; padding: 12px 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
                                         <div>
-                                            <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #6d28d9;">Current Remaining Balance:</span>
-                                            <div style="font-size: 20px; font-weight: 800; color: #4c1d95;">
+                                            <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #c2410c;">Current Remaining Balance:</span>
+                                            <div style="font-size: 20px; font-weight: 800; color: #9a3412;">
                                                 ₹<span id="discountModalRemainingBalance">0.00</span>
                                             </div>
                                         </div>
-                                        <button type="button" class="btn btn-sm" id="btnAutoFillFullBalance" style="background-color: #8b5cf6; color: #fff; border: none; font-weight: 600; font-size: 11.5px; border-radius: 4px; padding: 6px 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.15);" title="Auto-fill the full remaining balance as discount to settle account">
+                                        <button type="button" class="btn btn-sm" id="btnAutoFillFullBalance" style="background: linear-gradient(135deg, #ea580c, #f97316); color: #fff; border: 1px solid #c2410c; font-weight: 600; font-size: 11.5px; border-radius: 4px; padding: 6px 12px; box-shadow: 0 1px 3px rgba(234, 88, 12, 0.25);" title="Auto-fill the full remaining balance as discount to settle account">
                                             <i class="fa fa-bolt"></i> Settle Full Balance
                                         </button>
                                     </div>
@@ -6238,17 +6417,17 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 Discount / Short Paid Amount <span style="color: #ef4444;">*</span>
                                             </label>
                                             <div class="input-group">
-                                                <span class="input-group-addon" style="background-color: #ede9fe; border-color: #c4b5fd; color: #6d28d9; font-weight: 700;">₹</span>
-                                                <input type="number" step="any" min="0.01" class="form-control" id="modalDiscountAmount" name="modalDiscountAmount" placeholder="Enter discount amount" required style="font-size: 15px; font-weight: 700; color: #1e1b4b; border-color: #c4b5fd;" />
+                                                <span class="input-group-addon" style="background-color: #ffedd5; border-color: #fdba74; color: #c2410c; font-weight: 700;">₹</span>
+                                                <input type="number" step="any" min="0.01" class="form-control" id="modalDiscountAmount" name="modalDiscountAmount" placeholder="Enter discount amount" required style="font-size: 15px; font-weight: 700; color: #7c2d12; border-color: #fdba74;" />
                                             </div>
                                             <small style="color: #64748b; font-size: 11px;">This amount will be settled and deducted from the remaining balance.</small>
                                         </div>
 
                                         <div class="form-group" style="margin-bottom: 14px;">
                                             <label style="font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 4px;">
-                                                <i class="fa fa-file-text-o" style="color: #7c3aed; margin-right: 4px;"></i> Discount Against Invoice No. <span style="color: #ef4444;">*</span>
+                                                <i class="fa fa-file-text-o" style="color: #ea580c; margin-right: 4px;"></i> Discount Against Invoice No. <span style="color: #ef4444;">*</span>
                                             </label>
-                                            <select class="form-control" id="modalDiscountInvoice" name="modalDiscountInvoice" required style="font-size: 13px; font-weight: 600; color: #1e1b4b; border-color: #c4b5fd; background-color: #f5f3ff;">
+                                            <select class="form-control" id="modalDiscountInvoice" name="modalDiscountInvoice" required style="font-size: 13px; font-weight: 600; color: #7c2d12; border-color: #fdba74; background-color: #fff7ed;">
                                                 <?php if (!empty($invoiceList) && count($invoiceList) > 0) { ?>
                                                     <?php foreach ($invoiceList as $idx => $inv) { 
                                                         $fullInvNo = $inv['final_prefix'] . '-' . $inv['final_invoice_no'];
@@ -6280,7 +6459,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                 </div>
                                 <div class="modal-footer" style="background-color: #f1f5f9; padding: 10px 18px; border-top: 1px solid #e2e8f0;">
                                     <button type="button" class="btn btn-default" data-dismiss="modal" style="font-size: 12px; font-weight: 600;">Cancel</button>
-                                    <button type="button" class="btn" id="btnSaveDiscountSettlement" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #ffffff; border: none; font-size: 12.5px; font-weight: 700; padding: 6px 16px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">
+                                    <button type="button" class="btn" id="btnSaveDiscountSettlement" style="background: linear-gradient(135deg, #c2410c, #ea580c); color: #ffffff; border: none; font-size: 12.5px; font-weight: 700; padding: 6px 16px; border-radius: 4px; box-shadow: 0 1px 3px rgba(234, 88, 12, 0.25);">
                                         <i class="fa fa-check-circle" style="margin-right: 4px;"></i> Save &amp; Settle Discount
                                     </button>
                                 </div>
@@ -21435,10 +21614,11 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             });
 
             $('.service-type').change(function () {
-                $svctype = '<?php echo $letestServiceType["service_type"]; ?>';
+                $svctype = '<?php echo $letestServiceType["service_type"] ?? ""; ?>';
+                var hasActiveCR = <?php echo (!empty($hasActiveCR) || (isset($letestServiceType['service_type']) && $letestServiceType['service_type'] === 'CR')) ? 'true' : 'false'; ?>;
                 //            alert($svctype);
                 if ($('.service-type').val() == "1") {
-                    if ($svctype == "CR") {
+                    if ($svctype == "CR" || hasActiveCR) {
                         $('.new-ca-service-add').show();
                     } else {
                         $("#addCRsvc").show();
@@ -21469,7 +21649,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 }
                 if ($('.service-type').val() == "4") {
                     //                $('.rc-service-type').show();
-                    if ($svctype == "CR") {
+                    if ($svctype == "CR" || hasActiveCR) {
                         $(".new-rc-service").show();
                     } else {
                         $("#addCRsvc").show();
@@ -21498,7 +21678,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     //                $('.sp-service-type').hide();
                 }
                 if ($('.service-type').val() == "7") {
-                    if ($svctype == "CR") {
+                    if ($svctype == "CR" || hasActiveCR) {
                         $('.new-ptr-service-add').show();
                     } else {
                         $("#addCRsvc").show();

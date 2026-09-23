@@ -7,6 +7,7 @@
  */
 header('Content-Type: application/json; charset=utf-8');
 include_once './dbConnect.php';
+require_once __DIR__ . '/include/agreement_sync_helper.php';
 date_default_timezone_set('Asia/Kolkata');
 
 if(isset($_GET['customerId']) && !empty($_GET['customerId']) && isset($_GET['contractId']) && !empty($_GET['contractId'])){
@@ -93,6 +94,30 @@ if(isset($_GET['customerId']) && !empty($_GET['customerId']) && isset($_GET['con
         $statement->execute();
         $notificationDetails = $statement->fetch();
         
+        if ($notificationDetails && !empty($notificationDetails['ca_customer_id'])) {
+            if (function_exists('aitf_sync_customer_agreement_numbers')) {
+                $syncedRef = aitf_sync_customer_agreement_numbers($db, $notificationDetails['ca_customer_id']);
+                if (!empty($syncedRef)) {
+                    $notificationDetails['audit_ref_no'] = $syncedRef;
+                }
+            } else {
+                $customerStmt = $db->prepare("SELECT unique_id FROM customer_info WHERE id = :id");
+                $customerStmt->bindParam(':id', $notificationDetails['ca_customer_id']);
+                $customerStmt->execute();
+                $customerRow = $customerStmt->fetch();
+                if ($customerRow && !empty($customerRow['unique_id'])) {
+                    $correctRef = $customerRow['unique_id'];
+                    if (empty($notificationDetails['audit_ref_no']) || trim((string)$notificationDetails['audit_ref_no']) !== trim((string)$correctRef)) {
+                        $updateStmt = $db->prepare("UPDATE stage_oneaudit_id SET audit_ref_no = :ref WHERE audit_stage_id = :id");
+                        $updateStmt->bindParam(':ref', $correctRef);
+                        $updateStmt->bindParam(':id', $_GET['notificationId']);
+                        $updateStmt->execute();
+                        $notificationDetails['audit_ref_no'] = $correctRef;
+                    }
+                }
+            }
+        }
+        
         $notificationRows = "SELECT sao.*, a.auditor_email FROM stage_audit_one sao LEFT JOIN auditors a ON sao.auditor_id = a.auditors_id WHERE sao.audit_stage_id = :id";
         $statement = $db->prepare($notificationRows);
         $statement->bindParam(':id', $_GET['notificationId']);
@@ -112,18 +137,25 @@ if(isset($_GET['customerId']) && !empty($_GET['customerId']) && isset($_GET['con
         $scheduleDetails = $statement->fetch();
         
         if ($scheduleDetails && !empty($scheduleDetails['customer_ca_id'])) {
-            $customerStmt = $db->prepare("SELECT unique_id FROM customer_info WHERE id = :id");
-            $customerStmt->bindParam(':id', $scheduleDetails['customer_ca_id']);
-            $customerStmt->execute();
-            $customerRow = $customerStmt->fetch();
-            if ($customerRow && !empty($customerRow['unique_id'])) {
-                $correctRef = $customerRow['unique_id'];
-                if (empty($scheduleDetails['ref_no']) || trim((string)$scheduleDetails['ref_no']) !== trim((string)$correctRef)) {
-                    $updateStmt = $db->prepare("UPDATE audit_schedule_id SET ref_no = :ref WHERE audit_schedule_id = :id");
-                    $updateStmt->bindParam(':ref', $correctRef);
-                    $updateStmt->bindParam(':id', $_GET['scheduleId']);
-                    $updateStmt->execute();
-                    $scheduleDetails['ref_no'] = $correctRef;
+            if (function_exists('aitf_sync_customer_agreement_numbers')) {
+                $syncedRef = aitf_sync_customer_agreement_numbers($db, $scheduleDetails['customer_ca_id']);
+                if (!empty($syncedRef)) {
+                    $scheduleDetails['ref_no'] = $syncedRef;
+                }
+            } else {
+                $customerStmt = $db->prepare("SELECT unique_id FROM customer_info WHERE id = :id");
+                $customerStmt->bindParam(':id', $scheduleDetails['customer_ca_id']);
+                $customerStmt->execute();
+                $customerRow = $customerStmt->fetch();
+                if ($customerRow && !empty($customerRow['unique_id'])) {
+                    $correctRef = $customerRow['unique_id'];
+                    if (empty($scheduleDetails['ref_no']) || trim((string)$scheduleDetails['ref_no']) !== trim((string)$correctRef)) {
+                        $updateStmt = $db->prepare("UPDATE audit_schedule_id SET ref_no = :ref WHERE audit_schedule_id = :id");
+                        $updateStmt->bindParam(':ref', $correctRef);
+                        $updateStmt->bindParam(':id', $_GET['scheduleId']);
+                        $updateStmt->execute();
+                        $scheduleDetails['ref_no'] = $correctRef;
+                    }
                 }
             }
         }
@@ -457,6 +489,15 @@ if(isset($_GET['customerId']) && !empty($_GET['customerId']) && isset($_GET['con
         $statement->bindParam(':id',$_GET['notificationiiId']);
         $statement->execute();
         $stage2IdInfo = $statement->fetch();
+        
+        if ($stage2IdInfo && !empty($stage2IdInfo['customer_id'])) {
+            if (function_exists('aitf_sync_customer_agreement_numbers')) {
+                $syncedRef = aitf_sync_customer_agreement_numbers($db, $stage2IdInfo['customer_id']);
+                if (!empty($syncedRef)) {
+                    $stage2IdInfo['audit_ref_no'] = $syncedRef;
+                }
+            }
+        }
         
         $stage2Audit = "SELECT sat.*, a.auditor_email FROM stage_audit_two sat LEFT JOIN auditors a ON sat.auditor_id = a.auditors_id WHERE sat.audit_stageii_id = :id";
         $statement = $db->prepare($stage2Audit);

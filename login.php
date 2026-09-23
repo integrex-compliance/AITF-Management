@@ -320,7 +320,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         if ($foundRole) {
             echo json_encode(['success' => true, 'role' => $foundRole]);
         } else {
-            echo json_encode(['success' => false, 'message' => 'We cannot find an account with that email, username, or ID.']);
+            echo json_encode(['success' => false, 'message' => 'We cannot find an account with that username.']);
         }
         exit;
     }
@@ -477,7 +477,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             echo json_encode(['success' => true, 'redirect' => $redirectUrl]);
         } else {
             $rlInfo = record_failed_attempt($db, $identifier, $role);
-            $msg = ($role === 'Client') ? 'Invalid agreement number / password.' : 'Invalid password.';
+            $msg = 'Invalid password.';
             $lockoutTime = null;
             $sendEmail = false; $emailDuration = '';
             
@@ -688,7 +688,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         <h2>Sign in</h2>
         <form id="form-check" onsubmit="event.preventDefault(); checkAccount();">
             <label for="identifier">Username</label>
-            <input type="text" id="identifier" name="identifier" required autocomplete="username" placeholder="Company Name, Email, or Agreement No.">
+            <input type="text" id="identifier" name="identifier" required autocomplete="username" placeholder="Enter your username">
             <button type="submit" class="amazon-btn" id="btn-continue">
                 <span class="amazon-spinner" id="spin-continue"></span> Continue
             </button>
@@ -707,11 +707,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         </div>
         <form id="form-login" onsubmit="event.preventDefault(); submitLogin();">
             <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 5px;">
-                <label for="password" id="label-password" style="margin-bottom: 0;">Password</label>
-                <a href="#" id="link-forgot-pass" onclick="showError('To reset your password, please contact your Administrator or Managing Director.'); return false;" style="font-size: 13px; color: #2563eb; text-decoration: none;">Forgot your password?</a>
+                <label for="password" style="margin-bottom: 0;">Password</label>
+                <a href="#" onclick="showError('To reset your password, please contact your Administrator or Managing Director.'); return false;" style="font-size: 13px; color: #2563eb; text-decoration: none;">Forgot your password?</a>
             </div>
             <div style="position: relative; margin-bottom: 15px;">
-                <input type="password" id="password" name="password" required autocomplete="current-password" style="margin-bottom: 0; padding-right: 40px;">
+                <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="Enter your password" style="margin-bottom: 0; padding-right: 40px;">
                 <span onclick="togglePassword('password', this)" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #64748b; display: flex;" title="Show password">
                     <svg class="eye-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                     <svg class="eye-off-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
@@ -873,24 +873,6 @@ function checkAccount() {
             currentRole = data.role;
             currentIdentifier = identifier;
             document.getElementById('display-identifier').innerText = identifier;
-            const passLabel = document.getElementById('label-password');
-            const passInput = document.getElementById('password');
-            const forgotLink = document.getElementById('link-forgot-pass');
-            if (currentRole === 'Client') {
-                if (passLabel) passLabel.innerText = 'Agreement Number (Password)';
-                if (passInput) passInput.placeholder = 'Enter your Agreement No.';
-                if (forgotLink) {
-                    forgotLink.innerText = 'Need help?';
-                    forgotLink.setAttribute('onclick', "showError('Your password is the Agreement Number sent in your Certification Service Agreement email. Please check your email or contact AITF support.'); return false;");
-                }
-            } else {
-                if (passLabel) passLabel.innerText = 'Password';
-                if (passInput) passInput.placeholder = '';
-                if (forgotLink) {
-                    forgotLink.innerText = 'Forgot your password?';
-                    forgotLink.setAttribute('onclick', "showError('To reset your password, please contact your Administrator or Managing Director.'); return false;");
-                }
-            }
             showPanel('panel-signin-2');
             document.getElementById('password').focus();
         } else {

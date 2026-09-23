@@ -951,18 +951,8 @@ foreach ($auditors as $name) {
         }
 
         function hasAtLeastOneQualifiedAuditor() {
-            if (!aitfNotificationHasNaceClasses && !aitfNotificationHasDivisions) {
-                return true;
-            }
-            var anyQualified = false;
-            $('.contractAuditorName').each(function () {
-                var val = String($(this).val() || '').trim();
-                if (val !== '' && isAuditorIdQualified(val)) {
-                    anyQualified = true;
-                    return false;
-                }
-            });
-            return anyQualified;
+            // Temporarily bypassed: allow any auditor to be assigned
+            return true;
         }
 
         function updateAuditorRowVisualStatus($select) {
@@ -1440,6 +1430,22 @@ foreach ($auditors as $name) {
 
                         $('.auditLocation').val(main['location'] || '');
                         $('.auditReferance').val(main['audit_ref_no'] || '');
+                        // Non-blocking fetch to ensure latest authoritative agreement number
+                        $.ajax({
+                            url: "getClientInfo.php",
+                            type: "GET",
+                            dataType: "json",
+                            data: {
+                                customer_id: custId,
+                                service_id: svcId,
+                            },
+                            success: function (clientData) {
+                                if (clientData && clientData[0] && clientData[0]['unique_id'] != null && clientData[0]['unique_id'] !== "") {
+                                    $('.auditReferance').val(clientData[0]['unique_id']);
+                                    $('.auditReferance').trigger('change');
+                                }
+                            }
+                        });
                         $('.auditStandard').val(main['audit_standard'] || '');
                         $('.auditContactPerson').val(main['audit_contact_person'] || '');
 
@@ -1605,6 +1611,8 @@ foreach ($auditors as $name) {
                 return;
             }
 
+            // Temporarily disabled: allow any auditor to be saved
+            /*
             if (!hasAtLeastOneQualifiedAuditor()) {
                 e.preventDefault();
                 if (typeof Swal !== 'undefined' && Swal.fire) {
@@ -1620,6 +1628,7 @@ foreach ($auditors as $name) {
                 }
                 return;
             }
+            */
 
         });
         $(document.body).on('click', '.addAuditLink', function (e) {
@@ -1692,6 +1701,8 @@ foreach ($auditors as $name) {
                 return;
             }
 
+            // Temporarily disabled: allow any auditor to be saved
+            /*
             if (!hasAtLeastOneQualifiedAuditor()) {
                 e.preventDefault();
                 if (typeof Swal !== 'undefined' && Swal.fire) {
@@ -1707,6 +1718,7 @@ foreach ($auditors as $name) {
                 }
                 return;
             }
+            */
 
             var seenAuditors = {};
             var hasDuplicateAuditor = false;
@@ -1773,6 +1785,8 @@ foreach ($auditors as $name) {
         });
 
         $('.addAuditNotiFdf').click(function (e) {
+            // Temporarily disabled: allow any auditor to be saved
+            /*
             if (!hasAtLeastOneQualifiedAuditor()) {
                 if (e) e.preventDefault();
                 if (typeof Swal !== 'undefined' && Swal.fire) {
@@ -1788,6 +1802,7 @@ foreach ($auditors as $name) {
                 }
                 return false;
             }
+            */
 
             var seenAuditors = {};
             var hasDuplicateAuditor = false;

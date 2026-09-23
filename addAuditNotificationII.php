@@ -45,13 +45,28 @@ if (isset($_POST['audtii-noti-id']) && !empty($_POST['audtii-noti-id']) && isset
 
         $servicestatus = "Audit planning";
 
-        $sql = "SELECT service_id FROM `stage_twoaudit_id` where audit_stageii_id = :id ";
+        $sql = "SELECT service_id, customer_id FROM `stage_twoaudit_id` where audit_stageii_id = :id ";
         $statement = $db->prepare($sql);
         $statement->bindParam(":id", $_POST['audtii-noti-id']);
         $statement->execute();
         $serviceid = $statement->fetch();
 
         $service = $serviceid["service_id"];
+
+        $refNo = null;
+        $custIdToSync = !empty($serviceid["customer_id"]) ? $serviceid["customer_id"] : (!empty($_POST['customerii']) ? $_POST['customerii'] : null);
+        if (!empty($custIdToSync)) {
+            $stmtRef = $db->prepare("SELECT unique_id FROM customer_info WHERE id = :id");
+            $stmtRef->bindParam(':id', $custIdToSync);
+            $stmtRef->execute();
+            $refRow = $stmtRef->fetch();
+            if ($refRow && !empty($refRow['unique_id'])) {
+                $refNo = $refRow['unique_id'];
+            }
+        }
+        if (empty($refNo)) {
+            $refNo = $_POST['auditiiReferance'];
+        }
 
         $updateSchedule = "UPDATE stage_twoaudit_id SET audit_subject = :auditsub, for_org = :auditorg, "
                 . "intimation_date = :intimationdate, location = :location, audit_ref_no = :referance, "
@@ -64,7 +79,7 @@ if (isset($_POST['audtii-noti-id']) && !empty($_POST['audtii-noti-id']) && isset
         $statement->bindParam(':auditorg', $_POST['auditiiForOrg']);
         $statement->bindParam(':intimationdate', $intimationDate);
         $statement->bindParam(':location', $_POST['auditiiLocation']);
-        $statement->bindParam(':referance', $_POST['auditiiReferance']);
+        $statement->bindParam(':referance', $refNo);
         $statement->bindParam(':standard', $_POST['auditiiStandard']);
         $statement->bindParam(':contactPerson', $_POST['auditiiContactPerson']);
         $statement->bindParam(':auditdates', $_POST["auditiiDatesHiddenii"]);
@@ -280,7 +295,20 @@ if (isset($_POST['audtii-noti-id']) && !empty($_POST['audtii-noti-id']) && isset
             $statement->bindParam(':auditorg', $_POST['auditiiForOrg']);
             $statement->bindParam(':intimationdate', $intimationDate);
             $statement->bindParam(':location', $_POST['auditiiLocation']);
-            $statement->bindParam(':referance', $_POST['auditiiReferance']);
+            $refNo = null;
+            if (!empty($customer)) {
+                $stmtRef = $db->prepare("SELECT unique_id FROM customer_info WHERE id = :id");
+                $stmtRef->bindParam(':id', $customer);
+                $stmtRef->execute();
+                $refRow = $stmtRef->fetch();
+                if ($refRow && !empty($refRow['unique_id'])) {
+                    $refNo = $refRow['unique_id'];
+                }
+            }
+            if (empty($refNo)) {
+                $refNo = $_POST['auditiiReferance'];
+            }
+            $statement->bindParam(':referance', $refNo);
             $statement->bindParam(':mcldesignation', $_POST['mcldesignation']);
             $statement->bindParam(':appointedby', $_POST['appointedby']);
             $statement->bindParam(':standard', $_POST['auditiiStandard']);

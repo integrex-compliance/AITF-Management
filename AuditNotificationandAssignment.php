@@ -34,6 +34,7 @@ session_start();
 require_once(__DIR__ . '/tcpdf_include.php');
 // code by Pallavi to display pdf
 include_once __DIR__ . '/dbConnect.php';
+require_once __DIR__ . '/include/agreement_sync_helper.php';
 date_default_timezone_set('Asia/Kolkata');
 $auditDate = "";
 $lastDate = "";
@@ -61,6 +62,25 @@ if (!$auditInfo && !empty($reqCustomerId)) {
     if ($auditInfo) {
         $reqAuditId = $auditInfo['audit_stage_id'];
         $reqServiceId = $auditInfo['ca_service_id'];
+    }
+}
+if ($auditInfo) {
+    $targetCustomerId = !empty($auditInfo['ca_customer_id']) ? $auditInfo['ca_customer_id'] : $reqCustomerId;
+    if (!empty($targetCustomerId)) {
+        if (function_exists('aitf_sync_customer_agreement_numbers')) {
+            $syncedNo = aitf_sync_customer_agreement_numbers($db, $targetCustomerId);
+            if (!empty($syncedNo)) {
+                $auditInfo['audit_ref_no'] = $syncedNo;
+            }
+        } else {
+            $stmtCustomer = $db->prepare("SELECT unique_id FROM customer_info WHERE id = :id");
+            $stmtCustomer->bindParam(':id', $targetCustomerId);
+            $stmtCustomer->execute();
+            $customerRow = $stmtCustomer->fetch();
+            if ($customerRow && !empty($customerRow['unique_id'])) {
+                $auditInfo['audit_ref_no'] = $customerRow['unique_id'];
+            }
+        }
     }
 }
 

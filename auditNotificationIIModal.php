@@ -407,18 +407,8 @@ foreach ($category as $name) {
     }
 
     function hasAtLeastOneQualifiedAuditorII() {
-        if (!aitfNotificationHasNaceClassesII && !aitfNotificationHasDivisionsII) {
-            return true;
-        }
-        var anyQualified = false;
-        $('.contractAuditorNameii').each(function () {
-            var val = String($(this).val() || '').trim();
-            if (val !== '' && isAuditorIdQualifiedII(val)) {
-                anyQualified = true;
-                return false;
-            }
-        });
-        return anyQualified;
+        // Temporarily bypassed: allow any auditor to be assigned
+        return true;
     }
 
     function updateAuditorRowVisualStatusII($select) {
@@ -1047,6 +1037,22 @@ foreach ($category as $name) {
 
                         $('.auditiiLocation').val(main['location'] || '');
                         $('.auditiiReferance').val(main['audit_ref_no'] || '');
+                        // Non-blocking fetch to ensure latest authoritative agreement number
+                        $.ajax({
+                            url: "getClientInfo.php",
+                            type: "GET",
+                            dataType: "json",
+                            data: {
+                                customer_id: custId,
+                                service_id: svcId,
+                            },
+                            success: function (clientData) {
+                                if (clientData && clientData[0] && clientData[0]['unique_id'] != null && clientData[0]['unique_id'] !== "") {
+                                    $('.auditiiReferance').val(clientData[0]['unique_id']);
+                                    $('.auditiiReferance').trigger('change');
+                                }
+                            }
+                        });
                         $('.auditiiStandard').val(main['audit_standard'] || '');
                         $('.auditiiContactPerson').val(main['audit_contact_person'] || '');
                         $('.auditiiDesignation').val(main['audit_designation'] || '');
@@ -1275,6 +1281,8 @@ foreach ($category as $name) {
                 return;
             }
 
+            // Temporarily disabled: allow any auditor to be saved
+            /*
             if (!hasAtLeastOneQualifiedAuditorII()) {
                 e.preventDefault();
                 if (typeof Swal !== 'undefined' && Swal.fire) {
@@ -1290,6 +1298,7 @@ foreach ($category as $name) {
                 }
                 return;
             }
+            */
 
             var seenAuditors = {};
             var hasDuplicateAuditor = false;

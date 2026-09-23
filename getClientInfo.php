@@ -87,6 +87,28 @@ function getNextAllotmentSequence($db, $customerId, $year, $month) {
     return $candidate;
 }
 
+function aitfResolveCustomerAgreementUniqueId($db, &$customerDetails) {
+    if (!$customerDetails || empty($customerDetails['id'])) {
+        return;
+    }
+    try {
+        if (function_exists('aitf_sync_customer_agreement_numbers')) {
+            $synced = aitf_sync_customer_agreement_numbers($db, $customerDetails['id']);
+            if (!empty($synced)) {
+                $customerDetails['unique_id'] = $synced;
+                return;
+            }
+        }
+        $agStmt = $db->prepare("SELECT aggrement_no FROM certification_aggrement WHERE customer_id = :cid AND aggrement_no IS NOT NULL AND aggrement_no != '' AND aggrement_no NOT LIKE '% Rc-%' AND aggrement_no NOT LIKE '%-RC-%' ORDER BY id DESC LIMIT 1");
+        $agStmt->execute([':cid' => $customerDetails['id']]);
+        $agRow = $agStmt->fetch(PDO::FETCH_ASSOC);
+        if ($agRow && !empty($agRow['aggrement_no'])) {
+            $authAg = trim($agRow['aggrement_no']);
+            $customerDetails['unique_id'] = $authAg;
+        }
+    } catch (Throwable $e) {}
+}
+
 function getRequestHeadersSafe() {
     if (function_exists('getallheaders')) {
         $headers = getallheaders();
@@ -170,6 +192,7 @@ if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
         $statement->bindParam(':id', $_GET['customerid']);
         $statement->execute();
         $customerDetails = $statement->fetch();
+        aitfResolveCustomerAgreementUniqueId($db, $customerDetails);
         
         // Check if customer was found
         if (!$customerDetails) {
@@ -512,6 +535,7 @@ if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
         $statement->bindParam(':id', $_GET['customerID']);
         $statement->execute();
         $customerDetails = $statement->fetch();
+        aitfResolveCustomerAgreementUniqueId($db, $customerDetails);
 
         // Fetch agreement number for this service
         try {
@@ -1728,6 +1752,7 @@ if (isset($_GET['customerid']) && !empty($_GET['customerid'])) {
         $statement->bindParam(':id', $_GET['customid']);
         $statement->execute();
         $customerDetails = $statement->fetch();
+        aitfResolveCustomerAgreementUniqueId($db, $customerDetails);
 
         // CRITICAL FIX: Check if this is an RC service - same issue as CDC form!
         // For RC: svcID is rc_id, but audit_application uses main service_id

@@ -103,8 +103,22 @@ if (isset($_POST["audit-noti-id-edit"]) && !empty($_POST["audit-noti-id-edit"]))
         $statement->bindParam(':auditsub', $_POST['auditSubject']);
         $statement->bindParam(':auditorg', $_POST['auditForOrg']);
         $statement->bindParam(':intimationdate', $intimationDate);
+        $refNo = null;
+        if (!empty($customer)) {
+            $stmtRef = $db->prepare("SELECT unique_id FROM customer_info WHERE id = :id");
+            $stmtRef->bindParam(':id', $customer);
+            $stmtRef->execute();
+            $refRow = $stmtRef->fetch();
+            if ($refRow && !empty($refRow['unique_id'])) {
+                $refNo = $refRow['unique_id'];
+            }
+        }
+        if (empty($refNo)) {
+            $refNo = $_POST['auditReferance'];
+        }
+
         $statement->bindParam(':location', $_POST['auditLocation']);
-        $statement->bindParam(':referance', $_POST['auditReferance']);
+        $statement->bindParam(':referance', $refNo);
         $statement->bindParam(':standard', $_POST['auditStandard']);
         $statement->bindParam(':contactPerson', $_POST['auditContactPerson']);
         $statement->bindParam(':auditdates', $_POST['auditDatesHidden']);
@@ -492,7 +506,20 @@ if (isset($_POST["audit-noti-id-edit"]) && !empty($_POST["audit-noti-id-edit"]))
             $statement->bindParam(':auditorg', $_POST['auditForOrg']);
             $statement->bindParam(':intimationdate', $intimationDate);
             $statement->bindParam(':location', $_POST['auditLocation']);
-            $statement->bindParam(':referance', $_POST['auditReferance']);
+            $refNo = null;
+            if (!empty($customer)) {
+                $stmtRef = $db->prepare("SELECT unique_id FROM customer_info WHERE id = :id");
+                $stmtRef->bindParam(':id', $customer);
+                $stmtRef->execute();
+                $refRow = $stmtRef->fetch();
+                if ($refRow && !empty($refRow['unique_id'])) {
+                    $refNo = $refRow['unique_id'];
+                }
+            }
+            if (empty($refNo)) {
+                $refNo = $_POST['auditReferance'];
+            }
+            $statement->bindParam(':referance', $refNo);
             $statement->bindParam(':standard', $_POST['auditStandard']);
             $statement->bindParam(':contactPerson', $_POST['auditContactPerson']);
             $statement->bindParam(':auditdates', $_POST["auditDatesHidden"]);
