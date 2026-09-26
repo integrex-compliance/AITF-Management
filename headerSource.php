@@ -296,6 +296,9 @@
         align-items: center;
         margin-right: 20px;
         margin-left: 0;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
         transition: transform 0.3s ease;
     }
 
@@ -303,11 +306,42 @@
         transform: scale(1.02);
     }
 
-    .navbar-brand img {
-        max-height: 100px;
-        height: 100px;
-        width: auto;
+    .navbar-brand .aitf-logo-dark {
+        height: 100px !important;
+        max-height: 100px !important;
+        width: auto !important;
+        display: inline-block !important;
         filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+    }
+
+    .navbar-brand .aitf-logo-light {
+        height: 60px !important;
+        max-height: 60px !important;
+        width: auto !important;
+        display: none !important;
+        filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
+    }
+
+    /* When navbar is on dark background (un-scrolled hero or login page) */
+    #home .top-header:not(.scrolled) .navbar-brand .aitf-logo-dark,
+    .aitf-login-page .top-header:not(.scrolled) .navbar-brand .aitf-logo-dark {
+        display: none !important;
+    }
+
+    #home .top-header:not(.scrolled) .navbar-brand .aitf-logo-light,
+    .aitf-login-page .top-header:not(.scrolled) .navbar-brand .aitf-logo-light {
+        display: inline-block !important;
+    }
+
+    /* When scrolled down (navbar becomes solid white) */
+    .top-header.scrolled .navbar-brand .aitf-logo-light,
+    #home .top-header.scrolled .navbar-brand .aitf-logo-light {
+        display: none !important;
+    }
+
+    .top-header.scrolled .navbar-brand .aitf-logo-dark,
+    #home .top-header.scrolled .navbar-brand .aitf-logo-dark {
+        display: inline-block !important;
     }
 
     .header-nav .nav-link {
@@ -1251,8 +1285,10 @@
 <header class="top-header">
     <nav class="navbar header-nav navbar-expand-lg">
         <div class="container-fluid">
-            <a class="navbar-brand" href="index.php"><img src="aitfImages/newlogo.png" alt="AITF Logo" class="img-fluid"
-                    style="height: 100px !important; width: auto !important; max-height: 100px !important;"></a>
+            <a class="navbar-brand" href="index.php">
+                <img src="aitfImages/newlogo.png" alt="AITF Logo" class="img-fluid aitf-logo-dark">
+                <img src="aitfImages/bg_change_logo.png" alt="AITF Logo" class="img-fluid aitf-logo-light">
+            </a>
             <button class="navbar-toggler" type="button" aria-controls="navbar-wd" aria-expanded="false"
                 aria-label="Toggle navigation" data-mobile-nav-toggle>
                 <span class="mobile-toggle-bar"></span>

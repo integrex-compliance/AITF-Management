@@ -1,4 +1,7 @@
 <?php
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
 $pageTitle = "Online ISO Certification Application | AITF";
 $pageDescription = "Submit your online ISO certification application with AITF. Start your quality management and environmental management certification process here.";
 $canonicalUrl = "https://www.aitf.co.in/application-form";
@@ -52,6 +55,8 @@ if (isset($db)) {
             multisite VARCHAR(10) NULL,
             multisite_functions TEXT NULL,
             multisite_sites TEXT NULL,
+            integrated_management_system VARCHAR(10) NULL,
+            ims_levels TEXT NULL,
             employee_structure TEXT NULL,
             onsite_installation VARCHAR(10) NULL,
             onsite_details TEXT NULL,
@@ -71,6 +76,21 @@ if (isset($db)) {
             other_certificates TEXT NULL,
             system_implementation_date VARCHAR(50) NULL,
             proposed_audit_month VARCHAR(50) NULL,
+            complicated_logistics VARCHAR(10) NULL,
+            complicated_logistics_details TEXT NULL,
+            ems_statutory_requirements TEXT NULL,
+            ems_hazardous_materials TEXT NULL,
+            ems_adverse_impact TEXT NULL,
+            ems_sensitive_location TEXT NULL,
+            ems_nearby_sensitive TEXT NULL,
+            ems_emergency_history TEXT NULL,
+            ohsms_statutory_requirements TEXT NULL,
+            ohsms_hazardous_materials TEXT NULL,
+            ohsms_health_safety_risks TEXT NULL,
+            ohsms_activities_temporary_sites TEXT NULL,
+            ohsms_accident_rates TEXT NULL,
+            ohsms_public_present TEXT NULL,
+            ohsms_mandatory_audits TEXT NULL,
             sign_name VARCHAR(255) NULL,
             sign_designation VARCHAR(255) NULL,
             sign_date VARCHAR(50) NULL,
@@ -102,6 +122,23 @@ if (isset($db)) {
             "ALTER TABLE online_audit_applications ADD COLUMN customer_requirements_attachment_name VARCHAR(255) NULL",
             "ALTER TABLE online_audit_applications ADD COLUMN declaration_confirmed TINYINT(1) DEFAULT 0",
             "ALTER TABLE online_audit_applications ADD COLUMN read_flag TINYINT(1) DEFAULT 0",
+            "ALTER TABLE online_audit_applications ADD COLUMN integrated_management_system VARCHAR(10) NULL",
+            "ALTER TABLE online_audit_applications ADD COLUMN ims_levels TEXT NULL",
+            "ALTER TABLE online_audit_applications ADD COLUMN complicated_logistics VARCHAR(10) NULL",
+            "ALTER TABLE online_audit_applications ADD COLUMN complicated_logistics_details TEXT NULL",
+            "ALTER TABLE online_audit_applications ADD COLUMN ems_statutory_requirements TEXT NULL",
+            "ALTER TABLE online_audit_applications ADD COLUMN ems_hazardous_materials TEXT NULL",
+            "ALTER TABLE online_audit_applications ADD COLUMN ems_adverse_impact TEXT NULL",
+            "ALTER TABLE online_audit_applications ADD COLUMN ems_sensitive_location TEXT NULL",
+            "ALTER TABLE online_audit_applications ADD COLUMN ems_nearby_sensitive TEXT NULL",
+            "ALTER TABLE online_audit_applications ADD COLUMN ems_emergency_history TEXT NULL",
+            "ALTER TABLE online_audit_applications ADD COLUMN ohsms_statutory_requirements TEXT NULL",
+            "ALTER TABLE online_audit_applications ADD COLUMN ohsms_hazardous_materials TEXT NULL",
+            "ALTER TABLE online_audit_applications ADD COLUMN ohsms_health_safety_risks TEXT NULL",
+            "ALTER TABLE online_audit_applications ADD COLUMN ohsms_activities_temporary_sites TEXT NULL",
+            "ALTER TABLE online_audit_applications ADD COLUMN ohsms_accident_rates TEXT NULL",
+            "ALTER TABLE online_audit_applications ADD COLUMN ohsms_public_present TEXT NULL",
+            "ALTER TABLE online_audit_applications ADD COLUMN ohsms_mandatory_audits TEXT NULL",
             "ALTER TABLE online_audit_applications MODIFY created_at DATETIME NULL"
         ];
         foreach ($alterColumns as $sql) {
@@ -228,9 +265,9 @@ if (isset($db)) {
             $gstin = getOnlineAuditPostValue('gstin');
             $legal_status = getOnlineAuditPostValue('legal_status');
             $branch_offices = getOnlineAuditPostValue('branch_offices');
-            $branch_details = getOnlineAuditPostValue('branch_details');
+            $branch_details = ($branch_offices === 'Yes') ? getOnlineAuditPostValue('branch_details') : '';
             $legal_obligations_applicable = getOnlineAuditPostValue('legal_obligations_applicable');
-            $legal_obligations = getOnlineAuditPostValue('legal_obligations');
+            $legal_obligations = ($legal_obligations_applicable === 'Yes') ? getOnlineAuditPostValue('legal_obligations') : '';
 
             $certTypes = [];
             if (isset($_POST['certification_type']) && is_array($_POST['certification_type'])) {
@@ -253,15 +290,25 @@ if (isset($db)) {
             $standard_input = isset($_POST['standard_applied']) && is_array($_POST['standard_applied']) ? $_POST['standard_applied'] : [];
             $accreditation_input = isset($_POST['accreditation_requirement']) && is_array($_POST['accreditation_requirement']) ? $_POST['accreditation_requirement'] : [];
             $maxPairs = max(count($standard_input), count($accreditation_input), 1);
+            $seen_standards = [];
+            $duplicate_standards = [];
             for ($i = 0; $i < $maxPairs; $i++) {
                 $std = isset($standard_input[$i]) ? trim($standard_input[$i]) : '';
                 $acc = isset($accreditation_input[$i]) ? trim($accreditation_input[$i]) : '';
                 if ($std !== '') {
-                    $standard_applied[] = $std . ($acc !== '' ? ' (' . $acc . ')' : '');
+                    if (in_array($std, $seen_standards, true)) {
+                        $duplicate_standards[] = $std;
+                    } else {
+                        $seen_standards[] = $std;
+                        $standard_applied[] = $std . ($acc !== '' ? ' (' . $acc . ')' : '');
+                        if ($acc !== '') {
+                            $accreditation_requirement[] = $acc;
+                        }
+                    }
                 }
-                if ($acc !== '') {
-                    $accreditation_requirement[] = $acc;
-                }
+            }
+            if (!empty($duplicate_standards)) {
+                $error_message = 'Duplicate ISO Standard (' . htmlspecialchars(implode(', ', array_unique($duplicate_standards)), ENT_QUOTES, 'UTF-8') . ') selected. Please select each standard only once.';
             }
             $standard_applied_text = implode(', ', $standard_applied);
             $accreditation_requirement_text = implode(', ', $accreditation_requirement);
@@ -270,24 +317,57 @@ if (isset($db)) {
             $accreditation_requirement = $accreditation_requirement_text;
             $scope_requirement = getOnlineAuditPostValue('scope_requirement');
             $multisite = getOnlineAuditPostValue('multisite');
-            $multisite_functions = getOnlineAuditPostValue('multisite_functions');
-            $multisite_sites = getOnlineAuditPostValue('multisite_sites');
+            $multisite_functions = ($multisite === 'Yes') ? getOnlineAuditPostValue('multisite_functions') : '';
+            $multisite_sites = ($multisite === 'Yes') ? getOnlineAuditPostValue('multisite_sites') : '';
+            $integrated_management_system = getOnlineAuditPostValue('integrated_management_system');
+            $ims_levels_input = isset($_POST['ims_levels']) && is_array($_POST['ims_levels']) ? $_POST['ims_levels'] : [];
+            $ims_levels_clean = [];
+            foreach ($ims_levels_input as $lvl) {
+                $cLvl = trim($lvl);
+                if ($cLvl !== '') {
+                    $ims_levels_clean[] = $cLvl;
+                }
+            }
+            $ims_levels = ($integrated_management_system === 'Yes') ? implode("\n", $ims_levels_clean) : '';
             $employee_structure = getOnlineAuditPostValue('employee_structure');
             $onsite_installation = getOnlineAuditPostValue('onsite_installation');
-            $onsite_details = getOnlineAuditPostValue('onsite_details');
+            $onsite_details = ($onsite_installation === 'Yes') ? getOnlineAuditPostValue('onsite_details') : '';
             $part_time_personnel = getOnlineAuditPostValue('part_time_personnel');
-            $part_time_count = getOnlineAuditPostValue('part_time_count');
+            $part_time_count = ($part_time_personnel === 'Yes') ? getOnlineAuditPostValue('part_time_count') : '';
             $employees_excluded = getOnlineAuditPostValue('employees_excluded');
-            $employees_excluded_details = getOnlineAuditPostValue('employees_excluded_details');
+            $employees_excluded_details = ($employees_excluded === 'Yes') ? getOnlineAuditPostValue('employees_excluded_details') : '';
             $consultancy_services_taken = getOnlineAuditPostValue('consultancy_services_taken');
-            $consultancy_details = getOnlineAuditPostValue('consultancy_details');
+            $consultancy_details = ($consultancy_services_taken === 'Yes') ? getOnlineAuditPostValue('consultancy_details') : '';
             $org_type = getOnlineAuditPostValue('org_type');
             $major_customers = getOnlineAuditPostValue('major_customers');
+
+            // Annexure 1 is applicable to all applicants
             $main_products = getOnlineAuditPostValue('main_products');
             $raw_materials = getOnlineAuditPostValue('raw_materials');
             $operations = getOnlineAuditPostValue('operations');
             $external_processes = getOnlineAuditPostValue('external_processes');
             $design_responsibility = getOnlineAuditPostValue('design_responsibility');
+            $complicated_logistics = getOnlineAuditPostValue('complicated_logistics');
+            $complicated_logistics_details = ($complicated_logistics === 'Yes') ? getOnlineAuditPostValue('complicated_logistics_details') : '';
+
+            // Annexure 2 (EMS) & Annexure 3 (OHSMS) are scheme-specific based on selected standards
+            $has14001 = (stripos($standard_applied_text, '14001') !== false);
+            $has45001 = (stripos($standard_applied_text, '45001') !== false);
+
+            $ems_statutory_requirements = $has14001 ? getOnlineAuditPostValue('ems_statutory_requirements') : '';
+            $ems_hazardous_materials = $has14001 ? getOnlineAuditPostValue('ems_hazardous_materials') : '';
+            $ems_adverse_impact = $has14001 ? getOnlineAuditPostValue('ems_adverse_impact') : '';
+            $ems_sensitive_location = $has14001 ? getOnlineAuditPostValue('ems_sensitive_location') : '';
+            $ems_nearby_sensitive = $has14001 ? getOnlineAuditPostValue('ems_nearby_sensitive') : '';
+            $ems_emergency_history = $has14001 ? getOnlineAuditPostValue('ems_emergency_history') : '';
+
+            $ohsms_statutory_requirements = $has45001 ? getOnlineAuditPostValue('ohsms_statutory_requirements') : '';
+            $ohsms_hazardous_materials = $has45001 ? getOnlineAuditPostValue('ohsms_hazardous_materials') : '';
+            $ohsms_health_safety_risks = $has45001 ? getOnlineAuditPostValue('ohsms_health_safety_risks') : '';
+            $ohsms_activities_temporary_sites = $has45001 ? getOnlineAuditPostValue('ohsms_activities_temporary_sites') : '';
+            $ohsms_accident_rates = $has45001 ? getOnlineAuditPostValue('ohsms_accident_rates') : '';
+            $ohsms_public_present = $has45001 ? getOnlineAuditPostValue('ohsms_public_present') : '';
+            $ohsms_mandatory_audits = $has45001 ? getOnlineAuditPostValue('ohsms_mandatory_audits') : '';
             $other_certificates = getOnlineAuditPostValue('other_certificates');
             $system_implementation_date = getOnlineAuditPostValue('system_implementation_date');
             $proposed_audit_month = getOnlineAuditPostValue('proposed_audit_month');
@@ -404,12 +484,18 @@ if (isset($db)) {
                     branch_offices, branch_details, legal_obligations_applicable, legal_obligations,
                     certification_type, standard_applied, accreditation_requirement, scope_requirement,
                     multisite, multisite_functions, multisite_sites,
+                    integrated_management_system, ims_levels,
                     employee_structure, onsite_installation, onsite_details,
                     part_time_personnel, part_time_count, employees_excluded, employees_excluded_details,
                     consultancy_services_taken, consultancy_details,
                     org_type, major_customers, main_products, raw_materials, operations,
                     external_processes, design_responsibility, other_certificates,
                     system_implementation_date, proposed_audit_month,
+                    complicated_logistics, complicated_logistics_details,
+                    ems_statutory_requirements, ems_hazardous_materials, ems_adverse_impact,
+                    ems_sensitive_location, ems_nearby_sensitive, ems_emergency_history,
+                    ohsms_statutory_requirements, ohsms_hazardous_materials, ohsms_health_safety_risks,
+                    ohsms_activities_temporary_sites, ohsms_accident_rates, ohsms_public_present, ohsms_mandatory_audits,
                     sign_name, sign_designation, sign_date, sign_image_path,
                     process_flow_attachment_path, process_flow_attachment_name,
                     organisation_brochure_attachment_path, organisation_brochure_attachment_name,
@@ -421,12 +507,18 @@ if (isset($db)) {
                     :branch_offices, :branch_details, :legal_obligations_applicable, :legal_obligations,
                     :certification_type, :standard_applied, :accreditation_requirement, :scope_requirement,
                     :multisite, :multisite_functions, :multisite_sites,
+                    :integrated_management_system, :ims_levels,
                     :employee_structure, :onsite_installation, :onsite_details,
                     :part_time_personnel, :part_time_count, :employees_excluded, :employees_excluded_details,
                     :consultancy_services_taken, :consultancy_details,
                     :org_type, :major_customers, :main_products, :raw_materials, :operations,
                     :external_processes, :design_responsibility, :other_certificates,
                     :system_implementation_date, :proposed_audit_month,
+                    :complicated_logistics, :complicated_logistics_details,
+                    :ems_statutory_requirements, :ems_hazardous_materials, :ems_adverse_impact,
+                    :ems_sensitive_location, :ems_nearby_sensitive, :ems_emergency_history,
+                    :ohsms_statutory_requirements, :ohsms_hazardous_materials, :ohsms_health_safety_risks,
+                    :ohsms_activities_temporary_sites, :ohsms_accident_rates, :ohsms_public_present, :ohsms_mandatory_audits,
                     :sign_name, :sign_designation, :sign_date, :sign_image_path,
                     :process_flow_attachment_path, :process_flow_attachment_name,
                     :organisation_brochure_attachment_path, :organisation_brochure_attachment_name,
@@ -456,6 +548,8 @@ if (isset($db)) {
                     $stmt->bindParam(':multisite', $multisite);
                     $stmt->bindParam(':multisite_functions', $multisite_functions);
                     $stmt->bindParam(':multisite_sites', $multisite_sites);
+                    $stmt->bindParam(':integrated_management_system', $integrated_management_system);
+                    $stmt->bindParam(':ims_levels', $ims_levels);
                     $stmt->bindParam(':employee_structure', $employee_structure);
                     $stmt->bindParam(':onsite_installation', $onsite_installation);
                     $stmt->bindParam(':onsite_details', $onsite_details);
@@ -475,6 +569,21 @@ if (isset($db)) {
                     $stmt->bindParam(':other_certificates', $other_certificates);
                     $stmt->bindParam(':system_implementation_date', $system_implementation_date);
                     $stmt->bindParam(':proposed_audit_month', $proposed_audit_month);
+                    $stmt->bindParam(':complicated_logistics', $complicated_logistics);
+                    $stmt->bindParam(':complicated_logistics_details', $complicated_logistics_details);
+                    $stmt->bindParam(':ems_statutory_requirements', $ems_statutory_requirements);
+                    $stmt->bindParam(':ems_hazardous_materials', $ems_hazardous_materials);
+                    $stmt->bindParam(':ems_adverse_impact', $ems_adverse_impact);
+                    $stmt->bindParam(':ems_sensitive_location', $ems_sensitive_location);
+                    $stmt->bindParam(':ems_nearby_sensitive', $ems_nearby_sensitive);
+                    $stmt->bindParam(':ems_emergency_history', $ems_emergency_history);
+                    $stmt->bindParam(':ohsms_statutory_requirements', $ohsms_statutory_requirements);
+                    $stmt->bindParam(':ohsms_hazardous_materials', $ohsms_hazardous_materials);
+                    $stmt->bindParam(':ohsms_health_safety_risks', $ohsms_health_safety_risks);
+                    $stmt->bindParam(':ohsms_activities_temporary_sites', $ohsms_activities_temporary_sites);
+                    $stmt->bindParam(':ohsms_accident_rates', $ohsms_accident_rates);
+                    $stmt->bindParam(':ohsms_public_present', $ohsms_public_present);
+                    $stmt->bindParam(':ohsms_mandatory_audits', $ohsms_mandatory_audits);
                     $stmt->bindParam(':sign_name', $sign_name);
                     $stmt->bindParam(':sign_designation', $sign_designation);
                     $stmt->bindParam(':sign_date', $sign_date);
@@ -633,7 +742,7 @@ if (isset($db)) {
                             $clientMail->addAddress($email, $contact_person);
                             $clientMail->Subject = 'Thank you for your application - A.I.T.F. (Assessment And Institute for Technical Forum)';
                             $clientBody = "<p style=\"font-family:Arial,sans-serif; font-size:14px;\">Hi " . htmlspecialchars($contact_person, ENT_QUOTES, 'UTF-8') . ",</p>"
-                                . "<p style=\"font-family:Arial,sans-serif; font-size:14px; margin:8px 0;\">Thank you for contacting <strong>A.I.T.F. (Assessment And Institute for Technical Forum)</strong>.</p>"
+                                . "<p style=\"font-family:Arial,sans-serif; font-size:14px; margin:8px 0;\">Thank you for choosing <strong>A.I.T.F. (Assessment And Institute for Technical Forum)</strong>for your certification.We sincerely appreciate your trust in us.</p>"
                                 . "<p style=\"font-family:Arial,sans-serif; font-size:14px; margin:8px 0;\">We confirm that we have successfully received your <strong>Audit Application Form</strong>. Our assessment team is currently reviewing the details submitted by you.</p>"
                                 . "<p style=\"font-family:Arial,sans-serif; font-size:14px; margin:8px 0;\">Once the verification process is completed, our team will contact you to through the next steps of the audit process.</p>"
                                 . "<p style=\"font-family:Arial,sans-serif; font-size:14px; margin:8px 0;\"><strong>Application Summary:</strong><br>Organization Name: " . htmlspecialchars($org_name, ENT_QUOTES, 'UTF-8') . "<br>Contact Number: " . htmlspecialchars($phone, ENT_QUOTES, 'UTF-8') . "<br>Email Address: " . htmlspecialchars($email, ENT_QUOTES, 'UTF-8') . "<br>Applied Assessment: " . htmlspecialchars($standard_applied, ENT_QUOTES, 'UTF-8') . "</p>"
@@ -743,16 +852,17 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
             border-radius: 2px;
         }
 
-        .form-card {
+        .form-card,
+        .nc-form-card {
             background: #ffffff;
             border: 1px solid #e2e8f0;
             border-radius: 20px;
-            padding: 42px 48px;
+            padding: 38px 42px;
             margin: 16px 0 24px;
             max-width: 100%;
             width: 100%;
             position: relative;
-            box-shadow: 0 20px 50px -12px rgba(15, 23, 42, 0.12);
+            box-shadow: 0 20px 50px -12px rgba(15, 23, 42, 0.08);
         }
 
         .nc-form-header {
@@ -760,7 +870,7 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
             border: 1px solid #e2e8f0;
             border-radius: 16px;
             padding: 26px 28px;
-            margin-bottom: 35px;
+            margin-bottom: 30px;
             text-align: center;
             box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.8);
         }
@@ -793,6 +903,43 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
             color: #64748b;
         }
 
+        /* Section Step Tags */
+        .nc-section-step-tag {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .nc-step-pill-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #eff6ff;
+            color: #1e40af;
+            border: 1.5px solid #bfdbfe;
+            padding: 5px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .nc-step-pill-badge i {
+            font-size: 11px;
+            color: #2563eb;
+        }
+
+        .nc-step-pill-badge.nc-step-pill-final {
+            background: #ecfdf5;
+            color: #065f46;
+            border-color: #a7f3d0;
+        }
+
+        .nc-step-pill-badge.nc-step-pill-final i {
+            color: #059669;
+        }
+
         .nc-form-section {
             border: 1.5px solid #e2e8f0;
             padding: 28px 30px 22px;
@@ -801,6 +948,7 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
             background: #ffffff;
             box-shadow: 0 4px 18px -4px rgba(15, 23, 42, 0.03);
             transition: all 0.25s ease;
+            scroll-margin-top: 100px;
         }
 
         .nc-form-section:hover {
@@ -821,6 +969,7 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
             gap: 12px;
             letter-spacing: -0.2px;
             line-height: 1.4;
+            word-break: break-word;
         }
 
         .nc-section-icon {
@@ -836,33 +985,254 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
             flex-shrink: 0;
         }
 
-        .btn-submit-main {
-            background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
-            color: #ffffff;
-            border: none;
-            padding: 16px 48px;
-            font-size: 17px;
-            font-weight: 700;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.4);
-            display: inline-flex;
+        /* Mobile Table Horizontal Swipe Hint */
+        .mobile-table-hint {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #166534;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 12.5px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .table-responsive {
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+            touch-action: pan-x pan-y !important;
+            width: 100%;
+        }
+
+        .table-responsive::-webkit-scrollbar {
+            height: 7px;
+        }
+
+        .table-responsive::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+
+        .table-responsive::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        .table-responsive::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Employee Structure Table - Fixed & Clean Horizontal Scroll */
+        .employee-structure-table {
+            min-width: 790px !important;
+            width: 100% !important;
+            table-layout: fixed !important;
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+            background: #ffffff !important;
+            margin-bottom: 0 !important;
+        }
+
+        .other-cert-table {
+            min-width: 650px;
+        }
+
+        /* Colgroup widths */
+        .employee-structure-table .emp-col-dept-w {
+            width: 175px !important;
+        }
+
+        .employee-structure-table .emp-col-shift-w {
+            width: 76px !important;
+        }
+
+        /* Department Header (Row 1, First Cell) - Pinned Sticky */
+        .employee-structure-table thead tr.emp-row-main-head th.emp-th-dept {
+            position: sticky !important;
+            left: 0 !important;
+            top: 0 !important;
+            z-index: 10 !important;
+            background: #f1f5f9 !important;
+            color: #1e293b !important;
+            font-size: 13px !important;
+            font-weight: 700 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.5px !important;
+            vertical-align: middle !important;
+            padding: 10px 12px !important;
+            border-top: none !important;
+            border-left: none !important;
+            border-right: 2px solid #cbd5e1 !important;
+            border-bottom: 2px solid #cbd5e1 !important;
+            box-shadow: 4px 0 8px -2px rgba(15, 23, 42, 0.12) !important;
+        }
+
+        /* Shift Group Headers (Row 1, Cols 2-5) */
+        .employee-structure-table thead tr.emp-row-main-head th.emp-th-group {
+            background: #f8fafc !important;
+            color: #0f172a !important;
+            font-size: 12.5px !important;
+            font-weight: 700 !important;
+            text-align: center !important;
+            padding: 9px 6px !important;
+            border-top: none !important;
+            border-right: 1px solid #e2e8f0 !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+        }
+
+        /* Sub-headers (Row 2) - STRICTLY NON-STICKY */
+        .employee-structure-table thead tr.emp-row-sub-head th.emp-th-sub {
+            position: static !important;
+            left: auto !important;
+            z-index: 1 !important;
+            box-shadow: none !important;
+            background: #f8fafc !important;
+            color: #475569 !important;
+            font-size: 11.5px !important;
+            font-weight: 600 !important;
+            text-align: center !important;
+            padding: 7px 4px !important;
+            border-top: none !important;
+            border-right: 1px solid #e2e8f0 !important;
+            border-bottom: 2px solid #cbd5e1 !important;
+            white-space: nowrap !important;
+        }
+
+        /* Department Cell in Body - Pinned Sticky */
+        .employee-structure-table tbody tr td.emp-td-dept {
+            position: sticky !important;
+            left: 0 !important;
+            z-index: 5 !important;
+            background: #ffffff !important;
+            border-right: 2px solid #cbd5e1 !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+            box-shadow: 4px 0 8px -2px rgba(15, 23, 42, 0.1) !important;
+            padding: 10px 12px !important;
+            font-size: 12.5px !important;
+            line-height: 1.4 !important;
+            font-weight: 500 !important;
+            color: #1e293b !important;
+            vertical-align: middle !important;
+        }
+
+        .employee-structure-table tbody tr:nth-child(even) td.emp-td-dept {
+            background: #f8fafc !important;
+        }
+
+        /* Shift Data Cells */
+        .employee-structure-table tbody tr td {
+            padding: 8px 5px !important;
+            text-align: center !important;
+            vertical-align: middle !important;
+            border-right: 1px solid #f1f5f9 !important;
+            border-bottom: 1px solid #f1f5f9 !important;
+            background: #ffffff;
+        }
+
+        .employee-structure-table tbody tr:nth-child(even) td {
+            background: #fcfdfe;
+        }
+
+        /* Inputs in the Table */
+        .employee-structure-table .emp-input {
+            width: 60px !important;
+            height: 38px !important;
+            padding: 4px 6px !important;
+            font-size: 14px !important;
+            font-weight: 600 !important;
+            text-align: center !important;
+            margin: 0 auto !important;
+            display: block !important;
+            border-radius: 8px !important;
+            border: 1.5px solid #cbd5e1 !important;
+            background: #ffffff !important;
+            color: #0f172a !important;
+            transition: all 0.2s ease !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+        }
+
+        .employee-structure-table .emp-input:focus {
+            border-color: #2563eb !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18) !important;
+            background: #eff6ff !important;
+            outline: none !important;
+        }
+
+        /* Full vs Short labels */
+        .employee-structure-table .full-lbl {
+            display: inline;
+        }
+
+        .employee-structure-table .short-lbl {
+            display: none;
+        }
+
+        /* Submit Button Styling */
+        .submit-action-wrapper {
+            display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 10px;
-            letter-spacing: 0.2px;
+            text-align: center;
+            margin-top: 35px;
+            margin-bottom: 25px;
+            width: 100%;
         }
 
-        .btn-submit-main:hover:not(:disabled) {
-            background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 16px 32px -6px rgba(37, 99, 235, 0.5);
-            color: #ffffff;
+        #main-submit-btn,
+        .btn-submit-main,
+        .submit-btn {
+            background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%) !important;
+            color: #ffffff !important;
+            border: none !important;
+            padding: 16px 42px !important;
+            font-family: 'Poppins', sans-serif !important;
+            font-size: 16px !important;
+            font-weight: 700 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.8px !important;
+            border-radius: 50px !important;
+            cursor: pointer !important;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            box-shadow: 0 10px 25px -4px rgba(22, 163, 74, 0.42), 0 4px 10px rgba(0, 0, 0, 0.04) !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 12px !important;
+            width: auto !important;
+            min-width: 310px !important;
+            max-width: 440px !important;
+            margin: 0 auto !important;
+            white-space: nowrap !important;
+            text-decoration: none !important;
+            outline: none !important;
         }
 
+        #main-submit-btn:hover:not(:disabled),
+        .btn-submit-main:hover:not(:disabled),
+        .submit-btn:hover:not(:disabled) {
+            background: linear-gradient(135deg, #15803d 0%, #16a34a 100%) !important;
+            transform: translateY(-2px) !important;
+            box-shadow: 0 14px 32px -4px rgba(22, 163, 74, 0.52), 0 6px 14px rgba(0, 0, 0, 0.08) !important;
+            color: #ffffff !important;
+        }
+
+        #main-submit-btn:active:not(:disabled),
+        .btn-submit-main:active:not(:disabled),
+        .submit-btn:active:not(:disabled) {
+            transform: translateY(0) !important;
+            box-shadow: 0 6px 16px rgba(22, 163, 74, 0.35) !important;
+        }
+
+        #main-submit-btn:disabled,
+        #main-submit-btn[disabled],
         .btn-submit-main:disabled,
-        .btn-submit-main[disabled] {
+        .btn-submit-main[disabled],
+        .submit-btn:disabled,
+        .submit-btn.disabled {
             background: #94a3b8 !important;
             opacity: 0.65 !important;
             cursor: not-allowed !important;
@@ -871,17 +1241,71 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
             pointer-events: none !important;
         }
 
+        #main-submit-btn i,
+        .btn-submit-main i,
+        .submit-btn i {
+            font-size: 17px !important;
+            margin-right: 0 !important;
+            transition: transform 0.2s ease !important;
+        }
+
+        #main-submit-btn:hover:not(:disabled) i,
+        .btn-submit-main:hover:not(:disabled) i {
+            transform: translateX(3px) !important;
+        }
+
+        /* Conditional Fields (Hidden by default, smooth fadeIn when Yes selected) */
+        .conditional-field-wrapper {
+            animation: fadeInConditional 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes fadeInConditional {
+            from {
+                opacity: 0;
+                transform: translateY(-4px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Captcha Wrap Directly Below Button */
+        .captcha-wrap {
+            width: auto;
+            max-width: 100%;
+            margin: 20px auto 0 !important;
+            display: inline-flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 0 !important;
+            background: transparent !important;
+            border: none !important;
+        }
+
+        .captcha-wrap .cf-turnstile {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            max-width: 100%;
+        }
+
+        .captcha-wrap .cf-turnstile > div,
+        .captcha-wrap .cf-turnstile iframe {
+            margin: 0 auto !important;
+            max-width: 100% !important;
+        }
+
         /* 3D Button with Hover Effect */
-        .download-btn,
-        .submit-btn {
+        .download-btn {
             transition: none;
             box-shadow: none;
         }
 
         .download-btn:hover,
-        .download-btn:active,
-        .submit-btn:hover,
-        .submit-btn:active {
+        .download-btn:active {
             transform: none;
             box-shadow: none;
             letter-spacing: 1px;
@@ -1040,41 +1464,6 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
             padding: 9px;
             border-radius: 10px;
             font-size: 0.86rem;
-        }
-
-        .submit-btn {
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
-            color: #ffffff;
-            border: none;
-            padding: 14px 38px;
-            border-radius: 999px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 1.2px;
-            cursor: pointer;
-            transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.15s ease;
-            box-shadow: 0 10px 24px rgba(37, 99, 235, 0.35);
-            width: 100%;
-            max-width: 240px;
-            display: block;
-            margin: 20px auto 0;
-        }
-
-        .submit-btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 14px 28px rgba(29, 78, 216, 0.4);
-        }
-
-        .submit-btn:active:not(:disabled) {
-            transform: translateY(0);
-            box-shadow: 0 8px 18px rgba(29, 78, 216, 0.35);
-        }
-
-        .submit-btn:disabled,
-        .submit-btn.disabled {
-            opacity: 0.55;
-            cursor: not-allowed;
-            box-shadow: none;
         }
 
         .required-warning {
@@ -1266,6 +1655,88 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
             padding: 6px 12px;
         }
 
+        .remove-standard-row {
+            margin-top: 24px;
+            width: 100%;
+            border-radius: 6px;
+            padding: 8px 12px;
+            color: #ef4444;
+            border: 1px solid #fca5a5;
+            background: #fff;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .remove-standard-row:hover {
+            background: #fef2f2;
+            color: #dc2626;
+            border-color: #f87171;
+        }
+
+        @media (max-width: 767px) {
+            .remove-standard-row {
+                margin-top: 6px;
+                margin-bottom: 12px;
+            }
+        }
+
+        /* IMS (Integrated Management System) styling */
+        .ims-levels-container {
+            border: 1.5px solid #cbd5e1;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #fff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+
+        .ims-level-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 13px 18px;
+            margin: 0;
+            border-bottom: 1px solid #e2e8f0;
+            cursor: pointer;
+            font-weight: normal;
+            transition: background 0.15s ease;
+        }
+
+        .ims-level-row:last-child {
+            border-bottom: none;
+        }
+
+        .ims-level-row:hover {
+            background: #f8fafc;
+        }
+
+        .ims-level-text {
+            color: #1e293b;
+            font-size: 14px;
+            line-height: 1.5;
+            padding-right: 16px;
+            flex-grow: 1;
+        }
+
+        .ims-checkbox {
+            width: 20px;
+            height: 20px;
+            accent-color: #2563eb;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        @media (max-width: 767px) {
+            .ims-level-row {
+                padding: 11px 12px !important;
+            }
+            .ims-level-text {
+                font-size: 13px !important;
+                padding-right: 10px !important;
+                line-height: 1.45 !important;
+            }
+        }
+
         .form-control {
             width: 100%;
             padding: 12px 15px;
@@ -1281,29 +1752,7 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
             outline: none;
         }
 
-        /* Submit Button */
-        .submit-btn {
-            background: linear-gradient(45deg, #4CAF50, #8BC34A);
-            color: white;
-            border: none;
-            padding: 14px 35px;
-            border-radius: 50px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
-            width: 100%;
-            max-width: 200px;
-            display: block;
-            margin: 20px auto 0;
-        }
-
-        .submit-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 7px 20px rgba(76, 175, 80, 0.4);
-        }
+        /* Submit Button styles handled in main form styles */
 
         /* PDF Viewer Styling */
         .pdf-container {
@@ -1915,9 +2364,25 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
 
                             <form method="post" action="" enctype="multipart/form-data" id="online-application-form-main">
                                 <input type="hidden" name="public_audit_application" value="1">
+                                <?php
+                                $has9001Initial = false;
+                                $has14001Initial = false;
+                                $has45001Initial = false;
+                                if (isset($_POST['standard_applied']) && is_array($_POST['standard_applied'])) {
+                                    foreach ($_POST['standard_applied'] as $sVal) {
+                                        $sUpper = strtoupper((string) $sVal);
+                                        if (strpos($sUpper, '9001') !== false) $has9001Initial = true;
+                                        if (strpos($sUpper, '14001') !== false) $has14001Initial = true;
+                                        if (strpos($sUpper, '45001') !== false) $has45001Initial = true;
+                                    }
+                                }
+                                ?>
                                 
                                 <!-- 1. Data of Organisation Applying for Certification -->
-                                <div class="nc-form-section">
+                                <div class="nc-form-section" id="form-step-1">
+                                    <div class="nc-section-step-tag">
+                                        <span class="nc-step-pill-badge"><i class="fa fa-bookmark"></i> Step 1 of 14</span>
+                                    </div>
                                     <h4>
                                         <span class="nc-section-icon"><i class="fa fa-building"></i></span>
                                         1. DATA OF ORGANISATION APPLYING FOR CERTIFICATION
@@ -1959,7 +2424,10 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                                 </div>
 
                                 <!-- 2. Company Structure -->
-                                <div class="nc-form-section">
+                                <div class="nc-form-section" id="form-step-2">
+                                    <div class="nc-section-step-tag">
+                                        <span class="nc-step-pill-badge"><i class="fa fa-bookmark"></i> Step 2 of 14</span>
+                                    </div>
                                     <h4>
                                         <span class="nc-section-icon"><i class="fa fa-sitemap"></i></span>
                                         2. COMPANY STRUCTURE
@@ -1977,27 +2445,24 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                                                 <option value="Other" <?php echo (isset($_POST['legal_status']) && $_POST['legal_status'] === 'Other') ? 'selected' : ''; ?>>Other</option>
                                             </select>
                                         </div>
-                                        <div class="col-md-6 form-group">
-                                            <label>Branch offices / group companies</label>
+                                        <div class="col-md-6 form-group" style="margin-bottom: 0;">
+                                            <label>If any branch offices, subsidiary company / Group companies:</label>
                                             <div style="margin-bottom: 8px;">
                                                 <label style="margin-right:20px; font-weight: 500; cursor: pointer;"><input type="radio" name="branch_offices" value="Yes" <?php echo (isset($_POST['branch_offices']) && $_POST['branch_offices'] === 'Yes') ? 'checked' : ''; ?>> Yes</label>
                                                 <label style="font-weight: 500; cursor: pointer;"><input type="radio" name="branch_offices" value="No" <?php echo (isset($_POST['branch_offices']) && $_POST['branch_offices'] === 'No') ? 'checked' : ''; ?>> No</label>
                                             </div>
-                                            <textarea name="branch_details" class="form-control" rows="2" placeholder="If yes, please specify sites / branches."><?php echo isset($_POST['branch_details']) ? htmlspecialchars($_POST['branch_details'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
-                                        </div>
-                                        <div class="col-md-12 form-group" style="margin-bottom: 0;">
-                                            <label>Any legal (statutory and regulatory) obligations applicable to your product / service?</label>
-                                            <div style="margin-bottom: 8px;">
-                                                <label style="margin-right:20px; font-weight: 500; cursor: pointer;"><input type="radio" name="legal_obligations_applicable" value="Yes" <?php echo (isset($_POST['legal_obligations_applicable']) && $_POST['legal_obligations_applicable'] === 'Yes') ? 'checked' : ''; ?>> Yes</label>
-                                                <label style="font-weight: 500; cursor: pointer;"><input type="radio" name="legal_obligations_applicable" value="No" <?php echo (isset($_POST['legal_obligations_applicable']) && $_POST['legal_obligations_applicable'] === 'No') ? 'checked' : ''; ?>> No</label>
+                                            <div id="branch-details-wrapper" class="conditional-field-wrapper" style="<?php echo (isset($_POST['branch_offices']) && $_POST['branch_offices'] === 'Yes') ? '' : 'display: none;'; ?> margin-top: 8px;">
+                                                <textarea name="branch_details" class="form-control" rows="2" placeholder="If yes, please specify sites / branches."><?php echo isset($_POST['branch_details']) ? htmlspecialchars($_POST['branch_details'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
                                             </div>
-                                            <textarea name="legal_obligations" class="form-control" rows="2" placeholder="If yes, please specify."><?php echo isset($_POST['legal_obligations']) ? htmlspecialchars($_POST['legal_obligations'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
                                         </div>
                                     </div>
                                 </div>
 
                                 <!-- 3. Certification Requirement -->
-                                <div class="nc-form-section">
+                                <div class="nc-form-section" id="form-step-3">
+                                    <div class="nc-section-step-tag">
+                                        <span class="nc-step-pill-badge"><i class="fa fa-bookmark"></i> Step 3 of 14</span>
+                                    </div>
                                     <h4>
                                         <span class="nc-section-icon"><i class="fa fa-certificate"></i></span>
                                         3. CERTIFICATION REQUIREMENT
@@ -2029,9 +2494,8 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
 
                                         <?php
                                         $isoOptions = ['ISO 9001', 'ISO 14001', 'ISO 45001', 'ISO 27001'];
-                                        $accrOptions = ['NABCB', 'SELF'];
                                         $stdInput = isset($_POST['standard_applied']) && is_array($_POST['standard_applied']) ? $_POST['standard_applied'] : [''];
-                                        $accInput = isset($_POST['accreditation_requirement']) && is_array($_POST['accreditation_requirement']) ? $_POST['accreditation_requirement'] : [''];
+                                        $accInput = isset($_POST['accreditation_requirement']) && is_array($_POST['accreditation_requirement']) ? $_POST['accreditation_requirement'] : ['NABCB'];
                                         $rowCount = max(count($stdInput), count($accInput), 1);
                                         ?>
                                         <div class="col-md-12 form-group">
@@ -2042,12 +2506,11 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                                             <div id="standard-rows">
                                                 <?php for ($i = 0; $i < $rowCount; $i++):
                                                     $stdVal = isset($stdInput[$i]) ? $stdInput[$i] : '';
-                                                    $accVal = isset($accInput[$i]) ? $accInput[$i] : '';
                                                     ?>
                                                     <div class="row align-items-end standard-row" style="margin-bottom:12px;">
-                                                        <div class="col-md-6">
+                                                        <div class="col-md-5 col-sm-12" style="margin-bottom: 8px;">
                                                             <label style="font-size: 13px; color: #64748b;">Standard applied for</label>
-                                                            <select name="standard_applied[]" class="form-control">
+                                                            <select name="standard_applied[]" class="form-control standard-select">
                                                                 <option value="">Select Standard</option>
                                                                 <?php foreach ($isoOptions as $opt):
                                                                     $sel = ($stdVal === $opt) ? 'selected' : '';
@@ -2056,21 +2519,39 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                                                                 <?php endforeach; ?>
                                                             </select>
                                                         </div>
-                                                        <div class="col-md-6">
+                                                        <div class="col-md-5 col-sm-12" style="margin-bottom: 8px;">
                                                             <label style="font-size: 13px; color: #64748b;">Accreditation requirement</label>
-                                                            <select name="accreditation_requirement[]" class="form-control">
-                                                                <option value="">Select Accreditation</option>
-                                                                <?php foreach ($accrOptions as $opt):
-                                                                    $sel = ($accVal === $opt) ? 'selected' : '';
-                                                                    ?>
-                                                                    <option value="<?php echo htmlspecialchars($opt, ENT_QUOTES, 'UTF-8'); ?>" <?php echo $sel; ?>><?php echo htmlspecialchars($opt, ENT_QUOTES, 'UTF-8'); ?></option>
-                                                                <?php endforeach; ?>
-                                                            </select>
+                                                            <input type="text" name="accreditation_requirement[]" class="form-control accreditation-input" value="NABCB" readonly style="background: #f8fafc; font-weight: 600; color: #0f172a; cursor: default;">
+                                                        </div>
+                                                        <div class="col-md-2 col-sm-12" style="margin-bottom: 8px;">
+                                                            <button type="button" class="btn remove-standard-row" style="<?php echo ($rowCount <= 1) ? 'display:none;' : ''; ?>"><i class="fa fa-trash"></i> Remove</button>
                                                         </div>
                                                     </div>
                                                 <?php endfor; ?>
                                             </div>
-                                            <small style="color:#64748b; display: block; margin-top: 4px;"><i class="fa fa-info-circle"></i> Use Add Standard to include multiple ISO Standards.</small>
+                                            <small style="color:#64748b; display: block; margin-top: 4px;"><i class="fa fa-info-circle"></i> Use Add Standard to include multiple ISO Standards (maximum 4 unique standards).</small>
+                                            <?php
+                                            $initBadges = [];
+                                            $initBadges[] = '<a href="#form-step-9" class="annexure-chip" style="text-decoration:none; display:inline-flex; align-items:center; gap:5px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; font-size:12px; font-weight:600; padding:4px 10px; border-radius:999px;"><i class="fa fa-check-circle" style="color:#2563eb;"></i> Annexure 1 (QMS - All Applicants) &darr;</a>';
+                                            if ($has14001Initial) {
+                                                $initBadges[] = '<a href="#form-step-10" class="annexure-chip" style="text-decoration:none; display:inline-flex; align-items:center; gap:5px; background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; font-size:12px; font-weight:600; padding:4px 10px; border-radius:999px;"><i class="fa fa-check-circle" style="color:#059669;"></i> Annexure 2 (EMS) Active &darr;</a>';
+                                            }
+                                            if ($has45001Initial) {
+                                                $initBadges[] = '<a href="#form-step-11" class="annexure-chip" style="text-decoration:none; display:inline-flex; align-items:center; gap:5px; background:#fffbeb; color:#b45309; border:1px solid #fde68a; font-size:12px; font-weight:600; padding:4px 10px; border-radius:999px;"><i class="fa fa-check-circle" style="color:#d97706;"></i> Annexure 3 (OHSMS) Active &darr;</a>';
+                                            }
+                                            ?>
+                                            <div id="annexure-dynamic-status" style="margin-top: 10px; font-size: 13.5px; padding: 10px 14px; border-radius: 10px; background: #f8fafc; border: 1.5px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                                                <div id="annexure-status-text" style="color: #475569; display: flex; align-items: center; gap: 8px;">
+                                                    <?php if ($has14001Initial || $has45001Initial): ?>
+                                                        <i class="fa fa-check-circle text-success"></i> <span style="font-weight:600; color:#0f172a;">Active Annexures for your application:</span>
+                                                    <?php else: ?>
+                                                        <i class="fa fa-info-circle text-primary"></i> <span>Annexure 1 is applicable to all applicants. Selecting ISO 14001 activates Annexure 2, and ISO 45001 activates Annexure 3.</span>
+                                                    <?php endif; ?>
+                                                </div>
+                                                <div id="annexure-status-badges" style="display: flex; gap: 6px; flex-wrap: wrap;">
+                                                    <?php echo implode(' ', $initBadges); ?>
+                                                </div>
+                                            </div>
                                         </div>
 
                                         <div class="col-md-12 form-group" style="margin-bottom: 0;">
@@ -2081,63 +2562,138 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                                 </div>
 
                                 <!-- 4. Multisite Information -->
-                                <div class="nc-form-section">
+                                <div class="nc-form-section" id="form-step-4">
+                                    <div class="nc-section-step-tag">
+                                        <span class="nc-step-pill-badge"><i class="fa fa-bookmark"></i> Step 4 of 14</span>
+                                    </div>
                                     <h4>
                                         <span class="nc-section-icon"><i class="fa fa-map-marker"></i></span>
                                         4. MULTISITE INFORMATION
                                     </h4>
                                     <div class="row">
-                                        <div class="col-md-6 form-group">
-                                            <label>Is your organisation having multisite?</label>
+                                        <div class="col-md-12 form-group" style="margin-bottom: 8px;">
+                                            <label>4. IS YOUR ORGANISATION HAVING MULTISITE? ( Yes / No )</label>
                                             <div style="margin-bottom: 8px;">
                                                 <label style="margin-right:20px; font-weight: 500; cursor: pointer;"><input type="radio" name="multisite" value="Yes" <?php echo (isset($_POST['multisite']) && $_POST['multisite'] === 'Yes') ? 'checked' : ''; ?>> Yes</label>
                                                 <label style="font-weight: 500; cursor: pointer;"><input type="radio" name="multisite" value="No" <?php echo (isset($_POST['multisite']) && $_POST['multisite'] === 'No') ? 'checked' : ''; ?>> No</label>
                                             </div>
                                         </div>
-                                        <div class="col-md-6 form-group">
-                                            <label>If yes, what functions are performed centrally?</label>
-                                            <textarea name="multisite_functions" class="form-control" rows="2" placeholder="e.g. Marketing, Purchasing, HR, Top Management, etc."><?php echo isset($_POST['multisite_functions']) ? htmlspecialchars($_POST['multisite_functions'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
-                                        </div>
-                                        <div class="col-md-12 form-group" style="margin-bottom: 0;">
-                                            <label>List all sites to be covered (with address and key processes)</label>
-                                            <textarea name="multisite_sites" class="form-control" rows="3" placeholder="Site 1: Address, Processes / Operations&#10;Site 2: Address, Processes / Operations&#10;..."><?php echo isset($_POST['multisite_sites']) ? htmlspecialchars($_POST['multisite_sites'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+                                    </div>
+                                    <div id="multisite-details-wrapper" class="conditional-field-wrapper" style="<?php echo (isset($_POST['multisite']) && $_POST['multisite'] === 'Yes') ? '' : 'display: none;'; ?>">
+                                        <div class="row">
+                                            <div class="col-md-12 form-group">
+                                                <label>If yes, please specify what functions are performed centrally (eg, Marketing, Purchasing, Top Management, HR, Contract review, Customer Care etc ) :-</label>
+                                                <textarea name="multisite_functions" class="form-control" rows="2" placeholder="Specify functions performed centrally..."><?php echo isset($_POST['multisite_functions']) ? htmlspecialchars($_POST['multisite_functions'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+                                            </div>
+                                            <div class="col-md-12 form-group" style="margin-bottom: 0;">
+                                                <label>List all site/s to be covered ( Please use hierarchical structures, i.e., firstly mention the central office/ Head office, then other sites ) :</label>
+                                                <textarea name="multisite_sites" class="form-control" rows="3" placeholder="Site 1: Address, Processes / Operations, No. of employees&#10;Site 2: Address, Processes / Operations, No. of employees&#10;Site 3: Address, Processes / Operations, No. of employees"><?php echo isset($_POST['multisite_sites']) ? htmlspecialchars($_POST['multisite_sites'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <!-- 5. Employee Structure -->
-                                <div class="nc-form-section">
+                                <!-- 5. Integrated Management System (IMS) -->
+                                <div class="nc-form-section" id="form-step-5">
+                                    <div class="nc-section-step-tag">
+                                        <span class="nc-step-pill-badge"><i class="fa fa-bookmark"></i> Step 5 of 14</span>
+                                    </div>
+                                    <h4>
+                                        <span class="nc-section-icon"><i class="fa fa-cubes"></i></span>
+                                        5. INTEGRATED MANAGEMENT SYSTEM (IMS)
+                                    </h4>
+                                    <div class="row">
+                                        <div class="col-md-12 form-group" style="margin-bottom: 8px;">
+                                            <label style="font-size: 15px; font-weight: 600; color: #1e293b;">Is the organisation having an Integrated management system?</label>
+                                            <div style="margin-top: 6px; margin-bottom: 8px;">
+                                                <label style="margin-right:24px; font-weight: 500; cursor: pointer; font-size: 15px;"><input type="radio" name="integrated_management_system" value="Yes" <?php echo (isset($_POST['integrated_management_system']) && $_POST['integrated_management_system'] === 'Yes') ? 'checked' : ''; ?>> Yes</label>
+                                                <label style="font-weight: 500; cursor: pointer; font-size: 15px;"><input type="radio" name="integrated_management_system" value="No" <?php echo (isset($_POST['integrated_management_system']) && $_POST['integrated_management_system'] === 'No') ? 'checked' : ''; ?>> No</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="ims-details-wrapper" class="conditional-field-wrapper" style="<?php echo (isset($_POST['integrated_management_system']) && $_POST['integrated_management_system'] === 'Yes') ? '' : 'display: none;'; ?>">
+                                        <div class="row">
+                                            <div class="col-md-12 form-group" style="margin-bottom: 0;">
+                                                <label style="font-size: 13.5px; font-weight: 600; color: #334155; margin-bottom: 10px; display: block;">
+                                                    If yes, please select the appropriate level /s of integration:
+                                                </label>
+                                                <?php
+                                                $imsLevelsSaved = isset($_POST['ims_levels']) && is_array($_POST['ims_levels']) ? $_POST['ims_levels'] : [];
+                                                $imsOptionsList = [
+                                                    'No integration',
+                                                    'An integrated approach to internal audits and management review',
+                                                    'An integrated management system documentation to a good level of development, together with an integrated approach to policy and objectives',
+                                                    'An integrated approach towards management system planning and processes',
+                                                    'An integrated approach towards improvement mechanisms, together with unified management commitment and responsibilities'
+                                                ];
+                                                ?>
+                                                <div class="ims-levels-container">
+                                                    <?php foreach ($imsOptionsList as $idx => $optText):
+                                                        $isLvlChecked = in_array($optText, $imsLevelsSaved, true);
+                                                    ?>
+                                                        <label class="ims-level-row">
+                                                            <span class="ims-level-text">
+                                                                <?php echo htmlspecialchars($optText, ENT_QUOTES, 'UTF-8'); ?>
+                                                            </span>
+                                                            <input type="checkbox" name="ims_levels[]" value="<?php echo htmlspecialchars($optText, ENT_QUOTES, 'UTF-8'); ?>" class="ims-checkbox" <?php echo $isLvlChecked ? 'checked' : ''; ?>>
+                                                        </label>
+                                                    <?php endforeach; ?>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 6. Employee Structure -->
+                                <div class="nc-form-section" id="form-step-6">
+                                    <div class="nc-section-step-tag">
+                                        <span class="nc-step-pill-badge"><i class="fa fa-bookmark"></i> Step 6 of 14</span>
+                                    </div>
                                     <h4>
                                         <span class="nc-section-icon"><i class="fa fa-users"></i></span>
-                                        5. EMPLOYEE STRUCTURE
+                                        6. EMPLOYEE STRUCTURE
                                     </h4>
                                     <p style="font-size: 13.5px; color: #64748b; margin-top: -10px; margin-bottom: 18px;">
                                         Please provide approximate number of employees by department and shift.
                                     </p>
-                                    <div class="table-responsive" style="margin-bottom: 16px; border: 1.5px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
-                                        <table class="table table-bordered employee-structure-table" id="employee-structure-table" style="margin-bottom: 0; background: #fff;">
-                                            <thead style="background: #f8fafc; color: #334155; font-size: 13px;">
-                                                <tr>
-                                                    <th rowspan="2" style="vertical-align: middle; min-width: 180px;">Department</th>
-                                                    <th colspan="2" style="text-align: center; border-bottom: 1px solid #e2e8f0;">General shift</th>
-                                                    <th colspan="2" style="text-align: center; border-bottom: 1px solid #e2e8f0;">Shift I</th>
-                                                    <th colspan="2" style="text-align: center; border-bottom: 1px solid #e2e8f0;">Shift II</th>
-                                                    <th colspan="2" style="text-align: center; border-bottom: 1px solid #e2e8f0;">Shift III</th>
+                                    <div class="mobile-table-hint">
+                                        <i class="fa fa-arrows-h"></i> Swipe horizontally to view all shifts &amp; enter employees
+                                    </div>
+                                    <div class="table-responsive" style="margin-bottom: 16px; border: 1.5px solid #e2e8f0; border-radius: 12px; overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                                        <table class="table employee-structure-table" id="employee-structure-table">
+                                            <colgroup>
+                                                <col class="emp-col-dept-w">
+                                                <col class="emp-col-shift-w">
+                                                <col class="emp-col-shift-w">
+                                                <col class="emp-col-shift-w">
+                                                <col class="emp-col-shift-w">
+                                                <col class="emp-col-shift-w">
+                                                <col class="emp-col-shift-w">
+                                                <col class="emp-col-shift-w">
+                                                <col class="emp-col-shift-w">
+                                            </colgroup>
+                                            <thead>
+                                                <tr class="emp-row-main-head">
+                                                    <th rowspan="2" class="emp-th-dept">Department</th>
+                                                    <th colspan="2" class="emp-th-group">General shift</th>
+                                                    <th colspan="2" class="emp-th-group">Shift I</th>
+                                                    <th colspan="2" class="emp-th-group">Shift II</th>
+                                                    <th colspan="2" class="emp-th-group">Shift III</th>
                                                 </tr>
-                                                <tr>
-                                                    <th style="text-align: center;">Permanent</th>
-                                                    <th style="text-align: center;">Contract</th>
-                                                    <th style="text-align: center;">Per.</th>
-                                                    <th style="text-align: center;">Contract</th>
-                                                    <th style="text-align: center;">Per.</th>
-                                                    <th style="text-align: center;">Contract</th>
-                                                    <th style="text-align: center;">Per.</th>
-                                                    <th style="text-align: center;">Contract</th>
+                                                <tr class="emp-row-sub-head">
+                                                    <th class="emp-th-sub"><span class="full-lbl">Permanent</span><span class="short-lbl">Perm.</span></th>
+                                                    <th class="emp-th-sub"><span class="full-lbl">Contract</span><span class="short-lbl">Cont.</span></th>
+                                                    <th class="emp-th-sub"><span class="full-lbl">Permanent</span><span class="short-lbl">Perm.</span></th>
+                                                    <th class="emp-th-sub"><span class="full-lbl">Contract</span><span class="short-lbl">Cont.</span></th>
+                                                    <th class="emp-th-sub"><span class="full-lbl">Permanent</span><span class="short-lbl">Perm.</span></th>
+                                                    <th class="emp-th-sub"><span class="full-lbl">Contract</span><span class="short-lbl">Cont.</span></th>
+                                                    <th class="emp-th-sub"><span class="full-lbl">Permanent</span><span class="short-lbl">Perm.</span></th>
+                                                    <th class="emp-th-sub"><span class="full-lbl">Contract</span><span class="short-lbl">Cont.</span></th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 <tr data-dept-label="Top management / Administrative staff">
-                                                    <td style="font-weight: 500; font-size: 13px;">Top management, Administrative staff (Marketing, HR, Purchase, Design, etc.)</td>
+                                                    <td class="emp-td-dept">Top management, Administrative staff (Marketing, HR, Purchase, Design, etc.)</td>
                                                     <td><input type="number" min="0" class="form-control emp-input" data-label="General shift - Permanent" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
                                                     <td><input type="number" min="0" class="form-control emp-input" data-label="General shift - Contract" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
                                                     <td><input type="number" min="0" class="form-control emp-input" data-label="Shift I - Permanent" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
@@ -2148,7 +2704,7 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                                                     <td><input type="number" min="0" class="form-control emp-input" data-label="Shift III - Contract" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
                                                 </tr>
                                                 <tr data-dept-label="Management / Supervisory staff">
-                                                    <td style="font-weight: 500; font-size: 13px;">Management and Supervisory staff</td>
+                                                    <td class="emp-td-dept">Management and Supervisory staff</td>
                                                     <td><input type="number" min="0" class="form-control emp-input" data-label="General shift - Permanent" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
                                                     <td><input type="number" min="0" class="form-control emp-input" data-label="General shift - Contract" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
                                                     <td><input type="number" min="0" class="form-control emp-input" data-label="Shift I - Permanent" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
@@ -2159,7 +2715,7 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                                                     <td><input type="number" min="0" class="form-control emp-input" data-label="Shift III - Contract" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
                                                 </tr>
                                                 <tr data-dept-label="Operators">
-                                                    <td style="font-weight: 500; font-size: 13px;">Operators</td>
+                                                    <td class="emp-td-dept">Operators</td>
                                                     <td><input type="number" min="0" class="form-control emp-input" data-label="General shift - Permanent" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
                                                     <td><input type="number" min="0" class="form-control emp-input" data-label="General shift - Contract" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
                                                     <td><input type="number" min="0" class="form-control emp-input" data-label="Shift I - Permanent" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
@@ -2170,7 +2726,7 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                                                     <td><input type="number" min="0" class="form-control emp-input" data-label="Shift III - Contract" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
                                                 </tr>
                                                 <tr data-dept-label="Helpers">
-                                                    <td style="font-weight: 500; font-size: 13px;">Helpers</td>
+                                                    <td class="emp-td-dept">Helpers</td>
                                                     <td><input type="number" min="0" class="form-control emp-input" data-label="General shift - Permanent" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
                                                     <td><input type="number" min="0" class="form-control emp-input" data-label="General shift - Contract" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
                                                     <td><input type="number" min="0" class="form-control emp-input" data-label="Shift I - Permanent" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
@@ -2181,7 +2737,7 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                                                     <td><input type="number" min="0" class="form-control emp-input" data-label="Shift III - Contract" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
                                                 </tr>
                                                 <tr data-dept-label="Others (if any)">
-                                                    <td style="font-weight: 500; font-size: 13px;">Others (if any)</td>
+                                                    <td class="emp-td-dept">Others (if any)</td>
                                                     <td><input type="number" min="0" class="form-control emp-input" data-label="General shift - Permanent" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
                                                     <td><input type="number" min="0" class="form-control emp-input" data-label="General shift - Contract" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
                                                     <td><input type="number" min="0" class="form-control emp-input" data-label="Shift I - Permanent" style="padding: 6px 8px; font-size: 13px; text-align: center;"></td>
@@ -2198,97 +2754,95 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
 
                                     <div class="row">
                                         <div class="col-md-6 form-group">
-                                            <label>Onsite installation work / operational yards / temporary sites?</label>
+                                            <label>On-site installation work or having any other operational yards / temporary sites ?</label>
                                             <div style="margin-bottom: 8px;">
                                                 <label style="margin-right:20px; font-weight: 500; cursor: pointer;"><input type="radio" name="onsite_installation" value="Yes" <?php echo (isset($_POST['onsite_installation']) && $_POST['onsite_installation'] === 'Yes') ? 'checked' : ''; ?>> Yes</label>
                                                 <label style="font-weight: 500; cursor: pointer;"><input type="radio" name="onsite_installation" value="No" <?php echo (isset($_POST['onsite_installation']) && $_POST['onsite_installation'] === 'No') ? 'checked' : ''; ?>> No</label>
                                             </div>
-                                            <textarea name="onsite_details" class="form-control" rows="2" placeholder="If yes, please explain."><?php echo isset($_POST['onsite_details']) ? htmlspecialchars($_POST['onsite_details'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+                                            <div id="onsite-details-wrapper" class="conditional-field-wrapper" style="<?php echo (isset($_POST['onsite_installation']) && $_POST['onsite_installation'] === 'Yes') ? '' : 'display: none;'; ?> margin-top: 8px;">
+                                                <textarea name="onsite_details" class="form-control" rows="2" placeholder="If yes, Please Explain:"><?php echo isset($_POST['onsite_details']) ? htmlspecialchars($_POST['onsite_details'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+                                            </div>
                                         </div>
                                         <div class="col-md-6 form-group">
-                                            <label>Any part time personnel?</label>
+                                            <label>Any part-time personnel ?</label>
                                             <div style="margin-bottom: 8px;">
                                                 <label style="margin-right:20px; font-weight: 500; cursor: pointer;"><input type="radio" name="part_time_personnel" value="Yes" <?php echo (isset($_POST['part_time_personnel']) && $_POST['part_time_personnel'] === 'Yes') ? 'checked' : ''; ?>> Yes</label>
                                                 <label style="font-weight: 500; cursor: pointer;"><input type="radio" name="part_time_personnel" value="No" <?php echo (isset($_POST['part_time_personnel']) && $_POST['part_time_personnel'] === 'No') ? 'checked' : ''; ?>> No</label>
                                             </div>
-                                            <input type="text" name="part_time_count" class="form-control" placeholder="If yes, number of personnel" value="<?php echo isset($_POST['part_time_count']) ? htmlspecialchars($_POST['part_time_count'], ENT_QUOTES, 'UTF-8') : ''; ?>">
+                                            <div id="part-time-details-wrapper" class="conditional-field-wrapper" style="<?php echo (isset($_POST['part_time_personnel']) && $_POST['part_time_personnel'] === 'Yes') ? '' : 'display: none;'; ?> margin-top: 8px;">
+                                                <input type="text" name="part_time_count" class="form-control" placeholder="If Yes Please specify No of personnel" value="<?php echo isset($_POST['part_time_count']) ? htmlspecialchars($_POST['part_time_count'], ENT_QUOTES, 'UTF-8') : ''; ?>">
+                                            </div>
                                         </div>
-                                        <div class="col-md-12 form-group" style="margin-bottom: 0;">
-                                            <label>Are there any employees excluded from audit scope?</label>
+                                        <div class="col-md-12 form-group">
+                                            <label>Are there any employees that you did not include in the above-mentioned tables because you consider them to be outside the scope of the audit?</label>
                                             <div style="margin-bottom: 8px;">
                                                 <label style="margin-right:20px; font-weight: 500; cursor: pointer;"><input type="radio" name="employees_excluded" value="Yes" <?php echo (isset($_POST['employees_excluded']) && $_POST['employees_excluded'] === 'Yes') ? 'checked' : ''; ?>> Yes</label>
                                                 <label style="font-weight: 500; cursor: pointer;"><input type="radio" name="employees_excluded" value="No" <?php echo (isset($_POST['employees_excluded']) && $_POST['employees_excluded'] === 'No') ? 'checked' : ''; ?>> No</label>
                                             </div>
-                                            <textarea name="employees_excluded_details" class="form-control" rows="2" placeholder="If yes, please explain."><?php echo isset($_POST['employees_excluded_details']) ? htmlspecialchars($_POST['employees_excluded_details'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+                                            <div id="employees-excluded-wrapper" class="conditional-field-wrapper" style="<?php echo (isset($_POST['employees_excluded']) && $_POST['employees_excluded'] === 'Yes') ? '' : 'display: none;'; ?> margin-top: 8px;">
+                                                <textarea name="employees_excluded_details" class="form-control" rows="2" placeholder="If yes, Please Explain:"><?php echo isset($_POST['employees_excluded_details']) ? htmlspecialchars($_POST['employees_excluded_details'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-12 form-group" style="margin-bottom: 0;">
+                                            <label>Have any management system consultancy services been taken ? :</label>
+                                            <div style="margin-bottom: 8px;">
+                                                <label style="margin-right:20px; font-weight: 500; cursor: pointer;"><input type="radio" name="consultancy_services_taken" value="Yes" <?php echo (isset($_POST['consultancy_services_taken']) && $_POST['consultancy_services_taken'] === 'Yes') ? 'checked' : ''; ?>> Yes</label>
+                                                <label style="font-weight: 500; cursor: pointer;"><input type="radio" name="consultancy_services_taken" value="No" <?php echo (isset($_POST['consultancy_services_taken']) && $_POST['consultancy_services_taken'] === 'No') ? 'checked' : ''; ?>> No</label>
+                                            </div>
+                                            <div id="consultancy-details-wrapper" class="conditional-field-wrapper" style="<?php echo (isset($_POST['consultancy_services_taken']) && $_POST['consultancy_services_taken'] === 'Yes') ? '' : 'display: none;'; ?> margin-top: 8px;">
+                                                <textarea name="consultancy_details" class="form-control" rows="2" placeholder="If yes, by whom?- And period of services:"><?php echo isset($_POST['consultancy_details']) ? htmlspecialchars($_POST['consultancy_details'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <!-- 6. Describe your organisation -->
-                                <div class="nc-form-section">
+                                <!-- 7. Describe your organisation -->
+                                <div class="nc-form-section" id="form-step-7">
+                                    <div class="nc-section-step-tag">
+                                        <span class="nc-step-pill-badge"><i class="fa fa-bookmark"></i> Step 7 of 14</span>
+                                    </div>
                                     <h4>
                                         <span class="nc-section-icon"><i class="fa fa-industry"></i></span>
                                         6. DESCRIBE YOUR ORGANISATION
                                     </h4>
                                     <div class="row">
                                         <div class="col-md-6 form-group">
-                                            <label>Organisation type</label>
+                                            <label>Describe your organization is:</label>
                                             <div style="margin-bottom: 8px;">
                                                 <label style="margin-right:20px; font-weight: 500; cursor: pointer;"><input type="radio" name="org_type" value="Manufacturer" <?php echo (isset($_POST['org_type']) && $_POST['org_type'] === 'Manufacturer') ? 'checked' : ''; ?>> Manufacturer</label>
                                                 <label style="font-weight: 500; cursor: pointer;"><input type="radio" name="org_type" value="Service provider" <?php echo (isset($_POST['org_type']) && $_POST['org_type'] === 'Service provider') ? 'checked' : ''; ?>> Service provider</label>
                                             </div>
                                         </div>
-                                        <div class="col-md-6 form-group">
+                                        <div class="col-md-6 form-group" style="margin-bottom: 0;">
                                             <label>Major customers</label>
                                             <textarea name="major_customers" class="form-control" rows="2" placeholder="List major customers or client industries..."><?php echo isset($_POST['major_customers']) ? htmlspecialchars($_POST['major_customers'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
-                                        </div>
-                                        <div class="col-md-6 form-group">
-                                            <label>Main products</label>
-                                            <textarea name="main_products" class="form-control" rows="2" placeholder="Main products or services offered..."><?php echo isset($_POST['main_products']) ? htmlspecialchars($_POST['main_products'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
-                                        </div>
-                                        <div class="col-md-6 form-group">
-                                            <label>Main raw materials used or processed</label>
-                                            <textarea name="raw_materials" class="form-control" rows="2" placeholder="Main raw materials / inputs..."><?php echo isset($_POST['raw_materials']) ? htmlspecialchars($_POST['raw_materials'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
-                                        </div>
-                                        <div class="col-md-12 form-group">
-                                            <label>Operations involved in the service / manufacturing of your product</label>
-                                            <textarea name="operations" class="form-control" rows="2" placeholder="Briefly describe operational workflow / stages..."><?php echo isset($_POST['operations']) ? htmlspecialchars($_POST['operations'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
-                                        </div>
-                                        <div class="col-md-12 form-group">
-                                            <label>Processes provided by external sources related to the product / service</label>
-                                            <textarea name="external_processes" class="form-control" rows="2" placeholder="Outsourced or third-party processes..."><?php echo isset($_POST['external_processes']) ? htmlspecialchars($_POST['external_processes'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
-                                        </div>
-                                        <div class="col-md-12 form-group" style="margin-bottom: 0;">
-                                            <label>Who designs the products / services that you provide to your customers?</label>
-                                            <select name="design_responsibility" class="form-control">
-                                                <option value="">Select Design Responsibility</option>
-                                                <option value="We manufacture as per customer designs" <?php echo (isset($_POST['design_responsibility']) && $_POST['design_responsibility'] === 'We manufacture as per customer designs') ? 'selected' : ''; ?>>We manufacture the product as per customers provided designs and specification.</option>
-                                                <option value="We design our own products" <?php echo (isset($_POST['design_responsibility']) && $_POST['design_responsibility'] === 'We design our own products') ? 'selected' : ''; ?>>We design our own products.</option>
-                                                <option value="Design at another site" <?php echo (isset($_POST['design_responsibility']) && $_POST['design_responsibility'] === 'Design at another site') ? 'selected' : ''; ?>>We design products at another site and produce at the site to be certified.</option>
-                                                <option value="Outsourced design" <?php echo (isset($_POST['design_responsibility']) && $_POST['design_responsibility'] === 'Outsourced design') ? 'selected' : ''; ?>>We outsource design activities to external providers / subcontractors.</option>
-                                                <option value="Distributor of other company products" <?php echo (isset($_POST['design_responsibility']) && $_POST['design_responsibility'] === 'Distributor of other company products') ? 'selected' : ''; ?>>We are a distributor of products that are designed and manufactured by another company.</option>
-                                            </select>
                                         </div>
                                     </div>
                                 </div>
 
-                                <!-- 7. Other information -->
-                                <div class="nc-form-section">
+                                <!-- 8. Other Valid Certificates & Audit Timing -->
+                                <div class="nc-form-section" id="form-step-8">
+                                    <div class="nc-section-step-tag">
+                                        <span class="nc-step-pill-badge"><i class="fa fa-bookmark"></i> Step 8 of 14</span>
+                                    </div>
                                     <h4>
                                         <span class="nc-section-icon"><i class="fa fa-info-circle"></i></span>
-                                        7. OTHER INFORMATION
+                                        7. OTHER VALID CERTIFICATES &amp; AUDIT TIMING
                                     </h4>
                                     <div class="row">
                                         <div class="col-md-12 form-group">
                                             <div class="other-certificates-wrapper">
-                                                <label style="display:block; margin-bottom:6px;">Does the company have any other valid certificate(s)?</label>
+                                                <label style="display:block; margin-bottom:6px;">Does the company have any other valid certificate/s?</label>
                                                 <div style="margin-bottom: 10px;">
-                                                    <label style="margin-right:20px; font-weight: 500; cursor: pointer;"><input type="radio" name="other_certificates_flag" value="Yes"> Yes</label>
-                                                    <label style="font-weight: 500; cursor: pointer;"><input type="radio" name="other_certificates_flag" value="No" checked> No</label>
+                                                    <label style="margin-right:20px; font-weight: 500; cursor: pointer;"><input type="radio" name="other_certificates_flag" value="Yes" <?php echo (isset($_POST['other_certificates_flag']) && $_POST['other_certificates_flag'] === 'Yes') ? 'checked' : ''; ?>> Yes</label>
+                                                    <label style="font-weight: 500; cursor: pointer;"><input type="radio" name="other_certificates_flag" value="No" <?php echo (isset($_POST['other_certificates_flag']) && $_POST['other_certificates_flag'] === 'No') ? 'checked' : ''; ?>> No</label>
                                                 </div>
-                                                <div id="other-certificates-details" style="display:none; margin-top: 10px;">
+                                                <div id="other-certificates-details" class="conditional-field-wrapper" style="<?php echo (isset($_POST['other_certificates_flag']) && $_POST['other_certificates_flag'] === 'Yes') ? '' : 'display:none;'; ?> margin-top: 10px;">
                                                     <p style="font-size: 13.5px; color: #4b5563; margin-bottom: 8px;">If yes, please list below:</p>
-                                                    <div class="table-responsive" style="margin-bottom: 10px; border: 1.5px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+                                                    <div class="mobile-table-hint">
+                                                        <i class="fa fa-arrows-h"></i> Swipe horizontally to view all certificate columns
+                                                    </div>
+                                                    <div class="table-responsive" style="margin-bottom: 10px; border: 1.5px solid #e2e8f0; border-radius: 12px; overflow-x: auto; -webkit-overflow-scrolling: touch;">
                                                         <table class="table table-bordered other-cert-table" id="other-certificates-table" style="margin-bottom: 0; background: #fff;">
                                                             <thead style="background: #f8fafc; font-size: 13px;">
                                                                 <tr>
@@ -2296,7 +2850,7 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                                                                     <th>Certification body</th>
                                                                     <th>Accreditation</th>
                                                                     <th>Validity until</th>
-                                                                    <th>Certificate(s) number</th>
+                                                                    <th>Certificate/s number</th>
                                                                 </tr>
                                                             </thead>
                                                             <tbody>
@@ -2327,23 +2881,155 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                                             <label>Date of system implementation</label>
                                             <input type="text" name="system_implementation_date" class="form-control" placeholder="dd-mm-yyyy" value="<?php echo isset($_POST['system_implementation_date']) ? htmlspecialchars($_POST['system_implementation_date'], ENT_QUOTES, 'UTF-8') : ''; ?>">
                                         </div>
-                                        <div class="col-md-6 form-group">
-                                            <label>Proposed month-year to conduct the audit</label>
+                                        <div class="col-md-6 form-group" style="margin-bottom: 0;">
+                                            <label>Please mention your proposed month-year to conduct the audit</label>
                                             <input type="text" name="proposed_audit_month" class="form-control" placeholder="MM-YYYY" value="<?php echo isset($_POST['proposed_audit_month']) ? htmlspecialchars($_POST['proposed_audit_month'], ENT_QUOTES, 'UTF-8') : ''; ?>">
-                                        </div>
-                                        <div class="col-md-12 form-group" style="margin-bottom: 0;">
-                                            <label>Have any management system consultancy services been taken?</label>
-                                            <div style="margin-bottom: 8px;">
-                                                <label style="margin-right:20px; font-weight: 500; cursor: pointer;"><input type="radio" name="consultancy_services_taken" value="Yes" <?php echo (isset($_POST['consultancy_services_taken']) && $_POST['consultancy_services_taken'] === 'Yes') ? 'checked' : ''; ?>> Yes</label>
-                                                <label style="font-weight: 500; cursor: pointer;"><input type="radio" name="consultancy_services_taken" value="No" <?php echo (isset($_POST['consultancy_services_taken']) && $_POST['consultancy_services_taken'] === 'No') ? 'checked' : ''; ?>> No</label>
-                                            </div>
-                                            <textarea name="consultancy_details" class="form-control" rows="2" placeholder="If yes, by whom and period of services."><?php echo isset($_POST['consultancy_details']) ? htmlspecialchars($_POST['consultancy_details'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
                                         </div>
                                     </div>
                                 </div>
 
-                                <!-- 8. Optional Supporting Attachments -->
-                                <div class="nc-form-section">
+                                <!-- 9. Annexure 1 - QMS (Basic Information and for Applicant of 9001 Certification) -->
+                                <div class="nc-form-section" id="form-step-9">
+                                    <div class="nc-section-step-tag">
+                                        <span class="nc-step-pill-badge"><i class="fa fa-check-square-o"></i> Step 9 of 14</span>
+                                    </div>
+                                    <h4>
+                                        <span class="nc-section-icon"><i class="fa fa-check-square-o"></i></span>
+                                        ANNEXURE 1 – QMS (BASIC INFORMATION &amp; FOR APPLICANT OF 9001 CERTIFICATION)
+                                    </h4>
+                                    <p style="font-size: 13.5px; color: #64748b; margin-top: -10px; margin-bottom: 18px;">
+                                        <em>Note: Annexure 1 is applicable to all applicants. Product or service term is used for either service-providing or manufacturing organisation, or both.</em>
+                                    </p>
+                                    <div class="row">
+                                        <div class="col-md-6 form-group">
+                                            <label>Main products</label>
+                                            <textarea name="main_products" class="form-control" rows="2" placeholder="Main products or services offered..."><?php echo isset($_POST['main_products']) ? htmlspecialchars($_POST['main_products'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+                                        </div>
+                                        <div class="col-md-6 form-group">
+                                            <label>Main raw materials used or processed</label>
+                                            <textarea name="raw_materials" class="form-control" rows="2" placeholder="Main raw materials / inputs..."><?php echo isset($_POST['raw_materials']) ? htmlspecialchars($_POST['raw_materials'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+                                        </div>
+                                        <div class="col-md-12 form-group">
+                                            <label>Operations involved in the service / manufacturing of your product</label>
+                                            <textarea name="operations" class="form-control" rows="2" placeholder="Briefly describe operational workflow / stages..."><?php echo isset($_POST['operations']) ? htmlspecialchars($_POST['operations'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+                                        </div>
+                                        <div class="col-md-12 form-group">
+                                            <label>Processes that are provided by external sources related to the product / service</label>
+                                            <textarea name="external_processes" class="form-control" rows="2" placeholder="Outsourced or third-party processes..."><?php echo isset($_POST['external_processes']) ? htmlspecialchars($_POST['external_processes'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+                                        </div>
+                                        <div class="col-md-12 form-group">
+                                            <label>Do you have complicated logistics involving more than one building or location where work is carried out?</label>
+                                            <div style="margin-bottom: 8px;">
+                                                <label style="margin-right:20px; font-weight: 500; cursor: pointer;"><input type="radio" name="complicated_logistics" value="Yes" <?php echo (isset($_POST['complicated_logistics']) && $_POST['complicated_logistics'] === 'Yes') ? 'checked' : ''; ?>> Yes</label>
+                                                <label style="font-weight: 500; cursor: pointer;"><input type="radio" name="complicated_logistics" value="No" <?php echo (isset($_POST['complicated_logistics']) && $_POST['complicated_logistics'] === 'No') ? 'checked' : ''; ?>> No</label>
+                                            </div>
+                                            <div id="complicated-logistics-details-wrapper" class="conditional-field-wrapper" style="<?php echo (isset($_POST['complicated_logistics']) && $_POST['complicated_logistics'] === 'Yes') ? '' : 'display: none;'; ?> margin-top: 8px;">
+                                                <textarea name="complicated_logistics_details" class="form-control" rows="2" placeholder="If yes, please explain the logistics and multi-building workflow..."><?php echo isset($_POST['complicated_logistics_details']) ? htmlspecialchars($_POST['complicated_logistics_details'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-12 form-group" style="margin-bottom: 0;">
+                                            <label>Who designs the products / services that you provide to your customers? <span style="font-weight: normal; color: #64748b;">(Please Tick mark)</span></label>
+                                            <select name="design_responsibility" class="form-control">
+                                                <option value="">Select Design Responsibility</option>
+                                                <option value="We manufacture as per customer designs" <?php echo (isset($_POST['design_responsibility']) && $_POST['design_responsibility'] === 'We manufacture as per customer designs') ? 'selected' : ''; ?>>We manufacture the product as per the customers' provided designs and specifications.</option>
+                                                <option value="We design our own products" <?php echo (isset($_POST['design_responsibility']) && $_POST['design_responsibility'] === 'We design our own products') ? 'selected' : ''; ?>>We design our own products.</option>
+                                                <option value="Design at another site" <?php echo (isset($_POST['design_responsibility']) && $_POST['design_responsibility'] === 'Design at another site') ? 'selected' : ''; ?>>We design products at another Site and produce them at the site to be certified.</option>
+                                                <option value="Outsourced design" <?php echo (isset($_POST['design_responsibility']) && $_POST['design_responsibility'] === 'Outsourced design') ? 'selected' : ''; ?>>We outsource design activities to external providers / subcontractors.</option>
+                                                <option value="Distributor of other company products" <?php echo (isset($_POST['design_responsibility']) && $_POST['design_responsibility'] === 'Distributor of other company products') ? 'selected' : ''; ?>>We are a distributor of products that are designed and manufactured by another company.</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 10. Annexure 2 - EMS (For Applicant of 14001 Certification) -->
+                                <div class="nc-form-section" id="form-step-10" style="<?php echo $has14001Initial ? '' : 'display:none;'; ?>">
+                                    <div class="nc-section-step-tag">
+                                        <span class="nc-step-pill-badge"><i class="fa fa-leaf"></i> Step 10 of 14</span>
+                                    </div>
+                                    <h4>
+                                        <span class="nc-section-icon" style="background: #10b981; color:#fff;"><i class="fa fa-leaf"></i></span>
+                                        ANNEXURE 2 – EMS (FOR APPLICANT OF 14001 CERTIFICATION)
+                                    </h4>
+                                    <p style="font-size: 13.5px; color: #64748b; margin-top: -10px; margin-bottom: 18px;">
+                                        <em>Applicable for ISO 14001 (EMS) applicants. If not applicable to your scheme, you may leave blank or enter N.A.</em>
+                                    </p>
+                                    <div class="row">
+                                        <div class="col-md-12 form-group">
+                                            <label>Any Statutory Regulatory Requirements related to Environmental clearance for the product manufactured by the organization:</label>
+                                            <textarea name="ems_statutory_requirements" class="form-control" rows="2" placeholder="e.g. Consent to Establish / Operate, Environmental Clearance, Pollution Control Board NOC, etc."><?php echo isset($_POST['ems_statutory_requirements']) ? htmlspecialchars($_POST['ems_statutory_requirements'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+                                        </div>
+                                        <div class="col-md-12 form-group">
+                                            <label>Any Hazardous Raw / Processing materials used:</label>
+                                            <textarea name="ems_hazardous_materials" class="form-control" rows="2" placeholder="List hazardous materials, chemicals, solvents, heavy metals, etc. if any..."><?php echo isset($_POST['ems_hazardous_materials']) ? htmlspecialchars($_POST['ems_hazardous_materials'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+                                        </div>
+                                        <div class="col-md-12 form-group">
+                                            <label>Any adverse impact identified on the environment due to operations involved in the service / manufacturing processes:</label>
+                                            <textarea name="ems_adverse_impact" class="form-control" rows="2" placeholder="Air emissions, effluent discharge, hazardous solid waste, noise pollution, etc..."><?php echo isset($_POST['ems_adverse_impact']) ? htmlspecialchars($_POST['ems_adverse_impact'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+                                        </div>
+                                        <div class="col-md-12 form-group">
+                                            <label>Is the organisation's location(s) particularly environmentally sensitive to any conditions:</label>
+                                            <textarea name="ems_sensitive_location" class="form-control" rows="2" placeholder="Coastal zone, forest area, eco-sensitive zone, flood plain, etc..."><?php echo isset($_POST['ems_sensitive_location']) ? htmlspecialchars($_POST['ems_sensitive_location'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+                                        </div>
+                                        <div class="col-md-12 form-group">
+                                            <label>Any nearby, e.g., archaeological site, listed building, adjacent to sensitive locations, etc.:</label>
+                                            <textarea name="ems_nearby_sensitive" class="form-control" rows="2" placeholder="Proximity to heritage sites, schools, hospitals, water bodies, etc..."><?php echo isset($_POST['ems_nearby_sensitive']) ? htmlspecialchars($_POST['ems_nearby_sensitive'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+                                        </div>
+                                        <div class="col-md-12 form-group" style="margin-bottom: 0;">
+                                            <label>Do you have any history of adverse performance or operations where an emergency condition would result in a significant environmental event:</label>
+                                            <textarea name="ems_emergency_history" class="form-control" rows="2" placeholder="Spills, major fires, non-compliance notices, or past environmental incidents..."><?php echo isset($_POST['ems_emergency_history']) ? htmlspecialchars($_POST['ems_emergency_history'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 11. Annexure 3 - OHSMS (For Applicant of 45001 Certification) -->
+                                <div class="nc-form-section" id="form-step-11" style="<?php echo $has45001Initial ? '' : 'display:none;'; ?>">
+                                    <div class="nc-section-step-tag">
+                                        <span class="nc-step-pill-badge"><i class="fa fa-medkit"></i> Step 11 of 14</span>
+                                    </div>
+                                    <h4>
+                                        <span class="nc-section-icon" style="background: #f59e0b; color:#fff;"><i class="fa fa-medkit"></i></span>
+                                        ANNEXURE 3 – OHSMS (FOR APPLICANT OF 45001 CERTIFICATION)
+                                    </h4>
+                                    <p style="font-size: 13.5px; color: #64748b; margin-top: -10px; margin-bottom: 18px;">
+                                        <em>Applicable for ISO 45001 (OHSMS) applicants. If not applicable to your scheme, you may leave blank or enter N.A.</em>
+                                    </p>
+                                    <div class="row">
+                                        <div class="col-md-12 form-group">
+                                            <label>Statutory Regulatory Requirements related to Health and Safety for the product manufactured by the organization:</label>
+                                            <textarea name="ohsms_statutory_requirements" class="form-control" rows="2" placeholder="Factory license, OHS regulations, fire NOC, statutory safety officer requirement, etc..."><?php echo isset($_POST['ohsms_statutory_requirements']) ? htmlspecialchars($_POST['ohsms_statutory_requirements'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+                                        </div>
+                                        <div class="col-md-12 form-group">
+                                            <label>Any Hazardous raw / Processing material, dangerous substances used / Present at the site:</label>
+                                            <textarea name="ohsms_hazardous_materials" class="form-control" rows="2" placeholder="Flammable chemicals, explosives, toxic gases, pressurized cylinders, etc..."><?php echo isset($_POST['ohsms_hazardous_materials']) ? htmlspecialchars($_POST['ohsms_hazardous_materials'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+                                        </div>
+                                        <div class="col-md-12 form-group">
+                                            <label>Identify the personnel's health and safety risks due to operations involved in the service / manufacturing Processes:</label>
+                                            <textarea name="ohsms_health_safety_risks" class="form-control" rows="2" placeholder="Ergonomic risks, height work, electrical hazard, machinery entanglement, dust/fumes, etc..."><?php echo isset($_POST['ohsms_health_safety_risks']) ? htmlspecialchars($_POST['ohsms_health_safety_risks'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+                                        </div>
+                                        <div class="col-md-12 form-group">
+                                            <label>Are there activities carried out on-site, temporary sites, or sites not under your control:</label>
+                                            <textarea name="ohsms_activities_temporary_sites" class="form-control" rows="2" placeholder="Site erection, installation, external client locations, scaffolding, etc..."><?php echo isset($_POST['ohsms_activities_temporary_sites']) ? htmlspecialchars($_POST['ohsms_activities_temporary_sites'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+                                        </div>
+                                        <div class="col-md-12 form-group">
+                                            <label>Do you have higher than industry average rates of accidents, disease, or absence:</label>
+                                            <textarea name="ohsms_accident_rates" class="form-control" rows="2" placeholder="Accident records, reportable incidents, occupational health checkup trends..."><?php echo isset($_POST['ohsms_accident_rates']) ? htmlspecialchars($_POST['ohsms_accident_rates'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+                                        </div>
+                                        <div class="col-md-12 form-group">
+                                            <label>Do you have members of the public present at your sites in large numbers? (e.g., hospitals, schools, public transport hubs):</label>
+                                            <textarea name="ohsms_public_present" class="form-control" rows="2" placeholder="Visitors, public access, students, patients, external contractors..."><?php echo isset($_POST['ohsms_public_present']) ? htmlspecialchars($_POST['ohsms_public_present'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+                                        </div>
+                                        <div class="col-md-12 form-group" style="margin-bottom: 0;">
+                                            <label>Are you subject to mandatory visits (audits) by governmental regulators:</label>
+                                            <textarea name="ohsms_mandatory_audits" class="form-control" rows="2" placeholder="Factory inspector visits, pollution control board audits, labour department inspections..."><?php echo isset($_POST['ohsms_mandatory_audits']) ? htmlspecialchars($_POST['ohsms_mandatory_audits'], ENT_QUOTES, 'UTF-8') : ''; ?></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 12. Optional Supporting Attachments -->
+                                <div class="nc-form-section" id="form-step-12">
+                                    <div class="nc-section-step-tag">
+                                        <span class="nc-step-pill-badge"><i class="fa fa-paperclip"></i> Step 12 of 14</span>
+                                    </div>
                                     <h4>
                                         <span class="nc-section-icon"><i class="fa fa-paperclip"></i></span>
                                         8. OPTIONAL SUPPORTING ATTACHMENTS
@@ -2373,8 +3059,11 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                                     </div>
                                 </div>
 
-                                <!-- 9. Authorized Person, Declaration & Signature -->
-                                <div class="nc-form-section">
+                                <!-- 13. Authorized Person, Declaration & Signature -->
+                                <div class="nc-form-section" id="form-step-13">
+                                    <div class="nc-section-step-tag">
+                                        <span class="nc-step-pill-badge"><i class="fa fa-pencil-square-o"></i> Step 13 of 14</span>
+                                    </div>
                                     <h4>
                                         <span class="nc-section-icon"><i class="fa fa-pencil-square-o"></i></span>
                                         9. AUTHORIZED PERSON, DECLARATION &amp; SIGNATURE
@@ -2426,8 +3115,11 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                                     </div>
                                 </div>
 
-                                <!-- 10. Organisation Mail ID Section -->
-                                <div class="nc-form-section" id="email-verification-section" style="border: 1.5px solid #0284c7; background: #f0f9ff; border-radius: 16px; padding: 28px 32px;">
+                                <!-- 14. Organisation Mail ID Section -->
+                                <div class="nc-form-section" id="form-step-14" style="border: 1.5px solid #0284c7; background: #f0f9ff; border-radius: 16px; padding: 28px 32px;">
+                                    <div class="nc-section-step-tag">
+                                        <span class="nc-step-pill-badge nc-step-pill-final"><i class="fa fa-check-circle"></i> Step 14 of 14 &bull; Final Step</span>
+                                    </div>
                                     <h4 style="color: #0369a1; border-bottom: 2px solid #bae6fd; padding-bottom: 12px; margin-bottom: 18px;">
                                         <span class="nc-section-icon" style="background: #0284c7; color: #fff;"><i class="fa fa-envelope"></i></span>
                                         10. ORGANISATION MAIL ID
@@ -2444,23 +3136,26 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                                     </div>
                                 </div>
 
-                                <!-- Cloudflare Turnstile Captcha -->
-                                <div class="captcha-wrap" style="display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 30px 0 10px; border: none; background: transparent;">
-                                    <?php if ($turnstileReady): ?>
-                                        <div class="cf-turnstile"
-                                            data-sitekey="<?php echo htmlspecialchars($turnstileConfig['site_key'], ENT_QUOTES, 'UTF-8'); ?>"
-                                            data-callback="applicationCaptchaSolved"
-                                            data-expired-callback="applicationCaptchaExpired"
-                                            data-error-callback="applicationCaptchaExpired"></div>
-                                    <?php endif; ?>
-                                    <div id="application-captcha-status" class="captcha-status" style="font-size: 13px; color: #64748b; margin-top: 6px;"></div>
-                                </div>
-
-                                <div class="text-center" style="margin-top: 35px; margin-bottom: 15px;">
-                                    <div id="required-warning" class="required-warning" style="margin-bottom: 12px;">Please fill all required fields marked with *</div>
+                                <div class="submit-action-wrapper">
+                                    <div id="required-warning" class="required-warning" style="margin-bottom: 14px;">
+                                        <i class="fa fa-exclamation-triangle"></i> Please fill all required fields marked with *
+                                    </div>
                                     <button type="submit" id="main-submit-btn" class="btn-submit-main submit-btn">
-                                        <i class="fa fa-paper-plane"></i> Submit Application Form
+                                        <i class="fa fa-paper-plane"></i>
+                                        <span>Submit Application Form</span>
                                     </button>
+
+                                    <!-- Cloudflare Turnstile Captcha directly below submit button -->
+                                    <div class="captcha-wrap">
+                                        <?php if ($turnstileReady): ?>
+                                            <div class="cf-turnstile"
+                                                data-sitekey="<?php echo htmlspecialchars($turnstileConfig['site_key'], ENT_QUOTES, 'UTF-8'); ?>"
+                                                data-callback="applicationCaptchaSolved"
+                                                data-expired-callback="applicationCaptchaExpired"
+                                                data-error-callback="applicationCaptchaExpired"></div>
+                                        <?php endif; ?>
+                                        <div id="application-captcha-status" class="captcha-status"></div>
+                                    </div>
                                 </div>
                             </form>
                         </div>
@@ -2522,6 +3217,177 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
 
             #online-tab>.section {
                 padding: 25px 0 40px !important;
+            }
+
+            @media (max-width: 991px) {
+                .mobile-table-hint {
+                    display: flex !important;
+                }
+            }
+
+            @media (max-width: 768px) {
+                #online-tab>.section {
+                    padding: 12px 0 25px !important;
+                }
+
+                .nc-form-card {
+                    padding: 20px 14px !important;
+                    border-radius: 14px !important;
+                    margin: 8px 0 16px !important;
+                }
+
+                .nc-form-header {
+                    padding: 18px 14px !important;
+                    margin-bottom: 20px !important;
+                    border-radius: 12px !important;
+                }
+
+                .nc-form-header h3 {
+                    font-size: 18px !important;
+                    line-height: 1.35 !important;
+                }
+
+                .nc-form-header p {
+                    font-size: 12.5px !important;
+                }
+
+                .nc-form-section {
+                    padding: 18px 14px 16px !important;
+                    border-radius: 12px !important;
+                    margin-bottom: 20px !important;
+                    scroll-margin-top: 70px;
+                }
+
+                .nc-form-section h4 {
+                    font-size: 14px !important;
+                    gap: 8px !important;
+                    padding-bottom: 10px !important;
+                    margin-bottom: 16px !important;
+                }
+
+                .nc-section-icon {
+                    width: 30px !important;
+                    height: 30px !important;
+                    font-size: 13px !important;
+                    border-radius: 8px !important;
+                }
+
+                .nc-step-pill-badge {
+                    font-size: 11px !important;
+                    padding: 3px 10px !important;
+                }
+
+                #form-step-10, #form-step-11 {
+                    padding: 18px 14px !important;
+                    border-radius: 12px !important;
+                }
+
+                .form-control {
+                    font-size: 15px !important;
+                    padding: 10px 12px !important;
+                }
+
+                .form-group label {
+                    font-size: 13px !important;
+                    margin-bottom: 5px !important;
+                }
+
+                #main-submit-btn,
+                .btn-submit-main,
+                .submit-btn {
+                    width: 100% !important;
+                    min-width: 0 !important;
+                    max-width: 100% !important;
+                    padding: 15px 18px !important;
+                    font-size: 15px !important;
+                    letter-spacing: 0.4px !important;
+                    white-space: normal !important;
+                }
+            }
+
+            @media (max-width: 576px) {
+                .app-hero-header h1 {
+                    font-size: 1.65rem !important;
+                    letter-spacing: 1px !important;
+                }
+
+                .app-hero-header p {
+                    font-size: 0.9rem !important;
+                }
+
+                .nc-form-card {
+                    padding: 15px 10px !important;
+                }
+
+                .nc-form-section {
+                    padding: 15px 10px 14px !important;
+                }
+
+                #main-submit-btn,
+                .btn-submit-main,
+                .submit-btn {
+                    padding: 14px 16px !important;
+                    font-size: 14px !important;
+                }
+
+                .employee-structure-table {
+                    min-width: 730px !important;
+                }
+
+                .employee-structure-table .emp-col-dept-w {
+                    width: 135px !important;
+                }
+
+                .employee-structure-table .emp-col-shift-w {
+                    width: 74px !important;
+                }
+
+                .employee-structure-table thead tr.emp-row-main-head th.emp-th-dept {
+                    width: 135px !important;
+                    min-width: 135px !important;
+                    max-width: 135px !important;
+                    font-size: 11.5px !important;
+                    padding: 8px 8px !important;
+                }
+
+                .employee-structure-table tbody tr td.emp-td-dept {
+                    width: 135px !important;
+                    min-width: 135px !important;
+                    max-width: 135px !important;
+                    font-size: 11px !important;
+                    line-height: 1.35 !important;
+                    padding: 8px 8px !important;
+                }
+
+                .employee-structure-table .full-lbl {
+                    display: none !important;
+                }
+
+                .employee-structure-table .short-lbl {
+                    display: inline !important;
+                }
+
+                .employee-structure-table .emp-input {
+                    width: 55px !important;
+                    height: 36px !important;
+                    font-size: 13px !important;
+                }
+
+                .captcha-wrap {
+                    margin-top: 14px !important;
+                }
+
+                .captcha-wrap .cf-turnstile {
+                    transform: scale(0.95);
+                    transform-origin: center top;
+                }
+            }
+
+            @media (max-width: 380px) {
+                .captcha-wrap .cf-turnstile {
+                    transform: scale(0.88);
+                    transform-origin: center top;
+                }
             }
 
             /* Ensure footer container takes full width */
@@ -2869,6 +3735,18 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                 }
             }
 
+            var conditionalFieldConfigs = [
+                { name: 'branch_offices', id: 'branch-details-wrapper' },
+                { name: 'multisite', id: 'multisite-details-wrapper' },
+                { name: 'integrated_management_system', id: 'ims-details-wrapper' },
+                { name: 'onsite_installation', id: 'onsite-details-wrapper' },
+                { name: 'part_time_personnel', id: 'part-time-details-wrapper' },
+                { name: 'employees_excluded', id: 'employees-excluded-wrapper' },
+                { name: 'consultancy_services_taken', id: 'consultancy-details-wrapper' },
+                { name: 'other_certificates_flag', id: 'other-certificates-details' },
+                { name: 'complicated_logistics', id: 'complicated-logistics-details-wrapper' }
+            ];
+
             function toggleOtherCertificatesDetails() {
                 var details = document.getElementById('other-certificates-details');
                 if (!details) return;
@@ -2876,11 +3754,47 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                 details.style.display = (yesRadio && yesRadio.checked) ? 'block' : 'none';
             }
 
-            var flagRadios = form.querySelectorAll('input[name="other_certificates_flag"]');
-            for (var r = 0; r < flagRadios.length; r++) {
-                flagRadios[r].addEventListener('change', toggleOtherCertificatesDetails);
+            function updateAllConditionalFields() {
+                conditionalFieldConfigs.forEach(function (cfg) {
+                    var wrapper = document.getElementById(cfg.id);
+                    if (!wrapper) return;
+                    var yesRadio = form.querySelector('input[name="' + cfg.name + '"][value="Yes"]');
+                    wrapper.style.display = (yesRadio && yesRadio.checked) ? 'block' : 'none';
+                });
             }
-            toggleOtherCertificatesDetails();
+
+            conditionalFieldConfigs.forEach(function (cfg) {
+                var radios = form.querySelectorAll('input[name="' + cfg.name + '"]');
+                for (var r = 0; r < radios.length; r++) {
+                    radios[r].addEventListener('change', function () {
+                        updateAllConditionalFields();
+                    });
+                }
+            });
+            updateAllConditionalFields();
+
+            // IMS "No integration" vs specific integration options mutual exclusivity
+            var imsCheckboxes = form.querySelectorAll('input[name="ims_levels[]"]');
+            imsCheckboxes.forEach(function (cb) {
+                cb.addEventListener('change', function () {
+                    if (this.value === 'No integration' && this.checked) {
+                        imsCheckboxes.forEach(function (other) {
+                            if (other.value !== 'No integration') {
+                                other.checked = false;
+                            }
+                        });
+                    } else if (this.value !== 'No integration' && this.checked) {
+                        var noInteg = form.querySelector('input[name="ims_levels[]"][value="No integration"]');
+                        if (noInteg) {
+                            noInteg.checked = false;
+                        }
+                    }
+                });
+            });
+
+            form.addEventListener('reset', function () {
+                setTimeout(updateAllConditionalFields, 20);
+            });
 
             // Populate tables from existing hidden text when form reloads (e.g. after validation error)
             populateEmployeeStructureFromText();
@@ -2932,40 +3846,190 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                 });
             }
 
-            // Standards + Accreditation dynamic rows
+            // Standards dynamic rows
             var isoOptions = ['ISO 9001', 'ISO 14001', 'ISO 45001', 'ISO 27001'];
-            var accrOptions = ['NABCB', 'SELF'];
 
-            function createStandardRow(stdVal, accVal) {
+            // Dynamic Step Numbers Updater
+            function updateStepNumbers() {
+                var allSections = document.querySelectorAll('.nc-form-section');
+                var visibleSections = [];
+                allSections.forEach(function (sec) {
+                    if (window.getComputedStyle(sec).display !== 'none') {
+                        visibleSections.push(sec);
+                    }
+                });
+
+                var totalVisible = visibleSections.length;
+                visibleSections.forEach(function (sec, idx) {
+                    var stepNum = idx + 1;
+                    var badge = sec.querySelector('.nc-section-step-tag .nc-step-pill-badge');
+                    if (!badge) return;
+                    var iconEl = badge.querySelector('i');
+                    var iconHtml = iconEl ? iconEl.outerHTML + ' ' : '<i class="fa fa-bookmark"></i> ';
+
+                    if (stepNum === totalVisible) {
+                        badge.className = 'nc-step-pill-badge nc-step-pill-final';
+                        badge.innerHTML = iconHtml + 'Step ' + stepNum + ' of ' + totalVisible + ' &bull; Final Step';
+                    } else {
+                        badge.className = 'nc-step-pill-badge';
+                        badge.innerHTML = iconHtml + 'Step ' + stepNum + ' of ' + totalVisible;
+                    }
+                });
+            }
+
+            function updateStandardDropdowns() {
+                if (!standardRows) return;
+                var rows = standardRows.querySelectorAll('.standard-row');
+                var totalRows = rows.length;
+                var selects = standardRows.querySelectorAll('select[name="standard_applied[]"]');
+                var selectedValues = [];
+
+                selects.forEach(function (s) {
+                    var v = (s.value || '').trim();
+                    if (v !== '') {
+                        selectedValues.push(v);
+                    }
+                });
+
+                // Update each select's options to disable already chosen standards in other rows
+                selects.forEach(function (select) {
+                    var currentVal = (select.value || '').trim();
+                    var options = select.querySelectorAll('option');
+                    options.forEach(function (opt) {
+                        var optVal = (opt.value || '').trim();
+                        if (optVal === '') {
+                            opt.disabled = false;
+                            return;
+                        }
+                        if (selectedValues.indexOf(optVal) !== -1 && optVal !== currentVal) {
+                            opt.disabled = true;
+                            opt.textContent = optVal + ' (Already selected)';
+                        } else {
+                            opt.disabled = false;
+                            opt.textContent = optVal;
+                        }
+                    });
+                });
+
+                // Manage Remove buttons visibility: hide when only 1 row, show when > 1 row
+                rows.forEach(function (r) {
+                    var rmBtn = r.querySelector('.remove-standard-row');
+                    if (rmBtn) {
+                        rmBtn.style.display = (totalRows > 1) ? 'block' : 'none';
+                    }
+                });
+
+                // Disable "Add Standard" button if 4 rows exist or all standards selected
+                if (addStandardRowBtn) {
+                    if (totalRows >= isoOptions.length || selectedValues.length >= isoOptions.length) {
+                        addStandardRowBtn.disabled = true;
+                        addStandardRowBtn.style.opacity = '0.5';
+                        addStandardRowBtn.style.cursor = 'not-allowed';
+                        addStandardRowBtn.title = 'Maximum 4 standards allowed';
+                    } else {
+                        addStandardRowBtn.disabled = false;
+                        addStandardRowBtn.style.opacity = '1';
+                        addStandardRowBtn.style.cursor = 'pointer';
+                        addStandardRowBtn.title = '';
+                    }
+                }
+
+                // Dynamic Annexure visibility based on selected ISO standards
+                var has9001 = false;
+                var has14001 = false;
+                var has45001 = false;
+
+                selectedValues.forEach(function (val) {
+                    var vUpper = val.toUpperCase();
+                    if (vUpper.indexOf('9001') !== -1) has9001 = true;
+                    if (vUpper.indexOf('14001') !== -1) has14001 = true;
+                    if (vUpper.indexOf('45001') !== -1) has45001 = true;
+                });
+
+                var step9 = document.getElementById('form-step-9');   // Annexure 1 - QMS (ISO 9001)
+                var step10 = document.getElementById('form-step-10'); // Annexure 2 - EMS (ISO 14001)
+                var step11 = document.getElementById('form-step-11'); // Annexure 3 - OHSMS (ISO 45001)
+
+                // Annexure 1 is applicable to all applicants (always shown)
+                if (step9) step9.style.display = '';
+
+                // Annexure 2 (EMS) & Annexure 3 (OHSMS) are based on selected ISO standards
+                if (step10) step10.style.display = has14001 ? '' : 'none';
+                if (step11) step11.style.display = has45001 ? '' : 'none';
+
+                // Update Annexure dynamic status banner in Step 3
+                var statusText = document.getElementById('annexure-status-text');
+                var statusBadges = document.getElementById('annexure-status-badges');
+                if (statusText && statusBadges) {
+                    var badgeHtml = [];
+                    // Annexure 1 is always active for all applicants
+                    badgeHtml.push('<a href="#form-step-9" class="annexure-chip" style="text-decoration:none; display:inline-flex; align-items:center; gap:5px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; font-size:12px; font-weight:600; padding:4px 10px; border-radius:999px; transition:all 0.2s;"><i class="fa fa-check-circle" style="color:#2563eb;"></i> Annexure 1 (QMS - All Applicants) &darr;</a>');
+
+                    if (has14001) {
+                        badgeHtml.push('<a href="#form-step-10" class="annexure-chip" style="text-decoration:none; display:inline-flex; align-items:center; gap:5px; background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; font-size:12px; font-weight:600; padding:4px 10px; border-radius:999px; transition:all 0.2s;"><i class="fa fa-check-circle" style="color:#059669;"></i> Annexure 2 (EMS) Active &darr;</a>');
+                    }
+                    if (has45001) {
+                        badgeHtml.push('<a href="#form-step-11" class="annexure-chip" style="text-decoration:none; display:inline-flex; align-items:center; gap:5px; background:#fffbeb; color:#b45309; border:1px solid #fde68a; font-size:12px; font-weight:600; padding:4px 10px; border-radius:999px; transition:all 0.2s;"><i class="fa fa-check-circle" style="color:#d97706;"></i> Annexure 3 (OHSMS) Active &darr;</a>');
+                    }
+
+                    if (has14001 || has45001) {
+                        statusText.innerHTML = '<i class="fa fa-check-circle text-success"></i> <span style="font-weight:600; color:#0f172a;">Active Annexures for your application:</span>';
+                    } else {
+                        statusText.innerHTML = '<i class="fa fa-info-circle text-primary"></i> <span>Annexure 1 is applicable to all applicants. Selecting ISO 14001 activates Annexure 2, and ISO 45001 activates Annexure 3.</span>';
+                    }
+                    statusBadges.innerHTML = badgeHtml.join(' ');
+                }
+
+                // Update step pill badges dynamically across all visible sections
+                updateStepNumbers();
+            }
+
+            var annexureStatusBadges = document.getElementById('annexure-status-badges');
+            if (annexureStatusBadges) {
+                annexureStatusBadges.addEventListener('click', function (e) {
+                    var link = e.target.closest('a');
+                    if (link && link.hash) {
+                        var targetEl = document.querySelector(link.hash);
+                        if (targetEl && window.getComputedStyle(targetEl).display !== 'none') {
+                            e.preventDefault();
+                            targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                    }
+                });
+            }
+
+            function createStandardRow(stdVal) {
                 var row = document.createElement('div');
                 row.className = 'row align-items-end standard-row';
-                row.style.marginBottom = '10px';
-                var stdOptionsHtml = '<option value=\"\">Select</option>' + isoOptions.map(function (opt) {
+                row.style.marginBottom = '12px';
+                var stdOptionsHtml = '<option value="">Select Standard</option>' + isoOptions.map(function (opt) {
                     var sel = (opt === stdVal) ? ' selected' : '';
-                    return '<option value=\"' + opt + '\"' + sel + '>' + opt + '</option>';
-                }).join('');
-                var accOptionsHtml = '<option value=\"\">Select</option>' + accrOptions.map(function (opt) {
-                    var sel = (opt === accVal) ? ' selected' : '';
-                    return '<option value=\"' + opt + '\"' + sel + '>' + opt + '</option>';
+                    return '<option value="' + opt + '"' + sel + '>' + opt + '</option>';
                 }).join('');
                 row.innerHTML = '' +
-                    '<div class=\"col-md-6\">' +
-                    '<label>Standard applied for</label>' +
-                    '<select name=\"standard_applied[]\" class=\"form-control\">' + stdOptionsHtml + '</select>' +
+                    '<div class="col-md-5 col-sm-12" style="margin-bottom: 8px;">' +
+                    '<label style="font-size: 13px; color: #64748b;">Standard applied for</label>' +
+                    '<select name="standard_applied[]" class="form-control standard-select">' + stdOptionsHtml + '</select>' +
                     '</div>' +
-                    '<div class=\"col-md-4\">' +
-                    '<label>Accreditation requirement</label>' +
-                    '<select name=\"accreditation_requirement[]\" class=\"form-control\">' + accOptionsHtml + '</select>' +
+                    '<div class="col-md-5 col-sm-12" style="margin-bottom: 8px;">' +
+                    '<label style="font-size: 13px; color: #64748b;">Accreditation requirement</label>' +
+                    '<input type="text" name="accreditation_requirement[]" class="form-control accreditation-input" value="NABCB" readonly style="background: #f8fafc; font-weight: 600; color: #0f172a; cursor: default;">' +
                     '</div>' +
-                    '<div class=\"col-md-2\">' +
-                    '<button type=\"button\" class=\"btn btn-default remove-standard-row\" style=\"margin-top:22px; width:100%;\"><i class=\"fa fa-trash\"></i> Remove</button>' +
+                    '<div class="col-md-2 col-sm-12" style="margin-bottom: 8px;">' +
+                    '<button type="button" class="btn remove-standard-row"><i class="fa fa-trash"></i> Remove</button>' +
                     '</div>';
                 return row;
             }
 
             if (addStandardRowBtn && standardRows) {
                 addStandardRowBtn.addEventListener('click', function () {
-                    standardRows.appendChild(createStandardRow('', ''));
+                    var totalRows = standardRows.querySelectorAll('.standard-row').length;
+                    if (totalRows >= isoOptions.length) {
+                        alert('You cannot add more than ' + isoOptions.length + ' standards.');
+                        return;
+                    }
+                    standardRows.appendChild(createStandardRow(''));
+                    updateStandardDropdowns();
                 });
 
                 standardRows.addEventListener('click', function (e) {
@@ -2976,9 +4040,33 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                         var totalRows = standardRows.querySelectorAll('.standard-row').length;
                         if (totalRows > 1) {
                             row.remove();
+                            updateStandardDropdowns();
                         }
                     }
                 });
+
+                standardRows.addEventListener('change', function (e) {
+                    if (e.target && e.target.name === 'standard_applied[]') {
+                        var currentSelect = e.target;
+                        var chosenVal = (currentSelect.value || '').trim();
+                        if (chosenVal !== '') {
+                            var selects = standardRows.querySelectorAll('select[name="standard_applied[]"]');
+                            var count = 0;
+                            selects.forEach(function (s) {
+                                if ((s.value || '').trim() === chosenVal) {
+                                    count++;
+                                }
+                            });
+                            if (count > 1) {
+                                alert('This ISO standard ("' + chosenVal + '") is already selected in another row. Duplicate selection is not allowed.');
+                                currentSelect.value = '';
+                            }
+                        }
+                        updateStandardDropdowns();
+                    }
+                });
+
+                updateStandardDropdowns();
             }
 
             function isApplicationCaptchaComplete() {
@@ -3069,6 +4157,22 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                     return false;
                 }
 
+                // Check duplicate ISO standards before submitting
+                var stdSelects = form.querySelectorAll('select[name="standard_applied[]"]');
+                var checkedStds = [];
+                for (var si = 0; si < stdSelects.length; si++) {
+                    var sVal = (stdSelects[si].value || '').trim();
+                    if (sVal !== '') {
+                        if (checkedStds.indexOf(sVal) !== -1) {
+                            alert('Duplicate ISO Standard ("' + sVal + '") found. Please select each standard only once before submitting.');
+                            stdSelects[si].focus();
+                            e.preventDefault();
+                            return false;
+                        }
+                        checkedStds.push(sVal);
+                    }
+                }
+
                 validateRequiredFields();
                 if (submitBtn && submitBtn.disabled) {
                     e.preventDefault();
@@ -3106,8 +4210,8 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                 var overlay = document.getElementById('submitOverlay');
                 if (overlay && submitBtn) {
                     overlay.classList.add('show');
-                    submitBtn.dataset.originalText = submitBtn.textContent;
-                    submitBtn.textContent = 'Submitting...';
+                    submitBtn.dataset.originalHtml = submitBtn.innerHTML;
+                    submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> <span>Submitting Application...</span>';
                     submitBtn.disabled = true;
                 }
             });
@@ -3116,11 +4220,14 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                 var overlay = document.getElementById('submitOverlay');
                 if (overlay) overlay.classList.remove('show');
                 if (submitBtn) {
-                    if (submitBtn.dataset.originalText) {
-                        submitBtn.textContent = submitBtn.dataset.originalText;
+                    if (submitBtn.dataset.originalHtml) {
+                        submitBtn.innerHTML = submitBtn.dataset.originalHtml;
                     }
                 }
                 validateRequiredFields();
+                if (typeof updateAllConditionalFields === 'function') {
+                    updateAllConditionalFields();
+                }
             });
         })();
     </script>
