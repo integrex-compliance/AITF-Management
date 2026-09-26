@@ -359,6 +359,36 @@ if (!function_exists('aitf_auto_sync_schema')) {
                 error_log("agreement auto-sync error: " . $e->getMessage());
             }
 
+            // Ensure service_type column in invoice_details
+            try {
+                $chkInvCol = $db->query("SHOW COLUMNS FROM `invoice_details` LIKE 'service_type'");
+                if ($chkInvCol && $chkInvCol->rowCount() === 0) {
+                    $db->exec("ALTER TABLE `invoice_details` ADD COLUMN `service_type` VARCHAR(100) NULL");
+                }
+            } catch (Throwable $e) {
+                // Ignore if already exists
+            }
+
+            // Ensure reconciliation column in payment_system
+            try {
+                $chkPayCol = $db->query("SHOW COLUMNS FROM `payment_system` LIKE 'reconciliation'");
+                if ($chkPayCol && $chkPayCol->rowCount() === 0) {
+                    $db->exec("ALTER TABLE `payment_system` ADD COLUMN `reconciliation` VARCHAR(100) NULL AFTER `cheque_details`");
+                }
+            } catch (Throwable $e) {
+                // Ignore if already exists
+            }
+
+            // Ensure remark column in invoice_details
+            try {
+                $chkInvRem = $db->query("SHOW COLUMNS FROM `invoice_details` LIKE 'remark'");
+                if ($chkInvRem && $chkInvRem->rowCount() === 0) {
+                    $db->exec("ALTER TABLE `invoice_details` ADD COLUMN `remark` TEXT NULL");
+                }
+            } catch (Throwable $e) {
+                // Ignore if already exists
+            }
+
             $alreadySynced = true;
             if (isset($flagFile)) {
                 @touch($flagFile);

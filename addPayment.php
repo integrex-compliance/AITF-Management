@@ -46,6 +46,94 @@ if(isset($_GET["inv_id"]) && !empty($_GET["inv_id"])){
     }
 }
 
+if (isset($req['action']) && $req['action'] === 'updateInvoiceRemark') {
+    header('Content-Type: application/json');
+    try {
+        $invId = intval($req['invoice_id'] ?? 0);
+        $remark = trim((string)($req['remark'] ?? ''));
+        if ($invId > 0) {
+            $stmt = $db->prepare("UPDATE `invoice_details` SET `remark` = :rmk WHERE `invoice_id` = :id");
+            $stmt->bindParam(':rmk', $remark);
+            $stmt->bindParam(':id', $invId, PDO::PARAM_INT);
+            $stmt->execute();
+            echo json_encode(['success' => true, 'remark' => $remark]);
+            exit;
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Invalid invoice ID']);
+            exit;
+        }
+    } catch (Exception $e) {
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        exit;
+    }
+}
+
+if (isset($req['action']) && $req['action'] === 'updateInvoiceServiceType') {
+    header('Content-Type: application/json');
+    try {
+        $invId = intval($req['invoice_id'] ?? 0);
+        $svcType = trim((string)($req['service_type'] ?? ''));
+        if ($invId > 0) {
+            $stmt = $db->prepare("UPDATE `invoice_details` SET `service_type` = :svc WHERE `invoice_id` = :id");
+            $stmt->bindParam(':svc', $svcType);
+            $stmt->bindParam(':id', $invId, PDO::PARAM_INT);
+            $stmt->execute();
+            echo json_encode(['success' => true, 'service_type' => $svcType]);
+            exit;
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Invalid invoice ID']);
+            exit;
+        }
+    } catch (Exception $e) {
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        exit;
+    }
+}
+
+if (isset($req['action']) && $req['action'] === 'updatePaymentServiceType') {
+    header('Content-Type: application/json');
+    try {
+        $payId = intval($req['payment_id'] ?? 0);
+        $svcType = trim((string)($req['service_type'] ?? ''));
+        if ($payId > 0) {
+            $stmt = $db->prepare("UPDATE `payment_system` SET `service_type` = :svc WHERE `payment_id` = :id");
+            $stmt->bindParam(':svc', $svcType);
+            $stmt->bindParam(':id', $payId, PDO::PARAM_INT);
+            $stmt->execute();
+            echo json_encode(['success' => true, 'service_type' => $svcType]);
+            exit;
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Invalid payment ID']);
+            exit;
+        }
+    } catch (Exception $e) {
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        exit;
+    }
+}
+
+if (isset($req['action']) && $req['action'] === 'updateReconcileStatus') {
+    header('Content-Type: application/json');
+    try {
+        $payId = intval($req['payment_id'] ?? 0);
+        $status = trim((string)($req['status'] ?? ''));
+        if ($payId > 0) {
+            $stmt = $db->prepare("UPDATE `payment_system` SET `reconciliation` = :status WHERE `payment_id` = :id");
+            $stmt->bindParam(':status', $status);
+            $stmt->bindParam(':id', $payId, PDO::PARAM_INT);
+            $stmt->execute();
+            echo json_encode(['success' => true, 'status' => $status]);
+            exit;
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Invalid payment ID']);
+            exit;
+        }
+    } catch (Exception $e) {
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        exit;
+    }
+}
+
 if (isset($req['action']) && $req['action'] === 'saveDiscount') {
     header('Content-Type: application/json');
     try {
@@ -145,7 +233,9 @@ if (isset($req['payid']) && !empty($req['payid'])) {
         $chequedetails = explode('~', $req['chequeDetails']);
         $rowi_ds = explode('~', $req['rowids']);
         $dlt_rows = explode('~', $req['dltRows'] ?? '');
-//        echo $depositdate;
+        $reconciliations = isset($req['reconciliation']) ? explode('~', $req['reconciliation']) : [];
+        $savedRowIds = [];
+
         for ($i = 0; $i < count($servicetypes); ++$i) {
             if ($servicetypes[$i] != "") {
                 if (count($depositdate) < ($i + 1) || $depositdate[$i] == "")
@@ -158,6 +248,7 @@ if (isset($req['payid']) && !empty($req['payid'])) {
                 $tdsVal = floatval($tdsamounts[$i] ?? 0);
                 $discountVal = floatval($discountamounts[$i] ?? 0);
                 $chkDetails = $chequedetails[$i] ?? '';
+                $reconciliationVal = $reconciliations[$i] ?? '';
                 $isTds = (stripos($servicetypes[$i], 'tds') !== false);
                 $isDiscount = (stripos($servicetypes[$i], 'discount') !== false || stripos($servicetypes[$i], 'short') !== false);
 
@@ -178,9 +269,9 @@ if (isset($req['payid']) && !empty($req['payid'])) {
                         $statement->bindParam(':payid', $payid);
                         $statement->bindParam(':rowid', $rowi_ds[$i]);
                         $statement->execute();
-//                        echo 'in delete ';
+                        $savedRowIds[] = 0;
                     } else {
-                        $updateFayInfo = "UPDATE payment_system SET service_type = :services, amount_decided = :decideAmount, payment_received = :rcvAmount, tds_amount = :tdsAmount, discount_amount = :discountAmount, payment_date = :payDate, cheque_details = :checkdetails, balance = :balance, comment = :comment WHERE payment_id = :rowid and payment_sy_id = :payid";
+                        $updateFayInfo = "UPDATE payment_system SET service_type = :services, amount_decided = :decideAmount, payment_received = :rcvAmount, tds_amount = :tdsAmount, discount_amount = :discountAmount, payment_date = :payDate, cheque_details = :checkdetails, reconciliation = :reconciliation, balance = :balance, comment = :comment WHERE payment_id = :rowid and payment_sy_id = :payid";
                         $statement = $db->prepare($updateFayInfo);
                         $statement->bindParam(':comment', $chkDetails);
                         $statement->bindParam(':services', $servicetypes[$i]);
@@ -190,14 +281,15 @@ if (isset($req['payid']) && !empty($req['payid'])) {
                         $statement->bindParam(':discountAmount', $discountVal);
                         $statement->bindParam(':payDate', $date);
                         $statement->bindParam(':checkdetails', $chkDetails);
+                        $statement->bindParam(':reconciliation', $reconciliationVal);
                         $statement->bindParam(':balance', $balance);
                         $statement->bindParam(':rowid', $rowi_ds[$i]);
                         $statement->bindParam(':payid', $payid);
                         $statement->execute();
-//                        echo 'in update ';
+                        $savedRowIds[] = intval($rowi_ds[$i]);
                     }
                 } else {
-                    $paymentDetails = "INSERT INTO payment_system (payment_sy_id, customer_id, service_type, amount_decided, payment_received, tds_amount, discount_amount, payment_date, cheque_details, balance, comment) VALUES (:payid, :customer, :services, :decideAmount, :rcvAmount, :tdsAmount, :discountAmount, :payDate, :checkdetails, :balance, :comment)";
+                    $paymentDetails = "INSERT INTO payment_system (payment_sy_id, customer_id, service_type, amount_decided, payment_received, tds_amount, discount_amount, payment_date, cheque_details, reconciliation, balance, comment) VALUES (:payid, :customer, :services, :decideAmount, :rcvAmount, :tdsAmount, :discountAmount, :payDate, :checkdetails, :reconciliation, :balance, :comment)";
                     $statement = $db->prepare($paymentDetails);
                     $statement->bindParam(':payid', $payid);
                     $statement->bindParam(':customer', $customer);
@@ -208,15 +300,26 @@ if (isset($req['payid']) && !empty($req['payid'])) {
                     $statement->bindParam(':discountAmount', $discountVal);
                     $statement->bindParam(':payDate', $date);
                     $statement->bindParam(':checkdetails', $chkDetails);
+                    $statement->bindParam(':reconciliation', $reconciliationVal);
                     $statement->bindParam(':balance', $balance);
                     $statement->bindParam(':comment', $chkDetails);
                     $statement->execute();
-//                    echo 'in insert';
+                    $savedRowIds[] = intval($db->lastInsertId());
                 }
             }
         }
+        if ((isset($req['action']) && $req['action'] === 'autoSavePayments') || (isset($req['format']) && $req['format'] === 'json')) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true, 'payid' => $payid, 'rowIds' => $savedRowIds]);
+            exit;
+        }
         echo 'success';
     } catch (Exception $ex) {
+        if ((isset($req['action']) && $req['action'] === 'autoSavePayments') || (isset($req['format']) && $req['format'] === 'json')) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => $ex->getMessage()]);
+            exit;
+        }
         echo $ex;
     }
 } else {
@@ -230,6 +333,8 @@ if (isset($req['payid']) && !empty($req['payid'])) {
             $discountamounts = isset($req['discountAmount']) ? explode('~', $req['discountAmount']) : [];
             $depositdate = explode('~', $req['depositDate']);
             $chequedetails = explode('~', $req['chequeDetails']);
+            $reconciliations = isset($req['reconciliation']) ? explode('~', $req['reconciliation']) : [];
+            $savedRowIds = [];
 
             $payid = "INSERT INTO payment_system_id (customer_id) VALUES (:customer)";
             $statement = $db->prepare($payid);
@@ -243,9 +348,7 @@ if (isset($req['payid']) && !empty($req['payid'])) {
             $pay_id = $row['id'];
 
             for ($i = 0; $i < count($servicetypes); ++$i) {
-
                 if ($servicetypes[$i] != "") {
-
                     if (count($depositdate) < ($i + 1) || $depositdate[$i] == "")
                         $date = NULL;
                     else
@@ -256,6 +359,7 @@ if (isset($req['payid']) && !empty($req['payid'])) {
                     $tdsVal = floatval($tdsamounts[$i] ?? 0);
                     $discountVal = floatval($discountamounts[$i] ?? 0);
                     $chkDetails = $chequedetails[$i] ?? '';
+                    $reconciliationVal = $reconciliations[$i] ?? '';
                     $isTds = (stripos($servicetypes[$i], 'tds') !== false);
                     $isDiscount = (stripos($servicetypes[$i], 'discount') !== false || stripos($servicetypes[$i], 'short') !== false);
 
@@ -268,8 +372,8 @@ if (isset($req['payid']) && !empty($req['payid'])) {
 
                     $balance = $decidedVal - ($receivedVal + $tdsVal + $discountVal);
 
-                    $paymentDetails = "INSERT INTO payment_system (payment_sy_id, customer_id, service_type, amount_decided, payment_received, tds_amount, discount_amount, payment_date, cheque_details, balance, comment)"
-                            . " VALUES (:payid, :customer, :services, :decideAmount, :rcvAmount, :tdsAmount, :discountAmount, :payDate, :checkdetails, :balance, :comment)";
+                    $paymentDetails = "INSERT INTO payment_system (payment_sy_id, customer_id, service_type, amount_decided, payment_received, tds_amount, discount_amount, payment_date, cheque_details, reconciliation, balance, comment)"
+                            . " VALUES (:payid, :customer, :services, :decideAmount, :rcvAmount, :tdsAmount, :discountAmount, :payDate, :checkdetails, :reconciliation, :balance, :comment)";
                     $statement = $db->prepare($paymentDetails);
                     $statement->bindParam(':payid', $pay_id);
                     $statement->bindParam(':customer', $customer);
@@ -280,13 +384,25 @@ if (isset($req['payid']) && !empty($req['payid'])) {
                     $statement->bindParam(':discountAmount', $discountVal);
                     $statement->bindParam(':payDate', $date);
                     $statement->bindParam(':checkdetails', $chkDetails);
+                    $statement->bindParam(':reconciliation', $reconciliationVal);
                     $statement->bindParam(':balance', $balance);
                     $statement->bindParam(':comment', $chkDetails);
                     $statement->execute();
+                    $savedRowIds[] = intval($db->lastInsertId());
                 }
+            }
+            if ((isset($req['action']) && $req['action'] === 'autoSavePayments') || (isset($req['format']) && $req['format'] === 'json')) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => true, 'payid' => $pay_id, 'rowIds' => $savedRowIds]);
+                exit;
             }
             echo 'success';
         } catch (Exception $ex) {
+            if ((isset($req['action']) && $req['action'] === 'autoSavePayments') || (isset($req['format']) && $req['format'] === 'json')) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => $ex->getMessage()]);
+                exit;
+            }
             echo $ex;
         }
     }

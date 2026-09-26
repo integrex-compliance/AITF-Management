@@ -614,9 +614,7 @@ $html .= '</table>'
     . '<tr><td style="padding:8px 6px;"><strong>If yes, by whom? and period of services:</strong></td><td style="padding:10px 6px;">' . nl2br($e('consultancy_details')) . '</td></tr>'
     . '</table><br />';
 
-$html .= '<div class="section-title">DECLARATION AND SIGNATURE</div>';
-
-// Build signature cell HTML with embedded image (if available)
+$hasSignature = false;
 $signatureCellHtml = '';
 if (!empty($application['sign_image_path'])) {
     $imgPath = str_replace('\\', '/', __DIR__ . '/' . $application['sign_image_path']);
@@ -624,42 +622,61 @@ if (!empty($application['sign_image_path'])) {
         // Use normal file path in HTML img src so TCPDF can read the image size correctly
         // Specify width and height explicitly to prevent TCPDF from pushing large images to a new page
         $signatureCellHtml .= '<img src="' . $imgPath . '" width="340" height="220" style="display:block; margin: 0 auto;" />';
-    } else {
-        $signatureCellHtml .= 'Signature image not available on server.<br />';
+        $signatureCellHtml .= '<div style="font-size:9px; margin-top: 5px; text-align: center; line-height: 12px;"><strong>Sign with duly stamped</strong><br />(We herewith confirm the completeness and accuracy of the information given above.)</div>';
+        $hasSignature = true;
     }
-} else {
-    $signatureCellHtml .= 'No signature uploaded.<br />';
 }
-$signatureCellHtml .= '<div style="font-size:9px; margin-top: 5px; text-align: center; line-height: 12px;"><strong>Sign with duly stamped</strong><br />(We herewith confirm the completeness and accuracy of the information given above.)</div>';
 
-$html .= '<table border="1" cellpadding="3" cellspacing="0" class="form-table" nobr="true">'
-    . '<tr>'
-    . '<td colspan="2" style="font-size:9px;">'
-    . '<strong>Note </strong><br />'
-    . 'Initial audit will be conducted in two stages. Stage 2 audit date(s) will be finalised on assessment of Stage 1 audit.<br />'
-    . 'If available, please attach process flow diagram, organisation brochure and any customer specific requirements.'
-    . '</td>'
-    . '</tr>'
-    . '<tr>'
-    . '<td width="55%" style="height:115px; vertical-align:bottom; text-align:center;">' . $signatureCellHtml . '</td>'
-    . '<td width="45%" style="font-size:11px; vertical-align:middle; padding: 10px;">'
-    . '<div style="border: 1px solid #000; padding: 15px; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center;">'
-    . '<div style="margin-bottom: 10px;">'
-    . '<div><strong>Name:</strong> ' . $e('sign_name') . '</div>'
-    . '</div>'
-    . '<div style="margin-bottom: 10px;">'
-    . '<div><strong>Designation:</strong> ' . $e('sign_designation') . '</div>'
-    . '</div>'
-    . '<div style="margin-bottom: 10px;">'
-    . '<div><strong>Date:</strong> ' . $e('sign_date') . '</div>'
-    . '</div>'
-    . '<div>'
-    . '<div><strong>Declaration:</strong> ' . (!empty($application['declaration_confirmed']) ? 'Confirmed by applicant.' : 'Not confirmed on submission.') . '</div>'
-    . '</div>'
-    . '</div>'
-    . '</td>'
-    . '</tr>'
-    . '</table>';
+if ($hasSignature) {
+    $html .= '<div class="section-title">DECLARATION AND SIGNATURE</div>';
+    $html .= '<table border="1" cellpadding="3" cellspacing="0" class="form-table" nobr="true">'
+        . '<tr>'
+        . '<td colspan="2" style="font-size:9px;">'
+        . '<strong>Note  </strong><br />'
+        . 'Initial audit will be conducted in two stages. Stage 2 audit date(s) will be finalised on assessment of Stage 1 audit.<br />'
+        . 'If available, please attach process flow diagram, organisation brochure and any customer specific requirements.'
+        . '</td>'
+        . '</tr>'
+        . '<tr>'
+        . '<td width="55%" style="height:115px; vertical-align:bottom; text-align:center;">' . $signatureCellHtml . '</td>'
+        . '<td width="45%" style="font-size:11px; vertical-align:middle; padding: 10px;">'
+        . '<div style="border: 1px solid #000; padding: 15px; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center;">'
+        . '<div style="margin-bottom: 10px;">'
+        . '<div><strong>Name:</strong> ' . $e('sign_name') . '</div>'
+        . '</div>'
+        . '<div style="margin-bottom: 10px;">'
+        . '<div><strong>Designation:</strong> ' . $e('sign_designation') . '</div>'
+        . '</div>'
+        . '<div style="margin-bottom: 10px;">'
+        . '<div><strong>Date:</strong> ' . $e('sign_date') . '</div>'
+        . '</div>'
+        . '<div>'
+        . '<div><strong>Declaration:</strong> ' . (!empty($application['declaration_confirmed']) ? 'Confirmed by applicant.' : 'Not confirmed on submission.') . '</div>'
+        . '</div>'
+        . '</div>'
+        . '</td>'
+        . '</tr>'
+        . '</table>';
+} else {
+    $html .= '<div class="section-title">DECLARATION</div>';
+    $html .= '<table border="1" cellpadding="3" cellspacing="0" class="form-table" nobr="true">'
+        . '<tr>'
+        . '<td colspan="2" style="font-size:9px;">'
+        . '<strong>Note  </strong><br />'
+        . 'Initial audit will be conducted in two stages. Stage 2 audit date(s) will be finalised on assessment of Stage 1 audit.<br />'
+        . 'If available, please attach process flow diagram, organisation brochure and any customer specific requirements.'
+        . '</td>'
+        . '</tr>'
+        . '<tr>'
+        . '<td width="50%" style="font-size:11px; padding: 8px 10px;"><strong>Name:</strong> ' . $e('sign_name') . '</td>'
+        . '<td width="50%" style="font-size:11px; padding: 8px 10px;"><strong>Designation:</strong> ' . $e('sign_designation') . '</td>'
+        . '</tr>'
+        . '<tr>'
+        . '<td width="50%" style="font-size:11px; padding: 8px 10px;"><strong>Date:</strong> ' . $e('sign_date') . '</td>'
+        . '<td width="50%" style="font-size:11px; padding: 8px 10px;"><strong>Declaration:</strong> ' . (!empty($application['declaration_confirmed']) ? 'Confirmed by applicant.' : 'Not confirmed on submission.') . '</td>'
+        . '</tr>'
+        . '</table>';
+}
 
 $pdf->writeHTML($html, true, false, true, false, '');
 

@@ -249,45 +249,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_info_form'])) 
     if (empty($sign_date))
         $errors[] = "Signature date is required";
 
-    // Handle signature image upload
-    $signature_image_path = '';
-    if (isset($_FILES['signature_image']) && $_FILES['signature_image']['error'] === UPLOAD_ERR_OK) {
-        $file = $_FILES['signature_image'];
-        $allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
-        $max_size = 2 * 1024 * 1024; // 2MB
-
-        // Validate file type
-        if (!in_array($file['type'], $allowed_types)) {
-            $errors[] = "Signature file must be JPG, PNG, or PDF";
-        }
-
-        // Validate file size
-        if ($file['size'] > $max_size) {
-            $errors[] = "Signature file size must be less than 2MB";
-        }
-
-        if (empty($errors)) {
-            // Create upload directory if it doesn't exist
-            $upload_dir = 'uploads/signatures/';
-            if (!file_exists($upload_dir)) {
-                mkdir($upload_dir, 0777, true);
-            }
-
-            // Generate unique filename
-            $file_extension = pathinfo($file['name'], PATHINFO_EXTENSION);
-            $new_filename = 'signature_' . time() . '_' . uniqid() . '.' . $file_extension;
-            $upload_path = $upload_dir . $new_filename;
-
-            // Move uploaded file
-            if (move_uploaded_file($file['tmp_name'], $upload_path)) {
-                $signature_image_path = $upload_path;
-            } else {
-                $errors[] = "Failed to upload signature image. Please try again.";
-            }
-        }
-    } elseif (isset($_FILES['signature_image']) && $_FILES['signature_image']['error'] !== UPLOAD_ERR_NO_FILE) {
-        $errors[] = "Signature image upload error. Please try again.";
-    }
+    // Signature image upload removed
+    $signature_image_path = null;
 
     // If no errors, insert into database
     if (empty($errors)) {
@@ -385,12 +348,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_info_form'])) 
                 
                 // 1. Send mail to client
                 if (!empty($email)) {
-                    $clientSubject = "Thank you for your Information Updation Form";
+                    $clientSubject = "Thank you for your Information Updation Form - A.I.T.F. (Assessment And Institute for Technical Forum)";
                     $clientBody = "<p>Dear " . htmlspecialchars($contact_person) . ",</p>
-                                   <p>Thank you, we have received your information updation form.</p>
+                                   <p>Thank you for contacting <strong>A.I.T.F. (Assessment And Institute for Technical Forum)</strong>. We have received your information updation form.</p>
                                    <p>This is a confirmation mail that we have received your form and our team is reviewing it right now.</p>
                                    <p>Meanwhile, if you have any queries, feel free to contact us.</p>
-                                   <p>Best regards,<br>AITF Certification Services</p>";
+                                   <p>Regards,<br>AITF Management Certification Limited.<br><br>QCI-NABCB Accredited Certification Body.<br><br>Authorised Signatory</p>";
                     $emailSender->sendEmail($email, $contact_person, $clientBody, $clientSubject);
                 }
                 
@@ -1076,37 +1039,6 @@ $canonicalUrl = "https://www.aitf.co.in/info-updation";
                         </div>
                     </div>
 
-                    <div class="row" style="margin-top: 20px;">
-                        <div class="col-sm-12 form-group">
-                            <label style="display: block; margin-bottom: 10px;">
-                                <i class="fa fa-image"></i> Upload Signature Image <span style="color: red;">*</span>
-                                <small style="color: #6b7280; font-weight: normal;">(JPG, PNG, or PDF - Max 2MB)</small>
-                            </label>
-                            <div
-                                style="border: 2px dashed #bbf7d0; border-radius: 8px; padding: 20px; text-align: center; background: #ffffff;">
-                                <input type="file" name="signature_image" id="signature_image"
-                                    accept="image/jpeg,image/jpg,image/png,application/pdf" required
-                                    style="display: none;">
-                                <label for="signature_image" style="cursor: pointer; display: block;">
-                                    <div id="upload-placeholder">
-                                        <i class="fa fa-cloud-upload"
-                                            style="font-size: 48px; color: #16a34a; margin-bottom: 10px;"></i>
-                                        <p style="margin: 0; color: #166534; font-weight: 600;">Click to upload
-                                            signature</p>
-                                        <p style="margin: 5px 0 0 0; color: #6b7280; font-size: 13px;">or drag and drop your file here</p>
-                                        <p style="margin: 5px 0 0 0; color: #ef4444; font-size: 13px; font-weight: 600;">Only JPEG, PNG, PDF is accepted</p>
-                                    </div>
-                                    <div id="file-preview" style="display: none;">
-                                        <i class="fa fa-file-image-o"
-                                            style="font-size: 48px; color: #16a34a; margin-bottom: 10px;"></i>
-                                        <p id="file-name" style="margin: 0; color: #166534; font-weight: 600;"></p>
-                                        <p style="margin: 5px 0 0 0; color: #6b7280; font-size: 13px;">Click to change
-                                            file</p>
-                                    </div>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
                 </div>
 
                 <!-- Note Section -->
@@ -1174,34 +1106,6 @@ $canonicalUrl = "https://www.aitf.co.in/info-updation";
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
         $(document).ready(function () {
-            // File upload preview
-            $('#signature_image').change(function () {
-                var file = this.files[0];
-                if (file) {
-                    var fileName = file.name;
-                    var fileSize = (file.size / 1024 / 1024).toFixed(2); // Convert to MB
-
-                    // Check file size (max 2MB)
-                    if (fileSize > 2) {
-                        alert('File size must be less than 2MB. Your file is ' + fileSize + 'MB');
-                        $(this).val('');
-                        return;
-                    }
-
-                    // Check file type
-                    var validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
-                    if (!validTypes.includes(file.type)) {
-                        alert('Please upload only JPG, PNG, or PDF files');
-                        $(this).val('');
-                        return;
-                    }
-
-                    // Show file preview
-                    $('#upload-placeholder').hide();
-                    $('#file-preview').show();
-                    $('#file-name').text(fileName + ' (' + fileSize + ' MB)');
-                }
-            });
 
             // Show/hide detail fields based on Yes/No selection
             $('.change-radio').change(function () {
@@ -1234,13 +1138,6 @@ $canonicalUrl = "https://www.aitf.co.in/info-updation";
                 var phone = $('input[name="phone"]').val();
                 if (phone.length < 10) {
                     errors.push('Please enter a valid phone number');
-                    isValid = false;
-                }
-
-                // Validate signature upload
-                var signatureFile = $('#signature_image')[0].files[0];
-                if (!signatureFile) {
-                    errors.push('Please upload your signature image');
                     isValid = false;
                 }
 

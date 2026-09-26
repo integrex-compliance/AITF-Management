@@ -331,6 +331,87 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             return count($officeRows) === 1 ? $officeRows[0] : array();
         }
 
+        if (!function_exists('caCertHeaderGetFirstCaCdcDate')) {
+            function caCertHeaderGetFirstCaCdcDate(PDO $db, $customerId, $standardName = '')
+            {
+                if (empty($db) || empty($customerId)) {
+                    return '';
+                }
+
+                $customerId = (int) $customerId;
+
+                // 1. If standardName is provided, check if a CA CDC record matches this specific standard
+                if (!empty($standardName)) {
+                    $stdLike = '%' . trim((string) $standardName) . '%';
+                    $statement = $db->prepare(
+                        "SELECT crr.Date
+                         FROM cdc_report_review crr
+                         LEFT JOIN service_type_ca ca ON crr.ca_service_id = ca.ca_id
+                         WHERE crr.customer_id = :customer_id
+                           AND (
+                               ca.ca_id IS NOT NULL
+                               OR TRIM(UPPER(crr.audit_type)) IN ('CA', 'INITIAL CERTIFICATION AUDIT', 'INITIAL CERTIFICATION AUDIT.', 'INTIAL CERTIFICATION AUDIT')
+                           )
+                           AND (
+                               crr.covered_for LIKE :stdLike
+                               OR EXISTS (
+                                   SELECT 1 FROM cdc_report_review_office_use cou
+                                   WHERE cou.crr_id = crr.crr_id
+                                     AND cou.iso_label LIKE :stdLike2
+                               )
+                           )
+                           AND crr.Date IS NOT NULL
+                           AND crr.Date <> ''
+                           AND crr.Date <> '0000-00-00'
+                         ORDER BY crr.Date ASC, crr.crr_id ASC
+                         LIMIT 1"
+                    );
+                    $statement->bindValue(':customer_id', $customerId, PDO::PARAM_INT);
+                    $statement->bindValue(':stdLike', $stdLike, PDO::PARAM_STR);
+                    $statement->bindValue(':stdLike2', $stdLike, PDO::PARAM_STR);
+                    $statement->execute();
+                    $isoSpecificDate = $statement->fetchColumn();
+                    if (!empty($isoSpecificDate) && $isoSpecificDate !== '0000-00-00') {
+                        return $isoSpecificDate;
+                    }
+                }
+
+                // 2. Earliest CA CDC date for this customer
+                $statement = $db->prepare(
+                    "SELECT crr.Date
+                     FROM cdc_report_review crr
+                     LEFT JOIN service_type_ca ca ON crr.ca_service_id = ca.ca_id
+                     WHERE crr.customer_id = :customer_id
+                       AND (
+                           ca.ca_id IS NOT NULL
+                           OR TRIM(UPPER(crr.audit_type)) IN ('CA', 'INITIAL CERTIFICATION AUDIT', 'INITIAL CERTIFICATION AUDIT.', 'INTIAL CERTIFICATION AUDIT')
+                       )
+                       AND crr.Date IS NOT NULL
+                       AND crr.Date <> ''
+                       AND crr.Date <> '0000-00-00'
+                     ORDER BY crr.Date ASC, crr.crr_id ASC
+                     LIMIT 1"
+                );
+                $statement->bindValue(':customer_id', $customerId, PDO::PARAM_INT);
+                $statement->execute();
+                $firstDate = $statement->fetchColumn();
+                if (!empty($firstDate) && $firstDate !== '0000-00-00') {
+                    return $firstDate;
+                }
+
+                // 3. Fallback to customer_info.certification_stage_date
+                $custStmt = $db->prepare("SELECT certification_stage_date FROM customer_info WHERE id = :customer_id LIMIT 1");
+                $custStmt->bindValue(':customer_id', $customerId, PDO::PARAM_INT);
+                $custStmt->execute();
+                $custDate = $custStmt->fetchColumn();
+                if (!empty($custDate) && $custDate !== '0000-00-00') {
+                    return $custDate;
+                }
+
+                return '';
+            }
+        }
+
         function caCertHeaderCertificatesFromLatestCdc(PDO $db, $customerId)
         {
             $statement = $db->prepare(
@@ -387,12 +468,13 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 $legacyCertificates = array();
 
                 foreach ($legacyEntries as $entry) {
+                    $legacyStdName = trim((string) ($entry['iso_label'] ?? ''));
                     $legacyCertificates[] = array(
                         'certification_no' => trim((string) ($entry['certificate_no'] ?? '')),
-                        'standard_name' => trim((string) ($entry['iso_label'] ?? '')),
+                        'standard_name' => $legacyStdName,
                         'issue_date' => $entry['rev_date'] ?? '',
                         'expire_date' => $entry['expire_date'] ?? '',
-                        'decision_date' => $entry['decision_date'] ?? '',
+                        'decision_date' => caCertHeaderGetFirstCaCdcDate($db, $customerId, $legacyStdName),
                         'cdc_status' => trim((string) ($entry['certification_status'] ?? '')),
                         'serviceca_id' => $entry['serviceca_id'] ?? '',
                         'crr_id' => isset($entry['crr_id']) ? (int) $entry['crr_id'] : 0,
@@ -425,7 +507,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     'expire_date' => caCertHeaderHasRealDate($row['expire_date'] ?? '')
                         ? $row['expire_date']
                         : ($row['legacy_expire_date'] ?? ''),
-                    'decision_date' => $row['decision_date'] ?? '',
+                    'decision_date' => caCertHeaderGetFirstCaCdcDate($db, $customerId, $standardName),
                     'cdc_status' => trim((string) ($row['certification_status'] ?? ($row['cdc_status'] ?? ''))),
                     'serviceca_id' => $row['serviceca_id'] ?? '',
                     'crr_id' => isset($row['crr_id']) ? (int) $row['crr_id'] : 0,
@@ -595,12 +677,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     $certificates[$index]['cdc_status'] = trim((string) $dashboardRow['certification_status']);
                 }
 
-                $dashboardDecisionDate = caCertHeaderDashboardDate($dashboardRow, array('certificate_issue_date'));
                 $dashboardIssueDate = caCertHeaderDashboardDate($dashboardRow, array('issue_date'));
                 $dashboardExpireDate = caCertHeaderDashboardDate($dashboardRow, array('expire_date', 'expiry_date'));
-                if ($dashboardDecisionDate !== '') {
-                    $certificates[$index]['decision_date'] = $dashboardDecisionDate;
-                }
                 if ($dashboardIssueDate !== '') {
                     $certificates[$index]['issue_date'] = $dashboardIssueDate;
                 }
@@ -613,17 +691,19 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             return $certificates;
         }
 
-        function caCertHeaderCertificatesFromDashboardRows(array $dashboardRows)
+        function caCertHeaderCertificatesFromDashboardRows(array $dashboardRows, PDO $db = null, $customerId = 0)
         {
             $certificates = array();
 
             foreach ($dashboardRows as $row) {
+                $stdName = isset($row['standard_name']) ? trim((string) $row['standard_name']) : '';
+                $decDate = ($db && $customerId) ? caCertHeaderGetFirstCaCdcDate($db, $customerId, $stdName) : '';
                 $certificates[] = array(
                     'certification_no' => isset($row['certificate_number']) ? trim((string) $row['certificate_number']) : '',
-                    'standard_name' => isset($row['standard_name']) ? trim((string) $row['standard_name']) : '',
+                    'standard_name' => $stdName,
                     'issue_date' => caCertHeaderDashboardDate($row, array('issue_date')),
                     'expire_date' => caCertHeaderDashboardDate($row, array('expire_date', 'expiry_date')),
-                    'decision_date' => caCertHeaderDashboardDate($row, array('certificate_issue_date')),
+                    'decision_date' => $decDate,
                     'cdc_status' => isset($row['certification_status']) ? trim((string) $row['certification_status']) : '',
                     'serviceca_id' => isset($row['svc_id']) ? $row['svc_id'] : '',
                     'iso_index' => isset($row['iso_index']) ? $row['iso_index'] : '',
@@ -1122,7 +1202,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         // Initialize certificate number and ISO-specific fields
                         $certInfo['certification_no'] = '';
                         $certInfo['cdc_status'] = ''; // ISO-specific certification status
-                        $certInfo['decision_date'] = ''; // ISO-specific decision date
+                        $certInfo['decision_date'] = caCertHeaderGetFirstCaCdcDate($db, $customerId, $singleStandard); // First CA CDC date
                         $certInfo['crr_id'] = '';
                         $certInfo['accreditation'] = '';
 
@@ -1140,12 +1220,9 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                 $certInfo['crr_id'] = $crrData['crr_id'];
                                 $certInfo['accreditation'] = strtoupper(trim((string) ($crrData['accreditation'] ?? '')));
 
-                                // Store ISO-specific status and decision date
+                                // Store ISO-specific status
                                 if (!empty($crrData['cdc_status'])) {
                                     $certInfo['cdc_status'] = $crrData['cdc_status'];
-                                }
-                                if (!empty($crrData['decision_date'])) {
-                                    $certInfo['decision_date'] = $crrData['decision_date'];
                                 }
 
                                 // Try to get certificate and dates from office_use using the same ISO matching strategy as the CDC modal.
@@ -1275,7 +1352,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                             'standard_name' => isset($dashboardRow['standard_name']) ? $dashboardRow['standard_name'] : '',
                             'issue_date' => caCertHeaderDashboardDate($dashboardRow, array('issue_date')),
                             'expire_date' => caCertHeaderDashboardDate($dashboardRow, array('expire_date', 'expiry_date')),
-                            'decision_date' => caCertHeaderDashboardDate($dashboardRow, array('certificate_issue_date')),
+                            'decision_date' => caCertHeaderGetFirstCaCdcDate($db, $customerId, isset($dashboardRow['standard_name']) ? $dashboardRow['standard_name'] : ''),
                             'cdc_status' => isset($dashboardRow['certification_status']) ? $dashboardRow['certification_status'] : '',
                             'serviceca_id' => isset($dashboardRow['svc_id']) ? $dashboardRow['svc_id'] : '',
                             'crr_id' => '',
@@ -1299,7 +1376,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 $allCertificates = $uniqueCertificates;
 
                 if (empty($allCertificates) && !empty($dashboardCertificateRows)) {
-                    $allCertificates = caCertHeaderCertificatesFromDashboardRows($dashboardCertificateRows);
+                    $allCertificates = caCertHeaderCertificatesFromDashboardRows($dashboardCertificateRows, $db, $customerId);
                 } elseif (!empty($dashboardCertificateRows)) {
                     $allCertificates = caCertHeaderApplyDashboardRows($allCertificates, $dashboardCertificateRows);
                 }
@@ -1536,7 +1613,11 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             $statement->execute();
             $servicetype = $statement->fetch();
 
-            $invoice = "SELECT * FROM `invoice_details` WHERE invoice_type = 'final' and customer_id = :id AND (is_deleted = 'No' OR is_deleted IS NULL) ORDER BY invoice_id ASC";
+            $invoice = "SELECT inv.*, 
+                (SELECT GROUP_CONCAT(DISTINCT service_desc SEPARATOR ', ') FROM invoice_services WHERE invoice_ids = inv.invoice_id) AS invoice_service_type
+            FROM `invoice_details` inv 
+            WHERE inv.invoice_type = 'final' AND inv.customer_id = :id AND (inv.is_deleted = 'No' OR inv.is_deleted IS NULL) 
+            ORDER BY inv.invoice_id ASC";
             $statement = $db->prepare($invoice);
             $statement->bindParam(':id', $_GET['customerid']);
             $statement->execute();
@@ -3702,18 +3783,18 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             color: #ef4444 !important;
         }
 
+        .payment-header-toggle-row,
         .service_title.payment-title,
         .payment-title {
-            background: linear-gradient(135deg, #c2410c 0%, #ea580c 50%, #f97316 100%) !important;
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%) !important;
             color: #ffffff !important;
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
             font-weight: 700 !important;
             border-radius: 6px 6px 0 0 !important;
-            box-shadow: 0 2px 8px rgba(234, 88, 12, 0.25) !important;
-        }
-
-        .servicebox .service_title.payment-title + .service_title {
-            background: linear-gradient(135deg, #c2410c 0%, #ea580c 50%, #f97316 100%) !important;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.15) !important;
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+            border: none !important;
         }
 
         .payment-title .savePayment i {
@@ -3725,33 +3806,33 @@ if ($currentRole === 'client' || $currentRole === 'external') {
         }
 
         /* ========================================================
-           PAYMENT SYSTEM - COMPLETE ORANGE THEME
+           PAYMENT SYSTEM - CLEAN MINIMAL WHITE & SLATE THEME
            ======================================================== */
         .payment-desc {
             background: #ffffff !important;
-            border: 1.5px solid #fed7aa !important;
+            border: 1px solid #e2e8f0 !important;
             border-top: none !important;
             border-radius: 0 0 8px 8px !important;
-            padding: 10px 12px 14px 12px !important;
-            box-shadow: 0 4px 14px rgba(234, 88, 12, 0.08) !important;
+            padding: 10px 14px 14px 14px !important;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04) !important;
         }
 
         /* Payment System Section Headers (Invoice, Payments, Payment Summary) */
         .payment-desc .qms_complete_btn {
-            background: linear-gradient(135deg, #c2410c 0%, #ea580c 60%, #f97316 100%) !important;
-            border: none !important;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
+            border: 1px solid #cbd5e1 !important;
             border-radius: 6px !important;
-            color: #ffffff !important;
-            box-shadow: 0 2px 6px rgba(234, 88, 12, 0.28) !important;
+            color: #1e293b !important;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
             font-weight: 700 !important;
-            letter-spacing: 0.3px !important;
+            letter-spacing: 0.4px !important;
             transition: all 0.2s ease !important;
         }
 
         .payment-desc .qms_complete_btn:hover {
-            background: linear-gradient(135deg, #9a3412 0%, #c2410c 60%, #ea580c 100%) !important;
-            box-shadow: 0 4px 12px rgba(234, 88, 12, 0.38) !important;
-            color: #ffffff !important;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08) !important;
+            color: #0f172a !important;
         }
 
         /* Table Headers in Payment System */
@@ -3761,87 +3842,185 @@ if ($currentRole === 'client' || $currentRole === 'external') {
         #invoice_service_details thead th small,
         #payment_summary_table thead th,
         #payment_summary_table thead th small {
-            background: #fff7ed !important;
-            color: #c2410c !important;
-            border-bottom: 2px solid #fdba74 !important;
+            background: #f8fafc !important;
+            color: #334155 !important;
+            border-bottom: 2px solid #cbd5e1 !important;
+            border-color: #e2e8f0 !important;
             font-weight: 700 !important;
         }
 
-        /* TDS Header */
-        .payment-desc #service_details thead th[style*="#fef3c7"] {
-            background: #ffedd5 !important;
-            color: #9a3412 !important;
-            border-bottom: 2px solid #f97316 !important;
+        /* Input Controls in Payment System */
+        .payment-desc .table-edit-control input,
+        .payment-desc .table-edit-control select {
+            color: #0f172a !important;
+            font-size: 12px !important;
+            font-weight: 500 !important;
         }
 
-        /* Input Controls Focus in Payment System */
         .payment-desc .table-edit-control input:focus,
         .payment-desc .table-edit-control select:focus,
         .payment-desc input.form-control:focus {
             background-color: #ffffff !important;
-            border-color: #ea580c !important;
-            box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.18) !important;
+            border-color: #2563eb !important;
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15) !important;
             outline: none !important;
         }
 
         /* Row Hover in Payment System */
         .payment-desc .service_details tbody tr:hover td {
-            background-color: #fffbf5 !important;
+            background-color: #f8fafc !important;
         }
 
         /* Add Row (+) Button in Payments Table */
         .payment-desc .cbAddLink,
         #service_details .cbAddLink {
-            background: linear-gradient(135deg, #ea580c, #f97316) !important;
-            border: 1px solid #c2410c !important;
+            background: linear-gradient(135deg, #1e293b, #334155) !important;
+            border: 1px solid #1e293b !important;
             color: #ffffff !important;
-            box-shadow: 0 1px 3px rgba(234, 88, 12, 0.35) !important;
+            box-shadow: 0 1px 3px rgba(30, 41, 59, 0.25) !important;
             border-radius: 4px !important;
             padding: 1px 6px !important;
         }
         .payment-desc .cbAddLink:hover,
         #service_details .cbAddLink:hover {
-            background: linear-gradient(135deg, #c2410c, #ea580c) !important;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+            border-color: #1e40af !important;
             color: #ffffff !important;
             transform: scale(1.08);
         }
 
         /* Invoice Edit Icon */
         .payment-desc .editFinalInvoice i.fa-pencil-square {
-            color: #ea580c !important;
+            color: #2563eb !important;
             transition: transform 0.15s ease, color 0.15s ease;
         }
         .payment-desc .editFinalInvoice:hover i.fa-pencil-square {
-            color: #c2410c !important;
+            color: #1d4ed8 !important;
             transform: scale(1.22);
         }
 
-        /* Total Invoice Table Footer */
-        #invoice_service_details tfoot tr {
-            background-color: #fff7ed !important;
-            border-top: 2px solid #ea580c !important;
+                /* Invoice Remark Input Styling */
+        .invoiceRemark {
+            width: 100%;
+            height: 24px;
+            border: 1px solid transparent;
+            border-radius: 3px;
+            padding: 2px 6px;
+            font-size: 11.5px;
+            color: #1e293b;
+            background: transparent;
+            transition: all 0.2s ease;
+            box-sizing: border-box;
         }
-        #invoice_service_details tfoot td {
-            color: #c2410c !important;
+        .invoiceRemark:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
         }
-        #invoice_service_details #totalInvoiceTableSum {
-            color: #c2410c !important;
-            background: #ffedd5 !important;
-            border: 1px solid #fdba74 !important;
+        .invoiceRemark:focus {
+            background: #ffffff;
+            border-color: #3b82f6;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+        }
+        html.theme-dark .invoiceRemark {
+            color: #e2e8f0;
+            background: transparent;
+        }
+        html.theme-dark .invoiceRemark:hover {
+            background: #1e293b;
+            border-color: #475569;
+        }
+        html.theme-dark .invoiceRemark:focus {
+            background: #0f172a;
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2);
+        }
+
+        /* Total Invoice & Payment Table Footers */
+        #invoice_service_details tfoot tr,
+        .invoice-service-details-table tfoot tr,
+        #service_details tfoot tr,
+        .service-details-table tfoot tr {
+            background-color: #f8fafc !important;
+            border-top: 2px solid #cbd5e1 !important;
+        }
+        #invoice_service_details tfoot td,
+        .invoice-service-details-table tfoot td,
+        #service_details tfoot td,
+        .service-details-table tfoot td {
+            color: #334155 !important;
+        }
+        #invoice_service_details #totalInvoiceTableSum,
+        .totalInvoiceTableSum,
+        #service_details #totalPaymentCombinedSum,
+        .totalPaymentCombinedSum {
+            color: #0f172a !important;
+            background: #ffffff !important;
+            border: 1px solid #cbd5e1 !important;
             font-weight: 700 !important;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04) !important;
         }
-        #invoice_service_details tfoot .badge {
-            background-color: #ea580c !important;
+        #service_details #totalPaymentReceivedSum,
+        .totalPaymentReceivedSum {
+            color: #16a34a !important;
+            background: #ffffff !important;
+            border: 1px solid #cbd5e1 !important;
+            font-weight: 700 !important;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+        }
+        #service_details #totalPaymentTdsSum,
+        .totalPaymentTdsSum {
+            color: #b45309 !important;
+            background: #ffffff !important;
+            border: 1px solid #cbd5e1 !important;
+            font-weight: 700 !important;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+        }
+        #invoice_service_details tfoot .badge,
+        .invoice-service-details-table tfoot .badge,
+        #service_details tfoot .badge,
+        .service-details-table tfoot .badge {
+            background-color: #1e293b !important;
             color: #ffffff !important;
         }
 
-        /* Payment Summary Grand Total & Card Accent */
-        #payment_summary_table thead th:first-child {
-            background: #fff7ed !important;
-            border-left: 3px solid #ea580c !important;
+        /* Minimal Service Block Separation */
+        .service-block-divider {
+            margin: 28px 0 22px 0;
+            border-top: 2px dashed #94a3b8;
+            position: relative;
+            text-align: center;
+            clear: both;
+        }
+        .service-block-meta-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 6px 12px;
+            margin-bottom: 10px;
+        }
+        .btnAddInvoiceHeader {
+            transition: all 0.2s ease;
+        }
+        .btnAddInvoiceHeader:hover {
+            filter: brightness(0.95);
+            transform: translateY(-1px);
+        }
+
+        /* Payment Summary Styling */
+        #payment_summary_table {
+            background: #ffffff !important;
+            border: 1px solid #e2e8f0 !important;
+        }
+        #payment_summary_table thead th {
+            background: #ffffff !important;
+            border: 1px solid #e2e8f0 !important;
         }
         #payment_summary_table #summaryTotalAmount {
-            color: #ea580c !important;
+            color: #0f172a !important;
         }
 
 
@@ -4533,37 +4712,98 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             color: #fff !important;
         }
 
-        /* Payment System -> Orange theme in dark mode */
+        /* Payment System -> Minimal Slate theme in dark mode */
+        html.theme-dark .payment-header-toggle-row,
+        html.theme-dark .payment-title,
         html.theme-dark .service_title.payment-title {
-            background: linear-gradient(135deg, #7c2d12 0%, #9a3412 50%, #c2410c 100%) !important;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%) !important;
             color: #ffffff !important;
         }
         html.theme-dark .payment-desc {
-            background: #18181b !important;
-            border-color: #7c2d12 !important;
+            background: #0f172a !important;
+            border-color: #334155 !important;
         }
         html.theme-dark .payment-desc .qms_complete_btn {
-            background: linear-gradient(135deg, #9a3412 0%, #c2410c 100%) !important;
-            color: #ffedd5 !important;
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%) !important;
+            color: #f1f5f9 !important;
+            border-color: #475569 !important;
         }
         html.theme-dark .payment-desc .service_details thead th,
         html.theme-dark .payment-desc .service_details thead th small,
         html.theme-dark #invoice_service_details thead th,
-        html.theme-dark #invoice_service_details thead th small,
-        html.theme-dark #payment_summary_table thead th,
-        html.theme-dark #payment_summary_table thead th small {
-            background: #271b14 !important;
-            color: #fb923c !important;
-            border-bottom: 2px solid #9a3412 !important;
+        html.theme-dark #invoice_service_details thead th small {
+            background: #1e293b !important;
+            color: #f1f5f9 !important;
+            border-bottom: 2px solid #334155 !important;
+            border-color: #334155 !important;
         }
-        html.theme-dark #invoice_service_details tfoot tr {
-            background-color: #271b14 !important;
-            border-top: 2px solid #ea580c !important;
+        html.theme-dark .all-service-summary-card {
+            background: #0f172a !important;
+            border-color: #334155 !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
         }
-        html.theme-dark #invoice_service_details #totalInvoiceTableSum {
-            background: #331f16 !important;
-            color: #fb923c !important;
-            border-color: #9a3412 !important;
+        html.theme-dark .all-service-summary-header {
+            background: linear-gradient(135deg, #020617 0%, #0f172a 100%) !important;
+            border-bottom-color: #3b82f6 !important;
+        }
+        html.theme-dark #summaryGrandTotalTh {
+            background: #0f172a !important;
+            border-top: 3.5px solid #3b82f6 !important;
+        }
+        html.theme-dark #summaryGrandTotalTh small { color: #93c5fd !important; }
+        html.theme-dark #summaryGrandTotalTh strong { color: #f8fafc !important; }
+        html.theme-dark #summaryReceivedTh {
+            background: #052e16 !important;
+            border-top: 3.5px solid #22c55e !important;
+        }
+        html.theme-dark #summaryReceivedTh small { color: #86efac !important; }
+        html.theme-dark #summaryTdsTh {
+            background: #451a03 !important;
+            border-top: 3.5px solid #f59e0b !important;
+        }
+        html.theme-dark #summaryTdsTh small { color: #fcd34d !important; }
+        html.theme-dark #summaryDiscountTh {
+            background: #2e1065 !important;
+            border-top: 3.5px solid #a855f7 !important;
+        }
+        html.theme-dark #summaryDiscountTh small { color: #d8b4fe !important; }
+        html.theme-dark #invoice_service_details tfoot tr,
+        html.theme-dark .invoice-service-details-table tfoot tr,
+        html.theme-dark #service_details tfoot tr,
+        html.theme-dark .service-details-table tfoot tr {
+            background-color: #1e293b !important;
+            border-top: 2px solid #334155 !important;
+        }
+        html.theme-dark #invoice_service_details #totalInvoiceTableSum,
+        html.theme-dark .totalInvoiceTableSum,
+        html.theme-dark #service_details #totalPaymentCombinedSum,
+        html.theme-dark .totalPaymentCombinedSum {
+            background: #0f172a !important;
+            color: #f8fafc !important;
+            border-color: #334155 !important;
+        }
+        html.theme-dark #service_details #totalPaymentReceivedSum,
+        html.theme-dark .totalPaymentReceivedSum {
+            background: #0f172a !important;
+            color: #4ade80 !important;
+            border-color: #166534 !important;
+        }
+        html.theme-dark #service_details #totalPaymentTdsSum,
+        html.theme-dark .totalPaymentTdsSum {
+            background: #0f172a !important;
+            color: #fbbf24 !important;
+            border-color: #854d0e !important;
+        }
+        html.theme-dark .invoiceServiceTypeSelect,
+        html.theme-dark .paymentServiceTypeSelect {
+            background-color: #1e293b !important;
+            color: #f1f5f9 !important;
+            border-color: #475569 !important;
+        }
+        html.theme-dark .invoiceServiceTypeSelect option,
+        html.theme-dark .paymentServiceTypeSelect option {
+            background-color: #0f172a !important;
+            color: #f1f5f9 !important;
         }
 
         /* Other coloured title bars -> dark green */
@@ -5800,7 +6040,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                             $expireDate = isset($cert['expire_date']) ? $cert['expire_date'] : '';
 
                             $certStatus = isset($cert['cdc_status']) && trim((string) $cert['cdc_status']) !== '' ? trim((string) $cert['cdc_status']) : (isset($clientInfo['audit_status']) ? trim((string) $clientInfo['audit_status']) : '');
-                            $decisionDate = !empty($cert['decision_date']) ? $cert['decision_date'] : ($i == 0 ? $clientInfo['certification_stage_date'] : '');
+                            $firstCaCdcDate = caCertHeaderGetFirstCaCdcDate($db, (int) $customerId, $standardName);
+                            $decisionDate = !empty($firstCaCdcDate) ? $firstCaCdcDate : (!empty($cert['decision_date']) ? $cert['decision_date'] : ($i == 0 ? (isset($clientInfo['certification_stage_date']) ? $clientInfo['certification_stage_date'] : '') : ''));
                             $certCrrId = isset($cert['crr_id']) ? (int) $cert['crr_id'] : 0;
                             $certIsoIndex = isset($cert['iso_index']) ? (int) $cert['iso_index'] : $i;
                             $certAccreditation = isset($cert['accreditation']) ? strtoupper(trim((string) $cert['accreditation'])) : '';
@@ -5916,19 +6157,15 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             </div>
 
             <div class="row" style="">
-                <div class="col-xs-3  text-center btn  qms_complete_btn invoiceBtn"
+                <div class="col-xs-4  text-center btn  qms_complete_btn invoiceBtn"
                     data-id="<?php echo $_GET['customerid'] ?>" data-address="<?php echo $clientInfo['address'] ?>">
                     <span><i class="fa fa-inr ">Proforma Invoice</i></span>
                 </div>
-                <div class="col-xs-3  text-center btn qms_complete_btn finalInvoiceBtn"
-                    data-id="<?php echo $_GET['customerid'] ?>" data-address="<?php echo $clientInfo['address'] ?>">
-                    <span><i class="fa fa-file-text-o ">Final Invoice</i></span>
-                </div>
-                <div class="col-xs-3  text-center btn qms_complete_btn quotationBtn">
+                <div class="col-xs-4  text-center btn qms_complete_btn quotationBtn">
                     <span><i class="fa fa-quote-left ">Quotation</i></span>
                 </div>
                 <?php if (!$isSupplierAccount && !$isAuditor) { ?>
-                    <div class="col-xs-3  text-center btn qms_complete_btn " style="height: 28px">
+                    <div class="col-xs-4  text-center btn qms_complete_btn " style="height: 28px">
                         <select name="service-type" class="form-control service-type" id="service-type"
                             style="height: 20px; background-color: #f5821f; padding-top: 0px; font-size: 10px; color: white">
                             <option value="" style="color: white; font-size: 10px">Create New Service</option>
@@ -5954,7 +6191,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         $supplierBtnBg = '#f5821f';
                     }
                     ?>
-                    <div class="col-xs-3 text-center btn qms_complete_btn"
+                    <div class="col-xs-4 text-center btn qms_complete_btn"
                         style="background-color: <?php echo $supplierBtnBg; ?>; color: #fff;"
                         onclick="window.location.href='<?php echo $supplierBtnUrl; ?>'">
                         <span><i class="fa <?php echo $supplierBtnIcon; ?>" style="color:#fff;">
@@ -5968,414 +6205,667 @@ if ($currentRole === 'client' || $currentRole === 'external') {
         <?php // if (Utitlity::checkForUserMainAdmin() || Utitlity::checkForOfficeStaff() || Utitlity::checkForStaff() || Utitlity::checkForUserConsultant() || Utitlity::checkForUserFinance()) {  ?>
         <div class="servicebox-bunch">
             <div class="servicebox" style="display: ">
-                <div class="row" id="service-row" class="service-row">
-                    <div class="col-sm-11 service_title payment-title"
-                        style="text-align: center; color: #fff;">
+                <div class="row payment-header-toggle-row payment-title" id="service-row"
+                    style="margin-left: 0; margin-right: 0; padding: 7px 15px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; border-radius: 6px 6px 0 0; background: linear-gradient(135deg, #1e293b 0%, #334155 100%); box-shadow: 0 2px 6px rgba(15, 23, 42, 0.15); user-select: none; width: 100%;">
+                    <div style="width: 150px;" class="hidden-xs"></div>
+                    <div class="payment-title-text"
+                        style="text-align: center; color: #ffffff; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; flex: 1; cursor: pointer;">
                         Payment System <span class="serviceStatus"></span>
                     </div>
-                    <div class="col-sm-1 service_title payment-title" style="color: #fff; font-size: 1.7em;">
-                        <a class="savePayment" id="savePayment" data-row-id="<?php if (isset($paymentDetails['payment_sy_id']))
-                            echo $paymentDetails['payment_sy_id'] ?>">
-                                <i class="fa fa-floppy-o pull-right"
-                                    style="color: white; padding-right: 10px; display: "></i>
-                            </a>
-                            <!--<a class="deleteService" id="deleteService" data-row-id=""><i class="fa fa-trash-o pull-right " style="color:white; padding-right:10px;"></i></a>-->
+                    <div class="payment-actions-wrapper" style="text-align: right; display: flex; align-items: center; justify-content: flex-end; gap: 10px; cursor: default;">
+                        <button type="button" class="btn btn-xs btnAddInvoiceHeader"
+                            style="background: #ffffff; color: #1e293b; border: 1px solid #cbd5e1; font-weight: 700; font-size: 11px; border-radius: 4px; padding: 3px 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.15); display: inline-flex; align-items: center; gap: 5px; cursor: pointer; text-transform: none;"
+                            title="Add new service invoice &amp; payment header">
+                            <i class="fa fa-plus-circle" style="color: #2563eb; font-size: 11.5px;"></i> Add Invoice Header
+                        </button>
+                        <input type="hidden" id="paymentAutoSaveStatus" data-row-id="<?php if (isset($paymentDetails['payment_sy_id'])) echo $paymentDetails['payment_sy_id']; ?>" value="<?php if (isset($paymentDetails['payment_sy_id'])) echo $paymentDetails['payment_sy_id']; ?>" />
+                    </div>
+                </div>
+                    <div class="servicebox-data payment-desc" id="servicebox-data" style="display: none;">
+                    <?php
+                    if (!function_exists('normalizePaymentServiceType')) {
+                        function normalizePaymentServiceType($svcRaw) {
+                            $raw = trim((string)$svcRaw);
+                            if ($raw === '') return 'CA';
+                            $lower = strtolower($raw);
+
+                            // Clean spaces and underscores/dashes for uniform matching
+                            $clean = preg_replace('/[\s_-]+/', ' ', $lower);
+
+                            // 1. Contract Review (CR)
+                            if (preg_match('/\b(contract\s*review|cr)\b/i', $raw) || $lower === 'cr' || strpos($lower, 'contract review') !== false) {
+                                return 'Contract Review';
+                            }
+
+                            // 2. Transition Audit
+                            if (strpos($lower, 'transition') !== false) {
+                                return 'Transition Audit';
+                            }
+
+                            // 3. PTR
+                            if (preg_match('/\bptr\b/i', $raw) || strpos($lower, 'ptr') !== false) {
+                                return 'PTR';
+                            }
+
+                            // 4. Special Audit (SP)
+                            if (preg_match('/\b(special\s*audit|sp)\b/i', $raw) || $lower === 'sp' || strpos($lower, 'sp-') !== false) {
+                                return 'SP';
+                            }
+
+                            // 5. 1st Surveillance (SA-I) - check before RC if it's explicitly SA
+                            if (
+                                preg_match('/\b(1st|1\s*st|first|3rd|3\s*rd|third|5th|5\s*th)\s*surveillance/i', $clean) ||
+                                preg_match('/surveillance\s*(1|i|01|3|03|5|05)\b/i', $clean) ||
+                                preg_match('/\bsa\s*[-_]?\s*(0?1|i|0?3|0?5)\b/i', $clean) ||
+                                strpos($lower, 'sa-01') !== false ||
+                                strpos($lower, 'sa-1') !== false ||
+                                strpos($lower, 'sa-i') !== false ||
+                                strpos($lower, 'sa 1') !== false ||
+                                strpos($lower, 'sa1') !== false ||
+                                strpos($lower, 'sa-03') !== false ||
+                                strpos($lower, 'sa-3') !== false ||
+                                strpos($lower, 'sa3') !== false ||
+                                strpos($lower, 'sa-05') !== false ||
+                                strpos($lower, 'sa-5') !== false ||
+                                strpos($lower, 'sa5') !== false
+                            ) {
+                                return 'SA-I';
+                            }
+
+                            // 6. 2nd Surveillance (SA-II)
+                            if (
+                                preg_match('/\b(2nd|2\s*nd|second|4th|4\s*th|fourth|6th|6\s*th)\s*surveillance/i', $clean) ||
+                                preg_match('/surveillance\s*(2|ii|02|4|04|6|06)\b/i', $clean) ||
+                                preg_match('/\bsa\s*[-_]?\s*(0?2|ii|0?4|0?6)\b/i', $clean) ||
+                                strpos($lower, 'sa-02') !== false ||
+                                strpos($lower, 'sa-2') !== false ||
+                                strpos($lower, 'sa-ii') !== false ||
+                                strpos($lower, 'sa 2') !== false ||
+                                strpos($lower, 'sa2') !== false ||
+                                strpos($lower, 'sa-04') !== false ||
+                                strpos($lower, 'sa-4') !== false ||
+                                strpos($lower, 'sa4') !== false ||
+                                strpos($lower, 'sa-06') !== false ||
+                                strpos($lower, 'sa-6') !== false ||
+                                strpos($lower, 'sa6') !== false
+                            ) {
+                                return 'SA-II';
+                            }
+
+                            // 7. Re-Certification (RC) - MUST BE CHECKED BEFORE general CA/certification
+                            if (
+                                preg_match('/\b(re\s*cert|recert|re\s*certification|recertification|rc)\b/i', $raw) ||
+                                strpos($clean, 're cert') !== false ||
+                                strpos($clean, 'recert') !== false ||
+                                strpos($lower, 'rc-') !== false ||
+                                strpos($lower, 'rc -') !== false ||
+                                $lower === 'rc'
+                            ) {
+                                return 'RC';
+                            }
+
+                            // 8. General Surveillance (if unspecified 1 or 2, default to SA-I)
+                            if (strpos($lower, 'surveillance') !== false) {
+                                return 'SA-I';
+                            }
+
+                            // 9. Initial Certification (CA)
+                            if (
+                                preg_match('/\bca\b/i', $raw) ||
+                                strpos($lower, 'ca-') !== false ||
+                                strpos($lower, 'stage 1') !== false ||
+                                strpos($lower, 'stage 2') !== false ||
+                                strpos($lower, 'stage1') !== false ||
+                                strpos($lower, 'stage2') !== false ||
+                                strpos($lower, 'application') !== false ||
+                                strpos($lower, 'certification') !== false ||
+                                strpos($lower, 'audit') !== false
+                            ) {
+                                return 'CA';
+                            }
+
+                            return 'CA';
+                        }
+                    }
+
+                    $availableServices = ['CA', 'SA-I', 'SA-II', 'RC', 'SP', 'Contract Review', 'PTR', 'Transition Audit'];
+
+                    // Group invoices by service
+                    $invoicesByService = [];
+                    if (!empty($invoiceList)) {
+                        foreach ($invoiceList as $inv) {
+                            $s = trim((string)($inv['service_type'] ?? ''));
+                            if ($s === '') {
+                                $s = trim((string)($inv['invoice_service_type'] ?? ''));
+                            }
+                            $normSvc = normalizePaymentServiceType($s);
+                            if (!isset($invoicesByService[$normSvc])) {
+                                $invoicesByService[$normSvc] = [];
+                            }
+                            $invoicesByService[$normSvc][] = $inv;
+                        }
+                    }
+
+                    // Group payments by service
+                    $paymentsByService = [];
+                    if (!empty($paymentInfo)) {
+                        foreach ($paymentInfo as $pay) {
+                            $s = trim((string)($pay['service_type'] ?? ''));
+                            $normSvc = normalizePaymentServiceType($s);
+                            if (!isset($paymentsByService[$normSvc])) {
+                                $paymentsByService[$normSvc] = [];
+                            }
+                            $paymentsByService[$normSvc][] = $pay;
+                        }
+                    }
+
+                    // Determine active service blocks based on existing records
+                    $activeServiceBlocks = [];
+                    foreach (array_keys($invoicesByService) as $s) {
+                        if (!empty($invoicesByService[$s]) && !in_array($s, $activeServiceBlocks)) {
+                            $activeServiceBlocks[] = $s;
+                        }
+                    }
+                    foreach (array_keys($paymentsByService) as $s) {
+                        if (!empty($paymentsByService[$s]) && !in_array($s, $activeServiceBlocks)) {
+                            $activeServiceBlocks[] = $s;
+                        }
+                    }
+                    // Default to CA only if no records exist anywhere
+                    if (empty($activeServiceBlocks)) {
+                        $activeServiceBlocks = ['CA'];
+                    }
+
+                    // Sort active blocks in logical service order
+                    usort($activeServiceBlocks, function ($a, $b) use ($availableServices) {
+                        $posA = array_search($a, $availableServices);
+                        $posB = array_search($b, $availableServices);
+                        if ($posA === false) $posA = 999;
+                        if ($posB === false) $posB = 999;
+                        return $posA <=> $posB;
+                    });
+                    ?>
+
+                    <!-- Top Action Bar inside Payment System -->
+                    <div class="payment-system-top-bar" style="display: flex; justify-content: space-between; align-items: center; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 14px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <i class="fa fa-th-large" style="color: #2563eb; font-size: 14px;"></i>
+                            <span style="font-weight: 700; font-size: 13px; color: #1e293b;">Services Invoicing &amp; Payment Breakdown</span>
+                            <span class="badge" style="background: #e0e7ff; color: #3730a3; font-weight: 700; font-size: 10.5px; border-radius: 10px; padding: 3px 8px;" id="activeServicesCountBadge"><?php echo count($activeServiceBlocks); ?> Active</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <button type="button" class="btn btn-xs btnAddInvoiceHeader" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #ffffff; border: 1px solid #1e40af; font-weight: 700; font-size: 11.5px; border-radius: 4px; padding: 4px 14px; box-shadow: 0 1px 3px rgba(37,99,235,0.25); display: inline-flex; align-items: center; gap: 6px; cursor: pointer; text-transform: none; transition: all 0.2s ease;" title="Add new service invoice &amp; payment header">
+                                <i class="fa fa-plus-circle" style="font-size: 12px;"></i> Add Invoice Header
+                            </button>
                         </div>
                     </div>
-                    <div class="servicebox-data payment-desc" id="servicebox-data" style="display: none;">
-                        <div class="row">
-                        <div class="col-xs-4 table-responsive">
-                            <div class="row">
-                                <div class="col-xs-12  text-center btn qms_complete_btn">
-                                    <span><i class="fa ">Invoice</i></span>
+
+                    <style>
+                        .invoice-service-details-table,
+                        .service-details-table,
+                        #invoice_service_details,
+                        #service_details {
+                            table-layout: fixed;
+                            width: 100%;
+                        }
+                        .invoice-service-details-table th,
+                        .invoice-service-details-table td,
+                        .service-details-table th,
+                        .service-details-table td,
+                        #invoice_service_details th,
+                        #invoice_service_details td,
+                        #service_details th,
+                        #service_details td {
+                            overflow: hidden;
+                            text-overflow: ellipsis;
+                            white-space: nowrap;
+                        }
+                        .invoice-service-details-table .table-edit-control input,
+                        .service-details-table .table-edit-control input,
+                        .service-details-table .table-edit-control select {
+                            width: 100% !important;
+                            box-sizing: border-box !important;
+                        }
+                        .invoiceServiceTypeSelect,
+                        .paymentServiceTypeSelect {
+                            width: 100% !important;
+                            height: 24px !important;
+                            padding: 1px 4px !important;
+                            font-size: 11px !important;
+                            font-weight: 600 !important;
+                            color: #1e293b !important;
+                            background-color: #ffffff !important;
+                            border: 1px solid #cbd5e1 !important;
+                            border-radius: 4px !important;
+                            cursor: pointer !important;
+                            outline: none !important;
+                            transition: border-color 0.2s ease, background-color 0.2s ease;
+                        }
+                        .invoiceServiceTypeSelect:focus,
+                        .paymentServiceTypeSelect:focus {
+                            border-color: #2563eb !important;
+                            background-color: #ffffff !important;
+                            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15) !important;
+                        }
+                        .openInvoicePdfLink {
+                            color: #dc2626 !important;
+                            transition: transform 0.15s ease, color 0.15s ease;
+                        }
+                        .openInvoicePdfLink:hover {
+                            color: #b91c1c !important;
+                            transform: scale(1.22);
+                        }
+                    </style>
+
+                    <div id="service_blocks_container">
+                        <?php
+                        foreach ($activeServiceBlocks as $blockIdx => $svcName) {
+                            $serviceInvoices = $invoicesByService[$svcName] ?? [];
+                            $servicePayments = $paymentsByService[$svcName] ?? [];
+                            
+                            $blockInvoiceSum = 0;
+                            foreach ($serviceInvoices as $inv) {
+                                $blockInvoiceSum += floatval($inv['final_amount'] ?? 0);
+                            }
+
+                            $blockRcvSum = 0;
+                            $blockTdsSum = 0;
+                            $blockDiscountSum = 0;
+                            $blockValidCount = 0;
+
+                            foreach ($servicePayments as $pay) {
+                                $isDisc = (floatval($pay['discount_amount'] ?? 0) > 0 || stripos($pay['service_type'] ?? '', 'discount') !== false || stripos($pay['service_type'] ?? '', 'short') !== false);
+                                $isTds = (stripos($pay['service_type'] ?? '', 'tds') !== false && floatval($pay['tds_amount'] ?? 0) == 0 && !$isDisc);
+
+                                $discVal = floatval($pay['discount_amount'] ?? 0);
+                                if ($discVal == 0 && $isDisc) {
+                                    $discVal = floatval($pay['payment_received'] ?? 0);
+                                }
+                                $rcvVal = ($isTds || $isDisc) ? 0 : floatval($pay['payment_received'] ?? 0);
+                                $tdsVal = floatval($pay['tds_amount'] ?? 0) > 0 ? floatval($pay['tds_amount'] ?? 0) : ($isTds ? floatval($pay['payment_received'] ?? 0) : 0);
+
+                                if ($isDisc) {
+                                    $blockDiscountSum += $discVal;
+                                } else {
+                                    $blockRcvSum += $rcvVal;
+                                    $blockTdsSum += $tdsVal;
+                                }
+
+                                $dt = trim((string)($pay['payment_date'] ?? ''));
+                                $chk = trim((string)($pay['cheque_details'] ?? ''));
+                                $rec = trim((string)($pay['reconciliation'] ?? ''));
+                                if ($rcvVal > 0 || $tdsVal > 0 || $discVal > 0 || ($dt !== '' && $dt !== '0000-00-00') || $chk !== '' || $rec !== '') {
+                                    $blockValidCount++;
+                                }
+                            }
+                            ?>
+
+                            <?php if ($blockIdx > 0) { ?>
+                                <!-- Clean minimal dotted separation line between services -->
+                                <div class="service-block-divider" style="margin: 28px 0 22px 0; border-top: 2px dashed #94a3b8; position: relative; text-align: center; clear: both;">
+                                    <span style="position: absolute; top: -11px; left: 50%; transform: translateX(-50%); background: #ffffff; padding: 0 16px; font-size: 11px; font-weight: 700; color: #475569; letter-spacing: 0.5px; border: 1.5px dashed #cbd5e1; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); display: inline-flex; align-items: center; gap: 6px;">
+                                        <i class="fa fa-code-fork" style="color: #2563eb; font-size: 11px;"></i> SERVICE SEPARATION &bull; <span class="divider-service-label"><?php echo htmlspecialchars($svcName); ?></span>
+                                    </span>
                                 </div>
-                            </div>
-                            <style>
-                                .invoiceStatusBtn:hover {
-                                    filter: brightness(0.9);
-                                    box-shadow: 0 1px 4px rgba(0,0,0,0.25);
-                                }
-                                .invoiceStatusBtn:active {
-                                    transform: scale(0.97);
-                                }
-                                .openInvoicePdfLink {
-                                    color: #dc2626 !important;
-                                    transition: transform 0.15s ease, color 0.15s ease;
-                                }
-                                .openInvoicePdfLink:hover {
-                                    color: #b91c1c !important;
-                                    transform: scale(1.22);
-                                }
-                            </style>
-                            <div class="row">
-                                <table class="table table-bordered table-hover table-sortable service_details"
-                                    id="invoice_service_details">
-                                    <thead>
-                                        <tr>
-                                            <th class="" width="30%" style="padding: 3px 2px; text-align: center;">
-                                                <small>Invoice No.</small>
-                                            </th>
-                                            <th class="" width="22%" style="padding: 3px 2px; text-align: center;">
-                                                <small>Date</small>
-                                            </th>
-                                            <th class="" width="24%" style="padding: 3px 2px; text-align: center;">
-                                                <small>Amount</small>
-                                            </th>
-                                            <th class="" width="24%" style="padding: 3px 2px; text-align: center;">
-                                                <small>Status</small>
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="">
-                                        <?php
-                                        $totalInvoiceSumComputed = 0;
-                                        foreach ($invoiceList as $invoiceinfo) {
-                                            $totalInvoiceSumComputed += floatval($invoiceinfo['final_amount'] ?? 0);
-                                            $isPaid = ($invoiceinfo["invoice_status"] == "Rcv");
-                                            $invoicePdfUrl = "finalInvoicePDF.php?invoiceid=" . urlencode($invoiceinfo["invoice_id"]) . "&invoiceCustomerId=" . urlencode($_GET["customerid"]);
-                                            ?>
-                                            <tr class="cb_subsection" id="cb_subsection_0" style="display: ">
-                                                <td class="viewFinalInvoice"
-                                                    data-customer="<?php echo $_GET['customerid'] ?>"
-                                                    data-id="<?php echo $invoiceinfo["invoice_id"] ?>"
-                                                    style="padding: 0px;">
-                                                    <div class="table-edit-control"><label></label>
-                                                        <input type="text" data_row_id="" class="invoiceNo" name="invoiceNo"
-                                                            value="<?php echo $invoiceinfo['final_prefix'] . '-' . $invoiceinfo['final_invoice_no'] ?>"
-                                                            readonly="" style="cursor: pointer;" title="Click to view PDF in new tab" />
-                                                    </div>
-                                                </td>
-                                                <td class="viewFinalInvoice"
-                                                    data-customer="<?php echo $_GET['customerid'] ?>"
-                                                    data-id="<?php echo $invoiceinfo["invoice_id"] ?>"
-                                                    style="padding: 0px;">
-                                                    <div class="table-edit-control"><label></label>
-                                                        <input type="text" data_row_id="" class="invoiceDate"
-                                                            name="invoiceDate"
-                                                            value="<?php echo date("d.m.Y", strtotime($invoiceinfo['invoice_date'])) ?>"
-                                                            readonly="" />
-                                                    </div>
-                                                </td>
-                                                <td class="viewFinalInvoice"
-                                                    data-customer="<?php echo $_GET['customerid'] ?>"
-                                                    data-id="<?php echo $invoiceinfo["invoice_id"] ?>"
-                                                    style="padding: 0px;">
-                                                    <div class="table-edit-control"><label></label>
-                                                        <input type="text" data_row_id="" class="invoiceAmount"
-                                                            name="invoiceAmount"
-                                                            value="<?php echo $invoiceinfo['final_amount'] ?>"
-                                                            readonly="" />
-                                                    </div>
-                                                </td>
-                                                <td class="" style="padding: 2px 4px; text-align: center; vertical-align: middle; white-space: nowrap;">
-                                                    <div style="display: inline-flex; align-items: center; justify-content: center; gap: 5px;">
-                                                        <a href="<?php echo $invoicePdfUrl; ?>"
-                                                            target="_blank"
-                                                            class="openInvoicePdfLink"
-                                                            title="Open Invoice PDF (New Tab)"
-                                                            style="color: #dc2626; padding: 2px 4px; display: inline-block; cursor: pointer; text-decoration: none;">
-                                                            <i class="fa fa-file-pdf-o" style="font-size: 15px; vertical-align: middle;"></i>
-                                                        </a>
-                                                        <a class="editFinalInvoice"
-                                                            data-customer="<?php echo $_GET['customerid'] ?>"
-                                                            data-id="<?php echo $invoiceinfo["invoice_id"] ?>"
-                                                            title="Edit Final Invoice" style="color: #ea580c; padding: 2px 4px; display: inline-block; cursor: pointer;">
-                                                            <i class="fa fa-pencil-square" style="font-size: 14px; vertical-align: middle;"></i>
-                                                        </a>
-                                                        <button type="button" class="btn btn-xs invoiceStatusBtn <?php echo ($isPaid ? 'btn-invoice-paid' : 'btn-invoice-unpaid'); ?>"
-                                                            data-row-id="<?php echo $invoiceinfo['invoice_id'] ?>"
-                                                            data-status="<?php echo ($isPaid ? 'Rcv' : 'NotRcv'); ?>"
-                                                            title="<?php echo ($isPaid ? 'Payment Received - Click to mark as Unpaid' : 'Payment Not Received - Click to mark as Paid'); ?>"
-                                                            style="padding: 2px 8px; font-size: 10.5px; font-weight: 700; border-radius: 4px; min-width: 58px; transition: all 0.2s ease; cursor: pointer; <?php echo ($isPaid ? 'background-color: #16a34a; border-color: #15803d; color: #ffffff;' : 'background-color: #ef4444; border-color: #dc2626; color: #ffffff;'); ?>">
-                                                            <i class="fa <?php echo ($isPaid ? 'fa-check' : 'fa-times'); ?>"></i> <?php echo ($isPaid ? 'Paid' : 'Unpaid'); ?>
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
+                            <?php } ?>
+
+                            <div class="service-payment-block" data-service="<?php echo htmlspecialchars($svcName); ?>" data-block-id="<?php echo $blockIdx; ?>" style="margin-bottom: 22px;">
+                                <!-- Service block meta header bar -->
+                                <div class="service-block-meta-bar" style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 12px; margin-bottom: 10px;">
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <span style="font-size: 11.5px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px;">Inovice service:</span>
+                                        <select class="form-control serviceBlockTypeSelect" style="width: auto; display: inline-block; height: 26px; padding: 2px 8px; font-size: 12px; font-weight: 700; color: #1e293b; background: #ffffff; border: 1.5px solid #2563eb; border-radius: 4px; outline: none; cursor: pointer;">
+                                            <?php foreach ($availableServices as $asvc) { ?>
+                                                <option value="<?php echo htmlspecialchars($asvc); ?>" <?php echo (strcasecmp($asvc, $svcName) === 0) ? 'selected' : ''; ?>><?php echo htmlspecialchars($asvc); ?></option>
+                                            <?php } ?>
+                                        </select>
+                                        <span class="label label-primary serviceBlockBadge" style="background-color: #2563eb; font-size: 11px; font-weight: 700; padding: 4px 8px; border-radius: 4px;"><?php echo htmlspecialchars($svcName); ?></span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <?php if ($blockIdx > 0) { ?>
+                                            <button type="button" class="btn btn-xs removeServiceBlockBtn" style="background: #ffffff; color: #ef4444; border: 1px solid #fca5a5; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; cursor: pointer;" title="Remove this service section">
+                                                <i class="fa fa-trash-o"></i> Remove Header
+                                            </button>
                                         <?php } ?>
-                                    </tbody>
-                                    <tfoot>
-                                        <tr style="background-color: #fff7ed; font-weight: bold; border-top: 2px solid #ea580c;">
-                                            <td colspan="2" style="text-align: right; padding: 4px 6px; vertical-align: middle; color: #c2410c;">
-                                                <small style="font-weight: 700; font-size: 11px;">TOTAL INVOICE (<?php echo count($invoiceList); ?>):</small>
-                                            </td>
-                                            <td style="padding: 0px; vertical-align: middle;">
-                                                <div class="table-edit-control">
-                                                    <input type="text" id="totalInvoiceTableSum" value="<?php echo number_format($totalInvoiceSumComputed, 2, '.', ''); ?>" style="font-weight: bold; color: #c2410c; background: #ffedd5; text-align: center; border: 1px solid #fdba74; font-size: 12px; height: 26px; padding: 0;" readonly title="Total Invoicing Amount" />
-                                                </div>
-                                            </td>
-                                            <td style="text-align: center; vertical-align: middle; padding: 2px;">
-                                                <span class="badge" style="background-color: #ea580c; font-size: 10px; color: #ffffff;"><?php echo count($invoiceList); ?></span>
-                                            </td>
-                                        </tr>
-                                    </tfoot>
-                                </table>
-                            </div>
-                        </div>
-                            <div class="col-xs-8 table-responsive">
-                                <div class="row">
-                                    <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 10px;">
-                                        <span style="flex-grow: 1; text-align: center; font-weight: 700;"><i class="fa ">Payments</i></span>
-                                        <button type="button" class="btn btn-xs openDiscountModalBtn" style="background: #ffffff; color: #c2410c; border: 1px solid #fed7aa; font-weight: 700; border-radius: 4px; padding: 2px 9px; box-shadow: 0 1px 3px rgba(0,0,0,0.15); text-transform: none; display: inline-flex; align-items: center; gap: 4px;" title="Add Discount (Short Paid) Settlement">
-                                            <i class="fa fa-tag" style="color: #ea580c;"></i> Discount (Short Paid)
-                                        </button>
                                     </div>
                                 </div>
-                                 <style>
-                                     #service_details {
-                                         table-layout: fixed;
-                                         width: 100%;
-                                     }
-                                     #service_details th, #service_details td {
-                                         overflow: hidden;
-                                         text-overflow: ellipsis;
-                                         white-space: nowrap;
-                                     }
-                                     #service_details .table-edit-control input {
-                                         width: 100% !important;
-                                         box-sizing: border-box !important;
-                                     }
-                                 </style>
-                                 <div class="row">
-                                     <table class="table table-bordered table-hover table-sortable service_details"
-                                         id="service_details">
-                                         <thead>
-                                              <tr>
-                                                 <th class="" width="17%" style="padding: 2px">
-                                                     <small>Service Type</small>
-                                                 </th>
-                                                 <th class="" width="17%" style="padding: 2px">
-                                                     <small>Payment received</small>
-                                                 </th>
-                                                 <th class="" width="16%" style="padding: 2px; background-color: #fef3c7; color: #b45309; border-bottom: 2px solid #f59e0b; text-align: center;">
-                                                     <small style="font-weight: 700;"><i class="fa fa-percent" style="font-size: 10px; margin-right: 2px;"></i> TDS</small>
-                                                 </th>
-                                                 <th class="" width="15%" style="padding: 2px">
-                                                     <small>Date</small>
-                                                 </th>
-                                                 <th class="" width="15%" style="padding: 2px">
-                                                     <small>Instrument</small>
-                                                 </th>
-                                                 <th class="" width="13%" style="padding: 2px">
-                                                     <small>Balance</small>
-                                                 </th>
-                                                 <th class="" width="7%" style="padding: 2px; text-align: right;">
-                                                     <a class="btn btn-xs btn-info cbAddLink pull-right" data-row-id="<?php if (isset($payId))
-                             echo $payId; ?>" data-row-count="<?php echo $payCount['totalpayrow'] ?>"
-                                                     title="Add new row" style="padding: 1px 5px;">
-                                                     <i class="fa fa-plus-circle fa-lg " style="padding: 3px"></i>
-                                                 </a>
-                                             </th>
-                                         </tr>
-                                     </thead>
-                                     <tbody class="">
-                                         <?php
-                                         if ($payCount['totalpayrow'] > 0) {
-                                             foreach ($paymentInfo as $payInfo) {
-                                                 $isDiscountRow = (floatval($payInfo['discount_amount'] ?? 0) > 0 || stripos($payInfo['service_type'] ?? '', 'discount') !== false || stripos($payInfo['service_type'] ?? '', 'short') !== false);
-                                                 $isLegacyTdsRow = (stripos($payInfo['service_type'] ?? '', 'tds') !== false && floatval($payInfo['tds_amount'] ?? 0) == 0 && !$isDiscountRow);
 
-                                                 $discountVal = floatval($payInfo['discount_amount'] ?? 0);
-                                                 if ($discountVal == 0 && $isDiscountRow) {
-                                                    $discountVal = floatval($payInfo['payment_received'] ?? 0);
-                                                 }
-
-                                                 $displayRcv = ($isLegacyTdsRow || $isDiscountRow) ? '' : (floatval($payInfo['payment_received'] ?? 0) > 0 ? $payInfo['payment_received'] : ($payInfo['payment_received'] === '0' || $payInfo['payment_received'] === 0 ? '0' : ''));
-                                                 $displayTds = floatval($payInfo['tds_amount'] ?? 0) > 0 ? $payInfo['tds_amount'] : ($isLegacyTdsRow && floatval($payInfo['payment_received'] ?? 0) > 0 ? $payInfo['payment_received'] : '');
-                                                 $displayDiscount = ($discountVal > 0) ? $discountVal : '';
-                                                 ?>
-                                                 <tr class="cb_subsection previousCBData pamentrow<?php echo $payInfo["payment_id"] ?> <?php echo $isDiscountRow ? 'discount-settlement-row' : ''; ?>"
-                                                     id="cb_subsection_0" style="<?php echo $isDiscountRow ? 'background-color: #faf5ff !important; border-left: 4px solid #8b5cf6 !important;' : ''; ?>">
-                                                     <td class="" style="padding: 0px; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ''; ?>">
-                                                         <div class="table-edit-control"><label></label>
-                                                             <input type="text" data_row_id="" class="serviceTypeName"
-                                                                 name="serviceTypeName"
-                                                                 value="<?php echo htmlspecialchars($payInfo['service_type'] ?? ''); ?>" placeholder="" style="<?php echo $isDiscountRow ? 'font-weight: 700; color: #6d28d9;' : ''; ?>" />
-                                                         </div>
-                                                     </td>
-                                                     <td class="" style="padding: 0px; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ''; ?>">
-                                                         <div class="table-edit-control"><label></label>
-                                                             <input type="hidden" data_row_id=""
-                                                                 class="serviceAmountDecided" name="serviceAmountDecided"
-                                                                 value="<?php echo htmlspecialchars((floatval($displayRcv) + floatval($displayTds) + floatval($displayDiscount)) ?: ($payInfo['amount_decided'] ?? '')); ?>" />
-                                                             <input type="hidden" data_row_id=""
-                                                                 class="serviceDiscountAmount" name="serviceDiscountAmount"
-                                                                 value="<?php echo htmlspecialchars($displayDiscount); ?>" />
-                                                             <?php if ($isDiscountRow) { ?>
-                                                                 <input type="text" readonly
-                                                                     class="serviceDiscountDisplay"
-                                                                     value="<?php echo number_format($discountVal, 2, '.', ''); ?>"
-                                                                     title="Discount Settled: ₹<?php echo number_format($discountVal, 2, '.', ''); ?>"
-                                                                     style="background-color: #faf5ff; border-bottom: 1px solid #8b5cf6; color: #6d28d9; font-weight: 700; text-align: right;" />
-                                                                 <input type="hidden" data_row_id=""
-                                                                     class="servicePaymentReceived" name="servicePaymentReceived"
-                                                                     value="0" />
-                                                             <?php } else { ?>
-                                                                 <input type="number" step="any" min="0" data_row_id=""
-                                                                     class="servicePaymentReceived" name="servicePaymentReceived"
-                                                                     value="<?php echo htmlspecialchars($displayRcv); ?>"
-                                                                     placeholder="" />
-                                                             <?php } ?>
-                                                         </div>
-                                                     </td>
-                                                     <td class="" style="padding: 0px; background-color: <?php echo $isDiscountRow ? '#faf5ff' : '#fffbeb'; ?>;">
-                                                         <div class="table-edit-control"><label></label>
-                                                             <input type="number" step="any" min="0" data_row_id=""
-                                                                 class="serviceTdsAmount" name="serviceTdsAmount"
-                                                                 value="<?php echo htmlspecialchars($displayTds); ?>"
-                                                                 placeholder=""
-                                                                 style="background-color: <?php echo $isDiscountRow ? '#faf5ff' : '#fffbeb'; ?>; border-bottom: 1px solid #f59e0b; color: #b45309; font-weight: 700; text-align: right;" />
-                                                         </div>
-                                                     </td>
-                                                     <td class="" style="padding: 0px; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ''; ?>">
-                                                         <div class="table-edit-control"><label></label>
-                                                             <input type="text" data_row_id="" class="paymentDepositDate"
-                                                                name="paymentDepositDate"
-                                                                value="<?php if (isset($payInfo['payment_date']) && !empty($payInfo['payment_date']) && $payInfo['payment_date'] != '0000-00-00')
-                                                                    echo date("d.m.Y", strtotime($payInfo['payment_date'])) ?>" placeholder="DD.MM.YYYY">
+                                <div class="row payment-tables-row" style="display: flex; align-items: stretch; margin-left: -5px; margin-right: -5px;">
+                                    <!-- Left: Invoices Column -->
+                                    <div class="col-xs-6 table-responsive invoice-container-col" style="flex: 1 1 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px;">
+                                        <div class="row">
+                                            <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 10px;">
+                                                <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.4px;"><i class="fa ">Invoice</i> (<span class="col-service-label"><?php echo htmlspecialchars($svcName); ?></span>)</span>
+                                                <button type="button" class="btn btn-xs finalInvoiceBtn"
+                                                    data-id="<?php echo htmlspecialchars($_GET['customerid'] ?? ''); ?>"
+                                                    data-address="<?php echo htmlspecialchars($clientInfo['address'] ?? '', ENT_QUOTES); ?>"
+                                                    data-service="<?php echo htmlspecialchars($svcName); ?>"
+                                                    style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #ffffff; border: 1px solid #1e40af; font-weight: 700; font-size: 11px; border-radius: 4px; padding: 2px 10px; box-shadow: 0 1px 3px rgba(37,99,235,0.25); text-transform: none; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; transition: all 0.2s ease;"
+                                                    title="Create Final Invoice Against <?php echo htmlspecialchars($svcName); ?>">
+                                                    <i class="fa fa-plus" style="font-size: 10px;"></i> issue tax invoice for service
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <table class="table table-bordered table-hover table-sortable service_details invoice-service-details-table" <?php if ($blockIdx === 0) echo 'id="invoice_service_details"'; ?>>
+                                                <thead>
+                                                    <tr>
+                                                        <th width="28%" style="padding: 3px 2px; text-align: center;"><small>Invoice No.</small></th>
+                                                        <th width="18%" style="padding: 3px 2px; text-align: center;"><small>Date</small></th>
+                                                        <th width="22%" style="padding: 3px 2px; text-align: center;"><small>Gross Amount</small></th>
+                                                        <th width="32%" style="padding: 3px 2px; text-align: center;"><small>Remark</small></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <?php
+                                                    if (!empty($serviceInvoices)) {
+                                                        foreach ($serviceInvoices as $invoiceinfo) {
+                                                            $invoicePdfUrl = "finalInvoicePDF.php?invoiceid=" . urlencode($invoiceinfo["invoice_id"]) . "&invoiceCustomerId=" . urlencode($_GET["customerid"]);
+                                                            ?>
+                                                            <tr class="cb_subsection" id="cb_subsection_0">
+                                                                <td class="viewFinalInvoice" data-customer="<?php echo $_GET['customerid'] ?>" data-id="<?php echo $invoiceinfo["invoice_id"] ?>" style="padding: 0px;">
+                                                                    <div class="table-edit-control"><label></label>
+                                                                        <input type="text" data_row_id="" class="invoiceNo" name="invoiceNo" value="<?php echo $invoiceinfo['final_prefix'] . '-' . $invoiceinfo['final_invoice_no'] ?>" readonly="" style="cursor: pointer;" title="Click to view PDF in new tab" />
+                                                                        <a href="<?php echo $invoicePdfUrl; ?>" target="_blank" class="openInvoicePdfLink" title="Open Invoice PDF (New Tab)" style="color: #dc2626; padding: 2px 4px; display: inline-block; cursor: pointer; text-decoration: none;"><i class="fa fa-file-pdf-o" style="font-size: 13px;"></i></a>
+                                                                        <a class="editFinalInvoice" data-customer="<?php echo $_GET['customerid'] ?>" data-id="<?php echo $invoiceinfo['invoice_id'] ?>" title="Edit Final Invoice" style="color: #2563eb; padding: 2px 4px; display: inline-block; cursor: pointer;"><i class="fa fa-pencil-square" style="font-size: 13px;"></i></a>
+                                                                    </div>
+                                                                </td>
+                                                                <td class="viewFinalInvoice" data-customer="<?php echo $_GET['customerid'] ?>" data-id="<?php echo $invoiceinfo["invoice_id"] ?>" style="padding: 0px;">
+                                                                    <div class="table-edit-control"><label></label>
+                                                                        <input type="text" data_row_id="" class="invoiceDate" name="invoiceDate" value="<?php echo date("d.m.Y", strtotime($invoiceinfo['invoice_date'])) ?>" readonly="" />
+                                                                    </div>
+                                                                </td>
+                                                                <td class="viewFinalInvoice" data-customer="<?php echo $_GET['customerid'] ?>" data-id="<?php echo $invoiceinfo["invoice_id"] ?>" style="padding: 0px;">
+                                                                    <div class="table-edit-control"><label></label>
+                                                                        <input type="text" data_row_id="" class="invoiceAmount" name="invoiceAmount" value="<?php echo $invoiceinfo['final_amount'] ?>" readonly="" />
+                                                                    </div>
+                                                                </td>
+                                                                <td style="padding: 0px;">
+                                                                    <div class="table-edit-control"><label></label>
+                                                                        <input type="text" class="invoiceRemark" name="invoiceRemark" data-invoice-id="<?php echo $invoiceinfo['invoice_id']; ?>" value="<?php echo htmlspecialchars($invoiceinfo['remark'] ?? ''); ?>" placeholder="Add remark..." title="Invoice remark (Auto-saved)" />
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        <?php }
+                                                    } else { ?>
+                                                        <tr class="cb_subsection" id="cb_subsection_0">
+                                                            <td style="padding: 0px;">
+                                                                <div class="table-edit-control"><label></label>
+                                                                    <input type="text" class="invoiceNo" name="invoiceNo" value="-" readonly style="text-align: center; color: #94a3b8;" />
+                                                                </div>
+                                                            </td>
+                                                            <td style="padding: 0px;">
+                                                                <div class="table-edit-control"><label></label>
+                                                                    <input type="text" class="invoiceDate" name="invoiceDate" value="-" readonly style="text-align: center; color: #94a3b8;" />
+                                                                </div>
+                                                            </td>
+                                                            <td style="padding: 0px;">
+                                                                <div class="table-edit-control"><label></label>
+                                                                    <input type="text" class="invoiceAmount" name="invoiceAmount" value="0.00" readonly style="text-align: center; color: #94a3b8;" />
+                                                                </div>
+                                                            </td>
+                                                            <td style="padding: 0px;">
+                                                                <div class="table-edit-control"><label></label>
+                                                                    <input type="text" class="invoiceRemark" readonly disabled placeholder="-" style="text-align: center; color: #94a3b8; background: transparent; border: none;" />
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    <?php } ?>
+                                                </tbody>
+                                                <tfoot>
+                                                    <tr style="background-color: #f8fafc; font-weight: bold; border-top: 2px solid #cbd5e1;">
+                                                        <td colspan="2" style="text-align: right; padding: 4px 8px; vertical-align: middle; color: #334155; white-space: nowrap;">
+                                                            <small style="font-weight: 700; font-size: 11px;">TOTAL INVOICE (<span class="blockInvoiceCount"><?php echo count($serviceInvoices); ?></span>):</small>
+                                                        </td>
+                                                        <td style="padding: 0px; vertical-align: middle;">
+                                                            <div class="table-edit-control">
+                                                                <input type="text" class="totalInvoiceTableSum" <?php if ($blockIdx === 0) echo 'id="totalInvoiceTableSum"'; ?> value="<?php echo number_format($blockInvoiceSum, 2, '.', ''); ?>" style="font-weight: bold; color: #0f172a; background: #ffffff; text-align: center; border: 1px solid #cbd5e1; font-size: 12px; height: 26px; padding: 0;" readonly title="Total Invoicing Amount for <?php echo htmlspecialchars($svcName); ?>" />
                                                             </div>
                                                         </td>
-                                                        <td class="" style="padding: 0px; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ''; ?>">
-                                                            <div class="table-edit-control"><label></label>
-                                                                <input type="text" data_row_id="" class="serviceChequeDetails"
-                                                                    name="serviceChequeDetails"
-                                                                    value="<?php echo htmlspecialchars($payInfo['cheque_details'] ?? ''); ?>"
-                                                                placeholder="" />
-                                                        </div>
-                                                    </td>
-                                                    <td class="" style="padding: 0px; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ''; ?>">
-                                                        <div class="table-edit-control"><label></label>
-                                                            <input type="text" data_row_id="" class="serviceBalance"
-                                                                name="serviceBalance" value="<?php echo htmlspecialchars($payInfo['balance'] ?? '0.00'); ?>"
-                                                                placeholder="" readonly="" />
-                                                        </div>
-                                                    </td>
-                                                    <td class="" style="padding: 0px; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ''; ?>">
-                                                        <div class="table-edit-control">
-                                                            <a class="infoDelete"
-                                                                data-row-id="<?php echo $payInfo['payment_id'] ?>"
-                                                                value="<?php echo $payInfo['payment_id'] ?>"><i
-                                                                    class="fa fa-trash-o pull-right "
-                                                                    style="padding-right: 10px; color: #ef4444;"
-                                                                    title="Delete Row Details"></i></a>
-                                                            <!--<input type="checkbox" class="infoDelete" data-row-id="<?php echo $payInfo['payment_id'] ?>" value="<?php echo $payInfo['payment_id'] ?>">-->
-                                                            <input type="hidden" data-row-id="" class="row-id" name="row-id"
-                                                                value="<?php echo $payInfo['payment_id'] ?>">
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                                <?php
-                                            }
-                                        } else {
-                                            ?>
-                                            <tr class="cb_subsection previousCBData" id="cb_subsection_0" style="display: ">
-                                                <td class="" style="padding: 0px;">
-                                                    <div class="table-edit-control"><label></label>
-                                                        <input type="text" data_row_id="" class="serviceTypeName"
-                                                            name="serviceTypeName" value="" placeholder="" />
-                                                    </div>
-                                                </td>
-                                                <td class="" style="padding: 0px;">
-                                                    <div class="table-edit-control"><label></label>
-                                                        <input type="hidden" data_row_id=""
-                                                            class="serviceAmountDecided" name="serviceAmountDecided"
-                                                            value="" />
-                                                        <input type="hidden" data_row_id=""
-                                                            class="serviceDiscountAmount" name="serviceDiscountAmount"
-                                                            value="" />
-                                                        <input type="number" step="any" min="0" data_row_id=""
-                                                            class="servicePaymentReceived" name="servicePaymentReceived"
-                                                            value="" placeholder="" />
-                                                    </div>
-                                                </td>
-                                                <td class="" style="padding: 0px; background-color: #fffbeb;">
-                                                    <div class="table-edit-control"><label></label>
-                                                        <input type="number" step="any" min="0" data_row_id=""
-                                                            class="serviceTdsAmount" name="serviceTdsAmount"
-                                                            value="" placeholder=""
-                                                            style="background-color: #fffbeb; border-bottom: 1px solid #f59e0b; color: #b45309; font-weight: 700; text-align: right;" />
-                                                    </div>
-                                                </td>
-                                                <td class="" style="padding: 0px;">
-                                                    <div class="table-edit-control"><label></label>
-                                                        <input type="text" data_row_id="" class="paymentDepositDate"
-                                                            name="paymentDepositDate" value="" placeholder="DD.MM.YYYY">
-                                                    </div>
-                                                </td>
-                                                <td class="" style="padding: 0px;">
-                                                    <div class="table-edit-control"><label></label>
-                                                        <input type="text" data_row_id="" class="serviceChequeDetails"
-                                                            name="serviceChequeDetails" value="" placeholder="" />
-                                                    </div>
-                                                </td>
-                                                <td class="" style="padding: 0px;">
-                                                    <div class="table-edit-control"><label></label>
-                                                        <input type="text" data_row_id="" class="serviceBalance"
-                                                            name="serviceBalance" value="" placeholder="" readonly="" />
-                                                    </div>
-                                                </td>
-                                                <td class="" style="padding: 0px;">
-                                                    <input type="hidden" data-row-id="" class="row-id" name="row-id"
-                                                        value="">
-                                                </td>
-                                            </tr>
-                                        <?php } ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
+                                                        <td></td>
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
+                                    </div>
 
-                    <div>
+                                    <!-- Right: Payments Column -->
+                                    <div class="col-xs-6 table-responsive payments-container-col" style="flex: 1 1 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px;">
+                                        <div class="row">
+                                            <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 10px;">
+                                                <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.4px;"><i class="fa ">Payments</i> (<span class="col-service-label"><?php echo htmlspecialchars($svcName); ?></span>)</span>
+                                                <button type="button" class="btn btn-xs openDiscountModalBtn" data-service="<?php echo htmlspecialchars($svcName); ?>" style="background: #ffffff; color: #475569; border: 1px solid #cbd5e1; font-weight: 700; font-size: 11px; border-radius: 4px; padding: 2px 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.06); text-transform: none; display: inline-flex; align-items: center; gap: 3px; cursor: pointer; transition: all 0.2s ease;" title="Discount / Short Paid Settlement">
+                                                    (-+)
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <table class="table table-bordered table-hover table-sortable service_details service-details-table" <?php if ($blockIdx === 0) echo 'id="service_details"'; ?>>
+                                                <thead>
+                                                    <tr>
+                                                        <th width="24%" style="padding: 2px"><small>Payment received</small></th>
+                                                        <th width="18%" style="padding: 2px; text-align: center;"><small style="font-weight: 700; color: #b45309;"><i class="fa fa-percent" style="font-size: 10px; margin-right: 2px;"></i> TDS Deducted</small></th>
+                                                        <th width="17%" style="padding: 2px"><small>Received Date</small></th>
+                                                        <th width="18%" style="padding: 2px"><small>Instrument</small></th>
+                                                        <th width="16%" style="padding: 2px"><small>Reconcile</small></th>
+                                                        <th width="7%" style="padding: 2px; text-align: right;">
+                                                            <a class="btn btn-xs btn-info cbAddLink pull-right" data-service="<?php echo htmlspecialchars($svcName); ?>" data-row-id="<?php if (isset($payId)) echo $payId; ?>" data-row-count="<?php echo count($servicePayments); ?>" title="Add new row" style="padding: 1px 5px;">
+                                                                <i class="fa fa-plus-circle fa-lg" style="padding: 3px"></i>
+                                                            </a>
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <?php
+                                                    if (!empty($servicePayments)) {
+                                                        foreach ($servicePayments as $payInfo) {
+                                                            $isDiscountRow = (floatval($payInfo['discount_amount'] ?? 0) > 0 || stripos($payInfo['service_type'] ?? '', 'discount') !== false || stripos($payInfo['service_type'] ?? '', 'short') !== false);
+                                                            $isLegacyTdsRow = (stripos($payInfo['service_type'] ?? '', 'tds') !== false && floatval($payInfo['tds_amount'] ?? 0) == 0 && !$isDiscountRow);
 
-                    </div>
+                                                            $discountVal = floatval($payInfo['discount_amount'] ?? 0);
+                                                            if ($discountVal == 0 && $isDiscountRow) {
+                                                                $discountVal = floatval($payInfo['payment_received'] ?? 0);
+                                                            }
 
-                    <div class="row">
-                        <div class="col-xs-12">
-                            <div class="row">
-                                <div class="col-xs-12  text-center btn qms_complete_btn">
-                                    <span><i class="fa fa-calculator" style="margin-right: 5px;"></i>Payment Summary</span>
+                                                            $displayRcv = ($isLegacyTdsRow || $isDiscountRow) ? '' : (floatval($payInfo['payment_received'] ?? 0) > 0 ? $payInfo['payment_received'] : ($payInfo['payment_received'] === '0' || $payInfo['payment_received'] === 0 ? '0' : ''));
+                                                            $displayTds = floatval($payInfo['tds_amount'] ?? 0) > 0 ? $payInfo['tds_amount'] : ($isLegacyTdsRow && floatval($payInfo['payment_received'] ?? 0) > 0 ? $payInfo['payment_received'] : '');
+                                                            $displayDiscount = ($discountVal > 0) ? $discountVal : '';
+
+                                                            $recRaw = trim(strtolower($payInfo['reconciliation'] ?? ''));
+                                                            $isVerified = in_array($recRaw, ['verified', 'verify', 'yes', '1']);
+                                                            $recStatusText = $isVerified ? 'Verified' : 'Not Verify';
+                                                            ?>
+                                                            <tr class="cb_subsection previousCBData pamentrow<?php echo $payInfo["payment_id"] ?> <?php echo $isDiscountRow ? 'discount-settlement-row' : ''; ?>" id="cb_subsection_0" style="<?php echo $isDiscountRow ? 'background-color: #faf5ff !important; border-left: 4px solid #8b5cf6 !important;' : ''; ?>">
+                                                                <td style="padding: 0px; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ''; ?>">
+                                                                    <div class="table-edit-control"><label></label>
+                                                                        <input type="hidden" data_row_id="" class="serviceTypeName" name="serviceTypeName" value="<?php echo htmlspecialchars($payInfo['service_type'] ?? $svcName); ?>" />
+                                                                        <input type="hidden" data_row_id="" class="serviceAmountDecided" name="serviceAmountDecided" value="<?php echo htmlspecialchars((floatval($displayRcv) + floatval($displayTds) + floatval($displayDiscount)) ?: ($payInfo['amount_decided'] ?? '')); ?>" />
+                                                                        <input type="hidden" data_row_id="" class="serviceDiscountAmount" name="serviceDiscountAmount" value="<?php echo htmlspecialchars($displayDiscount); ?>" />
+                                                                        <?php if ($isDiscountRow) { ?>
+                                                                            <input type="text" readonly class="serviceDiscountDisplay" value="<?php echo number_format($discountVal, 2, '.', ''); ?>" title="Discount Settled: ₹<?php echo number_format($discountVal, 2, '.', ''); ?>" style="background-color: #faf5ff; border-bottom: 1px solid #8b5cf6; color: #6d28d9; font-weight: 700; text-align: right;" />
+                                                                            <input type="hidden" data_row_id="" class="servicePaymentReceived" name="servicePaymentReceived" value="0" />
+                                                                        <?php } else { ?>
+                                                                            <input type="number" step="any" min="0" data_row_id="" class="servicePaymentReceived" name="servicePaymentReceived" value="<?php echo htmlspecialchars($displayRcv); ?>" placeholder="" />
+                                                                        <?php } ?>
+                                                                    </div>
+                                                                </td>
+                                                                <td style="padding: 0px; background-color: <?php echo $isDiscountRow ? '#faf5ff' : '#ffffff'; ?>;">
+                                                                    <div class="table-edit-control"><label></label>
+                                                                        <input type="number" step="any" min="0" data_row_id="" class="serviceTdsAmount" name="serviceTdsAmount" value="<?php echo htmlspecialchars($displayTds); ?>" placeholder="" style="background-color: <?php echo $isDiscountRow ? '#faf5ff' : '#ffffff'; ?>; border-bottom: 1px solid #cbd5e1; color: #b45309; font-weight: 700; text-align: right;" />
+                                                                    </div>
+                                                                </td>
+                                                                <td style="padding: 0px; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ''; ?>">
+                                                                    <div class="table-edit-control"><label></label>
+                                                                        <input type="text" data_row_id="" class="paymentDepositDate" name="paymentDepositDate" value="<?php if (isset($payInfo['payment_date']) && !empty($payInfo['payment_date']) && $payInfo['payment_date'] != '0000-00-00') echo date("d.m.Y", strtotime($payInfo['payment_date'])) ?>" placeholder="DD.MM.YYYY">
+                                                                    </div>
+                                                                </td>
+                                                                <td style="padding: 0px; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ''; ?>">
+                                                                    <div class="table-edit-control"><label></label>
+                                                                        <input type="text" data_row_id="" class="serviceChequeDetails" name="serviceChequeDetails" value="<?php echo htmlspecialchars($payInfo['cheque_details'] ?? ''); ?>" placeholder="" />
+                                                                    </div>
+                                                                </td>
+                                                                <td style="padding: 1px 2px; text-align: center; vertical-align: middle; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ''; ?>">
+                                                                    <div class="table-edit-control" style="display: flex; align-items: center; justify-content: center;">
+                                                                        <input type="hidden" class="serviceReconciliation" name="serviceReconciliation" value="<?php echo $recStatusText; ?>" />
+                                                                        <button type="button" class="btn btn-xs toggleReconcileBtn <?php echo $isVerified ? 'reconcile-verified' : 'reconcile-not-verify'; ?>" data-status="<?php echo $recStatusText; ?>" data-pay-id="<?php echo htmlspecialchars($payInfo['payment_id'] ?? ''); ?>" style="width: 96%; height: 23px; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 0 2px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; cursor: pointer; transition: all 0.2s ease; <?php echo $isVerified ? 'background-color: #16a34a; border: 1px solid #15803d; color: #ffffff;' : 'background-color: #ef4444; border: 1px solid #dc2626; color: #ffffff;'; ?>" title="Click to toggle: <?php echo $isVerified ? 'Mark as Not Verify' : 'Mark as Verified'; ?>">
+                                                                            <i class="fa <?php echo $isVerified ? 'fa-check' : 'fa-times'; ?>"></i>
+                                                                            <span><?php echo $recStatusText; ?></span>
+                                                                        </button>
+                                                                    </div>
+                                                                </td>
+                                                                <td style="padding: 0px; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ''; ?>">
+                                                                    <div class="table-edit-control">
+                                                                        <input type="hidden" data_row_id="" class="serviceBalance" name="serviceBalance" value="<?php echo htmlspecialchars($payInfo['balance'] ?? '0.00'); ?>" />
+                                                                        <a class="infoDelete" data-row-id="<?php echo $payInfo['payment_id'] ?>" value="<?php echo $payInfo['payment_id'] ?>"><i class="fa fa-trash-o pull-right " style="padding-right: 10px; color: #ef4444;" title="Delete Row Details"></i></a>
+                                                                        <input type="hidden" data-row-id="" class="row-id" name="row-id" value="<?php echo $payInfo['payment_id'] ?>">
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        <?php }
+                                                    } else { ?>
+                                                        <tr class="cb_subsection previousCBData" id="cb_subsection_0">
+                                                            <td style="padding: 0px;">
+                                                                <div class="table-edit-control"><label></label>
+                                                                    <input type="hidden" data_row_id="" class="serviceTypeName" name="serviceTypeName" value="<?php echo htmlspecialchars($svcName); ?>" />
+                                                                    <input type="hidden" data_row_id="" class="serviceAmountDecided" name="serviceAmountDecided" value="" />
+                                                                    <input type="hidden" data_row_id="" class="serviceDiscountAmount" name="serviceDiscountAmount" value="" />
+                                                                    <input type="number" step="any" min="0" data_row_id="" class="servicePaymentReceived" name="servicePaymentReceived" value="" placeholder="" />
+                                                                </div>
+                                                            </td>
+                                                            <td style="padding: 0px; background-color: #ffffff;">
+                                                                <div class="table-edit-control"><label></label>
+                                                                    <input type="number" step="any" min="0" data_row_id="" class="serviceTdsAmount" name="serviceTdsAmount" value="" placeholder="" style="background-color: #ffffff; border-bottom: 1px solid #cbd5e1; color: #b45309; font-weight: 700; text-align: right;" />
+                                                                </div>
+                                                            </td>
+                                                            <td style="padding: 0px;">
+                                                                <div class="table-edit-control"><label></label>
+                                                                    <input type="text" data_row_id="" class="paymentDepositDate" name="paymentDepositDate" value="" placeholder="DD.MM.YYYY">
+                                                                </div>
+                                                            </td>
+                                                            <td style="padding: 0px;">
+                                                                <div class="table-edit-control"><label></label>
+                                                                    <input type="text" data_row_id="" class="serviceChequeDetails" name="serviceChequeDetails" value="" placeholder="" />
+                                                                </div>
+                                                            </td>
+                                                            <td style="padding: 1px 2px; text-align: center; vertical-align: middle;">
+                                                                <div class="table-edit-control" style="display: flex; align-items: center; justify-content: center;">
+                                                                    <input type="hidden" class="serviceReconciliation" name="serviceReconciliation" value="Not Verify" />
+                                                                    <button type="button" class="btn btn-xs toggleReconcileBtn reconcile-not-verify" data-status="Not Verify" data-pay-id="" style="width: 96%; height: 23px; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 0 2px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; cursor: pointer; transition: all 0.2s ease; background-color: #ef4444; border: 1px solid #dc2626; color: #ffffff;" title="Click to toggle: Mark as Verified">
+                                                                        <i class="fa fa-times"></i>
+                                                                        <span>Not Verify</span>
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                            <td style="padding: 0px;">
+                                                                <div class="table-edit-control">
+                                                                    <input type="hidden" data_row_id="" class="serviceBalance" name="serviceBalance" value="0.00" />
+                                                                    <input type="hidden" data-row-id="" class="row-id" name="row-id" value="">
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    <?php } ?>
+                                                </tbody>
+                                                <tfoot>
+                                                    <tr style="background-color: #f8fafc; font-weight: bold; border-top: 2px solid #cbd5e1;">
+                                                        <td style="padding: 0px; vertical-align: middle;">
+                                                            <div class="table-edit-control">
+                                                                <input type="text" class="totalPaymentReceivedSum" <?php if ($blockIdx === 0) echo 'id="totalPaymentReceivedSum"'; ?> value="<?php echo number_format($blockRcvSum, 2, '.', ''); ?>" style="font-weight: bold; color: #16a34a; background: #ffffff; text-align: center; border: 1px solid #cbd5e1; font-size: 12px; height: 26px; padding: 0;" readonly title="Total Payment Received for <?php echo htmlspecialchars($svcName); ?>" />
+                                                            </div>
+                                                        </td>
+                                                        <td style="padding: 0px; vertical-align: middle; background-color: #f8fafc;">
+                                                            <div class="table-edit-control">
+                                                                <input type="text" class="totalPaymentTdsSum" <?php if ($blockIdx === 0) echo 'id="totalPaymentTdsSum"'; ?> value="<?php echo number_format($blockTdsSum, 2, '.', ''); ?>" style="font-weight: bold; color: #b45309; background: #ffffff; text-align: center; border: 1px solid #cbd5e1; font-size: 12px; height: 26px; padding: 0;" readonly title="Total TDS Amount for <?php echo htmlspecialchars($svcName); ?>" />
+                                                            </div>
+                                                        </td>
+                                                        <td colspan="4" style="text-align: right; padding: 4px 8px; vertical-align: middle; color: #334155; white-space: nowrap;">
+                                                            <small style="font-weight: 700; font-size: 11px;">TOTAL INSTALLMENTS (<span class="totalPaymentRowCount"><?php echo $blockValidCount; ?></span>):</small>
+                                                            <div style="display: inline-block; vertical-align: middle; margin-left: 6px; width: 95px;">
+                                                                <input type="text" class="totalPaymentCombinedSum" <?php if ($blockIdx === 0) echo 'id="totalPaymentCombinedSum"'; ?> value="<?php echo number_format($blockRcvSum + $blockTdsSum + $blockDiscountSum, 2, '.', ''); ?>" style="font-weight: bold; color: #0f172a; background: #ffffff; text-align: center; border: 1px solid #cbd5e1; font-size: 12px; height: 26px; padding: 0; width: 100%;" readonly title="Total Payment Amount for <?php echo htmlspecialchars($svcName); ?>" />
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="row">
-                                <table class="table table-bordered table-hover table-sortable service_details"
-                                    id="payment_summary_table">
+                        <?php } ?>
+                    </div>
+<div class="row all-service-summary-wrapper" style="margin-top: 24px; margin-bottom: 20px;">
+                        <div class="col-xs-12">
+                            <div class="all-service-summary-card" style="border-radius: 8px; overflow: hidden; border: 1.5px solid #cbd5e1; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06); background: #ffffff;">
+                                <!-- Summary Header -->
+                                <div class="all-service-summary-header" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%); color: #ffffff; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #2563eb;">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <i class="fa fa-calculator" style="color: #38bdf8; font-size: 15px;"></i>
+                                        <span style="font-weight: 800; font-size: 12.5px; letter-spacing: 0.6px; text-transform: uppercase; color: #ffffff;">ALL SERVICE PAYMENT SUMMARY</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span class="badge" style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); color: #f8fafc; font-size: 10.5px; font-weight: 600; padding: 3px 10px; border-radius: 12px;">Consolidated Summary</span>
+                                    </div>
+                                </div>
+                                
+                                <!-- Summary KPI Table -->
+                                <table class="table table-bordered service_details" id="payment_summary_table" style="margin: 0; border: none; width: 100%;">
                                     <thead>
                                         <tr>
-                                            <th class="" width="20%" style="padding: 6px 8px; text-align: center; vertical-align: middle;">
+                                            <!-- Grand Total -->
+                                            <th id="summaryGrandTotalTh" width="20%" style="padding: 12px 10px; text-align: center; vertical-align: middle; background: #f8fafc; border-top: 3.5px solid #2563eb; border-bottom: none;">
                                                 <?php $totalInvoiceAmount = floatval($invoiceTotal["invoice_sum"] ?? 0); ?>
-                                                <small style="font-weight: 700; color: #c2410c; text-transform: uppercase; font-size: 10.5px;">Grand Total:</small>
-                                                <strong style="color: #ea580c; font-size: 13.5px; margin-left: 4px;">
+                                                <small style="font-weight: 800; color: #1e3a8a; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; display: block; margin-bottom: 4px;">
+                                                    <i class="fa fa-briefcase" style="color: #2563eb; margin-right: 3px;"></i> Grand Total
+                                                </small>
+                                                <strong style="color: #0f172a; font-size: 16px; font-weight: 800;">
                                                     ₹<span id="summaryTotalAmount"><?php echo number_format($totalInvoiceAmount, 2, '.', ''); ?></span>
                                                 </strong>
                                                 <span id="summaryReceivableAmount" style="display: none;"><?php echo number_format($totalInvoiceAmount, 2, '.', ''); ?></span>
                                                 <span id="summaryInvoicingAmount" style="display: none;"><?php echo number_format($totalInvoiceAmount, 2, '.', ''); ?></span>
                                             </th>
-                                            <th class="" width="20%" style="padding: 6px 8px; text-align: center; vertical-align: middle;">
+
+                                            <!-- Received Amount -->
+                                            <th id="summaryReceivedTh" width="20%" style="padding: 12px 10px; text-align: center; vertical-align: middle; background: #f0fdf4; border-top: 3.5px solid #16a34a; border-bottom: none;">
                                                 <?php $totalPaymentReceived = floatval($paymentTotal["payment_sum"] ?? 0); ?>
-                                                <small style="font-weight: 700; color: #475569; text-transform: uppercase; font-size: 10.5px;">Received Amount:</small>
-                                                <strong style="color: #16a34a; font-size: 13.5px; margin-left: 4px;">
+                                                <small style="font-weight: 800; color: #166534; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; display: block; margin-bottom: 4px;">
+                                                    <i class="fa fa-check-circle" style="color: #16a34a; margin-right: 3px;"></i> Received Amount
+                                                </small>
+                                                <strong style="color: #15803d; font-size: 16px; font-weight: 800;">
                                                     ₹<span id="summaryReceivedAmount"><?php echo number_format($totalPaymentReceived, 2, '.', ''); ?></span>
                                                 </strong>
                                             </th>
-                                            <th class="" width="20%" style="padding: 6px 8px; text-align: center; vertical-align: middle; background-color: #fffbeb;">
+
+                                            <!-- TDS Deducted -->
+                                            <th id="summaryTdsTh" width="20%" style="padding: 12px 10px; text-align: center; vertical-align: middle; background: #fffbeb; border-top: 3.5px solid #d97706; border-bottom: none;">
                                                 <?php $totalTdsAmount = floatval($paymentTotal["tds_sum"] ?? 0); ?>
-                                                <small style="font-weight: 700; color: #b45309; text-transform: uppercase; font-size: 10.5px;"><i class="fa fa-percent" style="font-size: 9px; margin-right: 2px;"></i> TDS Amount:</small>
-                                                <strong style="color: #d97706; font-size: 13.5px; margin-left: 4px;">
+                                                <small style="font-weight: 800; color: #92400e; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; display: block; margin-bottom: 4px;">
+                                                    <i class="fa fa-percent" style="font-size: 9.5px; margin-right: 3px; color: #d97706;"></i> TDS Deducted
+                                                </small>
+                                                <strong style="color: #b45309; font-size: 16px; font-weight: 800;">
                                                     ₹<span id="summaryTdsAmount"><?php echo number_format($totalTdsAmount, 2, '.', ''); ?></span>
                                                 </strong>
                                             </th>
-                                            <th class="" width="20%" style="padding: 6px 8px; text-align: center; vertical-align: middle; background-color: #fff7ed; border: 1px solid #fed7aa;">
+
+                                            <!-- Discount / Short Paid -->
+                                            <th id="summaryDiscountTh" width="20%" style="padding: 12px 10px; text-align: center; vertical-align: middle; background: #faf5ff; border-top: 3.5px solid #7c3aed; border-bottom: none;">
                                                 <?php $totalDiscountAmount = floatval($paymentTotal["discount_sum"] ?? 0); ?>
-                                                <small style="font-weight: 700; color: #c2410c; text-transform: uppercase; font-size: 10.5px;"><i class="fa fa-tag" style="font-size: 9px; margin-right: 2px;"></i> Discount (Short):</small>
-                                                <strong style="color: #ea580c; font-size: 13.5px; margin-left: 4px;">
+                                                <small style="font-weight: 800; color: #6b21a8; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; display: block; margin-bottom: 4px;">
+                                                    <i class="fa fa-tag" style="font-size: 10px; margin-right: 3px; color: #7c3aed;"></i> Discount (Short)
+                                                </small>
+                                                <strong style="color: #7c3aed; font-size: 16px; font-weight: 800;">
                                                     ₹<span id="summaryDiscountAmount"><?php echo number_format($totalDiscountAmount, 2, '.', ''); ?></span>
                                                 </strong>
                                             </th>
-                                            <th class="" width="20%" style="padding: 6px 8px; text-align: center; vertical-align: middle;">
-                                                <?php $difference = $totalInvoiceAmount - $totalPaymentReceived - $totalTdsAmount - $totalDiscountAmount; ?>
-                                                <small style="font-weight: 700; color: #475569; text-transform: uppercase; font-size: 10.5px;">Remaining Amount:</small>
-                                                <strong style="color: <?php echo ($difference > 0 ? '#dc2626' : '#16a34a'); ?>; font-size: 13.5px; margin-left: 4px;">
+
+                                            <!-- Remaining Amount -->
+                                            <?php 
+                                            $difference = $totalInvoiceAmount - $totalPaymentReceived - $totalTdsAmount - $totalDiscountAmount;
+                                            $isDue = ($difference > 0);
+                                            ?>
+                                            <th id="summaryRemainingTh" width="20%" style="padding: 12px 10px; text-align: center; vertical-align: middle; background: <?php echo $isDue ? '#fef2f2' : '#f0fdf4'; ?>; border-top: 3.5px solid <?php echo $isDue ? '#dc2626' : '#16a34a'; ?>; border-bottom: none;">
+                                                <small id="summaryRemainingLabel" style="font-weight: 800; color: <?php echo $isDue ? '#991b1b' : '#166534'; ?>; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; display: block; margin-bottom: 4px;">
+                                                    <i class="fa <?php echo $isDue ? 'fa-clock-o' : 'fa-check-circle'; ?>" style="color: <?php echo $isDue ? '#dc2626' : '#16a34a'; ?>; margin-right: 3px;"></i> <?php echo $isDue ? 'Remaining Amount' : 'Remaining (Settled)'; ?>
+                                                </small>
+                                                <strong style="color: <?php echo $isDue ? '#dc2626' : '#15803d'; ?>; font-size: 16px; font-weight: 800;">
                                                     ₹<span id="summaryRemainingAmount"><?php echo number_format($difference, 2, '.', ''); ?></span>
                                                 </strong>
                                                 <span id="summaryBalanceAmount" style="display: none;"><?php echo number_format($difference, 2, '.', ''); ?></span>
@@ -6391,43 +6881,43 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     <div class="modal fade" id="discountModal" tabindex="-1" role="dialog" aria-labelledby="discountModalLabel" aria-hidden="true">
                         <div class="modal-dialog" style="max-width: 480px; margin-top: 80px;">
                             <div class="modal-content" style="border-radius: 8px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.25); border: none;">
-                                <div class="modal-header" style="background: linear-gradient(135deg, #c2410c, #ea580c); color: #ffffff; padding: 12px 18px;">
-                                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true" style="color: #ffffff; opacity: 0.9; font-size: 22px;">&times;</button>
-                                    <h4 class="modal-title" id="discountModalLabel" style="font-weight: 700; font-size: 16px; margin: 0; display: flex; align-items: center; gap: 8px;">
-                                        <i class="fa fa-tags"></i> Discount (Short Paid) Settlement
-                                    </h4>
-                                </div>
-                                <div class="modal-body" style="padding: 20px; background-color: #f8fafc;">
-                                    <!-- Remaining Balance Box -->
-                                    <div style="background-color: #fff7ed; border: 1px solid #fed7aa; border-radius: 6px; padding: 12px 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
-                                        <div>
-                                            <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #c2410c;">Current Remaining Balance:</span>
-                                            <div style="font-size: 20px; font-weight: 800; color: #9a3412;">
-                                                ₹<span id="discountModalRemainingBalance">0.00</span>
-                                            </div>
-                                        </div>
-                                        <button type="button" class="btn btn-sm" id="btnAutoFillFullBalance" style="background: linear-gradient(135deg, #ea580c, #f97316); color: #fff; border: 1px solid #c2410c; font-weight: 600; font-size: 11.5px; border-radius: 4px; padding: 6px 12px; box-shadow: 0 1px 3px rgba(234, 88, 12, 0.25);" title="Auto-fill the full remaining balance as discount to settle account">
-                                            <i class="fa fa-bolt"></i> Settle Full Balance
-                                        </button>
-                                    </div>
+                                <div class="modal-header" style="background: linear-gradient(135deg, #1e293b, #334155); color: #ffffff; padding: 12px 18px;">
+                                     <button type="button" class="close" data-dismiss="modal" aria-hidden="true" style="color: #ffffff; opacity: 0.9; font-size: 22px;">&times;</button>
+                                     <h4 class="modal-title" id="discountModalLabel" style="font-weight: 700; font-size: 16px; margin: 0; display: flex; align-items: center; gap: 8px;">
+                                         <i class="fa fa-tags"></i> Discount (Short Paid) Settlement
+                                     </h4>
+                                 </div>
+                                 <div class="modal-body" style="padding: 20px; background-color: #f8fafc;">
+                                     <!-- Remaining Balance Box -->
+                                     <div style="background-color: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; padding: 12px 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+                                         <div>
+                                             <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #475569;">Current Remaining Balance:</span>
+                                             <div style="font-size: 20px; font-weight: 800; color: #0f172a;">
+                                                 ₹<span id="discountModalRemainingBalance">0.00</span>
+                                             </div>
+                                         </div>
+                                         <button type="button" class="btn btn-sm" id="btnAutoFillFullBalance" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #fff; border: 1px solid #1e40af; font-weight: 600; font-size: 11.5px; border-radius: 4px; padding: 6px 12px; box-shadow: 0 1px 3px rgba(37, 99, 235, 0.25);" title="Auto-fill the full remaining balance as discount to settle account">
+                                             <i class="fa fa-bolt"></i> Settle Full Balance
+                                         </button>
+                                     </div>
 
-                                    <form id="discountSettlementForm">
-                                        <div class="form-group" style="margin-bottom: 14px;">
-                                            <label style="font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 4px;">
-                                                Discount / Short Paid Amount <span style="color: #ef4444;">*</span>
-                                            </label>
-                                            <div class="input-group">
-                                                <span class="input-group-addon" style="background-color: #ffedd5; border-color: #fdba74; color: #c2410c; font-weight: 700;">₹</span>
-                                                <input type="number" step="any" min="0.01" class="form-control" id="modalDiscountAmount" name="modalDiscountAmount" placeholder="Enter discount amount" required style="font-size: 15px; font-weight: 700; color: #7c2d12; border-color: #fdba74;" />
-                                            </div>
-                                            <small style="color: #64748b; font-size: 11px;">This amount will be settled and deducted from the remaining balance.</small>
-                                        </div>
+                                     <form id="discountSettlementForm">
+                                         <div class="form-group" style="margin-bottom: 14px;">
+                                             <label style="font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 4px;">
+                                                 Discount / Short Paid Amount <span style="color: #ef4444;">*</span>
+                                             </label>
+                                             <div class="input-group">
+                                                 <span class="input-group-addon" style="background-color: #f1f5f9; border-color: #cbd5e1; color: #334155; font-weight: 700;">₹</span>
+                                                 <input type="number" step="any" min="0.01" class="form-control" id="modalDiscountAmount" name="modalDiscountAmount" placeholder="Enter discount amount" required style="font-size: 15px; font-weight: 700; color: #0f172a; border-color: #cbd5e1;" />
+                                             </div>
+                                             <small style="color: #64748b; font-size: 11px;">This amount will be settled and deducted from the remaining balance.</small>
+                                         </div>
 
-                                        <div class="form-group" style="margin-bottom: 14px;">
-                                            <label style="font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 4px;">
-                                                <i class="fa fa-file-text-o" style="color: #ea580c; margin-right: 4px;"></i> Discount Against Invoice No. <span style="color: #ef4444;">*</span>
-                                            </label>
-                                            <select class="form-control" id="modalDiscountInvoice" name="modalDiscountInvoice" required style="font-size: 13px; font-weight: 600; color: #7c2d12; border-color: #fdba74; background-color: #fff7ed;">
+                                         <div class="form-group" style="margin-bottom: 14px;">
+                                             <label style="font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 4px;">
+                                                 <i class="fa fa-file-text-o" style="color: #2563eb; margin-right: 4px;"></i> Discount Against Invoice No. <span style="color: #ef4444;">*</span>
+                                             </label>
+                                             <select class="form-control" id="modalDiscountInvoice" name="modalDiscountInvoice" required style="font-size: 13px; font-weight: 600; color: #0f172a; border-color: #cbd5e1; background-color: #ffffff;">
                                                 <?php if (!empty($invoiceList) && count($invoiceList) > 0) { ?>
                                                     <?php foreach ($invoiceList as $idx => $inv) { 
                                                         $fullInvNo = $inv['final_prefix'] . '-' . $inv['final_invoice_no'];
@@ -6459,7 +6949,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                 </div>
                                 <div class="modal-footer" style="background-color: #f1f5f9; padding: 10px 18px; border-top: 1px solid #e2e8f0;">
                                     <button type="button" class="btn btn-default" data-dismiss="modal" style="font-size: 12px; font-weight: 600;">Cancel</button>
-                                    <button type="button" class="btn" id="btnSaveDiscountSettlement" style="background: linear-gradient(135deg, #c2410c, #ea580c); color: #ffffff; border: none; font-size: 12.5px; font-weight: 700; padding: 6px 16px; border-radius: 4px; box-shadow: 0 1px 3px rgba(234, 88, 12, 0.25);">
+                                    <button type="button" class="btn" id="btnSaveDiscountSettlement" style="background: linear-gradient(135deg, #16a34a, #15803d); color: #ffffff; border: none; font-size: 12.5px; font-weight: 700; padding: 6px 16px; border-radius: 4px; box-shadow: 0 1px 3px rgba(22, 163, 74, 0.25);">
                                         <i class="fa fa-check-circle" style="margin-right: 4px;"></i> Save &amp; Settle Discount
                                     </button>
                                 </div>
@@ -13954,7 +14444,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 autoclose: true
             });
 
-            $(document).on('focus', ".paymentDepositDate", function () {
+            $(document).on('focus', ".paymentDepositDate, .serviceReconciliation", function () {
                 if ($(this).hasClass('hasDatepicker') === false) {
                     $(this).datepicker({
                         minDate: '-100Y',
@@ -14184,7 +14674,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             });
 
             $('.viewFinalInvoice').click(function (e) {
-                if ($(e.target).closest('a').length) {
+                if ($(e.target).closest('a, select, option').length) {
                     return; // Link has href and target="_blank"
                 }
                 var customerID = $(this).attr('data-customer');
@@ -14192,10 +14682,11 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 window.open('finalInvoicePDF.php?invoiceid=' + encodeURIComponent(invoiceid) + '&invoiceCustomerId=' + encodeURIComponent(customerID), '_blank');
             });
 
-            $(".payment-title").click(function () {
-                //                alert($(this).attr("data-id"));
+            $(document).on('click', '.payment-title, .payment-header-toggle-row', function (e) {
+                if ($(e.target).closest('button, a, input, select, .btnAddInvoiceHeader, .savePayment').length) {
+                    return;
+                }
                 $(".payment-desc").toggle();
-                //            $(".cadates" + svc).toggle();
             });
 
             // Handle saveChanges class for auto-saving fields (excluding comment field which has its own handler)
@@ -15276,7 +15767,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 $('.sp-service-type').show();
             }
 
-            function resetFinalInvoiceModal(customerId, customerAddress) {
+            function resetFinalInvoiceModal(customerId, customerAddress, serviceType) {
                 var $finalModal = $('#finalinvoiceModal');
                 var finalForm = $finalModal.find('form').get(0);
 
@@ -15293,6 +15784,9 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 $finalModal.find('input[name="finalTaxtype"][value="CGST & SGST"]').prop('checked', true);
                 $finalModal.find('.finalserviceAmtTd').empty();
                 $finalModal.find('.addFinalServiceAmtRow').trigger('click');
+                if (serviceType) {
+                    $finalModal.find('.finalInvoiceService').first().val(serviceType);
+                }
                 $finalModal.find('.finalNetPrice, .finaligst, .finalcgst, .finalsgst').val('');
                 $finalModal.find('.fianlInvoiceGenerate').attr('disabled', true);
             }
@@ -15308,11 +15802,13 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 $('#invoiceModal').modal('show');
             });
 
-            $('.finalInvoiceBtn').click(function () {
-                var companyName = $(this).attr("data-id");
-                var companyAddress = $(this).attr("data-address");
+            $(document).on('click', '.finalInvoiceBtn', function (e) {
+                if (e && e.preventDefault) e.preventDefault();
+                var companyName = $(this).attr("data-id") || <?php echo json_encode((string)($_GET["customerid"] ?? "")); ?>;
+                var companyAddress = $(this).attr("data-address") || <?php echo json_encode((string)($clientInfo["address"] ?? "")); ?>;
+                var serviceType = $(this).attr("data-service") || $(this).closest('.service-payment-block').attr('data-service') || '';
 
-                resetFinalInvoiceModal(companyName, companyAddress);
+                resetFinalInvoiceModal(companyName, companyAddress, serviceType);
                 $('#finalinvoiceModal').modal('show');
             });
 
@@ -21414,47 +21910,66 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             });
 
             $(document.body).on('click', '.cbAddLink', function () {
-                $newCount = 0;
-                $rowCB = $(this).data("row-count");
-                if ($rowCB == "") {
-                    $rowCB = 1;
+                var $btn = $(this);
+                var $block = $btn.closest('.service-payment-block');
+                var blockService = $btn.attr('data-service') || $block.attr('data-service') || 'Payment';
+                var $table = $block.length ? $block.find('.service-details-table') : $("#service_details");
+                if (!$table.length) {
+                    $table = $("#service_details");
                 }
-                $count = $rowCB + 1;
-                var table = document.getElementById("service_details");
-                var row = table.insertRow($count);
-                $(this).data("row-count", $rowCB + 1);
-
-                var cell1 = row.insertCell(0);
-                var cell2 = row.insertCell(1);
-                var cell3 = row.insertCell(2);
-                var cell4 = row.insertCell(3);
-                var cell5 = row.insertCell(4);
-                var cell6 = row.insertCell(5);
-                var cell7 = row.insertCell(6);
-
-                cell1.style.padding = "0px";
-                cell2.style.padding = "0px";
-                cell3.style.padding = "0px";
-                cell3.style.backgroundColor = "#fffbeb";
-                cell4.style.padding = "0px";
-                cell5.style.padding = "0px";
-                cell6.style.padding = "0px";
-                cell7.style.padding = "0px";
+                var $tbody = $table.find('tbody');
 
                 var summaryState = (typeof recalculatePaymentSystem === 'function') ? recalculatePaymentSystem() : null;
                 var remAmount = (summaryState && summaryState.remainingBalance > 0) ? summaryState.remainingBalance.toFixed(2) : '';
 
-                cell1.innerHTML = '<div class="table-edit-control"><label></label><input type="text" data-row-id="" class="serviceTypeName" name="serviceTypeName" placeholder="" /></div>';
-                cell2.innerHTML = '<div class="table-edit-control"><label></label><input type="hidden" data-row-id="" class="serviceAmountDecided" name="serviceAmountDecided" value="' + remAmount + '" /><input type="hidden" data-row-id="" class="serviceDiscountAmount" name="serviceDiscountAmount" value="0" /><input type="number" step="any" min="0" data-row-id="" class="servicePaymentReceived" name="servicePaymentReceived" value="' + remAmount + '" placeholder="" /></div>';
-                cell3.innerHTML = '<div class="table-edit-control"><label></label><input type="number" step="any" min="0" data-row-id="" class="serviceTdsAmount" name="serviceTdsAmount" value="" placeholder="" style="background-color: #fffbeb; border-bottom: 1px solid #f59e0b; color: #b45309; font-weight: 700; text-align: right;" /></div>';
-                cell4.innerHTML = '<div class="table-edit-control"><label></label><input type="text" data-row-id="" class="paymentDepositDate" name="paymentDepositDate" placeholder="DD.MM.YYYY" /></div>';
-                cell5.innerHTML = '<div class="table-edit-control"><label></label><input type="text" data-row-id="" class="serviceChequeDetails" name="serviceChequeDetails" placeholder="" /></div>';
-                cell6.innerHTML = '<div class="table-edit-control"><label></label><input type="text" data-row-id="" class="serviceBalance" name="serviceBalance" value="0.00" readonly="" placeholder="" /></div><input type="hidden" data-row-id="" class="row-id" id="row-id" name="row-id" value="">';
-                cell7.innerHTML = '<div class="table-edit-control" style="text-align: center;"><a class="removeNewPaymentRow" style="color: #ef4444; cursor: pointer; padding: 2px 5px;" title="Remove Row"><i class="fa fa-trash-o"></i></a></div>';
-                row.className = "cb_subsection";
+                var newRow = $('<tr class="cb_subsection">' +
+                    '<td style="padding: 0px;">' +
+                        '<div class="table-edit-control"><label></label>' +
+                            '<input type="hidden" data-row-id="" class="serviceTypeName" name="serviceTypeName" value="' + blockService + '" />' +
+                            '<input type="hidden" data-row-id="" class="serviceAmountDecided" name="serviceAmountDecided" value="' + remAmount + '" />' +
+                            '<input type="hidden" data-row-id="" class="serviceDiscountAmount" name="serviceDiscountAmount" value="0" />' +
+                            '<input type="number" step="any" min="0" data-row-id="" class="servicePaymentReceived" name="servicePaymentReceived" value="' + remAmount + '" placeholder="" />' +
+                        '</div>' +
+                    '</td>' +
+                    '<td style="padding: 0px; background-color: #ffffff;">' +
+                        '<div class="table-edit-control"><label></label>' +
+                            '<input type="number" step="any" min="0" data-row-id="" class="serviceTdsAmount" name="serviceTdsAmount" value="" placeholder="" style="background-color: #ffffff; border-bottom: 1px solid #cbd5e1; color: #b45309; font-weight: 700; text-align: right;" />' +
+                        '</div>' +
+                    '</td>' +
+                    '<td style="padding: 0px;">' +
+                        '<div class="table-edit-control"><label></label>' +
+                            '<input type="text" data-row-id="" class="paymentDepositDate" name="paymentDepositDate" placeholder="DD.MM.YYYY" />' +
+                        '</div>' +
+                    '</td>' +
+                    '<td style="padding: 0px;">' +
+                        '<div class="table-edit-control"><label></label>' +
+                            '<input type="text" data-row-id="" class="serviceChequeDetails" name="serviceChequeDetails" placeholder="" />' +
+                        '</div>' +
+                    '</td>' +
+                    '<td style="padding: 1px 2px; text-align: center; vertical-align: middle;">' +
+                        '<div class="table-edit-control" style="display: flex; align-items: center; justify-content: center;">' +
+                            '<input type="hidden" class="serviceReconciliation" name="serviceReconciliation" value="Not Verify" />' +
+                            '<button type="button" class="btn btn-xs toggleReconcileBtn reconcile-not-verify" data-status="Not Verify" data-pay-id="" style="width: 96%; height: 23px; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 0 2px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; cursor: pointer; transition: all 0.2s ease; background-color: #ef4444; border: 1px solid #dc2626; color: #ffffff;" title="Click to toggle: Mark as Verified">' +
+                                '<i class="fa fa-times"></i> <span>Not Verify</span>' +
+                            '</button>' +
+                        '</div>' +
+                    '</td>' +
+                    '<td style="padding: 0px;">' +
+                        '<div class="table-edit-control" style="text-align: center;">' +
+                            '<input type="hidden" data-row-id="" class="serviceBalance" name="serviceBalance" value="0.00" />' +
+                            '<input type="hidden" data-row-id="" class="row-id" id="row-id" name="row-id" value="">' +
+                            '<a class="removeNewPaymentRow" style="color: #ef4444; cursor: pointer; padding: 2px 5px;" title="Remove Row"><i class="fa fa-trash-o"></i></a>' +
+                        '</div>' +
+                    '</td>' +
+                '</tr>');
+
+                $tbody.append(newRow);
 
                 if (typeof recalculatePaymentSystem === 'function') {
                     recalculatePaymentSystem();
+                }
+                if (typeof triggerPaymentAutoSave === 'function' && remAmount !== '') {
+                    triggerPaymentAutoSave(true);
                 }
             });
 
@@ -21709,27 +22224,70 @@ if ($currentRole === 'client' || $currentRole === 'external') {
 
         });
 
-        $(".infoDelete").click(function () {
-            var payrowid = $(this).attr('data-row-id');
-            $('#delete-details').show();
-            $('.delete-confirm-ok').click(function () {
+
+
+        $(document).on('click', '.toggleReconcileBtn', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var $btn = $(this);
+            var currentStatus = $btn.attr("data-status");
+            var isCurrentlyVerified = (currentStatus === "Verified" || currentStatus === "Verify");
+            var newStatus = isCurrentlyVerified ? "Not Verify" : "Verified";
+            var payId = $btn.attr("data-pay-id");
+            var $row = $btn.closest("tr");
+
+            $row.find(".serviceReconciliation").val(newStatus);
+            $btn.attr("data-status", newStatus);
+
+            if (newStatus === "Verified") {
+                $btn.removeClass("reconcile-not-verify")
+                    .addClass("reconcile-verified")
+                    .css({
+                        "background-color": "#16a34a",
+                        "border-color": "#15803d",
+                        "color": "#ffffff"
+                    })
+                    .attr("title", "Click to toggle: Mark as Not Verify")
+                    .html('<i class="fa fa-check"></i> <span>Verified</span>');
+            } else {
+                $btn.removeClass("reconcile-verified")
+                    .addClass("reconcile-not-verify")
+                    .css({
+                        "background-color": "#ef4444",
+                        "border-color": "#dc2626",
+                        "color": "#ffffff"
+                    })
+                    .attr("title", "Click to toggle: Mark as Verified")
+                    .html('<i class="fa fa-times"></i> <span>Not Verify</span>');
+            }
+
+            if (payId && payId !== "" && payId !== "0") {
+                $btn.css("opacity", "0.6");
                 $.ajax({
                     url: "addPayment.php",
-                    type: "GET",
-                    //                    dataType: "json",
+                    type: "POST",
                     data: {
-                        paymentID: payrowid,
+                        action: "updateReconcileStatus",
+                        payment_id: payId,
+                        status: newStatus
                     },
-                    success: function (data) {
-                        $(".pamentrow" + payrowid).hide();
-                        //                        alert(data);
-                        $('#delete-details').hide();
+                    dataType: "json",
+                    success: function (res) {
+                        $btn.css("opacity", "1");
+                        if (!res || !res.success) {
+                            console.warn("Could not update reconcile status via background AJAX:", res);
+                        }
+                    },
+                    error: function (xhr, status, err) {
+                        $btn.css("opacity", "1");
+                        console.error("Error updating reconcile status:", err);
                     }
                 });
-            });
-            $('.delete-cancel').click(function () {
-                $('#delete-details').hide();
-            });
+            } else {
+                if (typeof triggerPaymentAutoSave === 'function') {
+                    triggerPaymentAutoSave(true);
+                }
+            }
         });
 
         $(document).on('click', '.invoiceStatusBtn', function (e) {
@@ -21794,79 +22352,370 @@ if ($currentRole === 'client' || $currentRole === 'external') {
         });
 
         function recalculatePaymentSystem() {
-            var totalInvoice = 0;
-            $("#invoice_service_details .invoiceAmount").each(function () {
-                var v = parseFloat($(this).val()) || 0;
-                totalInvoice += v;
-            });
-            $("#totalInvoiceTableSum").val(totalInvoice.toFixed(2));
+            var grandTotalInvoice = 0;
+            var grandTotalReceived = 0;
+            var grandTotalTds = 0;
+            var grandTotalDiscount = 0;
 
-            var totalReceived = 0;
-            var totalTds = 0;
-            var totalDiscount = 0;
+            var $blocks = $(".service-payment-block");
+            if ($blocks.length > 0) {
+                $blocks.each(function () {
+                    var $block = $(this);
 
-            $("#service_details tbody tr.cb_subsection").each(function () {
-                var $row = $(this);
-                var sType = ($row.find(".serviceTypeName").val() || "").trim().toLowerCase();
-                var received = parseFloat($row.find(".servicePaymentReceived").val()) || 0;
-                var tds = parseFloat($row.find(".serviceTdsAmount").val()) || 0;
-                var discount = parseFloat($row.find(".serviceDiscountAmount").val()) || 0;
+                    // 1. Invoices in this block
+                    var blockInvoiceSum = 0;
+                    var blockInvoiceCount = 0;
+                    $block.find(".invoice-service-details-table tbody tr").each(function () {
+                        var $r = $(this);
+                        var invNo = ($r.find(".invoiceNo").val() || "").trim();
+                        var amt = parseFloat($r.find(".invoiceAmount").val()) || 0;
+                        if (invNo !== "-" && invNo !== "") {
+                            blockInvoiceCount++;
+                        }
+                        blockInvoiceSum += amt;
+                    });
+                    $block.find(".totalInvoiceTableSum").val(blockInvoiceSum.toFixed(2));
+                    $block.find(".blockInvoiceCount").text(blockInvoiceCount);
+                    grandTotalInvoice += blockInvoiceSum;
 
-                var isDiscountRow = ($row.hasClass('discount-settlement-row') || discount > 0 || sType.indexOf("discount") !== -1 || sType.indexOf("short") !== -1);
+                    // 2. Payments in this block
+                    var blockReceived = 0;
+                    var blockTds = 0;
+                    var blockDiscount = 0;
+                    var blockValidCount = 0;
 
-                if (isDiscountRow) {
-                    if (discount === 0 && received > 0) {
-                        discount = received;
-                    }
-                    received = 0;
-                    $row.find(".servicePaymentReceived").val(0);
-                    $row.find(".serviceDiscountAmount").val(discount);
-                    $row.find(".serviceAmountDecided").val(discount.toFixed(2));
-                    $row.find(".serviceBalance").val("0.00");
-                    totalDiscount += discount;
-                    return;
-                }
+                    $block.find(".service-details-table tbody tr.cb_subsection").each(function () {
+                        var $row = $(this);
+                        var sType = ($row.find(".serviceTypeName").val() || "").trim().toLowerCase();
+                        var received = parseFloat($row.find(".servicePaymentReceived").val()) || 0;
+                        var tds = parseFloat($row.find(".serviceTdsAmount").val()) || 0;
+                        var discount = parseFloat($row.find(".serviceDiscountAmount").val()) || 0;
 
-                if (sType.indexOf("tds") !== -1 && tds === 0 && received > 0) {
-                    tds = received;
-                    received = 0;
-                }
+                        var isDiscountRow = ($row.hasClass('discount-settlement-row') || discount > 0 || sType.indexOf("discount") !== -1 || sType.indexOf("short") !== -1);
 
-                $row.find(".serviceAmountDecided").val((received + tds).toFixed(2));
-                $row.find(".serviceBalance").val("0.00");
+                        if (isDiscountRow) {
+                            if (discount === 0 && received > 0) {
+                                discount = received;
+                            }
+                            received = 0;
+                            $row.find(".servicePaymentReceived").val(0);
+                            $row.find(".serviceDiscountAmount").val(discount);
+                            $row.find(".serviceAmountDecided").val(discount.toFixed(2));
+                            $row.find(".serviceBalance").val("0.00");
+                            blockDiscount += discount;
+                        } else {
+                            if (sType.indexOf("tds") !== -1 && tds === 0 && received > 0) {
+                                tds = received;
+                                received = 0;
+                            }
+                            $row.find(".serviceAmountDecided").val((received + tds).toFixed(2));
+                            $row.find(".serviceBalance").val("0.00");
+                            blockReceived += received;
+                            blockTds += tds;
+                        }
 
-                totalReceived += received;
-                totalTds += tds;
-            });
+                        var dt = ($row.find(".paymentDepositDate").val() || "").trim();
+                        var chk = ($row.find(".serviceChequeDetails").val() || "").trim();
+                        var rec = ($row.find(".serviceReconciliation").val() || "").trim();
+                        if (received > 0 || tds > 0 || discount > 0 || dt !== "" || chk !== "" || rec !== "") {
+                            blockValidCount++;
+                        }
+                    });
 
-            var masterFinal = totalInvoice;
-            var balanceRemaining = masterFinal - totalReceived - totalTds - totalDiscount;
+                    var blockCombined = blockReceived + blockTds + blockDiscount;
+                    $block.find(".totalPaymentReceivedSum").val(blockReceived.toFixed(2));
+                    $block.find(".totalPaymentTdsSum").val(blockTds.toFixed(2));
+                    $block.find(".totalPaymentCombinedSum").val(blockCombined.toFixed(2));
+                    $block.find(".totalPaymentRowCount").text(blockValidCount);
 
-            $("#summaryTotalAmount").text(masterFinal.toFixed(2));
-            $("#summaryReceivedAmount").text(totalReceived.toFixed(2));
-            $("#summaryTdsAmount").text(totalTds.toFixed(2));
-            $("#summaryDiscountAmount").text(totalDiscount.toFixed(2));
-            $("#summaryRemainingAmount").text(balanceRemaining.toFixed(2));
-
-            if (balanceRemaining > 0) {
-                $("#summaryRemainingAmount").parent().css("color", "#dc2626");
+                    grandTotalReceived += blockReceived;
+                    grandTotalTds += blockTds;
+                    grandTotalDiscount += blockDiscount;
+                });
             } else {
-                $("#summaryRemainingAmount").parent().css("color", "#16a34a");
+                $("#invoice_service_details .invoiceAmount").each(function () {
+                    grandTotalInvoice += (parseFloat($(this).val()) || 0);
+                });
+                $("#totalInvoiceTableSum").val(grandTotalInvoice.toFixed(2));
+
+                $("#service_details tbody tr.cb_subsection").each(function () {
+                    var $row = $(this);
+                    var sType = ($row.find(".serviceTypeName").val() || "").trim().toLowerCase();
+                    var received = parseFloat($row.find(".servicePaymentReceived").val()) || 0;
+                    var tds = parseFloat($row.find(".serviceTdsAmount").val()) || 0;
+                    var discount = parseFloat($row.find(".serviceDiscountAmount").val()) || 0;
+
+                    if ($row.hasClass('discount-settlement-row') || discount > 0 || sType.indexOf("discount") !== -1 || sType.indexOf("short") !== -1) {
+                        if (discount === 0 && received > 0) discount = received;
+                        received = 0;
+                        grandTotalDiscount += discount;
+                    } else {
+                        if (sType.indexOf("tds") !== -1 && tds === 0 && received > 0) {
+                            tds = received;
+                            received = 0;
+                        }
+                        grandTotalReceived += received;
+                        grandTotalTds += tds;
+                    }
+                });
+                $("#totalPaymentReceivedSum").val(grandTotalReceived.toFixed(2));
+                $("#totalPaymentTdsSum").val(grandTotalTds.toFixed(2));
+                $("#totalPaymentCombinedSum").val((grandTotalReceived + grandTotalTds + grandTotalDiscount).toFixed(2));
             }
 
-            $("#summaryReceivableAmount").text(masterFinal.toFixed(2));
-            $("#summaryInvoicingAmount").text(totalInvoice.toFixed(2));
-            $("#summaryBalanceAmount").text(balanceRemaining.toFixed(2));
+            var grandRemaining = grandTotalInvoice - grandTotalReceived - grandTotalTds - grandTotalDiscount;
+
+            $("#summaryTotalAmount").text(grandTotalInvoice.toFixed(2));
+            $("#summaryReceivedAmount").text(grandTotalReceived.toFixed(2));
+            $("#summaryTdsAmount").text(grandTotalTds.toFixed(2));
+            $("#summaryDiscountAmount").text(grandTotalDiscount.toFixed(2));
+            $("#summaryRemainingAmount").text(grandRemaining.toFixed(2));
+
+            if (grandRemaining > 0) {
+                $("#summaryRemainingTh").css({
+                    "background": "#fef2f2",
+                    "border-top": "3.5px solid #dc2626"
+                });
+                $("#summaryRemainingAmount").parent().css("color", "#dc2626");
+                $("#summaryRemainingLabel").css("color", "#991b1b").html('<i class="fa fa-clock-o" style="color: #dc2626; margin-right: 3px;"></i> Remaining Amount');
+            } else {
+                $("#summaryRemainingTh").css({
+                    "background": "#f0fdf4",
+                    "border-top": "3.5px solid #16a34a"
+                });
+                $("#summaryRemainingAmount").parent().css("color", "#15803d");
+                $("#summaryRemainingLabel").css("color", "#166534").html('<i class="fa fa-check-circle" style="color: #16a34a; margin-right: 3px;"></i> Remaining (Settled)');
+            }
+
+            $("#summaryReceivableAmount").text(grandTotalInvoice.toFixed(2));
+            $("#summaryInvoicingAmount").text(grandTotalInvoice.toFixed(2));
+            $("#summaryBalanceAmount").text(grandRemaining.toFixed(2));
 
             return {
-                totalInvoice: totalInvoice,
-                masterFinal: masterFinal,
-                totalReceived: totalReceived,
-                totalTds: totalTds,
-                totalDiscount: totalDiscount,
-                remainingBalance: balanceRemaining
+                totalInvoice: grandTotalInvoice,
+                masterFinal: grandTotalInvoice,
+                totalReceived: grandTotalReceived,
+                totalTds: grandTotalTds,
+                totalDiscount: grandTotalDiscount,
+                remainingBalance: grandRemaining
             };
         }
+
+        // Helper function to dynamically generate a new service block
+        function renderServiceBlockTemplate(svcName, blockIdx, customerId, customerAddress, availableServices) {
+            var optionsHtml = '';
+            for (var i = 0; i < availableServices.length; i++) {
+                var s = availableServices[i];
+                var sel = (s.toLowerCase() === svcName.toLowerCase()) ? 'selected' : '';
+                optionsHtml += '<option value="' + s + '" ' + sel + '>' + s + '</option>';
+            }
+
+            var html = '';
+            html += '<div class="service-block-divider" style="margin: 28px 0 22px 0; border-top: 2px dashed #94a3b8; position: relative; text-align: center; clear: both;">';
+            html += '    <span style="position: absolute; top: -11px; left: 50%; transform: translateX(-50%); background: #ffffff; padding: 0 16px; font-size: 11px; font-weight: 700; color: #475569; letter-spacing: 0.5px; border: 1.5px dashed #cbd5e1; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); display: inline-flex; align-items: center; gap: 6px;">';
+            html += '        <i class="fa fa-code-fork" style="color: #2563eb; font-size: 11px;"></i> SERVICE SEPARATION &bull; <span class="divider-service-label">' + svcName + '</span>';
+            html += '    </span>';
+            html += '</div>';
+
+            html += '<div class="service-payment-block" data-service="' + svcName + '" data-block-id="' + blockIdx + '" style="margin-bottom: 22px;">';
+            html += '    <div class="service-block-meta-bar" style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 12px; margin-bottom: 10px;">';
+            html += '        <div style="display: flex; align-items: center; gap: 10px;">';
+            html += '            <span style="font-size: 11.5px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px;">Service Scope:</span>';
+            html += '            <select class="form-control serviceBlockTypeSelect" style="width: auto; display: inline-block; height: 26px; padding: 2px 8px; font-size: 12px; font-weight: 700; color: #1e293b; background: #ffffff; border: 1.5px solid #2563eb; border-radius: 4px; outline: none; cursor: pointer;">';
+            html +=                 optionsHtml;
+            html += '            </select>';
+            html += '            <span class="label label-primary serviceBlockBadge" style="background-color: #2563eb; font-size: 11px; font-weight: 700; padding: 4px 8px; border-radius: 4px;">' + svcName + '</span>';
+            html += '        </div>';
+            html += '        <div style="display: flex; align-items: center; gap: 8px;">';
+            html += '            <button type="button" class="btn btn-xs removeServiceBlockBtn" style="background: #ffffff; color: #ef4444; border: 1px solid #fca5a5; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; cursor: pointer;" title="Remove this service section">';
+            html += '                <i class="fa fa-trash-o"></i> Remove Header';
+            html += '            </button>';
+            html += '        </div>';
+            html += '    </div>';
+
+            html += '    <div class="row payment-tables-row" style="display: flex; align-items: stretch; margin-left: -5px; margin-right: -5px;">';
+            // Invoices column
+            html += '        <div class="col-xs-6 table-responsive invoice-container-col" style="flex: 1 1 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px;">';
+            html += '            <div class="row">';
+            html += '                <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 10px;">';
+            html += '                    <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.4px;"><i class="fa ">Invoice</i> (<span class="col-service-label">' + svcName + '</span>)</span>';
+            html += '                    <button type="button" class="btn btn-xs finalInvoiceBtn" data-id="' + customerId + '" data-address="' + customerAddress + '" data-service="' + svcName + '" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #ffffff; border: 1px solid #1e40af; font-weight: 700; font-size: 11px; border-radius: 4px; padding: 2px 10px; box-shadow: 0 1px 3px rgba(37,99,235,0.25); text-transform: none; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; transition: all 0.2s ease;" title="Create Final Invoice Against ' + svcName + '">';
+            html += '                        <i class="fa fa-plus" style="font-size: 10px;"></i> issue tax invoice against service';
+            html += '                    </button>';
+            html += '                </div>';
+            html += '            </div>';
+            html += '            <div class="row">';
+            html += '                <table class="table table-bordered table-hover table-sortable service_details invoice-service-details-table">';
+            html += '                    <thead><tr>';
+            html += '                        <th width="28%" style="padding: 3px 2px; text-align: center;"><small>Invoice No.</small></th>';
+            html += '                        <th width="18%" style="padding: 3px 2px; text-align: center;"><small>Date</small></th>';
+            html += '                        <th width="22%" style="padding: 3px 2px; text-align: center;"><small>Gross Amount</small></th>';
+            html += '                        <th width="32%" style="padding: 3px 2px; text-align: center;"><small>Remark</small></th>';
+            html += '                    </tr></thead>';
+            html += '                    <tbody>';
+            html += '                        <tr class="cb_subsection">';
+            html += '                            <td style="padding: 0px;"><div class="table-edit-control"><label></label><input type="text" class="invoiceNo" name="invoiceNo" value="-" readonly style="text-align: center; color: #94a3b8;" /></div></td>';
+            html += '                            <td style="padding: 0px;"><div class="table-edit-control"><label></label><input type="text" class="invoiceDate" name="invoiceDate" value="-" readonly style="text-align: center; color: #94a3b8;" /></div></td>';
+            html += '                            <td style="padding: 0px;"><div class="table-edit-control"><label></label><input type="text" class="invoiceAmount" name="invoiceAmount" value="0.00" readonly style="text-align: center; color: #94a3b8;" /></div></td>';
+            html += '                            <td style="padding: 0px;"><div class="table-edit-control"><label></label><input type="text" class="invoiceRemark" readonly disabled placeholder="-" style="text-align: center; color: #94a3b8; background: transparent; border: none;" /></div></td>';
+            html += '                        </tr>';
+            html += '                    </tbody>';
+            html += '                    <tfoot>';
+            html += '                        <tr style="background-color: #f8fafc; font-weight: bold; border-top: 2px solid #cbd5e1;">';
+            html += '                            <td colspan="2" style="text-align: right; padding: 4px 8px; vertical-align: middle; color: #334155; white-space: nowrap;"><small style="font-weight: 700; font-size: 11px;">TOTAL INVOICE (<span class="blockInvoiceCount">0</span>):</small></td>';
+            html += '                            <td style="padding: 0px; vertical-align: middle;"><div class="table-edit-control"><input type="text" class="totalInvoiceTableSum" value="0.00" style="font-weight: bold; color: #0f172a; background: #ffffff; text-align: center; border: 1px solid #cbd5e1; font-size: 12px; height: 26px; padding: 0;" readonly title="Total Invoicing Amount for ' + svcName + '" /></div></td>';
+            html += '                            <td></td>';
+            html += '                        </tr>';
+            html += '                    </tfoot>';
+            html += '                </table>';
+            html += '            </div>';
+            html += '        </div>';
+
+            // Payments column
+            html += '        <div class="col-xs-6 table-responsive payments-container-col" style="flex: 1 1 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px;">';
+            html += '            <div class="row">';
+            html += '                <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 10px;">';
+            html += '                    <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.4px;"><i class="fa ">Payments</i> (<span class="col-service-label">' + svcName + '</span>)</span>';
+            html += '                    <button type="button" class="btn btn-xs openDiscountModalBtn" data-service="' + svcName + '" style="background: #ffffff; color: #475569; border: 1px solid #cbd5e1; font-weight: 700; font-size: 11px; border-radius: 4px; padding: 2px 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.06); text-transform: none; display: inline-flex; align-items: center; gap: 3px; cursor: pointer; transition: all 0.2s ease;" title="Discount / Short Paid Settlement">(-+)</button>';
+            html += '                </div>';
+            html += '            </div>';
+            html += '            <div class="row">';
+            html += '                <table class="table table-bordered table-hover table-sortable service_details service-details-table">';
+            html += '                    <thead><tr>';
+            html += '                        <th width="24%" style="padding: 2px"><small>Payment received</small></th>';
+            html += '                        <th width="18%" style="padding: 2px; text-align: center;"><small style="font-weight: 700; color: #b45309;"><i class="fa fa-percent" style="font-size: 10px; margin-right: 2px;"></i> TDS Deducted</small></th>';
+            html += '                        <th width="17%" style="padding: 2px"><small>Received Date</small></th>';
+            html += '                        <th width="18%" style="padding: 2px"><small>Instrument</small></th>';
+            html += '                        <th width="16%" style="padding: 2px"><small>Reconcile</small></th>';
+            html += '                        <th width="7%" style="padding: 2px; text-align: right;"><a class="btn btn-xs btn-info cbAddLink pull-right" data-service="' + svcName + '" data-row-id="" data-row-count="1" title="Add new row" style="padding: 1px 5px;"><i class="fa fa-plus-circle fa-lg" style="padding: 3px"></i></a></th>';
+            html += '                    </tr></thead>';
+            html += '                    <tbody>';
+            html += '                        <tr class="cb_subsection previousCBData" id="cb_subsection_0">';
+            html += '                            <td style="padding: 0px;"><div class="table-edit-control"><label></label><input type="hidden" data_row_id="" class="serviceTypeName" name="serviceTypeName" value="' + svcName + '" /><input type="hidden" data_row_id="" class="serviceAmountDecided" name="serviceAmountDecided" value="" /><input type="hidden" data_row_id="" class="serviceDiscountAmount" name="serviceDiscountAmount" value="" /><input type="number" step="any" min="0" data_row_id="" class="servicePaymentReceived" name="servicePaymentReceived" value="" placeholder="" /></div></td>';
+            html += '                            <td style="padding: 0px; background-color: #ffffff;"><div class="table-edit-control"><label></label><input type="number" step="any" min="0" data_row_id="" class="serviceTdsAmount" name="serviceTdsAmount" value="" placeholder="" style="background-color: #ffffff; border-bottom: 1px solid #cbd5e1; color: #b45309; font-weight: 700; text-align: right;" /></div></td>';
+            html += '                            <td style="padding: 0px;"><div class="table-edit-control"><label></label><input type="text" data_row_id="" class="paymentDepositDate" name="paymentDepositDate" value="" placeholder="DD.MM.YYYY"></div></td>';
+            html += '                            <td style="padding: 0px;"><div class="table-edit-control"><label></label><input type="text" data_row_id="" class="serviceChequeDetails" name="serviceChequeDetails" value="" placeholder="" /></div></td>';
+            html += '                            <td style="padding: 1px 2px; text-align: center; vertical-align: middle;"><div class="table-edit-control" style="display: flex; align-items: center; justify-content: center;"><input type="hidden" class="serviceReconciliation" name="serviceReconciliation" value="Not Verify" /><button type="button" class="btn btn-xs toggleReconcileBtn reconcile-not-verify" data-status="Not Verify" data-pay-id="" style="width: 96%; height: 23px; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 0 2px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; cursor: pointer; transition: all 0.2s ease; background-color: #ef4444; border: 1px solid #dc2626; color: #ffffff;" title="Click to toggle: Mark as Verified"><i class="fa fa-times"></i> <span>Not Verify</span></button></div></td>';
+            html += '                            <td style="padding: 0px;"><div class="table-edit-control"><input type="hidden" data_row_id="" class="serviceBalance" name="serviceBalance" value="0.00" /><input type="hidden" data-row-id="" class="row-id" name="row-id" value=""></div></td>';
+            html += '                        </tr>';
+            html += '                    </tbody>';
+            html += '                    <tfoot>';
+            html += '                        <tr style="background-color: #f8fafc; font-weight: bold; border-top: 2px solid #cbd5e1;">';
+            html += '                            <td style="padding: 0px; vertical-align: middle;"><div class="table-edit-control"><input type="text" class="totalPaymentReceivedSum" value="0.00" style="font-weight: bold; color: #16a34a; background: #ffffff; text-align: center; border: 1px solid #cbd5e1; font-size: 12px; height: 26px; padding: 0;" readonly title="Total Payment Received for ' + svcName + '" /></div></td>';
+            html += '                            <td style="padding: 0px; vertical-align: middle; background-color: #f8fafc;"><div class="table-edit-control"><input type="text" class="totalPaymentTdsSum" value="0.00" style="font-weight: bold; color: #b45309; background: #ffffff; text-align: center; border: 1px solid #cbd5e1; font-size: 12px; height: 26px; padding: 0;" readonly title="Total TDS Amount for ' + svcName + '" /></div></td>';
+            html += '                            <td colspan="4" style="text-align: right; padding: 4px 8px; vertical-align: middle; color: #334155; white-space: nowrap;"><small style="font-weight: 700; font-size: 11px;">TOTAL PAYMENT (<span class="totalPaymentRowCount">0</span>):</small><div style="display: inline-block; vertical-align: middle; margin-left: 6px; width: 95px;"><input type="text" class="totalPaymentCombinedSum" value="0.00" style="font-weight: bold; color: #0f172a; background: #ffffff; text-align: center; border: 1px solid #cbd5e1; font-size: 12px; height: 26px; padding: 0; width: 100%;" readonly title="Total Payment Amount for ' + svcName + '" /></div></td>';
+            html += '                        </tr>';
+            html += '                    </tfoot>';
+            html += '                </table>';
+            html += '            </div>';
+            html += '        </div>';
+            html += '    </div>';
+            html += '</div>';
+
+            return html;
+        }
+
+        // Add Invoice Header Button Click Handler
+        $(document).on('click', '.btnAddInvoiceHeader', function (e) {
+            if (e && e.stopPropagation) e.stopPropagation();
+            if (e && e.preventDefault) e.preventDefault();
+
+            var $pDesc = $('.payment-desc');
+            if ($pDesc.is(':hidden')) {
+                $pDesc.slideDown();
+            }
+
+            var availableServices = ['CA', 'SA-I', 'SA-II', 'RC', 'SP', 'Contract Review', 'PTR', 'Transition Audit'];
+            var currentActiveServices = [];
+            $('.service-payment-block').each(function () {
+                var s = $(this).attr('data-service');
+                if (s) currentActiveServices.push(s.toUpperCase());
+            });
+
+            var nextService = 'SA-I';
+            for (var i = 0; i < availableServices.length; i++) {
+                if (currentActiveServices.indexOf(availableServices[i].toUpperCase()) === -1) {
+                    nextService = availableServices[i];
+                    break;
+                }
+            }
+
+            var blockIndex = $('.service-payment-block').length;
+            var customerId = <?php echo json_encode((string)($_GET["customerid"] ?? "")); ?>;
+            var customerAddress = <?php echo json_encode((string)($clientInfo["address"] ?? "")); ?>;
+
+            var newBlockHtml = renderServiceBlockTemplate(nextService, blockIndex, customerId, customerAddress, availableServices);
+
+            $('#service_blocks_container').append(newBlockHtml);
+            $('#activeServicesCountBadge').text($('.service-payment-block').length + ' Active');
+
+            var $newBlock = $('.service-payment-block').last();
+            $('html, body').animate({
+                scrollTop: $newBlock.offset().top - 80
+            }, 400);
+
+            recalculatePaymentSystem();
+        });
+
+        // Service Block Type Select Change
+        $(document).on('change', '.serviceBlockTypeSelect', function () {
+            var newSvc = $(this).val();
+            var $block = $(this).closest('.service-payment-block');
+            $block.attr('data-service', newSvc);
+            $block.find('.serviceBlockBadge').text(newSvc);
+            $block.find('.col-service-label').text(newSvc);
+            $block.find('.finalInvoiceBtn').attr('data-service', newSvc).attr('title', 'Create Final Invoice Against ' + newSvc);
+            $block.find('.cbAddLink').attr('data-service', newSvc);
+            $block.find('.openDiscountModalBtn').attr('data-service', newSvc);
+
+            var $prevDivider = $block.prev('.service-block-divider');
+            if ($prevDivider.length) {
+                $prevDivider.find('.divider-service-label').text(newSvc);
+            }
+
+            $block.find('tbody tr.cb_subsection').each(function () {
+                var rId = $(this).find('.row-id').val();
+                if (!rId) {
+                    $(this).find('.serviceTypeName').val(newSvc);
+                }
+            });
+
+            $block.find('.invoiceServiceTypeSelect[data-invoice-id="0"]').val(newSvc);
+        });
+
+        // Remove Service Block Button Click Handler
+        $(document).on('click', '.removeServiceBlockBtn', function () {
+            var $block = $(this).closest('.service-payment-block');
+            var hasSavedInvoice = false;
+            $block.find('.invoiceRemark').each(function () {
+                var id = $(this).attr('data-invoice-id');
+                if (id && id !== '0') hasSavedInvoice = true;
+            });
+            $block.find('.viewFinalInvoice').each(function () {
+                var id = $(this).attr('data-id');
+                if (id && id !== '0') hasSavedInvoice = true;
+            });
+            var hasSavedPayment = false;
+            $block.find('.row-id').each(function () {
+                var pid = $(this).val();
+                if (pid && pid !== '' && pid !== '0') hasSavedPayment = true;
+            });
+
+            if (hasSavedInvoice || hasSavedPayment) {
+                alert("This service block contains saved invoice or payment records and cannot be removed directly. Please delete or reassign the records first.");
+                return;
+            }
+
+            if (confirm("Are you sure you want to remove this service header section?")) {
+                var $prevDivider = $block.prev('.service-block-divider');
+                if ($prevDivider.length) {
+                    $prevDivider.remove();
+                }
+                $block.remove();
+                $('#activeServicesCountBadge').text($('.service-payment-block').length + ' Active');
+                recalculatePaymentSystem();
+            }
+        });
 
         // Live calculation on amount changes
         $(document).on('input keyup change', '.servicePaymentReceived, .serviceTdsAmount', function () {
@@ -21988,13 +22837,204 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             });
         });
 
-        $('.savePayment').click(function () {
-            var paymentID = $(this).attr('data-row-id');
-            var customerID = '<?php echo $_GET['customerid'] ?>';
+        $(document).on('change', '.invoiceServiceTypeSelect', function () {
+            var $sel = $(this);
+            var invId = $sel.attr('data-invoice-id');
+            var selectedService = $sel.val();
 
-            var hasError = false;
-            var errorMsg = "";
+            if (!invId || invId === '0') {
+                return;
+            }
 
+            $sel.css({
+                'opacity': '0.6',
+                'border-color': '#f59e0b'
+            });
+
+            $.ajax({
+                url: 'addPayment.php',
+                type: 'POST',
+                data: {
+                    action: 'updateInvoiceServiceType',
+                    invoice_id: invId,
+                    service_type: selectedService
+                },
+                dataType: 'json',
+                success: function (res) {
+                    if (res && res.success) {
+                        $sel.css({
+                            'opacity': '1',
+                            'border-color': '#16a34a',
+                            'background-color': '#f0fdf4'
+                        });
+                        setTimeout(function () {
+                            $sel.css({
+                                'border-color': '#cbd5e1',
+                                'background-color': '#ffffff'
+                            });
+                        }, 1200);
+                    } else {
+                        $sel.css({
+                            'opacity': '1',
+                            'border-color': '#ef4444',
+                            'background-color': '#fef2f2'
+                        });
+                        alert('Could not update Service Type: ' + ((res && res.message) ? res.message : 'Unknown error'));
+                    }
+                },
+                error: function (xhr, status, err) {
+                    $sel.css({
+                        'opacity': '1',
+                        'border-color': '#ef4444',
+                        'background-color': '#fef2f2'
+                    });
+                    console.error('Service type update error:', err);
+                }
+            });
+        });
+
+        $(document).on('change', '.paymentServiceTypeSelect', function () {
+            var $sel = $(this);
+            var $row = $sel.closest('tr');
+            var payId = $row.find('.row-id').val();
+            var selectedService = $sel.val();
+
+            if (!payId || payId === '0') {
+                return;
+            }
+
+            $sel.css({
+                'opacity': '0.6',
+                'border-color': '#f59e0b'
+            });
+
+            $.ajax({
+                url: 'addPayment.php',
+                type: 'POST',
+                data: {
+                    action: 'updatePaymentServiceType',
+                    payment_id: payId,
+                    service_type: selectedService
+                },
+                dataType: 'json',
+                success: function (res) {
+                    if (res && res.success) {
+                        $sel.css({
+                            'opacity': '1',
+                            'border-color': '#16a34a',
+                            'background-color': '#f0fdf4'
+                        });
+                        setTimeout(function () {
+                            $sel.css({
+                                'border-color': '#cbd5e1',
+                                'background-color': '#ffffff'
+                            });
+                        }, 1200);
+                    } else {
+                        $sel.css({
+                            'opacity': '1',
+                            'border-color': '#ef4444',
+                            'background-color': '#fef2f2'
+                        });
+                    }
+                },
+                error: function (xhr, status, err) {
+                    $sel.css({
+                        'opacity': '1',
+                        'border-color': '#ef4444',
+                        'background-color': '#fef2f2'
+                    });
+                    console.error('Payment service type update error:', err);
+                }
+            });
+        });
+
+        /* Auto-Save & Payment System Core */
+        function showAutoSaveIndicator(state, message) {
+            // Visual badge removed; auto-save operates silently in the background
+            return;
+        }
+
+        // Invoice Remark Auto-save
+        var invoiceRemarkTimer = null;
+        function autoSaveInvoiceRemark($input) {
+            var invId = $input.attr('data-invoice-id');
+            var val = $input.val();
+            if (!invId || invId === '0') {
+                return;
+            }
+            showAutoSaveIndicator('saving', 'Saving remark...');
+            $input.css({'border-color': '#f59e0b', 'background-color': '#fffbeb'});
+
+            $.ajax({
+                url: 'addPayment.php',
+                type: 'POST',
+                data: {
+                    action: 'updateInvoiceRemark',
+                    invoice_id: invId,
+                    remark: val
+                },
+                dataType: 'json',
+                success: function (res) {
+                    if (res && res.success) {
+                        $input.css({'border-color': 'transparent', 'background-color': 'transparent'});
+                        showAutoSaveIndicator('saved', 'Remark saved');
+                        setTimeout(function () { showAutoSaveIndicator('saved'); }, 2000);
+                    } else {
+                        $input.css({'border-color': '#ef4444', 'background-color': '#fef2f2'});
+                        showAutoSaveIndicator('error', (res && res.message) ? res.message : 'Error');
+                    }
+                },
+                error: function () {
+                    $input.css({'border-color': '#ef4444', 'background-color': '#fef2f2'});
+                    showAutoSaveIndicator('error', 'Network error');
+                }
+            });
+        }
+
+        $(document).on('input', '.invoiceRemark', function () {
+            var $inp = $(this);
+            clearTimeout(invoiceRemarkTimer);
+            invoiceRemarkTimer = setTimeout(function () {
+                autoSaveInvoiceRemark($inp);
+            }, 500);
+        });
+
+        $(document).on('blur change', '.invoiceRemark', function () {
+            clearTimeout(invoiceRemarkTimer);
+            autoSaveInvoiceRemark($(this));
+        });
+
+        // Payment System Auto-save
+        var paymentAutoSaveTimer = null;
+        var isPaymentSaving = false;
+        var paymentSavePending = false;
+
+        function triggerPaymentAutoSave(immediate) {
+            if (paymentAutoSaveTimer) {
+                clearTimeout(paymentAutoSaveTimer);
+                paymentAutoSaveTimer = null;
+            }
+            if (immediate) {
+                executePaymentAutoSave();
+            } else {
+                showAutoSaveIndicator('saving', 'Saving...');
+                paymentAutoSaveTimer = setTimeout(function () {
+                    executePaymentAutoSave();
+                }, 500);
+            }
+        }
+
+        function executePaymentAutoSave() {
+            if (isPaymentSaving) {
+                paymentSavePending = true;
+                return;
+            }
+
+            var paymentID = $('#paymentAutoSaveStatus').attr('data-row-id') || $('.savePayment').attr('data-row-id') || '';
+            var customerID = '<?php echo $_GET['customerid'] ?? '' ?>';
+
+            var $matchedRows = [];
             var serviceTypeArray = [];
             var serviceAmountArray = [];
             var paymentReceivedArray = [];
@@ -22002,98 +23042,187 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             var discountAmountArray = [];
             var depositDateArray = [];
             var serviceChequeArray = [];
+            var reconciliationArray = [];
             var rowidArray = [];
 
-            $("#service_details tbody tr.cb_subsection").each(function () {
-                var sType = ($(this).find(".serviceTypeName").val() || "").trim();
-                var received = $(this).find(".servicePaymentReceived").val();
-                var tds = $(this).find(".serviceTdsAmount").val();
-                var discount = $(this).find(".serviceDiscountAmount").val();
-                var dateVal = $(this).find(".paymentDepositDate").val();
-                var chkVal = $(this).find(".serviceChequeDetails").val();
-                var rId = $(this).find(".row-id").val();
+            $(".service-details-table tbody tr.cb_subsection, #service_details tbody tr.cb_subsection").each(function () {
+                var $row = $(this);
+                var sType = ($row.find(".serviceTypeName").val() || "").trim();
+                if (sType === "") {
+                    sType = $row.closest('.service-payment-block').attr('data-service') || "Payment";
+                }
+                var received = $row.find(".servicePaymentReceived").val();
+                var tds = $row.find(".serviceTdsAmount").val();
+                var discount = $row.find(".serviceDiscountAmount").val();
+                var dateVal = $row.find(".paymentDepositDate").val();
+                var chkVal = $row.find(".serviceChequeDetails").val();
+                var recVal = $row.find(".serviceReconciliation").val();
+                var rId = $row.find(".row-id").val();
+
+                var hasData = (received !== "" && received !== null && received !== undefined) ||
+                              (tds !== "" && tds !== null && tds !== undefined) ||
+                              (discount !== "" && discount !== null && discount !== undefined) ||
+                              (dateVal !== "" && dateVal !== null && dateVal !== undefined) ||
+                              (chkVal !== "" && chkVal !== null && chkVal !== undefined) ||
+                              (recVal !== "" && recVal !== null && recVal !== undefined) ||
+                              (rId !== "" && rId !== null && rId !== undefined && rId !== "0");
+
+                if (!hasData) {
+                    return;
+                }
 
                 var rcvNum = parseFloat(received) || 0;
                 var tdsNum = parseFloat(tds) || 0;
                 var discNum = parseFloat(discount) || 0;
 
-                if (received !== "" || tds !== "" || discount !== "" || dateVal !== "" || chkVal !== "") {
-                    if (sType === "") {
-                        hasError = true;
-                        errorMsg = "Please enter Service Type for all payment rows.";
-                        return false;
-                    }
-                    if (rcvNum < 0) {
-                        hasError = true;
-                        errorMsg = "Payment received cannot be negative.";
-                        return false;
-                    }
-                    if (tdsNum < 0) {
-                        hasError = true;
-                        errorMsg = "TDS amount cannot be negative.";
-                        return false;
-                    }
-                    if (discNum < 0) {
-                        hasError = true;
-                        errorMsg = "Discount amount cannot be negative.";
-                        return false;
-                    }
-                }
-
-                if (sType !== "") {
-                    serviceTypeArray.push(sType);
-                    serviceAmountArray.push((rcvNum + tdsNum + discNum).toFixed(2));
-                    paymentReceivedArray.push(received || "0");
-                    tdsAmountArray.push(tds || "0");
-                    discountAmountArray.push(discount || "0");
-                    depositDateArray.push(dateVal || "");
-                    serviceChequeArray.push(chkVal || "");
-                    rowidArray.push(rId || "");
-                }
+                $matchedRows.push($row);
+                serviceTypeArray.push(sType);
+                serviceAmountArray.push((rcvNum + tdsNum + discNum).toFixed(2));
+                paymentReceivedArray.push(received || "0");
+                tdsAmountArray.push(tds || "0");
+                discountAmountArray.push(discount || "0");
+                depositDateArray.push(dateVal || "");
+                serviceChequeArray.push(chkVal || "");
+                reconciliationArray.push(recVal || "");
+                rowidArray.push(rId || "");
             });
 
-            if (hasError) {
-                alert(errorMsg);
-                return false;
+            if ($matchedRows.length === 0) {
+                showAutoSaveIndicator('saved');
+                return;
             }
 
-            var serviceTypeDetails = serviceTypeArray.join("~");
-            var serviceAmountDetails = serviceAmountArray.join("~");
-            var paymentReceivedDetails = paymentReceivedArray.join("~");
-            var tdsAmountDetails = tdsAmountArray.join("~");
-            var discountAmountDetails = discountAmountArray.join("~");
-            var depositDateDetails = depositDateArray.join("~");
-            var serviceChequeDetails = serviceChequeArray.join("~");
-            var rowidDetails = rowidArray.join("~");
-            var dltRowDetails = "";
-
-            var $saveBtn = $(this);
-            $saveBtn.find('i').removeClass('fa-floppy-o').addClass('fa-spinner fa-spin');
+            isPaymentSaving = true;
+            showAutoSaveIndicator('saving', 'Saving...');
 
             $.ajax({
                 url: "addPayment.php",
                 type: 'POST',
                 data: {
-                    serviceType: serviceTypeDetails,
-                    decidedAmount: serviceAmountDetails,
-                    paymentReceived: paymentReceivedDetails,
-                    tdsAmount: tdsAmountDetails,
-                    discountAmount: discountAmountDetails,
-                    depositDate: depositDateDetails,
-                    chequeDetails: serviceChequeDetails,
+                    action: 'autoSavePayments',
+                    format: 'json',
+                    serviceType: serviceTypeArray.join("~"),
+                    decidedAmount: serviceAmountArray.join("~"),
+                    paymentReceived: paymentReceivedArray.join("~"),
+                    tdsAmount: tdsAmountArray.join("~"),
+                    discountAmount: discountAmountArray.join("~"),
+                    depositDate: depositDateArray.join("~"),
+                    chequeDetails: serviceChequeArray.join("~"),
+                    reconciliation: reconciliationArray.join("~"),
                     customer: customerID,
                     payid: paymentID,
-                    rowids: rowidDetails,
-                    dltRows: dltRowDetails,
+                    rowids: rowidArray.join("~"),
+                    dltRows: ""
                 },
-                success: function (data) {
-                    location.reload(true);
+                dataType: 'json',
+                success: function (res) {
+                    if (res && res.success) {
+                        if (res.payid) {
+                            $('#paymentAutoSaveStatus').attr('data-row-id', res.payid);
+                            $('.savePayment').attr('data-row-id', res.payid);
+                        }
+                        if (res.rowIds && Array.isArray(res.rowIds)) {
+                            for (var k = 0; k < res.rowIds.length; k++) {
+                                var newId = res.rowIds[k];
+                                if (newId && newId > 0 && $matchedRows[k]) {
+                                    $matchedRows[k].find('.row-id').val(newId);
+                                    $matchedRows[k].find('.toggleReconcileBtn').attr('data-pay-id', newId);
+                                    $matchedRows[k].find('.infoDelete').attr('data-row-id', newId);
+                                    $matchedRows[k].find('.serviceBlockTypeSelect').attr('data-pay-id', newId);
+                                }
+                            }
+                        }
+                        showAutoSaveIndicator('saved');
+                    } else {
+                        showAutoSaveIndicator('error', (res && res.message) ? res.message : 'Save error');
+                    }
                 },
-                error: function (data, status, err) {
-                    $saveBtn.find('i').removeClass('fa-spinner fa-spin').addClass('fa-floppy-o');
-                    alert("Error saving payment: " + status);
+                error: function () {
+                    showAutoSaveIndicator('error', 'Save error');
+                },
+                complete: function () {
+                    isPaymentSaving = false;
+                    if (paymentSavePending) {
+                        paymentSavePending = false;
+                        triggerPaymentAutoSave(false);
+                    }
                 }
             });
+        }
+
+        // Auto-save triggers on typing, changing, or blurring payment fields
+        $(document).on('input', '.servicePaymentReceived, .serviceTdsAmount, .serviceDiscountAmount, .serviceChequeDetails', function () {
+            recalculatePaymentSystem();
+            triggerPaymentAutoSave(false);
+        });
+
+        $(document).on('change blur', '.servicePaymentReceived, .serviceTdsAmount, .serviceDiscountAmount, .paymentDepositDate, .serviceChequeDetails', function () {
+            recalculatePaymentSystem();
+            triggerPaymentAutoSave(true);
+        });
+
+        // Delegate deletion for all payment rows with auto-save & recalculation
+        $(document).on('click', '.infoDelete', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var $btn = $(this);
+            var payrowid = $btn.attr('data-row-id');
+            var $row = $btn.closest('tr');
+            if (!payrowid) {
+                payrowid = $row.find('.row-id').val();
+            }
+
+            if (!payrowid || payrowid === '0') {
+                $row.remove();
+                if (typeof recalculatePaymentSystem === 'function') recalculatePaymentSystem();
+                return;
+            }
+
+            if (confirm("Are you sure you want to delete this payment record?")) {
+                showAutoSaveIndicator('saving', 'Deleting...');
+                $.ajax({
+                    url: "addPayment.php",
+                    type: "GET",
+                    data: { paymentID: payrowid },
+                    success: function () {
+                        $row.remove();
+                        if (typeof recalculatePaymentSystem === 'function') recalculatePaymentSystem();
+                        showAutoSaveIndicator('saved', 'Deleted');
+                        setTimeout(function () { showAutoSaveIndicator('saved'); }, 2000);
+                    },
+                    error: function () {
+                        showAutoSaveIndicator('error', 'Delete error');
+                    }
+                });
+            }
+        });
+
+        $(document).on('click', '.removeNewPaymentRow', function (e) {
+            e.preventDefault();
+            var $row = $(this).closest('tr');
+            var payrowid = $row.find('.row-id').val();
+            if (payrowid && payrowid !== '0') {
+                if (confirm("Are you sure you want to delete this payment row?")) {
+                    showAutoSaveIndicator('saving', 'Deleting...');
+                    $.ajax({
+                        url: "addPayment.php",
+                        type: "GET",
+                        data: { paymentID: payrowid },
+                        success: function () {
+                            $row.remove();
+                            if (typeof recalculatePaymentSystem === 'function') recalculatePaymentSystem();
+                            showAutoSaveIndicator('saved', 'Deleted');
+                            setTimeout(function () { showAutoSaveIndicator('saved'); }, 2000);
+                        },
+                        error: function () {
+                            showAutoSaveIndicator('error', 'Delete error');
+                        }
+                    });
+                }
+            } else {
+                $row.remove();
+                if (typeof recalculatePaymentSystem === 'function') recalculatePaymentSystem();
+            }
         });
 
         $(document).off('submit.customerAccount', '#informationUpdationReviewForm');

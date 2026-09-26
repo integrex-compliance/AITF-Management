@@ -216,8 +216,6 @@ if (isset($db)) {
             $error_message = 'Please enter a valid email address.';
         } elseif (empty($_POST['declaration_confirmed'])) {
             $error_message = 'Please confirm the declaration before submitting.';
-        } elseif (empty($_FILES['sign_image']['name']) && empty($_FILES['sign_image']['tmp_name'])) {
-            $error_message = 'Please upload your signature with company stamp.';
         } elseif (function_exists('aitf_verify_turnstile') && !aitf_verify_turnstile($turnstileToken, $error_message)) {
             if ($error_message === '') {
                 $error_message = 'Captcha verification failed. Please try again.';
@@ -633,18 +631,18 @@ if (isset($db)) {
                             $clientMail->Sender = $mailConfig['from_email'] ?: 'no-reply@localhost';
                             $clientMail->addCustomHeader('Return-Path', $mailConfig['from_email'] ?: 'no-reply@localhost');
                             $clientMail->addAddress($email, $contact_person);
-                            $clientMail->Subject = 'Thank you for your application - AITF';
+                            $clientMail->Subject = 'Thank you for your application - A.I.T.F. (Assessment And Institute for Technical Forum)';
                             $clientBody = "<p style=\"font-family:Arial,sans-serif; font-size:14px;\">Hi " . htmlspecialchars($contact_person, ENT_QUOTES, 'UTF-8') . ",</p>"
-                                . "<p style=\"font-family:Arial,sans-serif; font-size:14px; margin:8px 0;\">Thank you for choosing AITF.</p>"
+                                . "<p style=\"font-family:Arial,sans-serif; font-size:14px; margin:8px 0;\">Thank you for contacting <strong>A.I.T.F. (Assessment And Institute for Technical Forum)</strong>.</p>"
                                 . "<p style=\"font-family:Arial,sans-serif; font-size:14px; margin:8px 0;\">We confirm that we have successfully received your <strong>Audit Application Form</strong>. Our assessment team is currently reviewing the details submitted by you.</p>"
-                                . "<p style=\"font-family:Arial,sans-serif; font-size:14px; margin:8px 0;\">Once the verification process is completed, our team will contact you to guide you through the next steps of the audit process.</p>"
+                                . "<p style=\"font-family:Arial,sans-serif; font-size:14px; margin:8px 0;\">Once the verification process is completed, our team will contact you to through the next steps of the audit process.</p>"
                                 . "<p style=\"font-family:Arial,sans-serif; font-size:14px; margin:8px 0;\"><strong>Application Summary:</strong><br>Organization Name: " . htmlspecialchars($org_name, ENT_QUOTES, 'UTF-8') . "<br>Contact Number: " . htmlspecialchars($phone, ENT_QUOTES, 'UTF-8') . "<br>Email Address: " . htmlspecialchars($email, ENT_QUOTES, 'UTF-8') . "<br>Applied Assessment: " . htmlspecialchars($standard_applied, ENT_QUOTES, 'UTF-8') . "</p>"
                                 . "<p style=\"font-family:Arial,sans-serif; font-size:14px; margin:8px 0;\">A copy of your submitted Audit Application Form is attached for your reference.</p>"
                                 . "<p style=\"font-family:Arial,sans-serif; font-size:14px; margin:8px 0;\">If you have any questions in the meantime, feel free to reply to this email. Our team will be happy to assist you.</p>"
-                                . "<p style=\"font-family:Arial,sans-serif; font-size:14px; margin:8px 0;\">Warm regards,<br><strong>AITF Team</strong><br>Assessment Department<br>AITF<br><br>Email: <a href=\"mailto:" . $mailFromEmailHtml . "\">" . $mailFromEmailHtml . "</a><br>" . ($mailCcEmailHtml !== '' ? "Email: <a href=\"mailto:" . $mailCcEmailHtml . "\">" . $mailCcEmailHtml . "</a><br>" : "") . "Website: <a href=\"http://www.aitf.in\" target=\"_blank\" rel=\"noopener\">www.aitf.in</a></p>";
+                                . "<p style=\"font-family:Arial,sans-serif; font-size:14px; margin:8px 0;\">Regards,<br>AITF Management Certification Limited.<br><br>QCI-NABCB Accredited Certification Body.<br><br>Authorised Signatory<br><br>Email: <a href=\"mailto:" . $mailFromEmailHtml . "\">" . $mailFromEmailHtml . "</a><br>" . ($mailCcEmailHtml !== '' ? "Email: <a href=\"mailto:" . $mailCcEmailHtml . "\">" . $mailCcEmailHtml . "</a><br>" : "") . "Website: <a href=\"https://www.aitf.co.in\" target=\"_blank\" rel=\"noopener\">www.aitf.co.in</a></p>";
                             $clientMail->isHTML(true);
                             $clientMail->Body = $clientBody;
-                            $clientMail->AltBody = "Dear $contact_person,\n\nThank you for submitting your audit application to AITF.\nWe have received your application and will review it.\nA copy of your submitted application form (system generated PDF) is attached for your reference.\n\nRegards,\nAITF Team";
+                            $clientMail->AltBody = "Dear $contact_person,\n\nThank you for contacting A.I.T.F. (Assessment And Institute for Technical Forum).\nWe have received your application and will review it.\nA copy of your submitted application form (system generated PDF) is attached for your reference.\n\nRegards,\nAITF Management Certification Limited.\n\nQCI-NABCB Accredited Certification Body.\n\nAuthorised Signatory";
                             if ($pdfContent !== '') {
                                 $clientMail->addStringAttachment($pdfContent, $pdfFilename, 'base64', 'application/pdf');
                             }
@@ -2407,14 +2405,14 @@ if (isset($_GET['submitted']) && $_GET['submitted'] === '1') {
                                         </div>
 
                                         <div class="col-md-12 form-group" style="margin-bottom: 0;">
-                                            <label>Signature with Company's Stamp <span class="required-label" style="color:#ef4444;">*</span></label>
+                                            <label>Signature with Company's Stamp <span style="color: #64748b; font-weight: normal; font-size: 13px;">(Optional)</span></label>
                                             <div class="row align-items-center">
                                                 <div class="col-md-7">
                                                     <div style="background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 12px; padding: 14px 18px;">
-                                                        <input type="file" name="sign_image" accept=".jpg,.jpeg,.png,image/jpeg,image/png" class="form-control-file" id="sign-image-input" required style="font-size: 14px; color: #475569; width: 100%;">
-                                                        <div style="color: #0369a1; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; padding: 6px 10px; margin-top: 8px; font-size: 12.5px; font-weight: 500; display: flex; align-items: center; gap: 6px;">
-                                                            <i class="fa fa-info-circle" style="color: #0284c7; flex-shrink: 0;"></i>
-                                                            <span>*Note: Only signature with company's duly stamp will be accepted. (JPG, PNG &bull; Max 2MB)</span>
+                                                        <input type="file" name="sign_image" accept=".jpg,.jpeg,.png,image/jpeg,image/png" class="form-control-file" id="sign-image-input" style="font-size: 14px; color: #475569; width: 100%;">
+                                                        <div style="color: #0369a1; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; padding: 8px 12px; margin-top: 8px; font-size: 12.5px; line-height: 1.5; display: flex; align-items: flex-start; gap: 8px;">
+                                                            <i class="fa fa-info-circle" style="color: #0284c7; flex-shrink: 0; margin-top: 2px;"></i>
+                                                            <span>*Note: If form is submitted via organisation's registered mail ID, signature is not required. Signature upload is optional if anyone wishes to upload it with company's duly stamp (JPG, PNG &bull; Max 2MB).</span>
                                                         </div>
                                                     </div>
                                                 </div>

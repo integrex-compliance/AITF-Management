@@ -335,11 +335,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_nc_form'])) {
                 
                 // 1. Send mail to client
                 if (!empty($email)) {
-                    $clientSubject = "Confirmation: NC Closing Form Received";
+                    $clientSubject = "Confirmation: NC Closing Form Received - A.I.T.F. (Assessment And Institute for Technical Forum)";
                     $clientBody = "<p>Dear " . htmlspecialchars($sign_name) . ",</p>
-                                   <p>This is a confirmation mail that we have received your NC closing form and our team is reviewing it.</p>
+                                   <p>Thank you for contacting <strong>A.I.T.F. (Assessment And Institute for Technical Forum)</strong>. We have received your NC closing form and our team is reviewing it.</p>
                                    <p>Meanwhile if you need any help kindly feel free to connect with us.</p>
-                                   <p>Best regards,<br>AITF Certification Services</p>";
+                                   <p>Regards,<br>AITF Management Certification Limited.<br><br>QCI-NABCB Accredited Certification Body.<br><br>Authorised Signatory</p>";
                     $emailSender->sendEmail($email, $sign_name, $clientBody, $clientSubject);
                 }
                 
