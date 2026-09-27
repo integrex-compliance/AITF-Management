@@ -134,6 +134,33 @@ if (isset($req['action']) && $req['action'] === 'updateReconcileStatus') {
     }
 }
 
+if (isset($req['action']) && $req['action'] === 'updateTdsVerifyStatus') {
+    header('Content-Type: application/json');
+    try {
+        $payId = intval($req['payment_id'] ?? 0);
+        $status = trim((string)($req['status'] ?? 'Verify'));
+        $isStatement = !empty($req['is_statement']) && $req['is_statement'] !== '0' && $req['is_statement'] !== false;
+        if ($payId > 0) {
+            if ($isStatement) {
+                $stmt = $db->prepare("UPDATE `statement_payments` SET `tds_verified` = :status WHERE `id` = :id");
+            } else {
+                $stmt = $db->prepare("UPDATE `payment_system` SET `tds_verified` = :status WHERE `payment_id` = :id");
+            }
+            $stmt->bindParam(':status', $status);
+            $stmt->bindParam(':id', $payId, PDO::PARAM_INT);
+            $stmt->execute();
+            echo json_encode(['success' => true, 'status' => $status, 'payment_id' => $payId]);
+            exit;
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Invalid payment ID']);
+            exit;
+        }
+    } catch (Exception $e) {
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        exit;
+    }
+}
+
 if (isset($req['action']) && $req['action'] === 'saveDiscount') {
     header('Content-Type: application/json');
     try {

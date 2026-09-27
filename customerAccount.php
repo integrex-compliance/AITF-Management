@@ -3899,41 +3899,48 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             transform: scale(1.22);
         }
 
-                /* Invoice Remark Input Styling */
+        /* Invoice Comments Input/Textarea Styling */
         .invoiceRemark {
-            width: 100%;
-            height: 24px;
-            border: 1px solid transparent;
-            border-radius: 3px;
-            padding: 2px 6px;
-            font-size: 11.5px;
-            color: #1e293b;
-            background: transparent;
-            transition: all 0.2s ease;
-            box-sizing: border-box;
+            width: 100% !important;
+            height: 38px !important;
+            min-height: 36px !important;
+            max-height: 48px !important;
+            line-height: 1.25 !important;
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 4px !important;
+            padding: 3px 6px !important;
+            font-size: 11px !important;
+            color: #1e293b !important;
+            background: #ffffff !important;
+            resize: none !important;
+            transition: all 0.2s ease !important;
+            box-sizing: border-box !important;
+            display: block !important;
+            font-family: inherit !important;
         }
         .invoiceRemark:hover {
-            background: #f8fafc;
-            border-color: #cbd5e1;
+            background: #ffffff !important;
+            border-color: #94a3b8 !important;
         }
         .invoiceRemark:focus {
-            background: #ffffff;
-            border-color: #3b82f6;
-            outline: none;
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+            background: #ffffff !important;
+            border-color: #2563eb !important;
+            outline: none !important;
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15) !important;
         }
         html.theme-dark .invoiceRemark {
-            color: #e2e8f0;
-            background: transparent;
+            color: #e2e8f0 !important;
+            background: #1e293b !important;
+            border-color: #475569 !important;
         }
         html.theme-dark .invoiceRemark:hover {
-            background: #1e293b;
-            border-color: #475569;
+            background: #1e293b !important;
+            border-color: #64748b !important;
         }
         html.theme-dark .invoiceRemark:focus {
-            background: #0f172a;
-            border-color: #60a5fa;
-            box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2);
+            background: #0f172a !important;
+            border-color: #60a5fa !important;
+            box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2) !important;
         }
 
         /* Total Invoice & Payment Table Footers */
@@ -6209,12 +6216,12 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     style="margin-left: 0; margin-right: 0; padding: 7px 15px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; border-radius: 6px 6px 0 0; background: linear-gradient(135deg, #1e293b 0%, #334155 100%); box-shadow: 0 2px 6px rgba(15, 23, 42, 0.15); user-select: none; width: 100%;">
                     <div style="width: 150px;" class="hidden-xs"></div>
                     <div class="payment-title-text"
-                        style="text-align: center; color: #ffffff; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; flex: 1; cursor: pointer;">
-                        Payment System <span class="serviceStatus"></span>
+                        style="text-align: center; color: #ffffff; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; flex: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                        <span>Payment System</span> <span class="serviceStatus"></span> <i class="fa fa-chevron-down payment-toggle-chevron" style="font-size: 11px; color: #94a3b8; transition: transform 0.25s ease;"></i>
                     </div>
-                    <div class="payment-actions-wrapper" style="text-align: right; display: flex; align-items: center; justify-content: flex-end; gap: 10px; cursor: default;">
+                    <div class="payment-actions-wrapper" style="text-align: right; display: flex; align-items: center; justify-content: flex-end; gap: 10px; cursor: default; width: 150px;">
                         <button type="button" class="btn btn-xs btnAddInvoiceHeader"
-                            style="background: #ffffff; color: #1e293b; border: 1px solid #cbd5e1; font-weight: 700; font-size: 11px; border-radius: 4px; padding: 3px 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.15); display: inline-flex; align-items: center; gap: 5px; cursor: pointer; text-transform: none;"
+                            style="display: none; background: #ffffff; color: #1e293b; border: 1px solid #cbd5e1; font-weight: 700; font-size: 11px; border-radius: 4px; padding: 3px 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.15); align-items: center; gap: 5px; cursor: pointer; text-transform: none;"
                             title="Add new service invoice &amp; payment header">
                             <i class="fa fa-plus-circle" style="color: #2563eb; font-size: 11.5px;"></i> Add Invoice Header
                         </button>
@@ -6386,20 +6393,6 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     });
                     ?>
 
-                    <!-- Top Action Bar inside Payment System -->
-                    <div class="payment-system-top-bar" style="display: flex; justify-content: space-between; align-items: center; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 14px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <i class="fa fa-th-large" style="color: #2563eb; font-size: 14px;"></i>
-                            <span style="font-weight: 700; font-size: 13px; color: #1e293b;">Services Invoicing &amp; Payment Breakdown</span>
-                            <span class="badge" style="background: #e0e7ff; color: #3730a3; font-weight: 700; font-size: 10.5px; border-radius: 10px; padding: 3px 8px;" id="activeServicesCountBadge"><?php echo count($activeServiceBlocks); ?> Active</span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <button type="button" class="btn btn-xs btnAddInvoiceHeader" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #ffffff; border: 1px solid #1e40af; font-weight: 700; font-size: 11.5px; border-radius: 4px; padding: 4px 14px; box-shadow: 0 1px 3px rgba(37,99,235,0.25); display: inline-flex; align-items: center; gap: 6px; cursor: pointer; text-transform: none; transition: all 0.2s ease;" title="Add new service invoice &amp; payment header">
-                                <i class="fa fa-plus-circle" style="font-size: 12px;"></i> Add Invoice Header
-                            </button>
-                        </div>
-                    </div>
-
                     <style>
                         .invoice-service-details-table,
                         .service-details-table,
@@ -6447,6 +6440,42 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                             background-color: #ffffff !important;
                             box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15) !important;
                         }
+                        .invoice-no-flex-control {
+                            display: flex !important;
+                            align-items: center !important;
+                            justify-content: space-between !important;
+                            width: 100% !important;
+                            gap: 2px !important;
+                            padding: 0 2px !important;
+                            box-sizing: border-box !important;
+                        }
+                        .invoice-no-flex-control .invoiceNo {
+                            flex: 1 1 auto !important;
+                            min-width: 0 !important;
+                            width: auto !important;
+                            height: 24px !important;
+                            padding: 1px 4px !important;
+                            font-size: 11.5px !important;
+                            font-weight: 600 !important;
+                            color: #1e293b !important;
+                            text-overflow: ellipsis !important;
+                            overflow: hidden !important;
+                            white-space: nowrap !important;
+                        }
+                        .invoice-actions-inline {
+                            display: inline-flex !important;
+                            align-items: center !important;
+                            gap: 2px !important;
+                            flex-shrink: 0 !important;
+                        }
+                        .invoice-actions-inline a {
+                            display: inline-flex !important;
+                            align-items: center !important;
+                            justify-content: center !important;
+                            padding: 1px 3px !important;
+                            cursor: pointer !important;
+                            text-decoration: none !important;
+                        }
                         .openInvoicePdfLink {
                             color: #dc2626 !important;
                             transition: transform 0.15s ease, color 0.15s ease;
@@ -6454,6 +6483,61 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         .openInvoicePdfLink:hover {
                             color: #b91c1c !important;
                             transform: scale(1.22);
+                        }
+                        .editFinalInvoice {
+                            color: #2563eb !important;
+                            transition: transform 0.15s ease, color 0.15s ease;
+                        }
+                        .editFinalInvoice:hover {
+                            color: #1d4ed8 !important;
+                            transform: scale(1.22);
+                        }
+                        /* Service Block Matched (Balanced) Styling */
+                        .service-payment-block.service-block-matched {
+                            background: #f8fdfa !important;
+                            border: 1.5px solid #86efac !important;
+                            border-radius: 8px !important;
+                            padding: 8px 8px 6px 8px !important;
+                            box-shadow: 0 2px 8px rgba(22, 163, 74, 0.08) !important;
+                            transition: all 0.25s ease;
+                        }
+                        .service-payment-block.service-block-matched .invoice-service-details-table tbody tr.cb_subsection td,
+                        .service-payment-block.service-block-matched .service-details-table tbody tr.cb_subsection:not(.discount-settlement-row) td {
+                            background-color: #f0fdf4 !important;
+                            border-color: #bbf7d0 !important;
+                        }
+                        .service-payment-block.service-block-matched .invoice-service-details-table tbody tr.cb_subsection input:not(.invoiceRemark),
+                        .service-payment-block.service-block-matched .service-details-table tbody tr.cb_subsection:not(.discount-settlement-row) input {
+                            background-color: #f0fdf4 !important;
+                            color: #14532d !important;
+                            font-weight: 600 !important;
+                        }
+                        .service-payment-block.service-block-matched .totalInvoiceTableSum,
+                        .service-payment-block.service-block-matched .totalPaymentReceivedSum {
+                            background-color: #dcfce7 !important;
+                            color: #15803d !important;
+                            border: 1.5px solid #86efac !important;
+                            font-weight: 800 !important;
+                        }
+                        .service-payment-block.service-block-matched .service-block-summary-bar {
+                            background-color: #f0fdf4 !important;
+                            border: 1.5px solid #86efac !important;
+                            box-shadow: 0 1px 3px rgba(22, 163, 74, 0.1) !important;
+                        }
+                        .block-matched-badge {
+                            background: #16a34a !important;
+                            color: #ffffff !important;
+                            font-size: 10px !important;
+                            font-weight: 800 !important;
+                            padding: 2px 7px !important;
+                            border-radius: 10px !important;
+                            letter-spacing: 0.3px !important;
+                            display: inline-flex !important;
+                            align-items: center !important;
+                            gap: 3px !important;
+                            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15) !important;
+                            text-transform: uppercase !important;
+                            vertical-align: middle !important;
                         }
                     </style>
 
@@ -6494,10 +6578,13 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                 $dt = trim((string)($pay['payment_date'] ?? ''));
                                 $chk = trim((string)($pay['cheque_details'] ?? ''));
                                 $rec = trim((string)($pay['reconciliation'] ?? ''));
-                                if ($rcvVal > 0 || $tdsVal > 0 || $discVal > 0 || ($dt !== '' && $dt !== '0000-00-00') || $chk !== '' || $rec !== '') {
+                                if ($rcvVal > 0 || $tdsVal > 0 || $discVal > 0 || ($dt !== '' && $dt !== '0000-00-00') || $chk !== '' || in_array(strtolower($rec), ['verified', 'yes', '1'])) {
                                     $blockValidCount++;
                                 }
                             }
+                            $blockCombined = $blockRcvSum + $blockTdsSum + $blockDiscountSum;
+                            $blockRemaining = $blockInvoiceSum - $blockCombined;
+                            $isBlockMatched = ($blockInvoiceSum > 0 && abs($blockRemaining) < 0.01);
                             ?>
 
                             <?php if ($blockIdx > 0) { ?>
@@ -6509,33 +6596,18 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                 </div>
                             <?php } ?>
 
-                            <div class="service-payment-block" data-service="<?php echo htmlspecialchars($svcName); ?>" data-block-id="<?php echo $blockIdx; ?>" style="margin-bottom: 22px;">
-                                <!-- Service block meta header bar -->
-                                <div class="service-block-meta-bar" style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 12px; margin-bottom: 10px;">
-                                    <div style="display: flex; align-items: center; gap: 10px;">
-                                        <span style="font-size: 11.5px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px;">Inovice service:</span>
-                                        <select class="form-control serviceBlockTypeSelect" style="width: auto; display: inline-block; height: 26px; padding: 2px 8px; font-size: 12px; font-weight: 700; color: #1e293b; background: #ffffff; border: 1.5px solid #2563eb; border-radius: 4px; outline: none; cursor: pointer;">
-                                            <?php foreach ($availableServices as $asvc) { ?>
-                                                <option value="<?php echo htmlspecialchars($asvc); ?>" <?php echo (strcasecmp($asvc, $svcName) === 0) ? 'selected' : ''; ?>><?php echo htmlspecialchars($asvc); ?></option>
-                                            <?php } ?>
-                                        </select>
-                                        <span class="label label-primary serviceBlockBadge" style="background-color: #2563eb; font-size: 11px; font-weight: 700; padding: 4px 8px; border-radius: 4px;"><?php echo htmlspecialchars($svcName); ?></span>
-                                    </div>
-                                    <div style="display: flex; align-items: center; gap: 8px;">
-                                        <?php if ($blockIdx > 0) { ?>
-                                            <button type="button" class="btn btn-xs removeServiceBlockBtn" style="background: #ffffff; color: #ef4444; border: 1px solid #fca5a5; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; cursor: pointer;" title="Remove this service section">
-                                                <i class="fa fa-trash-o"></i> Remove Header
-                                            </button>
-                                        <?php } ?>
-                                    </div>
-                                </div>
-
+                            <div class="service-payment-block <?php echo $isBlockMatched ? 'service-block-matched' : ''; ?>" data-service="<?php echo htmlspecialchars($svcName); ?>" data-block-id="<?php echo $blockIdx; ?>" style="margin-bottom: 22px;">
                                 <div class="row payment-tables-row" style="display: flex; align-items: stretch; margin-left: -5px; margin-right: -5px;">
                                     <!-- Left: Invoices Column -->
                                     <div class="col-xs-6 table-responsive invoice-container-col" style="flex: 1 1 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px;">
                                         <div class="row">
                                             <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 10px;">
-                                                <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.4px;"><i class="fa ">Invoice</i> (<span class="col-service-label"><?php echo htmlspecialchars($svcName); ?></span>)</span>
+                                                <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.4px;">
+                                                    <i class="fa ">Invoicing</i> (<span class="col-service-label"><?php echo htmlspecialchars($svcName); ?></span>)
+                                                    <?php if ($isBlockMatched) { ?>
+                                                        <span class="block-matched-badge"><i class="fa fa-check-circle"></i> MATCHED</span>
+                                                    <?php } ?>
+                                                </span>
                                                 <button type="button" class="btn btn-xs finalInvoiceBtn"
                                                     data-id="<?php echo htmlspecialchars($_GET['customerid'] ?? ''); ?>"
                                                     data-address="<?php echo htmlspecialchars($clientInfo['address'] ?? '', ENT_QUOTES); ?>"
@@ -6550,10 +6622,10 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                             <table class="table table-bordered table-hover table-sortable service_details invoice-service-details-table" <?php if ($blockIdx === 0) echo 'id="invoice_service_details"'; ?>>
                                                 <thead>
                                                     <tr>
-                                                        <th width="28%" style="padding: 3px 2px; text-align: center;"><small>Invoice No.</small></th>
+                                                        <th width="30%" style="padding: 3px 2px; text-align: center;"><small>Invoice No.</small></th>
                                                         <th width="18%" style="padding: 3px 2px; text-align: center;"><small>Date</small></th>
                                                         <th width="22%" style="padding: 3px 2px; text-align: center;"><small>Gross Amount</small></th>
-                                                        <th width="32%" style="padding: 3px 2px; text-align: center;"><small>Remark</small></th>
+                                                        <th width="30%" style="padding: 3px 2px; text-align: center;"><small>Comments</small></th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -6564,10 +6636,12 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                             ?>
                                                             <tr class="cb_subsection" id="cb_subsection_0">
                                                                 <td class="viewFinalInvoice" data-customer="<?php echo $_GET['customerid'] ?>" data-id="<?php echo $invoiceinfo["invoice_id"] ?>" style="padding: 0px;">
-                                                                    <div class="table-edit-control"><label></label>
+                                                                    <div class="table-edit-control invoice-no-flex-control"><label></label>
                                                                         <input type="text" data_row_id="" class="invoiceNo" name="invoiceNo" value="<?php echo $invoiceinfo['final_prefix'] . '-' . $invoiceinfo['final_invoice_no'] ?>" readonly="" style="cursor: pointer;" title="Click to view PDF in new tab" />
-                                                                        <a href="<?php echo $invoicePdfUrl; ?>" target="_blank" class="openInvoicePdfLink" title="Open Invoice PDF (New Tab)" style="color: #dc2626; padding: 2px 4px; display: inline-block; cursor: pointer; text-decoration: none;"><i class="fa fa-file-pdf-o" style="font-size: 13px;"></i></a>
-                                                                        <a class="editFinalInvoice" data-customer="<?php echo $_GET['customerid'] ?>" data-id="<?php echo $invoiceinfo['invoice_id'] ?>" title="Edit Final Invoice" style="color: #2563eb; padding: 2px 4px; display: inline-block; cursor: pointer;"><i class="fa fa-pencil-square" style="font-size: 13px;"></i></a>
+                                                                        <div class="invoice-actions-inline">
+                                                                            <a href="<?php echo $invoicePdfUrl; ?>" target="_blank" class="openInvoicePdfLink" title="Open Invoice PDF (New Tab)"><i class="fa fa-file-pdf-o" style="font-size: 13px;"></i></a>
+                                                                            <a class="editFinalInvoice" data-customer="<?php echo $_GET['customerid'] ?>" data-id="<?php echo $invoiceinfo['invoice_id'] ?>" title="Edit Final Invoice"><i class="fa fa-pencil-square" style="font-size: 13px;"></i></a>
+                                                                        </div>
                                                                     </div>
                                                                 </td>
                                                                 <td class="viewFinalInvoice" data-customer="<?php echo $_GET['customerid'] ?>" data-id="<?php echo $invoiceinfo["invoice_id"] ?>" style="padding: 0px;">
@@ -6580,9 +6654,9 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                         <input type="text" data_row_id="" class="invoiceAmount" name="invoiceAmount" value="<?php echo $invoiceinfo['final_amount'] ?>" readonly="" />
                                                                     </div>
                                                                 </td>
-                                                                <td style="padding: 0px;">
-                                                                    <div class="table-edit-control"><label></label>
-                                                                        <input type="text" class="invoiceRemark" name="invoiceRemark" data-invoice-id="<?php echo $invoiceinfo['invoice_id']; ?>" value="<?php echo htmlspecialchars($invoiceinfo['remark'] ?? ''); ?>" placeholder="Add remark..." title="Invoice remark (Auto-saved)" />
+                                                                <td style="padding: 1px 2px; vertical-align: middle;">
+                                                                    <div class="table-edit-control" style="margin: 0; padding: 0;">
+                                                                        <textarea class="invoiceRemark" name="invoiceRemark" data-invoice-id="<?php echo $invoiceinfo['invoice_id']; ?>" placeholder="Add comments..." title="Invoice comments (Auto-saved)" rows="2"><?php echo htmlspecialchars($invoiceinfo['remark'] ?? ''); ?></textarea>
                                                                     </div>
                                                                 </td>
                                                             </tr>
@@ -6604,9 +6678,9 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                     <input type="text" class="invoiceAmount" name="invoiceAmount" value="0.00" readonly style="text-align: center; color: #94a3b8;" />
                                                                 </div>
                                                             </td>
-                                                            <td style="padding: 0px;">
-                                                                <div class="table-edit-control"><label></label>
-                                                                    <input type="text" class="invoiceRemark" readonly disabled placeholder="-" style="text-align: center; color: #94a3b8; background: transparent; border: none;" />
+                                                            <td style="padding: 1px 2px; vertical-align: middle;">
+                                                                <div class="table-edit-control" style="margin: 0; padding: 0;">
+                                                                    <textarea class="invoiceRemark" readonly disabled placeholder="-" style="text-align: center; color: #94a3b8; background: transparent; border: none; resize: none;" rows="2"></textarea>
                                                                 </div>
                                                             </td>
                                                         </tr>
@@ -6615,7 +6689,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 <tfoot>
                                                     <tr style="background-color: #f8fafc; font-weight: bold; border-top: 2px solid #cbd5e1;">
                                                         <td colspan="2" style="text-align: right; padding: 4px 8px; vertical-align: middle; color: #334155; white-space: nowrap;">
-                                                            <small style="font-weight: 700; font-size: 11px;">TOTAL INVOICE (<span class="blockInvoiceCount"><?php echo count($serviceInvoices); ?></span>):</small>
+                                                            <small style="font-weight: 700; font-size: 11px;">Invoicing Gross Total (<span class="blockInvoiceCount"><?php echo count($serviceInvoices); ?></span>):</small>
                                                         </td>
                                                         <td style="padding: 0px; vertical-align: middle;">
                                                             <div class="table-edit-control">
@@ -6633,7 +6707,12 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                     <div class="col-xs-6 table-responsive payments-container-col" style="flex: 1 1 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px;">
                                         <div class="row">
                                             <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 10px;">
-                                                <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.4px;"><i class="fa ">Payments</i> (<span class="col-service-label"><?php echo htmlspecialchars($svcName); ?></span>)</span>
+                                                <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.4px;">
+                                                    <i class="fa ">Received Payment</i> (<span class="col-service-label"><?php echo htmlspecialchars($svcName); ?></span>)
+                                                    <?php if ($isBlockMatched) { ?>
+                                                        <span class="block-matched-badge"><i class="fa fa-check-circle"></i> MATCHED</span>
+                                                    <?php } ?>
+                                                </span>
                                                 <button type="button" class="btn btn-xs openDiscountModalBtn" data-service="<?php echo htmlspecialchars($svcName); ?>" style="background: #ffffff; color: #475569; border: 1px solid #cbd5e1; font-weight: 700; font-size: 11px; border-radius: 4px; padding: 2px 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.06); text-transform: none; display: inline-flex; align-items: center; gap: 3px; cursor: pointer; transition: all 0.2s ease;" title="Discount / Short Paid Settlement">
                                                     (-+)
                                                 </button>
@@ -6672,8 +6751,9 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                             $displayDiscount = ($discountVal > 0) ? $discountVal : '';
 
                                                             $recRaw = trim(strtolower($payInfo['reconciliation'] ?? ''));
-                                                            $isVerified = in_array($recRaw, ['verified', 'verify', 'yes', '1']);
-                                                            $recStatusText = $isVerified ? 'Verified' : 'Not Verify';
+                                                            $isVerified = in_array($recRaw, ['verified', 'yes', '1']);
+                                                            $recStatusText = $isVerified ? 'Verified' : 'Verify';
+                                                            $isTdsVerified = (isset($payInfo['tds_verified']) && in_array(strtolower(trim($payInfo['tds_verified'])), ['verified', 'yes', '1']));
                                                             ?>
                                                             <tr class="cb_subsection previousCBData pamentrow<?php echo $payInfo["payment_id"] ?> <?php echo $isDiscountRow ? 'discount-settlement-row' : ''; ?>" id="cb_subsection_0" style="<?php echo $isDiscountRow ? 'background-color: #faf5ff !important; border-left: 4px solid #8b5cf6 !important;' : ''; ?>">
                                                                 <td style="padding: 0px; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ''; ?>">
@@ -6689,9 +6769,14 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                         <?php } ?>
                                                                     </div>
                                                                 </td>
-                                                                <td style="padding: 0px; background-color: <?php echo $isDiscountRow ? '#faf5ff' : '#ffffff'; ?>;">
-                                                                    <div class="table-edit-control"><label></label>
-                                                                        <input type="number" step="any" min="0" data_row_id="" class="serviceTdsAmount" name="serviceTdsAmount" value="<?php echo htmlspecialchars($displayTds); ?>" placeholder="" style="background-color: <?php echo $isDiscountRow ? '#faf5ff' : '#ffffff'; ?>; border-bottom: 1px solid #cbd5e1; color: #b45309; font-weight: 700; text-align: right;" />
+                                                                <td style="padding: 0px; background-color: <?php echo $isDiscountRow ? '#faf5ff' : ($isTdsVerified && floatval($displayTds) > 0 ? '#f0fdf4' : '#ffffff'); ?>; position: relative;">
+                                                                    <div class="table-edit-control" style="position: relative; display: flex; align-items: center; width: 100%;"><label></label>
+                                                                        <input type="number" step="any" min="0" data_row_id="" class="serviceTdsAmount" name="serviceTdsAmount" value="<?php echo htmlspecialchars($displayTds); ?>" placeholder="" style="background-color: <?php echo $isDiscountRow ? '#faf5ff' : ($isTdsVerified && floatval($displayTds) > 0 ? '#f0fdf4' : '#ffffff'); ?>; border-bottom: 1px solid <?php echo ($isTdsVerified && floatval($displayTds) > 0) ? '#86efac' : '#cbd5e1'; ?>; color: <?php echo ($isTdsVerified && floatval($displayTds) > 0) ? '#15803d' : '#b45309'; ?>; font-weight: 700; text-align: right; <?php echo ($isTdsVerified && floatval($displayTds) > 0) ? 'padding-right: 18px !important;' : ''; ?>" />
+                                                                        <?php if ($isTdsVerified && floatval($displayTds) > 0) { ?>
+                                                                            <span class="tds-verified-icon" title="TDS Verified in TDS section" style="position: absolute; right: 3px; top: 50%; transform: translateY(-50%); color: #16a34a; font-size: 11px; display: inline-flex; align-items: center; pointer-events: none; z-index: 2;">
+                                                                                <i class="fa fa-check-circle" style="color: #16a34a; font-size: 11.5px;"></i>
+                                                                            </span>
+                                                                        <?php } ?>
                                                                     </div>
                                                                 </td>
                                                                 <td style="padding: 0px; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ''; ?>">
@@ -6707,7 +6792,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                 <td style="padding: 1px 2px; text-align: center; vertical-align: middle; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ''; ?>">
                                                                     <div class="table-edit-control" style="display: flex; align-items: center; justify-content: center;">
                                                                         <input type="hidden" class="serviceReconciliation" name="serviceReconciliation" value="<?php echo $recStatusText; ?>" />
-                                                                        <button type="button" class="btn btn-xs toggleReconcileBtn <?php echo $isVerified ? 'reconcile-verified' : 'reconcile-not-verify'; ?>" data-status="<?php echo $recStatusText; ?>" data-pay-id="<?php echo htmlspecialchars($payInfo['payment_id'] ?? ''); ?>" style="width: 96%; height: 23px; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 0 2px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; cursor: pointer; transition: all 0.2s ease; <?php echo $isVerified ? 'background-color: #16a34a; border: 1px solid #15803d; color: #ffffff;' : 'background-color: #ef4444; border: 1px solid #dc2626; color: #ffffff;'; ?>" title="Click to toggle: <?php echo $isVerified ? 'Mark as Not Verify' : 'Mark as Verified'; ?>">
+                                                                        <button type="button" class="btn btn-xs toggleReconcileBtn <?php echo $isVerified ? 'reconcile-verified' : 'reconcile-not-verify'; ?>" data-status="<?php echo $recStatusText; ?>" data-pay-id="<?php echo htmlspecialchars($payInfo['payment_id'] ?? ''); ?>" style="width: 96%; height: 23px; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 0 2px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; cursor: pointer; transition: all 0.2s ease; <?php echo $isVerified ? 'background-color: #16a34a; border: 1px solid #15803d; color: #ffffff;' : 'background-color: #ef4444; border: 1px solid #dc2626; color: #ffffff;'; ?>" title="Click to toggle: <?php echo $isVerified ? 'Mark as Verify' : 'Mark as Verified'; ?>">
                                                                             <i class="fa <?php echo $isVerified ? 'fa-check' : 'fa-times'; ?>"></i>
                                                                             <span><?php echo $recStatusText; ?></span>
                                                                         </button>
@@ -6749,10 +6834,10 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                             </td>
                                                             <td style="padding: 1px 2px; text-align: center; vertical-align: middle;">
                                                                 <div class="table-edit-control" style="display: flex; align-items: center; justify-content: center;">
-                                                                    <input type="hidden" class="serviceReconciliation" name="serviceReconciliation" value="Not Verify" />
-                                                                    <button type="button" class="btn btn-xs toggleReconcileBtn reconcile-not-verify" data-status="Not Verify" data-pay-id="" style="width: 96%; height: 23px; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 0 2px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; cursor: pointer; transition: all 0.2s ease; background-color: #ef4444; border: 1px solid #dc2626; color: #ffffff;" title="Click to toggle: Mark as Verified">
+                                                                    <input type="hidden" class="serviceReconciliation" name="serviceReconciliation" value="Verify" />
+                                                                    <button type="button" class="btn btn-xs toggleReconcileBtn reconcile-not-verify" data-status="Verify" data-pay-id="" style="width: 96%; height: 23px; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 0 2px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; cursor: pointer; transition: all 0.2s ease; background-color: #ef4444; border: 1px solid #dc2626; color: #ffffff;" title="Click to toggle: Mark as Verified">
                                                                         <i class="fa fa-times"></i>
-                                                                        <span>Not Verify</span>
+                                                                        <span>Verify</span>
                                                                     </button>
                                                                 </div>
                                                             </td>
@@ -6778,14 +6863,42 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                             </div>
                                                         </td>
                                                         <td colspan="4" style="text-align: right; padding: 4px 8px; vertical-align: middle; color: #334155; white-space: nowrap;">
-                                                            <small style="font-weight: 700; font-size: 11px;">TOTAL INSTALLMENTS (<span class="totalPaymentRowCount"><?php echo $blockValidCount; ?></span>):</small>
-                                                            <div style="display: inline-block; vertical-align: middle; margin-left: 6px; width: 95px;">
-                                                                <input type="text" class="totalPaymentCombinedSum" <?php if ($blockIdx === 0) echo 'id="totalPaymentCombinedSum"'; ?> value="<?php echo number_format($blockRcvSum + $blockTdsSum + $blockDiscountSum, 2, '.', ''); ?>" style="font-weight: bold; color: #0f172a; background: #ffffff; text-align: center; border: 1px solid #cbd5e1; font-size: 12px; height: 26px; padding: 0; width: 100%;" readonly title="Total Payment Amount for <?php echo htmlspecialchars($svcName); ?>" />
-                                                            </div>
+                                                            <input type="hidden" class="totalPaymentCombinedSum" <?php if ($blockIdx === 0) echo 'id="totalPaymentCombinedSum"'; ?> value="<?php echo number_format($blockRcvSum + $blockTdsSum + $blockDiscountSum, 2, '.', ''); ?>" />
                                                         </td>
                                                     </tr>
                                                 </tfoot>
                                             </table>
+                                        </div>
+
+                                        <!-- Service Block Summary Ribbon (Placed in Received Payment column) -->
+                                        <div class="service-block-summary-bar" style="margin-top: 4px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 3px 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: nowrap; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); white-space: nowrap;">
+                                            <span class="serviceBlockInvSum" style="display: none;"><?php echo number_format($blockInvoiceSum, 2, '.', ''); ?></span>
+                                            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: nowrap;">
+                                                <div style="display: inline-flex; align-items: center; gap: 3px;">
+                                                    <span style="color: #166534; font-weight: 700; text-transform: uppercase; font-size: 9.5px;"><i class="fa fa-check-circle" style="color: #16a34a; margin-right: 2px;"></i> Received Total:</span>
+                                                    <strong style="color: #15803d; font-size: 11px; font-weight: 800;">₹<span class="serviceBlockPaidSum"><?php echo number_format($blockRcvSum, 2, '.', ''); ?></span></strong>
+                                                </div>
+                                                <div style="display: inline-flex; align-items: center; gap: 3px;">
+                                                    <span style="color: #92400e; font-weight: 700; text-transform: uppercase; font-size: 9.5px;"><i class="fa fa-percent" style="color: #d97706; font-size: 9px; margin-right: 2px;"></i> TDS Total:</span>
+                                                    <strong style="color: #b45309; font-size: 11px; font-weight: 800;">₹<span class="serviceBlockTdsSum"><?php echo number_format($blockTdsSum, 2, '.', ''); ?></span></strong>
+                                                </div>
+                                                <div class="serviceBlockDiscountWrapper" style="display: <?php echo ($blockDiscountSum > 0) ? 'inline-flex' : 'none'; ?>; align-items: center; gap: 3px;">
+                                                    <span style="color: #6b21a8; font-weight: 700; text-transform: uppercase; font-size: 9.5px;"><i class="fa fa-tag" style="color: #7c3aed; font-size: 9px; margin-right: 2px;"></i> Disc:</span>
+                                                    <strong style="color: #7c3aed; font-size: 11px; font-weight: 800;">₹<span class="serviceBlockDiscountSum"><?php echo number_format($blockDiscountSum, 2, '.', ''); ?></span></strong>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <span class="serviceBlockRemainingWrapper" style="display: inline-flex; align-items: center; font-size: 10px; padding: 2px 7px; border-radius: 4px; font-weight: 800; background: <?php echo ($isBlockMatched) ? '#dcfce7' : (($blockRemaining <= 0) ? '#ecfdf5' : '#fef2f2'); ?>; border: 1px solid <?php echo ($isBlockMatched) ? '#4ade80' : (($blockRemaining <= 0) ? '#a7f3d0' : '#fca5a5'); ?>; white-space: nowrap;">
+                                                    <span style="color: <?php echo ($isBlockMatched) ? '#166534' : (($blockRemaining <= 0) ? '#065f46' : '#991b1b'); ?>; text-transform: uppercase; font-size: 9.5px; margin-right: 3px;">
+                                                        <?php if ($isBlockMatched) { ?>
+                                                            <i class="fa fa-check-circle" style="color: #16a34a; margin-right: 2px;"></i> Matched:
+                                                        <?php } else { ?>
+                                                            Remaining Total:
+                                                        <?php } ?>
+                                                    </span>
+                                                    <strong class="serviceBlockRemainingSum" style="color: <?php echo ($isBlockMatched) ? '#15803d' : (($blockRemaining <= 0) ? '#16a34a' : '#dc2626'); ?>; font-size: 11px;">₹<?php echo number_format($blockRemaining, 2, '.', ''); ?></strong>
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -14686,8 +14799,25 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 if ($(e.target).closest('button, a, input, select, .btnAddInvoiceHeader, .savePayment').length) {
                     return;
                 }
-                $(".payment-desc").toggle();
+                var $pDesc = $(".payment-desc");
+                if ($pDesc.is(":visible")) {
+                    $pDesc.slideUp(200);
+                    $(".btnAddInvoiceHeader").fadeOut(150);
+                    $(".payment-toggle-chevron").css("transform", "rotate(0deg)");
+                } else {
+                    $pDesc.slideDown(200);
+                    $(".btnAddInvoiceHeader").css("display", "inline-flex").hide().fadeIn(150);
+                    $(".payment-toggle-chevron").css("transform", "rotate(180deg)");
+                }
             });
+
+            if ($(".payment-desc").is(":visible")) {
+                $(".btnAddInvoiceHeader").css("display", "inline-flex");
+                $(".payment-toggle-chevron").css("transform", "rotate(180deg)");
+            } else {
+                $(".btnAddInvoiceHeader").hide();
+                $(".payment-toggle-chevron").css("transform", "rotate(0deg)");
+            }
 
             // Handle saveChanges class for auto-saving fields (excluding comment field which has its own handler)
             $('.saveChanges').not('#add-notes').on('blur change', function () {
@@ -21948,9 +22078,9 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     '</td>' +
                     '<td style="padding: 1px 2px; text-align: center; vertical-align: middle;">' +
                         '<div class="table-edit-control" style="display: flex; align-items: center; justify-content: center;">' +
-                            '<input type="hidden" class="serviceReconciliation" name="serviceReconciliation" value="Not Verify" />' +
-                            '<button type="button" class="btn btn-xs toggleReconcileBtn reconcile-not-verify" data-status="Not Verify" data-pay-id="" style="width: 96%; height: 23px; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 0 2px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; cursor: pointer; transition: all 0.2s ease; background-color: #ef4444; border: 1px solid #dc2626; color: #ffffff;" title="Click to toggle: Mark as Verified">' +
-                                '<i class="fa fa-times"></i> <span>Not Verify</span>' +
+                            '<input type="hidden" class="serviceReconciliation" name="serviceReconciliation" value="Verify" />' +
+                            '<button type="button" class="btn btn-xs toggleReconcileBtn reconcile-not-verify" data-status="Verify" data-pay-id="" style="width: 96%; height: 23px; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 0 2px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; cursor: pointer; transition: all 0.2s ease; background-color: #ef4444; border: 1px solid #dc2626; color: #ffffff;" title="Click to toggle: Mark as Verified">' +
+                                '<i class="fa fa-times"></i> <span>Verify</span>' +
                             '</button>' +
                         '</div>' +
                     '</td>' +
@@ -22231,8 +22361,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             e.stopPropagation();
             var $btn = $(this);
             var currentStatus = $btn.attr("data-status");
-            var isCurrentlyVerified = (currentStatus === "Verified" || currentStatus === "Verify");
-            var newStatus = isCurrentlyVerified ? "Not Verify" : "Verified";
+            var isCurrentlyVerified = (currentStatus === "Verified");
+            var newStatus = isCurrentlyVerified ? "Verify" : "Verified";
             var payId = $btn.attr("data-pay-id");
             var $row = $btn.closest("tr");
 
@@ -22247,7 +22377,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         "border-color": "#15803d",
                         "color": "#ffffff"
                     })
-                    .attr("title", "Click to toggle: Mark as Not Verify")
+                    .attr("title", "Click to toggle: Mark as Verify")
                     .html('<i class="fa fa-check"></i> <span>Verified</span>');
             } else {
                 $btn.removeClass("reconcile-verified")
@@ -22258,7 +22388,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         "color": "#ffffff"
                     })
                     .attr("title", "Click to toggle: Mark as Verified")
-                    .html('<i class="fa fa-times"></i> <span>Not Verify</span>');
+                    .html('<i class="fa fa-times"></i> <span>Verify</span>');
             }
 
             if (payId && payId !== "" && payId !== "0") {
@@ -22417,16 +22547,61 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         var dt = ($row.find(".paymentDepositDate").val() || "").trim();
                         var chk = ($row.find(".serviceChequeDetails").val() || "").trim();
                         var rec = ($row.find(".serviceReconciliation").val() || "").trim();
-                        if (received > 0 || tds > 0 || discount > 0 || dt !== "" || chk !== "" || rec !== "") {
+                        if (received > 0 || tds > 0 || discount > 0 || dt !== "" || chk !== "" || rec.toLowerCase() === "verified") {
                             blockValidCount++;
                         }
                     });
 
                     var blockCombined = blockReceived + blockTds + blockDiscount;
+                    var blockRemaining = blockInvoiceSum - blockCombined;
+
                     $block.find(".totalPaymentReceivedSum").val(blockReceived.toFixed(2));
                     $block.find(".totalPaymentTdsSum").val(blockTds.toFixed(2));
                     $block.find(".totalPaymentCombinedSum").val(blockCombined.toFixed(2));
                     $block.find(".totalPaymentRowCount").text(blockValidCount);
+
+                    $block.find(".serviceBlockInvSum").text(blockInvoiceSum.toFixed(2));
+                    $block.find(".serviceBlockPaidSum").text(blockReceived.toFixed(2));
+                    $block.find(".serviceBlockTdsSum").text(blockTds.toFixed(2));
+                    $block.find(".serviceBlockDiscountSum").text(blockDiscount.toFixed(2));
+                    if (blockDiscount > 0) {
+                        $block.find(".serviceBlockDiscountWrapper").show();
+                    } else {
+                        $block.find(".serviceBlockDiscountWrapper").hide();
+                    }
+                    $block.find(".serviceBlockRemainingSum").text('₹' + blockRemaining.toFixed(2));
+
+                    var isBlockMatched = (blockInvoiceSum > 0 && Math.abs(blockRemaining) < 0.01);
+                    if (isBlockMatched) {
+                        $block.addClass("service-block-matched");
+                        $block.find(".block-matched-badge").remove();
+                        $block.find(".invoice-container-col .qms_complete_btn > span").append(' <span class="block-matched-badge"><i class="fa fa-check-circle"></i> MATCHED</span>');
+                        $block.find(".payments-container-col .qms_complete_btn > span").append(' <span class="block-matched-badge"><i class="fa fa-check-circle"></i> MATCHED</span>');
+                        $block.find(".serviceBlockRemainingWrapper").css({
+                            "background": "#dcfce7",
+                            "border-color": "#4ade80"
+                        });
+                        $block.find(".serviceBlockRemainingWrapper span").css("color", "#166534").html('<i class="fa fa-check-circle" style="color: #16a34a; margin-right: 2px;"></i> Matched:');
+                        $block.find(".serviceBlockRemainingSum").css("color", "#15803d");
+                    } else {
+                        $block.removeClass("service-block-matched");
+                        $block.find(".block-matched-badge").remove();
+                        if (blockRemaining <= 0) {
+                            $block.find(".serviceBlockRemainingWrapper").css({
+                                "background": "#ecfdf5",
+                                "border-color": "#a7f3d0"
+                            });
+                            $block.find(".serviceBlockRemainingWrapper span").css("color", "#065f46").text("Remaining Total:");
+                            $block.find(".serviceBlockRemainingSum").css("color", "#16a34a");
+                        } else {
+                            $block.find(".serviceBlockRemainingWrapper").css({
+                                "background": "#fef2f2",
+                                "border-color": "#fca5a5"
+                            });
+                            $block.find(".serviceBlockRemainingWrapper span").css("color", "#991b1b").text("Remaining Total:");
+                            $block.find(".serviceBlockRemainingSum").css("color", "#dc2626");
+                        }
+                    }
 
                     grandTotalReceived += blockReceived;
                     grandTotalTds += blockTds;
@@ -22518,27 +22693,12 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             html += '</div>';
 
             html += '<div class="service-payment-block" data-service="' + svcName + '" data-block-id="' + blockIdx + '" style="margin-bottom: 22px;">';
-            html += '    <div class="service-block-meta-bar" style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 12px; margin-bottom: 10px;">';
-            html += '        <div style="display: flex; align-items: center; gap: 10px;">';
-            html += '            <span style="font-size: 11.5px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px;">Service Scope:</span>';
-            html += '            <select class="form-control serviceBlockTypeSelect" style="width: auto; display: inline-block; height: 26px; padding: 2px 8px; font-size: 12px; font-weight: 700; color: #1e293b; background: #ffffff; border: 1.5px solid #2563eb; border-radius: 4px; outline: none; cursor: pointer;">';
-            html +=                 optionsHtml;
-            html += '            </select>';
-            html += '            <span class="label label-primary serviceBlockBadge" style="background-color: #2563eb; font-size: 11px; font-weight: 700; padding: 4px 8px; border-radius: 4px;">' + svcName + '</span>';
-            html += '        </div>';
-            html += '        <div style="display: flex; align-items: center; gap: 8px;">';
-            html += '            <button type="button" class="btn btn-xs removeServiceBlockBtn" style="background: #ffffff; color: #ef4444; border: 1px solid #fca5a5; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; cursor: pointer;" title="Remove this service section">';
-            html += '                <i class="fa fa-trash-o"></i> Remove Header';
-            html += '            </button>';
-            html += '        </div>';
-            html += '    </div>';
-
             html += '    <div class="row payment-tables-row" style="display: flex; align-items: stretch; margin-left: -5px; margin-right: -5px;">';
             // Invoices column
             html += '        <div class="col-xs-6 table-responsive invoice-container-col" style="flex: 1 1 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px;">';
             html += '            <div class="row">';
             html += '                <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 10px;">';
-            html += '                    <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.4px;"><i class="fa ">Invoice</i> (<span class="col-service-label">' + svcName + '</span>)</span>';
+            html += '                    <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.4px;"><i class="fa ">Invoicing</i> (<span class="col-service-label">' + svcName + '</span>)</span>';
             html += '                    <button type="button" class="btn btn-xs finalInvoiceBtn" data-id="' + customerId + '" data-address="' + customerAddress + '" data-service="' + svcName + '" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #ffffff; border: 1px solid #1e40af; font-weight: 700; font-size: 11px; border-radius: 4px; padding: 2px 10px; box-shadow: 0 1px 3px rgba(37,99,235,0.25); text-transform: none; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; transition: all 0.2s ease;" title="Create Final Invoice Against ' + svcName + '">';
             html += '                        <i class="fa fa-plus" style="font-size: 10px;"></i> issue tax invoice against service';
             html += '                    </button>';
@@ -22550,14 +22710,14 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             html += '                        <th width="28%" style="padding: 3px 2px; text-align: center;"><small>Invoice No.</small></th>';
             html += '                        <th width="18%" style="padding: 3px 2px; text-align: center;"><small>Date</small></th>';
             html += '                        <th width="22%" style="padding: 3px 2px; text-align: center;"><small>Gross Amount</small></th>';
-            html += '                        <th width="32%" style="padding: 3px 2px; text-align: center;"><small>Remark</small></th>';
+            html += '                        <th width="32%" style="padding: 3px 2px; text-align: center;"><small>Comments</small></th>';
             html += '                    </tr></thead>';
             html += '                    <tbody>';
             html += '                        <tr class="cb_subsection">';
             html += '                            <td style="padding: 0px;"><div class="table-edit-control"><label></label><input type="text" class="invoiceNo" name="invoiceNo" value="-" readonly style="text-align: center; color: #94a3b8;" /></div></td>';
             html += '                            <td style="padding: 0px;"><div class="table-edit-control"><label></label><input type="text" class="invoiceDate" name="invoiceDate" value="-" readonly style="text-align: center; color: #94a3b8;" /></div></td>';
             html += '                            <td style="padding: 0px;"><div class="table-edit-control"><label></label><input type="text" class="invoiceAmount" name="invoiceAmount" value="0.00" readonly style="text-align: center; color: #94a3b8;" /></div></td>';
-            html += '                            <td style="padding: 0px;"><div class="table-edit-control"><label></label><input type="text" class="invoiceRemark" readonly disabled placeholder="-" style="text-align: center; color: #94a3b8; background: transparent; border: none;" /></div></td>';
+            html += '                            <td style="padding: 1px 2px; vertical-align: middle;"><div class="table-edit-control" style="margin: 0; padding: 0;"><textarea class="invoiceRemark" readonly disabled placeholder="-" style="text-align: center; color: #94a3b8; background: transparent; border: none; resize: none;" rows="2"></textarea></div></td>';
             html += '                        </tr>';
             html += '                    </tbody>';
             html += '                    <tfoot>';
@@ -22575,7 +22735,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             html += '        <div class="col-xs-6 table-responsive payments-container-col" style="flex: 1 1 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px;">';
             html += '            <div class="row">';
             html += '                <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 10px;">';
-            html += '                    <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.4px;"><i class="fa ">Payments</i> (<span class="col-service-label">' + svcName + '</span>)</span>';
+            html += '                    <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.4px;"><i class="fa ">Received Payment</i> (<span class="col-service-label">' + svcName + '</span>)</span>';
             html += '                    <button type="button" class="btn btn-xs openDiscountModalBtn" data-service="' + svcName + '" style="background: #ffffff; color: #475569; border: 1px solid #cbd5e1; font-weight: 700; font-size: 11px; border-radius: 4px; padding: 2px 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.06); text-transform: none; display: inline-flex; align-items: center; gap: 3px; cursor: pointer; transition: all 0.2s ease;" title="Discount / Short Paid Settlement">(-+)</button>';
             html += '                </div>';
             html += '            </div>';
@@ -22595,7 +22755,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             html += '                            <td style="padding: 0px; background-color: #ffffff;"><div class="table-edit-control"><label></label><input type="number" step="any" min="0" data_row_id="" class="serviceTdsAmount" name="serviceTdsAmount" value="" placeholder="" style="background-color: #ffffff; border-bottom: 1px solid #cbd5e1; color: #b45309; font-weight: 700; text-align: right;" /></div></td>';
             html += '                            <td style="padding: 0px;"><div class="table-edit-control"><label></label><input type="text" data_row_id="" class="paymentDepositDate" name="paymentDepositDate" value="" placeholder="DD.MM.YYYY"></div></td>';
             html += '                            <td style="padding: 0px;"><div class="table-edit-control"><label></label><input type="text" data_row_id="" class="serviceChequeDetails" name="serviceChequeDetails" value="" placeholder="" /></div></td>';
-            html += '                            <td style="padding: 1px 2px; text-align: center; vertical-align: middle;"><div class="table-edit-control" style="display: flex; align-items: center; justify-content: center;"><input type="hidden" class="serviceReconciliation" name="serviceReconciliation" value="Not Verify" /><button type="button" class="btn btn-xs toggleReconcileBtn reconcile-not-verify" data-status="Not Verify" data-pay-id="" style="width: 96%; height: 23px; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 0 2px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; cursor: pointer; transition: all 0.2s ease; background-color: #ef4444; border: 1px solid #dc2626; color: #ffffff;" title="Click to toggle: Mark as Verified"><i class="fa fa-times"></i> <span>Not Verify</span></button></div></td>';
+            html += '                            <td style="padding: 1px 2px; text-align: center; vertical-align: middle;"><div class="table-edit-control" style="display: flex; align-items: center; justify-content: center;"><input type="hidden" class="serviceReconciliation" name="serviceReconciliation" value="Verify" /><button type="button" class="btn btn-xs toggleReconcileBtn reconcile-not-verify" data-status="Verify" data-pay-id="" style="width: 96%; height: 23px; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 0 2px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; cursor: pointer; transition: all 0.2s ease; background-color: #ef4444; border: 1px solid #dc2626; color: #ffffff;" title="Click to toggle: Mark as Verified"><i class="fa fa-times"></i> <span>Verify</span></button></div></td>';
             html += '                            <td style="padding: 0px;"><div class="table-edit-control"><input type="hidden" data_row_id="" class="serviceBalance" name="serviceBalance" value="0.00" /><input type="hidden" data-row-id="" class="row-id" name="row-id" value=""></div></td>';
             html += '                        </tr>';
             html += '                    </tbody>';
@@ -22603,10 +22763,21 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             html += '                        <tr style="background-color: #f8fafc; font-weight: bold; border-top: 2px solid #cbd5e1;">';
             html += '                            <td style="padding: 0px; vertical-align: middle;"><div class="table-edit-control"><input type="text" class="totalPaymentReceivedSum" value="0.00" style="font-weight: bold; color: #16a34a; background: #ffffff; text-align: center; border: 1px solid #cbd5e1; font-size: 12px; height: 26px; padding: 0;" readonly title="Total Payment Received for ' + svcName + '" /></div></td>';
             html += '                            <td style="padding: 0px; vertical-align: middle; background-color: #f8fafc;"><div class="table-edit-control"><input type="text" class="totalPaymentTdsSum" value="0.00" style="font-weight: bold; color: #b45309; background: #ffffff; text-align: center; border: 1px solid #cbd5e1; font-size: 12px; height: 26px; padding: 0;" readonly title="Total TDS Amount for ' + svcName + '" /></div></td>';
-            html += '                            <td colspan="4" style="text-align: right; padding: 4px 8px; vertical-align: middle; color: #334155; white-space: nowrap;"><small style="font-weight: 700; font-size: 11px;">TOTAL PAYMENT (<span class="totalPaymentRowCount">0</span>):</small><div style="display: inline-block; vertical-align: middle; margin-left: 6px; width: 95px;"><input type="text" class="totalPaymentCombinedSum" value="0.00" style="font-weight: bold; color: #0f172a; background: #ffffff; text-align: center; border: 1px solid #cbd5e1; font-size: 12px; height: 26px; padding: 0; width: 100%;" readonly title="Total Payment Amount for ' + svcName + '" /></div></td>';
+            html += '                            <td colspan="4" style="text-align: right; padding: 4px 8px; vertical-align: middle; color: #334155; white-space: nowrap;">';
+            html += '                                <input type="hidden" class="totalPaymentCombinedSum" value="0.00" />';
+            html += '                            </td>';
             html += '                        </tr>';
             html += '                    </tfoot>';
             html += '                </table>';
+            html += '            </div>';
+            html += '            <div class="service-block-summary-bar" style="margin-top: 4px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 3px 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: nowrap; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); white-space: nowrap;">';
+            html += '                <span class="serviceBlockInvSum" style="display: none;">0.00</span>';
+            html += '                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: nowrap;">';
+            html += '                    <div style="display: inline-flex; align-items: center; gap: 3px;"><span style="color: #166534; font-weight: 700; text-transform: uppercase; font-size: 9.5px;"><i class="fa fa-check-circle" style="color: #16a34a; margin-right: 2px;"></i> Received Total:</span> <strong style="color: #15803d; font-size: 11px; font-weight: 800;">₹<span class="serviceBlockPaidSum">0.00</span></strong></div>';
+            html += '                    <div style="display: inline-flex; align-items: center; gap: 3px;"><span style="color: #92400e; font-weight: 700; text-transform: uppercase; font-size: 9.5px;"><i class="fa fa-percent" style="color: #d97706; font-size: 9px; margin-right: 2px;"></i> TDS Total:</span> <strong style="color: #b45309; font-size: 11px; font-weight: 800;">₹<span class="serviceBlockTdsSum">0.00</span></strong></div>';
+            html += '                    <div class="serviceBlockDiscountWrapper" style="display: none; align-items: center; gap: 3px;"><span style="color: #6b21a8; font-weight: 700; text-transform: uppercase; font-size: 9.5px;"><i class="fa fa-tag" style="color: #7c3aed; font-size: 9px; margin-right: 2px;"></i> Disc:</span> <strong style="color: #7c3aed; font-size: 11px; font-weight: 800;">₹<span class="serviceBlockDiscountSum">0.00</span></strong></div>';
+            html += '                </div>';
+            html += '                <div><span class="serviceBlockRemainingWrapper" style="display: inline-flex; align-items: center; font-size: 10px; padding: 2px 7px; border-radius: 4px; font-weight: 800; background: #ecfdf5; border: 1px solid #a7f3d0; white-space: nowrap;"><span style="color: #065f46; text-transform: uppercase; font-size: 9.5px; margin-right: 3px;">Remaining Total:</span> <strong class="serviceBlockRemainingSum" style="color: #16a34a; font-size: 11px;">₹0.00</strong></span></div>';
             html += '            </div>';
             html += '        </div>';
             html += '    </div>';
@@ -22622,7 +22793,9 @@ if ($currentRole === 'client' || $currentRole === 'external') {
 
             var $pDesc = $('.payment-desc');
             if ($pDesc.is(':hidden')) {
-                $pDesc.slideDown();
+                $pDesc.slideDown(200);
+                $('.btnAddInvoiceHeader').css('display', 'inline-flex');
+                $('.payment-toggle-chevron').css('transform', 'rotate(180deg)');
             }
 
             var availableServices = ['CA', 'SA-I', 'SA-II', 'RC', 'SP', 'Contract Review', 'PTR', 'Transition Audit'];
@@ -22963,7 +23136,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             if (!invId || invId === '0') {
                 return;
             }
-            showAutoSaveIndicator('saving', 'Saving remark...');
+            showAutoSaveIndicator('saving', 'Saving comments...');
             $input.css({'border-color': '#f59e0b', 'background-color': '#fffbeb'});
 
             $.ajax({
@@ -22977,8 +23150,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 dataType: 'json',
                 success: function (res) {
                     if (res && res.success) {
-                        $input.css({'border-color': 'transparent', 'background-color': 'transparent'});
-                        showAutoSaveIndicator('saved', 'Remark saved');
+                        $input.css({'border-color': '#cbd5e1', 'background-color': '#ffffff'});
+                        showAutoSaveIndicator('saved', 'Comments saved');
                         setTimeout(function () { showAutoSaveIndicator('saved'); }, 2000);
                     } else {
                         $input.css({'border-color': '#ef4444', 'background-color': '#fef2f2'});
@@ -23064,7 +23237,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                               (discount !== "" && discount !== null && discount !== undefined) ||
                               (dateVal !== "" && dateVal !== null && dateVal !== undefined) ||
                               (chkVal !== "" && chkVal !== null && chkVal !== undefined) ||
-                              (recVal !== "" && recVal !== null && recVal !== undefined) ||
+                              (recVal && (recVal.toLowerCase() === "verified" || recVal.toLowerCase() === "yes" || recVal === "1")) ||
                               (rId !== "" && rId !== null && rId !== undefined && rId !== "0");
 
                 if (!hasData) {

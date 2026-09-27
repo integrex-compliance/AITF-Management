@@ -42,7 +42,7 @@
     $allTds = "SELECT ci.id, customer_name,ci.unique_id,ps.customer_id,ps.service_type as tds, 
                COALESCE(NULLIF(ps.tds_amount, 0), ps.amount_decided, ps.payment_received) as amount_decided,
                COALESCE(NULLIF(ps.tds_amount, 0), ps.payment_received, ps.amount_decided) as payment_received,
-               ps.payment_date,ps.comment,ps.payment_id, svc.service_id, svc.service_type
+               ps.payment_date,ps.comment,ps.payment_id, ps.tds_verified, svc.service_id, svc.service_type, 0 as is_statement
                FROM customer_info ci
                left join payment_system ps ON ci.id=ps.customer_id
                left join service svc on ps.customer_id = svc.customer_id
@@ -76,8 +76,8 @@
     $newTdsQuery = "SELECT ci.id, ci.customer_name, ci.unique_id, sp.customer_id, 
                     CONCAT('TDS (Statement #', sp.id, ')') as tds, 
                     sp.tds_decided as amount_decided, sp.tds_received as payment_received,
-                    sp.payment_date, sp.comment, sp.id as payment_id,
-                    0 as service_id, sp.service_type
+                    sp.payment_date, sp.comment, sp.id as payment_id, sp.tds_verified,
+                    0 as service_id, sp.service_type, 1 as is_statement
                     FROM customer_info ci
                     INNER JOIN statement_payments sp ON ci.id = sp.customer_id
                     WHERE sp.tds_decided > 0";
@@ -570,13 +570,19 @@
                                                     <th class="" width="10" >
                                                         <small><a>TDS certificate details</a></small>
                                                     </th>
+                                                    <th class="" style="text-align: center; width: 105px;">
+                                                        <small><a>TDS Verify</a></small>
+                                                    </th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                <?php foreach ($listOfTds as $tds) { ?>
+                                                <?php foreach ($listOfTds as $tds) { 
+                                                    $isTdsVerified = (isset($tds['tds_verified']) && in_array(strtolower(trim($tds['tds_verified'])), ['verified', 'yes', '1']));
+                                                    $tdsStatusText = $isTdsVerified ? 'Verified' : 'Verify';
+                                                ?>
                                                     <tr id='addr0' data-id="<?php echo $tds['customer_id'] ?>">
                                                         <td data-name="desc" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
-                                                            <small><a data-id="<?php echo $tds['customer_id'] ?>" class="customerAccount"><?php echo $tds['unique_id'] ?></a></small>
+                                                             <small><a data-id="<?php echo $tds['customer_id'] ?>" class="customerAccount"><?php echo $tds['unique_id'] ?></a></small>
                                                         </td>
 
                                                         <td  class="customerAccount" data-id="<?php echo $tds['customer_id'] ?>" data-name="desc" style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff;">
@@ -593,13 +599,24 @@
                                                         </td>
                                                         <td   class="customerAccount" data-id="<?php echo $tds['customer_id'] ?>" data-name="sel" style="border-top: 1px solid #ffffff;  border-right: 1px solid #ffffff;">
                                                             <small><?php if (isset($tds['payment_date']) && !empty($tds['payment_date'])) {
-                                                    echo date("d.m.Y", strtotime($tds['payment_date']));
-                                                } ?></small>
+                                                     echo date("d.m.Y", strtotime($tds['payment_date']));
+                                                 } ?></small>
                                                         </td>
                                                         <td data-name="sel" style="border-top: 1px solid #ffffff;  border-right: 1px solid #ffffff;">
                                                             <div class="table-edit-control">
                                                                 <textarea rows="3" class="saveChanges" data-row="<?php echo $tds['payment_id'] ?>" data-column="comment" name="payComments" value="" placeholder="" ><?php if (isset($tds['comment'])) echo $tds['comment'] ?></textarea>
                                                             </div>
+                                                        </td>
+                                                        <td style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; text-align: center; vertical-align: middle;">
+                                                            <button type="button" class="btn btn-xs toggleTdsVerifyBtn <?php echo $isTdsVerified ? 'tds-btn-verified' : 'tds-btn-unverified'; ?>" 
+                                                                    data-status="<?php echo $tdsStatusText; ?>" 
+                                                                    data-pay-id="<?php echo htmlspecialchars($tds['payment_id'] ?? ''); ?>" 
+                                                                    data-statement="<?php echo !empty($tds['is_statement']) ? '1' : '0'; ?>"
+                                                                    style="min-width: 84px; height: 26px; font-size: 11.5px; font-weight: 700; border-radius: 4px; padding: 2px 8px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; transition: all 0.2s ease; <?php echo $isTdsVerified ? 'background-color: #16a34a; border: 1px solid #15803d; color: #ffffff;' : 'background-color: #ef4444; border: 1px solid #dc2626; color: #ffffff;'; ?>"
+                                                                    title="Click to toggle: <?php echo $isTdsVerified ? 'Mark as Unverified' : 'Mark as Verified in Payment System'; ?>">
+                                                                <i class="fa <?php echo $isTdsVerified ? 'fa-check' : 'fa-times'; ?>"></i>
+                                                                <span><?php echo $tdsStatusText; ?></span>
+                                                            </button>
                                                         </td>
                                                     </tr>
 <?php } ?>
@@ -998,13 +1015,14 @@
             "lengthChange": false,
             "dom": "tr<'row dt-bottom-row'<'col-sm-6 col-xs-12'i><'col-sm-6 col-xs-12'p>>",
             "columnDefs": [
-                { "width": "12%", "targets": 0 },
+                { "width": "10%", "targets": 0 },
                 { "width": "18%", "targets": 1 },
-                { "width": "14%", "targets": 2 },
-                { "width": "14%", "targets": 3 },
+                { "width": "12%", "targets": 2 },
+                { "width": "12%", "targets": 3 },
                 { "width": "12%", "targets": 4 },
                 { "width": "10%", "targets": 5 },
-                { "width": "20%", "targets": 6 }
+                { "width": "16%", "targets": 6 },
+                { "width": "10%", "targets": 7 }
             ],
             "language": {
                 "emptyTable": "No TDS records available in table",
@@ -1026,6 +1044,66 @@
             $("#wrapper").toggleClass("active");
             $(".container").toggleClass("active");
             table.draw();
+        });
+
+        // Toggle TDS Verification Status
+        $(document).on('click', '.toggleTdsVerifyBtn', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var $btn = $(this);
+            var currentStatus = $btn.attr('data-status');
+            var isCurrentlyVerified = (currentStatus === 'Verified');
+            var newStatus = isCurrentlyVerified ? 'Verify' : 'Verified';
+            var payId = $btn.attr('data-pay-id');
+            var isStatement = $btn.attr('data-statement');
+
+            $btn.attr('data-status', newStatus);
+            if (newStatus === 'Verified') {
+                $btn.removeClass('tds-btn-unverified')
+                    .addClass('tds-btn-verified')
+                    .css({
+                        'background-color': '#16a34a',
+                        'border-color': '#15803d',
+                        'color': '#ffffff'
+                    })
+                    .attr('title', 'Click to toggle: Mark as Unverified')
+                    .html('<i class="fa fa-check"></i> <span>Verified</span>');
+            } else {
+                $btn.removeClass('tds-btn-verified')
+                    .addClass('tds-btn-unverified')
+                    .css({
+                        'background-color': '#ef4444',
+                        'border-color': '#dc2626',
+                        'color': '#ffffff'
+                    })
+                    .attr('title', 'Click to toggle: Mark as Verified in Payment System')
+                    .html('<i class="fa fa-times"></i> <span>Verify</span>');
+            }
+
+            if (payId) {
+                $btn.css('opacity', '0.7');
+                $.ajax({
+                    url: 'addPayment.php',
+                    type: 'POST',
+                    data: {
+                        action: 'updateTdsVerifyStatus',
+                        payment_id: payId,
+                        status: newStatus,
+                        is_statement: isStatement
+                    },
+                    dataType: 'json',
+                    success: function (res) {
+                        $btn.css('opacity', '1');
+                        if (!res || !res.success) {
+                            console.warn('Could not update TDS verify status:', res);
+                        }
+                    },
+                    error: function (xhr, status, err) {
+                        $btn.css('opacity', '1');
+                        console.error('Error updating TDS verify status:', err);
+                    }
+                });
+            }
         });
 
         $('.saveChanges').change(function (e) {
