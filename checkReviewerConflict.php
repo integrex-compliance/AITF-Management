@@ -20,13 +20,12 @@ if ($action === 'get_service_auditors') {
 }
 
 if ($action === 'check_service_reviewer') {
-    $result = aitf_check_service_reviewer_conflict($db, $serviceId, $reviewerName, $customerId);
     echo json_encode(array(
-        'conflict' => !empty($result['has_conflict']),
-        'conflicting_auditor' => $result['conflicting_auditor'] ?? '',
-        'reviewer_name' => $result['reviewer_name'] ?? '',
-        'message' => $result['message'] ?? '',
-        'auditors' => $result['auditors'] ?? array()
+        'conflict' => false,
+        'conflicting_auditor' => '',
+        'reviewer_name' => $reviewerName,
+        'message' => '',
+        'auditors' => array()
     ));
     exit;
 }
@@ -62,22 +61,19 @@ if ($action === 'get_reviewers') {
 
 // When checking if an Auditor can be appointed (has this person already been appointed as Reviewer?)
 if ($action === 'check_auditor' || ($auditor !== '' && $reviewerName === '')) {
-    $result = aitf_check_auditor_appointed_as_reviewer($db, $customerId, $serviceId, $auditor);
     echo json_encode(array(
-        'conflict' => !empty($result['has_conflict']),
-        'conflicting_reviewer' => $result['conflicting_name'] ?? '',
-        'auditor_name' => $result['auditor_name'] ?? '',
-        'message' => $result['message'] ?? ''
+        'conflict' => false,
+        'conflicting_reviewer' => '',
+        'auditor_name' => $auditor,
+        'message' => ''
     ));
     exit;
 }
 
 // When checking if a Reviewer can be appointed (has this person already been assigned as Auditor?)
-$result = aitf_check_auditor_reviewer_conflict($db, $customerId, $serviceId, $reviewerName);
-
 echo json_encode(array(
-    'conflict' => !empty($result['has_conflict']),
-    'auditor_name' => $result['conflicting_name'] ?? '',
-    'message' => $result['message'] ?? ''
+    'conflict' => false,
+    'auditor_name' => '',
+    'message' => ''
 ));
 exit;

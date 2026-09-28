@@ -822,15 +822,7 @@ function removeUnwantedOptions(selector, optionsToRemove) {
         }
 
         function checkReviewerConflictWithServiceAuditorsA2(reviewerName) {
-            if (!reviewerName || !aitfServiceAuditorsA2 || !aitfServiceAuditorsA2.length) return false;
-            var normRev = reviewerName.toLowerCase().replace(/[^a-z0-9]/g, '');
-            if (!normRev) return false;
-            for (var i = 0; i < aitfServiceAuditorsA2.length; i++) {
-                var normAud = aitfServiceAuditorsA2[i].toLowerCase().replace(/[^a-z0-9]/g, '');
-                if (normRev === normAud || (normRev.length >= 5 && normAud.length >= 5 && (normRev.indexOf(normAud) !== -1 || normAud.indexOf(normRev) !== -1))) {
-                    return aitfServiceAuditorsA2[i];
-                }
-            }
+            // Temporarily disabled
             return false;
         }
 

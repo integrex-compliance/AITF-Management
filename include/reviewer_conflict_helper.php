@@ -298,35 +298,7 @@ if (!function_exists('aitf_check_auditor_reviewer_conflict')) {
      */
     function aitf_check_auditor_reviewer_conflict(PDO $db, $customerId, $serviceId, $reviewerName)
     {
-        $reviewerName = trim((string)$reviewerName);
-        if ($reviewerName === '') {
-            return array('has_conflict' => false, 'conflicting_name' => '', 'message' => '');
-        }
-
-        $assigned = aitf_get_assigned_auditors_for_client($db, $customerId, $serviceId);
-        $normReviewer = aitf_normalize_person_name($reviewerName);
-
-        if ($normReviewer === '') {
-            return array('has_conflict' => false, 'conflicting_name' => '', 'message' => '');
-        }
-
-        foreach ($assigned['names'] as $auditorName) {
-            $normAuditor = aitf_normalize_person_name($auditorName);
-            if ($normAuditor === '') {
-                continue;
-            }
-
-            // Direct equality match or substring match if sufficiently long
-            if ($normAuditor === $normReviewer ||
-                (strlen($normAuditor) >= 5 && strlen($normReviewer) >= 5 && (strpos($normAuditor, $normReviewer) !== false || strpos($normReviewer, $normAuditor) !== false))) {
-                return array(
-                    'has_conflict' => true,
-                    'conflicting_name' => $auditorName,
-                    'message' => "'" . aitf_rbac_escape($auditorName) . "' is already assigned as Auditor of this client, cannot set as Reviewer. Please select another Reviewer."
-                );
-            }
-        }
-
+        // Temporarily disabled
         return array('has_conflict' => false, 'conflicting_name' => '', 'message' => '');
     }
 }
@@ -525,61 +497,8 @@ if (!function_exists('aitf_check_auditor_appointed_as_reviewer')) {
      */
     function aitf_check_auditor_appointed_as_reviewer(PDO $db, $customerId, $serviceId, $auditorIdOrName)
     {
-        $raw = trim((string)$auditorIdOrName);
-        if ($raw === '') {
-            return array('has_conflict' => false, 'conflicting_name' => '', 'auditor_name' => '', 'message' => '');
-        }
-
-        $auditorName = $raw;
-        $auditorId = 0;
-
-        // If numeric ID, fetch the auditor's name
-        if (is_numeric($raw)) {
-            $auditorId = (int)$raw;
-            try {
-                $stmt = $db->prepare("SELECT auditor_name FROM auditors WHERE auditors_id = :id LIMIT 1");
-                $stmt->execute([':id' => $auditorId]);
-                $fetched = $stmt->fetchColumn();
-                if (!empty($fetched)) {
-                    $auditorName = trim((string)$fetched);
-                }
-            } catch (Exception $e) {}
-        }
-
-        $appointed = aitf_get_appointed_reviewers_for_client($db, $customerId, $serviceId);
-
-        // Check by ID if available
-        if ($auditorId > 0 && in_array($auditorId, $appointed['auditor_ids'], true)) {
-            return array(
-                'has_conflict' => true,
-                'conflicting_name' => $auditorName,
-                'auditor_name' => $auditorName,
-                'message' => "'" . aitf_rbac_escape($auditorName) . "' is Reviewer of this client, cannot set as Auditor. Please select another Auditor."
-            );
-        }
-
-        // Check by Name matching
-        $normAud = aitf_normalize_person_name($auditorName);
-        if ($normAud === '') {
-            return array('has_conflict' => false, 'conflicting_name' => '', 'auditor_name' => $auditorName, 'message' => '');
-        }
-
-        foreach ($appointed['names'] as $revName) {
-            $normRev = aitf_normalize_person_name($revName);
-            if ($normRev === '') continue;
-
-            if ($normAud === $normRev ||
-                (strlen($normAud) >= 5 && strlen($normRev) >= 5 && (strpos($normAud, $normRev) !== false || strpos($normRev, $normAud) !== false))) {
-                return array(
-                    'has_conflict' => true,
-                    'conflicting_name' => $revName,
-                    'auditor_name' => $auditorName,
-                    'message' => "'" . aitf_rbac_escape($auditorName) . "' is Reviewer of this client, cannot set as Auditor. Please select another Auditor."
-                );
-            }
-        }
-
-        return array('has_conflict' => false, 'conflicting_name' => '', 'auditor_name' => $auditorName, 'message' => '');
+        // Temporarily disabled
+        return array('has_conflict' => false, 'conflicting_name' => '', 'auditor_name' => (string)$auditorIdOrName, 'message' => '');
     }
 }
 
@@ -727,52 +646,13 @@ if (!function_exists('aitf_check_service_reviewer_conflict')) {
      */
     function aitf_check_service_reviewer_conflict(PDO $db, $serviceId, $reviewerName, $customerId = 0, $serviceType = 'ca')
     {
-        $reviewerName = trim((string)$reviewerName);
-        if ($reviewerName === '') {
-            return array(
-                'has_conflict' => false,
-                'conflicting_auditor' => '',
-                'reviewer_name' => '',
-                'message' => '',
-                'auditors' => array()
-            );
-        }
-
-        $assigned = aitf_get_auditors_for_service($db, $serviceId, $customerId, $serviceType);
-        $normRev = aitf_normalize_person_name($reviewerName);
-
-        if ($normRev === '') {
-            return array(
-                'has_conflict' => false,
-                'conflicting_auditor' => '',
-                'reviewer_name' => $reviewerName,
-                'message' => '',
-                'auditors' => $assigned['names']
-            );
-        }
-
-        foreach ($assigned['names'] as $audName) {
-            $normAud = aitf_normalize_person_name($audName);
-            if ($normAud === '') continue;
-
-            if ($normAud === $normRev ||
-                (strlen($normAud) >= 5 && strlen($normRev) >= 5 && (strpos($normAud, $normRev) !== false || strpos($normRev, $normAud) !== false))) {
-                return array(
-                    'has_conflict' => true,
-                    'conflicting_auditor' => $audName,
-                    'reviewer_name' => $reviewerName,
-                    'message' => "'" . aitf_rbac_escape($audName) . "' is Auditor of this service, cannot set as Reviewer. Please select another Reviewer.",
-                    'auditors' => $assigned['names']
-                );
-            }
-        }
-
+        // Temporarily disabled
         return array(
             'has_conflict' => false,
             'conflicting_auditor' => '',
-            'reviewer_name' => $reviewerName,
+            'reviewer_name' => (string)$reviewerName,
             'message' => '',
-            'auditors' => $assigned['names']
+            'auditors' => array()
         );
     }
 }

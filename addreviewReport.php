@@ -55,7 +55,7 @@ if (strtoupper($_SERVER['REQUEST_METHOD']) == 'POST') {
                     $refRow = $stmtRef->fetch(PDO::FETCH_ASSOC);
                     if ($refRow && !empty($refRow['aggrement_no'])) {
                         $referenceNumber = trim($refRow['aggrement_no']);
-                    } else {
+                    } else { 
                         $stmtRef = $db->prepare("SELECT aggrement_no FROM certification_aggrement WHERE customer_id = :customer AND aggrement_no IS NOT NULL AND aggrement_no != '' ORDER BY id DESC LIMIT 1");
                         $stmtRef->execute([':customer' => $_POST['customerId']]);
                         $refRow = $stmtRef->fetch(PDO::FETCH_ASSOC);

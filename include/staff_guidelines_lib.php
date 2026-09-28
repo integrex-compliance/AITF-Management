@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/session_helper.php';
 require_once __DIR__ . '/rbac_helper.php';
+require_once __DIR__ . '/../utility.php';
 
 if (!function_exists('aitf_ensure_guidelines_schema')) {
     function aitf_ensure_guidelines_schema(PDO $db)
@@ -9,7 +10,7 @@ if (!function_exists('aitf_ensure_guidelines_schema')) {
             id INT AUTO_INCREMENT PRIMARY KEY,
             title VARCHAR(255) NOT NULL,
             description LONGTEXT NOT NULL,
-            target_role VARCHAR(255) NOT NULL DEFAULT 'All',
+            target_role VARCHAR(255) NOT NULL DEFAULT 'Users',
             created_by VARCHAR(100) NULL,
             created_role VARCHAR(100) NULL,
             created_at DATETIME NOT NULL,
@@ -31,9 +32,28 @@ if (!function_exists('aitf_ensure_guidelines_schema')) {
             INDEX idx_guideline_id (guideline_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 
+        $sql3 = "CREATE TABLE IF NOT EXISTS staff_guideline_recipients (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            guideline_id INT NOT NULL,
+            user_id INT NOT NULL,
+            user_type VARCHAR(50) NOT NULL DEFAULT 'user',
+            user_name VARCHAR(255) NULL,
+            user_email VARCHAR(255) NULL,
+            user_role VARCHAR(100) NULL,
+            assigned_by VARCHAR(100) NULL,
+            assigned_at DATETIME NOT NULL,
+            is_read TINYINT(1) NOT NULL DEFAULT 0,
+            read_at DATETIME NULL,
+            INDEX idx_guideline (guideline_id),
+            INDEX idx_user (user_id, user_type),
+            INDEX idx_user_email (user_email),
+            UNIQUE KEY uq_guideline_recipient (guideline_id, user_id, user_type)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+
         try {
             $db->exec($sql1);
             $db->exec($sql2);
+            $db->exec($sql3);
         } catch (Exception $e) {
             error_log("Failed to ensure staff guidelines schema: " . $e->getMessage());
         }
@@ -46,65 +66,55 @@ if (!function_exists('aitf_ensure_guidelines_schema')) {
     }
 }
 
-if (!function_exists('aitf_get_guideline_roles_list')) {
-    function aitf_get_guideline_roles_list(PDO $db)
+if (!function_exists('aitf_get_all_system_users')) {
+    function aitf_get_all_system_users(PDO $db)
     {
-        $roles = [
-            'All' => 'All Staff / All Roles',
-            'Top Mgmt' => 'Top Mgmt',
-            'Admin' => 'Admin',
-            'Finance' => 'Finance',
-            'Auditor' => 'Auditor',
-            'Application Reviewer' => 'Application Reviewer',
-            'Report Reviewer' => 'Report Reviewer',
-            'Office Staff-A' => 'Office Staff-A',
-            'Office Staff-B' => 'Office Staff-B',
-            'Office Staff' => 'Office Staff',
-            'Marketing Head' => 'Marketing Head',
-            'Marketing Executive' => 'Marketing Executive',
-            'Marketing' => 'Marketing'
-        ];
+        $users = [];
 
+        // 1. Fetch from 'user' table
         try {
-            $stmt = $db->query("SELECT DISTINCT role FROM user_role WHERE role IS NOT NULL AND role != '' ORDER BY role ASC");
+            $stmt = $db->query("SELECT user_id, user_name, abbreviation, email_id, role, 'user' as user_type 
+                                FROM user 
+                                WHERE (is_deleted = '0' OR is_deleted = 0 OR is_deleted IS NULL) 
+                                ORDER BY user_name ASC");
             while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                $r = trim($row['role']);
-                if ($r !== '' && !isset($roles[$r])) {
-                    $roles[$r] = $r;
-                }
+                $uid = (int)$row['user_id'];
+                $key = 'user_' . $uid;
+                $users[$key] = [
+                    'key' => $key,
+                    'user_id' => $uid,
+                    'user_type' => 'user',
+                    'name' => trim((string)$row['user_name']),
+                    'email' => trim((string)$row['email_id']),
+                    'role' => !empty($row['role']) ? trim((string)$row['role']) : 'Staff',
+                    'abbreviation' => trim((string)($row['abbreviation'] ?? ''))
+                ];
             }
-        } catch (Exception $e) {}
+        } catch (Exception $e) {
+            error_log("Error fetching users for guidelines: " . $e->getMessage());
+        }
 
-        return $roles;
+        return array_values($users);
     }
 }
 
 if (!function_exists('aitf_create_guideline')) {
-    function aitf_create_guideline(PDO $db, $title, $description, $targetRole, $createdBy = '', $createdRole = '', $files = [])
+    function aitf_create_guideline(PDO $db, $title, $description, $createdBy = '', $createdRole = '', $files = [])
     {
         aitf_ensure_guidelines_schema($db);
 
         $title = trim((string)$title);
         $description = trim((string)$description);
-        $targetRole = trim((string)$targetRole);
-        if ($targetRole === '') {
-            $targetRole = 'All';
-        }
 
         if ($title === '') {
             return ['success' => false, 'message' => 'Guideline title is required.'];
         }
-        if ($description === '') {
-            return ['success' => false, 'message' => 'Guideline description is required.'];
-        }
-
         $now = date('Y-m-d H:i:s');
         $stmt = $db->prepare("INSERT INTO staff_guidelines (title, description, target_role, created_by, created_role, created_at, updated_at, is_active)
-                              VALUES (:title, :desc, :target_role, :created_by, :created_role, :created_at, :updated_at, 1)");
+                              VALUES (:title, :desc, 'Users', :created_by, :created_role, :created_at, :updated_at, 1)");
         $stmt->execute([
             ':title' => $title,
             ':desc' => $description,
-            ':target_role' => $targetRole,
             ':created_by' => $createdBy,
             ':created_role' => $createdRole,
             ':created_at' => $now,
@@ -170,7 +180,7 @@ if (!function_exists('aitf_create_guideline')) {
 
         return [
             'success' => true,
-            'message' => 'Guideline successfully posted!',
+            'message' => 'Guideline created successfully! Now assign it to users from Add User page.',
             'guideline_id' => $guidelineId,
             'attachments_count' => $uploadedCount
         ];
@@ -202,6 +212,10 @@ if (!function_exists('aitf_delete_guideline')) {
             $stmtAtt = $db->prepare("DELETE FROM staff_guideline_attachments WHERE guideline_id = :gid");
             $stmtAtt->execute([':gid' => $guidelineId]);
 
+            // Delete recipients records
+            $stmtRec = $db->prepare("DELETE FROM staff_guideline_recipients WHERE guideline_id = :gid");
+            $stmtRec->execute([':gid' => $guidelineId]);
+
             // Delete guideline
             $stmtG = $db->prepare("DELETE FROM staff_guidelines WHERE id = :id");
             $stmtG->execute([':id' => $guidelineId]);
@@ -214,91 +228,136 @@ if (!function_exists('aitf_delete_guideline')) {
     }
 }
 
-if (!function_exists('aitf_user_can_view_guideline')) {
-    function aitf_user_can_view_guideline($userRole, array $guideline)
+if (!function_exists('aitf_assign_guideline_to_users')) {
+    function aitf_assign_guideline_to_users(PDO $db, $guidelineId, array $recipientKeys, $assignedBy = '')
     {
-        // Top Mgmt can view all guidelines
-        if (aitf_is_top_management_role($userRole)) {
-            return true;
+        aitf_ensure_guidelines_schema($db);
+        $guidelineId = (int)$guidelineId;
+        if ($guidelineId <= 0) {
+            return ['success' => false, 'message' => 'Invalid guideline ID.'];
         }
 
-        $target = trim((string)($guideline['target_role'] ?? 'All'));
-        if (strcasecmp($target, 'All') === 0 || $target === '' || strcasecmp($target, 'All Staff') === 0 || strcasecmp($target, 'All Roles') === 0) {
-            return true;
+        // Verify guideline exists
+        $checkStmt = $db->prepare("SELECT id, title FROM staff_guidelines WHERE id = :id LIMIT 1");
+        $checkStmt->execute([':id' => $guidelineId]);
+        $guideline = $checkStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$guideline) {
+            return ['success' => false, 'message' => 'Guideline not found.'];
         }
 
-        $userRoleNorm = strtolower(trim((string)$userRole));
-        $targetNorm = strtolower($target);
-
-        // Exact or case-insensitive match
-        if ($userRoleNorm === $targetNorm) {
-            return true;
+        // Fetch all system users to match metadata
+        $allUsers = aitf_get_all_system_users($db);
+        $usersByKey = [];
+        foreach ($allUsers as $u) {
+            $usersByKey[$u['key']] = $u;
+            // Also allow matching by numeric ID if plain user_id provided
+            $usersByKey['user_' . $u['user_id']] = $u;
+            $usersByKey[(string)$u['user_id']] = $u;
         }
 
-        // Auditor alias check (Auditor / Auditors)
-        if (($userRoleNorm === 'auditor' || $userRoleNorm === 'auditors') && ($targetNorm === 'auditor' || $targetNorm === 'auditors')) {
-            return true;
+        $now = date('Y-m-d H:i:s');
+        if (empty($assignedBy)) {
+            $assignedBy = $_SESSION['username'] ?? 'Director';
         }
 
-        // Marketing alias check
-        if (strpos($userRoleNorm, 'marketing') !== false && $targetNorm === 'marketing') {
-            return true;
-        }
+        try {
+            $db->beginTransaction();
 
-        // Office Staff alias check
-        if (strpos($userRoleNorm, 'office staff') !== false && $targetNorm === 'office staff') {
-            return true;
-        }
+            // Clear previous recipients for this guideline
+            $delStmt = $db->prepare("DELETE FROM staff_guideline_recipients WHERE guideline_id = :gid");
+            $delStmt->execute([':gid' => $guidelineId]);
 
-        // Comma-separated target roles support
-        if (strpos($targetNorm, ',') !== false) {
-            $rolesList = array_map('trim', explode(',', $targetNorm));
-            if (in_array($userRoleNorm, $rolesList, true)) {
-                return true;
+            $insertedCount = 0;
+            $insStmt = $db->prepare("INSERT INTO staff_guideline_recipients (guideline_id, user_id, user_type, user_name, user_email, user_role, assigned_by, assigned_at)
+                                     VALUES (:gid, :uid, :utype, :uname, :uemail, :urole, :assigned_by, :assigned_at)");
+
+            $assignedNames = [];
+            foreach ($recipientKeys as $rawKey) {
+                $rawKey = trim((string)$rawKey);
+                if ($rawKey === '') continue;
+
+                $userType = 'user';
+                $userId = 0;
+
+                if (strpos($rawKey, 'auditor_') === 0 || strpos($rawKey, 'auditor:') === 0) {
+                    $userType = 'auditor';
+                    $userId = (int)str_replace(['auditor_', 'auditor:'], '', $rawKey);
+                } elseif (strpos($rawKey, 'user_') === 0 || strpos($rawKey, 'user:') === 0) {
+                    $userType = 'user';
+                    $userId = (int)str_replace(['user_', 'user:'], '', $rawKey);
+                } else {
+                    $userId = (int)$rawKey;
+                }
+
+                if ($userId <= 0) continue;
+
+                $matched = $usersByKey[$userType . '_' . $userId] ?? ($usersByKey[(string)$userId] ?? null);
+                $userName = $matched ? $matched['name'] : 'User #' . $userId;
+                $userEmail = $matched ? $matched['email'] : '';
+                $userRole = $matched ? $matched['role'] : '';
+
+                $insStmt->execute([
+                    ':gid' => $guidelineId,
+                    ':uid' => $userId,
+                    ':utype' => $userType,
+                    ':uname' => $userName,
+                    ':uemail' => $userEmail,
+                    ':urole' => $userRole,
+                    ':assigned_by' => $assignedBy,
+                    ':assigned_at' => $now
+                ]);
+
+                $assignedNames[] = $userName;
+                $insertedCount++;
             }
-            if (($userRoleNorm === 'auditor' || $userRoleNorm === 'auditors') && (in_array('auditor', $rolesList, true) || in_array('auditors', $rolesList, true))) {
-                return true;
-            }
-        }
 
-        return false;
+            $db->commit();
+
+            return [
+                'success' => true,
+                'message' => $insertedCount > 0 
+                    ? "Guideline '{$guideline['title']}' successfully sent to {$insertedCount} user(s)." 
+                    : "Guideline recipients updated (no users selected).",
+                'guideline_id' => $guidelineId,
+                'recipients_count' => $insertedCount,
+                'assigned_names' => $assignedNames
+            ];
+
+        } catch (Exception $e) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            error_log("Error assigning guideline recipients: " . $e->getMessage());
+            return ['success' => false, 'message' => 'Failed to assign guideline to users: ' . $e->getMessage()];
+        }
     }
 }
 
-if (!function_exists('aitf_get_guidelines_for_user')) {
-    function aitf_get_guidelines_for_user(PDO $db, $userRole, $search = '', $filterRole = '')
+if (!function_exists('aitf_get_guideline_recipients')) {
+    function aitf_get_guideline_recipients(PDO $db, $guidelineId)
+    {
+        aitf_ensure_guidelines_schema($db);
+        $stmt = $db->prepare("SELECT * FROM staff_guideline_recipients WHERE guideline_id = :gid ORDER BY user_name ASC");
+        $stmt->execute([':gid' => (int)$guidelineId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+}
+
+if (!function_exists('aitf_get_all_guidelines_with_details')) {
+    function aitf_get_all_guidelines_with_details(PDO $db, $search = '')
     {
         aitf_ensure_guidelines_schema($db);
 
-        $isTopMgmt = aitf_is_top_management_role($userRole);
+        $where = ["g.is_active = 1"];
         $params = [];
-        $where = ["is_active = 1"];
-
-        if ($isTopMgmt) {
-            // Mgmt sees everything, but can filter by target_role if requested
-            if (!empty($filterRole) && $filterRole !== 'all') {
-                $where[] = "target_role = :filterRole";
-                $params[':filterRole'] = $filterRole;
-            }
-        } else {
-            // Non-mgmt users only see guidelines for 'All' or their specific role
-            $normRole = trim((string)$userRole);
-            if (strcasecmp($normRole, 'auditors') === 0) {
-                $normRole = 'Auditor';
-            }
-
-            $where[] = "(target_role = 'All' OR target_role = 'All Staff' OR target_role = 'All Roles' OR target_role = :role OR target_role LIKE :roleLike OR target_role = 'Auditors')";
-            $params[':role'] = $normRole;
-            $params[':roleLike'] = '%' . $normRole . '%';
-        }
 
         if (!empty($search)) {
-            $where[] = "(title LIKE :search OR description LIKE :search)";
+            $where[] = "(g.title LIKE :search OR g.description LIKE :search)";
             $params[':search'] = '%' . trim($search) . '%';
         }
 
         $whereSql = implode(' AND ', $where);
-        $sql = "SELECT * FROM staff_guidelines WHERE {$whereSql} ORDER BY id DESC";
+        $sql = "SELECT g.* FROM staff_guidelines g WHERE {$whereSql} ORDER BY g.id DESC";
         $stmt = $db->prepare($sql);
         $stmt->execute($params);
         $guidelines = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -307,7 +366,107 @@ if (!function_exists('aitf_get_guidelines_for_user')) {
             return [];
         }
 
-        // Fetch attachments for all retrieved guidelines
+        $guidelineIds = array_column($guidelines, 'id');
+        $placeholders = implode(',', array_fill(0, count($guidelineIds), '?'));
+
+        // Fetch attachments
+        $attStmt = $db->prepare("SELECT * FROM staff_guideline_attachments WHERE guideline_id IN ({$placeholders}) ORDER BY id ASC");
+        $attStmt->execute($guidelineIds);
+        $allAttachments = $attStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $attachmentsByGid = [];
+        foreach ($allAttachments as $att) {
+            $gid = (int)$att['guideline_id'];
+            $attachmentsByGid[$gid][] = $att;
+        }
+
+        // Fetch recipients
+        $recStmt = $db->prepare("SELECT * FROM staff_guideline_recipients WHERE guideline_id IN ({$placeholders}) ORDER BY user_name ASC");
+        $recStmt->execute($guidelineIds);
+        $allRecipients = $recStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $recipientsByGid = [];
+        foreach ($allRecipients as $rec) {
+            $gid = (int)$rec['guideline_id'];
+            $recipientsByGid[$gid][] = $rec;
+        }
+
+        foreach ($guidelines as &$g) {
+            $gid = (int)$g['id'];
+            $g['attachments'] = $attachmentsByGid[$gid] ?? [];
+            $g['recipients'] = $recipientsByGid[$gid] ?? [];
+            $g['recipient_keys'] = array_map(function($r) {
+                return ($r['user_type'] ?? 'user') . '_' . $r['user_id'];
+            }, $g['recipients']);
+        }
+        unset($g);
+
+        return $guidelines;
+    }
+}
+
+if (!function_exists('aitf_get_guidelines_for_current_user')) {
+    function aitf_get_guidelines_for_current_user(PDO $db, $userId = null, $userRole = null, $userEmail = null, $search = '')
+    {
+        aitf_ensure_guidelines_schema($db);
+
+        if ($userId === null) {
+            $userId = (int)($_SESSION['id'] ?? 0);
+        }
+        if ($userRole === null) {
+            $userRole = (string)($_SESSION['role'] ?? '');
+        }
+        if ($userEmail === null) {
+            $userEmail = (string)($_SESSION['email'] ?? ($_SESSION['email_id'] ?? ''));
+        }
+        $userName = (string)($_SESSION['username'] ?? '');
+
+        $isTopMgmt = aitf_is_top_management_role($userRole) || Utitlity::checkForDirector() || Utitlity::checkForUserMainAdmin();
+
+        $params = [];
+        $where = ["g.is_active = 1"];
+
+        if ($isTopMgmt) {
+            // Management can see all posted guidelines
+            if (!empty($search)) {
+                $where[] = "(g.title LIKE :search OR g.description LIKE :search)";
+                $params[':search'] = '%' . trim($search) . '%';
+            }
+            $whereSql = implode(' AND ', $where);
+            $sql = "SELECT DISTINCT g.* FROM staff_guidelines g WHERE {$whereSql} ORDER BY g.id DESC";
+        } else {
+            // Regular user: STRICTLY ONLY guidelines sent to this user!
+            $where[] = "(
+                (r.user_id = :uid)
+                OR (:uemail != '' AND r.user_email = :uemail)
+                OR (:uname != '' AND r.user_name = :uname)
+            )";
+            $params[':uid'] = (int)$userId;
+            $params[':uemail'] = trim($userEmail);
+            $params[':uname'] = trim($userName);
+
+            if (!empty($search)) {
+                $where[] = "(g.title LIKE :search OR g.description LIKE :search)";
+                $params[':search'] = '%' . trim($search) . '%';
+            }
+
+            $whereSql = implode(' AND ', $where);
+            $sql = "SELECT DISTINCT g.*, r.assigned_at, r.is_read 
+                    FROM staff_guidelines g 
+                    INNER JOIN staff_guideline_recipients r ON g.id = r.guideline_id 
+                    WHERE {$whereSql} 
+                    ORDER BY g.id DESC";
+        }
+
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        $guidelines = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($guidelines)) {
+            return [];
+        }
+
+        // Fetch attachments
         $guidelineIds = array_column($guidelines, 'id');
         $placeholders = implode(',', array_fill(0, count($guidelineIds), '?'));
         $attStmt = $db->prepare("SELECT * FROM staff_guideline_attachments WHERE guideline_id IN ({$placeholders}) ORDER BY id ASC");
@@ -317,19 +476,88 @@ if (!function_exists('aitf_get_guidelines_for_user')) {
         $attachmentsByGid = [];
         foreach ($allAttachments as $att) {
             $gid = (int)$att['guideline_id'];
-            if (!isset($attachmentsByGid[$gid])) {
-                $attachmentsByGid[$gid] = [];
-            }
             $attachmentsByGid[$gid][] = $att;
+        }
+
+        // Fetch recipients (for display)
+        $recStmt = $db->prepare("SELECT * FROM staff_guideline_recipients WHERE guideline_id IN ({$placeholders}) ORDER BY user_name ASC");
+        $recStmt->execute($guidelineIds);
+        $allRecipients = $recStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $recipientsByGid = [];
+        foreach ($allRecipients as $rec) {
+            $gid = (int)$rec['guideline_id'];
+            $recipientsByGid[$gid][] = $rec;
         }
 
         foreach ($guidelines as &$g) {
             $gid = (int)$g['id'];
             $g['attachments'] = $attachmentsByGid[$gid] ?? [];
+            $g['recipients'] = $recipientsByGid[$gid] ?? [];
         }
         unset($g);
 
         return $guidelines;
+    }
+}
+
+// Backward compatibility alias for aitf_get_guidelines_for_user
+if (!function_exists('aitf_get_guidelines_for_user')) {
+    function aitf_get_guidelines_for_user(PDO $db, $userRole, $search = '', $filterRole = '')
+    {
+        return aitf_get_guidelines_for_current_user($db, null, $userRole, null, $search);
+    }
+}
+
+if (!function_exists('aitf_user_can_view_guideline_doc')) {
+    function aitf_user_can_view_guideline_doc(PDO $db, $guidelineId, $userId = null, $userRole = null, $userEmail = null)
+    {
+        if ($userId === null) {
+            $userId = (int)($_SESSION['id'] ?? 0);
+        }
+        if ($userRole === null) {
+            $userRole = (string)($_SESSION['role'] ?? '');
+        }
+        if ($userEmail === null) {
+            $userEmail = (string)($_SESSION['email'] ?? ($_SESSION['email_id'] ?? ''));
+        }
+        $userName = (string)($_SESSION['username'] ?? '');
+
+        if (aitf_is_top_management_role($userRole) || Utitlity::checkForDirector() || Utitlity::checkForUserMainAdmin()) {
+            return true;
+        }
+
+        aitf_ensure_guidelines_schema($db);
+        $stmt = $db->prepare("SELECT COUNT(*) FROM staff_guideline_recipients 
+                              WHERE guideline_id = :gid 
+                                AND (
+                                    user_id = :uid 
+                                    OR (:uemail != '' AND user_email = :uemail)
+                                    OR (:uname != '' AND user_name = :uname)
+                                )");
+        $stmt->execute([
+            ':gid' => (int)$guidelineId,
+            ':uid' => (int)$userId,
+            ':uemail' => trim($userEmail),
+            ':uname' => trim($userName)
+        ]);
+        return ((int)$stmt->fetchColumn() > 0);
+    }
+}
+
+if (!function_exists('aitf_user_can_view_guideline')) {
+    function aitf_user_can_view_guideline($userRole, array $guideline)
+    {
+        global $db;
+        if (aitf_is_top_management_role($userRole) || Utitlity::checkForDirector() || Utitlity::checkForUserMainAdmin()) {
+            return true;
+        }
+
+        if (isset($guideline['id']) && isset($db) && $db instanceof PDO) {
+            return aitf_user_can_view_guideline_doc($db, $guideline['id']);
+        }
+
+        return true;
     }
 }
 
@@ -348,6 +576,13 @@ if (!function_exists('aitf_get_guideline_by_id')) {
         $attStmt = $db->prepare("SELECT * FROM staff_guideline_attachments WHERE guideline_id = :gid ORDER BY id ASC");
         $attStmt->execute([':gid' => (int)$guideline['id']]);
         $guideline['attachments'] = $attStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $recStmt = $db->prepare("SELECT * FROM staff_guideline_recipients WHERE guideline_id = :gid ORDER BY user_name ASC");
+        $recStmt->execute([':gid' => (int)$guideline['id']]);
+        $guideline['recipients'] = $recStmt->fetchAll(PDO::FETCH_ASSOC);
+        $guideline['recipient_keys'] = array_map(function($r) {
+            return ($r['user_type'] ?? 'user') . '_' . $r['user_id'];
+        }, $guideline['recipients']);
 
         return $guideline;
     }
@@ -426,11 +661,8 @@ if (!function_exists('aitf_get_role_badge_style')) {
             case 'application reviewer':
             case 'report reviewer':
                 return ['bg' => '#f0fdfa', 'text' => '#0f766e', 'border' => '#99f6e4', 'icon' => 'fa fa-check-square-o'];
-            case 'all':
-            case 'all staff':
-            case 'all roles':
             default:
-                return ['bg' => '#f0fdf4', 'text' => '#047857', 'border' => '#86efac', 'icon' => 'fa fa-globe'];
+                return ['bg' => '#f1f5f9', 'text' => '#334155', 'border' => '#cbd5e1', 'icon' => 'fa fa-user'];
         }
     }
 }

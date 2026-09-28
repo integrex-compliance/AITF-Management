@@ -416,7 +416,7 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
                         class="sub_icon fa fa-briefcase"></i></a></li>
         <?php } ?> 
         <?php if (aitf_has_access("Payment Due")) { ?>
-            <li><a href="paymentPage.php" class="animate <?php echo $addFinanceClass ?>"><span>PAYMENT</span><i
+            <li><a href="paymentPage.php" class="animate <?php echo $addFinanceClass ?>"><span> DUE PAYMENT</span><i
                         class="sub_icon fa fa-money"></i></a></li>
         <?php } ?>
         <?php if (aitf_has_access("Statement")) { ?>

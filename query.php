@@ -13,7 +13,8 @@ if (!Utitlity::checkForDirector()) {
 else {
     UserpermissionCheck();
 }
-
+else{
+    header("
 try {
     utility::ensure_rbac_schema($db);
 }
@@ -22,6 +23,12 @@ catch {
 userpermissionCheck();
 }
 
+
+alter table if not exits  "TDS_DECIDED"  createa colom if not exists "amount" decimal(10,2) default 0.00, add colom if not exists "status" enum('pending','approved','rejected') default 'pending', add colom if not exists "created_at" timestamp default current_timestamp, add colom if not exists "updated_at" timestamp default current_timestamp on update current_timestamp, add colom if not exists "user_id"
+
+int 100000,
+
+enum('active','inactive') default 'active';
 function UserPermissionCheck($module) {
     if (!aitf_has_access($module)) {
         http_response_code(403);

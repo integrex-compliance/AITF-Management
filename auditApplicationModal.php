@@ -1285,16 +1285,7 @@ $(document).on('change', '.nace-code', function() {
         }
 
         function checkConflictBetweenReviewerAndAuditors(reviewerName) {
-            if (!reviewerName) return false;
-            var normRev = reviewerName.toLowerCase().replace(/[^a-z0-9]/g, '');
-            if (!normRev) return false;
-            for (var i = 0; i < aitfAssignedAuditors.length; i++) {
-                var normAud = aitfAssignedAuditors[i].toLowerCase().replace(/[^a-z0-9]/g, '');
-                if (normAud === normRev ||
-                    (normAud.length >= 5 && normRev.length >= 5 && (normAud.indexOf(normRev) !== -1 || normRev.indexOf(normAud) !== -1))) {
-                    return aitfAssignedAuditors[i];
-                }
-            }
+            // Temporarily disabled
             return false;
         }
 

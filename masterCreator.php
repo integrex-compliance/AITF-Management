@@ -130,8 +130,7 @@
     $handlersList = $statement->fetchAll();
 
     // Staff Guidelines Data
-    $availableGuidelineRoles = aitf_get_guideline_roles_list($db);
-    $allMasterGuidelines = aitf_get_guidelines_for_user($db, 'Top Mgmt');
+    $allMasterGuidelines = aitf_get_all_guidelines_with_details($db);
     ?>
     <div id="page-content-wrapper">
         <div class="page-content inset">
@@ -816,179 +815,127 @@
                 <!-- ======================================================== -->
                 <!-- POST GUIDELINES FOR STAFF SECTION                        -->
                 <!-- ======================================================== -->
-                <div class="row" id="guidelines-section" style="margin-top: 35px; margin-bottom: 25px;">
-                    <div class="col-sm-12">
-                        <div class="mc-guidelines-box" style="background: #ffffff; border-radius: 14px; border: 1px solid #e2e8f0; box-shadow: 0 4px 20px rgba(0,0,0,0.05); padding: 24px;">
-                            <div class="mc-guidelines-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-bottom: 2px solid #f1f5f9; padding-bottom: 16px;">
-                                <div>
-                                    <h3 style="margin: 0 0 4px 0; font-size: 19px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 10px;">
-                                        <span style="background: #ecfdf5; color: #10b981; width: 34px; height: 34px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-size: 16px;">
-                                            <i class="fa fa-book"></i>
-                                        </span>
-                                        Post Guidelines for Staff
-                                    </h3>
-                                    <p style="margin: 0; font-size: 13px; color: #64748b;">
-                                        Publish operational guidelines and directives for staff.
-                                    </p>
-                                </div>
-                               
-                            </div>
-
-                            <div class="row" style="margin-top: 22px;">
-                                <!-- Left Column: Form -->
-                                <div class="col-md-6">
-                                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px;">
-                                        <h4 style="margin: 0 0 16px 0; font-size: 15px; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 8px;">
-                                            <i class="fa fa-pencil-square-o" style="color: #0ea5e9;"></i> Create New Staff Guideline
-                                        </h4>
-                                        <form id="postStaffGuidelineForm" method="post" enctype="multipart/form-data">
-                                            <input type="hidden" name="action" value="create_guideline">
-                                            <input type="hidden" name="is_ajax" value="1">
-
-                                            <!-- Select Post For (Role) -->
-                                            <div class="form-group" style="margin-bottom: 16px;">
-                                                <label style="font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px; display: block;">
-                                                    <i class="fa fa-user-circle-o" style="color: #6366f1;"></i> Select Post For (Target Role) <span class="text-danger">*</span>
-                                                </label>
-                                                <select name="target_role" id="targetRoleSelect" class="form-control" required style="border-radius: 8px; height: 42px; font-weight: 600; font-size: 13.5px; border-color: #cbd5e1;">
-                                                    <option value="All" style="font-weight: 700; color: #047857;">-- All Staff / All Roles (Everyone) --</option>
-                                                    <?php foreach ($availableGuidelineRoles as $rKey => $rVal) { 
-                                                        if ($rKey === 'All') continue;
-                                                    ?>
-                                                        <option value="<?php echo htmlspecialchars($rKey); ?>"><?php echo htmlspecialchars($rVal); ?></option>
-                                                    <?php } ?>
-                                                </select>
-                                                <small class="text-muted" style="display: block; margin-top: 5px; font-size: 11.5px; color: #64748b;">
-                                                    <i class="fa fa-info-circle text-info"></i> If you select <strong>Auditor</strong>, only Auditor role will see this. Top Mgmt sees all guidelines with role tags.
-                                                </small>
-                                            </div>
-
-                                            <!-- Guideline Title -->
-                                            <div class="form-group" style="margin-bottom: 16px;">
-                                                <label style="font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px; display: block;">
-                                                    <i class="fa fa-tag" style="color: #f59e0b;"></i> Guideline Title<span class="text-danger">*</span>
-                                                </label>
-                                                <input type="text" name="guideline_title" id="guidelineTitle" class="form-control" required 
-                                                       placeholder="e.g., ISO Audit Reporting Protocol & Deadlines 2026" 
-                                                       style="border-radius: 8px; height: 42px; font-size: 13.5px; border-color: #cbd5e1;">
-                                            </div>
-
-                                            <!-- Guideline Description -->
-                                            <div class="form-group" style="margin-bottom: 16px;">
-                                                <label style="font-weight: 700; font-size: 13px; color: #334155; margin-bottom: 6px; display: block;">
-                                                    <i class="fa fa-align-left" style="color: #0ea5e9;"></i> Description<span class="text-danger">*</span>
-                                                </label>
-                                                <textarea name="guideline_description" id="guidelineDesc" rows="5" class="form-control" required 
-                                                          placeholder="Write detailed instructions, procedures, checklist guidelines, or policy rules for the staff..." 
-                                                          style="border-radius: 8px; resize: vertical; font-size: 13.5px; border-color: #cbd5e1; line-height: 1.5;"></textarea>
-                                            </div>
-
-                                            <!-- Attachments & Dynamic Add More -->
-                                            <div class="form-group" style="margin-bottom: 20px;">
-                                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                                                    <label style="font-weight: 700; font-size: 13px; color: #334155; margin: 0;">
-                                                        <i class="fa fa-paperclip" style="color: #10b981;"></i> Attach Document(s)
-                                                    </label>
-                                                    <button type="button" class="btn btn-xs" id="btnAddMoreAttachment" 
-                                                            style="background: #10b981; color: #fff; border-radius: 6px; font-weight: 700; padding: 4px 12px; box-shadow: 0 2px 6px rgba(16,185,129,0.25);">
-                                                        <i class="fa fa-plus"></i> Add More Attachment
-                                                    </button>
-                                                </div>
-                                             
-
-                                                <!-- Dynamic Container for Attachment inputs -->
-                                                <div id="attachmentsContainer">
-                                                    <!-- Default First Row -->
-                                                    <div class="attachment-input-row" style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                                                        <div style="flex-grow: 1;">
-                                                            <input type="file" name="guideline_files[]" class="form-control" style="border-radius: 8px; height: 38px; padding: 5px 10px; font-size: 12px; border-color: #cbd5e1;">
-                                                        </div>
-                                                        <button type="button" class="btn btn-default btn-sm btn-remove-att-row" style="border-radius: 8px; color: #94a3b8; display: none;" title="Remove attachment">
-                                                            <i class="fa fa-trash"></i>
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <!-- Submit / Post Button -->
-                                            <div>
-                                                <button type="submit" class="btn btn-block" id="btnSubmitGuideline" 
-                                                        style="background: linear-gradient(135deg, #0d4d8b 0%, #06325d 100%); color: #fff; border-radius: 8px; height: 44px; font-size: 14px; font-weight: 700; border: none; box-shadow: 0 4px 14px rgba(13,77,139,0.3); transition: all 0.2s ease;">
-                                                    <i class="fa fa-paper-plane" style="margin-right: 6px;"></i> Post Guideline
-                                                </button>
-                                            </div>
-                                        </form>
+                <div class="row" id="guidelines-section" style="margin-top: 30px; margin-bottom: 25px;">
+                    <div class="col-sm-6">
+                        <div class="panel panel-default">
+                            <div class="panel-heading" style="background: #193048; color: #fff;">
+                                <div class="row">
+                                    <div class="col-sm-12 qms_customer_name" style="color: #fff; font-size: 14px;">
+                                        <span><i class="fa fa-book"></i></span> Post Guideline for Staff
                                     </div>
                                 </div>
+                            </div>
+                            <div class="panel-body" style="padding: 15px;">
+                                <div class="alert alert-info" style="font-size: 12px; padding: 8px 12px; margin-bottom: 15px;">
+                                    <i class="fa fa-info-circle"></i> Guidelines posted here are stored in the master pool. You can send and assign them to specific users from the <a href="addUsers.php#guidelines-dist-section" style="font-weight: bold; text-decoration: underline;">Add User</a> page.
+                                </div>
 
-                                <!-- Right Column: Recently Posted Guidelines -->
-                                <div class="col-md-6">
-                                    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; height: 100%;">
-                                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 14px;">
-                                            <h4 style="margin: 0; font-size: 15px; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 8px;">
-                                                <i class="fa fa-list-alt" style="color: #10b981;"></i> Published Guidelines
-                                            </h4>
-                                            <span class="badge" style="background: #0ea5e9; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 12px;" id="postedGuidelinesCount">
-                                                <?php echo count($allMasterGuidelines); ?> Posted
-                                            </span>
+                                <form id="postStaffGuidelineForm" method="post" enctype="multipart/form-data">
+                                    <input type="hidden" name="action" value="create_guideline">
+                                    <input type="hidden" name="is_ajax" value="1">
+
+                                    <div class="form-group" style="margin-bottom: 12px;">
+                                        <label style="font-size: 12px; font-weight: 600; color: #333;">Guideline Title <span class="text-danger">*</span></label>
+                                        <input type="text" name="guideline_title" id="guidelineTitle" class="form-control" required placeholder="Enter guideline title or subject">
+                                    </div>
+
+                                    <div class="form-group" style="margin-bottom: 15px;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                            <label style="font-size: 12px; font-weight: 600; color: #333; margin: 0;">Attach Document(s)</label>
+                                            <button type="button" class="btn btn-xs btn-default" id="btnAddMoreAttachment" style="font-size: 11px;">
+                                                <i class="fa fa-plus"></i> Add More File
+                                            </button>
                                         </div>
-
-                                        <div class="posted-guidelines-scroll" style="max-height: 520px; overflow-y: auto; padding-right: 6px;">
-                                            <div id="masterGuidelinesListContainer">
-                                                <?php if (empty($allMasterGuidelines)) { ?>
-                                                    <div class="text-center text-muted" style="padding: 60px 15px;" id="noMasterGuidelinesNotice">
-                                                        <i class="fa fa-folder-open-o" style="font-size: 40px; color: #cbd5e1; margin-bottom: 10px; display: block;"></i>
-                                                        <p style="margin: 0; font-size: 13.5px;">No guidelines posted yet. Use the form on the left to post directives for staff.</p>
-                                                    </div>
-                                                <?php } else { ?>
-                                                    <?php foreach ($allMasterGuidelines as $mg) { 
-                                                        $mBadge = aitf_get_role_badge_style($mg['target_role']);
-                                                        $mAtts = $mg['attachments'] ?? [];
-                                                        $mDate = date('M d, Y - h:i A', strtotime($mg['created_at']));
-                                                        $mRoleName = ($mg['target_role'] === 'All' || $mg['target_role'] === 'All Roles' || $mg['target_role'] === 'All Staff') ? 'All Staff' : $mg['target_role'];
-                                                    ?>
-                                                        <div class="mc-guideline-item" id="mc-guideline-item-<?php echo $mg['id']; ?>" 
-                                                             style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; transition: all 0.2s ease;">
-                                                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
-                                                                <div>
-                                                                    <span class="badge" style="background: <?php echo $mBadge['bg']; ?>; color: <?php echo $mBadge['text']; ?>; border: 1px solid <?php echo $mBadge['border']; ?>; font-size: 11px; font-weight: 800; padding: 3px 10px; border-radius: 12px; margin-bottom: 6px; display: inline-block;">
-                                                                        <i class="<?php echo $mBadge['icon']; ?>"></i> FOR: <?php echo strtoupper(htmlspecialchars($mRoleName)); ?>
-                                                                    </span>
-                                                                    <div style="font-size: 14px; font-weight: 700; color: #0f172a; margin-top: 2px;">
-                                                                        <?php echo htmlspecialchars($mg['title']); ?>
-                                                                    </div>
-                                                                </div>
-                                                                <button type="button" class="btn btn-xs btn-delete-mc-guideline" 
-                                                                        data-id="<?php echo $mg['id']; ?>" 
-                                                                        data-title="<?php echo htmlspecialchars($mg['title'], ENT_QUOTES); ?>"
-                                                                        style="color: #dc2626; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 4px 8px;" 
-                                                                        title="Delete this guideline">
-                                                                    <i class="fa fa-trash"></i>
-                                                                </button>
-                                                            </div>
-
-                                                            <div style="font-size: 12.5px; color: #475569; margin: 8px 0; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
-                                                                <?php echo htmlspecialchars($mg['description']); ?>
-                                                            </div>
-
-                                                            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; color: #94a3b8; border-top: 1px dashed #e2e8f0; padding-top: 8px; margin-top: 8px;">
-                                                                <span><i class="fa fa-clock-o"></i> <?php echo $mDate; ?></span>
-                                                                <span style="display: flex; align-items: center; gap: 10px;">
-                                                                    <?php if (!empty($mAtts)) { ?>
-                                                                        <span style="color: #0ea5e9; font-weight: 600;">
-                                                                            <i class="fa fa-paperclip"></i> <?php echo count($mAtts); ?> doc(s)
-                                                                        </span>
-                                                                    <?php } ?>
-                                                                    <a href="guidelines.php#guideline-card-<?php echo $mg['id']; ?>" target="_blank" style="color: #10b981; font-weight: 700; text-decoration: none;">
-                                                                        <i class="fa fa-eye"></i> View Live
-                                                                    </a>
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    <?php } ?>
-                                                <?php } ?>
+                                        <div id="attachmentsContainer">
+                                            <div class="attachment-input-row" style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+                                                <input type="file" name="guideline_files[]" class="form-control input-sm" style="font-size: 12px;">
+                                                <button type="button" class="btn btn-default btn-sm btn-remove-att-row" style="color: #c9513c; display: none;" title="Remove">
+                                                    <i class="fa fa-trash"></i>
+                                                </button>
                                             </div>
                                         </div>
+                                    </div>
+
+                                    <div class="text-right">
+                                        <button type="submit" class="btn btn-sm btn-info" id="btnSubmitGuideline" style="background: #193048; border-color: #193048; font-weight: 600; padding: 6px 16px;">
+                                            <i class="fa fa-paper-plane"></i> Post Guideline
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-sm-6">
+                        <div class="panel panel-default">
+                            <div class="panel-heading" style="background: #193048; color: #fff;">
+                                <div class="row">
+                                    <div class="col-xs-8 qms_customer_name" style="color: #fff; font-size: 14px;">
+                                        <span><i class="fa fa-list"></i></span> Master Guidelines List
+                                    </div>
+                                    <div class="col-xs-4 text-right">
+                                        <span class="badge" style="background: #fff; color: #193048; font-size: 11px;" id="postedGuidelinesCount">
+                                            <?php echo count($allMasterGuidelines); ?> Total
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="panel-body" style="padding: 0;">
+                                <div style="max-height: 380px; overflow-y: auto;">
+                                    <div id="masterGuidelinesListContainer">
+                                        <?php if (empty($allMasterGuidelines)) { ?>
+                                            <div class="text-center text-muted" style="padding: 40px 15px;" id="noMasterGuidelinesNotice">
+                                                <p style="margin: 0; font-size: 13px;">No guidelines posted yet. Use the form on the left to add guidelines to the master pool.</p>
+                                            </div>
+                                        <?php } else { ?>
+                                            <table class="table table-bordered table-striped" style="margin-bottom: 0; font-size: 12px;">
+                                                <thead>
+                                                    <tr style="background: #f5f5f5;">
+                                                        <th style="width: 50%;">Guideline</th>
+                                                        <th style="width: 30%;">Status</th>
+                                                        <th style="width: 20%; text-align: center;">Action</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <?php foreach ($allMasterGuidelines as $mg) { 
+                                                        $mAtts = $mg['attachments'] ?? [];
+                                                        $mRecipients = $mg['recipients'] ?? [];
+                                                        $mRecCount = count($mRecipients);
+                                                        $mDate = date('d M Y, h:i A', strtotime($mg['created_at']));
+                                                    ?>
+                                                        <tr id="mc-guideline-item-<?php echo $mg['id']; ?>" class="mc-guideline-item">
+                                                            <td>
+                                                                <strong style="color: #193048;"><?php echo htmlspecialchars($mg['title']); ?></strong>
+                                                                <div style="font-size: 11px; color: #777; margin-top: 2px;">
+                                                                    <i class="fa fa-clock-o"></i> <?php echo $mDate; ?>
+                                                                    <?php if (!empty($mAtts)) { ?>
+                                                                        &nbsp;|&nbsp; <i class="fa fa-paperclip"></i> <?php echo count($mAtts); ?> doc(s)
+                                                                    <?php } ?>
+                                                                </div>
+                                                            </td>
+                                                            <td>
+                                                                <?php if ($mRecCount > 0) { ?>
+                                                                    <span class="label label-success" style="font-size: 10.5px;">Sent to <?php echo $mRecCount; ?> User(s)</span>
+                                                                <?php } else { ?>
+                                                                    <span class="label label-warning" style="font-size: 10.5px;">Not Sent Yet</span>
+                                                                <?php } ?>
+                                                            </td>
+                                                            <td style="text-align: center; vertical-align: middle; white-space: nowrap;">
+                                                                <a href="addUsers.php#guidelines-dist-section" class="btn btn-xs btn-primary" style="padding: 2px 6px; font-size: 11px;" title="Send to users on Add Users page">
+                                                                    <i class="fa fa-paper-plane"></i> Send
+                                                                </a>
+                                                                <button type="button" class="btn btn-xs btn-danger btn-delete-mc-guideline" 
+                                                                        data-id="<?php echo $mg['id']; ?>" 
+                                                                        data-title="<?php echo htmlspecialchars($mg['title'], ENT_QUOTES); ?>"
+                                                                        style="padding: 2px 5px; margin-left: 2px;" title="Delete">
+                                                                    <i class="fa fa-trash"></i>
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    <?php } ?>
+                                                </tbody>
+                                            </table>
+                                        <?php } ?>
                                     </div>
                                 </div>
                             </div>
@@ -1097,16 +1044,9 @@
                 var origBtnHtml = $btn.html();
 
                 var title = $.trim($('#guidelineTitle').val());
-                var desc = $.trim($('#guidelineDesc').val());
-
                 if (title === '') {
                     alert('Please enter guideline title.');
                     $('#guidelineTitle').focus();
-                    return false;
-                }
-                if (desc === '') {
-                    alert('Please write guideline description.');
-                    $('#guidelineDesc').focus();
                     return false;
                 }
 

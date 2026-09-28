@@ -6539,6 +6539,31 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                             text-transform: uppercase !important;
                             vertical-align: middle !important;
                         }
+                        .serviceBlockTypeSelect {
+                            background-color: #ffffff !important;
+                            color: #1e3a8a !important;
+                            font-weight: 700 !important;
+                            font-size: 11.5px !important;
+                            border: 1.5px solid #93c5fd !important;
+                            border-radius: 4px !important;
+                            padding: 1px 6px !important;
+                            height: 23px !important;
+                            cursor: pointer !important;
+                            outline: none !important;
+                            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+                            text-transform: uppercase !important;
+                            vertical-align: middle !important;
+                            display: inline-block !important;
+                            transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+                        }
+                        .serviceBlockTypeSelect:hover {
+                            border-color: #2563eb !important;
+                            box-shadow: 0 1px 4px rgba(37, 99, 235, 0.25) !important;
+                        }
+                        .serviceBlockTypeSelect:focus {
+                            border-color: #1d4ed8 !important;
+                            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25) !important;
+                        }
                     </style>
 
                     <div id="service_blocks_container">
@@ -6602,8 +6627,21 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                     <div class="col-xs-6 table-responsive invoice-container-col" style="flex: 1 1 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px;">
                                         <div class="row">
                                             <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 10px;">
-                                                <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.4px;">
-                                                    <i class="fa ">Invoicing</i> (<span class="col-service-label"><?php echo htmlspecialchars($svcName); ?></span>)
+                                                <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.4px; display: inline-flex; align-items: center; gap: 4px;">
+                                                    <i class="fa ">Invoicing</i> (
+                                                    <select class="serviceBlockTypeSelect" style="background: #ffffff; color: #1e3a8a; font-weight: 700; font-size: 11.5px; border: 1.5px solid #93c5fd; border-radius: 4px; padding: 1px 6px; height: 23px; cursor: pointer; outline: none; box-shadow: 0 1px 2px rgba(0,0,0,0.05); text-transform: uppercase;" title="Change service for this section">
+                                                        <?php
+                                                        $blockServiceOptions = $availableServices;
+                                                        if (!in_array($svcName, $blockServiceOptions) && !empty($svcName)) {
+                                                            $blockServiceOptions[] = $svcName;
+                                                        }
+                                                        foreach ($blockServiceOptions as $opt) {
+                                                            $selected = (strcasecmp($opt, $svcName) === 0) ? 'selected' : '';
+                                                            echo '<option value="' . htmlspecialchars($opt) . '" ' . $selected . '>' . htmlspecialchars($opt) . '</option>';
+                                                        }
+                                                        ?>
+                                                    </select>
+                                                    )
                                                     <?php if ($isBlockMatched) { ?>
                                                         <span class="block-matched-badge"><i class="fa fa-check-circle"></i> MATCHED</span>
                                                     <?php } ?>
@@ -6625,7 +6663,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                         <th width="30%" style="padding: 3px 2px; text-align: center;"><small>Invoice No.</small></th>
                                                         <th width="18%" style="padding: 3px 2px; text-align: center;"><small>Date</small></th>
                                                         <th width="22%" style="padding: 3px 2px; text-align: center;"><small>Gross Amount</small></th>
-                                                        <th width="30%" style="padding: 3px 2px; text-align: center;"><small>Comments</small></th>
+                                                        <th width="30%" style="padding: 3px 2px; text-align: center;"><small>Comments (If Any)</small></th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -6713,25 +6751,26 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                         <span class="block-matched-badge"><i class="fa fa-check-circle"></i> MATCHED</span>
                                                     <?php } ?>
                                                 </span>
-                                                <button type="button" class="btn btn-xs openDiscountModalBtn" data-service="<?php echo htmlspecialchars($svcName); ?>" style="background: #ffffff; color: #475569; border: 1px solid #cbd5e1; font-weight: 700; font-size: 11px; border-radius: 4px; padding: 2px 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.06); text-transform: none; display: inline-flex; align-items: center; gap: 3px; cursor: pointer; transition: all 0.2s ease;" title="Discount / Short Paid Settlement">
-                                                    (-+)
-                                                </button>
+                                                <div style="display: inline-flex; align-items: center; gap: 5px;">
+                                                    <button type="button" class="btn btn-xs openDiscountModalBtn" data-service="<?php echo htmlspecialchars($svcName); ?>" style="background: #ffffff; color: #475569; border: 1px solid #cbd5e1; font-weight: 700; font-size: 11px; border-radius: 4px; padding: 2px 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.06); text-transform: none; display: inline-flex; align-items: center; gap: 3px; cursor: pointer; transition: all 0.2s ease;" title="Discount / Short Paid Settlement">
+                                                        (-+)
+                                                    </button>
+                                                    <a class="btn btn-xs btn-info cbAddLink" data-service="<?php echo htmlspecialchars($svcName); ?>" data-row-id="<?php if (isset($payId)) echo $payId; ?>" data-row-count="<?php echo count($servicePayments); ?>" title="Add new row" style="padding: 1px 6px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer;">
+                                                        <i class="fa fa-plus-circle fa-lg" style="padding: 2px 0;"></i>
+                                                    </a>
+                                                </div>
                                             </div>
                                         </div>
                                         <div class="row">
                                             <table class="table table-bordered table-hover table-sortable service_details service-details-table" <?php if ($blockIdx === 0) echo 'id="service_details"'; ?>>
                                                 <thead>
                                                     <tr>
-                                                        <th width="24%" style="padding: 2px"><small>Payment received</small></th>
-                                                        <th width="18%" style="padding: 2px; text-align: center;"><small style="font-weight: 700; color: #b45309;"><i class="fa fa-percent" style="font-size: 10px; margin-right: 2px;"></i> TDS Deducted</small></th>
+                                                        <th width="24%" style="padding: 2px"><small>Amount Received</small></th>
+                                                        <th width="18%" style="padding: 2px; text-align: center;"><small style="font-weight: 700; color: #b45309;">TDS Deducted</small></th>
                                                         <th width="17%" style="padding: 2px"><small>Received Date</small></th>
                                                         <th width="18%" style="padding: 2px"><small>Instrument</small></th>
                                                         <th width="16%" style="padding: 2px"><small>Reconcile</small></th>
-                                                        <th width="7%" style="padding: 2px; text-align: right;">
-                                                            <a class="btn btn-xs btn-info cbAddLink pull-right" data-service="<?php echo htmlspecialchars($svcName); ?>" data-row-id="<?php if (isset($payId)) echo $payId; ?>" data-row-count="<?php echo count($servicePayments); ?>" title="Add new row" style="padding: 1px 5px;">
-                                                                <i class="fa fa-plus-circle fa-lg" style="padding: 3px"></i>
-                                                            </a>
-                                                        </th>
+                                                        <th width="7%" style="padding: 2px; text-align: right;"></th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -6912,7 +6951,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                 <div class="all-service-summary-header" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%); color: #ffffff; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #2563eb;">
                                     <div style="display: flex; align-items: center; gap: 8px;">
                                         <i class="fa fa-calculator" style="color: #38bdf8; font-size: 15px;"></i>
-                                        <span style="font-weight: 800; font-size: 12.5px; letter-spacing: 0.6px; text-transform: uppercase; color: #ffffff;">ALL SERVICE PAYMENT SUMMARY</span>
+                                        <span style="font-weight: 800; font-size: 12.5px; letter-spacing: 0.6px; text-transform: uppercase; color: #ffffff;">  Summary-Client Ledger</span>
                                     </div>
                                     <div style="display: flex; align-items: center; gap: 8px;">
                                         <span class="badge" style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); color: #f8fafc; font-size: 10.5px; font-weight: 600; padding: 3px 10px; border-radius: 12px;">Consolidated Summary</span>
@@ -22698,7 +22737,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             html += '        <div class="col-xs-6 table-responsive invoice-container-col" style="flex: 1 1 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px;">';
             html += '            <div class="row">';
             html += '                <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 10px;">';
-            html += '                    <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.4px;"><i class="fa ">Invoicing</i> (<span class="col-service-label">' + svcName + '</span>)</span>';
+            html += '                    <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.4px; display: inline-flex; align-items: center; gap: 4px;"><i class="fa ">Invoicing</i> (<select class="serviceBlockTypeSelect" style="background: #ffffff; color: #1e3a8a; font-weight: 700; font-size: 11.5px; border: 1.5px solid #93c5fd; border-radius: 4px; padding: 1px 6px; height: 23px; cursor: pointer; outline: none; box-shadow: 0 1px 2px rgba(0,0,0,0.05); text-transform: uppercase;" title="Change service for this section">' + optionsHtml + '</select>)</span>';
             html += '                    <button type="button" class="btn btn-xs finalInvoiceBtn" data-id="' + customerId + '" data-address="' + customerAddress + '" data-service="' + svcName + '" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #ffffff; border: 1px solid #1e40af; font-weight: 700; font-size: 11px; border-radius: 4px; padding: 2px 10px; box-shadow: 0 1px 3px rgba(37,99,235,0.25); text-transform: none; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; transition: all 0.2s ease;" title="Create Final Invoice Against ' + svcName + '">';
             html += '                        <i class="fa fa-plus" style="font-size: 10px;"></i> issue tax invoice against service';
             html += '                    </button>';
@@ -22736,18 +22775,21 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             html += '            <div class="row">';
             html += '                <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 10px;">';
             html += '                    <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.4px;"><i class="fa ">Received Payment</i> (<span class="col-service-label">' + svcName + '</span>)</span>';
-            html += '                    <button type="button" class="btn btn-xs openDiscountModalBtn" data-service="' + svcName + '" style="background: #ffffff; color: #475569; border: 1px solid #cbd5e1; font-weight: 700; font-size: 11px; border-radius: 4px; padding: 2px 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.06); text-transform: none; display: inline-flex; align-items: center; gap: 3px; cursor: pointer; transition: all 0.2s ease;" title="Discount / Short Paid Settlement">(-+)</button>';
+            html += '                    <div style="display: inline-flex; align-items: center; gap: 5px;">';
+            html += '                        <button type="button" class="btn btn-xs openDiscountModalBtn" data-service="' + svcName + '" style="background: #ffffff; color: #475569; border: 1px solid #cbd5e1; font-weight: 700; font-size: 11px; border-radius: 4px; padding: 2px 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.06); text-transform: none; display: inline-flex; align-items: center; gap: 3px; cursor: pointer; transition: all 0.2s ease;" title="Discount / Short Paid Settlement">(-+)</button>';
+            html += '                        <a class="btn btn-xs btn-info cbAddLink" data-service="' + svcName + '" data-row-id="" data-row-count="1" title="Add new row" style="padding: 1px 6px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer;"><i class="fa fa-plus-circle fa-lg" style="padding: 2px 0;"></i></a>';
+            html += '                    </div>';
             html += '                </div>';
             html += '            </div>';
             html += '            <div class="row">';
             html += '                <table class="table table-bordered table-hover table-sortable service_details service-details-table">';
             html += '                    <thead><tr>';
             html += '                        <th width="24%" style="padding: 2px"><small>Payment received</small></th>';
-            html += '                        <th width="18%" style="padding: 2px; text-align: center;"><small style="font-weight: 700; color: #b45309;"><i class="fa fa-percent" style="font-size: 10px; margin-right: 2px;"></i> TDS Deducted</small></th>';
+            html += '                        <th width="18%" style="padding: 2px; text-align: center;"><small style="font-weight: 700; color: #b45309;">TDS Deducted</small></th>';
             html += '                        <th width="17%" style="padding: 2px"><small>Received Date</small></th>';
             html += '                        <th width="18%" style="padding: 2px"><small>Instrument</small></th>';
             html += '                        <th width="16%" style="padding: 2px"><small>Reconcile</small></th>';
-            html += '                        <th width="7%" style="padding: 2px; text-align: right;"><a class="btn btn-xs btn-info cbAddLink pull-right" data-service="' + svcName + '" data-row-id="" data-row-count="1" title="Add new row" style="padding: 1px 5px;"><i class="fa fa-plus-circle fa-lg" style="padding: 3px"></i></a></th>';
+            html += '                        <th width="7%" style="padding: 2px; text-align: right;"></th>';
             html += '                    </tr></thead>';
             html += '                    <tbody>';
             html += '                        <tr class="cb_subsection previousCBData" id="cb_subsection_0">';
@@ -22840,20 +22882,52 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             $block.find('.finalInvoiceBtn').attr('data-service', newSvc).attr('title', 'Create Final Invoice Against ' + newSvc);
             $block.find('.cbAddLink').attr('data-service', newSvc);
             $block.find('.openDiscountModalBtn').attr('data-service', newSvc);
+            $block.find('.totalInvoiceTableSum').attr('title', 'Total Invoicing Amount for ' + newSvc);
+            $block.find('.totalPaymentReceivedSum').attr('title', 'Total Payment Received for ' + newSvc);
+            $block.find('.totalPaymentTdsSum').attr('title', 'Total TDS Amount for ' + newSvc);
 
             var $prevDivider = $block.prev('.service-block-divider');
             if ($prevDivider.length) {
                 $prevDivider.find('.divider-service-label').text(newSvc);
             }
 
-            $block.find('tbody tr.cb_subsection').each(function () {
-                var rId = $(this).find('.row-id').val();
-                if (!rId) {
-                    $(this).find('.serviceTypeName').val(newSvc);
+            // Update all payment rows in this block
+            $block.find('.service-details-table tbody tr.cb_subsection').each(function () {
+                $(this).find('.serviceTypeName').val(newSvc);
+                var payId = $(this).find('.row-id').val();
+                if (payId && payId !== '' && payId !== '0') {
+                    $.ajax({
+                        url: "addPayment.php",
+                        type: "POST",
+                        data: {
+                            action: "updatePaymentServiceType",
+                            payment_id: payId,
+                            service_type: newSvc
+                        },
+                        dataType: "json"
+                    });
                 }
             });
 
-            $block.find('.invoiceServiceTypeSelect[data-invoice-id="0"]').val(newSvc);
+            // Update all invoices in this block
+            $block.find('.invoice-service-details-table tbody tr.cb_subsection').each(function () {
+                var invId = $(this).find('.viewFinalInvoice').attr('data-id') || $(this).find('.invoiceRemark').attr('data-invoice-id');
+                if (invId && invId !== '' && invId !== '0') {
+                    $.ajax({
+                        url: "addPayment.php",
+                        type: "POST",
+                        data: {
+                            action: "updateInvoiceServiceType",
+                            invoice_id: invId,
+                            service_type: newSvc
+                        },
+                        dataType: "json"
+                    });
+                }
+            });
+
+            recalculatePaymentSystem();
+            triggerPaymentAutoSave(true);
         });
 
         // Remove Service Block Button Click Handler

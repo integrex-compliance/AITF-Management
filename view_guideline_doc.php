@@ -31,9 +31,12 @@ try {
     }
 
     $userRole = $_SESSION['role'] ?? '';
-    if (!aitf_user_can_view_guideline($userRole, $attachment)) {
+    $userId = $_SESSION['id'] ?? 0;
+    $userEmail = $_SESSION['email'] ?? ($_SESSION['email_id'] ?? '');
+
+    if (!aitf_user_can_view_guideline_doc($db, $attachment['guideline_id'], $userId, $userRole, $userEmail)) {
         http_response_code(403);
-        die('Access denied: You do not have permission to view guidelines for this role.');
+        die('Access denied: This guideline document is not assigned to your account.');
     }
 
     $relativePath = ltrim($attachment['file_path'], '/\\');

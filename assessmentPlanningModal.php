@@ -816,15 +816,7 @@ foreach ($auditors as $name) {
         }
 
         function checkAuditorConflictWithReviewersAP(auditorName) {
-            if (!auditorName) return false;
-            var normAud = auditorName.toLowerCase().replace(/[^a-z0-9]/g, '');
-            if (!normAud) return false;
-            for (var i = 0; i < aitfAppointedReviewersAP.length; i++) {
-                var normRev = aitfAppointedReviewersAP[i].toLowerCase().replace(/[^a-z0-9]/g, '');
-                if (normAud === normRev || (normAud.length >= 5 && normRev.length >= 5 && (normAud.indexOf(normRev) !== -1 || normRev.indexOf(normAud) !== -1))) {
-                    return aitfAppointedReviewersAP[i];
-                }
-            }
+            // Temporarily disabled
             return false;
         }
 

@@ -729,23 +729,7 @@ foreach ($category as $name) {
     }
 
     function checkAuditorConflictWithReviewersII(auditorId, auditorName) {
-        if (!auditorId && !auditorName) return false;
-
-        if (auditorId && aitfAppointedReviewerAuditorIdsII.indexOf(parseInt(auditorId, 10)) !== -1) {
-            return auditorName || 'This auditor';
-        }
-
-        if (auditorName) {
-            var normAud = auditorName.toLowerCase().replace(/[^a-z0-9]/g, '');
-            if (normAud) {
-                for (var i = 0; i < aitfAppointedReviewersII.length; i++) {
-                    var normRev = aitfAppointedReviewersII[i].toLowerCase().replace(/[^a-z0-9]/g, '');
-                    if (normAud === normRev || (normAud.length >= 5 && normRev.length >= 5 && (normAud.indexOf(normRev) !== -1 || normRev.indexOf(normAud) !== -1))) {
-                        return aitfAppointedReviewersII[i];
-                    }
-                }
-            }
-        }
+        // Temporarily disabled
         return false;
     }
 
