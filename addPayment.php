@@ -59,6 +59,33 @@ if(isset($_GET["inv_id"]) && !empty($_GET["inv_id"])){
     }
 }
 
+if (isset($req['action']) && $req['action'] === 'saveServiceBlockComment') {
+    header('Content-Type: application/json');
+    try {
+        $customerId = intval($req['customer_id'] ?? 0);
+        $serviceType = trim((string)($req['service_type'] ?? ''));
+        $comment = trim((string)($req['comment'] ?? ''));
+        if ($customerId > 0 && $serviceType !== '') {
+            $stmt = $db->prepare("INSERT INTO `payment_block_comments` (`customer_id`, `service_type`, `comment`) 
+                                  VALUES (:cid, :svc, :comm) 
+                                  ON DUPLICATE KEY UPDATE `comment` = :comm2");
+            $stmt->bindParam(':cid', $customerId, PDO::PARAM_INT);
+            $stmt->bindParam(':svc', $serviceType);
+            $stmt->bindParam(':comm', $comment);
+            $stmt->bindParam(':comm2', $comment);
+            $stmt->execute();
+            echo json_encode(['success' => true, 'comment' => $comment, 'service_type' => $serviceType]);
+            exit;
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Invalid parameters']);
+            exit;
+        }
+    } catch (Exception $e) {
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        exit;
+    }
+}
+
 if (isset($req['action']) && $req['action'] === 'updateInvoiceRemark') {
     header('Content-Type: application/json');
     try {
@@ -81,11 +108,29 @@ if (isset($req['action']) && $req['action'] === 'updateInvoiceRemark') {
     }
 }
 
+if (!function_exists('aitf_is_blocked_service_name')) {
+    function aitf_is_blocked_service_name($name) {
+        if (empty($name)) return false;
+        $lower = strtolower(trim((string)$name));
+        $blocked = ['consultency', 'consultancy', 'consulting', 'consultant', 'consult', 'help', 'support', 'internal audit', 'documentation'];
+        foreach ($blocked as $b) {
+            if (strpos($lower, $b) !== false) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
 if (isset($req['action']) && $req['action'] === 'updateInvoiceServiceType') {
     header('Content-Type: application/json');
     try {
         $invId = intval($req['invoice_id'] ?? 0);
         $svcType = trim((string)($req['service_type'] ?? ''));
+        if (aitf_is_blocked_service_name($svcType)) {
+            echo json_encode(['success' => false, 'message' => 'Such type of service is not allowed']);
+            exit;
+        }
         if ($invId > 0) {
             $stmt = $db->prepare("UPDATE `invoice_details` SET `service_type` = :svc WHERE `invoice_id` = :id");
             $stmt->bindParam(':svc', $svcType);
@@ -108,6 +153,10 @@ if (isset($req['action']) && $req['action'] === 'updatePaymentServiceType') {
     try {
         $payId = intval($req['payment_id'] ?? 0);
         $svcType = trim((string)($req['service_type'] ?? ''));
+        if (aitf_is_blocked_service_name($svcType)) {
+            echo json_encode(['success' => false, 'message' => 'Such type of service is not allowed']);
+            exit;
+        }
         if ($payId > 0) {
             $stmt = $db->prepare("UPDATE `payment_system` SET `service_type` = :svc WHERE `payment_id` = :id");
             $stmt->bindParam(':svc', $svcType);

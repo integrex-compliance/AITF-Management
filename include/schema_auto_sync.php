@@ -685,6 +685,17 @@ if (!function_exists('aitf_migrate_legacy_tds_to_payment_columns')) {
                     ]);
                 }
             }
+
+            // Ensure payment_block_comments table for independent payment service comments
+            $db->exec("CREATE TABLE IF NOT EXISTS `payment_block_comments` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `customer_id` INT NOT NULL,
+                `service_type` VARCHAR(100) NOT NULL,
+                `comment` TEXT NULL,
+                `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY `uniq_cust_service` (`customer_id`, `service_type`),
+                KEY `idx_cust` (`customer_id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8");
         } catch (Throwable $e) {}
     }
 }

@@ -6394,6 +6394,18 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         if ($posB === false) $posB = 999;
                         return $posA <=> $posB;
                     });
+
+                    // Fetch all saved independent service block comments
+                    $blockCommentsMap = [];
+                    if (!empty($_GET['customerid'])) {
+                        try {
+                            $stmtComm = $db->prepare("SELECT `service_type`, `comment` FROM `payment_block_comments` WHERE `customer_id` = :id");
+                            $stmtComm->execute([':id' => intval($_GET['customerid'])]);
+                            while ($cRow = $stmtComm->fetch(PDO::FETCH_ASSOC)) {
+                                $blockCommentsMap[strtoupper(trim($cRow['service_type']))] = $cRow['comment'];
+                            }
+                        } catch (Exception $e) {}
+                    }
                     ?>
 
                     <style>
@@ -6509,7 +6521,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                             background-color: #f0fdf4 !important;
                             border-color: #bbf7d0 !important;
                         }
-                        .service-payment-block.service-block-matched .invoice-service-details-table tbody tr.cb_subsection input:not(.invoiceRemark),
+                        .service-payment-block.service-block-matched .invoice-service-details-table tbody tr.cb_subsection input,
                         .service-payment-block.service-block-matched .service-details-table tbody tr.cb_subsection:not(.discount-settlement-row) input {
                             background-color: #f0fdf4 !important;
                             color: #14532d !important;
@@ -6560,6 +6572,55 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         .serviceBlockTypeSelect:focus {
                             border-color: #1d4ed8 !important;
                             box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25) !important;
+                        }
+                        .comments-container-col {
+                            display: flex !important;
+                            flex-direction: column !important;
+                        }
+                        .comments-container-col .serviceBlockComment {
+                            width: 100% !important;
+                            height: 100% !important;
+                            min-height: 80px !important;
+                            font-size: 11.5px !important;
+                            line-height: 1.45 !important;
+                            border: 1px solid #cbd5e1 !important;
+                            border-radius: 4px !important;
+                            padding: 6px 8px !important;
+                            resize: none !important;
+                            background: #ffffff !important;
+                            color: #0f172a !important;
+                            box-sizing: border-box !important;
+                            transition: all 0.2s ease !important;
+                            font-family: inherit !important;
+                            display: block !important;
+                        }
+                        .comments-container-col .serviceBlockComment:hover {
+                            background: #ffffff !important;
+                            border-color: #94a3b8 !important;
+                        }
+                        .comments-container-col .serviceBlockComment:focus {
+                            background: #ffffff !important;
+                            border-color: #2563eb !important;
+                            outline: none !important;
+                            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15) !important;
+                        }
+                        .service-payment-block.service-block-matched .comments-container-col .serviceBlockComment {
+                            background-color: #ffffff !important;
+                            border-color: #86efac !important;
+                        }
+                        html.theme-dark .comments-container-col .serviceBlockComment {
+                            color: #e2e8f0 !important;
+                            background: #1e293b !important;
+                            border-color: #475569 !important;
+                        }
+                        html.theme-dark .comments-container-col .serviceBlockComment:hover {
+                            background: #1e293b !important;
+                            border-color: #64748b !important;
+                        }
+                        html.theme-dark .comments-container-col .serviceBlockComment:focus {
+                            background: #0f172a !important;
+                            border-color: #60a5fa !important;
+                            box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2) !important;
                         }
                     </style>
 
@@ -6620,13 +6681,13 @@ if ($currentRole === 'client' || $currentRole === 'external') {
 
                             <div class="service-payment-block <?php echo $isBlockMatched ? 'service-block-matched' : ''; ?>" data-service="<?php echo htmlspecialchars($svcName); ?>" data-block-id="<?php echo $blockIdx; ?>" style="margin-bottom: 22px;">
                                 <div class="row payment-tables-row" style="display: flex; align-items: stretch; margin-left: -5px; margin-right: -5px;">
-                                    <!-- Left: Invoices Column -->
-                                    <div class="col-xs-6 table-responsive invoice-container-col" style="flex: 1 1 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px;">
+                                    <!-- Left: Invoices Column (38%) -->
+                                    <div class="col-xs-4 table-responsive invoice-container-col" style="flex: 38 38 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px;">
                                         <div class="row">
-                                            <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 10px;">
-                                                <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.4px; display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap;">
+                                            <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; gap: 4px;">
+                                                <span style="font-weight: 700; font-size: 11.5px; letter-spacing: 0.3px; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; flex-shrink: 0;">
                                                     <i class="fa ">Invoicing</i> (
-                                                    <select class="serviceBlockTypeSelect" style="background: #ffffff; color: #1e3a8a; font-weight: 700; font-size: 11.5px; border: 1.5px solid #93c5fd; border-radius: 4px; padding: 1px 6px; height: 23px; cursor: pointer; outline: none; box-shadow: 0 1px 2px rgba(0,0,0,0.05); text-transform: uppercase;" title="Change service for this section">
+                                                    <select class="serviceBlockTypeSelect" style="background: #ffffff; color: #1e3a8a; font-weight: 700; font-size: 11px; border: 1.5px solid #93c5fd; border-radius: 4px; padding: 1px 4px; height: 23px; cursor: pointer; outline: none; box-shadow: 0 1px 2px rgba(0,0,0,0.05); text-transform: uppercase;" title="Change service for this section">
                                                         <?php
                                                         $blockServiceOptions = $availableServices;
                                                         if (!empty($svcName) && strcasecmp($svcName, 'Other') !== 0) {
@@ -6652,11 +6713,6 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                         }
                                                         ?>
                                                     </select>
-                                                    <span class="serviceBlockCustomInputWrapper" style="display: none; align-items: center; gap: 3px;">
-                                                        <input type="text" class="customServiceInput" placeholder="Enter service name..." style="background: #ffffff; color: #1e3a8a; font-weight: 700; font-size: 11.5px; border: 1.5px solid #2563eb; border-radius: 4px; padding: 1px 6px; height: 23px; width: 140px; outline: none; box-shadow: 0 0 0 2px rgba(37,99,235,0.2); text-transform: uppercase;" />
-                                                        <button type="button" class="btn btn-xs btn-primary btnSaveCustomService" style="padding: 1px 6px; height: 23px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;" title="Apply Service Name"><i class="fa fa-check"></i></button>
-                                                        <button type="button" class="btn btn-xs btn-default btnCancelCustomService" style="padding: 1px 6px; height: 23px; font-size: 11px; display: inline-flex; align-items: center; justify-content: center;" title="Cancel"><i class="fa fa-times"></i></button>
-                                                    </span>
                                                     )
                                                     <?php if ($isBlockMatched) { ?>
                                                         <span class="block-matched-badge" title="Matched"><i class="fa fa-check-circle"></i></span>
@@ -6666,9 +6722,9 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                     data-id="<?php echo htmlspecialchars($_GET['customerid'] ?? ''); ?>"
                                                     data-address="<?php echo htmlspecialchars($clientInfo['address'] ?? '', ENT_QUOTES); ?>"
                                                     data-service="<?php echo htmlspecialchars($svcName); ?>"
-                                                    style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #ffffff; border: 1px solid #1e40af; font-weight: 700; font-size: 11px; border-radius: 4px; padding: 2px 10px; box-shadow: 0 1px 3px rgba(37,99,235,0.25); text-transform: none; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; transition: all 0.2s ease;"
+                                                    style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #ffffff; border: 1px solid #1e40af; font-weight: 700; font-size: 10.5px; border-radius: 4px; padding: 2px 7px; box-shadow: 0 1px 3px rgba(37,99,235,0.25); text-transform: none; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; transition: all 0.2s ease; white-space: nowrap; flex-shrink: 0;"
                                                     title="Create Final Invoice Against <?php echo htmlspecialchars($svcName); ?>">
-                                                    <i class="fa fa-plus" style="font-size: 10px;"></i> issue tax invoice for service
+                                                    <i class="fa fa-plus" style="font-size: 9.5px;"></i> issue tax invoice
                                                 </button>
                                             </div>
                                         </div>
@@ -6676,10 +6732,9 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                             <table class="table table-bordered table-hover table-sortable service_details invoice-service-details-table" <?php if ($blockIdx === 0) echo 'id="invoice_service_details"'; ?>>
                                                 <thead>
                                                     <tr>
-                                                        <th width="30%" style="padding: 3px 2px; text-align: center;"><small>Invoice No.</small></th>
-                                                        <th width="18%" style="padding: 3px 2px; text-align: center;"><small>Date</small></th>
-                                                        <th width="22%" style="padding: 3px 2px; text-align: center;"><small>Gross Amount</small></th>
-                                                        <th width="30%" style="padding: 3px 2px; text-align: center;"><small>Comments (If Any)</small></th>
+                                                        <th width="40%" style="padding: 3px 2px; text-align: center;"><small>Invoice No.</small></th>
+                                                        <th width="28%" style="padding: 3px 2px; text-align: center;"><small>Date</small></th>
+                                                        <th width="32%" style="padding: 3px 2px; text-align: center;"><small>Gross Amount</small></th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -6708,11 +6763,6 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                         <input type="text" data_row_id="" class="invoiceAmount" name="invoiceAmount" value="<?php echo $invoiceinfo['final_amount'] ?>" readonly="" />
                                                                     </div>
                                                                 </td>
-                                                                <td style="padding: 1px 2px; vertical-align: middle;">
-                                                                    <div class="table-edit-control" style="margin: 0; padding: 0;">
-                                                                        <textarea class="invoiceRemark" name="invoiceRemark" data-invoice-id="<?php echo $invoiceinfo['invoice_id']; ?>" placeholder="Add comments..." title="Invoice comments (Auto-saved)" rows="2"><?php echo htmlspecialchars($invoiceinfo['remark'] ?? ''); ?></textarea>
-                                                                    </div>
-                                                                </td>
                                                             </tr>
                                                         <?php }
                                                     } else { ?>
@@ -6732,11 +6782,6 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                     <input type="text" class="invoiceAmount" name="invoiceAmount" value="0.00" readonly style="text-align: center; color: #94a3b8;" />
                                                                 </div>
                                                             </td>
-                                                            <td style="padding: 1px 2px; vertical-align: middle;">
-                                                                <div class="table-edit-control" style="margin: 0; padding: 0;">
-                                                                    <textarea class="invoiceRemark" readonly disabled placeholder="-" style="text-align: center; color: #94a3b8; background: transparent; border: none; resize: none;" rows="2"></textarea>
-                                                                </div>
-                                                            </td>
                                                         </tr>
                                                     <?php } ?>
                                                 </tbody>
@@ -6750,7 +6795,6 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                 <input type="text" class="totalInvoiceTableSum" <?php if ($blockIdx === 0) echo 'id="totalInvoiceTableSum"'; ?> value="<?php echo number_format($blockInvoiceSum, 2, '.', ''); ?>" style="font-weight: bold; color: #0f172a; background: #ffffff; text-align: center; border: 1px solid #cbd5e1; font-size: 12px; height: 26px; padding: 0;" readonly title="Total Invoicing Amount for <?php echo htmlspecialchars($svcName); ?>" />
                                                             </div>
                                                         </td>
-                                                        <td></td>
                                                     </tr>
                                                 </tfoot>
                                             </table>
@@ -6758,7 +6802,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                     </div>
 
                                     <!-- Right: Payments Column -->
-                                    <div class="col-xs-6 table-responsive payments-container-col" style="flex: 1 1 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px;">
+                                    <div class="col-xs-5 table-responsive payments-container-col" style="flex: 50 50 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px;">
                                         <div class="row">
                                             <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 10px;">
                                                 <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.4px;">
@@ -6938,6 +6982,37 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                     </span>
                                                     <strong class="serviceBlockRemainingSum" style="color: <?php echo ($isBlockMatched) ? '#15803d' : (($blockRemaining <= 0) ? '#16a34a' : '#dc2626'); ?>; font-size: 11px;">₹<?php echo number_format($blockRemaining, 2, '.', ''); ?></strong>
                                                 </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Far Right: Add Comment Column (20%) -->
+                                    <?php
+                                    $svcComment = $blockCommentsMap[strtoupper(trim($svcName))] ?? '';
+                                    if ($svcComment === '') {
+                                        foreach ($serviceInvoices as $legacyInv) {
+                                            if (!empty($legacyInv['remark'])) {
+                                                $svcComment = $legacyInv['remark'];
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    ?>
+                                    <div class="col-xs-3 comments-container-col" style="flex: 12 12 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px; display: flex; flex-direction: column;">
+                                        <div class="row">
+                                            <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: center; padding: 4px 4px; overflow: hidden; white-space: nowrap;">
+                                                <span style="font-weight: 700; font-size: 11px; letter-spacing: 0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="Notes (If Any) (<?php echo htmlspecialchars($svcName); ?>)">
+                                                    <i class="fa fa-commenting-o"></i> Notes (If Any) (<span class="col-service-comment-label"><?php echo htmlspecialchars($svcName); ?></span>)
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="row" style="flex: 1 1 auto; display: flex; flex-direction: column; margin-top: 0; margin-left: 0; margin-right: 0;">
+                                            <div style="flex: 1 1 auto; display: flex; flex-direction: column; padding: 0;">
+                                                <textarea class="form-control serviceBlockComment" 
+                                                    data-service="<?php echo htmlspecialchars($svcName); ?>" 
+                                                    data-customer="<?php echo htmlspecialchars($_GET['customerid'] ?? ''); ?>" 
+                                                    placeholder="Notes (if any)..." 
+                                                    style="flex: 1 1 auto; width: 100% !important; min-height: 80px; height: 100%; border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px 6px; font-size: 11px; line-height: 1.35; resize: none; background: #ffffff; color: #0f172a; box-sizing: border-box; transition: all 0.2s ease;"><?php echo htmlspecialchars($svcComment); ?></textarea>
                                             </div>
                                         </div>
                                     </div>
@@ -22826,45 +22901,42 @@ if ($currentRole === 'client' || $currentRole === 'external') {
 
             html += '<div class="service-payment-block" data-service="' + svcName + '" data-block-id="' + blockIdx + '" style="margin-bottom: 22px;">';
             html += '    <div class="row payment-tables-row" style="display: flex; align-items: stretch; margin-left: -5px; margin-right: -5px;">';
-            // Invoices column
-            html += '        <div class="col-xs-6 table-responsive invoice-container-col" style="flex: 1 1 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px;">';
+            // Invoices column (38%)
+            html += '        <div class="col-xs-4 table-responsive invoice-container-col" style="flex: 38 38 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px;">';
             html += '            <div class="row">';
-            html += '                <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 10px;">';
-            html += '                    <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.4px; display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap;"><i class="fa ">Invoicing</i> (<select class="serviceBlockTypeSelect" style="background: #ffffff; color: #1e3a8a; font-weight: 700; font-size: 11.5px; border: 1.5px solid #93c5fd; border-radius: 4px; padding: 1px 6px; height: 23px; cursor: pointer; outline: none; box-shadow: 0 1px 2px rgba(0,0,0,0.05); text-transform: uppercase;" title="Change service for this section">' + optionsHtml + '</select><span class="serviceBlockCustomInputWrapper" style="display: none; align-items: center; gap: 3px;"><input type="text" class="customServiceInput" placeholder="Enter service name..." style="background: #ffffff; color: #1e3a8a; font-weight: 700; font-size: 11.5px; border: 1.5px solid #2563eb; border-radius: 4px; padding: 1px 6px; height: 23px; width: 140px; outline: none; box-shadow: 0 0 0 2px rgba(37,99,235,0.2); text-transform: uppercase;" /><button type="button" class="btn btn-xs btn-primary btnSaveCustomService" style="padding: 1px 6px; height: 23px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;" title="Apply Service Name"><i class="fa fa-check"></i></button><button type="button" class="btn btn-xs btn-default btnCancelCustomService" style="padding: 1px 6px; height: 23px; font-size: 11px; display: inline-flex; align-items: center; justify-content: center;" title="Cancel"><i class="fa fa-times"></i></button></span>)</span>';
-            html += '                    <button type="button" class="btn btn-xs finalInvoiceBtn" data-id="' + customerId + '" data-address="' + customerAddress + '" data-service="' + svcName + '" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #ffffff; border: 1px solid #1e40af; font-weight: 700; font-size: 11px; border-radius: 4px; padding: 2px 10px; box-shadow: 0 1px 3px rgba(37,99,235,0.25); text-transform: none; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; transition: all 0.2s ease;" title="Create Final Invoice Against ' + svcName + '">';
-            html += '                        <i class="fa fa-plus" style="font-size: 10px;"></i> issue tax invoice against service';
+            html += '                <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; gap: 4px;">';
+            html += '                    <span style="font-weight: 700; font-size: 11.5px; letter-spacing: 0.3px; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; flex-shrink: 0;"><i class="fa ">Invoicing</i> (<select class="serviceBlockTypeSelect" style="background: #ffffff; color: #1e3a8a; font-weight: 700; font-size: 11px; border: 1.5px solid #93c5fd; border-radius: 4px; padding: 1px 4px; height: 23px; cursor: pointer; outline: none; box-shadow: 0 1px 2px rgba(0,0,0,0.05); text-transform: uppercase;" title="Change service for this section">' + optionsHtml + '</select>)</span>';
+            html += '                    <button type="button" class="btn btn-xs finalInvoiceBtn" data-id="' + customerId + '" data-address="' + customerAddress + '" data-service="' + svcName + '" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #ffffff; border: 1px solid #1e40af; font-weight: 700; font-size: 10.5px; border-radius: 4px; padding: 2px 7px; box-shadow: 0 1px 3px rgba(37,99,235,0.25); text-transform: none; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; transition: all 0.2s ease; white-space: nowrap; flex-shrink: 0;" title="Create Final Invoice Against ' + svcName + '">';
+            html += '                        <i class="fa fa-plus" style="font-size: 9.5px;"></i> issue tax invoice';
             html += '                    </button>';
             html += '                </div>';
             html += '            </div>';
             html += '            <div class="row">';
             html += '                <table class="table table-bordered table-hover table-sortable service_details invoice-service-details-table">';
             html += '                    <thead><tr>';
-            html += '                        <th width="28%" style="padding: 3px 2px; text-align: center;"><small>Invoice No.</small></th>';
-            html += '                        <th width="18%" style="padding: 3px 2px; text-align: center;"><small>Date</small></th>';
-            html += '                        <th width="22%" style="padding: 3px 2px; text-align: center;"><small>Gross Amount</small></th>';
-            html += '                        <th width="32%" style="padding: 3px 2px; text-align: center;"><small>Comments</small></th>';
+            html += '                        <th width="40%" style="padding: 3px 2px; text-align: center;"><small>Invoice No.</small></th>';
+            html += '                        <th width="28%" style="padding: 3px 2px; text-align: center;"><small>Date</small></th>';
+            html += '                        <th width="32%" style="padding: 3px 2px; text-align: center;"><small>Gross Amount</small></th>';
             html += '                    </tr></thead>';
             html += '                    <tbody>';
             html += '                        <tr class="cb_subsection">';
             html += '                            <td style="padding: 0px;"><div class="table-edit-control"><label></label><input type="text" class="invoiceNo" name="invoiceNo" value="-" readonly style="text-align: center; color: #94a3b8;" /></div></td>';
             html += '                            <td style="padding: 0px;"><div class="table-edit-control"><label></label><input type="text" class="invoiceDate" name="invoiceDate" value="-" readonly style="text-align: center; color: #94a3b8;" /></div></td>';
             html += '                            <td style="padding: 0px;"><div class="table-edit-control"><label></label><input type="text" class="invoiceAmount" name="invoiceAmount" value="0.00" readonly style="text-align: center; color: #94a3b8;" /></div></td>';
-            html += '                            <td style="padding: 1px 2px; vertical-align: middle;"><div class="table-edit-control" style="margin: 0; padding: 0;"><textarea class="invoiceRemark" readonly disabled placeholder="-" style="text-align: center; color: #94a3b8; background: transparent; border: none; resize: none;" rows="2"></textarea></div></td>';
             html += '                        </tr>';
             html += '                    </tbody>';
             html += '                    <tfoot>';
             html += '                        <tr style="background-color: #f8fafc; font-weight: bold; border-top: 2px solid #cbd5e1;">';
-            html += '                            <td colspan="2" style="text-align: right; padding: 4px 8px; vertical-align: middle; color: #334155; white-space: nowrap;"><small style="font-weight: 700; font-size: 11px;">TOTAL INVOICE (<span class="blockInvoiceCount">0</span>):</small></td>';
+            html += '                            <td colspan="2" style="text-align: right; padding: 4px 8px; vertical-align: middle; color: #334155; white-space: nowrap;"><small style="font-weight: 700; font-size: 11px;">Invoicing Gross Total (<span class="blockInvoiceCount">0</span>):</small></td>';
             html += '                            <td style="padding: 0px; vertical-align: middle;"><div class="table-edit-control"><input type="text" class="totalInvoiceTableSum" value="0.00" style="font-weight: bold; color: #0f172a; background: #ffffff; text-align: center; border: 1px solid #cbd5e1; font-size: 12px; height: 26px; padding: 0;" readonly title="Total Invoicing Amount for ' + svcName + '" /></div></td>';
-            html += '                            <td></td>';
             html += '                        </tr>';
             html += '                    </tfoot>';
             html += '                </table>';
             html += '            </div>';
             html += '        </div>';
 
-            // Payments column
-            html += '        <div class="col-xs-6 table-responsive payments-container-col" style="flex: 1 1 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px;">';
+            // Payments column (50%)
+            html += '        <div class="col-xs-5 table-responsive payments-container-col" style="flex: 50 50 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px;">';
             html += '            <div class="row">';
             html += '                <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 10px;">';
             html += '                    <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.4px;"><i class="fa ">Received Payment</i> (<span class="col-service-label">' + svcName + '</span>)</span>';
@@ -22904,6 +22976,20 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             html += '                    <div class="serviceBlockDiscountWrapper" style="display: none; align-items: center; gap: 3px;"><span style="color: #6b21a8; font-weight: 700; text-transform: uppercase; font-size: 9.5px;"><i class="fa fa-tag" style="color: #7c3aed; font-size: 9px; margin-right: 2px;"></i> Disc:</span> <strong style="color: #7c3aed; font-size: 11px; font-weight: 800;">₹<span class="serviceBlockDiscountSum">0.00</span></strong></div>';
             html += '                </div>';
             html += '                <div><span class="serviceBlockRemainingWrapper" style="display: inline-flex; align-items: center; font-size: 10px; padding: 2px 7px; border-radius: 4px; font-weight: 800; background: #ecfdf5; border: 1px solid #a7f3d0; white-space: nowrap;"><span style="color: #065f46; text-transform: uppercase; font-size: 9.5px; margin-right: 3px;">Remaining Total:</span> <strong class="serviceBlockRemainingSum" style="color: #16a34a; font-size: 11px;">₹0.00</strong></span></div>';
+            html += '            </div>';
+            html += '        </div>';
+
+            // Add Comment column on the far right (12%)
+            html += '        <div class="col-xs-3 comments-container-col" style="flex: 12 12 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px; display: flex; flex-direction: column;">';
+            html += '            <div class="row">';
+            html += '                <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: center; padding: 4px 4px; overflow: hidden; white-space: nowrap;">';
+            html += '                    <span style="font-weight: 700; font-size: 11px; letter-spacing: 0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="Notes (If Any) (' + svcName + ')"><i class="fa fa-commenting-o"></i> Notes (If Any) (<span class="col-service-comment-label">' + svcName + '</span>)</span>';
+            html += '                </div>';
+            html += '            </div>';
+            html += '            <div class="row" style="flex: 1 1 auto; display: flex; flex-direction: column; margin-top: 0; margin-left: 0; margin-right: 0;">';
+            html += '                <div style="flex: 1 1 auto; display: flex; flex-direction: column; padding: 0;">';
+            html += '                    <textarea class="form-control serviceBlockComment" data-service="' + svcName + '" data-customer="' + customerId + '" placeholder="Notes (if any)..." style="flex: 1 1 auto; width: 100% !important; min-height: 80px; height: 100%; border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px 6px; font-size: 11px; line-height: 1.35; resize: none; background: #ffffff; color: #0f172a; box-sizing: border-box; transition: all 0.2s ease;"></textarea>';
+            html += '                </div>';
             html += '            </div>';
             html += '        </div>';
             html += '    </div>';
@@ -22967,6 +23053,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             $block.find('.totalInvoiceTableSum').attr('title', 'Total Invoicing Amount for ' + newSvc);
             $block.find('.totalPaymentReceivedSum').attr('title', 'Total Payment Received for ' + newSvc);
             $block.find('.totalPaymentTdsSum').attr('title', 'Total TDS Amount for ' + newSvc);
+            $block.find('.col-service-comment-label').text(newSvc);
+            $block.find('.serviceBlockComment').attr('data-service', newSvc).attr('placeholder', 'Notes (if any)...');
 
             var $prevDivider = $block.prev('.service-block-divider');
             if ($prevDivider.length) {
@@ -22993,7 +23081,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
 
             // Update all invoices in this block
             $block.find('.invoice-service-details-table tbody tr.cb_subsection').each(function () {
-                var invId = $(this).find('.viewFinalInvoice').attr('data-id') || $(this).find('.invoiceRemark').attr('data-invoice-id');
+                var invId = $(this).find('.viewFinalInvoice').attr('data-id');
                 if (invId && invId !== '' && invId !== '0') {
                     $.ajax({
                         url: "addPayment.php",
@@ -23012,92 +23100,123 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             triggerPaymentAutoSave(true);
         }
 
+        // Helper to check blocked/disallowed service terms
+        function checkBlockedServiceWord(name) {
+            if (!name) return false;
+            var lower = name.toLowerCase().trim();
+            var blocked = ['consultency', 'consultancy', 'consulting', 'consultant', 'consult', 'help', 'support', 'internal audit', 'documentation'];
+            for (var i = 0; i < blocked.length; i++) {
+                if (lower.indexOf(blocked[i]) !== -1) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // Prompt custom service name via SweetAlert2 Modal Popup
+        function promptCustomService($block, prevSvc) {
+            var $select = $block.find('.serviceBlockTypeSelect');
+            if (typeof Swal !== 'undefined' && Swal.fire) {
+                Swal.fire({
+                    title: '<span style="font-weight: 700; font-size: 17px; color: #0f172a;">Enter Custom Service Name</span>',
+                    input: 'text',
+                    inputPlaceholder: 'Enter service name...',
+                    showCancelButton: true,
+                    confirmButtonText: '<i class="fa fa-check" style="margin-right: 4px;"></i> Apply Service',
+                    cancelButtonText: 'Cancel',
+                    confirmButtonColor: '#2563eb',
+                    cancelButtonColor: '#64748b',
+                    width: 380,
+                    padding: '1.25rem',
+                    inputAttributes: {
+                        autocapitalize: 'characters',
+                        style: 'text-transform: uppercase; font-weight: 700; font-size: 13px; text-align: center;'
+                    },
+                    inputValidator: function(value) {
+                        var val = (value || '').trim();
+                        if (!val) {
+                            return 'Please enter a service name!';
+                        }
+                        if (checkBlockedServiceWord(val)) {
+                            return 'Such type of service is not allow';
+                        }
+                    }
+                }).then(function(result) {
+                    if (result.isConfirmed && result.value) {
+                        var enteredVal = result.value.trim();
+                        var newSvc = enteredVal;
+                        var exists = false;
+                        $select.find('option').each(function () {
+                            if ($(this).val().toLowerCase() === newSvc.toLowerCase()) {
+                                exists = true;
+                                $(this).prop('selected', true);
+                                newSvc = $(this).val();
+                            }
+                        });
+
+                        if (!exists) {
+                            var $otherOpt = $select.find('option[value="Other"], option[value="OTHER"]');
+                            if ($otherOpt.length) {
+                                $('<option value="' + newSvc + '" selected>' + newSvc + '</option>').insertBefore($otherOpt);
+                            } else {
+                                $select.append('<option value="' + newSvc + '" selected>' + newSvc + '</option>');
+                            }
+                        }
+
+                        $select.val(newSvc);
+                        applyServiceBlockTypeChange($block, newSvc);
+                    } else {
+                        $select.val(prevSvc);
+                    }
+                });
+            } else {
+                var enteredVal = prompt("Enter custom service name:");
+                if (enteredVal && enteredVal.trim()) {
+                    var trimmed = enteredVal.trim();
+                    if (checkBlockedServiceWord(trimmed)) {
+                        alert("Such type of service is not allow");
+                        $select.val(prevSvc);
+                        return;
+                    }
+                    var newSvc = trimmed;
+                    var exists = false;
+                    $select.find('option').each(function () {
+                        if ($(this).val().toLowerCase() === newSvc.toLowerCase()) {
+                            exists = true;
+                            $(this).prop('selected', true);
+                            newSvc = $(this).val();
+                        }
+                    });
+                    if (!exists) {
+                        var $otherOpt = $select.find('option[value="Other"], option[value="OTHER"]');
+                        if ($otherOpt.length) {
+                            $('<option value="' + newSvc + '" selected>' + newSvc + '</option>').insertBefore($otherOpt);
+                        } else {
+                            $select.append('<option value="' + newSvc + '" selected>' + newSvc + '</option>');
+                        }
+                    }
+                    $select.val(newSvc);
+                    applyServiceBlockTypeChange($block, newSvc);
+                } else {
+                    $select.val(prevSvc);
+                }
+            }
+        }
+
         // Service Block Type Select Change
         $(document).on('change', '.serviceBlockTypeSelect', function () {
             var newSvc = $(this).val();
             var $select = $(this);
             var $block = $(this).closest('.service-payment-block');
-            var $customWrapper = $block.find('.serviceBlockCustomInputWrapper');
+            var prevSvc = $block.attr('data-service') || 'CA';
 
             if (newSvc === 'Other' || newSvc === 'OTHER' || (newSvc && newSvc.toLowerCase() === 'other')) {
-                // Show inline input directly right there
-                $customWrapper.css('display', 'inline-flex');
-                var $input = $customWrapper.find('.customServiceInput');
-                $input.val('').focus();
-                return;
-            } else {
-                $customWrapper.hide();
-            }
-
-            applyServiceBlockTypeChange($block, newSvc);
-        });
-
-        // Confirm / Save custom service name entered inline
-        function confirmCustomService($block) {
-            var $customWrapper = $block.find('.serviceBlockCustomInputWrapper');
-            var $input = $customWrapper.find('.customServiceInput');
-            var $select = $block.find('.serviceBlockTypeSelect');
-            var enteredVal = $input.val().trim();
-
-            if (!enteredVal) {
-                var prevSvc = $block.attr('data-service') || 'CA';
-                $select.val(prevSvc);
-                $customWrapper.hide();
+                // Open stylish popup prompt for custom service name
+                promptCustomService($block, prevSvc);
                 return;
             }
 
-            var newSvc = enteredVal;
-            var exists = false;
-            $select.find('option').each(function () {
-                if ($(this).val().toLowerCase() === newSvc.toLowerCase()) {
-                    exists = true;
-                    $(this).prop('selected', true);
-                    newSvc = $(this).val();
-                }
-            });
-
-            if (!exists) {
-                var $otherOpt = $select.find('option[value="Other"], option[value="OTHER"]');
-                if ($otherOpt.length) {
-                    $('<option value="' + newSvc + '" selected>' + newSvc + '</option>').insertBefore($otherOpt);
-                } else {
-                    $select.append('<option value="' + newSvc + '" selected>' + newSvc + '</option>');
-                }
-            }
-
-            $select.val(newSvc);
-            $customWrapper.hide();
             applyServiceBlockTypeChange($block, newSvc);
-        }
-
-        $(document).on('click', '.btnSaveCustomService', function (e) {
-            e.preventDefault();
-            var $block = $(this).closest('.service-payment-block');
-            confirmCustomService($block);
-        });
-
-        $(document).on('keydown', '.customServiceInput', function (e) {
-            if (e.which === 13) { // Enter key
-                e.preventDefault();
-                var $block = $(this).closest('.service-payment-block');
-                confirmCustomService($block);
-            } else if (e.which === 27) { // Escape key
-                e.preventDefault();
-                var $block = $(this).closest('.service-payment-block');
-                var $select = $block.find('.serviceBlockTypeSelect');
-                var prevSvc = $block.attr('data-service') || 'CA';
-                $select.val(prevSvc);
-                $block.find('.serviceBlockCustomInputWrapper').hide();
-            }
-        });
-
-        $(document).on('click', '.btnCancelCustomService', function (e) {
-            e.preventDefault();
-            var $block = $(this).closest('.service-payment-block');
-            var $select = $block.find('.serviceBlockTypeSelect');
-            var prevSvc = $block.attr('data-service') || 'CA';
-            $select.val(prevSvc);
-            $block.find('.serviceBlockCustomInputWrapper').hide();
         });
 
         // Remove Service Block Button Click Handler
@@ -23372,7 +23491,57 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             return;
         }
 
-        // Invoice Remark Auto-save
+        // Service Block Comment Auto-save (Independent of Invoices/Payments)
+        var serviceBlockCommentTimer = null;
+        function autoSaveServiceBlockComment($input) {
+            var $block = $input.closest('.service-payment-block');
+            var svcType = $input.attr('data-service') || $block.attr('data-service') || '';
+            var customerId = $input.attr('data-customer') || <?php echo json_encode((string)($_GET["customerid"] ?? "")); ?>;
+            var val = $input.val();
+
+            if (!customerId || customerId === '' || customerId === '0' || !svcType) {
+                return;
+            }
+
+            $input.css({'border-color': '#f59e0b', 'background-color': '#fffbeb'});
+
+            $.ajax({
+                url: 'addPayment.php',
+                type: 'POST',
+                data: {
+                    action: 'saveServiceBlockComment',
+                    customer_id: customerId,
+                    service_type: svcType,
+                    comment: val
+                },
+                dataType: 'json',
+                success: function (res) {
+                    if (res && res.success) {
+                        $input.css({'border-color': '#cbd5e1', 'background-color': '#ffffff'});
+                    } else {
+                        $input.css({'border-color': '#ef4444', 'background-color': '#fef2f2'});
+                    }
+                },
+                error: function () {
+                    $input.css({'border-color': '#ef4444', 'background-color': '#fef2f2'});
+                }
+            });
+        }
+
+        $(document).on('input', '.serviceBlockComment', function () {
+            var $inp = $(this);
+            clearTimeout(serviceBlockCommentTimer);
+            serviceBlockCommentTimer = setTimeout(function () {
+                autoSaveServiceBlockComment($inp);
+            }, 500);
+        });
+
+        $(document).on('blur change', '.serviceBlockComment', function () {
+            clearTimeout(serviceBlockCommentTimer);
+            autoSaveServiceBlockComment($(this));
+        });
+
+        // Legacy Invoice Remark Auto-save (Fallback)
         var invoiceRemarkTimer = null;
         function autoSaveInvoiceRemark($input) {
             var invId = $input.attr('data-invoice-id');
@@ -23380,7 +23549,6 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             if (!invId || invId === '0') {
                 return;
             }
-            showAutoSaveIndicator('saving', 'Saving comments...');
             $input.css({'border-color': '#f59e0b', 'background-color': '#fffbeb'});
 
             $.ajax({
@@ -23395,16 +23563,12 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 success: function (res) {
                     if (res && res.success) {
                         $input.css({'border-color': '#cbd5e1', 'background-color': '#ffffff'});
-                        showAutoSaveIndicator('saved', 'Comments saved');
-                        setTimeout(function () { showAutoSaveIndicator('saved'); }, 2000);
                     } else {
                         $input.css({'border-color': '#ef4444', 'background-color': '#fef2f2'});
-                        showAutoSaveIndicator('error', (res && res.message) ? res.message : 'Error');
                     }
                 },
                 error: function () {
                     $input.css({'border-color': '#ef4444', 'background-color': '#fef2f2'});
-                    showAutoSaveIndicator('error', 'Network error');
                 }
             });
         }
