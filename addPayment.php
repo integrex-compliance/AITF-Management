@@ -12,6 +12,18 @@ $req = array_merge($_GET, $_POST);
 
 if (isset($_GET["paymentID"]) && !empty($_GET["paymentID"])) {
     try {
+        $chkStmt = $db->prepare("SELECT tds_verified, reconciliation FROM payment_system WHERE payment_id = :rowid LIMIT 1");
+        $chkStmt->bindParam(':rowid', $_GET["paymentID"]);
+        $chkStmt->execute();
+        $chkRow = $chkStmt->fetch(PDO::FETCH_ASSOC);
+        if ($chkRow) {
+            $isTdsVer = in_array(strtolower(trim($chkRow['tds_verified'] ?? '')), ['verified', 'yes', '1']);
+            $isRecVer = in_array(strtolower(trim($chkRow['reconciliation'] ?? '')), ['verified', 'yes', '1']);
+            if ($isTdsVer || $isRecVer) {
+                echo 'Cannot delete payment that is verified by accounts person and reconciled from bank statement.';
+                exit;
+            }
+        }
         $dltRow = "DELETE FROM payment_system WHERE payment_id = :rowid";
         $statement = $db->prepare($dltRow);
         $statement->bindParam(':rowid', $_GET["paymentID"]);
@@ -20,6 +32,7 @@ if (isset($_GET["paymentID"]) && !empty($_GET["paymentID"])) {
     } catch (Exception $ex) {
         echo $ex;
     }
+    exit;
 }
 
 if (isset($_GET["invid"]) && !empty($_GET["invid"])) {
@@ -112,17 +125,61 @@ if (isset($req['action']) && $req['action'] === 'updatePaymentServiceType') {
     }
 }
 
-if (isset($req['action']) && $req['action'] === 'updateReconcileStatus') {
+if (isset($req['action']) && $req['action'] === 'updatePaymentComment') {
     header('Content-Type: application/json');
     try {
         $payId = intval($req['payment_id'] ?? 0);
-        $status = trim((string)($req['status'] ?? ''));
+        $comment = trim((string)($req['comment'] ?? ''));
+        $isStatement = !empty($req['is_statement']) && $req['is_statement'] !== '0' && $req['is_statement'] !== false;
         if ($payId > 0) {
-            $stmt = $db->prepare("UPDATE `payment_system` SET `reconciliation` = :status WHERE `payment_id` = :id");
+            if ($isStatement) {
+                $stmt = $db->prepare("UPDATE `statement_payments` SET `comment` = :comm WHERE `id` = :id");
+            } else {
+                $stmt = $db->prepare("UPDATE `payment_system` SET `comment` = :comm WHERE `payment_id` = :id");
+            }
+            $stmt->bindParam(':comm', $comment);
+            $stmt->bindParam(':id', $payId, PDO::PARAM_INT);
+            $stmt->execute();
+            echo json_encode(['success' => true, 'comment' => $comment, 'payment_id' => $payId]);
+            exit;
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Invalid payment ID']);
+            exit;
+        }
+    } catch (Exception $e) {
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        exit;
+    }
+}
+
+if (isset($req['action']) && $req['action'] === 'updateReconcileStatus') {
+    header('Content-Type: application/json');
+    try {
+        $userRole = trim($_SESSION['role'] ?? '');
+        $canReconcile = (
+            (class_exists('Utitlity') && (Utitlity::checkForDirector() || Utitlity::checkForUserAdmin() || Utitlity::checkForUserFinance()))
+            || in_array(trim($userRole), array('Top Mgmt', 'Admin', 'Finance', 'Director', 'Management', 'Main Admin'), true)
+            || (isset($_SESSION['username']) && in_array(strtolower(trim($_SESSION['username'])), array('admin', 'mainadmin', 'director', 'finance'), true))
+        );
+
+        if (!$canReconcile) {
+            echo json_encode(['success' => false, 'message' => 'Unauthorized: Only Finance, Admin, and Management can reconcile payments.']);
+            exit;
+        }
+
+        $payId = intval($req['payment_id'] ?? 0);
+        $status = trim((string)($req['status'] ?? 'Verify'));
+        $isStatement = !empty($req['is_statement']) && $req['is_statement'] !== '0' && $req['is_statement'] !== false;
+        if ($payId > 0) {
+            if ($isStatement) {
+                $stmt = $db->prepare("UPDATE `statement_payments` SET `tds_verified` = :status WHERE `id` = :id");
+            } else {
+                $stmt = $db->prepare("UPDATE `payment_system` SET `reconciliation` = :status WHERE `payment_id` = :id");
+            }
             $stmt->bindParam(':status', $status);
             $stmt->bindParam(':id', $payId, PDO::PARAM_INT);
             $stmt->execute();
-            echo json_encode(['success' => true, 'status' => $status]);
+            echo json_encode(['success' => true, 'status' => $status, 'payment_id' => $payId]);
             exit;
         } else {
             echo json_encode(['success' => false, 'message' => 'Invalid payment ID']);
@@ -137,6 +194,18 @@ if (isset($req['action']) && $req['action'] === 'updateReconcileStatus') {
 if (isset($req['action']) && $req['action'] === 'updateTdsVerifyStatus') {
     header('Content-Type: application/json');
     try {
+        $tdsRole = trim($_SESSION['role'] ?? '');
+        $canVerifyTds = (
+            (class_exists('Utitlity') && (Utitlity::checkForDirector() || Utitlity::checkForUserAdmin() || Utitlity::checkForUserFinance()))
+            || in_array(trim($tdsRole), array('Top Mgmt', 'Admin', 'Finance', 'Director', 'Management'), true)
+            || (isset($_SESSION['username']) && in_array(strtolower(trim($_SESSION['username'])), array('admin', 'mainadmin', 'director', 'finance'), true))
+        );
+
+        if (!$canVerifyTds) {
+            echo json_encode(['success' => false, 'message' => 'Unauthorized: Only Top Mgmt, Admin, and Finance can verify TDS.']);
+            exit;
+        }
+
         $payId = intval($req['payment_id'] ?? 0);
         $status = trim((string)($req['status'] ?? 'Verify'));
         $isStatement = !empty($req['is_statement']) && $req['is_statement'] !== '0' && $req['is_statement'] !== false;
@@ -291,6 +360,16 @@ if (isset($req['payid']) && !empty($req['payid'])) {
 
                 if (array_key_exists($i, $rowi_ds) && $rowi_ds[$i] != "" && $rowi_ds != null) {
                     if (in_array($rowi_ds[$i], $dlt_rows)) {
+                        $chkStmt = $db->prepare("SELECT tds_verified, reconciliation FROM payment_system WHERE payment_id = :rowid LIMIT 1");
+                        $chkStmt->bindParam(':rowid', $rowi_ds[$i]);
+                        $chkStmt->execute();
+                        $chkRow = $chkStmt->fetch(PDO::FETCH_ASSOC);
+                        $isTdsVer = $chkRow && in_array(strtolower(trim($chkRow['tds_verified'] ?? '')), ['verified', 'yes', '1']);
+                        $isRecVer = $chkRow && in_array(strtolower(trim($chkRow['reconciliation'] ?? '')), ['verified', 'yes', '1']);
+                        if ($isTdsVer || $isRecVer) {
+                            $savedRowIds[] = intval($rowi_ds[$i]);
+                            continue;
+                        }
                         $dltRow = "DELETE FROM payment_system WHERE payment_sy_id = :payid and payment_id = :rowid";
                         $statement = $db->prepare($dltRow);
                         $statement->bindParam(':payid', $payid);

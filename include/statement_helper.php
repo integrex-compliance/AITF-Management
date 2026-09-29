@@ -33,6 +33,7 @@ if (!function_exists('aitf_ensure_statement_tables')) {
                     `balance` DECIMAL(12,2) DEFAULT 0.00,
                     `tds_decided` DECIMAL(12,2) DEFAULT 0.00,
                     `tds_received` DECIMAL(12,2) DEFAULT 0.00,
+                    `tds_verified` VARCHAR(50) DEFAULT 'unverified',
                     `comment` TEXT DEFAULT NULL,
                     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
                     `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -42,6 +43,14 @@ if (!function_exists('aitf_ensure_statement_tables')) {
                     KEY `idx_tds` (`tds_decided`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
             ");
+
+            // Ensure tds_verified column in existing statement_payments
+            try {
+                $spCol = $db->query("SHOW COLUMNS FROM `statement_payments` LIKE 'tds_verified'");
+                if (!$spCol || !$spCol->fetch()) {
+                    $db->exec("ALTER TABLE `statement_payments` ADD COLUMN `tds_verified` VARCHAR(50) DEFAULT 'unverified' AFTER `tds_received`");
+                }
+            } catch (Throwable $e) {}
 
             // 2. statement_bank_reconciliation table
             $db->exec("

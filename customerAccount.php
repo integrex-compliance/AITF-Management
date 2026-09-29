@@ -6316,26 +6316,29 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                 return 'SA-I';
                             }
 
-                            // 9. Initial Certification (CA)
+                            // 9. Generic Training
+                            if (strpos($lower, 'generic') !== false || strpos($lower, 'training') !== false) {
+                                return 'Generic Training';
+                            }
+
+                            // 10. Initial Certification (CA)
                             if (
-                                preg_match('/\bca\b/i', $raw) ||
+                                preg_match('/\b(ca|stage\s*1|stage\s*2|stage1|stage2|initial)\b/i', $raw) ||
                                 strpos($lower, 'ca-') !== false ||
                                 strpos($lower, 'stage 1') !== false ||
                                 strpos($lower, 'stage 2') !== false ||
-                                strpos($lower, 'stage1') !== false ||
-                                strpos($lower, 'stage2') !== false ||
                                 strpos($lower, 'application') !== false ||
                                 strpos($lower, 'certification') !== false ||
-                                strpos($lower, 'audit') !== false
+                                $lower === 'ca'
                             ) {
                                 return 'CA';
                             }
 
-                            return 'CA';
+                            return $raw;
                         }
                     }
 
-                    $availableServices = ['CA', 'SA-I', 'SA-II', 'RC', 'SP', 'Contract Review', 'PTR', 'Transition Audit'];
+                    $availableServices = ['CA', 'SA-I', 'SA-II', 'RC', 'SP', 'Contract Review', 'PTR', 'Transition Audit', 'Generic Training', 'Other'];
 
                     // Group invoices by service
                     $invoicesByService = [];
@@ -6525,19 +6528,13 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                             box-shadow: 0 1px 3px rgba(22, 163, 74, 0.1) !important;
                         }
                         .block-matched-badge {
-                            background: #16a34a !important;
-                            color: #ffffff !important;
-                            font-size: 10px !important;
-                            font-weight: 800 !important;
-                            padding: 2px 7px !important;
-                            border-radius: 10px !important;
-                            letter-spacing: 0.3px !important;
+                            color: #16a34a !important;
                             display: inline-flex !important;
                             align-items: center !important;
-                            gap: 3px !important;
-                            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15) !important;
-                            text-transform: uppercase !important;
                             vertical-align: middle !important;
+                            margin-left: 4px !important;
+                            font-size: 14px !important;
+                            line-height: 1 !important;
                         }
                         .serviceBlockTypeSelect {
                             background-color: #ffffff !important;
@@ -6627,13 +6624,27 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                     <div class="col-xs-6 table-responsive invoice-container-col" style="flex: 1 1 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px;">
                                         <div class="row">
                                             <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 10px;">
-                                                <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.4px; display: inline-flex; align-items: center; gap: 4px;">
+                                                <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.4px; display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap;">
                                                     <i class="fa ">Invoicing</i> (
                                                     <select class="serviceBlockTypeSelect" style="background: #ffffff; color: #1e3a8a; font-weight: 700; font-size: 11.5px; border: 1.5px solid #93c5fd; border-radius: 4px; padding: 1px 6px; height: 23px; cursor: pointer; outline: none; box-shadow: 0 1px 2px rgba(0,0,0,0.05); text-transform: uppercase;" title="Change service for this section">
                                                         <?php
                                                         $blockServiceOptions = $availableServices;
-                                                        if (!in_array($svcName, $blockServiceOptions) && !empty($svcName)) {
-                                                            $blockServiceOptions[] = $svcName;
+                                                        if (!empty($svcName) && strcasecmp($svcName, 'Other') !== 0) {
+                                                            $found = false;
+                                                            foreach ($blockServiceOptions as $opt) {
+                                                                if (strcasecmp($opt, $svcName) === 0) {
+                                                                    $found = true;
+                                                                    break;
+                                                                }
+                                                            }
+                                                            if (!$found) {
+                                                                $otherPos = array_search('Other', $blockServiceOptions);
+                                                                if ($otherPos !== false) {
+                                                                    array_splice($blockServiceOptions, $otherPos, 0, [$svcName]);
+                                                                } else {
+                                                                    $blockServiceOptions[] = $svcName;
+                                                                }
+                                                            }
                                                         }
                                                         foreach ($blockServiceOptions as $opt) {
                                                             $selected = (strcasecmp($opt, $svcName) === 0) ? 'selected' : '';
@@ -6641,9 +6652,14 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                         }
                                                         ?>
                                                     </select>
+                                                    <span class="serviceBlockCustomInputWrapper" style="display: none; align-items: center; gap: 3px;">
+                                                        <input type="text" class="customServiceInput" placeholder="Enter service name..." style="background: #ffffff; color: #1e3a8a; font-weight: 700; font-size: 11.5px; border: 1.5px solid #2563eb; border-radius: 4px; padding: 1px 6px; height: 23px; width: 140px; outline: none; box-shadow: 0 0 0 2px rgba(37,99,235,0.2); text-transform: uppercase;" />
+                                                        <button type="button" class="btn btn-xs btn-primary btnSaveCustomService" style="padding: 1px 6px; height: 23px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;" title="Apply Service Name"><i class="fa fa-check"></i></button>
+                                                        <button type="button" class="btn btn-xs btn-default btnCancelCustomService" style="padding: 1px 6px; height: 23px; font-size: 11px; display: inline-flex; align-items: center; justify-content: center;" title="Cancel"><i class="fa fa-times"></i></button>
+                                                    </span>
                                                     )
                                                     <?php if ($isBlockMatched) { ?>
-                                                        <span class="block-matched-badge"><i class="fa fa-check-circle"></i> MATCHED</span>
+                                                        <span class="block-matched-badge" title="Matched"><i class="fa fa-check-circle"></i></span>
                                                     <?php } ?>
                                                 </span>
                                                 <button type="button" class="btn btn-xs finalInvoiceBtn"
@@ -6748,7 +6764,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.4px;">
                                                     <i class="fa ">Received Payment</i> (<span class="col-service-label"><?php echo htmlspecialchars($svcName); ?></span>)
                                                     <?php if ($isBlockMatched) { ?>
-                                                        <span class="block-matched-badge"><i class="fa fa-check-circle"></i> MATCHED</span>
+                                                        <span class="block-matched-badge" title="Matched"><i class="fa fa-check-circle"></i></span>
                                                     <?php } ?>
                                                 </span>
                                                 <div style="display: inline-flex; align-items: center; gap: 5px;">
@@ -6793,9 +6809,11 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                             $isVerified = in_array($recRaw, ['verified', 'yes', '1']);
                                                             $recStatusText = $isVerified ? 'Verified' : 'Verify';
                                                             $isTdsVerified = (isset($payInfo['tds_verified']) && in_array(strtolower(trim($payInfo['tds_verified'])), ['verified', 'yes', '1']));
+                                                            $isTdsLocked = ($isTdsVerified && floatval($displayTds) > 0);
+                                                            $isRowReconciled = $isVerified || $isTdsLocked;
                                                             ?>
-                                                            <tr class="cb_subsection previousCBData pamentrow<?php echo $payInfo["payment_id"] ?> <?php echo $isDiscountRow ? 'discount-settlement-row' : ''; ?>" id="cb_subsection_0" style="<?php echo $isDiscountRow ? 'background-color: #faf5ff !important; border-left: 4px solid #8b5cf6 !important;' : ''; ?>">
-                                                                <td style="padding: 0px; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ''; ?>">
+                                                            <tr class="cb_subsection previousCBData pamentrow<?php echo $payInfo["payment_id"] ?> <?php echo $isDiscountRow ? 'discount-settlement-row' : ''; ?> <?php echo $isRowReconciled ? 'row-reconciled-locked' : ''; ?>" id="cb_subsection_0" style="<?php echo $isDiscountRow ? 'background-color: #faf5ff !important; border-left: 4px solid #8b5cf6 !important;' : ($isRowReconciled ? 'background-color: #f8fafc !important;' : ''); ?>">
+                                                                <td style="padding: 0px; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ($isRowReconciled ? 'background-color: #f8fafc;' : ''); ?>">
                                                                     <div class="table-edit-control"><label></label>
                                                                         <input type="hidden" data_row_id="" class="serviceTypeName" name="serviceTypeName" value="<?php echo htmlspecialchars($payInfo['service_type'] ?? $svcName); ?>" />
                                                                         <input type="hidden" data_row_id="" class="serviceAmountDecided" name="serviceAmountDecided" value="<?php echo htmlspecialchars((floatval($displayRcv) + floatval($displayTds) + floatval($displayDiscount)) ?: ($payInfo['amount_decided'] ?? '')); ?>" />
@@ -6804,31 +6822,31 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                             <input type="text" readonly class="serviceDiscountDisplay" value="<?php echo number_format($discountVal, 2, '.', ''); ?>" title="Discount Settled: ₹<?php echo number_format($discountVal, 2, '.', ''); ?>" style="background-color: #faf5ff; border-bottom: 1px solid #8b5cf6; color: #6d28d9; font-weight: 700; text-align: right;" />
                                                                             <input type="hidden" data_row_id="" class="servicePaymentReceived" name="servicePaymentReceived" value="0" />
                                                                         <?php } else { ?>
-                                                                            <input type="number" step="any" min="0" data_row_id="" class="servicePaymentReceived" name="servicePaymentReceived" value="<?php echo htmlspecialchars($displayRcv); ?>" placeholder="" />
+                                                                            <input type="number" step="any" min="0" data_row_id="" class="servicePaymentReceived <?php echo $isRowReconciled ? 'reconciled-locked-input' : ''; ?>" name="servicePaymentReceived" value="<?php echo htmlspecialchars($displayRcv); ?>" placeholder="" <?php echo $isRowReconciled ? 'readonly="readonly" data-reconciled="1"' : ''; ?> style="background-color: <?php echo $isRowReconciled ? '#f8fafc' : '#ffffff'; ?>; border-bottom: 1px solid <?php echo $isRowReconciled ? '#86efac' : '#cbd5e1'; ?>; color: <?php echo $isRowReconciled ? '#15803d' : '#0f172a'; ?>; font-weight: 700; <?php echo $isRowReconciled ? 'cursor: not-allowed;' : ''; ?>" title="<?php echo $isRowReconciled ? 'Reconciled Entry - Cannot edit reconciled payment entry' : ''; ?>" />
                                                                         <?php } ?>
                                                                     </div>
                                                                 </td>
-                                                                <td style="padding: 0px; background-color: <?php echo $isDiscountRow ? '#faf5ff' : ($isTdsVerified && floatval($displayTds) > 0 ? '#f0fdf4' : '#ffffff'); ?>; position: relative;">
+                                                                <td style="padding: 0px; background-color: <?php echo $isDiscountRow ? '#faf5ff' : ($isRowReconciled ? '#f0fdf4' : '#ffffff'); ?>; position: relative;">
                                                                     <div class="table-edit-control" style="position: relative; display: flex; align-items: center; width: 100%;"><label></label>
-                                                                        <input type="number" step="any" min="0" data_row_id="" class="serviceTdsAmount" name="serviceTdsAmount" value="<?php echo htmlspecialchars($displayTds); ?>" placeholder="" style="background-color: <?php echo $isDiscountRow ? '#faf5ff' : ($isTdsVerified && floatval($displayTds) > 0 ? '#f0fdf4' : '#ffffff'); ?>; border-bottom: 1px solid <?php echo ($isTdsVerified && floatval($displayTds) > 0) ? '#86efac' : '#cbd5e1'; ?>; color: <?php echo ($isTdsVerified && floatval($displayTds) > 0) ? '#15803d' : '#b45309'; ?>; font-weight: 700; text-align: right; <?php echo ($isTdsVerified && floatval($displayTds) > 0) ? 'padding-right: 18px !important;' : ''; ?>" />
-                                                                        <?php if ($isTdsVerified && floatval($displayTds) > 0) { ?>
-                                                                            <span class="tds-verified-icon" title="TDS Verified in TDS section" style="position: absolute; right: 3px; top: 50%; transform: translateY(-50%); color: #16a34a; font-size: 11px; display: inline-flex; align-items: center; pointer-events: none; z-index: 2;">
+                                                                        <input type="number" step="any" min="0" data_row_id="" class="serviceTdsAmount <?php echo $isRowReconciled ? 'tds-locked-input reconciled-locked-input' : ''; ?>" name="serviceTdsAmount" value="<?php echo htmlspecialchars($displayTds); ?>" placeholder="" <?php echo $isRowReconciled ? 'readonly="readonly" data-tds-locked="1" data-reconciled="1"' : ''; ?> style="background-color: <?php echo $isDiscountRow ? '#faf5ff' : ($isRowReconciled ? '#f0fdf4' : '#ffffff'); ?>; border-bottom: 1px solid <?php echo ($isRowReconciled) ? '#86efac' : '#cbd5e1'; ?>; color: <?php echo ($isRowReconciled) ? '#15803d' : '#b45309'; ?>; font-weight: 700; text-align: right; <?php echo ($isRowReconciled) ? 'padding-right: 20px !important; cursor: not-allowed;' : ''; ?>" title="<?php echo $isRowReconciled ? 'Reconciled Entry - Cannot edit reconciled payment entry' : ''; ?>" />
+                                                                        <?php if ($isRowReconciled) { ?>
+                                                                            <span class="tds-verified-icon" title="Reconciled / Verified Entry" style="position: absolute; right: 3px; top: 50%; transform: translateY(-50%); color: #16a34a; font-size: 11px; display: inline-flex; align-items: center; pointer-events: none; z-index: 2;">
                                                                                 <i class="fa fa-check-circle" style="color: #16a34a; font-size: 11.5px;"></i>
                                                                             </span>
                                                                         <?php } ?>
                                                                     </div>
                                                                 </td>
-                                                                <td style="padding: 0px; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ''; ?>">
+                                                                <td style="padding: 0px; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ($isRowReconciled ? 'background-color: #f8fafc;' : ''); ?>">
                                                                     <div class="table-edit-control"><label></label>
-                                                                        <input type="text" data_row_id="" class="paymentDepositDate" name="paymentDepositDate" value="<?php if (isset($payInfo['payment_date']) && !empty($payInfo['payment_date']) && $payInfo['payment_date'] != '0000-00-00') echo date("d.m.Y", strtotime($payInfo['payment_date'])) ?>" placeholder="DD.MM.YYYY">
+                                                                        <input type="text" data_row_id="" class="paymentDepositDate <?php echo $isRowReconciled ? 'reconciled-locked-input' : ''; ?>" name="paymentDepositDate" value="<?php if (isset($payInfo['payment_date']) && !empty($payInfo['payment_date']) && $payInfo['payment_date'] != '0000-00-00') echo date("d.m.Y", strtotime($payInfo['payment_date'])) ?>" placeholder="DD.MM.YYYY" <?php echo $isRowReconciled ? 'readonly="readonly" data-reconciled="1"' : ''; ?> style="background-color: <?php echo $isRowReconciled ? '#f8fafc' : '#ffffff'; ?>; color: <?php echo $isRowReconciled ? '#334155' : '#0f172a'; ?>; <?php echo $isRowReconciled ? 'cursor: not-allowed; font-weight: 600;' : ''; ?>" title="<?php echo $isRowReconciled ? 'Reconciled Entry - Cannot edit reconciled payment entry' : ''; ?>">
                                                                     </div>
                                                                 </td>
-                                                                <td style="padding: 0px; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ''; ?>">
+                                                                <td style="padding: 0px; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ($isRowReconciled ? 'background-color: #f8fafc;' : ''); ?>">
                                                                     <div class="table-edit-control"><label></label>
-                                                                        <input type="text" data_row_id="" class="serviceChequeDetails" name="serviceChequeDetails" value="<?php echo htmlspecialchars($payInfo['cheque_details'] ?? ''); ?>" placeholder="" />
+                                                                        <input type="text" data_row_id="" class="serviceChequeDetails <?php echo $isRowReconciled ? 'reconciled-locked-input' : ''; ?>" name="serviceChequeDetails" value="<?php echo htmlspecialchars($payInfo['cheque_details'] ?? ''); ?>" placeholder="" <?php echo $isRowReconciled ? 'readonly="readonly" data-reconciled="1"' : ''; ?> style="background-color: <?php echo $isRowReconciled ? '#f8fafc' : '#ffffff'; ?>; color: <?php echo $isRowReconciled ? '#334155' : '#0f172a'; ?>; <?php echo $isRowReconciled ? 'cursor: not-allowed; font-weight: 600;' : ''; ?>" title="<?php echo $isRowReconciled ? 'Reconciled Entry - Cannot edit reconciled payment entry' : ''; ?>" />
                                                                     </div>
                                                                 </td>
-                                                                <td style="padding: 1px 2px; text-align: center; vertical-align: middle; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ''; ?>">
+                                                                <td style="padding: 1px 2px; text-align: center; vertical-align: middle; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ($isRowReconciled ? 'background-color: #f8fafc;' : ''); ?>">
                                                                     <div class="table-edit-control" style="display: flex; align-items: center; justify-content: center;">
                                                                         <input type="hidden" class="serviceReconciliation" name="serviceReconciliation" value="<?php echo $recStatusText; ?>" />
                                                                         <button type="button" class="btn btn-xs toggleReconcileBtn <?php echo $isVerified ? 'reconcile-verified' : 'reconcile-not-verify'; ?>" data-status="<?php echo $recStatusText; ?>" data-pay-id="<?php echo htmlspecialchars($payInfo['payment_id'] ?? ''); ?>" style="width: 96%; height: 23px; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 0 2px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; cursor: pointer; transition: all 0.2s ease; <?php echo $isVerified ? 'background-color: #16a34a; border: 1px solid #15803d; color: #ffffff;' : 'background-color: #ef4444; border: 1px solid #dc2626; color: #ffffff;'; ?>" title="Click to toggle: <?php echo $isVerified ? 'Mark as Verify' : 'Mark as Verified'; ?>">
@@ -6837,10 +6855,10 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                         </button>
                                                                     </div>
                                                                 </td>
-                                                                <td style="padding: 0px; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ''; ?>">
+                                                                <td style="padding: 0px; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ($isRowReconciled ? 'background-color: #f8fafc;' : ''); ?>">
                                                                     <div class="table-edit-control">
                                                                         <input type="hidden" data_row_id="" class="serviceBalance" name="serviceBalance" value="<?php echo htmlspecialchars($payInfo['balance'] ?? '0.00'); ?>" />
-                                                                        <a class="infoDelete" data-row-id="<?php echo $payInfo['payment_id'] ?>" value="<?php echo $payInfo['payment_id'] ?>"><i class="fa fa-trash-o pull-right " style="padding-right: 10px; color: #ef4444;" title="Delete Row Details"></i></a>
+                                                                        <a class="infoDelete" data-row-id="<?php echo $payInfo['payment_id'] ?>" data-tds-locked="<?php echo $isRowReconciled ? '1' : '0'; ?>" data-reconciled="<?php echo $isRowReconciled ? '1' : '0'; ?>" value="<?php echo $payInfo['payment_id'] ?>"><i class="fa fa-trash-o pull-right " style="padding-right: 10px; color: <?php echo $isRowReconciled ? '#94a3b8' : '#ef4444'; ?>;" title="<?php echo $isRowReconciled ? 'Cannot delete reconciled payment entry' : 'Delete Row Details'; ?>"></i></a>
                                                                         <input type="hidden" data-row-id="" class="row-id" name="row-id" value="<?php echo $payInfo['payment_id'] ?>">
                                                                     </div>
                                                                 </td>
@@ -6888,24 +6906,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                             </td>
                                                         </tr>
                                                     <?php } ?>
-                                                </tbody>
-                                                <tfoot>
-                                                    <tr style="background-color: #f8fafc; font-weight: bold; border-top: 2px solid #cbd5e1;">
-                                                        <td style="padding: 0px; vertical-align: middle;">
-                                                            <div class="table-edit-control">
-                                                                <input type="text" class="totalPaymentReceivedSum" <?php if ($blockIdx === 0) echo 'id="totalPaymentReceivedSum"'; ?> value="<?php echo number_format($blockRcvSum, 2, '.', ''); ?>" style="font-weight: bold; color: #16a34a; background: #ffffff; text-align: center; border: 1px solid #cbd5e1; font-size: 12px; height: 26px; padding: 0;" readonly title="Total Payment Received for <?php echo htmlspecialchars($svcName); ?>" />
-                                                            </div>
-                                                        </td>
-                                                        <td style="padding: 0px; vertical-align: middle; background-color: #f8fafc;">
-                                                            <div class="table-edit-control">
-                                                                <input type="text" class="totalPaymentTdsSum" <?php if ($blockIdx === 0) echo 'id="totalPaymentTdsSum"'; ?> value="<?php echo number_format($blockTdsSum, 2, '.', ''); ?>" style="font-weight: bold; color: #b45309; background: #ffffff; text-align: center; border: 1px solid #cbd5e1; font-size: 12px; height: 26px; padding: 0;" readonly title="Total TDS Amount for <?php echo htmlspecialchars($svcName); ?>" />
-                                                            </div>
-                                                        </td>
-                                                        <td colspan="4" style="text-align: right; padding: 4px 8px; vertical-align: middle; color: #334155; white-space: nowrap;">
-                                                            <input type="hidden" class="totalPaymentCombinedSum" <?php if ($blockIdx === 0) echo 'id="totalPaymentCombinedSum"'; ?> value="<?php echo number_format($blockRcvSum + $blockTdsSum + $blockDiscountSum, 2, '.', ''); ?>" />
-                                                        </td>
-                                                    </tr>
-                                                </tfoot>
+                                                 </tbody>
                                             </table>
                                         </div>
 
@@ -6918,7 +6919,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                     <strong style="color: #15803d; font-size: 11px; font-weight: 800;">₹<span class="serviceBlockPaidSum"><?php echo number_format($blockRcvSum, 2, '.', ''); ?></span></strong>
                                                 </div>
                                                 <div style="display: inline-flex; align-items: center; gap: 3px;">
-                                                    <span style="color: #92400e; font-weight: 700; text-transform: uppercase; font-size: 9.5px;"><i class="fa fa-percent" style="color: #d97706; font-size: 9px; margin-right: 2px;"></i> TDS Total:</span>
+                                                    <span style="color: #92400e; font-weight: 700; text-transform: uppercase; font-size: 9.5px;">TDS Total:</span>
                                                     <strong style="color: #b45309; font-size: 11px; font-weight: 800;">₹<span class="serviceBlockTdsSum"><?php echo number_format($blockTdsSum, 2, '.', ''); ?></span></strong>
                                                 </div>
                                                 <div class="serviceBlockDiscountWrapper" style="display: <?php echo ($blockDiscountSum > 0) ? 'inline-flex' : 'none'; ?>; align-items: center; gap: 3px;">
@@ -6962,11 +6963,11 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                 <table class="table table-bordered service_details" id="payment_summary_table" style="margin: 0; border: none; width: 100%;">
                                     <thead>
                                         <tr>
-                                            <!-- Grand Total -->
+                                            <!-- Invoice Total -->
                                             <th id="summaryGrandTotalTh" width="20%" style="padding: 12px 10px; text-align: center; vertical-align: middle; background: #f8fafc; border-top: 3.5px solid #2563eb; border-bottom: none;">
                                                 <?php $totalInvoiceAmount = floatval($invoiceTotal["invoice_sum"] ?? 0); ?>
                                                 <small style="font-weight: 800; color: #1e3a8a; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; display: block; margin-bottom: 4px;">
-                                                    <i class="fa fa-briefcase" style="color: #2563eb; margin-right: 3px;"></i> Grand Total
+                                                    <i class="fa fa-file-text-o" style="color: #2563eb; margin-right: 3px;"></i> Invoice Total
                                                 </small>
                                                 <strong style="color: #0f172a; font-size: 16px; font-weight: 800;">
                                                     ₹<span id="summaryTotalAmount"><?php echo number_format($totalInvoiceAmount, 2, '.', ''); ?></span>
@@ -6975,11 +6976,11 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                 <span id="summaryInvoicingAmount" style="display: none;"><?php echo number_format($totalInvoiceAmount, 2, '.', ''); ?></span>
                                             </th>
 
-                                            <!-- Received Amount -->
+                                            <!-- Received Total -->
                                             <th id="summaryReceivedTh" width="20%" style="padding: 12px 10px; text-align: center; vertical-align: middle; background: #f0fdf4; border-top: 3.5px solid #16a34a; border-bottom: none;">
                                                 <?php $totalPaymentReceived = floatval($paymentTotal["payment_sum"] ?? 0); ?>
                                                 <small style="font-weight: 800; color: #166534; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; display: block; margin-bottom: 4px;">
-                                                    <i class="fa fa-check-circle" style="color: #16a34a; margin-right: 3px;"></i> Received Amount
+                                                    <i class="fa fa-check-circle" style="color: #16a34a; margin-right: 3px;"></i> Received Total
                                                 </small>
                                                 <strong style="color: #15803d; font-size: 16px; font-weight: 800;">
                                                     ₹<span id="summaryReceivedAmount"><?php echo number_format($totalPaymentReceived, 2, '.', ''); ?></span>
@@ -6990,7 +6991,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                             <th id="summaryTdsTh" width="20%" style="padding: 12px 10px; text-align: center; vertical-align: middle; background: #fffbeb; border-top: 3.5px solid #d97706; border-bottom: none;">
                                                 <?php $totalTdsAmount = floatval($paymentTotal["tds_sum"] ?? 0); ?>
                                                 <small style="font-weight: 800; color: #92400e; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; display: block; margin-bottom: 4px;">
-                                                    <i class="fa fa-percent" style="font-size: 9.5px; margin-right: 3px; color: #d97706;"></i> TDS Deducted
+                                                    TDS Deducted
                                                 </small>
                                                 <strong style="color: #b45309; font-size: 16px; font-weight: 800;">
                                                     ₹<span id="summaryTdsAmount"><?php echo number_format($totalTdsAmount, 2, '.', ''); ?></span>
@@ -7015,7 +7016,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                             ?>
                                             <th id="summaryRemainingTh" width="20%" style="padding: 12px 10px; text-align: center; vertical-align: middle; background: <?php echo $isDue ? '#fef2f2' : '#f0fdf4'; ?>; border-top: 3.5px solid <?php echo $isDue ? '#dc2626' : '#16a34a'; ?>; border-bottom: none;">
                                                 <small id="summaryRemainingLabel" style="font-weight: 800; color: <?php echo $isDue ? '#991b1b' : '#166534'; ?>; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; display: block; margin-bottom: 4px;">
-                                                    <i class="fa <?php echo $isDue ? 'fa-clock-o' : 'fa-check-circle'; ?>" style="color: <?php echo $isDue ? '#dc2626' : '#16a34a'; ?>; margin-right: 3px;"></i> <?php echo $isDue ? 'Remaining Amount' : 'Remaining (Settled)'; ?>
+                                                    <i class="fa <?php echo $isDue ? 'fa-clock-o' : 'fa-check-circle'; ?>" style="color: <?php echo $isDue ? '#dc2626' : '#16a34a'; ?>; margin-right: 3px;"></i> Outstanding Balance
                                                 </small>
                                                 <strong style="color: <?php echo $isDue ? '#dc2626' : '#15803d'; ?>; font-size: 16px; font-weight: 800;">
                                                     ₹<span id="summaryRemainingAmount"><?php echo number_format($difference, 2, '.', ''); ?></span>
@@ -14597,6 +14598,9 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             });
 
             $(document).on('focus', ".paymentDepositDate, .serviceReconciliation", function () {
+                if ($(this).attr('readonly') || $(this).attr('data-reconciled') === '1' || $(this).hasClass('reconciled-locked-input') || $(this).closest('tr').find('.serviceReconciliation').val() === 'Verified') {
+                    return false;
+                }
                 if ($(this).hasClass('hasDatepicker') === false) {
                     $(this).datepicker({
                         minDate: '-100Y',
@@ -14763,6 +14767,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         $('.invoiceCustomerId').val(data[0]['customer_id']);
                         $('.invoiceFirmId').val(data[0]['firm_id']);
                         $('.invoiceId').val(data[0]['invoice_id']);
+                        $('#finalinvoiceModal').find('.invoiceAgreementNo').val(data[0]['agreement_no'] || (data[2] && data[2]['unique_id']) || <?php echo json_encode((string)($clientInfo['unique_id'] ?? '')); ?>);
+                        $('#finalinvoiceModal').find('.invoicePoRef').val(data[0]['po_ref'] || '');
                         $('.finalserviceAmtTd').empty();
                         var option1 = "";
                         var svcs = '<?php echo $svclist ?>';
@@ -15948,8 +15954,10 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 $finalModal.find('.invoiceconsultingFirmName').val(customerId);
                 $finalModal.find('input[name="invoiceAddress"]').val(customerAddress);
                 $finalModal.find('input[name="invoiceDt"]').val(moment().format('DD.MM.YYYY'));
-                $finalModal.find('input[name="invoiceState"]').val('Maharashtra');
-                $finalModal.find('input[name="invoiceStateCode"]').val('27');
+                $finalModal.find('.invoiceState').val('Maharashtra');
+                $finalModal.find('.invoiceStateCode').val('27');
+                $finalModal.find('.invoiceAgreementNo').val(<?php echo json_encode((string)($clientInfo['unique_id'] ?? '')); ?>);
+                $finalModal.find('.invoicePoRef').val('');
                 $finalModal.find('input[name="finalTaxtype"][value="CGST & SGST"]').prop('checked', true);
                 $finalModal.find('.finalserviceAmtTd').empty();
                 $finalModal.find('.addFinalServiceAmtRow').trigger('click');
@@ -15966,6 +15974,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 $('.invoiceconsultingFirmName').val(companyName);
                 //            alert($('.invoiceconsultingFirmName').val());
                 $('#invoiceAddress').val(companyAddress);
+                $('#invoiceModal').find('.invoiceAgreementNo').val(<?php echo json_encode((string)($clientInfo['unique_id'] ?? '')); ?>);
+                $('#invoiceModal').find('.invoicePoRef').val('');
                 $('#consultingFirmName').trigger('change');
                 $('#invoiceAddress').trigger('change');
                 $('#invoiceModal').modal('show');
@@ -22418,6 +22428,38 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     })
                     .attr("title", "Click to toggle: Mark as Verify")
                     .html('<i class="fa fa-check"></i> <span>Verified</span>');
+
+                // Lock all inputs in the row
+                $row.addClass('row-reconciled-locked').css('background-color', '#f8fafc');
+                $row.find('.servicePaymentReceived').prop('readonly', true).attr('data-reconciled', '1').addClass('reconciled-locked-input').css({
+                    'background-color': '#f8fafc',
+                    'border-bottom-color': '#86efac',
+                    'color': '#15803d',
+                    'cursor': 'not-allowed'
+                });
+                $row.find('.serviceTdsAmount').prop('readonly', true).attr('data-reconciled', '1').attr('data-tds-locked', '1').addClass('reconciled-locked-input tds-locked-input').css({
+                    'background-color': '#f0fdf4',
+                    'border-bottom-color': '#86efac',
+                    'color': '#15803d',
+                    'cursor': 'not-allowed',
+                    'padding-right': '20px'
+                });
+                if ($row.find('.tds-verified-icon').length === 0) {
+                    $row.find('.serviceTdsAmount').after('<span class="tds-verified-icon" title="Reconciled / Verified Entry" style="position: absolute; right: 3px; top: 50%; transform: translateY(-50%); color: #16a34a; font-size: 11px; display: inline-flex; align-items: center; pointer-events: none; z-index: 2;"><i class="fa fa-check-circle" style="color: #16a34a; font-size: 11.5px;"></i></span>');
+                } else {
+                    $row.find('.tds-verified-icon').show();
+                }
+                $row.find('.paymentDepositDate').prop('readonly', true).attr('data-reconciled', '1').addClass('reconciled-locked-input').css({
+                    'background-color': '#f8fafc',
+                    'color': '#334155',
+                    'cursor': 'not-allowed'
+                });
+                $row.find('.serviceChequeDetails').prop('readonly', true).attr('data-reconciled', '1').addClass('reconciled-locked-input').css({
+                    'background-color': '#f8fafc',
+                    'color': '#334155',
+                    'cursor': 'not-allowed'
+                });
+                $row.find('.infoDelete').attr('data-reconciled', '1').attr('data-tds-locked', '1').find('i').css('color', '#94a3b8');
             } else {
                 $btn.removeClass("reconcile-verified")
                     .addClass("reconcile-not-verify")
@@ -22428,6 +22470,34 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     })
                     .attr("title", "Click to toggle: Mark as Verified")
                     .html('<i class="fa fa-times"></i> <span>Verify</span>');
+
+                // Unlock inputs in the row
+                $row.removeClass('row-reconciled-locked').css('background-color', '#ffffff');
+                $row.find('.servicePaymentReceived').prop('readonly', false).removeAttr('data-reconciled').removeClass('reconciled-locked-input').css({
+                    'background-color': '#ffffff',
+                    'border-bottom-color': '#cbd5e1',
+                    'color': '#0f172a',
+                    'cursor': 'text'
+                });
+                $row.find('.serviceTdsAmount').prop('readonly', false).removeAttr('data-reconciled').removeAttr('data-tds-locked').removeClass('reconciled-locked-input tds-locked-input').css({
+                    'background-color': '#ffffff',
+                    'border-bottom-color': '#cbd5e1',
+                    'color': '#b45309',
+                    'cursor': 'text',
+                    'padding-right': ''
+                });
+                $row.find('.tds-verified-icon').hide();
+                $row.find('.paymentDepositDate').prop('readonly', false).removeAttr('data-reconciled').removeClass('reconciled-locked-input').css({
+                    'background-color': '#ffffff',
+                    'color': '#0f172a',
+                    'cursor': 'text'
+                });
+                $row.find('.serviceChequeDetails').prop('readonly', false).removeAttr('data-reconciled').removeClass('reconciled-locked-input').css({
+                    'background-color': '#ffffff',
+                    'color': '#0f172a',
+                    'cursor': 'text'
+                });
+                $row.find('.infoDelete').attr('data-reconciled', '0').attr('data-tds-locked', '0').find('i').css('color', '#ef4444');
             }
 
             if (payId && payId !== "" && payId !== "0") {
@@ -22614,8 +22684,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     if (isBlockMatched) {
                         $block.addClass("service-block-matched");
                         $block.find(".block-matched-badge").remove();
-                        $block.find(".invoice-container-col .qms_complete_btn > span").append(' <span class="block-matched-badge"><i class="fa fa-check-circle"></i> MATCHED</span>');
-                        $block.find(".payments-container-col .qms_complete_btn > span").append(' <span class="block-matched-badge"><i class="fa fa-check-circle"></i> MATCHED</span>');
+                        $block.find(".invoice-container-col .qms_complete_btn > span").append(' <span class="block-matched-badge" title="Matched"><i class="fa fa-check-circle"></i></span>');
+                        $block.find(".payments-container-col .qms_complete_btn > span").append(' <span class="block-matched-badge" title="Matched"><i class="fa fa-check-circle"></i></span>');
                         $block.find(".serviceBlockRemainingWrapper").css({
                             "background": "#dcfce7",
                             "border-color": "#4ade80"
@@ -22691,14 +22761,14 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     "border-top": "3.5px solid #dc2626"
                 });
                 $("#summaryRemainingAmount").parent().css("color", "#dc2626");
-                $("#summaryRemainingLabel").css("color", "#991b1b").html('<i class="fa fa-clock-o" style="color: #dc2626; margin-right: 3px;"></i> Remaining Amount');
+                $("#summaryRemainingLabel").css("color", "#991b1b").html('<i class="fa fa-clock-o" style="color: #dc2626; margin-right: 3px;"></i> Outstanding Balance');
             } else {
                 $("#summaryRemainingTh").css({
                     "background": "#f0fdf4",
                     "border-top": "3.5px solid #16a34a"
                 });
                 $("#summaryRemainingAmount").parent().css("color", "#15803d");
-                $("#summaryRemainingLabel").css("color", "#166534").html('<i class="fa fa-check-circle" style="color: #16a34a; margin-right: 3px;"></i> Remaining (Settled)');
+                $("#summaryRemainingLabel").css("color", "#166534").html('<i class="fa fa-check-circle" style="color: #16a34a; margin-right: 3px;"></i> Outstanding Balance');
             }
 
             $("#summaryReceivableAmount").text(grandTotalInvoice.toFixed(2));
@@ -22717,9 +22787,32 @@ if ($currentRole === 'client' || $currentRole === 'external') {
 
         // Helper function to dynamically generate a new service block
         function renderServiceBlockTemplate(svcName, blockIdx, customerId, customerAddress, availableServices) {
+            var blockServiceOptions = availableServices.slice();
+            var exists = false;
+            for (var i = 0; i < blockServiceOptions.length; i++) {
+                if (blockServiceOptions[i].toLowerCase() === svcName.toLowerCase()) {
+                    exists = true;
+                    break;
+                }
+            }
+            if (!exists && svcName && svcName.toLowerCase() !== 'other') {
+                var otherIdx = -1;
+                for (var j = 0; j < blockServiceOptions.length; j++) {
+                    if (blockServiceOptions[j].toLowerCase() === 'other') {
+                        otherIdx = j;
+                        break;
+                    }
+                }
+                if (otherIdx !== -1) {
+                    blockServiceOptions.splice(otherIdx, 0, svcName);
+                } else {
+                    blockServiceOptions.push(svcName);
+                }
+            }
+
             var optionsHtml = '';
-            for (var i = 0; i < availableServices.length; i++) {
-                var s = availableServices[i];
+            for (var i = 0; i < blockServiceOptions.length; i++) {
+                var s = blockServiceOptions[i];
                 var sel = (s.toLowerCase() === svcName.toLowerCase()) ? 'selected' : '';
                 optionsHtml += '<option value="' + s + '" ' + sel + '>' + s + '</option>';
             }
@@ -22737,7 +22830,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             html += '        <div class="col-xs-6 table-responsive invoice-container-col" style="flex: 1 1 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px;">';
             html += '            <div class="row">';
             html += '                <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 10px;">';
-            html += '                    <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.4px; display: inline-flex; align-items: center; gap: 4px;"><i class="fa ">Invoicing</i> (<select class="serviceBlockTypeSelect" style="background: #ffffff; color: #1e3a8a; font-weight: 700; font-size: 11.5px; border: 1.5px solid #93c5fd; border-radius: 4px; padding: 1px 6px; height: 23px; cursor: pointer; outline: none; box-shadow: 0 1px 2px rgba(0,0,0,0.05); text-transform: uppercase;" title="Change service for this section">' + optionsHtml + '</select>)</span>';
+            html += '                    <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.4px; display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap;"><i class="fa ">Invoicing</i> (<select class="serviceBlockTypeSelect" style="background: #ffffff; color: #1e3a8a; font-weight: 700; font-size: 11.5px; border: 1.5px solid #93c5fd; border-radius: 4px; padding: 1px 6px; height: 23px; cursor: pointer; outline: none; box-shadow: 0 1px 2px rgba(0,0,0,0.05); text-transform: uppercase;" title="Change service for this section">' + optionsHtml + '</select><span class="serviceBlockCustomInputWrapper" style="display: none; align-items: center; gap: 3px;"><input type="text" class="customServiceInput" placeholder="Enter service name..." style="background: #ffffff; color: #1e3a8a; font-weight: 700; font-size: 11.5px; border: 1.5px solid #2563eb; border-radius: 4px; padding: 1px 6px; height: 23px; width: 140px; outline: none; box-shadow: 0 0 0 2px rgba(37,99,235,0.2); text-transform: uppercase;" /><button type="button" class="btn btn-xs btn-primary btnSaveCustomService" style="padding: 1px 6px; height: 23px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;" title="Apply Service Name"><i class="fa fa-check"></i></button><button type="button" class="btn btn-xs btn-default btnCancelCustomService" style="padding: 1px 6px; height: 23px; font-size: 11px; display: inline-flex; align-items: center; justify-content: center;" title="Cancel"><i class="fa fa-times"></i></button></span>)</span>';
             html += '                    <button type="button" class="btn btn-xs finalInvoiceBtn" data-id="' + customerId + '" data-address="' + customerAddress + '" data-service="' + svcName + '" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #ffffff; border: 1px solid #1e40af; font-weight: 700; font-size: 11px; border-radius: 4px; padding: 2px 10px; box-shadow: 0 1px 3px rgba(37,99,235,0.25); text-transform: none; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; transition: all 0.2s ease;" title="Create Final Invoice Against ' + svcName + '">';
             html += '                        <i class="fa fa-plus" style="font-size: 10px;"></i> issue tax invoice against service';
             html += '                    </button>';
@@ -22801,22 +22894,13 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             html += '                            <td style="padding: 0px;"><div class="table-edit-control"><input type="hidden" data_row_id="" class="serviceBalance" name="serviceBalance" value="0.00" /><input type="hidden" data-row-id="" class="row-id" name="row-id" value=""></div></td>';
             html += '                        </tr>';
             html += '                    </tbody>';
-            html += '                    <tfoot>';
-            html += '                        <tr style="background-color: #f8fafc; font-weight: bold; border-top: 2px solid #cbd5e1;">';
-            html += '                            <td style="padding: 0px; vertical-align: middle;"><div class="table-edit-control"><input type="text" class="totalPaymentReceivedSum" value="0.00" style="font-weight: bold; color: #16a34a; background: #ffffff; text-align: center; border: 1px solid #cbd5e1; font-size: 12px; height: 26px; padding: 0;" readonly title="Total Payment Received for ' + svcName + '" /></div></td>';
-            html += '                            <td style="padding: 0px; vertical-align: middle; background-color: #f8fafc;"><div class="table-edit-control"><input type="text" class="totalPaymentTdsSum" value="0.00" style="font-weight: bold; color: #b45309; background: #ffffff; text-align: center; border: 1px solid #cbd5e1; font-size: 12px; height: 26px; padding: 0;" readonly title="Total TDS Amount for ' + svcName + '" /></div></td>';
-            html += '                            <td colspan="4" style="text-align: right; padding: 4px 8px; vertical-align: middle; color: #334155; white-space: nowrap;">';
-            html += '                                <input type="hidden" class="totalPaymentCombinedSum" value="0.00" />';
-            html += '                            </td>';
-            html += '                        </tr>';
-            html += '                    </tfoot>';
             html += '                </table>';
             html += '            </div>';
             html += '            <div class="service-block-summary-bar" style="margin-top: 4px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 3px 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: nowrap; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); white-space: nowrap;">';
             html += '                <span class="serviceBlockInvSum" style="display: none;">0.00</span>';
             html += '                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: nowrap;">';
             html += '                    <div style="display: inline-flex; align-items: center; gap: 3px;"><span style="color: #166534; font-weight: 700; text-transform: uppercase; font-size: 9.5px;"><i class="fa fa-check-circle" style="color: #16a34a; margin-right: 2px;"></i> Received Total:</span> <strong style="color: #15803d; font-size: 11px; font-weight: 800;">₹<span class="serviceBlockPaidSum">0.00</span></strong></div>';
-            html += '                    <div style="display: inline-flex; align-items: center; gap: 3px;"><span style="color: #92400e; font-weight: 700; text-transform: uppercase; font-size: 9.5px;"><i class="fa fa-percent" style="color: #d97706; font-size: 9px; margin-right: 2px;"></i> TDS Total:</span> <strong style="color: #b45309; font-size: 11px; font-weight: 800;">₹<span class="serviceBlockTdsSum">0.00</span></strong></div>';
+            html += '                    <div style="display: inline-flex; align-items: center; gap: 3px;"><span style="color: #92400e; font-weight: 700; text-transform: uppercase; font-size: 9.5px;">TDS Total:</span> <strong style="color: #b45309; font-size: 11px; font-weight: 800;">₹<span class="serviceBlockTdsSum">0.00</span></strong></div>';
             html += '                    <div class="serviceBlockDiscountWrapper" style="display: none; align-items: center; gap: 3px;"><span style="color: #6b21a8; font-weight: 700; text-transform: uppercase; font-size: 9.5px;"><i class="fa fa-tag" style="color: #7c3aed; font-size: 9px; margin-right: 2px;"></i> Disc:</span> <strong style="color: #7c3aed; font-size: 11px; font-weight: 800;">₹<span class="serviceBlockDiscountSum">0.00</span></strong></div>';
             html += '                </div>';
             html += '                <div><span class="serviceBlockRemainingWrapper" style="display: inline-flex; align-items: center; font-size: 10px; padding: 2px 7px; border-radius: 4px; font-weight: 800; background: #ecfdf5; border: 1px solid #a7f3d0; white-space: nowrap;"><span style="color: #065f46; text-transform: uppercase; font-size: 9.5px; margin-right: 3px;">Remaining Total:</span> <strong class="serviceBlockRemainingSum" style="color: #16a34a; font-size: 11px;">₹0.00</strong></span></div>';
@@ -22840,7 +22924,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 $('.payment-toggle-chevron').css('transform', 'rotate(180deg)');
             }
 
-            var availableServices = ['CA', 'SA-I', 'SA-II', 'RC', 'SP', 'Contract Review', 'PTR', 'Transition Audit'];
+            var availableServices = ['CA', 'SA-I', 'SA-II', 'RC', 'SP', 'Contract Review', 'PTR', 'Transition Audit', 'Generic Training', 'Other'];
             var currentActiveServices = [];
             $('.service-payment-block').each(function () {
                 var s = $(this).attr('data-service');
@@ -22849,7 +22933,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
 
             var nextService = 'SA-I';
             for (var i = 0; i < availableServices.length; i++) {
-                if (currentActiveServices.indexOf(availableServices[i].toUpperCase()) === -1) {
+                if (availableServices[i] !== 'Other' && currentActiveServices.indexOf(availableServices[i].toUpperCase()) === -1) {
                     nextService = availableServices[i];
                     break;
                 }
@@ -22872,10 +22956,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             recalculatePaymentSystem();
         });
 
-        // Service Block Type Select Change
-        $(document).on('change', '.serviceBlockTypeSelect', function () {
-            var newSvc = $(this).val();
-            var $block = $(this).closest('.service-payment-block');
+        // Helper function to apply service change to block, payments, and invoices
+        function applyServiceBlockTypeChange($block, newSvc) {
             $block.attr('data-service', newSvc);
             $block.find('.serviceBlockBadge').text(newSvc);
             $block.find('.col-service-label').text(newSvc);
@@ -22928,6 +23010,94 @@ if ($currentRole === 'client' || $currentRole === 'external') {
 
             recalculatePaymentSystem();
             triggerPaymentAutoSave(true);
+        }
+
+        // Service Block Type Select Change
+        $(document).on('change', '.serviceBlockTypeSelect', function () {
+            var newSvc = $(this).val();
+            var $select = $(this);
+            var $block = $(this).closest('.service-payment-block');
+            var $customWrapper = $block.find('.serviceBlockCustomInputWrapper');
+
+            if (newSvc === 'Other' || newSvc === 'OTHER' || (newSvc && newSvc.toLowerCase() === 'other')) {
+                // Show inline input directly right there
+                $customWrapper.css('display', 'inline-flex');
+                var $input = $customWrapper.find('.customServiceInput');
+                $input.val('').focus();
+                return;
+            } else {
+                $customWrapper.hide();
+            }
+
+            applyServiceBlockTypeChange($block, newSvc);
+        });
+
+        // Confirm / Save custom service name entered inline
+        function confirmCustomService($block) {
+            var $customWrapper = $block.find('.serviceBlockCustomInputWrapper');
+            var $input = $customWrapper.find('.customServiceInput');
+            var $select = $block.find('.serviceBlockTypeSelect');
+            var enteredVal = $input.val().trim();
+
+            if (!enteredVal) {
+                var prevSvc = $block.attr('data-service') || 'CA';
+                $select.val(prevSvc);
+                $customWrapper.hide();
+                return;
+            }
+
+            var newSvc = enteredVal;
+            var exists = false;
+            $select.find('option').each(function () {
+                if ($(this).val().toLowerCase() === newSvc.toLowerCase()) {
+                    exists = true;
+                    $(this).prop('selected', true);
+                    newSvc = $(this).val();
+                }
+            });
+
+            if (!exists) {
+                var $otherOpt = $select.find('option[value="Other"], option[value="OTHER"]');
+                if ($otherOpt.length) {
+                    $('<option value="' + newSvc + '" selected>' + newSvc + '</option>').insertBefore($otherOpt);
+                } else {
+                    $select.append('<option value="' + newSvc + '" selected>' + newSvc + '</option>');
+                }
+            }
+
+            $select.val(newSvc);
+            $customWrapper.hide();
+            applyServiceBlockTypeChange($block, newSvc);
+        }
+
+        $(document).on('click', '.btnSaveCustomService', function (e) {
+            e.preventDefault();
+            var $block = $(this).closest('.service-payment-block');
+            confirmCustomService($block);
+        });
+
+        $(document).on('keydown', '.customServiceInput', function (e) {
+            if (e.which === 13) { // Enter key
+                e.preventDefault();
+                var $block = $(this).closest('.service-payment-block');
+                confirmCustomService($block);
+            } else if (e.which === 27) { // Escape key
+                e.preventDefault();
+                var $block = $(this).closest('.service-payment-block');
+                var $select = $block.find('.serviceBlockTypeSelect');
+                var prevSvc = $block.attr('data-service') || 'CA';
+                $select.val(prevSvc);
+                $block.find('.serviceBlockCustomInputWrapper').hide();
+            }
+        });
+
+        $(document).on('click', '.btnCancelCustomService', function (e) {
+            e.preventDefault();
+            var $block = $(this).closest('.service-payment-block');
+            var $select = $block.find('.serviceBlockTypeSelect');
+            var prevSvc = $block.attr('data-service') || 'CA';
+            $select.val(prevSvc);
+            $block.find('.serviceBlockCustomInputWrapper').hide();
         });
 
         // Remove Service Block Button Click Handler
@@ -23408,6 +23578,24 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             triggerPaymentAutoSave(true);
         });
 
+        // Prevent editing ANY field of a reconciled / locked payment entry and alert the user
+        $(document).on('click focus keydown mousedown', '.reconciled-locked-input, input[data-reconciled="1"], .servicePaymentReceived[data-reconciled="1"], .serviceTdsAmount[data-tds-locked="1"], .serviceTdsAmount[data-reconciled="1"], .tds-locked-input, .paymentDepositDate[data-reconciled="1"], .serviceChequeDetails[data-reconciled="1"], tr.row-reconciled-locked input', function (e) {
+            e.preventDefault();
+            $(this).blur();
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: '<span style="font-size: 18px; font-weight: 700; color: #b45309;"><i class="fa fa-lock" style="margin-right: 6px;"></i> Reconciled Entry</span>',
+                    html: '<div style="font-size: 13.5px; color: #334155;">Cannot edit reconciled payment entry.<br><small style="color: #64748b;">This payment entry has been verified/reconciled against bank records.</small></div>',
+                    confirmButtonColor: '#0d4d8b',
+                    confirmButtonText: 'OK'
+                });
+            } else {
+                alert('Cannot edit reconciled payment entry.');
+            }
+            return false;
+        });
+
         // Delegate deletion for all payment rows with auto-save & recalculation
         $(document).on('click', '.infoDelete', function (e) {
             e.preventDefault();
@@ -23417,6 +23605,22 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             var $row = $btn.closest('tr');
             if (!payrowid) {
                 payrowid = $row.find('.row-id').val();
+            }
+
+            var isLocked = ($btn.attr('data-tds-locked') === '1' || $btn.attr('data-reconciled') === '1' || $row.find('.serviceTdsAmount[data-tds-locked="1"]').length > 0 || $row.find('.tds-locked-input').length > 0 || $row.hasClass('row-reconciled-locked') || $row.find('.serviceReconciliation').val() === 'Verified');
+            if (isLocked) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: '<span style="font-size: 18px; font-weight: 700; color: #dc2626;"><i class="fa fa-ban" style="margin-right: 6px;"></i> Action Prohibited</span>',
+                        html: '<div style="font-size: 13.5px; color: #334155; line-height: 1.5;"><strong>Cannot delete payment that is verified by accounts person and reconciled from bank statement.</strong></div>',
+                        confirmButtonColor: '#0d4d8b',
+                        confirmButtonText: 'OK'
+                    });
+                } else {
+                    alert('Cannot delete payment that is verified by accounts person and reconciled from bank statement.');
+                }
+                return false;
             }
 
             if (!payrowid || payrowid === '0') {
@@ -23431,7 +23635,12 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     url: "addPayment.php",
                     type: "GET",
                     data: { paymentID: payrowid },
-                    success: function () {
+                    success: function (resp) {
+                        if (resp && resp.indexOf('cannot') !== -1) {
+                            alert(resp);
+                            showAutoSaveIndicator('error', 'Cannot delete');
+                            return;
+                        }
                         $row.remove();
                         if (typeof recalculatePaymentSystem === 'function') recalculatePaymentSystem();
                         showAutoSaveIndicator('saved', 'Deleted');
@@ -23448,6 +23657,21 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             e.preventDefault();
             var $row = $(this).closest('tr');
             var payrowid = $row.find('.row-id').val();
+            var isLocked = ($row.find('.serviceTdsAmount[data-tds-locked="1"]').length > 0 || $row.find('.tds-locked-input').length > 0 || $row.hasClass('row-reconciled-locked') || $row.find('.serviceReconciliation').val() === 'Verified');
+            if (isLocked) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: '<span style="font-size: 18px; font-weight: 700; color: #dc2626;"><i class="fa fa-ban" style="margin-right: 6px;"></i> Action Prohibited</span>',
+                        html: '<div style="font-size: 13.5px; color: #334155; line-height: 1.5;"><strong>Cannot delete payment that is verified by accounts person and reconciled from bank statement.</strong></div>',
+                        confirmButtonColor: '#0d4d8b',
+                        confirmButtonText: 'OK'
+                    });
+                } else {
+                    alert('Cannot delete payment that is verified by accounts person and reconciled from bank statement.');
+                }
+                return false;
+            }
             if (payrowid && payrowid !== '0') {
                 if (confirm("Are you sure you want to delete this payment row?")) {
                     showAutoSaveIndicator('saving', 'Deleting...');
@@ -23455,7 +23679,21 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         url: "addPayment.php",
                         type: "GET",
                         data: { paymentID: payrowid },
-                        success: function () {
+                        success: function (resp) {
+                            if (resp && resp.indexOf('Cannot delete payment') !== -1) {
+                                if (typeof Swal !== 'undefined') {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Action Prohibited',
+                                        text: resp,
+                                        confirmButtonColor: '#0d4d8b'
+                                    });
+                                } else {
+                                    alert(resp);
+                                }
+                                showAutoSaveIndicator('error', 'Cannot delete');
+                                return;
+                            }
                             $row.remove();
                             if (typeof recalculatePaymentSystem === 'function') recalculatePaymentSystem();
                             showAutoSaveIndicator('saved', 'Deleted');

@@ -1,122 +1,194 @@
 <div id="wrapper" class="active">
+<?php
+$pageIdentifier = "TDS list";
+include_once './dbConnect.php';
+include_once './header.php';
+date_default_timezone_set('Asia/Kolkata');
 
-    <?php
+if (function_exists('aitf_auto_sync_schema')) {
+    aitf_auto_sync_schema($db);
+}
+if (function_exists('aitf_ensure_tds_columns')) {
+    aitf_ensure_tds_columns($db);
+}
 
-    $pageIdentifier = "TDS list";
-    include_once './header.php';
-    include_once './dbConnect.php';
-    date_default_timezone_set('Asia/Kolkata');
+$tdsRole = trim($_SESSION['role'] ?? '');
+$isMarketingHead = in_array($tdsRole, array('Marketing Head', 'Marketing Executive'), true)
+    || strtolower(str_replace(' ', '', $tdsRole)) === 'marketinghead'
+    || (isset($_SESSION['username']) && strtolower(trim($_SESSION['username'])) === 'marketingh');
+$isOfficeStaff = in_array($tdsRole, array('Office Staff-A', 'Office Staff-B'), true)
+    || in_array(strtolower(str_replace(array(' ', '-'), '', $tdsRole)), array('officestaffa', 'officestaffb'), true);
+$isRestrictedRole = $isMarketingHead || $isOfficeStaff;
 
-    $tdsRole = trim($_SESSION['role'] ?? '');
-    $isMarketingHead = in_array($tdsRole, array('Marketing Head', 'Marketing Executive'), true)
-        || strtolower(str_replace(' ', '', $tdsRole)) === 'marketinghead'
-        || (isset($_SESSION['username']) && strtolower(trim($_SESSION['username'])) === 'marketingh');
-    $isOfficeStaff = in_array($tdsRole, array('Office Staff-A', 'Office Staff-B'), true)
-        || in_array(strtolower(str_replace(array(' ', '-'), '', $tdsRole)), array('officestaffa', 'officestaffb'), true);
-    $isRestrictedRole = $isMarketingHead || $isOfficeStaff;
+$canVerifyTds = (
+    (class_exists('Utitlity') && (Utitlity::checkForDirector() || Utitlity::checkForUserAdmin() || Utitlity::checkForUserFinance()))
+    || in_array(trim($tdsRole), array('Top Mgmt', 'Admin', 'Finance', 'Director', 'Management'), true)
+    || (isset($_SESSION['username']) && in_array(strtolower(trim($_SESSION['username'])), array('admin', 'mainadmin', 'director', 'finance'), true))
+);
 
-    $status = $_GET['status'] ?? 'all';
-    $startDateStr = $_GET['startDate'] ?? '';
-    $endDateStr = $_GET['endDate'] ?? '';
-    $clientSearch = trim($_GET['clientSearch'] ?? '');
-    $sortOrder = $_GET['sortOrder'] ?? '';
+$status = $_GET['status'] ?? 'all';
+$startDateStr = $_GET['startDate'] ?? '';
+$endDateStr = $_GET['endDate'] ?? '';
+$clientSearch = trim($_GET['clientSearch'] ?? '');
+$sortOrder = $_GET['sortOrder'] ?? '';
 
-    $startDate = '';
-    $endDate = '';
+$startDate = '';
+$endDate = '';
 
-    if (!empty($startDateStr)) {
-        // dd.mm.yy to Y-m-d
-        $parts = explode('.', $startDateStr);
-        if(count($parts) == 3) {
-            $startDate = $parts[2] . '-' . $parts[1] . '-' . $parts[0];
-        }
+if (!empty($startDateStr)) {
+    // dd.mm.yy to Y-m-d
+    $parts = explode('.', $startDateStr);
+    if(count($parts) == 3) {
+        $startDate = $parts[2] . '-' . $parts[1] . '-' . $parts[0];
     }
-    if (!empty($endDateStr)) {
-        // dd.mm.yy to Y-m-d
-        $parts = explode('.', $endDateStr);
-        if(count($parts) == 3) {
-            $endDate = $parts[2] . '-' . $parts[1] . '-' . $parts[0];
-        }
+}
+if (!empty($endDateStr)) {
+    // dd.mm.yy to Y-m-d
+    $parts = explode('.', $endDateStr);
+    if(count($parts) == 3) {
+        $endDate = $parts[2] . '-' . $parts[1] . '-' . $parts[0];
     }
+}
 
-    $allTds = "SELECT ci.id, customer_name,ci.unique_id,ps.customer_id,ps.service_type as tds, 
-               COALESCE(NULLIF(ps.tds_amount, 0), ps.amount_decided, ps.payment_received) as amount_decided,
-               COALESCE(NULLIF(ps.tds_amount, 0), ps.payment_received, ps.amount_decided) as payment_received,
-               ps.payment_date,ps.comment,ps.payment_id, ps.tds_verified, svc.service_id, svc.service_type, 0 as is_statement
-               FROM customer_info ci
-               left join payment_system ps ON ci.id=ps.customer_id
-               left join service svc on ps.customer_id = svc.customer_id
-               WHERE (svc.service_id = (select max(tmp.service_id) from service tmp where tmp.customer_id = ci.id) OR svc.service_id IS NULL)
-               and (ps.service_type LIKE '%tds%' OR (ps.tds_amount IS NOT NULL AND ps.tds_amount > 0))";
+$listOfTds = [];
 
-    $params = [];
-    if ($status == 'received') {
-        $allTds .= " AND (ps.payment_received > 0 OR ps.tds_amount > 0)";
-    } elseif ($status == 'not_received') {
-        $allTds .= " AND (ps.payment_received IS NULL OR ps.payment_received = 0 OR ps.payment_received = '' OR ps.payment_received = '0.00' OR ps.payment_received = '0') AND (ps.tds_amount IS NULL OR ps.tds_amount = 0)";
-    }
+$allTds = "SELECT ci.id, customer_name, ci.unique_id, ps.customer_id, ps.service_type as tds, 
+           COALESCE(NULLIF(ps.tds_amount, 0), ps.amount_decided, ps.payment_received) as amount_decided,
+           COALESCE(NULLIF(ps.tds_amount, 0), ps.payment_received, ps.amount_decided) as payment_received,
+           ps.payment_date, ps.comment, ps.payment_id, ps.tds_verified, svc.service_id, svc.service_type, 0 as is_statement
+           FROM customer_info ci
+           left join payment_system ps ON ci.id=ps.customer_id
+           left join service svc on ps.customer_id = svc.customer_id
+           WHERE (svc.service_id = (select max(tmp.service_id) from service tmp where tmp.customer_id = ci.id) OR svc.service_id IS NULL)
+           and (ps.service_type LIKE '%tds%' OR (ps.tds_amount IS NOT NULL AND ps.tds_amount > 0))";
 
-    if ($sortOrder == 'high') {
-        $allTds .= " ORDER BY CAST(COALESCE(NULLIF(ps.tds_amount, 0), ps.amount_decided, ps.payment_received) AS DECIMAL(10,2)) DESC";
-    } elseif ($sortOrder == 'low') {
-        $allTds .= " ORDER BY CAST(COALESCE(NULLIF(ps.tds_amount, 0), ps.amount_decided, ps.payment_received) AS DECIMAL(10,2)) ASC";
-    } else {
-        $allTds .= " ORDER BY ci.id DESC";
-    }
+$params = [];
+if ($status == 'received') {
+    $allTds .= " AND (ps.payment_received > 0 OR ps.tds_amount > 0)";
+} elseif ($status == 'not_received') {
+    $allTds .= " AND (ps.payment_received IS NULL OR ps.payment_received = 0 OR ps.payment_received = '' OR ps.payment_received = '0.00' OR ps.payment_received = '0') AND (ps.tds_amount IS NULL OR ps.tds_amount = 0)";
+}
 
+if ($sortOrder == 'high') {
+    $allTds .= " ORDER BY CAST(COALESCE(NULLIF(ps.tds_amount, 0), ps.amount_decided, ps.payment_received) AS DECIMAL(10,2)) DESC";
+} elseif ($sortOrder == 'low') {
+    $allTds .= " ORDER BY CAST(COALESCE(NULLIF(ps.tds_amount, 0), ps.amount_decided, ps.payment_received) AS DECIMAL(10,2)) ASC";
+} else {
+    $allTds .= " ORDER BY ci.id DESC";
+}
+
+try {
     $statement = $db->prepare($allTds);
     foreach ($params as $key => $val) {
         $statement->bindValue($key, $val);
     }
     $statement->execute();
-    $listOfTds = $statement->fetchAll();
-
-
-    // Also fetch TDS from new Statement system (statement_payments where tds_decided > 0)
-    $newTdsQuery = "SELECT ci.id, ci.customer_name, ci.unique_id, sp.customer_id, 
-                    CONCAT('TDS (Statement #', sp.id, ')') as tds, 
-                    sp.tds_decided as amount_decided, sp.tds_received as payment_received,
-                    sp.payment_date, sp.comment, sp.id as payment_id, sp.tds_verified,
-                    0 as service_id, sp.service_type, 1 as is_statement
-                    FROM customer_info ci
-                    INNER JOIN statement_payments sp ON ci.id = sp.customer_id
-                    WHERE sp.tds_decided > 0";
-    $newTdsParams = [];
-    if ($status == 'received') {
-        $newTdsQuery .= " AND sp.tds_received > 0";
-    } elseif ($status == 'not_received') {
-        $newTdsQuery .= " AND (sp.tds_received IS NULL OR sp.tds_received = 0)";
+    $listOfTds = $statement->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    // If column is missing, ensure schema and retry, or gracefully fallback
+    if (function_exists('aitf_ensure_tds_columns')) {
+        aitf_ensure_tds_columns($db);
     }
-    if (!empty($clientSearch)) {
-        $newTdsQuery .= " AND ci.customer_name LIKE :clientSearch2";
-        $newTdsParams[':clientSearch2'] = '%' . $clientSearch . '%';
-    } else {
-        if ($isRestrictedRole && empty($startDate) && empty($endDate)) {
-            $newTdsQuery .= " AND sp.payment_date >= DATE_FORMAT(CURDATE() - INTERVAL 1 MONTH, '%Y-%m-01')";
+    try {
+        $statement = $db->prepare($allTds);
+        foreach ($params as $key => $val) {
+            $statement->bindValue($key, $val);
+        }
+        $statement->execute();
+        $listOfTds = $statement->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e2) {
+        // Fallback without ps.tds_verified or ps.tds_amount
+        $fallbackTds = "SELECT ci.id, customer_name, ci.unique_id, ps.customer_id, ps.service_type as tds, 
+                       ps.amount_decided, ps.payment_received, ps.payment_date, ps.comment, ps.payment_id,
+                       'unverified' as tds_verified, svc.service_id, svc.service_type, 0 as is_statement
+                       FROM customer_info ci
+                       left join payment_system ps ON ci.id=ps.customer_id
+                       left join service svc on ps.customer_id = svc.customer_id
+                       WHERE (svc.service_id = (select max(tmp.service_id) from service tmp where tmp.customer_id = ci.id) OR svc.service_id IS NULL)
+                       and ps.service_type LIKE '%tds%'";
+        if ($status == 'received') {
+            $fallbackTds .= " AND (ps.payment_received > 0)";
+        } elseif ($status == 'not_received') {
+            $fallbackTds .= " AND (ps.payment_received IS NULL OR ps.payment_received = 0 OR ps.payment_received = '' OR ps.payment_received = '0.00' OR ps.payment_received = '0')";
+        }
+        $fallbackTds .= " ORDER BY ci.id DESC";
+        try {
+            $fbStmt = $db->prepare($fallbackTds);
+            $fbStmt->execute();
+            $listOfTds = $fbStmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e3) {
+            $listOfTds = [];
         }
     }
-    if (!empty($startDate)) {
-        $newTdsQuery .= " AND sp.payment_date >= :startDate2";
-        $newTdsParams[':startDate2'] = $startDate;
-    }
-    if (!empty($endDate)) {
-        $newTdsQuery .= " AND sp.payment_date <= :endDate2";
-        $newTdsParams[':endDate2'] = $endDate;
-    }
-    $newTdsQuery .= " ORDER BY sp.id DESC";
+}
 
+
+// Also fetch TDS from new Statement system (statement_payments where tds_decided > 0)
+$newTdsQuery = "SELECT ci.id, ci.customer_name, ci.unique_id, sp.customer_id, 
+                CONCAT('TDS (Statement #', sp.id, ')') as tds, 
+                sp.tds_decided as amount_decided, sp.tds_received as payment_received,
+                sp.payment_date, sp.comment, sp.id as payment_id, sp.tds_verified,
+                0 as service_id, sp.service_type, 1 as is_statement
+                FROM customer_info ci
+                INNER JOIN statement_payments sp ON ci.id = sp.customer_id
+                WHERE sp.tds_decided > 0";
+$newTdsParams = [];
+if ($status == 'received') {
+    $newTdsQuery .= " AND sp.tds_received > 0";
+} elseif ($status == 'not_received') {
+    $newTdsQuery .= " AND (sp.tds_received IS NULL OR sp.tds_received = 0)";
+}
+if (!empty($clientSearch)) {
+    $newTdsQuery .= " AND ci.customer_name LIKE :clientSearch2";
+    $newTdsParams[':clientSearch2'] = '%' . $clientSearch . '%';
+} else {
+    if ($isRestrictedRole && empty($startDate) && empty($endDate)) {
+        $newTdsQuery .= " AND sp.payment_date >= DATE_FORMAT(CURDATE() - INTERVAL 1 MONTH, '%Y-%m-01')";
+    }
+}
+if (!empty($startDate)) {
+    $newTdsQuery .= " AND sp.payment_date >= :startDate2";
+    $newTdsParams[':startDate2'] = $startDate;
+}
+if (!empty($endDate)) {
+    $newTdsQuery .= " AND sp.payment_date <= :endDate2";
+    $newTdsParams[':endDate2'] = $endDate;
+}
+$newTdsQuery .= " ORDER BY sp.id DESC";
+
+try {
+    $stmtNew = $db->prepare($newTdsQuery);
+    foreach ($newTdsParams as $key => $val) {
+        $stmtNew->bindValue($key, $val);
+    }
+    $stmtNew->execute();
+    $newTdsList = $stmtNew->fetchAll(PDO::FETCH_ASSOC);
+    if (!empty($newTdsList)) {
+        $listOfTds = array_merge($listOfTds, $newTdsList);
+    }
+} catch (PDOException $e) {
+    // If statement_payments table or tds_verified doesn't exist yet, retry after auto-creating or skip gracefully
     try {
+        if (function_exists('aitf_ensure_statement_tables')) {
+            aitf_ensure_statement_tables($db);
+        }
+        if (function_exists('aitf_ensure_tds_columns')) {
+            aitf_ensure_tds_columns($db);
+        }
         $stmtNew = $db->prepare($newTdsQuery);
         foreach ($newTdsParams as $key => $val) {
             $stmtNew->bindValue($key, $val);
         }
         $stmtNew->execute();
-        $newTdsList = $stmtNew->fetchAll();
-        $listOfTds = array_merge($listOfTds, $newTdsList);
-    } catch (PDOException $e) {
-        // If statement_payments table doesn't exist yet, silently skip
+        $newTdsList = $stmtNew->fetchAll(PDO::FETCH_ASSOC);
+        if (!empty($newTdsList)) {
+            $listOfTds = array_merge($listOfTds, $newTdsList);
+        }
+    } catch (PDOException $e2) {
+        // Silently skip if statement_payments is not active
     }
-    ?>
+}
+?>
 
     <style>
         /* Base typography & resets */
@@ -608,15 +680,24 @@
                                                             </div>
                                                         </td>
                                                         <td style="border-top: 1px solid #ffffff; border-right: 1px solid #ffffff; text-align: center; vertical-align: middle;">
-                                                            <button type="button" class="btn btn-xs toggleTdsVerifyBtn <?php echo $isTdsVerified ? 'tds-btn-verified' : 'tds-btn-unverified'; ?>" 
-                                                                    data-status="<?php echo $tdsStatusText; ?>" 
-                                                                    data-pay-id="<?php echo htmlspecialchars($tds['payment_id'] ?? ''); ?>" 
-                                                                    data-statement="<?php echo !empty($tds['is_statement']) ? '1' : '0'; ?>"
-                                                                    style="min-width: 84px; height: 26px; font-size: 11.5px; font-weight: 700; border-radius: 4px; padding: 2px 8px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; transition: all 0.2s ease; <?php echo $isTdsVerified ? 'background-color: #16a34a; border: 1px solid #15803d; color: #ffffff;' : 'background-color: #ef4444; border: 1px solid #dc2626; color: #ffffff;'; ?>"
-                                                                    title="Click to toggle: <?php echo $isTdsVerified ? 'Mark as Unverified' : 'Mark as Verified in Payment System'; ?>">
-                                                                <i class="fa <?php echo $isTdsVerified ? 'fa-check' : 'fa-times'; ?>"></i>
-                                                                <span><?php echo $tdsStatusText; ?></span>
-                                                            </button>
+                                                            <?php if ($canVerifyTds) { ?>
+                                                                <button type="button" class="btn btn-xs toggleTdsVerifyBtn <?php echo $isTdsVerified ? 'tds-btn-verified' : 'tds-btn-unverified'; ?>" 
+                                                                        data-status="<?php echo $tdsStatusText; ?>" 
+                                                                        data-pay-id="<?php echo htmlspecialchars($tds['payment_id'] ?? ''); ?>" 
+                                                                        data-statement="<?php echo !empty($tds['is_statement']) ? '1' : '0'; ?>"
+                                                                        style="min-width: 84px; height: 26px; font-size: 11.5px; font-weight: 700; border-radius: 4px; padding: 2px 8px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; transition: all 0.2s ease; <?php echo $isTdsVerified ? 'background-color: #16a34a; border: 1px solid #15803d; color: #ffffff;' : 'background-color: #ef4444; border: 1px solid #dc2626; color: #ffffff;'; ?>"
+                                                                        title="Click to toggle: <?php echo $isTdsVerified ? 'Mark as Unverified' : 'Verify TDS against Bank Statement'; ?>">
+                                                                    <i class="fa <?php echo $isTdsVerified ? 'fa-check' : 'fa-times'; ?>"></i>
+                                                                    <span><?php echo $tdsStatusText; ?></span>
+                                                                </button>
+                                                            <?php } else { ?>
+                                                                <span class="badge <?php echo $isTdsVerified ? 'tds-badge-verified' : 'tds-badge-unverified'; ?>" 
+                                                                      style="min-width: 80px; height: 24px; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 4px 8px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; <?php echo $isTdsVerified ? 'background-color: #16a34a; color: #ffffff;' : 'background-color: #ef4444; color: #ffffff;'; ?>"
+                                                                      title="<?php echo $isTdsVerified ? 'Verified by Finance / Admin' : 'Unverified'; ?>">
+                                                                    <i class="fa <?php echo $isTdsVerified ? 'fa-check' : 'fa-times'; ?>"></i>
+                                                                    <span><?php echo $tdsStatusText; ?></span>
+                                                                </span>
+                                                            <?php } ?>
                                                         </td>
                                                     </tr>
 <?php } ?>
@@ -1046,17 +1127,79 @@
             table.draw();
         });
 
-        // Toggle TDS Verification Status
+        // Toggle TDS Verification Status with Acknowledgment Confirmation
         $(document).on('click', '.toggleTdsVerifyBtn', function (e) {
             e.preventDefault();
             e.stopPropagation();
             var $btn = $(this);
             var currentStatus = $btn.attr('data-status');
             var isCurrentlyVerified = (currentStatus === 'Verified');
-            var newStatus = isCurrentlyVerified ? 'Verify' : 'Verified';
             var payId = $btn.attr('data-pay-id');
             var isStatement = $btn.attr('data-statement');
 
+            if (!isCurrentlyVerified) {
+                // User wants to mark as Verified -> Require bank statement cross-check acknowledgement
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: '<span style="font-size: 19px; font-weight: 700; color: #0d4d8b;"><i class="fa fa-shield" style="margin-right: 6px;"></i> TDS Bank Verification</span>',
+                        html: '<div style="font-size: 13.5px; line-height: 1.5; color: #1e293b; text-align: left; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 14px 16px; margin: 10px 0 6px;">' +
+                              '<label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-weight: 600; margin: 0; color: #0f172a;">' +
+                              '<input type="checkbox" id="tdsAckCheckbox" style="margin-top: 3px; cursor: pointer; width: 18px; height: 18px; flex-shrink: 0; accent-color: #16a34a;">' +
+                              '<span>I acknowledge that I have cross checked bank statement and this TDS entry is valid.</span>' +
+                              '</label></div>' +
+                              '<div style="font-size: 11.5px; color: #64748b; text-align: left; margin-top: 4px;"><i class="fa fa-info-circle"></i> Once verified, this TDS entry will become locked and non-editable in the Payment System.</div>',
+                        showCancelButton: true,
+                        confirmButtonColor: '#16a34a',
+                        cancelButtonColor: '#64748b',
+                        confirmButtonText: '<i class="fa fa-check"></i> Confirm & Verify',
+                        cancelButtonText: 'Cancel',
+                        focusConfirm: false,
+                        didOpen: function () {
+                            var confirmBtn = Swal.getConfirmButton();
+                            confirmBtn.disabled = true;
+                            var cb = document.getElementById('tdsAckCheckbox');
+                            if (cb) {
+                                cb.addEventListener('change', function () {
+                                    confirmBtn.disabled = !this.checked;
+                                });
+                            }
+                        }
+                    }).then(function (result) {
+                        if (result.isConfirmed) {
+                            sendTdsVerifyUpdate($btn, 'Verified', payId, isStatement);
+                        }
+                    });
+                } else {
+                    if (confirm('I acknowledge that I have cross checked bank statement and this TDS entry is valid.\n\nClick OK to verify and lock this TDS entry.')) {
+                        sendTdsVerifyUpdate($btn, 'Verified', payId, isStatement);
+                    }
+                }
+            } else {
+                // User wants to mark as Unverified
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: '<span style="font-size: 18px; font-weight: 700; color: #dc2626;"><i class="fa fa-exclamation-triangle"></i> Mark as Unverified?</span>',
+                        text: 'Are you sure you want to mark this TDS entry as Unverified? This will re-enable editing in the Payment System.',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#ef4444',
+                        cancelButtonColor: '#64748b',
+                        confirmButtonText: '<i class="fa fa-undo"></i> Yes, Mark Unverified',
+                        cancelButtonText: 'Cancel'
+                    }).then(function (result) {
+                        if (result.isConfirmed) {
+                            sendTdsVerifyUpdate($btn, 'Verify', payId, isStatement);
+                        }
+                    });
+                } else {
+                    if (confirm('Are you sure you want to mark this TDS entry as Unverified?')) {
+                        sendTdsVerifyUpdate($btn, 'Verify', payId, isStatement);
+                    }
+                }
+            }
+        });
+
+        function sendTdsVerifyUpdate($btn, newStatus, payId, isStatement) {
             $btn.attr('data-status', newStatus);
             if (newStatus === 'Verified') {
                 $btn.removeClass('tds-btn-unverified')
@@ -1076,7 +1219,7 @@
                         'border-color': '#dc2626',
                         'color': '#ffffff'
                     })
-                    .attr('title', 'Click to toggle: Mark as Verified in Payment System')
+                    .attr('title', 'Click to toggle: Verify TDS against Bank Statement')
                     .html('<i class="fa fa-times"></i> <span>Verify</span>');
             }
 
@@ -1094,8 +1237,25 @@
                     dataType: 'json',
                     success: function (res) {
                         $btn.css('opacity', '1');
-                        if (!res || !res.success) {
+                        if (res && res.success) {
+                            if (typeof Swal !== 'undefined') {
+                                const Toast = Swal.mixin({
+                                    toast: true,
+                                    position: 'top-end',
+                                    showConfirmButton: false,
+                                    timer: 2000,
+                                    timerProgressBar: true
+                                });
+                                Toast.fire({
+                                    icon: 'success',
+                                    title: newStatus === 'Verified' ? 'TDS Verified successfully' : 'TDS marked as Unverified'
+                                });
+                            }
+                        } else {
                             console.warn('Could not update TDS verify status:', res);
+                            if (res && res.message && typeof Swal !== 'undefined') {
+                                Swal.fire({ icon: 'error', title: 'Error', text: res.message });
+                            }
                         }
                     },
                     error: function (xhr, status, err) {
@@ -1104,7 +1264,7 @@
                     }
                 });
             }
-        });
+        }
 
         $('.saveChanges').change(function (e) {
             saveData($(this));

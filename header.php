@@ -174,15 +174,15 @@ if (!Utitlity::checkIfLoggedIn()) {
         header("Location: login.php?reason=login_required");
         exit;
     }
-} else if (isset($pageIdentifier) && $pageIdentifier == "Finance Page") {
-    $addFinanceClass = "active";
-    if (!aitf_has_access("Payment Due")) {
+} else if (isset($pageIdentifier) && ($pageIdentifier == "Received Payments" || $pageIdentifier == "Received Payment")) {
+    $addReceivedPaymentClass = "active";
+    if (!aitf_has_access("Received Payment")) {
         header("Location: login.php?reason=login_required");
         exit;
     }
-} else if (isset($pageIdentifier) && $pageIdentifier == "Statement Page") {
-    $addStatementClass = "active";
-    if (!aitf_has_access("Statement")) {
+} else if (isset($pageIdentifier) && $pageIdentifier == "Finance Page") {
+    $addFinanceClass = "active";
+    if (!aitf_has_access("Payment Due")) {
         header("Location: login.php?reason=login_required");
         exit;
     }
@@ -415,13 +415,13 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
             <li><a href="marketingPage.php" class="animate <?php echo $addMarketingClass ?>"><span>MARKETING</span><i
                         class="sub_icon fa fa-briefcase"></i></a></li>
         <?php } ?> 
+        <?php if (aitf_has_access("Received Payment")) { ?>
+            <li><a href="receivedPayments.php" class="animate <?php echo $addReceivedPaymentClass ?? '' ?>"><span>RECEIVED PAYMENT</span><i
+                        class="sub_icon fa fa-check-circle"></i></a></li>
+        <?php } ?>
         <?php if (aitf_has_access("Payment Due")) { ?>
             <li><a href="paymentPage.php" class="animate <?php echo $addFinanceClass ?>"><span> DUE PAYMENT</span><i
                         class="sub_icon fa fa-money"></i></a></li>
-        <?php } ?>
-        <?php if (aitf_has_access("Statement")) { ?>
-            <li><a href="statementPage.php" class="animate <?php echo $addStatementClass ?? '' ?>"><span>STATEMENT</span><i
-                        class="sub_icon fa fa-file-text"></i></a></li>
         <?php } ?>
         <?php if (aitf_has_access("Audit Planning")) { ?>
             <li><a href="auditPlanning.php" class="animate <?php echo $addWorkingClass ?>"><span>AUDIT PLANNING</span><i
@@ -635,7 +635,6 @@ $hideSidebar = Utitlity::isLimitedAccessUser() && $isLimitedAccessPage;
                 <li><a href="homePage.php">CLIENTS</a></li>
                 <li><a href="marketingPage.php">MARKETING</a></li>
                 <li><a href="paymentPage.php">PAYMENT</a></li>
-                <li><a href="statementPage.php">STATEMENT</a></li>
                 <li><a href="auditPlanning.php">AUDIT PLANNING</a></li>
                 <?php if ((Utitlity::checkForUserMainAdmin() || Utitlity::checkForUserAdmin()) && (!isset($_SESSION['role']) || $_SESSION['role'] !== 'Main Admin')) { ?>
                 <li><a href="masterCreator.php">MASTER CREATOR</a></li>

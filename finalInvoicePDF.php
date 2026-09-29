@@ -35,6 +35,7 @@ while (ob_get_level() > 0) {
 ob_start();
 
 $__invoiceServicesQtyRateReady = invoiceServicesHasQtyRateColumns($db);
+$__invoiceDetailsAgreementReady = invoiceDetailsHasAgreementColumns($db);
 
 $invoiceid = "";
 $total_amt = "";
@@ -48,6 +49,9 @@ $krushiKalyan = "";
 $gsts = "";
 $firmSign = "";
 $signaturePath = '';
+
+$agreementNo = isset($_POST['invoiceAgreementNo']) ? trim((string)$_POST['invoiceAgreementNo']) : '';
+$poRef = isset($_POST['invoicePoRef']) ? trim((string)$_POST['invoicePoRef']) : '';
 
 $customerId = '';
 if (!empty($_POST['invoiceconsultingFirmName'])) {
@@ -67,6 +71,20 @@ if (!empty($customerId)) {
     $statement->bindParam(':id', $customerId);
     $statement->execute();
     $customerInfo = $statement->fetch();
+
+    if ($agreementNo === '') {
+        try {
+            $stmtAgr = $db->prepare("SELECT aggrement_no FROM certification_aggrement WHERE customer_id = :cid AND aggrement_no IS NOT NULL AND aggrement_no != '' ORDER BY id DESC LIMIT 1");
+            $stmtAgr->bindParam(':cid', $customerId);
+            $stmtAgr->execute();
+            $agrRow = $stmtAgr->fetch(PDO::FETCH_ASSOC);
+            if (!empty($agrRow['aggrement_no'])) {
+                $agreementNo = trim($agrRow['aggrement_no']);
+            } elseif (!empty($customerInfo['unique_id'])) {
+                $agreementNo = trim($customerInfo['unique_id']);
+            }
+        } catch (Throwable $e) {}
+    }
 }
 
 $consultingFirm = "SELECT * FROM consulting_firm ";
@@ -130,11 +148,21 @@ if (isset($_POST['invoiceId']) && !empty($_POST['invoiceId'])) {
 
     $netPriceDb = moneyDb($netPriceVal);
     $totalAmtDb = moneyDb($total_amt);
-    $invoiceUpdate = "UPDATE `invoice_details` SET `customer_id`= :customer,`invoice_date`= :date,`state`= :state,`state_code`= :statecode,`net_price`= :netprice,"
-            . "`igst`= :igst,`cgst`= :cgst,`sgst`= :sgst,`tax_type`= :taxtype,`final_amount`= :totalAmt WHERE `invoice_id` = :id";
+    $hasAgrCols = invoiceDetailsHasAgreementColumns($db);
+    if ($hasAgrCols) {
+        $invoiceUpdate = "UPDATE `invoice_details` SET `customer_id`= :customer,`agreement_no`= :agreement_no,`po_ref`= :po_ref,`invoice_date`= :date,`state`= :state,`state_code`= :statecode,`net_price`= :netprice,"
+                . "`igst`= :igst,`cgst`= :cgst,`sgst`= :sgst,`tax_type`= :taxtype,`final_amount`= :totalAmt WHERE `invoice_id` = :id";
+    } else {
+        $invoiceUpdate = "UPDATE `invoice_details` SET `customer_id`= :customer,`invoice_date`= :date,`state`= :state,`state_code`= :statecode,`net_price`= :netprice,"
+                . "`igst`= :igst,`cgst`= :cgst,`sgst`= :sgst,`tax_type`= :taxtype,`final_amount`= :totalAmt WHERE `invoice_id` = :id";
+    }
     $statement = $db->prepare($invoiceUpdate);
     $statement->bindParam(':id', $invoiceid);
     $statement->bindParam(':customer', $_POST["invoiceconsultingFirmName"]);
+    if ($hasAgrCols) {
+        $statement->bindParam(':agreement_no', $agreementNo);
+        $statement->bindParam(':po_ref', $poRef);
+    }
     $statement->bindParam(':date', date("Y-m-d", strtotime($_POST['invoiceDt'])));
     $statement->bindParam(':state', $_POST['invoiceState']);
     $statement->bindParam(':statecode', $_POST['invoiceStateCode']);
@@ -214,6 +242,8 @@ if (isset($_POST['invoiceId']) && !empty($_POST['invoiceId'])) {
     $invno = $innvoice['final_invoice_no'];
     $invDate = $innvoice['invoice_date'];
     $netPrice = moneyRound($innvoice['net_price']);
+    $agreementNo = !empty($innvoice['agreement_no']) ? $innvoice['agreement_no'] : $agreementNo;
+    $poRef = !empty($innvoice['po_ref']) ? $innvoice['po_ref'] : $poRef;
     $sgst = $innvoice['sgst'] === 'NA' ? 'NA' : moneyRound($innvoice['sgst']);
     $cgst = $innvoice["cgst"] === 'NA' ? 'NA' : moneyRound($innvoice["cgst"]);
     $igst = $innvoice['igst'] === 'NA' ? 'NA' : moneyRound($innvoice['igst']);
@@ -286,12 +316,22 @@ if (isset($_POST['invoiceId']) && !empty($_POST['invoiceId'])) {
     $finalNo = (int) $monthlyInvoiceInfo['max_invoice_no'] + 1;
     $netPriceDb = moneyDb($netPriceVal);
     $totalAmtDb = moneyDb($total_amt);
-    $invoiceInsert = "INSERT INTO invoice_details (customer_id, profarma_prefix, invoice_no, final_prefix, final_invoice_no, invoice_date, state, state_code, net_price, igst, cgst, sgst, tax_type, final_amount, invoice_type)
-            VALUES (:customer, :profarma_prefix, :invoice_no, :final_prefix, :final_invoice_no, :date, :state, :statecode, :netprice, :igst, :cgst, :sgst, :taxtype, :totalAmt, 'final')";
+    $hasAgrCols = invoiceDetailsHasAgreementColumns($db);
+    if ($hasAgrCols) {
+        $invoiceInsert = "INSERT INTO invoice_details (customer_id, agreement_no, po_ref, profarma_prefix, invoice_no, final_prefix, final_invoice_no, invoice_date, state, state_code, net_price, igst, cgst, sgst, tax_type, final_amount, invoice_type)
+                VALUES (:customer, :agreement_no, :po_ref, :profarma_prefix, :invoice_no, :final_prefix, :final_invoice_no, :date, :state, :statecode, :netprice, :igst, :cgst, :sgst, :taxtype, :totalAmt, 'final')";
+    } else {
+        $invoiceInsert = "INSERT INTO invoice_details (customer_id, profarma_prefix, invoice_no, final_prefix, final_invoice_no, invoice_date, state, state_code, net_price, igst, cgst, sgst, tax_type, final_amount, invoice_type)
+                VALUES (:customer, :profarma_prefix, :invoice_no, :final_prefix, :final_invoice_no, :date, :state, :statecode, :netprice, :igst, :cgst, :sgst, :taxtype, :totalAmt, 'final')";
+    }
     $statement = $db->prepare($invoiceInsert);
     $emptyProformaPrefix = '';
     $emptyProformaNo = '0';
     $statement->bindParam(':customer', $customerId);
+    if ($hasAgrCols) {
+        $statement->bindParam(':agreement_no', $agreementNo);
+        $statement->bindParam(':po_ref', $poRef);
+    }
     $statement->bindParam(':profarma_prefix', $emptyProformaPrefix);
     $statement->bindParam(':invoice_no', $emptyProformaNo);
     $statement->bindParam(':final_prefix', $finalprefix);
@@ -370,6 +410,8 @@ if (isset($_POST['invoiceId']) && !empty($_POST['invoiceId'])) {
     $invno = $innvoice['final_invoice_no'];
     $invDate = $innvoice['invoice_date'];
     $netPrice = moneyRound($innvoice['net_price']);
+    $agreementNo = !empty($innvoice['agreement_no']) ? $innvoice['agreement_no'] : $agreementNo;
+    $poRef = !empty($innvoice['po_ref']) ? $innvoice['po_ref'] : $poRef;
     $sgst = $innvoice['sgst'] === 'NA' ? 'NA' : moneyRound($innvoice['sgst']);
     $cgst = $innvoice["cgst"] === 'NA' ? 'NA' : moneyRound($innvoice["cgst"]);
     $igst = $innvoice['igst'] === 'NA' ? 'NA' : moneyRound($innvoice['igst']);
@@ -406,6 +448,21 @@ if (!empty($targetInvoiceId)) {
     $invno = $innvoice['final_invoice_no'];
     $invDate = $innvoice['invoice_date'];
     $netPrice = moneyRound($innvoice['net_price']);
+    $agreementNo = !empty($innvoice['agreement_no']) ? $innvoice['agreement_no'] : $agreementNo;
+    $poRef = !empty($innvoice['po_ref']) ? $innvoice['po_ref'] : $poRef;
+    if ($agreementNo === '' && !empty($customerId)) {
+        try {
+            $stmtAgr = $db->prepare("SELECT aggrement_no FROM certification_aggrement WHERE customer_id = :cid AND aggrement_no IS NOT NULL AND aggrement_no != '' ORDER BY id DESC LIMIT 1");
+            $stmtAgr->bindParam(':cid', $customerId);
+            $stmtAgr->execute();
+            $agrRow = $stmtAgr->fetch(PDO::FETCH_ASSOC);
+            if (!empty($agrRow['aggrement_no'])) {
+                $agreementNo = trim($agrRow['aggrement_no']);
+            } elseif (!empty($customerInfo['unique_id'])) {
+                $agreementNo = trim($customerInfo['unique_id']);
+            }
+        } catch (Throwable $e) {}
+    }
     $sgst = $innvoice['sgst'] === 'NA' ? 'NA' : moneyRound($innvoice['sgst']);
     $cgst = $innvoice["cgst"] === 'NA' ? 'NA' : moneyRound($innvoice["cgst"]);
     $igst = $innvoice['igst'] === 'NA' ? 'NA' : moneyRound($innvoice['igst']);
@@ -619,6 +676,15 @@ $serviceHeader = $includeQtyRate ?
         '<tr><th width="5%">Sr.</th><th width="45%">Description</th><th width="10%">Qty</th><th width="15%">Rate</th><th width="25%">Amount in Rs. </th></tr>' :
         '<tr><th width="5%">Sr.</th><th width="60%">Description</th><th width="35%">Amount in Rs. </th></tr>';
 
+$refParts = array();
+if (!empty($agreementNo)) {
+    $refParts[] = '<b>Agreement No: </b>' . $agreementNo;
+}
+if (!empty($poRef)) {
+    $refParts[] = '<b>P.O Ref: </b>' . $poRef;
+}
+$refLineHtml = !empty($refParts) ? '<br><br>' . implode('<br>', $refParts) : '';
+
 $html = '
 <table border="1" cellspacing="1" cellpadding="4">	
     <tr >
@@ -626,7 +692,7 @@ $html = '
       <br> <br><b>GSTIN No.: </b>' . $customerInfo['gstin_no'] . '
         <br><b>STATE: </b>' . $state . '&nbsp; &nbsp; &nbsp; <b>STATE CODE: </b>' . $stateCode . '
     </td>
-    <td ><br><b> INVOICE NO:' . $finalprefix . '-' . $invno . '</b><br><br><br><b>DATE:</b> ' . date("d.m.Y", strtotime($invDate)) . ' </td>
+    <td ><br><b> INVOICE NO:' . $finalprefix . '-' . $invno . '</b><br><br><b>DATE:</b> ' . date("d.m.Y", strtotime($invDate)) . $refLineHtml . ' </td>
     </tr>
     <tr><td colspan="3"><b>SAC code : </b> 998311</td></tr>
     </table>
@@ -735,6 +801,43 @@ function invoiceServicesHasQtyRateColumns($db) {
         $hasRate2 = $stmtRate2 && $stmtRate2->fetch();
         $has = ($hasQty2 && $hasRate2) ? true : false;
     } catch (Exception $e) {
+        $has = false;
+    }
+    return $has;
+}
+
+function invoiceDetailsHasAgreementColumns($db) {
+    if (function_exists('aitf_ensure_invoice_agreement_columns')) {
+        return aitf_ensure_invoice_agreement_columns($db);
+    }
+    static $has = null;
+    if ($has !== null) {
+        return $has;
+    }
+    if (!$db) {
+        return false;
+    }
+    try {
+        $stmtAgr = $db->query("SHOW COLUMNS FROM invoice_details LIKE 'agreement_no'");
+        $hasAgr = $stmtAgr && $stmtAgr->fetch();
+        $stmtPo = $db->query("SHOW COLUMNS FROM invoice_details LIKE 'po_ref'");
+        $hasPo = $stmtPo && $stmtPo->fetch();
+        if (!$hasAgr) {
+            try {
+                $db->exec("ALTER TABLE invoice_details ADD COLUMN agreement_no VARCHAR(150) NULL AFTER invoice_date");
+            } catch (Throwable $e) {}
+        }
+        if (!$hasPo) {
+            try {
+                $db->exec("ALTER TABLE invoice_details ADD COLUMN po_ref VARCHAR(150) NULL AFTER agreement_no");
+            } catch (Throwable $e) {}
+        }
+        $stmtAgr2 = $db->query("SHOW COLUMNS FROM invoice_details LIKE 'agreement_no'");
+        $hasAgr2 = $stmtAgr2 && $stmtAgr2->fetch();
+        $stmtPo2 = $db->query("SHOW COLUMNS FROM invoice_details LIKE 'po_ref'");
+        $hasPo2 = $stmtPo2 && $stmtPo2->fetch();
+        $has = ($hasAgr2 && $hasPo2) ? true : false;
+    } catch (Throwable $e) {
         $has = false;
     }
     return $has;

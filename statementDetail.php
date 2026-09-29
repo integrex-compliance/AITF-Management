@@ -970,6 +970,7 @@ html.theme-dark .file-upload-box input[type=file] {
                                     $tdsDec = floatval($np['tds_decided'] ?? 0);
                                     $tdsRec = floatval($np['tds_received'] ?? 0);
                                     $dateVal = !empty($np['payment_date']) ? date('d.m.Y', strtotime($np['payment_date'])) : '';
+                                    $isStmtTdsVerified = (isset($np['tds_verified']) && in_array(strtolower(trim($np['tds_verified'])), ['verified', 'yes', '1']));
                                 ?>
                                     <tr class="tr-editable" data-source="new" data-id="<?php echo $np['id']; ?>">
                                         <td style="text-align: center; color: #64748b; font-weight: 600; font-family: var(--stmt-mono);" class="row-num"><?php echo $rowCounter++; ?></td>
@@ -992,17 +993,17 @@ html.theme-dark .file-upload-box input[type=file] {
                                             <input type="text" class="stmt-input num-field balance-field field-balance" value="<?php echo number_format($bal, 2, '.', ''); ?>" readonly>
                                         </td>
                                         <td>
-                                            <input type="number" step="0.01" class="stmt-input num-field tds-field field-tds-dec" value="<?php echo $tdsDec; ?>" placeholder="0.00">
+                                            <input type="number" step="0.01" class="stmt-input num-field tds-field field-tds-dec <?php echo $isStmtTdsVerified ? 'tds-locked-input' : ''; ?>" value="<?php echo $tdsDec; ?>" placeholder="0.00" <?php echo $isStmtTdsVerified ? 'readonly="readonly" data-tds-locked="1" style="background-color: #f0fdf4 !important; color: #15803d !important; font-weight: 700; cursor: not-allowed;" title="Cannot edit reconciled payment entry."' : ''; ?>>
                                         </td>
                                         <td>
-                                            <input type="number" step="0.01" class="stmt-input num-field tds-field field-tds-rec" value="<?php echo $tdsRec; ?>" placeholder="0.00">
+                                            <input type="number" step="0.01" class="stmt-input num-field tds-field field-tds-rec <?php echo $isStmtTdsVerified ? 'tds-locked-input' : ''; ?>" value="<?php echo $tdsRec; ?>" placeholder="0.00" <?php echo $isStmtTdsVerified ? 'readonly="readonly" data-tds-locked="1" style="background-color: #f0fdf4 !important; color: #15803d !important; font-weight: 700; cursor: not-allowed;" title="Cannot edit reconciled payment entry."' : ''; ?>>
                                         </td>
                                         <td>
                                             <div class="stmt-row-actions">
                                                 <button type="button" class="btn-row-action btn-row-save" title="Save this row">
                                                     <i class="fa fa-floppy-o"></i>
                                                 </button>
-                                                <button type="button" class="btn-row-action btn-row-delete" data-id="<?php echo $np['id']; ?>" title="Delete row">
+                                                <button type="button" class="btn-row-action btn-row-delete" data-id="<?php echo $np['id']; ?>" data-tds-locked="<?php echo $isStmtTdsVerified ? '1' : '0'; ?>" title="Delete row">
                                                     <i class="fa fa-trash-o"></i>
                                                 </button>
                                             </div>
@@ -1353,10 +1354,42 @@ $(document).ready(function() {
         });
     });
 
+    // Alert on locked TDS fields
+    $(document).on('click focus keydown mousedown', '.tds-locked-input, .tds-field[data-tds-locked="1"]', function(e) {
+        e.preventDefault();
+        $(this).blur();
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Reconciled Entry',
+                text: 'Cannot edit reconciled payment entry.',
+                confirmButtonColor: '#0d4d8b'
+            });
+        } else {
+            alert('Cannot edit reconciled payment entry.');
+        }
+        return false;
+    });
+
     // Delete Row
     $(document).on('click', '.btn-row-delete', function() {
-        var $row = $(this).closest('tr');
-        var id = $(this).attr('data-id');
+        var $btn = $(this);
+        var $row = $btn.closest('tr');
+        var id = $btn.attr('data-id');
+
+        if ($btn.attr('data-tds-locked') === '1' || $row.find('.tds-locked-input').length > 0) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Action Prohibited',
+                    text: 'Cannot edit or delete reconciled payment entry.',
+                    confirmButtonColor: '#ef4444'
+                });
+            } else {
+                alert('Cannot edit or delete reconciled payment entry.');
+            }
+            return false;
+        }
 
         if (String(id).indexOf('new_') === 0) {
             $row.fadeOut(200, function() { $(this).remove(); recalcMasterSummary(); });

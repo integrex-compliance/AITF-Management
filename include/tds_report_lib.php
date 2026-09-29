@@ -58,19 +58,21 @@ function fetchTdsReportData($db, $status, $startDateStr, $endDateStr, $clientSea
     $startDate = tdsReportDateForSql($startDateStr);
     $endDate = tdsReportDateForSql($endDateStr);
 
-    $sql = "SELECT ci.id, ci.customer_name, ci.unique_id, ps.service_type AS tds, ps.amount_decided,
-                   ps.payment_received, ps.payment_date, ps.comment
+    $sql = "SELECT ci.id, ci.customer_name, ci.unique_id, ps.service_type AS tds, 
+                   COALESCE(NULLIF(ps.tds_amount, 0), ps.amount_decided, ps.payment_received) as amount_decided,
+                   COALESCE(NULLIF(ps.tds_amount, 0), ps.payment_received, ps.amount_decided) as payment_received,
+                   ps.payment_date, ps.comment
             FROM customer_info ci
             LEFT JOIN payment_system ps ON ci.id = ps.customer_id
             LEFT JOIN service svc ON ps.customer_id = svc.customer_id
-            WHERE svc.service_id = (SELECT MAX(tmp.service_id) FROM service tmp WHERE tmp.customer_id = ci.id)
-            AND ps.service_type LIKE '%tds%'";
+            WHERE (svc.service_id = (SELECT MAX(tmp.service_id) FROM service tmp WHERE tmp.customer_id = ci.id) OR svc.service_id IS NULL)
+            AND (ps.service_type LIKE '%tds%' OR (ps.tds_amount IS NOT NULL AND ps.tds_amount > 0))";
 
     $params = array();
     if ($status === 'received') {
-        $sql .= " AND ps.payment_received > 0 AND ps.payment_received IS NOT NULL AND ps.payment_received <> ''";
+        $sql .= " AND (ps.payment_received > 0 OR ps.tds_amount > 0)";
     } elseif ($status === 'not_received') {
-        $sql .= " AND (ps.payment_received IS NULL OR ps.payment_received = 0 OR ps.payment_received = '' OR ps.payment_received = '0.00' OR ps.payment_received = '0')";
+        $sql .= " AND (ps.payment_received IS NULL OR ps.payment_received = 0 OR ps.payment_received = '' OR ps.payment_received = '0.00' OR ps.payment_received = '0') AND (ps.tds_amount IS NULL OR ps.tds_amount = 0)";
     }
     if ($clientSearch !== '') {
         $params[':clientSearch'] = '%' . $clientSearch . '%';
@@ -95,20 +97,68 @@ function fetchTdsReportData($db, $status, $startDateStr, $endDateStr, $clientSea
     }
 
     if ($sortOrder === 'high') {
-        $sql .= " ORDER BY CAST(ps.amount_decided AS DECIMAL(10,2)) DESC";
+        $sql .= " ORDER BY CAST(COALESCE(NULLIF(ps.tds_amount, 0), ps.amount_decided, ps.payment_received) AS DECIMAL(10,2)) DESC";
     } elseif ($sortOrder === 'low') {
-        $sql .= " ORDER BY CAST(ps.amount_decided AS DECIMAL(10,2)) ASC";
+        $sql .= " ORDER BY CAST(COALESCE(NULLIF(ps.tds_amount, 0), ps.amount_decided, ps.payment_received) AS DECIMAL(10,2)) ASC";
     } else {
         $sql .= " ORDER BY ci.id DESC";
     }
 
-    $statement = $db->prepare($sql);
-    foreach ($params as $key => $val) {
-        $statement->bindValue($key, $val);
+    $tdsList = array();
+    try {
+        $statement = $db->prepare($sql);
+        foreach ($params as $key => $val) {
+            $statement->bindValue($key, $val);
+        }
+        $statement->execute();
+        $tdsList = $statement->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Throwable $e) {
+        $tdsList = array();
     }
-    $statement->execute();
 
-    return array('tdsList' => $statement->fetchAll(PDO::FETCH_ASSOC));
+    // Also fetch statement_payments TDS
+    try {
+        $spSql = "SELECT ci.id, ci.customer_name, ci.unique_id, 
+                         CONCAT('TDS (Statement #', sp.id, ')') as tds, 
+                         sp.tds_decided as amount_decided, sp.tds_received as payment_received,
+                         sp.payment_date, sp.comment
+                  FROM customer_info ci
+                  INNER JOIN statement_payments sp ON ci.id = sp.customer_id
+                  WHERE sp.tds_decided > 0";
+        $spParams = array();
+        if ($status === 'received') {
+            $spSql .= " AND sp.tds_received > 0";
+        } elseif ($status === 'not_received') {
+            $spSql .= " AND (sp.tds_received IS NULL OR sp.tds_received = 0)";
+        }
+        if ($clientSearch !== '') {
+            $spSql .= " AND (ci.customer_name LIKE :spClient OR ci.unique_id LIKE :spClient)";
+            $spParams[':spClient'] = '%' . $clientSearch . '%';
+        }
+        if ($startDate !== '') {
+            $spSql .= " AND sp.payment_date >= :spStartDate";
+            $spParams[':spStartDate'] = $startDate;
+        }
+        if ($endDate !== '') {
+            $spSql .= " AND sp.payment_date <= :spEndDate";
+            $spParams[':spEndDate'] = $endDate;
+        }
+        $spSql .= " ORDER BY sp.id DESC";
+
+        $spStmt = $db->prepare($spSql);
+        foreach ($spParams as $key => $val) {
+            $spStmt->bindValue($key, $val);
+        }
+        $spStmt->execute();
+        $spList = $spStmt->fetchAll(PDO::FETCH_ASSOC);
+        if (!empty($spList)) {
+            $tdsList = array_merge($tdsList, $spList);
+        }
+    } catch (Throwable $e) {
+        // Silently skip if statement_payments doesn't exist
+    }
+
+    return array('tdsList' => $tdsList);
 }
 
 function tdsReceivedAmount($row) {

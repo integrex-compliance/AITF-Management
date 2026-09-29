@@ -19,6 +19,8 @@ function aitf_has_access($module) {
         'Application' => ['Admin', 'Office Staff-A', 'Office Staff-B', 'Finance', 'Auditor', 'auditors', 'Application Reviewer', 'Application Reviewers', 'Marketing Head', 'Marketing Executive'],
         'Client List' => ['Admin', 'Office Staff-A', 'Office Staff-B', 'Finance', 'Marketing Head', 'Marketing Executive'],
         'Marketing' => ['Admin', 'Office Staff-A', 'Office Staff-B', 'Finance', 'Marketing Head', 'Marketing Executive'],
+        'Received Payment' => ['Admin', 'Finance', 'Management'],
+        'Received Payments' => ['Admin', 'Finance', 'Management'],
         'Payment Due' => ['Admin', 'Office Staff-A', 'Office Staff-B', 'Finance', 'Marketing Head', 'Marketing Executive'],
         'Statement' => ['Admin', 'Office Staff-A', 'Office Staff-B', 'Finance', 'Marketing Head', 'Marketing Executive'],
         'Audit Planning' => ['Admin', 'Office Staff-A', 'Office Staff-B', 'Finance', 'Marketing Head', 'Marketing Executive'],

@@ -32,6 +32,46 @@ $statement = $db->prepare($taxation);
 $statement->execute();
 $taxationDetails = $statement->fetch();
 $csgttax = $taxationDetails["rate"];
+
+$indianGstStates = array(
+    'Andaman and Nicobar Islands' => '35',
+    'Andhra Pradesh' => '37',
+    'Arunachal Pradesh' => '12',
+    'Assam' => '18',
+    'Bihar' => '10',
+    'Chandigarh' => '04',
+    'Chhattisgarh' => '22',
+    'Dadra and Nagar Haveli and Daman and Diu' => '26',
+    'Delhi' => '07',
+    'Goa' => '30',
+    'Gujarat' => '24',
+    'Haryana' => '06',
+    'Himachal Pradesh' => '02',
+    'Jammu and Kashmir' => '01',
+    'Jharkhand' => '20',
+    'Karnataka' => '29',
+    'Kerala' => '32',
+    'Ladakh' => '38',
+    'Lakshadweep' => '31',
+    'Madhya Pradesh' => '23',
+    'Maharashtra' => '27',
+    'Manipur' => '14',
+    'Meghalaya' => '17',
+    'Mizoram' => '15',
+    'Nagaland' => '13',
+    'Odisha' => '21',
+    'Puducherry' => '34',
+    'Punjab' => '03',
+    'Rajasthan' => '08',
+    'Sikkim' => '11',
+    'Tamil Nadu' => '33',
+    'Telangana' => '36',
+    'Tripura' => '16',
+    'Uttar Pradesh' => '09',
+    'Uttarakhand' => '05',
+    'West Bengal' => '19',
+    'Other Territory' => '97'
+);
 ?>
 <script src="js/form-fancy-control.js"></script>
 <link rel="stylesheet" href="css/float-label.css">
@@ -528,11 +568,26 @@ $csgttax = $taxationDetails["rate"];
                     <div class="row">
                         <div class="col-sm-6 form-group float-label-control">
                             <label>State</label> 
-                            <input type="text" class="invoiceState" id="invoiceState" name="invoiceState"   placeholder="State" value="Maharashtra">
+                            <select class="form-control invoiceState" id="invoiceState" name="invoiceState">
+                                <option value="">Select State</option>
+                                <?php foreach ($indianGstStates as $sName => $sCode) { ?>
+                                    <option value="<?php echo htmlspecialchars($sName); ?>" data-code="<?php echo $sCode; ?>" <?php echo ($sName === 'Maharashtra') ? 'selected' : ''; ?>><?php echo htmlspecialchars($sName); ?></option>
+                                <?php } ?>
+                            </select>
                         </div>
                         <div class="col-sm-6 form-group float-label-control">
                             <label>State Code</label>
                             <input type="text" class="invoiceStateCode" id="invoiceStateCode" name="invoiceStateCode" placeholder="State Code" value="27">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-6 form-group float-label-control">
+                            <label>Agreement No</label> 
+                            <input type="text" class="invoiceAgreementNo" id="invoiceAgreementNo" name="invoiceAgreementNo" placeholder="Agreement No" value="">
+                        </div>
+                        <div class="col-sm-6 form-group float-label-control">
+                            <label>P.O Ref:</label>
+                            <input type="text" class="invoicePoRef" id="invoicePoRef" name="invoicePoRef" placeholder="P.O Ref (Optional)" value="">
                         </div>
                     </div>
                     <div class="row" style="">
@@ -670,11 +725,26 @@ $csgttax = $taxationDetails["rate"];
                     <div class="row">
                         <div class="col-sm-6 form-group float-label-control">
                             <label>State</label> 
-                            <input type="text" class="invoiceState" id="invoiceState" name="invoiceState"   placeholder="State" value="Maharashtra">
+                            <select class="form-control invoiceState" id="finalInvoiceState" name="invoiceState">
+                                <option value="">Select State</option>
+                                <?php foreach ($indianGstStates as $sName => $sCode) { ?>
+                                    <option value="<?php echo htmlspecialchars($sName); ?>" data-code="<?php echo $sCode; ?>" <?php echo ($sName === 'Maharashtra') ? 'selected' : ''; ?>><?php echo htmlspecialchars($sName); ?></option>
+                                <?php } ?>
+                            </select>
                         </div>
                         <div class="col-sm-6 form-group float-label-control">
                             <label>State Code</label>
-                            <input type="text" class="invoiceStateCode" id="invoiceStateCode" name="invoiceStateCode" placeholder="State Code" value="27">
+                            <input type="text" class="invoiceStateCode" id="finalInvoiceStateCode" name="invoiceStateCode" placeholder="State Code" value="27">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-6 form-group float-label-control">
+                            <label>Agreement No</label> 
+                            <input type="text" class="invoiceAgreementNo" id="finalInvoiceAgreementNo" name="invoiceAgreementNo" placeholder="Agreement No" value="">
+                        </div>
+                        <div class="col-sm-6 form-group float-label-control">
+                            <label>P.O Ref:</label>
+                            <input type="text" class="invoicePoRef" id="finalInvoicePoRef" name="invoicePoRef" placeholder="P.O Ref (Optional)" value="">
                         </div>
                     </div>
                     <div class="row" style="">
@@ -1705,7 +1775,7 @@ $csgttax = $taxationDetails["rate"];
 
         $('.invoiceconsultingFirmName').change(function () {
             $customerid = $(this).val();
-//            alert($(this).val());
+            var $modal = $(this).closest('.modal');
             $.ajax({
                 url: "addComments.php",
                 type: 'GET',
@@ -1714,13 +1784,86 @@ $csgttax = $taxationDetails["rate"];
                     custid: $customerid
                 },
                 success: function (data) {
-                    $('#invoiceAddress').val(data["address"]);
-                    $(".invoiceCustomerId").val(data["id"]);
+                    if (data) {
+                        $modal.find('.invoiceAddress, #invoiceAddress').val(data["address"] || '');
+                        $modal.find(".invoiceCustomerId").val(data["id"] || '');
+                        if (data["agreement_no"]) {
+                            $modal.find('.invoiceAgreementNo, input[name="invoiceAgreementNo"]').val(data["agreement_no"]);
+                        }
+                        if (data["state"]) {
+                            var custState = data["state"].trim();
+                            $modal.find('.invoiceState').val(custState);
+                            if (!$modal.find('.invoiceState').val()) {
+                                $modal.find('.invoiceState option').filter(function () {
+                                    return $(this).text().toLowerCase().trim() === custState.toLowerCase();
+                                }).prop('selected', true);
+                            }
+                            $modal.find('.invoiceState').trigger('change');
+                        }
+                    }
                 },
                 error: function (data, status, err) {
                     alert(status);
                 }
             });
+        });
+
+        var indianStateCodeMap = {
+            'andaman and nicobar islands': '35',
+            'andhra pradesh': '37',
+            'arunachal pradesh': '12',
+            'assam': '18',
+            'bihar': '10',
+            'chandigarh': '04',
+            'chhattisgarh': '22',
+            'dadra and nagar haveli and daman and diu': '26',
+            'daman and diu': '26',
+            'dadra and nagar haveli': '26',
+            'delhi': '07',
+            'goa': '30',
+            'gujarat': '24',
+            'haryana': '06',
+            'himachal pradesh': '02',
+            'jammu and kashmir': '01',
+            'jharkhand': '20',
+            'karnataka': '29',
+            'kerala': '32',
+            'ladakh': '38',
+            'lakshadweep': '31',
+            'madhya pradesh': '23',
+            'maharashtra': '27',
+            'manipur': '14',
+            'meghalaya': '17',
+            'mizoram': '15',
+            'nagaland': '13',
+            'odisha': '21',
+            'orissa': '21',
+            'puducherry': '34',
+            'pondicherry': '34',
+            'punjab': '03',
+            'rajasthan': '08',
+            'sikkim': '11',
+            'tamil nadu': '33',
+            'telangana': '36',
+            'tripura': '16',
+            'uttar pradesh': '09',
+            'uttarakhand': '05',
+            'uttaranchal': '05',
+            'west bengal': '19',
+            'other territory': '97'
+        };
+
+        $(document).on('change', '.invoiceState', function () {
+            var $modal = $(this).closest('.modal, form');
+            var selectedOpt = $(this).find('option:selected');
+            var code = selectedOpt.attr('data-code');
+            if (!code) {
+                var stateName = ($(this).val() || '').toLowerCase().trim();
+                code = indianStateCodeMap[stateName] || '';
+            }
+            if (code) {
+                $modal.find('.invoiceStateCode, input[name="invoiceStateCode"]').val(code).trigger('change');
+            }
         });
 
         $(".finaltaxtype").change(function () {

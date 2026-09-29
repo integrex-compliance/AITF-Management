@@ -379,11 +379,40 @@ if (!function_exists('aitf_auto_sync_schema')) {
                 // Ignore if already exists
             }
 
-            // Ensure remark column in invoice_details
+            // Ensure agreement_no and po_ref columns in invoice_details
             try {
-                $chkInvRem = $db->query("SHOW COLUMNS FROM `invoice_details` LIKE 'remark'");
-                if ($chkInvRem && $chkInvRem->rowCount() === 0) {
-                    $db->exec("ALTER TABLE `invoice_details` ADD COLUMN `remark` TEXT NULL");
+                $chkInvAgr = $db->query("SHOW COLUMNS FROM `invoice_details` LIKE 'agreement_no'");
+                if ($chkInvAgr && $chkInvAgr->rowCount() === 0) {
+                    $db->exec("ALTER TABLE `invoice_details` ADD COLUMN `agreement_no` VARCHAR(150) NULL AFTER `invoice_date`");
+                }
+            } catch (Throwable $e) {
+                // Ignore if already exists
+            }
+
+            try {
+                $chkInvPo = $db->query("SHOW COLUMNS FROM `invoice_details` LIKE 'po_ref'");
+                if ($chkInvPo && $chkInvPo->rowCount() === 0) {
+                    $db->exec("ALTER TABLE `invoice_details` ADD COLUMN `po_ref` VARCHAR(150) NULL AFTER `agreement_no`");
+                }
+            } catch (Throwable $e) {
+                // Ignore if already exists
+            }
+
+            // Ensure tds_verified column in payment_system
+            try {
+                $chkTdsVer = $db->query("SHOW COLUMNS FROM `payment_system` LIKE 'tds_verified'");
+                if ($chkTdsVer && $chkTdsVer->rowCount() === 0) {
+                    $db->exec("ALTER TABLE `payment_system` ADD COLUMN `tds_verified` VARCHAR(50) NOT NULL DEFAULT 'unverified' AFTER `reconciliation`");
+                }
+            } catch (Throwable $e) {
+                // Ignore if already exists
+            }
+
+            // Ensure tds_verified column in statement_payments
+            try {
+                $chkSpTds = $db->query("SHOW COLUMNS FROM `statement_payments` LIKE 'tds_verified'");
+                if ($chkSpTds && $chkSpTds->rowCount() === 0) {
+                    $db->exec("ALTER TABLE `statement_payments` ADD COLUMN `tds_verified` VARCHAR(50) NOT NULL DEFAULT 'unverified' AFTER `tds_received`");
                 }
             } catch (Throwable $e) {
                 // Ignore if already exists
@@ -398,3 +427,266 @@ if (!function_exists('aitf_auto_sync_schema')) {
         }
     }
 }
+
+if (!function_exists('aitf_ensure_invoice_agreement_columns')) {
+    function aitf_ensure_invoice_agreement_columns($db) {
+        static $checked = false;
+        if ($checked) {
+            return true;
+        }
+        if (!$db) {
+            return false;
+        }
+        try {
+            $cols = array();
+            $stmt = $db->query("SHOW COLUMNS FROM `invoice_details`");
+            if ($stmt) {
+                while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                    $cols[strtolower($row['Field'])] = true;
+                }
+            }
+            if (!isset($cols['agreement_no'])) {
+                try {
+                    $db->exec("ALTER TABLE `invoice_details` ADD COLUMN `agreement_no` VARCHAR(150) NULL AFTER `invoice_date`");
+                    $cols['agreement_no'] = true;
+                } catch (Throwable $e) {}
+            }
+            if (!isset($cols['po_ref'])) {
+                try {
+                    $db->exec("ALTER TABLE `invoice_details` ADD COLUMN `po_ref` VARCHAR(150) NULL AFTER `agreement_no`");
+                    $cols['po_ref'] = true;
+                } catch (Throwable $e) {}
+            }
+            $checked = (!empty($cols['agreement_no']) && !empty($cols['po_ref']));
+            return $checked;
+        } catch (Throwable $e) {
+            return false;
+        }
+    }
+}
+
+if (!function_exists('aitf_ensure_tds_columns')) {
+    function aitf_ensure_tds_columns($db) {
+        static $checked = false;
+        if ($checked) {
+            return true;
+        }
+        if (!$db) {
+            return false;
+        }
+        try {
+            // Check payment_system columns
+            $payCols = array();
+            $stmt = $db->query("SHOW COLUMNS FROM `payment_system`");
+            if ($stmt) {
+                while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                    $payCols[strtolower($row['Field'])] = true;
+                }
+            }
+            if (!isset($payCols['tds_verified'])) {
+                try {
+                    $db->exec("ALTER TABLE `payment_system` ADD COLUMN `tds_verified` VARCHAR(50) NOT NULL DEFAULT 'unverified'");
+                } catch (Throwable $e) {}
+            }
+            if (!isset($payCols['tds_amount'])) {
+                try {
+                    $db->exec("ALTER TABLE `payment_system` ADD COLUMN `tds_amount` DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER `payment_received`");
+                } catch (Throwable $e) {}
+            }
+            if (!isset($payCols['discount_amount'])) {
+                try {
+                    $db->exec("ALTER TABLE `payment_system` ADD COLUMN `discount_amount` DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER `tds_amount`");
+                } catch (Throwable $e) {}
+            }
+            if (!isset($payCols['reconciliation'])) {
+                try {
+                    $db->exec("ALTER TABLE `payment_system` ADD COLUMN `reconciliation` VARCHAR(100) NULL AFTER `cheque_details`");
+                } catch (Throwable $e) {}
+            }
+
+            // Check statement_payments columns
+            try {
+                $spCols = array();
+                $spStmt = $db->query("SHOW COLUMNS FROM `statement_payments`");
+                if ($spStmt) {
+                    while ($row = $spStmt->fetch(PDO::FETCH_ASSOC)) {
+                        $spCols[strtolower($row['Field'])] = true;
+                    }
+                    if (!isset($spCols['tds_verified'])) {
+                        $db->exec("ALTER TABLE `statement_payments` ADD COLUMN `tds_verified` VARCHAR(50) NOT NULL DEFAULT 'unverified'");
+                    }
+                    if (!isset($spCols['tds_decided'])) {
+                        $db->exec("ALTER TABLE `statement_payments` ADD COLUMN `tds_decided` DECIMAL(12,2) DEFAULT 0.00");
+                    }
+                    if (!isset($spCols['tds_received'])) {
+                        $db->exec("ALTER TABLE `statement_payments` ADD COLUMN `tds_received` DECIMAL(12,2) DEFAULT 0.00");
+                    }
+                }
+            } catch (Throwable $e) {}
+
+            // Auto-migrate any standalone legacy TDS rows into payment_system.tds_amount
+            aitf_migrate_legacy_tds_to_payment_columns($db);
+
+            $checked = true;
+            return true;
+        } catch (Throwable $e) {
+            return false;
+        }
+    }
+}
+
+if (!function_exists('aitf_migrate_legacy_tds_to_payment_columns')) {
+    /**
+     * Migrates legacy standalone TDS rows (where service_type was saved as 'TDS', 'TDS 1200', etc.)
+     * into the parent service payment row's dedicated `tds_amount` column.
+     * 
+     * This ensures:
+     * 1. Old clients' TDS is reflected in the Payment System under the actual service (e.g. CA, SA-I, RC).
+     * 2. Remaining balance balances out against invoice gross totals.
+     * 3. No orphan 'SERVICE SEPARATION • TDS' dummy blocks are shown.
+     * 4. Idempotent and safe to run on both localhost and LIVE.
+     */
+    function aitf_migrate_legacy_tds_to_payment_columns($db) {
+        if (!$db) return;
+        try {
+            $stmt = $db->query("SELECT * FROM `payment_system` WHERE `service_type` LIKE '%tds%' ORDER BY `customer_id`, `payment_id`");
+            if (!$stmt) return;
+            $tdsRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            if (empty($tdsRows)) {
+                return;
+            }
+
+            foreach ($tdsRows as $tr) {
+                $cid = (int)($tr['customer_id'] ?? 0);
+                $tdsPayId = (int)($tr['payment_id'] ?? 0);
+                if ($cid <= 0 || $tdsPayId <= 0) continue;
+
+                $tdsAmount = floatval($tr['tds_amount'] ?? 0) ?: (floatval($tr['payment_received'] ?? 0) ?: floatval($tr['amount_decided'] ?? 0));
+                if ($tdsAmount == 0 && preg_match('/tds\s*(\d+(?:\.\d+)?)/i', (string)$tr['service_type'], $m)) {
+                    $tdsAmount = floatval($m[1]);
+                }
+
+                if ($tdsAmount <= 0) {
+                    $del = $db->prepare("DELETE FROM `payment_system` WHERE `payment_id` = :id");
+                    $del->execute([':id' => $tdsPayId]);
+                    continue;
+                }
+
+                // Find candidate service payment rows for this customer
+                $st = $db->prepare("SELECT * FROM `payment_system` WHERE `customer_id` = :cid AND `service_type` NOT LIKE '%tds%' ORDER BY `payment_id` ASC");
+                $st->execute([':cid' => $cid]);
+                $svcRows = $st->fetchAll(PDO::FETCH_ASSOC);
+
+                $matchedRow = null;
+
+                // 1. Exact balance match
+                foreach ($svcRows as $sr) {
+                    $dec = floatval($sr['amount_decided'] ?? 0);
+                    $rcv = floatval($sr['payment_received'] ?? 0);
+                    $curTds = floatval($sr['tds_amount'] ?? 0);
+                    $diff = round($dec - ($rcv + $curTds), 2);
+                    if ($curTds == 0 && abs($diff - $tdsAmount) < 0.01) {
+                        $matchedRow = $sr;
+                        break;
+                    }
+                }
+
+                // 2. Service name hint match (e.g. 'TDS(CA)' => 'CA')
+                if (!$matchedRow) {
+                    $tdsSvcName = strtoupper((string)$tr['service_type']);
+                    foreach (['CA', 'SA-01', 'SA-1', 'SA-02', 'SA-2', 'RC', 'CR'] as $hint) {
+                        if (stripos($tdsSvcName, $hint) !== false) {
+                            foreach ($svcRows as $sr) {
+                                if (stripos(strtoupper((string)$sr['service_type']), $hint) !== false && floatval($sr['tds_amount'] ?? 0) == 0) {
+                                    $matchedRow = $sr;
+                                    break 2;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 3. Preceding row in same payment_sy_id group
+                if (!$matchedRow) {
+                    $prevRows = array_filter($svcRows, function($sr) use ($tdsPayId, $tr) {
+                        return $sr['payment_id'] < $tdsPayId && floatval($sr['tds_amount'] ?? 0) == 0 && ($sr['payment_sy_id'] == $tr['payment_sy_id'] || empty($tr['payment_sy_id']));
+                    });
+                    if (!empty($prevRows)) {
+                        $matchedRow = end($prevRows);
+                    }
+                }
+
+                // 4. Fallback any service row with tds_amount == 0
+                if (!$matchedRow) {
+                    foreach ($svcRows as $sr) {
+                        if (floatval($sr['tds_amount'] ?? 0) == 0) {
+                            $matchedRow = $sr;
+                            break;
+                        }
+                    }
+                }
+
+                // 5. Fallback latest service row
+                if (!$matchedRow && !empty($svcRows)) {
+                    $matchedRow = end($svcRows);
+                }
+
+                if ($matchedRow) {
+                    $targetId = (int)$matchedRow['payment_id'];
+                    $newTds = floatval($matchedRow['tds_amount'] ?? 0) + $tdsAmount;
+                    $rcvAmt = floatval($matchedRow['payment_received'] ?? 0);
+                    $discAmt = floatval($matchedRow['discount_amount'] ?? 0);
+                    $newDecided = max(floatval($matchedRow['amount_decided'] ?? 0), round($rcvAmt + $newTds + $discAmt, 2));
+                    $newBalance = max(0, round($newDecided - ($rcvAmt + $newTds + $discAmt), 2));
+                    
+                    $isVerified = (isset($tr['tds_verified']) && in_array(strtolower(trim($tr['tds_verified'])), ['verified', 'yes', '1']))
+                               || (isset($matchedRow['tds_verified']) && in_array(strtolower(trim($matchedRow['tds_verified'])), ['verified', 'yes', '1']));
+                    $tdsVerVal = $isVerified ? 'Verified' : (trim($matchedRow['tds_verified'] ?? '') ?: 'unverified');
+
+                    $comment = trim($matchedRow['comment'] ?? '');
+                    if (empty($comment) && !empty($tr['comment'])) {
+                        $comment = trim($tr['comment']);
+                    }
+
+                    $upd = $db->prepare("UPDATE `payment_system` 
+                                         SET `tds_amount` = :tds, 
+                                             `amount_decided` = :decided, 
+                                             `balance` = :balance, 
+                                             `tds_verified` = :tds_ver,
+                                             `comment` = :comment
+                                         WHERE `payment_id` = :id");
+                    $upd->execute([
+                        ':tds' => $newTds,
+                        ':decided' => $newDecided,
+                        ':balance' => $newBalance,
+                        ':tds_ver' => $tdsVerVal,
+                        ':comment' => $comment,
+                        ':id' => $targetId
+                    ]);
+
+                    $del = $db->prepare("DELETE FROM `payment_system` WHERE `payment_id` = :id");
+                    $del->execute([':id' => $tdsPayId]);
+                } else {
+                    $svcStmt = $db->prepare("SELECT service_type FROM `service` WHERE `customer_id` = :cid ORDER BY `service_id` DESC LIMIT 1");
+                    $svcStmt->execute([':cid' => $cid]);
+                    $defSvc = $svcStmt->fetchColumn() ?: 'Payment';
+
+                    $upd = $db->prepare("UPDATE `payment_system` 
+                                         SET `service_type` = :svc,
+                                             `tds_amount` = :tds,
+                                             `payment_received` = 0.00,
+                                             `amount_decided` = :tds,
+                                             `balance` = 0.00
+                                         WHERE `payment_id` = :id");
+                    $upd->execute([
+                        ':svc' => $defSvc,
+                        ':tds' => $tdsAmount,
+                        ':id' => $tdsPayId
+                    ]);
+                }
+            }
+        } catch (Throwable $e) {}
+    }
+}
+
+

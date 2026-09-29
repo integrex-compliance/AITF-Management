@@ -203,10 +203,19 @@ if (isset($_POST["certificationComment"]) && !empty($_POST["certificationComment
         $statement = $db->prepare($customer);
         $statement->bindParam(":id", $_GET["custid"]);
         $statement->execute();
-        $row = $statement->fetch();
+        $row = $statement->fetch(PDO::FETCH_ASSOC);
+
+        if ($row) {
+            $agrStmt = $db->prepare("SELECT aggrement_no FROM `certification_aggrement` WHERE customer_id = :id AND aggrement_no IS NOT NULL AND aggrement_no != '' ORDER BY id DESC LIMIT 1");
+            $agrStmt->bindParam(":id", $_GET["custid"]);
+            $agrStmt->execute();
+            $agr = $agrStmt->fetch(PDO::FETCH_ASSOC);
+            $row['agreement_no'] = !empty($agr['aggrement_no']) ? $agr['aggrement_no'] : ($row['unique_id'] ?? '');
+        }
+
         echo json_encode($row);
     } catch (Exception $ex) {
-        
+        echo json_encode(['error' => $ex->getMessage()]);
     }
 } else if (isset($_GET["svcid"]) && !empty($_GET["svcid"]) && isset($_GET["servictype"]) && !empty($_GET["servictype"])) {
     try {

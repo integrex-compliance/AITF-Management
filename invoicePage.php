@@ -2604,6 +2604,8 @@
                     $('.invoiceCustomerId').val(data[0]['customer_id']);
                     $('.invoiceFirmId').val(data[0]['firm_id']);
                     $('.invoiceId').val(data[0]['invoice_id']);
+                    $('#finalinvoiceModal').find('.invoiceAgreementNo').val(data[0]['agreement_no'] || (data[2] && data[2]['unique_id']) || '');
+                    $('#finalinvoiceModal').find('.invoicePoRef').val(data[0]['po_ref'] || '');
                     $('.finalserviceAmtTd').empty();
                     var includeFinalQtyRate = false;
                     for (var k in data[1]) {
@@ -2711,6 +2713,8 @@
                     $('.invoiceCustomerId').val(data[0]['customer_id']);
                     $('.invoiceFirmId').val(data[0]['firm_id']);
                     $('.invoiceId').val(data[0]['invoice_id']);
+                    $('#invoiceModal').find('.invoiceAgreementNo').val(data[0]['agreement_no'] || (data[2] && data[2]['unique_id']) || '');
+                    $('#invoiceModal').find('.invoicePoRef').val(data[0]['po_ref'] || '');
                     $('.serviceAmtTd').empty();
                     var includeQtyRate = false;
                     for (var k in data[1]) {
