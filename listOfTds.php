@@ -1142,28 +1142,17 @@ try {
                 if (typeof Swal !== 'undefined') {
                     Swal.fire({
                         title: '<span style="font-size: 19px; font-weight: 700; color: #0d4d8b;"><i class="fa fa-shield" style="margin-right: 6px;"></i> TDS Bank Verification</span>',
-                        html: '<div style="font-size: 13.5px; line-height: 1.5; color: #1e293b; text-align: left; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 14px 16px; margin: 10px 0 6px;">' +
-                              '<label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-weight: 600; margin: 0; color: #0f172a;">' +
-                              '<input type="checkbox" id="tdsAckCheckbox" style="margin-top: 3px; cursor: pointer; width: 18px; height: 18px; flex-shrink: 0; accent-color: #16a34a;">' +
-                              '<span>I acknowledge that I have cross checked bank statement and this TDS entry is valid.</span>' +
-                              '</label></div>' +
-                              '<div style="font-size: 11.5px; color: #64748b; text-align: left; margin-top: 4px;"><i class="fa fa-info-circle"></i> Once verified, this TDS entry will become locked and non-editable in the Payment System.</div>',
+                        html: '<div style="font-size: 13.5px; line-height: 1.5; color: #1e293b; text-align: left; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 14px 16px; margin: 10px 0 6px; display: flex; align-items: flex-start; gap: 8px;">' +
+                              '<i class="fa fa-info-circle" style="color: #0d4d8b; font-size: 16px; margin-top: 2px; flex-shrink: 0;"></i>' +
+                              '<span style="font-weight: 600; font-size: 13px; color: #0f172a; line-height: 1.45;">I acknowledge that I have cross checked bank statement and this TDS entry is valid.</span>' +
+                              '</div>' +
+                              '<div style="font-size: 11.5px; color: #64748b; text-align: left; margin-top: 4px;"><i class="fa fa-lock"></i> Once verified, this TDS entry will become locked and non-editable in the Payment System.</div>',
                         showCancelButton: true,
                         confirmButtonColor: '#16a34a',
                         cancelButtonColor: '#64748b',
                         confirmButtonText: '<i class="fa fa-check"></i> Confirm & Verify',
                         cancelButtonText: 'Cancel',
-                        focusConfirm: false,
-                        didOpen: function () {
-                            var confirmBtn = Swal.getConfirmButton();
-                            confirmBtn.disabled = true;
-                            var cb = document.getElementById('tdsAckCheckbox');
-                            if (cb) {
-                                cb.addEventListener('change', function () {
-                                    confirmBtn.disabled = !this.checked;
-                                });
-                            }
-                        }
+                        focusConfirm: true
                     }).then(function (result) {
                         if (result.isConfirmed) {
                             sendTdsVerifyUpdate($btn, 'Verified', payId, isStatement);

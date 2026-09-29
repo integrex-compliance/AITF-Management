@@ -1294,11 +1294,9 @@ if (!function_exists('aitf_format_payment_date_display')) {
                               '<div style="display: flex; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 4px;"><strong>Received Amount:</strong> <span style="color: #059669; font-weight: 800; font-size: 14px;">' + amount + '</span></div>' +
                               '<div style="display: flex; justify-content: space-between;"><strong>Date &amp; Instrument:</strong> <span>' + pDate + ' (' + inst + ')</span></div>' +
                               '</div>' +
-                              '<div style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 8px; padding: 12px 14px; text-align: left;">' +
-                              '<label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-weight: 600; font-size: 13px; margin: 0; color: #92400e;">' +
-                              '<input type="checkbox" id="bankAckCheckbox" style="margin-top: 3px; cursor: pointer; width: 18px; height: 18px; flex-shrink: 0; accent-color: #059669;">' +
-                              '<span>I acknowledge that this amount is received in bank and that entry is reconciled with bank statement.</span>' +
-                              '</label>' +
+                              '<div style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 8px; padding: 12px 14px; text-align: left; display: flex; align-items: flex-start; gap: 8px;">' +
+                              '<i class="fa fa-info-circle" style="color: #d97706; font-size: 15px; margin-top: 2px; flex-shrink: 0;"></i>' +
+                              '<span style="font-weight: 600; font-size: 13px; color: #92400e; line-height: 1.45;">I acknowledge that this amount is received in bank and that entry is reconciled with bank statement.</span>' +
                               '</div>' +
                               '<div style="font-size: 11.5px; color: #64748b; text-align: left; margin-top: 6px;"><i class="fa fa-lock"></i> Once reconciled, this payment entry will become non-editable and protected from deletion.</div>',
                         showCancelButton: true,
@@ -1306,17 +1304,7 @@ if (!function_exists('aitf_format_payment_date_display')) {
                         cancelButtonColor: '#64748b',
                         confirmButtonText: '<i class="fa fa-check"></i> Mark as Reconciled Payment',
                         cancelButtonText: 'Cancel',
-                        focusConfirm: false,
-                        didOpen: function () {
-                            var confirmBtn = Swal.getConfirmButton();
-                            confirmBtn.disabled = true;
-                            var cb = document.getElementById('bankAckCheckbox');
-                            if (cb) {
-                                cb.addEventListener('change', function () {
-                                    confirmBtn.disabled = !this.checked;
-                                });
-                            }
-                        }
+                        focusConfirm: true
                     }).then(function (result) {
                         if (result.isConfirmed) {
                             sendReconcileUpdate($btn, 'Verified', payId, isStatement);
