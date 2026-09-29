@@ -428,6 +428,13 @@ textarea.form-control {
                                     <?php endif; ?>
                                 </div>
                             </div>
+                        <?php else: ?>
+                            <div class="minimal-field">
+                                <span class="minimal-label">Signature</span>
+                                <div class="minimal-value" style="color: #64748b; font-style: italic;">
+                                    Submitted Online (Duly signature not required)
+                                </div>
+                            </div>
                         <?php endif; ?>
                     </div>
 

@@ -52,7 +52,7 @@ $pdf->AddPage();
 
 $logoImgHtml = file_exists($logoPath) ? '<img src="'.$logoPath.'" style="height:45px; width:auto;">' : '<b>AITF</b>';
 
-$sigImgHtml = '<br><br>_______________';
+$sigImgHtml = '<span style="font-size: 8pt; color: #555;">Online Submission<br>(Duly signature not required)</span>';
 $sigFileCandidate = $submission['signature_image'] ?? $submission['signature_image_path'] ?? '';
 if (!empty($sigFileCandidate)) {
     $abs_sig_path = __DIR__ . '/' . $sigFileCandidate;

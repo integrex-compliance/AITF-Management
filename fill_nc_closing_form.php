@@ -269,10 +269,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_nc_form'])) {
         'Signature'
     );
 
-    if (empty($signature_image_path) && empty($errors)) {
-        $errors[] = "Signature with company's duly stamp is required.";
-    }
-
     $attachment1_path = aitf_validate_and_upload_nc_file(
         'attachment1',
         ['png', 'jpg', 'jpeg', 'pdf', 'doc', 'docx'],
@@ -786,12 +782,12 @@ $canonicalUrl = "https://www.aitf.co.in/nc_closing";
                             <input type="date" name="proposed_completion_date" class="form-control" value="<?php echo htmlspecialchars($_POST['proposed_completion_date'] ?? ''); ?>" required>
                         </div>
                         <div class="col-sm-6 form-group">
-                            <label>Signature with Company's Stamp <span style="color:#ef4444;">*</span></label>
+                            <label>Signature with Company's Stamp <span style="font-weight: normal; color: #64748b; font-size: 13px;">(Optional)</span></label>
                             <div style="background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 12px; padding: 12px 16px;">
-                                <input type="file" name="signature_image" class="form-control-file" accept=".jpg,.jpeg,.png,.pdf" style="font-size: 14px; color: #475569; width: 100%;" required>
+                                <input type="file" name="signature_image" class="form-control-file" accept=".jpg,.jpeg,.png,.pdf" style="font-size: 14px; color: #475569; width: 100%;">
                                 <div style="color: #0369a1; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; padding: 6px 10px; margin-top: 8px; font-size: 12.5px; font-weight: 500; display: flex; align-items: center; gap: 6px;">
                                     <i class="fa fa-info-circle" style="color: #0284c7; flex-shrink: 0;"></i>
-                                    <span>*Note: Only signature with company's duly stamp will be accepted. (JPG, PNG, PDF &bull; Max 2MB)</span>
+                                    <span>*Note: Signature upload is optional if form is submitted online from organisation's registered email-id ,if anyone wishes to upload it please upload with company's duly stamp . (JPG, PNG, PDF &bull; Max 2MB)</span>
                                 </div>
                             </div>
                         </div>
@@ -912,28 +908,21 @@ $canonicalUrl = "https://www.aitf.co.in/nc_closing";
                         return false;
                     }
 
-                    // Check mandatory signature with stamp
+                    // Check optional signature with stamp (if file uploaded)
                     var sigFile = document.querySelector('input[name="signature_image"]');
-                    if (!sigFile || !sigFile.files || !sigFile.files[0]) {
-                        e.preventDefault();
-                        alert("Please upload signature with company's duly stamp.");
-                        if (sigFile) {
-                            sigFile.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            sigFile.focus();
+                    if (sigFile && sigFile.files && sigFile.files[0]) {
+                        var sigExt = sigFile.files[0].name.split('.').pop().toLowerCase();
+                        var allowedSigExts = ['jpg', 'jpeg', 'png', 'pdf'];
+                        if (allowedSigExts.indexOf(sigExt) === -1) {
+                            e.preventDefault();
+                            alert('Invalid Signature file format. Allowed: JPG, PNG, PDF.');
+                            return false;
                         }
-                        return false;
-                    }
-                    var sigExt = sigFile.files[0].name.split('.').pop().toLowerCase();
-                    var allowedSigExts = ['jpg', 'jpeg', 'png', 'pdf'];
-                    if (allowedSigExts.indexOf(sigExt) === -1) {
-                        e.preventDefault();
-                        alert('Invalid Signature file format. Allowed: JPG, PNG, PDF.');
-                        return false;
-                    }
-                    if (sigFile.files[0].size > 2 * 1024 * 1024) {
-                        e.preventDefault();
-                        alert('Signature file size must be less than 2MB.');
-                        return false;
+                        if (sigFile.files[0].size > 2 * 1024 * 1024) {
+                            e.preventDefault();
+                            alert('Signature file size must be less than 2MB.');
+                            return false;
+                        }
                     }
 
                     // Check optional attachments (max 5MB, safe extensions)
