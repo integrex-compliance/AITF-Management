@@ -136,6 +136,21 @@ if (isset($req['action']) && $req['action'] === 'updateInvoiceServiceType') {
             $stmt->bindParam(':svc', $svcType);
             $stmt->bindParam(':id', $invId, PDO::PARAM_INT);
             $stmt->execute();
+
+            if (!empty($svcType) && strcasecmp($svcType, 'Till Sep 2026') !== 0) {
+                $custStmt = $db->prepare("SELECT customer_id FROM invoice_details WHERE invoice_id = :id");
+                $custStmt->execute([':id' => $invId]);
+                $invCustId = $custStmt->fetchColumn();
+                if ($invCustId) {
+                    $chkComm = $db->prepare("SELECT id FROM payment_block_comments WHERE customer_id = :cid AND UPPER(TRIM(service_type)) = :st");
+                    $chkComm->execute([':cid' => $invCustId, ':st' => strtoupper(trim($svcType))]);
+                    if (!$chkComm->fetch()) {
+                        $insComm = $db->prepare("INSERT INTO payment_block_comments (customer_id, service_type, comment) VALUES (:cid, :st, '')");
+                        $insComm->execute([':cid' => $invCustId, ':st' => $svcType]);
+                    }
+                }
+            }
+
             echo json_encode(['success' => true, 'service_type' => $svcType]);
             exit;
         } else {
@@ -162,6 +177,21 @@ if (isset($req['action']) && $req['action'] === 'updatePaymentServiceType') {
             $stmt->bindParam(':svc', $svcType);
             $stmt->bindParam(':id', $payId, PDO::PARAM_INT);
             $stmt->execute();
+
+            if (!empty($svcType) && strcasecmp($svcType, 'Till Sep 2026') !== 0) {
+                $custStmt = $db->prepare("SELECT customer_id FROM payment_system WHERE payment_id = :id");
+                $custStmt->execute([':id' => $payId]);
+                $payCustId = $custStmt->fetchColumn();
+                if ($payCustId) {
+                    $chkComm = $db->prepare("SELECT id FROM payment_block_comments WHERE customer_id = :cid AND UPPER(TRIM(service_type)) = :st");
+                    $chkComm->execute([':cid' => $payCustId, ':st' => strtoupper(trim($svcType))]);
+                    if (!$chkComm->fetch()) {
+                        $insComm = $db->prepare("INSERT INTO payment_block_comments (customer_id, service_type, comment) VALUES (:cid, :st, '')");
+                        $insComm->execute([':cid' => $payCustId, ':st' => $svcType]);
+                    }
+                }
+            }
+
             echo json_encode(['success' => true, 'service_type' => $svcType]);
             exit;
         } else {

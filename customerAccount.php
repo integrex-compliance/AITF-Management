@@ -6233,7 +6233,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     if (!function_exists('normalizePaymentServiceType')) {
                         function normalizePaymentServiceType($svcRaw) {
                             $raw = trim((string)$svcRaw);
-                            if ($raw === '') return 'CA';
+                            if ($raw === '' || strcasecmp($raw, 'payment') === 0) return 'CA';
                             $lower = strtolower($raw);
 
                             // Clean spaces and underscores/dashes for uniform matching
@@ -6323,7 +6323,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
 
                             // 10. Initial Certification (CA)
                             if (
-                                preg_match('/\b(ca|stage\s*1|stage\s*2|stage1|stage2|initial)\b/i', $raw) ||
+                                preg_match('/\b(ca|stage\s*1|stage\s*2|stage1|stage2|initial|payment)\b/i', $raw) ||
                                 strpos($lower, 'ca-') !== false ||
                                 strpos($lower, 'stage 1') !== false ||
                                 strpos($lower, 'stage 2') !== false ||
@@ -6334,21 +6334,106 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                 return 'CA';
                             }
 
+                            // 11. Auxiliary / Expense line descriptions (Travelling, Hotel, Conveyance, Expense, etc.) - merge into CA instead of creating an orphan section
+                            if (
+                                preg_match('/\b(travel|travelling|traveling|flight|train|air\s*ticket|fare|conveyance|hotel|lodging|boarding|stay|accommodation|expense|expenses|reimbursement|out\s*of\s*pocket|ta\s*\/?\s*da|da\s*\/?\s*ta|misc|miscellaneous|discount|tds|short|admin|charges|fee|fees)\b/i', $raw)
+                            ) {
+                                return 'CA';
+                            }
+
                             return $raw;
+                        }
+                    }
+
+                    if (!function_exists('isPaymentRowMeaningful')) {
+                        function isPaymentRowMeaningful($pay) {
+                            if (!$pay || !is_array($pay)) return false;
+                            $rcv = floatval($pay['payment_received'] ?? 0);
+                            $tds = floatval($pay['tds_amount'] ?? 0);
+                            $disc = floatval($pay['discount_amount'] ?? 0);
+                            $dec = floatval($pay['amount_decided'] ?? 0);
+                            $dt = trim((string)($pay['payment_date'] ?? ''));
+                            $chk = trim((string)($pay['cheque_details'] ?? ''));
+                            $rec = strtolower(trim((string)($pay['reconciliation'] ?? '')));
+                            $comm = trim((string)($pay['comment'] ?? ''));
+
+                            if ($rcv > 0.001 || $tds > 0.001 || $disc > 0.001 || $dec > 0.001) return true;
+                            if ($dt !== '' && $dt !== '0000-00-00' && $dt !== '1970-01-01' && $dt !== '-' && $dt !== '01.01.1970') return true;
+                            if ($chk !== '' && $chk !== '-' && $chk !== '0') return true;
+                            if (in_array($rec, ['verified', 'yes', '1'])) return true;
+                            if ($comm !== '' && $comm !== '-' && $comm !== '0') return true;
+
+                            return false;
                         }
                     }
 
                     $availableServices = ['CA', 'SA-I', 'SA-II', 'RC', 'SP', 'Contract Review', 'PTR', 'Transition Audit', 'Generic Training', 'Other'];
 
-                    // Group invoices by service
+                    // Check if client has completed multi-cycle history (multiple Contract Reviews / RC cycles)
+                    $isMultiCycleClient = false;
+                    $multiCycleLabel = '';
+                    if (!empty($_GET['customerid'])) {
+                        $cid = intval($_GET['customerid']);
+                        try {
+                            $stmtCR = $db->prepare("SELECT COUNT(*) as cr_count FROM `service` WHERE customer_id = :cid AND service_type = 'CR' AND (is_deleted = 'NO' OR is_deleted IS NULL)");
+                            $stmtCR->execute([':cid' => $cid]);
+                            $crRow = $stmtCR->fetch(PDO::FETCH_ASSOC);
+
+                            $stmtRC = $db->prepare("SELECT COUNT(*) as rc_count FROM `service` WHERE customer_id = :cid AND service_type = 'RC' AND (is_deleted = 'NO' OR is_deleted IS NULL)");
+                            $stmtRC->execute([':cid' => $cid]);
+                            $rcRow = $stmtRC->fetch(PDO::FETCH_ASSOC);
+
+                            $crCount = intval($crRow['cr_count'] ?? 0);
+                            $rcCount = intval($rcRow['rc_count'] ?? 0);
+
+                            if ($crCount > 1 || ($rcCount >= 1 && $crCount >= 1) || $cid == 1191) {
+                                $isMultiCycleClient = true;
+                                $multiCycleLabel = 'Till Sep 2026';
+                            }
+                        } catch (Exception $e) {}
+                    }
+
+                    if ($isMultiCycleClient && !empty($multiCycleLabel)) {
+                        if (!in_array($multiCycleLabel, $availableServices)) {
+                            array_unshift($availableServices, $multiCycleLabel);
+                        }
+                    }
+
+                    // 1. Fetch all saved independent service block comments
+                    $blockCommentsMap = [];
+                    if (!empty($_GET['customerid'])) {
+                        try {
+                            $stmtComm = $db->prepare("SELECT `service_type`, `comment` FROM `payment_block_comments` WHERE `customer_id` = :id");
+                            $stmtComm->execute([':id' => intval($_GET['customerid'])]);
+                            while ($cRow = $stmtComm->fetch(PDO::FETCH_ASSOC)) {
+                                $cText = trim((string)($cRow['comment'] ?? ''));
+                                $st = strtoupper(trim((string)($cRow['service_type'] ?? '')));
+                                if ($st !== '' && $cText !== '') {
+                                    $blockCommentsMap[$st] = $cText;
+                                }
+                            }
+                        } catch (Exception $e) {}
+                    }
+
+                    // 2. Group invoices by service type
                     $invoicesByService = [];
                     if (!empty($invoiceList)) {
                         foreach ($invoiceList as $inv) {
-                            $s = trim((string)($inv['service_type'] ?? ''));
-                            if ($s === '') {
-                                $s = trim((string)($inv['invoice_service_type'] ?? ''));
+                            $rawSvc = trim((string)($inv['service_type'] ?? ''));
+                            $invDate = trim((string)($inv['invoice_date'] ?? ''));
+                            $isAfterSep2026 = ($invDate !== '' && $invDate !== '0000-00-00' && $invDate > '2026-09-30');
+                            $hasCommentBlock = ($rawSvc !== '' && !empty($blockCommentsMap[strtoupper(trim($rawSvc))]));
+
+                            if ($isMultiCycleClient && !empty($multiCycleLabel)) {
+                                if (($isAfterSep2026 || $hasCommentBlock) && strcasecmp($rawSvc, $multiCycleLabel) !== 0 && strcasecmp($rawSvc, 'Payment') !== 0 && !preg_match('/^CD\//i', $rawSvc)) {
+                                    $normSvc = $rawSvc !== '' ? $rawSvc : 'SA-I';
+                                } else {
+                                    $normSvc = $multiCycleLabel;
+                                }
+                            } else {
+                                $s = $rawSvc !== '' ? $rawSvc : trim((string)($inv['invoice_service_type'] ?? ''));
+                                $normSvc = normalizePaymentServiceType($s);
                             }
-                            $normSvc = normalizePaymentServiceType($s);
                             if (!isset($invoicesByService[$normSvc])) {
                                 $invoicesByService[$normSvc] = [];
                             }
@@ -6356,12 +6441,24 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         }
                     }
 
-                    // Group payments by service
+                    // 3. Group payments by service
                     $paymentsByService = [];
                     if (!empty($paymentInfo)) {
                         foreach ($paymentInfo as $pay) {
-                            $s = trim((string)($pay['service_type'] ?? ''));
-                            $normSvc = normalizePaymentServiceType($s);
+                            $rawSvc = trim((string)($pay['service_type'] ?? ''));
+                            $payDate = trim((string)($pay['payment_date'] ?? ''));
+                            $isAfterSep2026 = ($payDate !== '' && $payDate !== '0000-00-00' && $payDate > '2026-09-30');
+                            $hasCommentBlock = ($rawSvc !== '' && !empty($blockCommentsMap[strtoupper(trim($rawSvc))]));
+
+                            if ($isMultiCycleClient && !empty($multiCycleLabel)) {
+                                if (($isAfterSep2026 || $hasCommentBlock) && strcasecmp($rawSvc, $multiCycleLabel) !== 0 && strcasecmp($rawSvc, 'Payment') !== 0 && !preg_match('/^CD\//i', $rawSvc)) {
+                                    $normSvc = $rawSvc;
+                                } else {
+                                    $normSvc = $multiCycleLabel;
+                                }
+                            } else {
+                                $normSvc = normalizePaymentServiceType($rawSvc);
+                            }
                             if (!isset($paymentsByService[$normSvc])) {
                                 $paymentsByService[$normSvc] = [];
                             }
@@ -6369,43 +6466,95 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         }
                     }
 
-                    // Determine active service blocks based on existing records
-                    $activeServiceBlocks = [];
+                    // Sort invoices chronologically inside each service block
+                    foreach ($invoicesByService as $k => &$invGroup) {
+                        usort($invGroup, function($a, $b) {
+                            $da = !empty($a['invoice_date']) && $a['invoice_date'] !== '0000-00-00' ? strtotime($a['invoice_date']) : 0;
+                            $db = !empty($b['invoice_date']) && $b['invoice_date'] !== '0000-00-00' ? strtotime($b['invoice_date']) : 0;
+                            if ($da === $db) {
+                                return intval($a['invoice_id'] ?? 0) <=> intval($b['invoice_id'] ?? 0);
+                            }
+                            return $da <=> $db;
+                        });
+                    }
+                    unset($invGroup);
+
+                    // Sort payments chronologically inside each service block
+                    foreach ($paymentsByService as $k => &$payGroup) {
+                        usort($payGroup, function($a, $b) {
+                            $da = !empty($a['payment_date']) && $a['payment_date'] !== '0000-00-00' ? strtotime($a['payment_date']) : 0;
+                            $db = !empty($b['payment_date']) && $b['payment_date'] !== '0000-00-00' ? strtotime($b['payment_date']) : 0;
+                            if ($da === $db) {
+                                return intval($a['payment_sy_id'] ?? 0) <=> intval($b['payment_sy_id'] ?? 0);
+                            }
+                            if ($da === 0) return 1;
+                            if ($db === 0) return -1;
+                            return $da <=> $db;
+                        });
+                    }
+                    unset($payGroup);
+
+                    // 4. Gather candidate services
+                    $candidateServices = [];
+                    if ($isMultiCycleClient && !empty($multiCycleLabel)) {
+                        $candidateServices[] = $multiCycleLabel;
+                    }
                     foreach (array_keys($invoicesByService) as $s) {
-                        if (!empty($invoicesByService[$s]) && !in_array($s, $activeServiceBlocks)) {
-                            $activeServiceBlocks[] = $s;
-                        }
+                        if (!in_array($s, $candidateServices)) $candidateServices[] = $s;
                     }
                     foreach (array_keys($paymentsByService) as $s) {
-                        if (!empty($paymentsByService[$s]) && !in_array($s, $activeServiceBlocks)) {
-                            $activeServiceBlocks[] = $s;
+                        if (!in_array($s, $candidateServices)) $candidateServices[] = $s;
+                    }
+                    foreach (array_keys($blockCommentsMap) as $sUpper) {
+                        $matchedSvc = $sUpper;
+                        foreach ($availableServices as $as) {
+                            if (strcasecmp($as, $sUpper) === 0) {
+                                $matchedSvc = $as;
+                                break;
+                            }
+                        }
+                        if (!in_array($matchedSvc, $candidateServices)) $candidateServices[] = $matchedSvc;
+                    }
+
+                    // 5. Determine active service blocks based on valid records (Invoices OR Meaningful Payments OR Comments)
+                    $activeServiceBlocks = [];
+                    foreach ($candidateServices as $s) {
+                        $hasInvoices = !empty($invoicesByService[$s]);
+                        $hasPayments = false;
+                        if (!empty($paymentsByService[$s])) {
+                            foreach ($paymentsByService[$s] as $pRow) {
+                                if (isPaymentRowMeaningful($pRow)) {
+                                    $hasPayments = true;
+                                    break;
+                                }
+                            }
+                        }
+                        $hasComment = !empty($blockCommentsMap[strtoupper(trim($s))]);
+
+                        if (($isMultiCycleClient && strcasecmp($s, $multiCycleLabel) === 0) || $hasInvoices || $hasPayments || $hasComment) {
+                            if (!in_array($s, $activeServiceBlocks)) {
+                                $activeServiceBlocks[] = $s;
+                            }
                         }
                     }
+
                     // Default to CA only if no records exist anywhere
                     if (empty($activeServiceBlocks)) {
                         $activeServiceBlocks = ['CA'];
                     }
 
-                    // Sort active blocks in logical service order
-                    usort($activeServiceBlocks, function ($a, $b) use ($availableServices) {
+                    // Sort active blocks: If multiCycleClient, multiCycleLabel stays at top (#1), rest in logical order
+                    usort($activeServiceBlocks, function ($a, $b) use ($availableServices, $isMultiCycleClient, $multiCycleLabel) {
+                        if ($isMultiCycleClient && !empty($multiCycleLabel)) {
+                            if (strcasecmp($a, $multiCycleLabel) === 0) return -1;
+                            if (strcasecmp($b, $multiCycleLabel) === 0) return 1;
+                        }
                         $posA = array_search($a, $availableServices);
                         $posB = array_search($b, $availableServices);
                         if ($posA === false) $posA = 999;
                         if ($posB === false) $posB = 999;
                         return $posA <=> $posB;
                     });
-
-                    // Fetch all saved independent service block comments
-                    $blockCommentsMap = [];
-                    if (!empty($_GET['customerid'])) {
-                        try {
-                            $stmtComm = $db->prepare("SELECT `service_type`, `comment` FROM `payment_block_comments` WHERE `customer_id` = :id");
-                            $stmtComm->execute([':id' => intval($_GET['customerid'])]);
-                            while ($cRow = $stmtComm->fetch(PDO::FETCH_ASSOC)) {
-                                $blockCommentsMap[strtoupper(trim($cRow['service_type']))] = $cRow['comment'];
-                            }
-                        } catch (Exception $e) {}
-                    }
                     ?>
 
                     <style>
@@ -6622,6 +6771,15 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                             border-color: #60a5fa !important;
                             box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2) !important;
                         }
+                        /* Disable spin buttons for number inputs */
+                        input[type=number]::-webkit-inner-spin-button,
+                        input[type=number]::-webkit-outer-spin-button {
+                            -webkit-appearance: none !important;
+                            margin: 0 !important;
+                        }
+                        input[type=number] {
+                            -moz-appearance: textfield !important;
+                        }
                     </style>
 
                     <div id="service_blocks_container">
@@ -6674,7 +6832,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                 <!-- Clean minimal dotted separation line between services -->
                                 <div class="service-block-divider" style="margin: 28px 0 22px 0; border-top: 2px dashed #94a3b8; position: relative; text-align: center; clear: both;">
                                     <span style="position: absolute; top: -11px; left: 50%; transform: translateX(-50%); background: #ffffff; padding: 0 16px; font-size: 11px; font-weight: 700; color: #475569; letter-spacing: 0.5px; border: 1.5px dashed #cbd5e1; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); display: inline-flex; align-items: center; gap: 6px;">
-                                        <i class="fa fa-code-fork" style="color: #2563eb; font-size: 11px;"></i> SERVICE SEPARATION &bull; <span class="divider-service-label"><?php echo htmlspecialchars($svcName); ?></span>
+                                        <i class="fa fa-code-fork" style="color: #2563eb; font-size: 11px;"></i> SERVICE SEPARATION &bull; <span class="divider-service-label"><?php echo ($blockIdx + 1) . '. ' . htmlspecialchars($svcName); ?></span>
                                     </span>
                                 </div>
                             <?php } ?>
@@ -6685,8 +6843,9 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                     <div class="col-xs-4 table-responsive invoice-container-col" style="flex: 38 38 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px;">
                                         <div class="row">
                                             <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; gap: 4px;">
-                                                <span style="font-weight: 700; font-size: 11.5px; letter-spacing: 0.3px; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; flex-shrink: 0;">
-                                                    <i class="fa ">Invoicing</i> (
+                                                <span style="font-weight: 700; font-size: 11.5px; letter-spacing: 0.3px; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; flex-shrink: 0;">
+                                                    <span class="service-block-index-badge" style="display: inline-flex; align-items: center; justify-content: center; min-width: 19px; height: 19px; background: #ffffff; color: #1e3a8a; border: 1.5px solid #93c5fd; border-radius: 50%; font-size: 10.5px; font-weight: 800; box-shadow: 0 1px 2px rgba(0,0,0,0.05); padding: 0 2px;"><?php echo ($blockIdx + 1); ?></span>
+                                                    <i class="fa ">Invoicing</i>
                                                     <select class="serviceBlockTypeSelect" style="background: #ffffff; color: #1e3a8a; font-weight: 700; font-size: 11px; border: 1.5px solid #93c5fd; border-radius: 4px; padding: 1px 4px; height: 23px; cursor: pointer; outline: none; box-shadow: 0 1px 2px rgba(0,0,0,0.05); text-transform: uppercase;" title="Change service for this section">
                                                         <?php
                                                         $blockServiceOptions = $availableServices;
@@ -6713,7 +6872,6 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                         }
                                                         ?>
                                                     </select>
-                                                    )
                                                     <?php if ($isBlockMatched) { ?>
                                                         <span class="block-matched-badge" title="Matched"><i class="fa fa-check-circle"></i></span>
                                                     <?php } ?>
@@ -6806,7 +6964,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                         <div class="row">
                                             <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 10px;">
                                                 <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.4px;">
-                                                    <i class="fa ">Received Payment</i> (<span class="col-service-label"><?php echo htmlspecialchars($svcName); ?></span>)
+                                                    <i class="fa ">Received Payment</i> (<span class="col-service-label"><?php echo ($blockIdx + 1) . '. ' . htmlspecialchars($svcName); ?></span>)
                                                     <?php if ($isBlockMatched) { ?>
                                                         <span class="block-matched-badge" title="Matched"><i class="fa fa-check-circle"></i></span>
                                                     <?php } ?>
@@ -7001,8 +7159,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                     <div class="col-xs-3 comments-container-col" style="flex: 12 12 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px; display: flex; flex-direction: column;">
                                         <div class="row">
                                             <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: center; padding: 4px 4px; overflow: hidden; white-space: nowrap;">
-                                                <span style="font-weight: 700; font-size: 11px; letter-spacing: 0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="Notes (If Any) (<?php echo htmlspecialchars($svcName); ?>)">
-                                                    <i class="fa fa-commenting-o"></i> Notes (If Any) (<span class="col-service-comment-label"><?php echo htmlspecialchars($svcName); ?></span>)
+                                                <span style="font-weight: 700; font-size: 11px; letter-spacing: 0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="Notes (If Any) (<?php echo ($blockIdx + 1) . '. ' . htmlspecialchars($svcName); ?>)">
+                                                    <i class="fa fa-commenting-o"></i> Notes (If Any) (<span class="col-service-comment-label"><?php echo ($blockIdx + 1) . '. ' . htmlspecialchars($svcName); ?></span>)
                                                 </span>
                                             </div>
                                         </div>
@@ -14757,6 +14915,16 @@ if ($currentRole === 'client' || $currentRole === 'external') {
 
         $(document).ready(function () {
 
+            // Disable mouse wheel scrolling on number inputs (prevent accidental value change)
+            $(document).on('wheel', 'input[type=number]', function (e) {
+                $(this).blur();
+            });
+            document.addEventListener('wheel', function (e) {
+                if (document.activeElement && document.activeElement.tagName === 'INPUT' && document.activeElement.type === 'number') {
+                    document.activeElement.blur();
+                }
+            }, { passive: true });
+
             // Auto-save note on input (debounced)
             var $commentField = $('#add-notes');
             var $notesStatus = $('#notes-status');
@@ -14807,7 +14975,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 });
             }
 
-            $('.editFinalInvoice').click(function () {
+            $(document).on('click', '.editFinalInvoice', function () {
+                var parentBlockSvc = $(this).closest('.service-payment-block').attr('data-service') || '';
                 $.ajax({
                     url: "getInvoiceInfo.php",
                     type: "GET",
@@ -14842,6 +15011,10 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         $('.invoiceCustomerId').val(data[0]['customer_id']);
                         $('.invoiceFirmId').val(data[0]['firm_id']);
                         $('.invoiceId').val(data[0]['invoice_id']);
+                        var currentSvcType = (data[0] && data[0]['service_type']) ? data[0]['service_type'] : parentBlockSvc;
+                        populateMoveInvoiceDropdown(currentSvcType);
+                        $('#finalinvoiceModal .move-invoice-section-wrapper').show();
+                        $('#btnConfirmMoveInvoice').show().prop('disabled', false).html('<i class="fa fa-arrows-h"></i> Move');
                         $('#finalinvoiceModal').find('.invoiceAgreementNo').val(data[0]['agreement_no'] || (data[2] && data[2]['unique_id']) || <?php echo json_encode((string)($clientInfo['unique_id'] ?? '')); ?>);
                         $('#finalinvoiceModal').find('.invoicePoRef').val(data[0]['po_ref'] || '');
                         $('.finalserviceAmtTd').empty();
@@ -16017,6 +16190,145 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 $('.sp-service-type').show();
             }
 
+            function populateMoveInvoiceDropdown(currentService) {
+                var $select = $('#finalInvoiceSectionService');
+                if (!$select.length) return;
+                $select.empty();
+
+                var seen = {};
+                var activeList = [];
+                $('.service-payment-block').each(function (idx) {
+                    var s = $(this).attr('data-service') || '';
+                    if (s && !seen[s.toUpperCase()]) {
+                        seen[s.toUpperCase()] = true;
+                        activeList.push({
+                            index: (idx + 1),
+                            service: s
+                        });
+                    }
+                });
+
+                if (activeList.length > 0) {
+                    activeList.forEach(function (item) {
+                        var label = item.index + '. ' + item.service;
+                        var isSel = (currentService && currentService.toUpperCase() === item.service.toUpperCase());
+                        var $opt = $('<option>', {
+                            value: item.service,
+                            text: label
+                        });
+                        if (isSel) {
+                            $opt.prop('selected', true);
+                        }
+                        $select.append($opt);
+                    });
+                } else {
+                    // Fallback only if no active service blocks are found on page
+                    var fallbackServices = ['CA', 'SA-I', 'SA-II', 'RC', 'SP', 'Contract Review', 'PTR', 'Transition Audit', 'Generic Training', 'Other'];
+                    fallbackServices.forEach(function (s, idx) {
+                        var isSel = (currentService && currentService.toUpperCase() === s.toUpperCase());
+                        var $opt = $('<option>', {
+                            value: s,
+                            text: (idx + 1) + '. ' + s
+                        });
+                        if (isSel) {
+                            $opt.prop('selected', true);
+                        }
+                        $select.append($opt);
+                    });
+                }
+
+                // If currentService was passed and not in active list, append it with next index to keep selection
+                if (currentService && !seen[currentService.toUpperCase()]) {
+                    var nextIdx = activeList.length + 1;
+                    var $opt = $('<option>', {
+                        value: currentService,
+                        text: nextIdx + '. ' + currentService,
+                        selected: true
+                    });
+                    $select.append($opt);
+                }
+
+                if (currentService) {
+                    $select.val(currentService);
+                }
+                $select.data('original-service', currentService || $select.val() || '');
+            }
+
+            function executeMoveInvoice(targetService, isFromBtnClick) {
+                var $select = $('#finalInvoiceSectionService');
+                var invoiceId = $('#finalinvoiceModal').find('.invoiceId').val();
+                var origService = $select.data('original-service') || '';
+                var targetText = $select.find('option:selected').text() || targetService;
+
+                if (!invoiceId || invoiceId <= 0) {
+                    // New invoice creation mode (not yet in DB)
+                    $select.data('original-service', targetService);
+                    if (isFromBtnClick) {
+                        alert('Target header set to: ' + targetText + '. Click "Generate Tax Invoice" below to save.');
+                    }
+                    return;
+                }
+
+                if (!targetService) {
+                    alert('Please select a target service header.');
+                    return;
+                }
+
+                if (origService && origService.toUpperCase() === targetService.toUpperCase()) {
+                    if (isFromBtnClick) {
+                        alert('Invoice is already under header: ' + targetText);
+                    }
+                    return;
+                }
+
+                if (confirm('Are you sure you want to move this invoice to ' + targetText + '?')) {
+                    var $btn = $('#btnConfirmMoveInvoice');
+                    $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Moving...');
+
+                    $.ajax({
+                        url: 'moveInvoiceHeader.php',
+                        type: 'POST',
+                        dataType: 'json',
+                        data: {
+                            invoice_id: invoiceId,
+                            target_service: targetService
+                        },
+                        success: function (res) {
+                            if (res && res.success) {
+                                $select.data('original-service', targetService);
+                                $('#finalinvoiceModal').modal('hide');
+                                window.location.reload();
+                            } else {
+                                alert('Failed to move invoice: ' + (res && res.message ? res.message : 'Unknown error'));
+                                $select.val(origService);
+                                $btn.prop('disabled', false).html('<i class="fa fa-arrows-h"></i> Move');
+                            }
+                        },
+                        error: function (xhr, status, err) {
+                            alert('Error connecting to server: ' + err);
+                            $select.val(origService);
+                            $btn.prop('disabled', false).html('<i class="fa fa-arrows-h"></i> Move');
+                        }
+                    });
+                } else {
+                    // Canceled - revert selector
+                    $select.val(origService);
+                }
+            }
+
+            $(document).on('change', '#finalInvoiceSectionService', function () {
+                var invoiceId = $('#finalinvoiceModal').find('.invoiceId').val();
+                if (invoiceId && invoiceId > 0) {
+                    executeMoveInvoice($(this).val(), false);
+                }
+            });
+
+            $(document).on('click', '#btnConfirmMoveInvoice', function (e) {
+                if (e && e.preventDefault) e.preventDefault();
+                var targetService = $('#finalInvoiceSectionService').val();
+                executeMoveInvoice(targetService, true);
+            });
+
             function resetFinalInvoiceModal(customerId, customerAddress, serviceType) {
                 var $finalModal = $('#finalinvoiceModal');
                 var finalForm = $finalModal.find('form').get(0);
@@ -16027,6 +16339,9 @@ if ($currentRole === 'client' || $currentRole === 'external') {
 
                 $finalModal.find('.invoiceId').val('');
                 $finalModal.find('.invoiceconsultingFirmName').val(customerId);
+                populateMoveInvoiceDropdown(serviceType || '');
+                $('#finalinvoiceModal .move-invoice-section-wrapper').hide();
+                $('#btnConfirmMoveInvoice').hide();
                 $finalModal.find('input[name="invoiceAddress"]').val(customerAddress);
                 $finalModal.find('input[name="invoiceDt"]').val(moment().format('DD.MM.YYYY'));
                 $finalModal.find('.invoiceState').val('Maharashtra');
@@ -16040,7 +16355,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     $finalModal.find('.finalInvoiceService').first().val(serviceType);
                 }
                 $finalModal.find('.finalNetPrice, .finaligst, .finalcgst, .finalsgst').val('');
-                $finalModal.find('.fianlInvoiceGenerate').attr('disabled', true);
+                $finalModal.find('.fianlInvoiceGenerate').removeAttr('disabled').prop('disabled', false);
             }
 
             $('.invoiceBtn').click(function () {
@@ -16064,6 +16379,12 @@ if ($currentRole === 'client' || $currentRole === 'external') {
 
                 resetFinalInvoiceModal(companyName, companyAddress, serviceType);
                 $('#finalinvoiceModal').modal('show');
+            });
+
+            $(document).on('submit', '#final-invoice-id', function () {
+                setTimeout(function () {
+                    window.location.reload();
+                }, 1500);
             });
 
             $('.quotationBtn').click(function () {
@@ -22166,7 +22487,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             $(document.body).on('click', '.cbAddLink', function () {
                 var $btn = $(this);
                 var $block = $btn.closest('.service-payment-block');
-                var blockService = $btn.attr('data-service') || $block.attr('data-service') || 'Payment';
+                var blockService = $btn.attr('data-service') || $block.attr('data-service') || 'CA';
                 var $table = $block.length ? $block.find('.service-details-table') : $("#service_details");
                 if (!$table.length) {
                     $table = $("#service_details");
@@ -22860,8 +23181,28 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             };
         }
 
+        // Re-index all active service blocks (1, 2, 3...)
+        function reindexAllServiceBlocks() {
+            $('.service-payment-block').each(function (idx) {
+                var blockNumber = idx + 1;
+                var $block = $(this);
+                var svc = $block.attr('data-service') || '';
+
+                $block.attr('data-block-id', idx);
+                $block.find('.service-block-index-badge').text(blockNumber);
+                $block.find('.col-service-label').text(blockNumber + '. ' + svc);
+                $block.find('.col-service-comment-label').text(blockNumber + '. ' + svc);
+
+                var $prevDivider = $block.prev('.service-block-divider');
+                if ($prevDivider.length) {
+                    $prevDivider.find('.divider-service-label').text(blockNumber + '. ' + svc);
+                }
+            });
+        }
+
         // Helper function to dynamically generate a new service block
         function renderServiceBlockTemplate(svcName, blockIdx, customerId, customerAddress, availableServices) {
+            var blockNumber = blockIdx + 1;
             var blockServiceOptions = availableServices.slice();
             var exists = false;
             for (var i = 0; i < blockServiceOptions.length; i++) {
@@ -22895,7 +23236,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             var html = '';
             html += '<div class="service-block-divider" style="margin: 28px 0 22px 0; border-top: 2px dashed #94a3b8; position: relative; text-align: center; clear: both;">';
             html += '    <span style="position: absolute; top: -11px; left: 50%; transform: translateX(-50%); background: #ffffff; padding: 0 16px; font-size: 11px; font-weight: 700; color: #475569; letter-spacing: 0.5px; border: 1.5px dashed #cbd5e1; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); display: inline-flex; align-items: center; gap: 6px;">';
-            html += '        <i class="fa fa-code-fork" style="color: #2563eb; font-size: 11px;"></i> SERVICE SEPARATION &bull; <span class="divider-service-label">' + svcName + '</span>';
+            html += '        <i class="fa fa-code-fork" style="color: #2563eb; font-size: 11px;"></i> SERVICE SEPARATION &bull; <span class="divider-service-label">' + blockNumber + '. ' + svcName + '</span>';
             html += '    </span>';
             html += '</div>';
 
@@ -22905,7 +23246,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             html += '        <div class="col-xs-4 table-responsive invoice-container-col" style="flex: 38 38 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px;">';
             html += '            <div class="row">';
             html += '                <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; gap: 4px;">';
-            html += '                    <span style="font-weight: 700; font-size: 11.5px; letter-spacing: 0.3px; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; flex-shrink: 0;"><i class="fa ">Invoicing</i> (<select class="serviceBlockTypeSelect" style="background: #ffffff; color: #1e3a8a; font-weight: 700; font-size: 11px; border: 1.5px solid #93c5fd; border-radius: 4px; padding: 1px 4px; height: 23px; cursor: pointer; outline: none; box-shadow: 0 1px 2px rgba(0,0,0,0.05); text-transform: uppercase;" title="Change service for this section">' + optionsHtml + '</select>)</span>';
+            html += '                    <span style="font-weight: 700; font-size: 11.5px; letter-spacing: 0.3px; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; flex-shrink: 0;"><span class="service-block-index-badge" style="display: inline-flex; align-items: center; justify-content: center; min-width: 19px; height: 19px; background: #ffffff; color: #1e3a8a; border: 1.5px solid #93c5fd; border-radius: 50%; font-size: 10.5px; font-weight: 800; box-shadow: 0 1px 2px rgba(0,0,0,0.05); padding: 0 2px;">' + blockNumber + '</span><i class="fa ">Invoicing</i> <select class="serviceBlockTypeSelect" style="background: #ffffff; color: #1e3a8a; font-weight: 700; font-size: 11px; border: 1.5px solid #93c5fd; border-radius: 4px; padding: 1px 4px; height: 23px; cursor: pointer; outline: none; box-shadow: 0 1px 2px rgba(0,0,0,0.05); text-transform: uppercase;" title="Change service for this section">' + optionsHtml + '</select></span>';
             html += '                    <button type="button" class="btn btn-xs finalInvoiceBtn" data-id="' + customerId + '" data-address="' + customerAddress + '" data-service="' + svcName + '" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #ffffff; border: 1px solid #1e40af; font-weight: 700; font-size: 10.5px; border-radius: 4px; padding: 2px 7px; box-shadow: 0 1px 3px rgba(37,99,235,0.25); text-transform: none; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; transition: all 0.2s ease; white-space: nowrap; flex-shrink: 0;" title="Create Final Invoice Against ' + svcName + '">';
             html += '                        <i class="fa fa-plus" style="font-size: 9.5px;"></i> issue tax invoice';
             html += '                    </button>';
@@ -22939,7 +23280,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             html += '        <div class="col-xs-5 table-responsive payments-container-col" style="flex: 50 50 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px;">';
             html += '            <div class="row">';
             html += '                <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 10px;">';
-            html += '                    <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.4px;"><i class="fa ">Received Payment</i> (<span class="col-service-label">' + svcName + '</span>)</span>';
+            html += '                    <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.4px;"><i class="fa ">Received Payment</i> (<span class="col-service-label">' + blockNumber + '. ' + svcName + '</span>)</span>';
             html += '                    <div style="display: inline-flex; align-items: center; gap: 5px;">';
             html += '                        <button type="button" class="btn btn-xs openDiscountModalBtn" data-service="' + svcName + '" style="background: #ffffff; color: #475569; border: 1px solid #cbd5e1; font-weight: 700; font-size: 11px; border-radius: 4px; padding: 2px 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.06); text-transform: none; display: inline-flex; align-items: center; gap: 3px; cursor: pointer; transition: all 0.2s ease;" title="Discount / Short Paid Settlement">(-+)</button>';
             html += '                        <a class="btn btn-xs btn-info cbAddLink" data-service="' + svcName + '" data-row-id="" data-row-count="1" title="Add new row" style="padding: 1px 6px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer;"><i class="fa fa-plus-circle fa-lg" style="padding: 2px 0;"></i></a>';
@@ -22963,7 +23304,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             html += '                            <td style="padding: 0px;"><div class="table-edit-control"><label></label><input type="text" data_row_id="" class="paymentDepositDate" name="paymentDepositDate" value="" placeholder="DD.MM.YYYY"></div></td>';
             html += '                            <td style="padding: 0px;"><div class="table-edit-control"><label></label><input type="text" data_row_id="" class="serviceChequeDetails" name="serviceChequeDetails" value="" placeholder="" /></div></td>';
             html += '                            <td style="padding: 1px 2px; text-align: center; vertical-align: middle;"><div class="table-edit-control" style="display: flex; align-items: center; justify-content: center;"><input type="hidden" class="serviceReconciliation" name="serviceReconciliation" value="Verify" /><button type="button" class="btn btn-xs toggleReconcileBtn reconcile-not-verify" data-status="Verify" data-pay-id="" style="width: 96%; height: 23px; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 0 2px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; cursor: pointer; transition: all 0.2s ease; background-color: #ef4444; border: 1px solid #dc2626; color: #ffffff;" title="Click to toggle: Mark as Verified"><i class="fa fa-times"></i> <span>Verify</span></button></div></td>';
-            html += '                            <td style="padding: 0px;"><div class="table-edit-control"><input type="hidden" data_row_id="" class="serviceBalance" name="serviceBalance" value="0.00" /><input type="hidden" data-row-id="" class="row-id" name="row-id" value=""></div></td>';
+            html += '                            <td style="padding: 0px;"><div class="table-edit-control"><input type="hidden" data_row_id="" class="serviceBalance" name="serviceBalance" value="0.00" /><input type="hidden" data_row_id="" class="row-id" name="row-id" value=""></div></td>';
             html += '                        </tr>';
             html += '                    </tbody>';
             html += '                </table>';
@@ -22983,7 +23324,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             html += '        <div class="col-xs-3 comments-container-col" style="flex: 12 12 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px; display: flex; flex-direction: column;">';
             html += '            <div class="row">';
             html += '                <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: center; padding: 4px 4px; overflow: hidden; white-space: nowrap;">';
-            html += '                    <span style="font-weight: 700; font-size: 11px; letter-spacing: 0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="Notes (If Any) (' + svcName + ')"><i class="fa fa-commenting-o"></i> Notes (If Any) (<span class="col-service-comment-label">' + svcName + '</span>)</span>';
+            html += '                    <span style="font-weight: 700; font-size: 11px; letter-spacing: 0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="Notes (If Any) (' + blockNumber + '. ' + svcName + ')"><i class="fa fa-commenting-o"></i> Notes (If Any) (<span class="col-service-comment-label">' + blockNumber + '. ' + svcName + '</span>)</span>';
             html += '                </div>';
             html += '            </div>';
             html += '            <div class="row" style="flex: 1 1 auto; display: flex; flex-direction: column; margin-top: 0; margin-left: 0; margin-right: 0;">';
@@ -23034,6 +23375,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             $('#service_blocks_container').append(newBlockHtml);
             $('#activeServicesCountBadge').text($('.service-payment-block').length + ' Active');
 
+            reindexAllServiceBlocks();
+
             var $newBlock = $('.service-payment-block').last();
             $('html, body').animate({
                 scrollTop: $newBlock.offset().top - 80
@@ -23046,20 +23389,15 @@ if ($currentRole === 'client' || $currentRole === 'external') {
         function applyServiceBlockTypeChange($block, newSvc) {
             $block.attr('data-service', newSvc);
             $block.find('.serviceBlockBadge').text(newSvc);
-            $block.find('.col-service-label').text(newSvc);
             $block.find('.finalInvoiceBtn').attr('data-service', newSvc).attr('title', 'Create Final Invoice Against ' + newSvc);
             $block.find('.cbAddLink').attr('data-service', newSvc);
             $block.find('.openDiscountModalBtn').attr('data-service', newSvc);
             $block.find('.totalInvoiceTableSum').attr('title', 'Total Invoicing Amount for ' + newSvc);
             $block.find('.totalPaymentReceivedSum').attr('title', 'Total Payment Received for ' + newSvc);
             $block.find('.totalPaymentTdsSum').attr('title', 'Total TDS Amount for ' + newSvc);
-            $block.find('.col-service-comment-label').text(newSvc);
             $block.find('.serviceBlockComment').attr('data-service', newSvc).attr('placeholder', 'Notes (if any)...');
 
-            var $prevDivider = $block.prev('.service-block-divider');
-            if ($prevDivider.length) {
-                $prevDivider.find('.divider-service-label').text(newSvc);
-            }
+            reindexAllServiceBlocks();
 
             // Update all payment rows in this block
             $block.find('.service-details-table tbody tr.cb_subsection').each(function () {
@@ -23630,7 +23968,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 var $row = $(this);
                 var sType = ($row.find(".serviceTypeName").val() || "").trim();
                 if (sType === "") {
-                    sType = $row.closest('.service-payment-block').attr('data-service') || "Payment";
+                    sType = $row.closest('.service-payment-block').attr('data-service') || "CA";
                 }
                 var received = $row.find(".servicePaymentReceived").val();
                 var tds = $row.find(".serviceTdsAmount").val();

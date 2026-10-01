@@ -149,12 +149,17 @@ if (isset($_POST['invoiceId']) && !empty($_POST['invoiceId'])) {
     $netPriceDb = moneyDb($netPriceVal);
     $totalAmtDb = moneyDb($total_amt);
     $hasAgrCols = invoiceDetailsHasAgreementColumns($db);
+    $sectionService = trim((string)($_POST['sectionServiceType'] ?? ''));
     if ($hasAgrCols) {
         $invoiceUpdate = "UPDATE `invoice_details` SET `customer_id`= :customer,`agreement_no`= :agreement_no,`po_ref`= :po_ref,`invoice_date`= :date,`state`= :state,`state_code`= :statecode,`net_price`= :netprice,"
-                . "`igst`= :igst,`cgst`= :cgst,`sgst`= :sgst,`tax_type`= :taxtype,`final_amount`= :totalAmt WHERE `invoice_id` = :id";
+                . "`igst`= :igst,`cgst`= :cgst,`sgst`= :sgst,`tax_type`= :taxtype,`final_amount`= :totalAmt"
+                . ($sectionService !== '' ? ",`service_type`= :service_type" : "")
+                . " WHERE `invoice_id` = :id";
     } else {
         $invoiceUpdate = "UPDATE `invoice_details` SET `customer_id`= :customer,`invoice_date`= :date,`state`= :state,`state_code`= :statecode,`net_price`= :netprice,"
-                . "`igst`= :igst,`cgst`= :cgst,`sgst`= :sgst,`tax_type`= :taxtype,`final_amount`= :totalAmt WHERE `invoice_id` = :id";
+                . "`igst`= :igst,`cgst`= :cgst,`sgst`= :sgst,`tax_type`= :taxtype,`final_amount`= :totalAmt"
+                . ($sectionService !== '' ? ",`service_type`= :service_type" : "")
+                . " WHERE `invoice_id` = :id";
     }
     $statement = $db->prepare($invoiceUpdate);
     $statement->bindParam(':id', $invoiceid);
@@ -172,6 +177,9 @@ if (isset($_POST['invoiceId']) && !empty($_POST['invoiceId'])) {
     $statement->bindParam(':sgst', $sgst);
     $statement->bindParam(':taxtype', $_POST["finalTaxtype"]);
     $statement->bindParam(':totalAmt', $totalAmtDb);
+    if ($sectionService !== '') {
+        $statement->bindParam(':service_type', $sectionService);
+    }
     $statement->execute();
 
     $invoiceInfo = "SELECT * FROM invoice_details WHERE invoice_id = :id";
@@ -276,15 +284,37 @@ if (isset($_POST['invoiceId']) && !empty($_POST['invoiceId'])) {
         $gsts = '<tr><td colspan="2" style="text-align:right">IGST@18%</td><td> ' . moneyFormat2($igstVal) . '/- </td></tr>';
     }
 } elseif (!empty($customerId) && !empty($_POST['invoiceDt'])) {
-    $netPriceVal = moneyRound($_POST['finalNetPrice']);
-    if ($_POST["finalTaxtype"] == "IGST") {
+    $netPriceVal = moneyRound($_POST['finalNetPrice'] ?? 0);
+    if (isset($_POST['finalInvoiceService'], $_POST['finalInvoiceServiceAmt']) && is_array($_POST['finalInvoiceService']) && is_array($_POST['finalInvoiceServiceAmt'])) {
+        $serviceSumVal = 0.0;
+        $c = min(count($_POST['finalInvoiceService']), count($_POST['finalInvoiceServiceAmt']));
+        $qtyArr = isset($_POST['finalInvoiceServiceQty']) && is_array($_POST['finalInvoiceServiceQty']) ? $_POST['finalInvoiceServiceQty'] : [];
+        $rateArr = isset($_POST['finalInvoiceServiceRate']) && is_array($_POST['finalInvoiceServiceRate']) ? $_POST['finalInvoiceServiceRate'] : [];
+        $useQtyRate = !empty($_POST['includeFinalQtyRate']) && count($qtyArr) > 0 && count($rateArr) > 0;
+        for ($i = 0; $i < $c; $i++) {
+            if ((string) $_POST['finalInvoiceService'][$i] !== '') {
+                if ($useQtyRate) {
+                    $serviceSumVal += round(moneyRound($qtyArr[$i] ?? 0) * moneyRound($rateArr[$i] ?? 0), 2);
+                } else {
+                    $serviceSumVal += moneyRound($_POST['finalInvoiceServiceAmt'][$i]);
+                }
+            }
+        }
+        if ($serviceSumVal > 0 && ($netPriceVal <= 0 || abs($netPriceVal - $serviceSumVal) > 0.009)) {
+            $netPriceVal = round($serviceSumVal, 2);
+        }
+    }
+
+    $taxType = isset($_POST["finalTaxtype"]) ? trim((string)$_POST["finalTaxtype"]) : "CGST & SGST";
+    if ($taxType == "IGST") {
         $sgst = "NA";
         $cgst = "NA";
         $igstVal = round($netPriceVal * 0.18, 2);
         $igst = moneyDb($igstVal);
         $total_amt = round($netPriceVal + $igstVal, 2);
         $gsts = '<tr><td colspan="2" style="text-align:right">IGST@18%</td><td> ' . moneyFormat2($igstVal) . '/- </td></tr>';
-    } else if ($_POST["finalTaxtype"] == "CGST & SGST") {
+    } else {
+        $taxType = "CGST & SGST";
         $igst = 'NA';
         $cgstVal = round($netPriceVal * 0.09, 2);
         $sgstVal = round($netPriceVal * 0.09, 2);
@@ -317,12 +347,16 @@ if (isset($_POST['invoiceId']) && !empty($_POST['invoiceId'])) {
     $netPriceDb = moneyDb($netPriceVal);
     $totalAmtDb = moneyDb($total_amt);
     $hasAgrCols = invoiceDetailsHasAgreementColumns($db);
+    $sectionService = trim((string)($_POST['sectionServiceType'] ?? ''));
+    if ($sectionService === '' && isset($_POST['finalInvoiceService'][0])) {
+        $sectionService = trim((string)$_POST['finalInvoiceService'][0]);
+    }
     if ($hasAgrCols) {
-        $invoiceInsert = "INSERT INTO invoice_details (customer_id, agreement_no, po_ref, profarma_prefix, invoice_no, final_prefix, final_invoice_no, invoice_date, state, state_code, net_price, igst, cgst, sgst, tax_type, final_amount, invoice_type)
-                VALUES (:customer, :agreement_no, :po_ref, :profarma_prefix, :invoice_no, :final_prefix, :final_invoice_no, :date, :state, :statecode, :netprice, :igst, :cgst, :sgst, :taxtype, :totalAmt, 'final')";
+        $invoiceInsert = "INSERT INTO invoice_details (customer_id, agreement_no, po_ref, profarma_prefix, invoice_no, final_prefix, final_invoice_no, invoice_date, state, state_code, net_price, igst, cgst, sgst, tax_type, final_amount, invoice_type" . ($sectionService !== '' ? ", service_type" : "") . ")
+                VALUES (:customer, :agreement_no, :po_ref, :profarma_prefix, :invoice_no, :final_prefix, :final_invoice_no, :date, :state, :statecode, :netprice, :igst, :cgst, :sgst, :taxtype, :totalAmt, 'final'" . ($sectionService !== '' ? ", :service_type" : "") . ")";
     } else {
-        $invoiceInsert = "INSERT INTO invoice_details (customer_id, profarma_prefix, invoice_no, final_prefix, final_invoice_no, invoice_date, state, state_code, net_price, igst, cgst, sgst, tax_type, final_amount, invoice_type)
-                VALUES (:customer, :profarma_prefix, :invoice_no, :final_prefix, :final_invoice_no, :date, :state, :statecode, :netprice, :igst, :cgst, :sgst, :taxtype, :totalAmt, 'final')";
+        $invoiceInsert = "INSERT INTO invoice_details (customer_id, profarma_prefix, invoice_no, final_prefix, final_invoice_no, invoice_date, state, state_code, net_price, igst, cgst, sgst, tax_type, final_amount, invoice_type" . ($sectionService !== '' ? ", service_type" : "") . ")
+                VALUES (:customer, :profarma_prefix, :invoice_no, :final_prefix, :final_invoice_no, :date, :state, :statecode, :netprice, :igst, :cgst, :sgst, :taxtype, :totalAmt, 'final'" . ($sectionService !== '' ? ", :service_type" : "") . ")";
     }
     $statement = $db->prepare($invoiceInsert);
     $emptyProformaPrefix = '';
@@ -343,15 +377,21 @@ if (isset($_POST['invoiceId']) && !empty($_POST['invoiceId'])) {
     $statement->bindParam(':igst', $igst);
     $statement->bindParam(':cgst', $cgst);
     $statement->bindParam(':sgst', $sgst);
-    $statement->bindParam(':taxtype', $_POST["finalTaxtype"]);
+    $statement->bindParam(':taxtype', $taxType);
     $statement->bindParam(':totalAmt', $totalAmtDb);
+    if ($sectionService !== '') {
+        $statement->bindParam(':service_type', $sectionService);
+    }
     $statement->execute();
 
-    $sql = "SELECT max(LAST_INSERT_ID(invoice_id)) as id From invoice_details";
-    $statement = $db->prepare($sql);
-    $statement->execute();
-    $row = $statement->fetch();
-    $invoiceid = $row['id'];
+    $invoiceid = $db->lastInsertId();
+    if (empty($invoiceid)) {
+        $sql = "SELECT max(invoice_id) as id From invoice_details WHERE customer_id = :cid";
+        $stMax = $db->prepare($sql);
+        $stMax->execute([':cid' => $customerId]);
+        $row = $stMax->fetch();
+        $invoiceid = $row['id'] ?? 0;
+    }
 
     if (isset($_POST['finalInvoiceService']) && isset($_POST['finalInvoiceServiceAmt'])) {
         $serviceArray = $_POST['finalInvoiceService'];

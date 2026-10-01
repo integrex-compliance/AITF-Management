@@ -704,13 +704,13 @@ $indianGstStates = array(
                             <div class="row">
                                 <div class="col-sm-12 form-group float-label-control">
                                     <label>Invoice Date</label>
-                                    <input type="text" class="invoiceDt" id="invoiceDt" name="invoiceDt" placeholder="Invoice Date" required>
+                                    <input type="text" class="invoiceDt finalInvoiceDt" id="finalInvoiceDt" name="invoiceDt" placeholder="Invoice Date" required>
                                 </div>
                             </div>
                             <div class="row">
                                 <div class="col-sm-12 form-group float-label-control">
-                                    <div id="invoiceDtError" style="display: none">
-                                        <small><span  id="invoiceDtErrorMsg" style="color: #c9513c; font-style: italic;"></span></small>
+                                    <div id="finalInvoiceDtError" style="display: none">
+                                        <small><span id="finalInvoiceDtErrorMsg" style="color: #c9513c; font-style: italic;"></span></small>
                                     </div>
                                 </div>
                             </div>
@@ -745,6 +745,22 @@ $indianGstStates = array(
                         <div class="col-sm-6 form-group float-label-control">
                             <label>P.O Ref:</label>
                             <input type="text" class="invoicePoRef" id="finalInvoicePoRef" name="invoicePoRef" placeholder="P.O Ref (Optional)" value="">
+                        </div>
+                    </div>
+                    <div class="row move-invoice-section-wrapper" style="display: none; margin-top: 6px; margin-bottom: 10px;">
+                        <div class="col-sm-12" style="background: #f8fafc; border: 1.5px solid #93c5fd; border-radius: 6px; padding: 10px 14px; box-shadow: 0 1px 3px rgba(37,99,235,0.06);">
+                            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                                <label for="finalInvoiceSectionService" style="font-weight: 700; color: #1e3a8a; font-size: 12.5px; margin: 0; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;">
+                                    <i class="fa fa-arrows-alt" style="color: #2563eb; font-size: 13px;"></i> Move invoice to another header:
+                                </label>
+                                <div style="display: inline-flex; align-items: center; gap: 8px; flex: 1; min-width: 240px; justify-content: flex-end;">
+                                    <select name="sectionServiceType" class="form-control finalInvoiceSectionService moveInvoiceSectionSelect" id="finalInvoiceSectionService" style="border: 1.5px solid #2563eb; font-weight: 700; font-size: 12px; background: #ffffff; color: #1e3a8a; border-radius: 4px; height: 34px; padding: 2px 10px; max-width: 280px; width: 100%;">
+                                    </select>
+                                    <button type="button" class="btn btn-primary btn-sm btnConfirmMoveInvoice" id="btnConfirmMoveInvoice" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); border: 1px solid #1e40af; font-weight: 700; font-size: 11.5px; height: 34px; padding: 4px 14px; border-radius: 4px; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+                                        <i class="fa fa-arrows-h"></i> Move
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="row" style="">
@@ -1188,7 +1204,7 @@ $indianGstStates = array(
 //            e.preventDefault();
         });
 
-        $('#invoiceDt').datepicker({
+        $('.invoiceDt').datepicker({
             minDate: '-100Y',
             maxDate: '+100Y',
             changeYear: true,
@@ -1197,7 +1213,7 @@ $indianGstStates = array(
             dateFormat: 'dd.mm.yy',
             autoclose: true
         });
-        $("#invoiceDt").keydown(function (e) {
+        $(".invoiceDt").keydown(function (e) {
 //            e.preventDefault();
         });
 
@@ -1560,16 +1576,31 @@ $indianGstStates = array(
     }
 
     function invoiceDate() {
-//        alert(moment($('.invoiceDt').val(), "DD/MM/YYYY")+" prev date "+ moment($('.previnvdate').val(), "DD/MM/YYYY"));       
         $isError = false;
-        if ($('.invoiceDt').val() == "") {
-            $('#invoiceDtErrorMsg').text("Invoice date can not be empty");
-            $('#invoiceDtError').show();
-            $('#invoiceDt').addClass('inputHighlight');
+        var val = $('#invoiceModal .invoiceDt').val();
+        if (!val || val.trim() == "") {
+            $('#invoiceModal #invoiceDtErrorMsg').text("Invoice date can not be empty");
+            $('#invoiceModal #invoiceDtError').show();
+            $('#invoiceModal .invoiceDt').addClass('inputHighlight');
             $isError = true;
         } else {
-            $('#invoiceDtError').hide();
-            $('#invoiceDt').removeClass('inputHighlight');
+            $('#invoiceModal #invoiceDtError').hide();
+            $('#invoiceModal .invoiceDt').removeClass('inputHighlight');
+        }
+        return $isError;
+    }
+
+    function finalInvoiceDate() {
+        $isError = false;
+        var val = $('#finalinvoiceModal .invoiceDt').val() || $('#finalinvoiceModal input[name="invoiceDt"]').val();
+        if (!val || val.trim() == "") {
+            $('#finalinvoiceModal #finalInvoiceDtErrorMsg').text("Invoice date can not be empty");
+            $('#finalinvoiceModal #finalInvoiceDtError').show();
+            $('#finalinvoiceModal .invoiceDt').addClass('inputHighlight');
+            $isError = true;
+        } else {
+            $('#finalinvoiceModal #finalInvoiceDtError').hide();
+            $('#finalinvoiceModal .invoiceDt').removeClass('inputHighlight');
         }
         return $isError;
     }
@@ -2070,145 +2101,77 @@ $indianGstStates = array(
 //            $('#invoiceModal').modal('hide');
         });
 
-        $(".fianlInvoiceGenerate").click(function () {
-
+        function calculateFinalInvoiceGstNow() {
             var sum = 0;
-//            var taxrate = <?php echo $csgttax ?>;
-            $(".finalInvoiceServiceAmt").each(function () {
-                sum = sum + (+($(this).val() || 0));
-            });
-//            alert(<?php echo $csgttax ?>);
-            $(".finalNetPrice").val(sum);
-            $sumofsvc = $(".finalNetPrice").val();
-//            alert($("input[name=finalTaxtype]:checked").val());
-            $taxtype = $("input[name=finalTaxtype]:checked").val();
-            if ($taxtype == "CGST & SGST") {
-                $.ajax({
-                    url: "getClientInfo.php",
-                    type: "GET",
-                    dataType: "json",
-                    data: {
-                        taxation: "taxation",
-                    },
-                    success: function (data)
-                    {
-                        for (var key in data) {
-//                            alert("In cgst <- " + data[key]['type_of_tax']);
-                            if (data[key]['type_of_tax'] == "CGST") {
-                                $sbTax = (($sumofsvc * data[key]['rate']) / 100);
-                                $(".finalcgst").val($sbTax);
-                                $(".finalsgst").val($sbTax);
-                                $(".finaligst").val("");
-                            }
-                        }
-                        $('.finalcgst').trigger('change');
-                        $('.finalsgst"]').trigger('change');
-                    },
-                    error: function (data, status, err)
-                    {
-                        alert(status);
-                    }
+            var isQtyRate = (typeof finalIncludeQtyRateEnabled === 'function') ? finalIncludeQtyRateEnabled() : $('.includeFinalQtyRate').is(':checked');
+            if (isQtyRate) {
+                $(".finalInvoiceServiceRow").each(function () {
+                    var $r = $(this);
+                    var q = parseFloat($r.find('.finalInvoiceServiceQty').val()) || 0;
+                    var r = parseFloat($r.find('.finalInvoiceServiceRate').val()) || 0;
+                    var a = (typeof round2 === 'function') ? round2(q * r) : Math.round(q * r * 100) / 100;
+                    $r.find('.finalInvoiceServiceAmt').val(a > 0 ? a : '');
+                    sum += a;
                 });
-            } else if ($taxtype == "IGST") {
-                $.ajax({
-                    url: "getClientInfo.php",
-                    type: "GET",
-                    dataType: "json",
-                    data: {
-                        taxation: "taxation",
-                    },
-                    success: function (data)
-                    {
-                        for (var key in data) {
-//                            alert("In igst -> " + data[key]['type_of_tax']);
-                            if (data[key]['type_of_tax'] == "IGST") {
-                                $kkTax = (($sumofsvc * data[key]['rate']) / 100);
-                                $(".finaligst").val($kkTax);
-                                $(".finalcgst").val("");
-                                $(".finalsgst").val("");
-                            }
-                        }
-                        $('.finaligst').trigger('change');
-                    },
-                    error: function (data, status, err)
-                    {
-//                        alert(status);
-                    }
+            } else {
+                $(".finalInvoiceServiceAmt").each(function () {
+                    sum += (+($(this).val() || 0));
                 });
             }
-            if ($(".finalNetPrice").val() != "") {
-                $(".fianlInvoiceGenerate").removeAttr('disabled');
+            sum = (typeof round2 === 'function') ? round2(sum) : Math.round(sum * 100) / 100;
+            $(".finalNetPrice").val(sum > 0 ? sum : '');
+            
+            var taxtype = $("input[name=finalTaxtype]:checked").val() || "CGST & SGST";
+            if (taxtype === "IGST") {
+                var igst = (typeof round2 === 'function') ? round2(sum * 0.18) : Math.round(sum * 0.18 * 100) / 100;
+                $(".finaligst").val(igst > 0 ? igst : '');
+                $(".finalcgst").val("");
+                $(".finalsgst").val("");
+            } else {
+                var cgst = (typeof round2 === 'function') ? round2(sum * 0.09) : Math.round(sum * 0.09 * 100) / 100;
+                var sgst = (typeof round2 === 'function') ? round2(sum * 0.09) : Math.round(sum * 0.09 * 100) / 100;
+                $(".finalcgst").val(cgst > 0 ? cgst : '');
+                $(".finalsgst").val(sgst > 0 ? sgst : '');
+                $(".finaligst").val("");
             }
-            document.getElementById("final-invoice-id").submit();
-            $("#finalinvoiceModal").modal("hide");
+            
+            if (sum > 0) {
+                $(".fianlInvoiceGenerate").removeAttr('disabled').prop('disabled', false);
+            }
+            return sum;
+        }
+
+        $(document).on("input change", ".finalInvoiceServiceAmt, .finalInvoiceServiceQty, .finalInvoiceServiceRate, input[name=finalTaxtype]", function () {
+            calculateFinalInvoiceGstNow();
         });
 
-        $(".finalNetPrice").click(function () {
-            var sum = 0;
-//            var taxrate = <?php echo $csgttax ?>;
-            $(".finalInvoiceServiceAmt").each(function () {
-                sum = sum + (+($(this).val() || 0));
-            });
-//            alert(<?php echo $csgttax ?>);
-            $(".finalNetPrice").val(sum);
-            $sumofsvc = $(".finalNetPrice").val();
-//            alert($("input[name=finalTaxtype]:checked").val());
-            $taxtype = $("input[name=finalTaxtype]:checked").val();
-            if ($taxtype == "CGST & SGST") {
-                $.ajax({
-                    url: "getClientInfo.php",
-                    type: "GET",
-                    dataType: "json",
-                    data: {
-                        taxation: "taxation",
-                    },
-                    success: function (data)
-                    {
-                        for (var key in data) {
-//                            alert("In cgst <- " + data[key]['type_of_tax']);
-                            if (data[key]['type_of_tax'] == "CGST") {
-                                $sbTax = (($sumofsvc * data[key]['rate']) / 100);
-                                $(".finalcgst").val($sbTax);
-                                $(".finalsgst").val($sbTax);
-                                $(".finaligst").val("");
-                            }
-                        }
-                        $('.finalcgst').trigger('change');
-                        $('.finalsgst"]').trigger('change');
-                    },
-                    error: function (data, status, err)
-                    {
-                        alert(status);
-                    }
-                });
-            } else if ($taxtype == "IGST") {
-                $.ajax({
-                    url: "getClientInfo.php",
-                    type: "GET",
-                    dataType: "json",
-                    data: {
-                        taxation: "taxation",
-                    },
-                    success: function (data)
-                    {
-                        for (var key in data) {
-//                            alert("In igst -> " + data[key]['type_of_tax']);
-                            if (data[key]['type_of_tax'] == "IGST") {
-                                $kkTax = (($sumofsvc * data[key]['rate']) / 100);
-                                $(".finaligst").val($kkTax);
-                                $(".finalcgst").val("");
-                                $(".finalsgst").val("");
-                            }
-                        }
-                        $('.finaligst').trigger('change');
-                    },
-                    error: function (data, status, err)
-                    {
-//                        alert(status);
-                    }
-                });
+        $(document).on("click", ".calculateFinalGST", function () {
+            calculateFinalInvoiceGstNow();
+        });
+
+        $(document).on("click", ".fianlInvoiceGenerate", function (e) {
+            var sum = calculateFinalInvoiceGstNow();
+            if (sum <= 0) {
+                alert('Please enter service amount before generating invoice.');
+                if (e && e.preventDefault) e.preventDefault();
+                return false;
             }
-            $(".fianlInvoiceGenerate").removeAttr('disabled');
+            if (typeof finalInvoiceDate === 'function' && finalInvoiceDate()) {
+                if (e && e.preventDefault) e.preventDefault();
+                return false;
+            }
+            
+            var finalForm = document.getElementById("final-invoice-id");
+            if (finalForm) {
+                finalForm.submit();
+            }
+            $("#finalinvoiceModal").modal("hide");
+            
+            setTimeout(function () {
+                if (window.location.href.indexOf('customerAccount.php') !== -1) {
+                    window.location.reload();
+                }
+            }, 1200);
         });
 
         $(".netPrice").click(function () {
@@ -2352,73 +2315,7 @@ $indianGstStates = array(
             }
         });
 
-        $(".calculateFinalGST").click(function () {
-            var sum = 0;
-//            var taxrate = <?php echo $csgttax ?>;
-            $(".finalInvoiceServiceAmt").each(function () {
-                sum = sum + (+($(this).val() || 0));
-            });
-//            alert(<?php echo $csgttax ?>);
-            $(".finalNetPrice").val(sum);
-            $sumofsvc = $(".finalNetPrice").val();
-//            alert($("input[name=finalTaxtype]:checked").val());
-            $taxtype = $("input[name=finalTaxtype]:checked").val();
-            if ($taxtype == "CGST & SGST") {
-                $.ajax({
-                    url: "getClientInfo.php",
-                    type: "GET",
-                    dataType: "json",
-                    data: {
-                        taxation: "taxation",
-                    },
-                    success: function (data)
-                    {
-                        for (var key in data) {
-//                            alert("In cgst <- " + data[key]['type_of_tax']);
-                            if (data[key]['type_of_tax'] == "CGST") {
-                                $sbTax = (($sumofsvc * data[key]['rate']) / 100);
-                                $(".finalcgst").val($sbTax);
-                                $(".finalsgst").val($sbTax);
-                                $(".finaligst").val("");
-                            }
-                        }
-                        $('.finalcgst').trigger('change');
-                        $('.finalsgst"]').trigger('change');
-                    },
-                    error: function (data, status, err)
-                    {
-                        alert(status);
-                    }
-                });
-            } else if ($taxtype == "IGST") {
-                $.ajax({
-                    url: "getClientInfo.php",
-                    type: "GET",
-                    dataType: "json",
-                    data: {
-                        taxation: "taxation",
-                    },
-                    success: function (data)
-                    {
-                        for (var key in data) {
-//                            alert("In igst -> " + data[key]['type_of_tax']);
-                            if (data[key]['type_of_tax'] == "IGST") {
-                                $kkTax = (($sumofsvc * data[key]['rate']) / 100);
-                                $(".finaligst").val($kkTax);
-                                $(".finalcgst").val("");
-                                $(".finalsgst").val("");
-                            }
-                        }
-                        $('.finaligst').trigger('change');
-                    },
-                    error: function (data, status, err)
-                    {
-//                        alert(status);
-                    }
-                });
-            }
-            $(".fianlInvoiceGenerate").removeAttr('disabled');
-        });
+
 
         $('.addCertification').click(function (e) {
             var newCount = $(".newCount").val();
