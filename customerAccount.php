@@ -6214,16 +6214,16 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             <div class="servicebox" style="display: ">
                 <div class="row payment-header-toggle-row payment-title" id="service-row"
                     style="margin-left: 0; margin-right: 0; padding: 7px 15px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; border-radius: 6px 6px 0 0; background: linear-gradient(135deg, #1e293b 0%, #334155 100%); box-shadow: 0 2px 6px rgba(15, 23, 42, 0.15); user-select: none; width: 100%;">
-                    <div style="width: 150px;" class="hidden-xs"></div>
+                    <div style="min-width: 220px;" class="hidden-xs"></div>
                     <div class="payment-title-text"
                         style="text-align: center; color: #ffffff; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; flex: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
                         <span>Payment System</span> <span class="serviceStatus"></span> <i class="fa fa-chevron-down payment-toggle-chevron" style="font-size: 11px; color: #94a3b8; transition: transform 0.25s ease;"></i>
                     </div>
-                    <div class="payment-actions-wrapper" style="text-align: right; display: flex; align-items: center; justify-content: flex-end; gap: 10px; cursor: default; width: 150px;">
+                    <div class="payment-actions-wrapper" style="text-align: right; display: flex; align-items: center; justify-content: flex-end; gap: 10px; cursor: default; min-width: 220px;">
                         <button type="button" class="btn btn-xs btnAddInvoiceHeader"
-                            style="display: none; background: #ffffff; color: #1e293b; border: 1px solid #cbd5e1; font-weight: 700; font-size: 11px; border-radius: 4px; padding: 3px 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.15); align-items: center; gap: 5px; cursor: pointer; text-transform: none;"
+                            style="display: none; background: #ffffff; color: #1e293b; border: 1px solid #cbd5e1; font-weight: 700; font-size: 11px; border-radius: 4px; padding: 3px 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.15); align-items: center; gap: 5px; cursor: pointer; text-transform: none; white-space: nowrap;"
                             title="Add new service invoice &amp; payment header">
-                            <i class="fa fa-plus-circle" style="color: #2563eb; font-size: 11.5px;"></i> Add Invoice Header
+                            <i class="fa fa-plus-circle" style="color: #2563eb; font-size: 11.5px;"></i> Add Service Header for Invoicing
                         </button>
                         <input type="hidden" id="paymentAutoSaveStatus" data-row-id="<?php if (isset($paymentDetails['payment_sy_id'])) echo $paymentDetails['payment_sy_id']; ?>" value="<?php if (isset($paymentDetails['payment_sy_id'])) echo $paymentDetails['payment_sy_id']; ?>" />
                     </div>
