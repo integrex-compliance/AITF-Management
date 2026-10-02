@@ -6388,6 +6388,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     // 1. Fetch all saved independent service block comments & custom active headers
                     $blockCommentsMap = [];
                     $savedCustomHeaders = [];
+                    $headerCatalog = aitf_payment_header_catalog($db, (int)($_GET["customerid"] ?? 0));
                     if (!empty($_GET['customerid'])) {
                         try {
                             $stmtComm = $db->prepare("SELECT `service_type`, `comment`, `is_explicit` FROM `payment_block_comments` WHERE `customer_id` = :id");
@@ -6517,18 +6518,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
 
                     // Empty accounts start with Add Invoice Header; do not recreate an empty CA block.
 
-                    // Sort active blocks: If multiCycleClient, multiCycleLabel stays at top (#1), rest in logical order
-                    usort($activeServiceBlocks, function ($a, $b) use ($availableServices, $isMultiCycleClient, $multiCycleLabel) {
-                        if ($isMultiCycleClient && !empty($multiCycleLabel)) {
-                            if (strcasecmp($a, $multiCycleLabel) === 0) return -1;
-                            if (strcasecmp($b, $multiCycleLabel) === 0) return 1;
-                        }
-                        $posA = array_search($a, $availableServices);
-                        $posB = array_search($b, $availableServices);
-                        if ($posA === false) $posA = 999;
-                        if ($posB === false) $posB = 999;
-                        return $posA <=> $posB;
-                    });
+                    $activeServiceBlocks = aitf_payment_sort_headers($activeServiceBlocks, $headerCatalog);
                     ?>
 
                     <style>
@@ -6808,6 +6798,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     <div id="service_blocks_container" data-customer="<?php echo (int)($_GET['customerid'] ?? 0); ?>">
                         <?php
                         foreach ($activeServiceBlocks as $blockIdx => $svcName) {
+                            $svcLabel = $headerCatalog[strtoupper($svcName)]["header_name"] ?? $svcName;
                             $serviceInvoices = $invoicesByService[$svcName] ?? [];
                             $servicePayments = $paymentsByService[$svcName] ?? [];
                             
@@ -6852,12 +6843,12 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                 <!-- Clean minimal dotted separation line between services -->
                                 <div class="service-block-divider" style="margin: 28px 0 22px 0; border-top: 2px dashed #94a3b8; position: relative; text-align: center; clear: both;">
                                     <span style="position: absolute; top: -11px; left: 50%; transform: translateX(-50%); background: #ffffff; padding: 0 16px; font-size: 11px; font-weight: 700; color: #475569; letter-spacing: 0.5px; border: 1.5px dashed #cbd5e1; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); display: inline-flex; align-items: center; gap: 6px;">
-                                        <i class="fa fa-code-fork" style="color: #2563eb; font-size: 11px;"></i> SERVICE SEPARATION &bull; <span class="divider-service-label"><?php echo ($blockIdx + 1) . '. ' . htmlspecialchars($svcName); ?></span>
+                                        <i class="fa fa-code-fork" style="color: #2563eb; font-size: 11px;"></i> SERVICE SEPARATION &bull; <span class="divider-service-label"><?php echo ($blockIdx + 1) . '. ' . htmlspecialchars($svcLabel); ?></span>
                                     </span>
                                 </div>
                             <?php } ?>
 
-                            <div class="service-payment-block <?php echo $isBlockMatched ? 'service-block-matched' : ''; ?>" data-service="<?php echo htmlspecialchars($svcName); ?>" data-block-id="<?php echo $blockIdx; ?>" style="margin-bottom: 22px;">
+                            <div class="service-payment-block <?php echo $isBlockMatched ? 'service-block-matched' : ''; ?>" data-service="<?php echo htmlspecialchars($svcName); ?>" data-header-name="<?php echo htmlspecialchars($svcLabel); ?>" data-block-id="<?php echo $blockIdx; ?>" style="margin-bottom: 22px;">
                                 <div class="row payment-tables-row" style="display: flex; align-items: stretch; margin-left: -5px; margin-right: -5px;">
                                     <!-- Left: Invoices Column (38%) -->
                                     <div class="col-xs-4 table-responsive invoice-container-col" style="flex: 38 38 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px;">
@@ -6869,10 +6860,10 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                     <select class="serviceBlockTypeSelect" style="background: #ffffff; color: #1e3a8a; font-weight: 700; font-size: 11px; border: 1.5px solid #93c5fd; border-radius: 4px; padding: 1px 4px; height: 23px; cursor: pointer; outline: none; box-shadow: 0 1px 2px rgba(0,0,0,0.05); text-transform: uppercase;" title="Change service for this section">
                                                         <?php
                                                         $blockServiceOptions = $availableServices;
-                                                        if (!empty($svcName) && strcasecmp($svcName, 'Other') !== 0) {
+                                                        if (!empty($svcLabel) && strcasecmp($svcLabel, 'Other') !== 0) {
                                                             $found = false;
                                                             foreach ($blockServiceOptions as $opt) {
-                                                                if (strcasecmp($opt, $svcName) === 0) {
+                                                                if (strcasecmp($opt, $svcLabel) === 0) {
                                                                     $found = true;
                                                                     break;
                                                                 }
@@ -6880,14 +6871,14 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                             if (!$found) {
                                                                 $otherPos = array_search('Other', $blockServiceOptions);
                                                                 if ($otherPos !== false) {
-                                                                    array_splice($blockServiceOptions, $otherPos, 0, [$svcName]);
+                                                                    array_splice($blockServiceOptions, $otherPos, 0, [$svcLabel]);
                                                                 } else {
-                                                                    $blockServiceOptions[] = $svcName;
+                                                                    $blockServiceOptions[] = $svcLabel;
                                                                 }
                                                             }
                                                         }
                                                         foreach ($blockServiceOptions as $opt) {
-                                                            $selected = (strcasecmp($opt, $svcName) === 0) ? 'selected' : '';
+                                                            $selected = (strcasecmp($opt, $svcLabel) === 0) ? 'selected' : '';
                                                             echo '<option value="' . htmlspecialchars($opt) . '" ' . $selected . '>' . htmlspecialchars($opt) . '</option>';
                                                         }
                                                         ?>
@@ -6984,7 +6975,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                         <div class="row">
                                             <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 10px;">
                                                 <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.4px;">
-                                                    <i class="fa ">Received Payment</i> (<span class="col-service-label"><?php echo ($blockIdx + 1) . '. ' . htmlspecialchars($svcName); ?></span>)
+                                                    <i class="fa ">Received Payment</i> (<span class="col-service-label"><?php echo ($blockIdx + 1) . '. ' . htmlspecialchars($svcLabel); ?></span>)
                                                     <?php if ($isBlockMatched) { ?>
                                                         <span class="block-matched-badge" title="Matched"><i class="fa fa-check-circle"></i></span>
                                                     <?php } ?>
@@ -7179,8 +7170,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                     <div class="col-xs-3 comments-container-col" style="flex: 10 10 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px; display: flex; flex-direction: column;">
                                         <div class="row">
                                             <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: center; padding: 4px 4px; overflow: hidden; white-space: nowrap;">
-                                                <span style="font-weight: 700; font-size: 11px; letter-spacing: 0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="Notes (If Any) (<?php echo ($blockIdx + 1) . '. ' . htmlspecialchars($svcName); ?>)">
-                                                    <i class="fa fa-commenting-o"></i> Notes (If Any) (<span class="col-service-comment-label"><?php echo ($blockIdx + 1) . '. ' . htmlspecialchars($svcName); ?></span>)
+                                                <span style="font-weight: 700; font-size: 11px; letter-spacing: 0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="Notes (If Any) (<?php echo ($blockIdx + 1) . '. ' . htmlspecialchars($svcLabel); ?>)">
+                                                    <i class="fa fa-commenting-o"></i> Notes (If Any) (<span class="col-service-comment-label"><?php echo ($blockIdx + 1) . '. ' . htmlspecialchars($svcLabel); ?></span>)
                                                 </span>
                                             </div>
                                         </div>
@@ -13953,8 +13944,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             </div>
         </div>
     <?php } ?>
-    <script src="js/payment-ledger.js?v=20261002-1"></script>
-    <script src="js/invoice-header-controls.js?v=20261001-2"></script>
+    <script src="js/payment-ledger.js?v=20261002-2"></script>
+    <script src="js/invoice-header-controls.js?v=20261002-2"></script>
     <script type="text/javascript">
         (function () {
             var aitfAiDocuments = [];
@@ -22970,7 +22961,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             $('.service-payment-block').each(function (idx) {
                 var blockNumber = idx + 1;
                 var $block = $(this);
-                var svc = $block.attr('data-service') || '';
+                var svc = $block.attr('data-header-name') || $block.attr('data-service') || '';
 
                 $block.attr('data-block-id', idx);
                 $block.find('.service-block-index-badge').text(blockNumber);
@@ -22985,17 +22976,18 @@ if ($currentRole === 'client' || $currentRole === 'external') {
         }
 
         // Helper function to dynamically generate a new service block
-        function renderServiceBlockTemplate(svcName, blockIdx, customerId, customerAddress, availableServices) {
+        function renderServiceBlockTemplate(svcName, blockIdx, customerId, customerAddress, availableServices, headerName) {
+            var svcLabel = headerName || svcName;
             var blockNumber = blockIdx + 1;
             var blockServiceOptions = availableServices.slice();
             var exists = false;
             for (var i = 0; i < blockServiceOptions.length; i++) {
-                if (blockServiceOptions[i].toLowerCase() === svcName.toLowerCase()) {
+                if (blockServiceOptions[i].toLowerCase() === svcLabel.toLowerCase()) {
                     exists = true;
                     break;
                 }
             }
-            if (!exists && svcName && svcName.toLowerCase() !== 'other') {
+            if (!exists && svcLabel && svcLabel.toLowerCase() !== 'other') {
                 var otherIdx = -1;
                 for (var j = 0; j < blockServiceOptions.length; j++) {
                     if (blockServiceOptions[j].toLowerCase() === 'other') {
@@ -23004,9 +22996,9 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     }
                 }
                 if (otherIdx !== -1) {
-                    blockServiceOptions.splice(otherIdx, 0, svcName);
+                    blockServiceOptions.splice(otherIdx, 0, svcLabel);
                 } else {
-                    blockServiceOptions.push(svcName);
+                    blockServiceOptions.push(svcLabel);
                 }
             }
 
@@ -23014,20 +23006,21 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             var optionsHtml = '';
             for (var i = 0; i < blockServiceOptions.length; i++) {
                 var s = blockServiceOptions[i];
-                var sel = (s.toLowerCase() === svcName.toLowerCase()) ? 'selected' : '';
+                var sel = (s.toLowerCase() === svcLabel.toLowerCase()) ? 'selected' : '';
                 optionsHtml += '<option value="' + escapePaymentHtml(s) + '" ' + sel + '>' + escapePaymentHtml(s) + '</option>';
             }
 
             svcName = escapePaymentHtml(svcName);
+            svcLabel = escapePaymentHtml(svcLabel);
             customerAddress = escapePaymentHtml(customerAddress);
             var html = '';
             html += '<div class="service-block-divider" style="margin: 28px 0 22px 0; border-top: 2px dashed #94a3b8; position: relative; text-align: center; clear: both;">';
             html += '    <span style="position: absolute; top: -11px; left: 50%; transform: translateX(-50%); background: #ffffff; padding: 0 16px; font-size: 11px; font-weight: 700; color: #475569; letter-spacing: 0.5px; border: 1.5px dashed #cbd5e1; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); display: inline-flex; align-items: center; gap: 6px;">';
-            html += '        <i class="fa fa-code-fork" style="color: #2563eb; font-size: 11px;"></i> SERVICE SEPARATION &bull; <span class="divider-service-label">' + blockNumber + '. ' + svcName + '</span>';
+            html += '        <i class="fa fa-code-fork" style="color: #2563eb; font-size: 11px;"></i> SERVICE SEPARATION &bull; <span class="divider-service-label">' + blockNumber + '. ' + svcLabel + '</span>';
             html += '    </span>';
             html += '</div>';
 
-            html += '<div class="service-payment-block" data-draft-header="1" data-service="' + svcName + '" data-block-id="' + blockIdx + '" style="margin-bottom: 22px;">';
+            html += '<div class="service-payment-block" data-header-name="' + svcLabel + '" data-draft-header="1" data-service="' + svcName + '" data-block-id="' + blockIdx + '" style="margin-bottom: 22px;">';
             html += '    <div class="row payment-tables-row" style="display: flex; align-items: stretch; margin-left: -5px; margin-right: -5px;">';
             // Invoices column (38%)
             html += '        <div class="col-xs-4 table-responsive invoice-container-col" style="flex: 38 38 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px;">';
@@ -23067,7 +23060,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             html += '        <div class="col-xs-5 table-responsive payments-container-col" style="flex: 52 52 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px;">';
             html += '            <div class="row">';
             html += '                <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 10px;">';
-            html += '                    <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.4px;"><i class="fa ">Received Payment</i> (<span class="col-service-label">' + blockNumber + '. ' + svcName + '</span>)</span>';
+            html += '                    <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.4px;"><i class="fa ">Received Payment</i> (<span class="col-service-label">' + blockNumber + '. ' + svcLabel + '</span>)</span>';
             html += '                    <div style="display: inline-flex; align-items: center; gap: 5px;">';
             html += '                        <button type="button" class="btn btn-xs openDiscountModalBtn" data-service="' + svcName + '" style="background: #ffffff; color: #475569; border: 1px solid #cbd5e1; font-weight: 700; font-size: 11px; border-radius: 4px; padding: 2px 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.06); text-transform: none; display: inline-flex; align-items: center; gap: 3px; cursor: pointer; transition: all 0.2s ease;" title="Discount / Short Paid Settlement">(-+)</button>';
             html += '                        <a class="btn btn-xs btn-info cbAddLink" data-service="' + svcName + '" data-row-id="" data-row-count="1" title="Add new row" style="padding: 1px 6px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer;"><i class="fa fa-plus-circle fa-lg" style="padding: 2px 0;"></i></a>';
@@ -23111,7 +23104,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             html += '        <div class="col-xs-3 comments-container-col" style="flex: 10 10 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px; display: flex; flex-direction: column;">';
             html += '            <div class="row">';
             html += '                <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: center; padding: 4px 4px; overflow: hidden; white-space: nowrap;">';
-            html += '                    <span style="font-weight: 700; font-size: 11px; letter-spacing: 0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="Notes (If Any) (' + blockNumber + '. ' + svcName + ')"><i class="fa fa-commenting-o"></i> Notes (If Any) (<span class="col-service-comment-label">' + blockNumber + '. ' + svcName + '</span>)</span>';
+            html += '                    <span style="font-weight: 700; font-size: 11px; letter-spacing: 0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="Notes (If Any) (' + blockNumber + '. ' + svcLabel + ')"><i class="fa fa-commenting-o"></i> Notes (If Any) (<span class="col-service-comment-label">' + blockNumber + '. ' + svcLabel + '</span>)</span>';
             html += '                </div>';
             html += '            </div>';
             html += '            <div class="row" style="flex: 1 1 auto; display: flex; flex-direction: column; margin-top: 0; margin-left: 0; margin-right: 0;">';
@@ -23158,10 +23151,11 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             var customerId = <?php echo json_encode((string)($_GET["customerid"] ?? "")); ?>;
             var customerAddress = <?php echo json_encode((string)($clientInfo["address"] ?? "")); ?>;
 
-            var newBlockHtml = renderServiceBlockTemplate(nextService, blockIndex, customerId, customerAddress, availableServices);
-
-            paymentMutation(function () { return paymentRequest({action:'createPaymentHeader', service_type:nextService}).done(function (res) {
+            var $addButton = $(this), creationKey = paymentHeaderCreationKey($addButton,nextService);
+            paymentMutation(function () { return paymentRequest({action:'createPaymentHeader', service_type:nextService, creation_key:creationKey}).done(function (res) {
             if (!res || !res.success) { alert(res && res.message || 'Could not create header.'); return; }
+            $addButton.removeData('header-creation');
+            var newBlockHtml = renderServiceBlockTemplate(res.service_type, blockIndex, customerId, customerAddress, availableServices, res.header_name || nextService);
             $('#service_blocks_container').append(newBlockHtml);
             $('#activeServicesCountBadge').text($('.service-payment-block').length + ' Active');
 
@@ -23179,12 +23173,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
         // Helper function to apply service change to block, payments, and invoices
         function applyServiceBlockTypeChange($block, newSvc) {
             var source = $block.attr('data-service');
-            if (!newSvc || newSvc.toUpperCase() === source.toUpperCase()) return;
-            var duplicate = false;
-            $('.service-payment-block').not($block).each(function () {
-                if (($(this).attr('data-service') || '').toUpperCase() === newSvc.toUpperCase()) duplicate = true;
-            });
-            if (duplicate) { alert('This header already exists. Move invoices to it instead.'); $block.find('.serviceBlockTypeSelect').val(source); return; }
+            var previousLabel = $block.attr('data-header-name') || source;
+            if (!newSvc || newSvc.toUpperCase() === previousLabel.toUpperCase()) return;
             paymentMutation(function () {
                 var payments = [], invoices = [], versions = {};
                 $block.find('.row-id').each(function () { if (Number($(this).val())) { payments.push(Number($(this).val())); versions[$(this).val()] = Number($(this).closest('tr').attr('data-version')) || 0; } });
@@ -23192,9 +23182,9 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 return paymentRequest({action:'renamePaymentHeader', source_service:source, service_type:newSvc,
                     payment_ids:JSON.stringify(payments), invoice_ids:JSON.stringify(invoices), payment_versions:JSON.stringify(versions)
                 }).done(function (res) {
-                    if (res && res.success) { paymentMutationPending = false; window.location.reload(); }
-                    else { $block.find('.serviceBlockTypeSelect').val(source); alert(res && res.message || 'Rename failed.'); }
-                }).fail(function () { $block.find('.serviceBlockTypeSelect').val(source); alert('Rename failed.'); });
+                    if (res && res.success) { applyPaymentHeaderRename($block,res); }
+                    else { $block.find('.serviceBlockTypeSelect').val(previousLabel); alert(res && res.message || 'Rename failed.'); }
+                }).fail(function () { $block.find('.serviceBlockTypeSelect').val(previousLabel); alert('Rename failed.'); });
             });
         }
 
@@ -23306,7 +23296,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             var newSvc = $(this).val();
             var $select = $(this);
             var $block = $(this).closest('.service-payment-block');
-            var prevSvc = $block.attr('data-service') || 'CA';
+            var prevSvc = $block.attr('data-header-name') || $block.attr('data-service') || 'CA';
 
             if (newSvc === 'Other' || newSvc === 'OTHER' || (newSvc && newSvc.toLowerCase() === 'other')) {
                 // Open stylish popup prompt for custom service name

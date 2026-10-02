@@ -254,12 +254,14 @@ if (isset($req['action']) && $req['action'] === 'saveDiscount') {
         $chequeDetails = !empty($invoiceNo) ? $invoiceNo : $remarks;
         $comment = !empty($invoiceNo) ? ("Discount against Invoice " . $invoiceNo . ($remarks && $remarks !== $invoiceNo ? " (" . $remarks . ")" : "")) : $remarks;
 
-        $insertDiscount = "INSERT INTO payment_system (payment_sy_id, customer_id, service_type, amount_decided, payment_received, tds_amount, discount_amount, payment_date, cheque_details, balance, comment) "
-            . "VALUES (:payid, :customer, :services, :decideAmount, :rcvAmount, :tdsAmount, :discountAmount, :payDate, :checkdetails, :balance, :comment)";
+        aitf_payment_schema($db);
+        $insertDiscount = "INSERT INTO payment_system (payment_sy_id, customer_id, service_type, payment_header, amount_decided, payment_received, tds_amount, discount_amount, payment_date, cheque_details, balance, comment) "
+            . "VALUES (:payid, :customer, :services, :paymentHeader, :decideAmount, :rcvAmount, :tdsAmount, :discountAmount, :payDate, :checkdetails, :balance, :comment)";
         $stmt = $db->prepare($insertDiscount);
         $stmt->bindParam(':payid', $pay_id);
         $stmt->bindParam(':customer', $customerId);
         $stmt->bindParam(':services', $serviceType);
+        $stmt->bindParam(':paymentHeader', $serviceType);
         $stmt->bindParam(':decideAmount', $discountAmount);
         $stmt->bindParam(':rcvAmount', $zero);
         $stmt->bindParam(':tdsAmount', $zero);

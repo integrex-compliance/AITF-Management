@@ -28,7 +28,70 @@ function aitf_payment_schema(PDO $db) {
         try { $db->exec('ALTER TABLE payment_block_comments ADD COLUMN is_explicit TINYINT NOT NULL DEFAULT 0'); }
         catch (PDOException $e) { if (($e->errorInfo[1] ?? 0) != 1060) throw $e; }
     }
+    foreach (['header_name'=>'VARCHAR(100) NULL', 'header_order'=>'INT NULL', 'creation_key'=>'VARCHAR(80) NULL'] as $name => $definition) {
+        if (!$db->query("SHOW COLUMNS FROM payment_block_comments LIKE '$name'")->fetch()) {
+            try { $db->exec("ALTER TABLE payment_block_comments ADD COLUMN `$name` $definition"); }
+            catch (PDOException $e) { if (($e->errorInfo[1] ?? 0) != 1060) throw $e; }
+        }
+    }
+    if (!$db->query("SHOW INDEX FROM payment_block_comments WHERE Key_name='uniq_customer_header_creation'")->fetch()) {
+        try { $db->exec('ALTER TABLE payment_block_comments ADD UNIQUE KEY uniq_customer_header_creation (customer_id,creation_key)'); }
+        catch (PDOException $e) { if (($e->errorInfo[1] ?? 0) != 1061) throw $e; }
+    }
     $ready = true;
+}
+
+// service_type remains the unique storage key; header_name is the repeatable display label.
+function aitf_payment_header_catalog(PDO $db, $customer) {
+    $stmt = $db->prepare('SELECT * FROM payment_block_comments WHERE customer_id=? ORDER BY id');
+    $stmt->execute([$customer]);
+    $catalog = [];
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) $catalog[strtoupper(trim($row['service_type']))] = $row;
+    return $catalog;
+}
+
+function aitf_payment_sort_headers(array $headers, array $catalog) {
+    $legacy = ['TILL SEP 2026','CA','SA-I','SA-II','RC','SP','CONTRACT REVIEW','PTR','TRANSITION AUDIT','GENERIC TRAINING','OTHER'];
+    $rank = function ($name) use ($catalog, $legacy) {
+        $key = strtoupper(trim($name));
+        $order = $catalog[$key]['header_order'] ?? null;
+        if ($order !== null) return [1, (int)$order];
+        $index = array_search($key, $legacy, true);
+        return [0, $index === false ? 999 : $index];
+    };
+    usort($headers, function ($a, $b) use ($rank) { return $rank($a) <=> $rank($b); });
+    return $headers;
+}
+
+// Called under the customer lock. Assign existing headers an order before appending a cycle.
+function aitf_payment_seed_header_order(PDO $db, $customer) {
+    $catalog = aitf_payment_header_catalog($db, $customer);
+    $names = array_map(function ($r) { return $r['service_type']; }, array_values($catalog));
+    foreach (['SELECT DISTINCT service_type FROM invoice_details WHERE customer_id=?',
+              "SELECT DISTINCT COALESCE(NULLIF(payment_header,''), NULLIF(service_type,''), 'CA') FROM payment_system WHERE customer_id=?"] as $sql) {
+        $stmt = $db->prepare($sql); $stmt->execute([$customer]);
+        $names = array_merge($names, $stmt->fetchAll(PDO::FETCH_COLUMN));
+    }
+    $names[] = 'Till Sep 2026'; // Reserve the historical bucket without changing legacy records.
+    $unique = [];
+    foreach ($names as $name) if (trim((string)$name) !== '') $unique[strtoupper(trim($name))] = trim($name);
+    $max = 0;
+    foreach ($catalog as $row) $max = max($max, (int)($row['header_order'] ?? 0));
+    foreach (aitf_payment_sort_headers(array_values($unique), $catalog) as $name) {
+        if (isset($catalog[strtoupper($name)]['header_order'])) continue;
+        $db->prepare('INSERT INTO payment_block_comments (customer_id,service_type,header_order) VALUES (?,?,?) ON DUPLICATE KEY UPDATE header_order=VALUES(header_order)')->execute([$customer,$name,++$max]);
+    }
+    return $max;
+}
+
+function aitf_payment_allocate_header_key(PDO $db, $customer, $name, $source = '') {
+    $catalog = aitf_payment_header_catalog($db, $customer);
+    $key = $name; $suffix = 1;
+    while (isset($catalog[strtoupper($key)]) && strcasecmp($key,$source) !== 0) {
+        $tail = ' (' . (++$suffix) . ')';
+        $key = mb_substr($name, 0, 100 - mb_strlen($tail)) . $tail;
+    }
+    return $key;
 }
 
 function aitf_payment_service($value) {
@@ -264,8 +327,22 @@ function aitf_payment_change_header(PDO $db, $customer, $ledgerAction, array $re
         $target = aitf_payment_service($req['service_type'] ?? '');
         $db->beginTransaction();
         aitf_payment_lock_customer($db, $customer);
+        $label = $target;
+        $maxOrder = aitf_payment_seed_header_order($db, $customer);
+        $updatedVersions = [];
         if ($ledgerAction === 'createPaymentHeader') {
-            $db->prepare("INSERT INTO payment_block_comments (customer_id,service_type,comment,is_explicit) VALUES (?,?,'',1) ON DUPLICATE KEY UPDATE is_explicit=1")->execute([$customer,$target]);
+            $creationKey = trim((string)($req['creation_key'] ?? ''));
+            if ($creationKey !== '' && !preg_match('/^[a-zA-Z0-9_-]{8,80}$/D', $creationKey)) throw new InvalidArgumentException('Invalid header creation key.');
+            if ($creationKey !== '') {
+                $stmt = $db->prepare('SELECT service_type,header_name FROM payment_block_comments WHERE customer_id=? AND creation_key=?');
+                $stmt->execute([$customer,$creationKey]);
+                if ($existing = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                    $db->commit();
+                    return ['success'=>true,'service_type'=>$existing['service_type'],'header_name'=>$existing['header_name'],'replayed'=>true];
+                }
+            }
+            $target = aitf_payment_allocate_header_key($db,$customer,$label);
+            $db->prepare("INSERT INTO payment_block_comments (customer_id,service_type,header_name,header_order,creation_key,comment,is_explicit) VALUES (?,?,?,?,?,'',1)")->execute([$customer,$target,$label,$maxOrder+1,$creationKey ?: null]);
         } else {
             $source = aitf_payment_service($req['source_service'] ?? $target);
             $paymentIds = json_decode($req['payment_ids'] ?? '[]', true);
@@ -281,6 +358,7 @@ function aitf_payment_change_header(PDO $db, $customer, $ledgerAction, array $re
                 if ($hasPayments || $stmt->fetch()) throw new RuntimeException('Move the saved records before removing this header.');
             } else {
                 // A rename is one transaction, including invoices, payments and notes.
+                $target = aitf_payment_allocate_header_key($db,$customer,$label,$source);
                 $stmt = $db->prepare('SELECT comment FROM payment_block_comments WHERE customer_id=? AND service_type=?');
                 $stmt->execute([$customer,$source]);
                 $comment = $stmt->fetchColumn() ?: '';
@@ -300,16 +378,20 @@ function aitf_payment_change_header(PDO $db, $customer, $ledgerAction, array $re
                         if ($storedHeader !== '' && strcasecmp($storedHeader,$source) !== 0) throw new RuntimeException('A record was moved to another header. Reload this page.');
                         $extra = $table === 'payment_system' ? ', row_version=row_version+1' : '';
                         $db->prepare("UPDATE $table SET $column=? $extra WHERE $pk=? AND customer_id=?")->execute([$target,$id,$customer]);
+                        if ($table === 'payment_system') $updatedVersions[$id] = (int)$record['row_version'] + 1;
                     }
                 }
-                $db->prepare('INSERT INTO payment_block_comments (customer_id,service_type,comment,is_explicit) VALUES (?,?,?,1) ON DUPLICATE KEY UPDATE comment=VALUES(comment),is_explicit=1')->execute([$customer,$target,$comment]);
+                // Preserve this header's position and creation key; never overwrite a namesake's notes.
+                $stmt = $db->prepare('UPDATE payment_block_comments SET service_type=?,header_name=?,is_explicit=1 WHERE customer_id=? AND service_type=?');
+                $stmt->execute([$target,$label,$customer,$source]);
+                if (!$stmt->rowCount() && strcasecmp($source,$target) !== 0) throw new RuntimeException('Header changed. Reload before renaming.');
             }
             if ($ledgerAction === 'removePaymentHeader' || strcasecmp($source,$target) !== 0) {
                 $db->prepare('DELETE FROM payment_block_comments WHERE customer_id=? AND service_type=?')->execute([$customer,$source]);
             }
         }
         $db->commit();
-        return ['success' => true, 'service_type' => $target];
+        return ['success' => true, 'service_type' => $target, 'header_name'=>$label, 'payment_versions'=>$updatedVersions];
     } catch (Throwable $e) {
         if ($db->inTransaction()) $db->rollBack();
         throw $e;

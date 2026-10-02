@@ -6,6 +6,38 @@ var paymentMutationPending = false;
 var paymentSavePromise = null;
 var paymentMutationQueued = false;
 
+function paymentHeaderLabel(key) {
+    var $block = $('.service-payment-block').filter(function () { return $(this).attr('data-service') === key; }).first();
+    return $block.attr('data-header-name') || key;
+}
+function paymentHeaderCreationKey($control, name) {
+    var pending = $control.data('header-creation');
+    if (!pending || pending.name !== name) {
+        pending = {name:name, key:'header_' + Date.now() + '_' + Math.random().toString(36).slice(2)};
+        $control.data('header-creation',pending);
+    }
+    return pending.key;
+}
+function applyPaymentHeaderRename($block, result) {
+    var source = $block.attr('data-service'), key = result.service_type, label = result.header_name || key;
+    $block.attr('data-service',key).attr('data-header-name',label);
+    $block.find('[data-service]').filter(function () { return $(this).attr('data-service') === source; }).attr('data-service',key).data('service',key);
+    var $select = $block.find('.serviceBlockTypeSelect');
+    if (!$select.find('option').filter(function () { return $(this).val() === label; }).length) $('<option>').val(label).text(label).appendTo($select);
+    $select.val(label);
+    $block.find('.service-details-table tr.cb_subsection').each(function () {
+        var $row = $(this), id = $row.find('.row-id').val();
+        if (!Number(id)) $row.find('.serviceTypeName').val(key);
+        if (result.payment_versions && result.payment_versions[id] !== undefined) $row.attr('data-version',result.payment_versions[id]);
+        $row.data('saved-payment',paymentSnapshot(paymentRowData($row)));
+    });
+    var $move = $('#finalInvoiceSectionService');
+    $move.find('option').filter(function () { return $(this).val() === source; }).val(key);
+    ['original-service','selected-service'].forEach(function (attr) { if ($move.data(attr) === source) $move.data(attr,key); });
+    reindexAllServiceBlocks();
+    $move.find('option').not('[data-add-header]').each(function (index) { $(this).text((index+1)+'. '+paymentHeaderLabel($(this).val())); });
+    recalculatePaymentSystem();
+}
 function paymentRows() { return $('.service-details-table tbody tr.cb_subsection'); }
 function paymentCustomerId() { return $('#service_blocks_container').attr('data-customer'); }
 function paymentRowData($row) {
@@ -80,7 +112,7 @@ function pruneEmptyPaymentBlocks() {
         $('.service-payment-block').first().prev('.service-block-divider').remove();
         if (typeof reindexAllServiceBlocks === 'function') reindexAllServiceBlocks();
         $('#finalInvoiceSectionService option').not('[data-add-header]').each(function (index) {
-            $(this).text((index + 1)+'. '+$(this).val());
+            $(this).text((index + 1)+'. '+paymentHeaderLabel($(this).val()));
         });
         $('#activeServicesCountBadge').text($('.service-payment-block').length+' Active');
         recalculatePaymentSystem();
@@ -233,13 +265,13 @@ $(function () {
         e.preventDefault(); e.stopPropagation();
         var $row=$(this).closest('tr'), options={}, names=[];
         $('.service-payment-block').each(function (index) {
-            var name=$(this).attr('data-service'); options[name]=(index+1)+'. '+name; names.push(name);
+            var name=$(this).attr('data-service'); options[name]=(index+1)+'. '+paymentHeaderLabel(name); names.push(name);
         });
         if (typeof Swal !== 'undefined') {
             Swal.fire({title:'Move payment',input:'select',inputOptions:options,inputValue:$row.closest('.service-payment-block').attr('data-service'),showCancelButton:true,confirmButtonText:'Move'})
                 .then(function (result) { if (result.isConfirmed || (result.value && !result.dismiss)) movePaymentToHeader($row,result.value); });
         } else {
-            var choice=window.prompt('Move payment to header number:\n'+names.map(function (name,i) { return (i+1)+'. '+name; }).join('\n'));
+            var choice=window.prompt('Move payment to header number:\n'+names.map(function (name,i) { return (i+1)+'. '+paymentHeaderLabel(name); }).join('\n'));
             if (choice !== null && /^[1-9][0-9]*$/.test(choice) && names[Number(choice)-1]) movePaymentToHeader($row,names[Number(choice)-1]);
         }
     });

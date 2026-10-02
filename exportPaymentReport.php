@@ -1,4 +1,4 @@
-<?php
+c<?php
 require_once('tcpdf_include.php');
 include_once './dbConnect.php';
 include_once './commonutil.php';

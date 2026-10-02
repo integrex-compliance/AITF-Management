@@ -7,12 +7,12 @@ function populateMoveInvoiceDropdown(currentService) {
         var name = ($(this).attr('data-service') || '').trim(), key = name.toUpperCase();
         if (name && !seen[key]) {
             seen[key] = true;
-            $('<option>').val(name).text((++index)+'. '+name).appendTo($select);
+            $('<option>').val(name).text((++index)+'. '+paymentHeaderLabel(name)).appendTo($select);
             if (currentService && key === currentService.toUpperCase()) currentService = name;
         }
     });
     if (currentService && !seen[currentService.toUpperCase()]) {
-        $('<option>').val(currentService).text((++index)+'. '+currentService).appendTo($select);
+        $('<option>').val(currentService).text((++index)+'. '+paymentHeaderLabel(currentService)).appendTo($select);
     }
     if (currentService) $select.val(currentService);
     $select.data('original-service',currentService || $select.val() || '');
@@ -53,10 +53,9 @@ $(function () {
             return;
         }
         $headers.val($headers.data('selected-service') || $headers.data('original-service') || '');
-        var existing = Object.create(null), $select = $('#newMoveInvoiceHeaderService').empty();
-        $('.service-payment-block').each(function () { existing[($(this).attr('data-service') || '').toUpperCase()] = true; });
+        var $select = $('#newMoveInvoiceHeaderService').empty();
         invoiceHeaderServices.forEach(function (name) {
-            if (name === 'Other' || !existing[name.toUpperCase()]) $('<option>').val(name).text(name).appendTo($select);
+            $('<option>').val(name).text(name).appendTo($select);
         });
         $('#newMoveInvoiceHeaderName').val('');
         $select.trigger('change');
@@ -79,17 +78,19 @@ $(function () {
         var $error = $('#moveInvoiceHeaderError').text('');
         if (!service) { $error.text('Enter a service header name.'); return; }
         var original = $('#finalInvoiceSectionService').data('original-service');
+        var $save = $(this), creationKey = paymentHeaderCreationKey($save,service);
         var $controls = $('#newMoveInvoiceHeaderPanel :input, #btnConfirmMoveInvoice, #finalInvoiceSectionService').prop('disabled',true);
         paymentMutation(function () {
-            return paymentRequest({action:'createPaymentHeader',service_type:service}).done(function (res) {
+            return paymentRequest({action:'createPaymentHeader',service_type:service,creation_key:creationKey}).done(function (res) {
                 if (!res || !res.success) { $error.text(res && res.message || 'Header could not be created.'); return; }
+                $save.removeData('header-creation');
                 var name = res.service_type, found = false;
                 $('.service-payment-block').each(function () {
                     var existing = $(this).attr('data-service') || '';
                     if (existing.toUpperCase() === name.toUpperCase()) { name = existing; found = true; }
                 });
                 if (!found) {
-                    $('#service_blocks_container').append(renderServiceBlockTemplate(name,$('.service-payment-block').length,paymentCustomerId(),$('#finalinvoiceModal input[name="invoiceAddress"]').val() || '',invoiceHeaderServices));
+                    $('#service_blocks_container').append(renderServiceBlockTemplate(name,$('.service-payment-block').length,paymentCustomerId(),$('#finalinvoiceModal input[name="invoiceAddress"]').val() || '',invoiceHeaderServices,res.header_name || service));
                     reindexAllServiceBlocks();
                     $('#activeServicesCountBadge').text($('.service-payment-block').length+' Active');
                     recalculatePaymentSystem();
