@@ -6980,7 +6980,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                         <span class="block-matched-badge" title="Matched"><i class="fa fa-check-circle"></i></span>
                                                     <?php } ?>
                                                 </span>
-                                                <div style="display: inline-flex; align-items: center; gap: 5px;">
+                                                <div style="display: inline-flex; align-items: center; gap: 70px;">
                                                     <button type="button" class="btn btn-xs openDiscountModalBtn" data-service="<?php echo htmlspecialchars($svcName); ?>" style="background: #ffffff; color: #475569; border: 1px solid #cbd5e1; font-weight: 700; font-size: 11px; border-radius: 4px; padding: 2px 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.06); text-transform: none; display: inline-flex; align-items: center; gap: 3px; cursor: pointer; transition: all 0.2s ease;" title="Discount / Short Paid Settlement">
                                                         (-+)
                                                     </button>
@@ -23061,7 +23061,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             html += '            <div class="row">';
             html += '                <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 10px;">';
             html += '                    <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.4px;"><i class="fa ">Received Payment</i> (<span class="col-service-label">' + blockNumber + '. ' + svcLabel + '</span>)</span>';
-            html += '                    <div style="display: inline-flex; align-items: center; gap: 5px;">';
+            html += '                    <div style="display: inline-flex; align-items: center; gap: 70px;">';
             html += '                        <button type="button" class="btn btn-xs openDiscountModalBtn" data-service="' + svcName + '" style="background: #ffffff; color: #475569; border: 1px solid #cbd5e1; font-weight: 700; font-size: 11px; border-radius: 4px; padding: 2px 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.06); text-transform: none; display: inline-flex; align-items: center; gap: 3px; cursor: pointer; transition: all 0.2s ease;" title="Discount / Short Paid Settlement">(-+)</button>';
             html += '                        <a class="btn btn-xs btn-info cbAddLink" data-service="' + svcName + '" data-row-id="" data-row-count="1" title="Add new row" style="padding: 1px 6px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer;"><i class="fa fa-plus-circle fa-lg" style="padding: 2px 0;"></i></a>';
             html += '                    </div>';
