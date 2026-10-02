@@ -14,6 +14,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
     <?php
     include_once './header.php';
     include_once './dbConnect.php';
+    require_once __DIR__ . '/include/payment_ledger.php';
+    aitf_payment_schema($db);
     include_once './include/ai_document_review_lib.php';
     include_once './include/supplier_helpers.php';
     include_once './include/certification_cycle_helper.php';
@@ -1560,12 +1562,12 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             $statement->execute();
             $spCount = $statement->fetch();
 
-            $paymentid = "SELECT * FROM payment_system_id WHERE customer_id = :id ";
+            $paymentid = "SELECT * FROM payment_system_id WHERE customer_id = :id ORDER BY payment_sy_id LIMIT 1";
             $statement = $db->prepare($paymentid);
             $statement->bindParam(':id', $_GET['customerid']);
             $statement->execute();
             $paymentDetails = $statement->fetch();
-            $payId = $paymentDetails['payment_sy_id'];
+            $payId = $paymentDetails['payment_sy_id'] ?? '';
 
             $payRowCount = "SELECT count(*) as totalpayrow FROM payment_system WHERE payment_sy_id = :payid";
             $statement = $db->prepare($payRowCount);
@@ -1573,9 +1575,9 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             $statement->execute();
             $payCount = $statement->fetch();
 
-            $payment_info = "SELECT * FROM payment_system WHERE payment_sy_id = :payid";
+            $payment_info = "SELECT * FROM payment_system WHERE customer_id = :customer ORDER BY payment_id";
             $statement = $db->prepare($payment_info);
-            $statement->bindParam(':payid', $payId);
+            $statement->bindParam(':customer', $_GET['customerid']);
             $statement->execute();
             $paymentInfo = $statement->fetchAll();
 
@@ -6347,23 +6349,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
 
                     if (!function_exists('isPaymentRowMeaningful')) {
                         function isPaymentRowMeaningful($pay) {
-                            if (!$pay || !is_array($pay)) return false;
-                            $rcv = floatval($pay['payment_received'] ?? 0);
-                            $tds = floatval($pay['tds_amount'] ?? 0);
-                            $disc = floatval($pay['discount_amount'] ?? 0);
-                            $dec = floatval($pay['amount_decided'] ?? 0);
-                            $dt = trim((string)($pay['payment_date'] ?? ''));
-                            $chk = trim((string)($pay['cheque_details'] ?? ''));
-                            $rec = strtolower(trim((string)($pay['reconciliation'] ?? '')));
-                            $comm = trim((string)($pay['comment'] ?? ''));
-
-                            if ($rcv > 0.001 || $tds > 0.001 || $disc > 0.001 || $dec > 0.001) return true;
-                            if ($dt !== '' && $dt !== '0000-00-00' && $dt !== '1970-01-01' && $dt !== '-' && $dt !== '01.01.1970') return true;
-                            if ($chk !== '' && $chk !== '-' && $chk !== '0') return true;
-                            if (in_array($rec, ['verified', 'yes', '1'])) return true;
-                            if ($comm !== '' && $comm !== '-' && $comm !== '0') return true;
-
-                            return false;
+                            return is_array($pay) && aitf_payment_meaningful($pay);
                         }
                     }
 
@@ -6399,17 +6385,21 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         }
                     }
 
-                    // 1. Fetch all saved independent service block comments
+                    // 1. Fetch all saved independent service block comments & custom active headers
                     $blockCommentsMap = [];
+                    $savedCustomHeaders = [];
                     if (!empty($_GET['customerid'])) {
                         try {
-                            $stmtComm = $db->prepare("SELECT `service_type`, `comment` FROM `payment_block_comments` WHERE `customer_id` = :id");
+                            $stmtComm = $db->prepare("SELECT `service_type`, `comment`, `is_explicit` FROM `payment_block_comments` WHERE `customer_id` = :id");
                             $stmtComm->execute([':id' => intval($_GET['customerid'])]);
                             while ($cRow = $stmtComm->fetch(PDO::FETCH_ASSOC)) {
                                 $cText = trim((string)($cRow['comment'] ?? ''));
                                 $st = strtoupper(trim((string)($cRow['service_type'] ?? '')));
-                                if ($st !== '' && $cText !== '') {
-                                    $blockCommentsMap[$st] = $cText;
+                                if ($st !== '') {
+                                    if (!empty($cRow['is_explicit'])) $savedCustomHeaders[$st] = trim($cRow['service_type']);
+                                    if (aitf_payment_text_meaningful($cText)) {
+                                        $blockCommentsMap[$st] = $cText;
+                                    }
                                 }
                             }
                         } catch (Exception $e) {}
@@ -6420,19 +6410,15 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     if (!empty($invoiceList)) {
                         foreach ($invoiceList as $inv) {
                             $rawSvc = trim((string)($inv['service_type'] ?? ''));
-                            $invDate = trim((string)($inv['invoice_date'] ?? ''));
-                            $isAfterSep2026 = ($invDate !== '' && $invDate !== '0000-00-00' && $invDate > '2026-09-30');
-                            $hasCommentBlock = ($rawSvc !== '' && !empty($blockCommentsMap[strtoupper(trim($rawSvc))]));
-
                             if ($isMultiCycleClient && !empty($multiCycleLabel)) {
-                                if (($isAfterSep2026 || $hasCommentBlock) && strcasecmp($rawSvc, $multiCycleLabel) !== 0 && strcasecmp($rawSvc, 'Payment') !== 0 && !preg_match('/^CD\//i', $rawSvc)) {
-                                    $normSvc = $rawSvc !== '' ? $rawSvc : 'SA-I';
+                                if ($rawSvc !== '' && strcasecmp($rawSvc, $multiCycleLabel) !== 0 && strcasecmp($rawSvc, 'Payment') !== 0 && !preg_match('/^CD\//i', $rawSvc)) {
+                                    $normSvc = $rawSvc;
                                 } else {
                                     $normSvc = $multiCycleLabel;
                                 }
                             } else {
                                 $s = $rawSvc !== '' ? $rawSvc : trim((string)($inv['invoice_service_type'] ?? ''));
-                                $normSvc = normalizePaymentServiceType($s);
+                                $normSvc = $rawSvc !== '' ? $rawSvc : normalizePaymentServiceType($s);
                             }
                             if (!isset($invoicesByService[$normSvc])) {
                                 $invoicesByService[$normSvc] = [];
@@ -6445,25 +6431,28 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     $paymentsByService = [];
                     if (!empty($paymentInfo)) {
                         foreach ($paymentInfo as $pay) {
-                            $rawSvc = trim((string)($pay['service_type'] ?? ''));
-                            $payDate = trim((string)($pay['payment_date'] ?? ''));
-                            $isAfterSep2026 = ($payDate !== '' && $payDate !== '0000-00-00' && $payDate > '2026-09-30');
-                            $hasCommentBlock = ($rawSvc !== '' && !empty($blockCommentsMap[strtoupper(trim($rawSvc))]));
-
-                            if ($isMultiCycleClient && !empty($multiCycleLabel)) {
-                                if (($isAfterSep2026 || $hasCommentBlock) && strcasecmp($rawSvc, $multiCycleLabel) !== 0 && strcasecmp($rawSvc, 'Payment') !== 0 && !preg_match('/^CD\//i', $rawSvc)) {
-                                    $normSvc = $rawSvc;
-                                } else {
-                                    $normSvc = $multiCycleLabel;
-                                }
-                            } else {
-                                $normSvc = normalizePaymentServiceType($rawSvc);
-                            }
+                            if (!aitf_payment_meaningful($pay)) continue;
+                            $normSvc = aitf_payment_header($pay, $isMultiCycleClient);
                             if (!isset($paymentsByService[$normSvc])) {
                                 $paymentsByService[$normSvc] = [];
                             }
                             $paymentsByService[$normSvc][] = $pay;
                         }
+                    }
+
+                    // Use one spelling for case-insensitive headers across records and notes.
+                    $headerNames = [];
+                    foreach (array_merge($availableServices, array_values($savedCustomHeaders), array_keys($invoicesByService), array_keys($paymentsByService)) as $name) {
+                        $key = strtoupper(trim($name));
+                        if (!isset($headerNames[$key])) $headerNames[$key] = trim($name);
+                    }
+                    foreach (['invoicesByService', 'paymentsByService'] as $mapName) {
+                        $merged = [];
+                        foreach ($$mapName as $name => $records) {
+                            $canonical = $headerNames[strtoupper(trim($name))];
+                            $merged[$canonical] = array_merge($merged[$canonical] ?? [], $records);
+                        }
+                        $$mapName = $merged;
                     }
 
                     // Sort invoices chronologically inside each service block
@@ -6505,8 +6494,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     foreach (array_keys($paymentsByService) as $s) {
                         if (!in_array($s, $candidateServices)) $candidateServices[] = $s;
                     }
-                    foreach (array_keys($blockCommentsMap) as $sUpper) {
-                        $matchedSvc = $sUpper;
+                    foreach (array_unique(array_merge(array_keys($blockCommentsMap), array_keys($savedCustomHeaders))) as $sUpper) {
+                        $matchedSvc = $headerNames[$sUpper] ?? $sUpper;
                         foreach ($availableServices as $as) {
                             if (strcasecmp($as, $sUpper) === 0) {
                                 $matchedSvc = $as;
@@ -6519,29 +6508,14 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     // 5. Determine active service blocks based on valid records (Invoices OR Meaningful Payments OR Comments)
                     $activeServiceBlocks = [];
                     foreach ($candidateServices as $s) {
-                        $hasInvoices = !empty($invoicesByService[$s]);
-                        $hasPayments = false;
-                        if (!empty($paymentsByService[$s])) {
-                            foreach ($paymentsByService[$s] as $pRow) {
-                                if (isPaymentRowMeaningful($pRow)) {
-                                    $hasPayments = true;
-                                    break;
-                                }
-                            }
-                        }
-                        $hasComment = !empty($blockCommentsMap[strtoupper(trim($s))]);
-
-                        if (($isMultiCycleClient && strcasecmp($s, $multiCycleLabel) === 0) || $hasInvoices || $hasPayments || $hasComment) {
+                        if (aitf_payment_block_meaningful($invoicesByService[$s] ?? [], $paymentsByService[$s] ?? [], $blockCommentsMap[strtoupper(trim($s))] ?? '')) {
                             if (!in_array($s, $activeServiceBlocks)) {
                                 $activeServiceBlocks[] = $s;
                             }
                         }
                     }
 
-                    // Default to CA only if no records exist anywhere
-                    if (empty($activeServiceBlocks)) {
-                        $activeServiceBlocks = ['CA'];
-                    }
+                    // Empty accounts start with Add Invoice Header; do not recreate an empty CA block.
 
                     // Sort active blocks: If multiCycleClient, multiCycleLabel stays at top (#1), rest in logical order
                     usort($activeServiceBlocks, function ($a, $b) use ($availableServices, $isMultiCycleClient, $multiCycleLabel) {
@@ -6582,6 +6556,55 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         .service-details-table .table-edit-control select {
                             width: 100% !important;
                             box-sizing: border-box !important;
+                        }
+                        .service-details-table thead th:last-child {
+                            width: 70px;
+                        }
+                        .service-details-table tbody tr.cb_subsection > td:last-child .table-edit-control {
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            gap: 6px;
+                            min-height: 28px;
+                        }
+                        .service-details-table .infoDelete,
+                        .service-details-table .removeNewPaymentRow,
+                        .service-details-table .movePaymentHeader {
+                            display: inline-flex;
+                            align-items: center;
+                            justify-content: center;
+                            flex: 0 0 26px;
+                            width: 26px;
+                            height: 26px;
+                            padding: 0 !important;
+                            border: 1px solid #fecaca;
+                            border-radius: 4px;
+                            background: #fff1f2;
+                            color: #ef4444;
+                            cursor: pointer;
+                            text-decoration: none;
+                        }
+                        .service-details-table .movePaymentHeader {
+                            border-color: #bfdbfe;
+                            background: #eff6ff;
+                            color: #2563eb;
+                        }
+                        .service-details-table .infoDelete[data-reconciled="1"] {
+                            border-color: #cbd5e1;
+                            background: #f8fafc;
+                            cursor: not-allowed;
+                        }
+                        .service-details-table .infoDelete i,
+                        .service-details-table .removeNewPaymentRow i,
+                        .service-details-table .movePaymentHeader i {
+                            float: none !important;
+                            padding: 0 !important;
+                            margin: 0 !important;
+                        }
+                        .service-details-table .infoDelete:hover,
+                        .service-details-table .removeNewPaymentRow:hover,
+                        .service-details-table .movePaymentHeader:hover {
+                            filter: brightness(0.95);
                         }
                         .invoiceServiceTypeSelect,
                         .paymentServiceTypeSelect {
@@ -6782,7 +6805,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         }
                     </style>
 
-                    <div id="service_blocks_container">
+                    <div id="service_blocks_container" data-customer="<?php echo (int)($_GET['customerid'] ?? 0); ?>">
                         <?php
                         foreach ($activeServiceBlocks as $blockIdx => $svcName) {
                             $serviceInvoices = $invoicesByService[$svcName] ?? [];
@@ -6799,7 +6822,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                             $blockValidCount = 0;
 
                             foreach ($servicePayments as $pay) {
-                                $isDisc = (floatval($pay['discount_amount'] ?? 0) > 0 || stripos($pay['service_type'] ?? '', 'discount') !== false || stripos($pay['service_type'] ?? '', 'short') !== false);
+                                $isDisc = (stripos($pay['service_type'] ?? '', 'discount') !== false || stripos($pay['service_type'] ?? '', 'short') !== false);
                                 $isTds = (stripos($pay['service_type'] ?? '', 'tds') !== false && floatval($pay['tds_amount'] ?? 0) == 0 && !$isDisc);
 
                                 $discVal = floatval($pay['discount_amount'] ?? 0);
@@ -6809,12 +6832,9 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                 $rcvVal = ($isTds || $isDisc) ? 0 : floatval($pay['payment_received'] ?? 0);
                                 $tdsVal = floatval($pay['tds_amount'] ?? 0) > 0 ? floatval($pay['tds_amount'] ?? 0) : ($isTds ? floatval($pay['payment_received'] ?? 0) : 0);
 
-                                if ($isDisc) {
-                                    $blockDiscountSum += $discVal;
-                                } else {
-                                    $blockRcvSum += $rcvVal;
-                                    $blockTdsSum += $tdsVal;
-                                }
+                                $blockDiscountSum += $discVal;
+                                $blockRcvSum += $rcvVal;
+                                $blockTdsSum += $tdsVal;
 
                                 $dt = trim((string)($pay['payment_date'] ?? ''));
                                 $chk = trim((string)($pay['cheque_details'] ?? ''));
@@ -6960,7 +6980,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                     </div>
 
                                     <!-- Right: Payments Column -->
-                                    <div class="col-xs-5 table-responsive payments-container-col" style="flex: 50 50 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px;">
+                                    <div class="col-xs-5 table-responsive payments-container-col" style="flex: 52 52 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px;">
                                         <div class="row">
                                             <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 10px;">
                                                 <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.4px;">
@@ -6995,7 +7015,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                     <?php
                                                     if (!empty($servicePayments)) {
                                                         foreach ($servicePayments as $payInfo) {
-                                                            $isDiscountRow = (floatval($payInfo['discount_amount'] ?? 0) > 0 || stripos($payInfo['service_type'] ?? '', 'discount') !== false || stripos($payInfo['service_type'] ?? '', 'short') !== false);
+                                                            $isDiscountRow = (stripos($payInfo['service_type'] ?? '', 'discount') !== false || stripos($payInfo['service_type'] ?? '', 'short') !== false);
                                                             $isLegacyTdsRow = (stripos($payInfo['service_type'] ?? '', 'tds') !== false && floatval($payInfo['tds_amount'] ?? 0) == 0 && !$isDiscountRow);
 
                                                             $discountVal = floatval($payInfo['discount_amount'] ?? 0);
@@ -7011,10 +7031,10 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                             $isVerified = in_array($recRaw, ['verified', 'yes', '1']);
                                                             $recStatusText = $isVerified ? 'Verified' : 'Verify';
                                                             $isTdsVerified = (isset($payInfo['tds_verified']) && in_array(strtolower(trim($payInfo['tds_verified'])), ['verified', 'yes', '1']));
-                                                            $isTdsLocked = ($isTdsVerified && floatval($displayTds) > 0);
+                                                            $isTdsLocked = $isTdsVerified;
                                                             $isRowReconciled = $isVerified || $isTdsLocked;
                                                             ?>
-                                                            <tr class="cb_subsection previousCBData pamentrow<?php echo $payInfo["payment_id"] ?> <?php echo $isDiscountRow ? 'discount-settlement-row' : ''; ?> <?php echo $isRowReconciled ? 'row-reconciled-locked' : ''; ?>" id="cb_subsection_0" style="<?php echo $isDiscountRow ? 'background-color: #faf5ff !important; border-left: 4px solid #8b5cf6 !important;' : ($isRowReconciled ? 'background-color: #f8fafc !important;' : ''); ?>">
+                                                            <tr class="cb_subsection previousCBData pamentrow<?php echo $payInfo["payment_id"] ?> <?php echo $isDiscountRow ? 'discount-settlement-row' : ''; ?> <?php echo $isRowReconciled ? 'row-reconciled-locked' : ''; ?>" data-preserve-details="<?php echo (aitf_payment_text_meaningful($payInfo['comment'] ?? '') || ((float)($payInfo['amount_decided'] ?? 0) > 0 && (float)($payInfo['payment_received'] ?? 0) + (float)($payInfo['tds_amount'] ?? 0) + (float)($payInfo['discount_amount'] ?? 0) == 0)) ? '1' : '0'; ?>" data-version="<?php echo (int)($payInfo['row_version'] ?? 0); ?>" id="cb_subsection_0" style="<?php echo $isDiscountRow ? 'background-color: #faf5ff !important; border-left: 4px solid #8b5cf6 !important;' : ($isRowReconciled ? 'background-color: #f8fafc !important;' : ''); ?>">
                                                                 <td style="padding: 0px; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ($isRowReconciled ? 'background-color: #f8fafc;' : ''); ?>">
                                                                     <div class="table-edit-control"><label></label>
                                                                         <input type="hidden" data_row_id="" class="serviceTypeName" name="serviceTypeName" value="<?php echo htmlspecialchars($payInfo['service_type'] ?? $svcName); ?>" />
@@ -7156,7 +7176,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                         }
                                     }
                                     ?>
-                                    <div class="col-xs-3 comments-container-col" style="flex: 12 12 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px; display: flex; flex-direction: column;">
+                                    <div class="col-xs-3 comments-container-col" style="flex: 10 10 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px; display: flex; flex-direction: column;">
                                         <div class="row">
                                             <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: center; padding: 4px 4px; overflow: hidden; white-space: nowrap;">
                                                 <span style="font-weight: 700; font-size: 11px; letter-spacing: 0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="Notes (If Any) (<?php echo ($blockIdx + 1) . '. ' . htmlspecialchars($svcName); ?>)">
@@ -13933,6 +13953,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             </div>
         </div>
     <?php } ?>
+    <script src="js/payment-ledger.js?v=20261002-1"></script>
+    <script src="js/invoice-header-controls.js?v=20261001-2"></script>
     <script type="text/javascript">
         (function () {
             var aitfAiDocuments = [];
@@ -16189,145 +16211,6 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             if (yetVisited == 'SP') {
                 $('.sp-service-type').show();
             }
-
-            function populateMoveInvoiceDropdown(currentService) {
-                var $select = $('#finalInvoiceSectionService');
-                if (!$select.length) return;
-                $select.empty();
-
-                var seen = {};
-                var activeList = [];
-                $('.service-payment-block').each(function (idx) {
-                    var s = $(this).attr('data-service') || '';
-                    if (s && !seen[s.toUpperCase()]) {
-                        seen[s.toUpperCase()] = true;
-                        activeList.push({
-                            index: (idx + 1),
-                            service: s
-                        });
-                    }
-                });
-
-                if (activeList.length > 0) {
-                    activeList.forEach(function (item) {
-                        var label = item.index + '. ' + item.service;
-                        var isSel = (currentService && currentService.toUpperCase() === item.service.toUpperCase());
-                        var $opt = $('<option>', {
-                            value: item.service,
-                            text: label
-                        });
-                        if (isSel) {
-                            $opt.prop('selected', true);
-                        }
-                        $select.append($opt);
-                    });
-                } else {
-                    // Fallback only if no active service blocks are found on page
-                    var fallbackServices = ['CA', 'SA-I', 'SA-II', 'RC', 'SP', 'Contract Review', 'PTR', 'Transition Audit', 'Generic Training', 'Other'];
-                    fallbackServices.forEach(function (s, idx) {
-                        var isSel = (currentService && currentService.toUpperCase() === s.toUpperCase());
-                        var $opt = $('<option>', {
-                            value: s,
-                            text: (idx + 1) + '. ' + s
-                        });
-                        if (isSel) {
-                            $opt.prop('selected', true);
-                        }
-                        $select.append($opt);
-                    });
-                }
-
-                // If currentService was passed and not in active list, append it with next index to keep selection
-                if (currentService && !seen[currentService.toUpperCase()]) {
-                    var nextIdx = activeList.length + 1;
-                    var $opt = $('<option>', {
-                        value: currentService,
-                        text: nextIdx + '. ' + currentService,
-                        selected: true
-                    });
-                    $select.append($opt);
-                }
-
-                if (currentService) {
-                    $select.val(currentService);
-                }
-                $select.data('original-service', currentService || $select.val() || '');
-            }
-
-            function executeMoveInvoice(targetService, isFromBtnClick) {
-                var $select = $('#finalInvoiceSectionService');
-                var invoiceId = $('#finalinvoiceModal').find('.invoiceId').val();
-                var origService = $select.data('original-service') || '';
-                var targetText = $select.find('option:selected').text() || targetService;
-
-                if (!invoiceId || invoiceId <= 0) {
-                    // New invoice creation mode (not yet in DB)
-                    $select.data('original-service', targetService);
-                    if (isFromBtnClick) {
-                        alert('Target header set to: ' + targetText + '. Click "Generate Tax Invoice" below to save.');
-                    }
-                    return;
-                }
-
-                if (!targetService) {
-                    alert('Please select a target service header.');
-                    return;
-                }
-
-                if (origService && origService.toUpperCase() === targetService.toUpperCase()) {
-                    if (isFromBtnClick) {
-                        alert('Invoice is already under header: ' + targetText);
-                    }
-                    return;
-                }
-
-                if (confirm('Are you sure you want to move this invoice to ' + targetText + '?')) {
-                    var $btn = $('#btnConfirmMoveInvoice');
-                    $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Moving...');
-
-                    $.ajax({
-                        url: 'moveInvoiceHeader.php',
-                        type: 'POST',
-                        dataType: 'json',
-                        data: {
-                            invoice_id: invoiceId,
-                            target_service: targetService
-                        },
-                        success: function (res) {
-                            if (res && res.success) {
-                                $select.data('original-service', targetService);
-                                $('#finalinvoiceModal').modal('hide');
-                                window.location.reload();
-                            } else {
-                                alert('Failed to move invoice: ' + (res && res.message ? res.message : 'Unknown error'));
-                                $select.val(origService);
-                                $btn.prop('disabled', false).html('<i class="fa fa-arrows-h"></i> Move');
-                            }
-                        },
-                        error: function (xhr, status, err) {
-                            alert('Error connecting to server: ' + err);
-                            $select.val(origService);
-                            $btn.prop('disabled', false).html('<i class="fa fa-arrows-h"></i> Move');
-                        }
-                    });
-                } else {
-                    // Canceled - revert selector
-                    $select.val(origService);
-                }
-            }
-
-            $(document).on('change', '#finalInvoiceSectionService', function () {
-                var invoiceId = $('#finalinvoiceModal').find('.invoiceId').val();
-                if (invoiceId && invoiceId > 0) {
-                    executeMoveInvoice($(this).val(), false);
-                }
-            });
-
-            $(document).on('click', '#btnConfirmMoveInvoice', function (e) {
-                if (e && e.preventDefault) e.preventDefault();
-                var targetService = $('#finalInvoiceSectionService').val();
-                executeMoveInvoice(targetService, true);
-            });
 
             function resetFinalInvoiceModal(customerId, customerAddress, serviceType) {
                 var $finalModal = $('#finalinvoiceModal');
@@ -22495,7 +22378,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 var $tbody = $table.find('tbody');
 
                 var summaryState = (typeof recalculatePaymentSystem === 'function') ? recalculatePaymentSystem() : null;
-                var remAmount = (summaryState && summaryState.remainingBalance > 0) ? summaryState.remainingBalance.toFixed(2) : '';
+                var remAmount = ''; // Adding an input row does not record a receipt.
 
                 var newRow = $('<tr class="cb_subsection">' +
                     '<td style="padding: 0px;">' +
@@ -22803,126 +22686,25 @@ if ($currentRole === 'client' || $currentRole === 'external') {
 
         $(document).on('click', '.toggleReconcileBtn', function (e) {
             e.preventDefault();
-            e.stopPropagation();
-            var $btn = $(this);
-            var currentStatus = $btn.attr("data-status");
-            var isCurrentlyVerified = (currentStatus === "Verified");
-            var newStatus = isCurrentlyVerified ? "Verify" : "Verified";
-            var payId = $btn.attr("data-pay-id");
-            var $row = $btn.closest("tr");
-
-            $row.find(".serviceReconciliation").val(newStatus);
-            $btn.attr("data-status", newStatus);
-
-            if (newStatus === "Verified") {
-                $btn.removeClass("reconcile-not-verify")
-                    .addClass("reconcile-verified")
-                    .css({
-                        "background-color": "#16a34a",
-                        "border-color": "#15803d",
-                        "color": "#ffffff"
-                    })
-                    .attr("title", "Click to toggle: Mark as Verify")
-                    .html('<i class="fa fa-check"></i> <span>Verified</span>');
-
-                // Lock all inputs in the row
-                $row.addClass('row-reconciled-locked').css('background-color', '#f8fafc');
-                $row.find('.servicePaymentReceived').prop('readonly', true).attr('data-reconciled', '1').addClass('reconciled-locked-input').css({
-                    'background-color': '#f8fafc',
-                    'border-bottom-color': '#86efac',
-                    'color': '#15803d',
-                    'cursor': 'not-allowed'
-                });
-                $row.find('.serviceTdsAmount').prop('readonly', true).attr('data-reconciled', '1').attr('data-tds-locked', '1').addClass('reconciled-locked-input tds-locked-input').css({
-                    'background-color': '#f0fdf4',
-                    'border-bottom-color': '#86efac',
-                    'color': '#15803d',
-                    'cursor': 'not-allowed',
-                    'padding-right': '20px'
-                });
-                if ($row.find('.tds-verified-icon').length === 0) {
-                    $row.find('.serviceTdsAmount').after('<span class="tds-verified-icon" title="Reconciled / Verified Entry" style="position: absolute; right: 3px; top: 50%; transform: translateY(-50%); color: #16a34a; font-size: 11px; display: inline-flex; align-items: center; pointer-events: none; z-index: 2;"><i class="fa fa-check-circle" style="color: #16a34a; font-size: 11.5px;"></i></span>');
-                } else {
-                    $row.find('.tds-verified-icon').show();
-                }
-                $row.find('.paymentDepositDate').prop('readonly', true).attr('data-reconciled', '1').addClass('reconciled-locked-input').css({
-                    'background-color': '#f8fafc',
-                    'color': '#334155',
-                    'cursor': 'not-allowed'
-                });
-                $row.find('.serviceChequeDetails').prop('readonly', true).attr('data-reconciled', '1').addClass('reconciled-locked-input').css({
-                    'background-color': '#f8fafc',
-                    'color': '#334155',
-                    'cursor': 'not-allowed'
-                });
-                $row.find('.infoDelete').attr('data-reconciled', '1').attr('data-tds-locked', '1').find('i').css('color', '#94a3b8');
-            } else {
-                $btn.removeClass("reconcile-verified")
-                    .addClass("reconcile-not-verify")
-                    .css({
-                        "background-color": "#ef4444",
-                        "border-color": "#dc2626",
-                        "color": "#ffffff"
-                    })
-                    .attr("title", "Click to toggle: Mark as Verified")
-                    .html('<i class="fa fa-times"></i> <span>Verify</span>');
-
-                // Unlock inputs in the row
-                $row.removeClass('row-reconciled-locked').css('background-color', '#ffffff');
-                $row.find('.servicePaymentReceived').prop('readonly', false).removeAttr('data-reconciled').removeClass('reconciled-locked-input').css({
-                    'background-color': '#ffffff',
-                    'border-bottom-color': '#cbd5e1',
-                    'color': '#0f172a',
-                    'cursor': 'text'
-                });
-                $row.find('.serviceTdsAmount').prop('readonly', false).removeAttr('data-reconciled').removeAttr('data-tds-locked').removeClass('reconciled-locked-input tds-locked-input').css({
-                    'background-color': '#ffffff',
-                    'border-bottom-color': '#cbd5e1',
-                    'color': '#b45309',
-                    'cursor': 'text',
-                    'padding-right': ''
-                });
-                $row.find('.tds-verified-icon').hide();
-                $row.find('.paymentDepositDate').prop('readonly', false).removeAttr('data-reconciled').removeClass('reconciled-locked-input').css({
-                    'background-color': '#ffffff',
-                    'color': '#0f172a',
-                    'cursor': 'text'
-                });
-                $row.find('.serviceChequeDetails').prop('readonly', false).removeAttr('data-reconciled').removeClass('reconciled-locked-input').css({
-                    'background-color': '#ffffff',
-                    'color': '#0f172a',
-                    'cursor': 'text'
-                });
-                $row.find('.infoDelete').attr('data-reconciled', '0').attr('data-tds-locked', '0').find('i').css('color', '#ef4444');
-            }
-
-            if (payId && payId !== "" && payId !== "0") {
-                $btn.css("opacity", "0.6");
-                $.ajax({
-                    url: "addPayment.php",
-                    type: "POST",
-                    data: {
-                        action: "updateReconcileStatus",
-                        payment_id: payId,
-                        status: newStatus
-                    },
-                    dataType: "json",
-                    success: function (res) {
-                        $btn.css("opacity", "1");
-                        if (!res || !res.success) {
-                            console.warn("Could not update reconcile status via background AJAX:", res);
-                        }
-                    },
-                    error: function (xhr, status, err) {
-                        $btn.css("opacity", "1");
-                        console.error("Error updating reconcile status:", err);
-                    }
-                });
-            } else {
-                if (typeof triggerPaymentAutoSave === 'function') {
-                    triggerPaymentAutoSave(true);
-                }
-            }
+            var $btn = $(this), $row = $btn.closest('tr');
+            var status = $btn.attr('data-status') === 'Verified' ? 'Verify' : 'Verified';
+            paymentMutation(function () {
+                var id = Number($row.find('.row-id').val());
+                if (!id) { alert('Enter and save a payment amount before verifying.'); return; }
+                return paymentRequest({action:'updateReconcileStatus',payment_id:id,status:status}).done(function (res) {
+                    if (!res || !res.success) { alert(res && res.message || 'Could not verify payment.'); return; }
+                    var verified = status === 'Verified';
+                    $btn.attr('data-status', status).toggleClass('reconcile-verified', verified).toggleClass('reconcile-not-verify', !verified)
+                        .css({'background-color':verified ? '#16a34a' : '#ef4444', 'border-color':verified ? '#15803d' : '#dc2626'})
+                        .html('<i class="fa '+(verified?'fa-check':'fa-times')+'"></i> <span>'+status+'</span>');
+                    $row.attr('data-version', res.version).toggleClass('row-reconciled-locked', !!res.locked);
+                    $row.find('.serviceReconciliation').val(status);
+                    $row.find('.servicePaymentReceived,.serviceTdsAmount,.paymentDepositDate,.serviceChequeDetails')
+                        .prop('readonly',!!res.locked).toggleClass('reconciled-locked-input',!!res.locked)
+                        .attr('data-reconciled',res.locked?'1':'0').removeAttr('data-tds-locked').removeClass('tds-locked-input');
+                    $row.find('.infoDelete').attr('data-reconciled',res.locked?'1':'0').attr('data-tds-locked','0');
+                }).fail(function () { alert('Could not verify payment.'); });
+            });
         });
 
         $(document).on('click', '.invoiceStatusBtn', function (e) {
@@ -23026,7 +22808,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         var tds = parseFloat($row.find(".serviceTdsAmount").val()) || 0;
                         var discount = parseFloat($row.find(".serviceDiscountAmount").val()) || 0;
 
-                        var isDiscountRow = ($row.hasClass('discount-settlement-row') || discount > 0 || sType.indexOf("discount") !== -1 || sType.indexOf("short") !== -1);
+                        var isDiscountRow = ($row.hasClass('discount-settlement-row') || sType.indexOf("discount") !== -1 || sType.indexOf("short") !== -1);
 
                         if (isDiscountRow) {
                             if (discount === 0 && received > 0) {
@@ -23047,12 +22829,13 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                             $row.find(".serviceBalance").val("0.00");
                             blockReceived += received;
                             blockTds += tds;
+                            blockDiscount += discount;
                         }
 
                         var dt = ($row.find(".paymentDepositDate").val() || "").trim();
                         var chk = ($row.find(".serviceChequeDetails").val() || "").trim();
                         var rec = ($row.find(".serviceReconciliation").val() || "").trim();
-                        if (received > 0 || tds > 0 || discount > 0 || dt !== "" || chk !== "" || rec.toLowerCase() === "verified") {
+                        if (received > 0 || tds > 0 || dt !== "" || chk !== "" || rec.toLowerCase() === "verified") {
                             blockValidCount++;
                         }
                     });
@@ -23125,7 +22908,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     var tds = parseFloat($row.find(".serviceTdsAmount").val()) || 0;
                     var discount = parseFloat($row.find(".serviceDiscountAmount").val()) || 0;
 
-                    if ($row.hasClass('discount-settlement-row') || discount > 0 || sType.indexOf("discount") !== -1 || sType.indexOf("short") !== -1) {
+                    if ($row.hasClass('discount-settlement-row') || sType.indexOf("discount") !== -1 || sType.indexOf("short") !== -1) {
                         if (discount === 0 && received > 0) discount = received;
                         received = 0;
                         grandTotalDiscount += discount;
@@ -23136,6 +22919,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         }
                         grandTotalReceived += received;
                         grandTotalTds += tds;
+                        grandTotalDiscount += discount;
                     }
                 });
                 $("#totalPaymentReceivedSum").val(grandTotalReceived.toFixed(2));
@@ -23226,13 +23010,16 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 }
             }
 
+            function escapePaymentHtml(value) { return $('<div>').text(String(value)).html().replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
             var optionsHtml = '';
             for (var i = 0; i < blockServiceOptions.length; i++) {
                 var s = blockServiceOptions[i];
                 var sel = (s.toLowerCase() === svcName.toLowerCase()) ? 'selected' : '';
-                optionsHtml += '<option value="' + s + '" ' + sel + '>' + s + '</option>';
+                optionsHtml += '<option value="' + escapePaymentHtml(s) + '" ' + sel + '>' + escapePaymentHtml(s) + '</option>';
             }
 
+            svcName = escapePaymentHtml(svcName);
+            customerAddress = escapePaymentHtml(customerAddress);
             var html = '';
             html += '<div class="service-block-divider" style="margin: 28px 0 22px 0; border-top: 2px dashed #94a3b8; position: relative; text-align: center; clear: both;">';
             html += '    <span style="position: absolute; top: -11px; left: 50%; transform: translateX(-50%); background: #ffffff; padding: 0 16px; font-size: 11px; font-weight: 700; color: #475569; letter-spacing: 0.5px; border: 1.5px dashed #cbd5e1; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); display: inline-flex; align-items: center; gap: 6px;">';
@@ -23240,7 +23027,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             html += '    </span>';
             html += '</div>';
 
-            html += '<div class="service-payment-block" data-service="' + svcName + '" data-block-id="' + blockIdx + '" style="margin-bottom: 22px;">';
+            html += '<div class="service-payment-block" data-draft-header="1" data-service="' + svcName + '" data-block-id="' + blockIdx + '" style="margin-bottom: 22px;">';
             html += '    <div class="row payment-tables-row" style="display: flex; align-items: stretch; margin-left: -5px; margin-right: -5px;">';
             // Invoices column (38%)
             html += '        <div class="col-xs-4 table-responsive invoice-container-col" style="flex: 38 38 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px;">';
@@ -23276,8 +23063,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             html += '            </div>';
             html += '        </div>';
 
-            // Payments column (50%)
-            html += '        <div class="col-xs-5 table-responsive payments-container-col" style="flex: 50 50 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px;">';
+            // Payments column (52%)
+            html += '        <div class="col-xs-5 table-responsive payments-container-col" style="flex: 52 52 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px;">';
             html += '            <div class="row">';
             html += '                <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 10px;">';
             html += '                    <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.4px;"><i class="fa ">Received Payment</i> (<span class="col-service-label">' + blockNumber + '. ' + svcName + '</span>)</span>';
@@ -23320,8 +23107,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             html += '            </div>';
             html += '        </div>';
 
-            // Add Comment column on the far right (12%)
-            html += '        <div class="col-xs-3 comments-container-col" style="flex: 12 12 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px; display: flex; flex-direction: column;">';
+            // Add Comment column on the far right (10%)
+            html += '        <div class="col-xs-3 comments-container-col" style="flex: 10 10 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px; display: flex; flex-direction: column;">';
             html += '            <div class="row">';
             html += '                <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: center; padding: 4px 4px; overflow: hidden; white-space: nowrap;">';
             html += '                    <span style="font-weight: 700; font-size: 11px; letter-spacing: 0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="Notes (If Any) (' + blockNumber + '. ' + svcName + ')"><i class="fa fa-commenting-o"></i> Notes (If Any) (<span class="col-service-comment-label">' + blockNumber + '. ' + svcName + '</span>)</span>';
@@ -23358,7 +23145,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 if (s) currentActiveServices.push(s.toUpperCase());
             });
 
-            var nextService = 'SA-I';
+            var nextService = 'Service ' + (currentActiveServices.length + 1);
+            while (currentActiveServices.indexOf(nextService.toUpperCase()) !== -1) nextService += ' New';
             for (var i = 0; i < availableServices.length; i++) {
                 if (availableServices[i] !== 'Other' && currentActiveServices.indexOf(availableServices[i].toUpperCase()) === -1) {
                     nextService = availableServices[i];
@@ -23372,6 +23160,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
 
             var newBlockHtml = renderServiceBlockTemplate(nextService, blockIndex, customerId, customerAddress, availableServices);
 
+            paymentMutation(function () { return paymentRequest({action:'createPaymentHeader', service_type:nextService}).done(function (res) {
+            if (!res || !res.success) { alert(res && res.message || 'Could not create header.'); return; }
             $('#service_blocks_container').append(newBlockHtml);
             $('#activeServicesCountBadge').text($('.service-payment-block').length + ' Active');
 
@@ -23383,59 +23173,29 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             }, 400);
 
             recalculatePaymentSystem();
+            }).fail(function () { alert('Could not create header.'); }); });
         });
 
         // Helper function to apply service change to block, payments, and invoices
         function applyServiceBlockTypeChange($block, newSvc) {
-            $block.attr('data-service', newSvc);
-            $block.find('.serviceBlockBadge').text(newSvc);
-            $block.find('.finalInvoiceBtn').attr('data-service', newSvc).attr('title', 'Create Final Invoice Against ' + newSvc);
-            $block.find('.cbAddLink').attr('data-service', newSvc);
-            $block.find('.openDiscountModalBtn').attr('data-service', newSvc);
-            $block.find('.totalInvoiceTableSum').attr('title', 'Total Invoicing Amount for ' + newSvc);
-            $block.find('.totalPaymentReceivedSum').attr('title', 'Total Payment Received for ' + newSvc);
-            $block.find('.totalPaymentTdsSum').attr('title', 'Total TDS Amount for ' + newSvc);
-            $block.find('.serviceBlockComment').attr('data-service', newSvc).attr('placeholder', 'Notes (if any)...');
-
-            reindexAllServiceBlocks();
-
-            // Update all payment rows in this block
-            $block.find('.service-details-table tbody tr.cb_subsection').each(function () {
-                $(this).find('.serviceTypeName').val(newSvc);
-                var payId = $(this).find('.row-id').val();
-                if (payId && payId !== '' && payId !== '0') {
-                    $.ajax({
-                        url: "addPayment.php",
-                        type: "POST",
-                        data: {
-                            action: "updatePaymentServiceType",
-                            payment_id: payId,
-                            service_type: newSvc
-                        },
-                        dataType: "json"
-                    });
-                }
+            var source = $block.attr('data-service');
+            if (!newSvc || newSvc.toUpperCase() === source.toUpperCase()) return;
+            var duplicate = false;
+            $('.service-payment-block').not($block).each(function () {
+                if (($(this).attr('data-service') || '').toUpperCase() === newSvc.toUpperCase()) duplicate = true;
             });
-
-            // Update all invoices in this block
-            $block.find('.invoice-service-details-table tbody tr.cb_subsection').each(function () {
-                var invId = $(this).find('.viewFinalInvoice').attr('data-id');
-                if (invId && invId !== '' && invId !== '0') {
-                    $.ajax({
-                        url: "addPayment.php",
-                        type: "POST",
-                        data: {
-                            action: "updateInvoiceServiceType",
-                            invoice_id: invId,
-                            service_type: newSvc
-                        },
-                        dataType: "json"
-                    });
-                }
+            if (duplicate) { alert('This header already exists. Move invoices to it instead.'); $block.find('.serviceBlockTypeSelect').val(source); return; }
+            paymentMutation(function () {
+                var payments = [], invoices = [], versions = {};
+                $block.find('.row-id').each(function () { if (Number($(this).val())) { payments.push(Number($(this).val())); versions[$(this).val()] = Number($(this).closest('tr').attr('data-version')) || 0; } });
+                $block.find('.viewFinalInvoice').each(function () { var id = Number($(this).attr('data-id')); if (id) invoices.push(id); });
+                return paymentRequest({action:'renamePaymentHeader', source_service:source, service_type:newSvc,
+                    payment_ids:JSON.stringify(payments), invoice_ids:JSON.stringify(invoices), payment_versions:JSON.stringify(versions)
+                }).done(function (res) {
+                    if (res && res.success) { paymentMutationPending = false; window.location.reload(); }
+                    else { $block.find('.serviceBlockTypeSelect').val(source); alert(res && res.message || 'Rename failed.'); }
+                }).fail(function () { $block.find('.serviceBlockTypeSelect').val(source); alert('Rename failed.'); });
             });
-
-            recalculatePaymentSystem();
-            triggerPaymentAutoSave(true);
         }
 
         // Helper to check blocked/disallowed service terms
@@ -23581,6 +23341,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             }
 
             if (confirm("Are you sure you want to remove this service header section?")) {
+                paymentMutation(function () { return paymentRequest({action:'removePaymentHeader', service_type:$block.attr('data-service')}).done(function (res) {
+                if (!res || !res.success) { alert(res && res.message || 'Could not remove header.'); return; }
                 var $prevDivider = $block.prev('.service-block-divider');
                 if ($prevDivider.length) {
                     $prevDivider.remove();
@@ -23588,6 +23350,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 $block.remove();
                 $('#activeServicesCountBadge').text($('.service-payment-block').length + ' Active');
                 recalculatePaymentSystem();
+                reindexAllServiceBlocks();
+                }).fail(function () { alert('Could not remove header.'); }); });
             }
         });
 
@@ -23612,12 +23376,6 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             $row.find('.serviceAmountDecided').val((received + tds + discount).toFixed(2));
             $row.find('.serviceBalance').val('0.00');
 
-            recalculatePaymentSystem();
-        });
-
-        // Remove new unsaved payment row
-        $(document).on('click', '.removeNewPaymentRow', function () {
-            $(this).closest('tr').remove();
             recalculatePaymentSystem();
         });
 
@@ -23712,170 +23470,34 @@ if ($currentRole === 'client' || $currentRole === 'external') {
         });
 
         $(document).on('change', '.invoiceServiceTypeSelect', function () {
-            var $sel = $(this);
-            var invId = $sel.attr('data-invoice-id');
-            var selectedService = $sel.val();
-
-            if (!invId || invId === '0') {
-                return;
-            }
-
-            $sel.css({
-                'opacity': '0.6',
-                'border-color': '#f59e0b'
-            });
-
-            $.ajax({
-                url: 'addPayment.php',
-                type: 'POST',
-                data: {
-                    action: 'updateInvoiceServiceType',
-                    invoice_id: invId,
-                    service_type: selectedService
-                },
-                dataType: 'json',
-                success: function (res) {
-                    if (res && res.success) {
-                        $sel.css({
-                            'opacity': '1',
-                            'border-color': '#16a34a',
-                            'background-color': '#f0fdf4'
-                        });
-                        setTimeout(function () {
-                            $sel.css({
-                                'border-color': '#cbd5e1',
-                                'background-color': '#ffffff'
-                            });
-                        }, 1200);
-                    } else {
-                        $sel.css({
-                            'opacity': '1',
-                            'border-color': '#ef4444',
-                            'background-color': '#fef2f2'
-                        });
-                        alert('Could not update Service Type: ' + ((res && res.message) ? res.message : 'Unknown error'));
-                    }
-                },
-                error: function (xhr, status, err) {
-                    $sel.css({
-                        'opacity': '1',
-                        'border-color': '#ef4444',
-                        'background-color': '#fef2f2'
-                    });
-                    console.error('Service type update error:', err);
-                }
-            });
+            moveInvoiceToHeader(Number($(this).attr('data-invoice-id')), $(this).val(), $(this).closest('.service-payment-block').attr('data-service'));
         });
-
         $(document).on('change', '.paymentServiceTypeSelect', function () {
-            var $sel = $(this);
-            var $row = $sel.closest('tr');
-            var payId = $row.find('.row-id').val();
-            var selectedService = $sel.val();
-
-            if (!payId || payId === '0') {
-                return;
-            }
-
-            $sel.css({
-                'opacity': '0.6',
-                'border-color': '#f59e0b'
-            });
-
-            $.ajax({
-                url: 'addPayment.php',
-                type: 'POST',
-                data: {
-                    action: 'updatePaymentServiceType',
-                    payment_id: payId,
-                    service_type: selectedService
-                },
-                dataType: 'json',
-                success: function (res) {
-                    if (res && res.success) {
-                        $sel.css({
-                            'opacity': '1',
-                            'border-color': '#16a34a',
-                            'background-color': '#f0fdf4'
-                        });
-                        setTimeout(function () {
-                            $sel.css({
-                                'border-color': '#cbd5e1',
-                                'background-color': '#ffffff'
-                            });
-                        }, 1200);
-                    } else {
-                        $sel.css({
-                            'opacity': '1',
-                            'border-color': '#ef4444',
-                            'background-color': '#fef2f2'
-                        });
-                    }
-                },
-                error: function (xhr, status, err) {
-                    $sel.css({
-                        'opacity': '1',
-                        'border-color': '#ef4444',
-                        'background-color': '#fef2f2'
-                    });
-                    console.error('Payment service type update error:', err);
-                }
-            });
+            movePaymentToHeader($(this).closest('tr'), $(this).val());
         });
 
         /* Auto-Save & Payment System Core */
         function showAutoSaveIndicator(state, message) {
-            // Visual badge removed; auto-save operates silently in the background
-            return;
+            var $message = $('#paymentSaveMessage');
+            if (!$message.length) {
+                $message = $('<div id="paymentSaveMessage" role="status" style="padding:8px;color:#991b1b;background:#fef2f2;border:1px solid #fecaca;margin:6px;"></div>').prependTo('.payment-desc');
+            }
+            $message.empty().toggle(state === 'error');
+            if (state === 'error') {
+                $message.append($('<span>').text(message || 'Payment could not be saved.'));
+                $message.append(' ').append($('<button type="button" class="btn btn-xs retryPaymentSave">Retry save</button>'));
+            }
         }
 
         // Service Block Comment Auto-save (Independent of Invoices/Payments)
-        var serviceBlockCommentTimer = null;
-        function autoSaveServiceBlockComment($input) {
-            var $block = $input.closest('.service-payment-block');
-            var svcType = $input.attr('data-service') || $block.attr('data-service') || '';
-            var customerId = $input.attr('data-customer') || <?php echo json_encode((string)($_GET["customerid"] ?? "")); ?>;
-            var val = $input.val();
-
-            if (!customerId || customerId === '' || customerId === '0' || !svcType) {
-                return;
-            }
-
-            $input.css({'border-color': '#f59e0b', 'background-color': '#fffbeb'});
-
-            $.ajax({
-                url: 'addPayment.php',
-                type: 'POST',
-                data: {
-                    action: 'saveServiceBlockComment',
-                    customer_id: customerId,
-                    service_type: svcType,
-                    comment: val
-                },
-                dataType: 'json',
-                success: function (res) {
-                    if (res && res.success) {
-                        $input.css({'border-color': '#cbd5e1', 'background-color': '#ffffff'});
-                    } else {
-                        $input.css({'border-color': '#ef4444', 'background-color': '#fef2f2'});
-                    }
-                },
-                error: function () {
-                    $input.css({'border-color': '#ef4444', 'background-color': '#fef2f2'});
-                }
-            });
-        }
-
         $(document).on('input', '.serviceBlockComment', function () {
             var $inp = $(this);
-            clearTimeout(serviceBlockCommentTimer);
-            serviceBlockCommentTimer = setTimeout(function () {
-                autoSaveServiceBlockComment($inp);
-            }, 500);
+            clearTimeout($inp.data('save-timer'));
+            $inp.data('save-timer', setTimeout(function () { autoSaveServiceBlockComment($inp); }, 500));
         });
 
         $(document).on('blur change', '.serviceBlockComment', function () {
-            clearTimeout(serviceBlockCommentTimer);
+            clearTimeout($(this).data('save-timer'));
             autoSaveServiceBlockComment($(this));
         });
 
@@ -23924,150 +23546,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             autoSaveInvoiceRemark($(this));
         });
 
-        // Payment System Auto-save
-        var paymentAutoSaveTimer = null;
-        var isPaymentSaving = false;
-        var paymentSavePending = false;
-
-        function triggerPaymentAutoSave(immediate) {
-            if (paymentAutoSaveTimer) {
-                clearTimeout(paymentAutoSaveTimer);
-                paymentAutoSaveTimer = null;
-            }
-            if (immediate) {
-                executePaymentAutoSave();
-            } else {
-                showAutoSaveIndicator('saving', 'Saving...');
-                paymentAutoSaveTimer = setTimeout(function () {
-                    executePaymentAutoSave();
-                }, 500);
-            }
-        }
-
-        function executePaymentAutoSave() {
-            if (isPaymentSaving) {
-                paymentSavePending = true;
-                return;
-            }
-
-            var paymentID = $('#paymentAutoSaveStatus').attr('data-row-id') || $('.savePayment').attr('data-row-id') || '';
-            var customerID = '<?php echo $_GET['customerid'] ?? '' ?>';
-
-            var $matchedRows = [];
-            var serviceTypeArray = [];
-            var serviceAmountArray = [];
-            var paymentReceivedArray = [];
-            var tdsAmountArray = [];
-            var discountAmountArray = [];
-            var depositDateArray = [];
-            var serviceChequeArray = [];
-            var reconciliationArray = [];
-            var rowidArray = [];
-
-            $(".service-details-table tbody tr.cb_subsection, #service_details tbody tr.cb_subsection").each(function () {
-                var $row = $(this);
-                var sType = ($row.find(".serviceTypeName").val() || "").trim();
-                if (sType === "") {
-                    sType = $row.closest('.service-payment-block').attr('data-service') || "CA";
-                }
-                var received = $row.find(".servicePaymentReceived").val();
-                var tds = $row.find(".serviceTdsAmount").val();
-                var discount = $row.find(".serviceDiscountAmount").val();
-                var dateVal = $row.find(".paymentDepositDate").val();
-                var chkVal = $row.find(".serviceChequeDetails").val();
-                var recVal = $row.find(".serviceReconciliation").val();
-                var rId = $row.find(".row-id").val();
-
-                var hasData = (received !== "" && received !== null && received !== undefined) ||
-                              (tds !== "" && tds !== null && tds !== undefined) ||
-                              (discount !== "" && discount !== null && discount !== undefined) ||
-                              (dateVal !== "" && dateVal !== null && dateVal !== undefined) ||
-                              (chkVal !== "" && chkVal !== null && chkVal !== undefined) ||
-                              (recVal && (recVal.toLowerCase() === "verified" || recVal.toLowerCase() === "yes" || recVal === "1")) ||
-                              (rId !== "" && rId !== null && rId !== undefined && rId !== "0");
-
-                if (!hasData) {
-                    return;
-                }
-
-                var rcvNum = parseFloat(received) || 0;
-                var tdsNum = parseFloat(tds) || 0;
-                var discNum = parseFloat(discount) || 0;
-
-                $matchedRows.push($row);
-                serviceTypeArray.push(sType);
-                serviceAmountArray.push((rcvNum + tdsNum + discNum).toFixed(2));
-                paymentReceivedArray.push(received || "0");
-                tdsAmountArray.push(tds || "0");
-                discountAmountArray.push(discount || "0");
-                depositDateArray.push(dateVal || "");
-                serviceChequeArray.push(chkVal || "");
-                reconciliationArray.push(recVal || "");
-                rowidArray.push(rId || "");
-            });
-
-            if ($matchedRows.length === 0) {
-                showAutoSaveIndicator('saved');
-                return;
-            }
-
-            isPaymentSaving = true;
-            showAutoSaveIndicator('saving', 'Saving...');
-
-            $.ajax({
-                url: "addPayment.php",
-                type: 'POST',
-                data: {
-                    action: 'autoSavePayments',
-                    format: 'json',
-                    serviceType: serviceTypeArray.join("~"),
-                    decidedAmount: serviceAmountArray.join("~"),
-                    paymentReceived: paymentReceivedArray.join("~"),
-                    tdsAmount: tdsAmountArray.join("~"),
-                    discountAmount: discountAmountArray.join("~"),
-                    depositDate: depositDateArray.join("~"),
-                    chequeDetails: serviceChequeArray.join("~"),
-                    reconciliation: reconciliationArray.join("~"),
-                    customer: customerID,
-                    payid: paymentID,
-                    rowids: rowidArray.join("~"),
-                    dltRows: ""
-                },
-                dataType: 'json',
-                success: function (res) {
-                    if (res && res.success) {
-                        if (res.payid) {
-                            $('#paymentAutoSaveStatus').attr('data-row-id', res.payid);
-                            $('.savePayment').attr('data-row-id', res.payid);
-                        }
-                        if (res.rowIds && Array.isArray(res.rowIds)) {
-                            for (var k = 0; k < res.rowIds.length; k++) {
-                                var newId = res.rowIds[k];
-                                if (newId && newId > 0 && $matchedRows[k]) {
-                                    $matchedRows[k].find('.row-id').val(newId);
-                                    $matchedRows[k].find('.toggleReconcileBtn').attr('data-pay-id', newId);
-                                    $matchedRows[k].find('.infoDelete').attr('data-row-id', newId);
-                                    $matchedRows[k].find('.serviceBlockTypeSelect').attr('data-pay-id', newId);
-                                }
-                            }
-                        }
-                        showAutoSaveIndicator('saved');
-                    } else {
-                        showAutoSaveIndicator('error', (res && res.message) ? res.message : 'Save error');
-                    }
-                },
-                error: function () {
-                    showAutoSaveIndicator('error', 'Save error');
-                },
-                complete: function () {
-                    isPaymentSaving = false;
-                    if (paymentSavePending) {
-                        paymentSavePending = false;
-                        triggerPaymentAutoSave(false);
-                    }
-                }
-            });
-        }
+        // Payment persistence is implemented in js/payment-ledger.js.
 
         // Auto-save triggers on typing, changing, or blurring payment fields
         $(document).on('input', '.servicePaymentReceived, .serviceTdsAmount, .serviceDiscountAmount, .serviceChequeDetails', function () {
@@ -24098,119 +23577,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             return false;
         });
 
-        // Delegate deletion for all payment rows with auto-save & recalculation
-        $(document).on('click', '.infoDelete', function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            var $btn = $(this);
-            var payrowid = $btn.attr('data-row-id');
-            var $row = $btn.closest('tr');
-            if (!payrowid) {
-                payrowid = $row.find('.row-id').val();
-            }
-
-            var isLocked = ($btn.attr('data-tds-locked') === '1' || $btn.attr('data-reconciled') === '1' || $row.find('.serviceTdsAmount[data-tds-locked="1"]').length > 0 || $row.find('.tds-locked-input').length > 0 || $row.hasClass('row-reconciled-locked') || $row.find('.serviceReconciliation').val() === 'Verified');
-            if (isLocked) {
-                if (typeof Swal !== 'undefined') {
-                    Swal.fire({
-                        icon: 'error',
-                        title: '<span style="font-size: 18px; font-weight: 700; color: #dc2626;"><i class="fa fa-ban" style="margin-right: 6px;"></i> Action Prohibited</span>',
-                        html: '<div style="font-size: 13.5px; color: #334155; line-height: 1.5;"><strong>Cannot delete payment that is verified by accounts person and reconciled from bank statement.</strong></div>',
-                        confirmButtonColor: '#0d4d8b',
-                        confirmButtonText: 'OK'
-                    });
-                } else {
-                    alert('Cannot delete payment that is verified by accounts person and reconciled from bank statement.');
-                }
-                return false;
-            }
-
-            if (!payrowid || payrowid === '0') {
-                $row.remove();
-                if (typeof recalculatePaymentSystem === 'function') recalculatePaymentSystem();
-                return;
-            }
-
-            if (confirm("Are you sure you want to delete this payment record?")) {
-                showAutoSaveIndicator('saving', 'Deleting...');
-                $.ajax({
-                    url: "addPayment.php",
-                    type: "GET",
-                    data: { paymentID: payrowid },
-                    success: function (resp) {
-                        if (resp && resp.indexOf('cannot') !== -1) {
-                            alert(resp);
-                            showAutoSaveIndicator('error', 'Cannot delete');
-                            return;
-                        }
-                        $row.remove();
-                        if (typeof recalculatePaymentSystem === 'function') recalculatePaymentSystem();
-                        showAutoSaveIndicator('saved', 'Deleted');
-                        setTimeout(function () { showAutoSaveIndicator('saved'); }, 2000);
-                    },
-                    error: function () {
-                        showAutoSaveIndicator('error', 'Delete error');
-                    }
-                });
-            }
-        });
-
-        $(document).on('click', '.removeNewPaymentRow', function (e) {
-            e.preventDefault();
-            var $row = $(this).closest('tr');
-            var payrowid = $row.find('.row-id').val();
-            var isLocked = ($row.find('.serviceTdsAmount[data-tds-locked="1"]').length > 0 || $row.find('.tds-locked-input').length > 0 || $row.hasClass('row-reconciled-locked') || $row.find('.serviceReconciliation').val() === 'Verified');
-            if (isLocked) {
-                if (typeof Swal !== 'undefined') {
-                    Swal.fire({
-                        icon: 'error',
-                        title: '<span style="font-size: 18px; font-weight: 700; color: #dc2626;"><i class="fa fa-ban" style="margin-right: 6px;"></i> Action Prohibited</span>',
-                        html: '<div style="font-size: 13.5px; color: #334155; line-height: 1.5;"><strong>Cannot delete payment that is verified by accounts person and reconciled from bank statement.</strong></div>',
-                        confirmButtonColor: '#0d4d8b',
-                        confirmButtonText: 'OK'
-                    });
-                } else {
-                    alert('Cannot delete payment that is verified by accounts person and reconciled from bank statement.');
-                }
-                return false;
-            }
-            if (payrowid && payrowid !== '0') {
-                if (confirm("Are you sure you want to delete this payment row?")) {
-                    showAutoSaveIndicator('saving', 'Deleting...');
-                    $.ajax({
-                        url: "addPayment.php",
-                        type: "GET",
-                        data: { paymentID: payrowid },
-                        success: function (resp) {
-                            if (resp && resp.indexOf('Cannot delete payment') !== -1) {
-                                if (typeof Swal !== 'undefined') {
-                                    Swal.fire({
-                                        icon: 'error',
-                                        title: 'Action Prohibited',
-                                        text: resp,
-                                        confirmButtonColor: '#0d4d8b'
-                                    });
-                                } else {
-                                    alert(resp);
-                                }
-                                showAutoSaveIndicator('error', 'Cannot delete');
-                                return;
-                            }
-                            $row.remove();
-                            if (typeof recalculatePaymentSystem === 'function') recalculatePaymentSystem();
-                            showAutoSaveIndicator('saved', 'Deleted');
-                            setTimeout(function () { showAutoSaveIndicator('saved'); }, 2000);
-                        },
-                        error: function () {
-                            showAutoSaveIndicator('error', 'Delete error');
-                        }
-                    });
-                }
-            } else {
-                $row.remove();
-                if (typeof recalculatePaymentSystem === 'function') recalculatePaymentSystem();
-            }
-        });
+        // Payment deletion is serialized with saving in payment-ledger.js.
 
         $(document).off('submit.customerAccount', '#informationUpdationReviewForm');
         $(document).on('submit.customerAccount', '#informationUpdationReviewForm', function (e) {

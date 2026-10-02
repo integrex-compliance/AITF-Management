@@ -15,9 +15,11 @@
  */
 
 require_once __DIR__ . '/agreement_sync_helper.php';
+require_once __DIR__ . '/payment_ledger.php';
 
 if (!function_exists('aitf_auto_sync_schema')) {
     function aitf_auto_sync_schema($db) {
+        if ($db) aitf_payment_schema($db);
         static $alreadySynced = false;
         if ($alreadySynced || !$db) {
             return;
@@ -699,5 +701,4 @@ if (!function_exists('aitf_migrate_legacy_tds_to_payment_columns')) {
         } catch (Throwable $e) {}
     }
 }
-
 

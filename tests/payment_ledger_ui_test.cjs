@@ -1,0 +1,129 @@
+const fs = require('fs'), vm = require('vm'), assert = require('assert');
+const {JSDOM} = require(require('path').join(process.env.TEMP,'aitf-payment-tests/node_modules/jsdom'));
+const dom = new JSDOM('<div id="service_blocks_container" data-customer="380"><div class="service-payment-block" data-service="Till Sep 2026"><table class="service-details-table"><tbody></tbody></table></div></div>', {runScripts:'outside-only',url:'http://localhost/'});
+const w=dom.window;
+w.eval(fs.readFileSync('js/vendor/jquery.min.js','utf8'));
+const $=w.jQuery;
+w.showAutoSaveIndicator=()=>{}; w.recalculatePaymentSystem=()=>{}; w.alert=()=>{}; w.confirm=()=>true; w.prompt=()=>null;
+const requests=[];
+$.ajax=options=>{const deferred=$.Deferred();requests.push({options,deferred});return deferred.promise();};
+w.eval(fs.readFileSync('js/payment-ledger.js','utf8'));
+function row(id='',amount='',tds='',date='') {
+ const $r=$('<tr class="cb_subsection"><td><input class="row-id"><input class="servicePaymentReceived"><input class="serviceTdsAmount"><input class="serviceDiscountAmount" value="0"><input class="paymentDepositDate"><input class="serviceChequeDetails"><a class="removeNewPaymentRow">Delete</a></td></tr>');
+ $r.find('.row-id').val(id);$r.find('.servicePaymentReceived').val(amount);$r.find('.serviceTdsAmount').val(tds);$r.find('.paymentDepositDate').val(date);$('tbody').append($r);return $r;
+}
+function saved(req,id,version=0,replayed=false) { const rows=JSON.parse(req.options.data.rows);req.deferred.resolve({success:true,payid:354,rows:rows.map(r=>({id,key:r.key,version,replayed}))}); }
+(async()=>{
+ await new Promise(r=>setTimeout(r,20));
+ let checks=0;
+ const blank=row('','0','','');
+ w.executePaymentAutoSave();assert.equal(requests.length,0);checks++;
+ const r=row('','100');
+ w.executePaymentAutoSave();assert.equal(requests.length,1);checks++;
+ const first=requests.shift();
+ r.find('.servicePaymentReceived').val('125');w.triggerPaymentAutoSave(true);
+ assert.equal(requests.length,0);checks++;
+ saved(first,3000);
+ assert.equal(requests.length,1);assert.equal(r.find('.row-id').val(),'3000');checks++;
+ const next=requests.shift();const payload=JSON.parse(next.options.data.rows)[0];
+ assert.equal(payload.received,'125');assert.equal(payload.id,3000);checks++;
+ saved(next,3000,1);
+ w.executePaymentAutoSave();assert.equal(requests.length,0);checks++;
+ // A save from an unrelated header never rewrites untouched legacy records.
+ const existing=row('1094','29500'); existing.data('saved-payment',w.paymentSnapshot(w.paymentRowData(existing)));
+ const newRow=row('','50');w.executePaymentAutoSave();assert.equal(JSON.parse(requests[0].options.data.rows).length,1);checks++;
+ const inflight=requests.shift();
+ newRow.find('.removeNewPaymentRow').trigger('click');assert.equal(requests.length,0);checks++;
+ saved(inflight,3001);
+ assert.equal(requests.length,1);assert.equal(requests[0].options.data.action,'deletePayment');assert.equal(requests[0].options.data.payment_id,3001);checks++;
+ requests.shift().deferred.resolve({success:false,message:'Cannot delete'});
+ assert.ok(w.document.contains(newRow[0]));checks++;
+ newRow.find('.removeNewPaymentRow').trigger('click');requests.shift().deferred.resolve({success:true});
+ assert.ok(!w.document.contains(newRow[0]));assert.ok(w.document.contains(existing[0]));checks++;
+ // Retry insert response must apply further edits, not mark them falsely saved.
+ const retry=row('','200'); w.executePaymentAutoSave();const lost=requests.shift();lost.deferred.reject();
+ retry.find('.servicePaymentReceived').val('250');w.executePaymentAutoSave();const retried=requests.shift();saved(retried,3002,0,true);
+ assert.equal(requests.length,1);assert.equal(JSON.parse(requests[0].options.data.rows)[0].received,'250');checks++;
+ saved(requests.shift(),3002,1);
+ const locked=row('5000','10');locked.addClass('row-reconciled-locked');w.executePaymentAutoSave();assert.equal(requests.length,0);checks++;
+ // Notes in different headers save independently, and renaming waits for the latest note.
+ const note1=$('<textarea class="serviceBlockComment" data-service="Till Sep 2026"></textarea>').appendTo('#service_blocks_container');
+ const note2=$('<textarea class="serviceBlockComment" data-service="SA-II"></textarea>').appendTo('#service_blocks_container');
+ note1.val('First note');note2.val('Second note');w.flushPaymentNotes();
+ assert.equal(requests.length,2);checks++;
+ const n1=requests.shift(),n2=requests.shift(); note1.val('Latest first note');
+ let mutationRan=false;w.paymentMutation(()=>{mutationRan=true;});
+ n1.deferred.resolve({success:true});assert.equal(mutationRan,false);assert.equal(requests.length,1);checks++;
+ n2.deferred.resolve({success:true});assert.equal(mutationRan,false);
+ requests.shift().deferred.resolve({success:true});assert.equal(mutationRan,true);checks++;
+ // Exercise the actual header controls and rendered empty service block.
+ const account=fs.readFileSync('customerAccount.php','utf8');
+ const renderStart=account.indexOf('        function reindexAllServiceBlocks()');
+ const renderEnd=account.indexOf('        // Add Invoice Header Button Click Handler',renderStart);
+ w.eval(account.slice(renderStart,renderEnd));
+ const modalSource=fs.readFileSync('modalForms.php','utf8');
+ const controlStart=modalSource.indexOf('<div class="row move-invoice-section-wrapper"');
+ const controlEnd=modalSource.indexOf('<div class="row" style="">',controlStart);
+ $('<div id="finalinvoiceModal"><input class="invoiceId" value="1760"><input name="invoiceAddress" value="Test address"></div>').appendTo('body').append(modalSource.slice(controlStart,controlEnd));
+ w.eval(fs.readFileSync('js/invoice-header-controls.js','utf8'));
+ await new Promise(r=>setTimeout(r,20));
+ w.populateMoveInvoiceDropdown('Till Sep 2026');
+ assert.equal($('#finalInvoiceSectionService option').length,2);assert.equal($('#finalInvoiceSectionService option').last().text(),'+ Add new header');checks++;
+ $('#finalInvoiceSectionService').val('__add_invoice_header__').trigger('change');
+ assert.notEqual($('#newMoveInvoiceHeaderPanel').css('display'),'none');assert.equal($('#finalInvoiceSectionService').val(),'Till Sep 2026');
+ assert.ok($('#newMoveInvoiceHeaderService option[value="SA-II"]').length);checks++;
+ $('#newMoveInvoiceHeaderService').val('SA-II');$('#btnSaveMoveInvoiceHeader').trigger('click');
+ assert.equal(requests.length,1);assert.equal(requests[0].options.data.action,'createPaymentHeader');
+ assert.equal(requests[0].options.data.service_type,'SA-II');checks++;
+ $('#btnSaveMoveInvoiceHeader').trigger('click');assert.equal(requests.length,1);checks++;
+ requests.shift().deferred.resolve({success:true,service_type:'SA-II'});
+ assert.equal($('.service-payment-block[data-service="SA-II"]').length,1);
+ assert.equal($('#finalInvoiceSectionService').val(),'SA-II');
+ assert.equal($('#finalInvoiceSectionService').data('original-service'),'Till Sep 2026');checks++;
+ w.executePaymentAutoSave();assert.equal(requests.length,0);checks++;
+ $('#finalInvoiceSectionService').trigger('change');assert.equal(requests.length,0);checks++;
+ $('#btnConfirmMoveInvoice').trigger('click');
+ assert.equal(requests.length,1);assert.equal(requests[0].options.url,'moveInvoiceHeader.php');
+ assert.equal(requests[0].options.data.target_service,'SA-II');
+ assert.equal(requests[0].options.data.payment_ids,undefined);checks++;
+ requests.shift().deferred.resolve({success:false,message:'Move failed'});
+ assert.equal($('#btnConfirmMoveInvoice').prop('disabled'),false);assert.equal($('#moveInvoiceHeaderError').text(),'Move failed');checks++;
+ $('#finalInvoiceSectionService').val('__add_invoice_header__').trigger('change');
+ assert.equal($('#finalInvoiceSectionService').val(),'SA-II');
+ assert.equal($('#newMoveInvoiceHeaderService option[value="SA-II"]').length,0);checks++;
+ $('#newMoveInvoiceHeaderService').val('Other').trigger('change');
+ $('#newMoveInvoiceHeaderName').val('sa-ii');$('#btnSaveMoveInvoiceHeader').trigger('click');
+ requests.shift().deferred.resolve({success:true,service_type:'sa-ii'});
+ assert.equal($('.service-payment-block[data-service="SA-II"]').length,1);checks++;
+ $('#finalInvoiceSectionService').val('__add_invoice_header__').trigger('change');$('#newMoveInvoiceHeaderService').val('Other').trigger('change');
+ $('#newMoveInvoiceHeaderName').val('');$('#btnSaveMoveInvoiceHeader').trigger('click');
+ assert.equal(requests.length,0);assert.ok($('#moveInvoiceHeaderError').text());checks++;
+ $('#newMoveInvoiceHeaderName').val('Custom header');$('#btnSaveMoveInvoiceHeader').trigger('click');
+ requests.shift().deferred.reject();assert.equal($('#btnSaveMoveInvoiceHeader').prop('disabled'),false);
+ assert.equal($('.service-payment-block').length,2);checks++;
+ // Fully empty used headers disappear, while single-field entries and new drafts survive.
+ const headerFixture=(name)=>$(w.renderServiceBlockTemplate(name,10,'380','',w.invoiceHeaderServices)).filter('.service-payment-block').removeAttr('data-draft-header').appendTo('#service_blocks_container');
+ const emptyHeader=headerFixture('Empty CA');
+ const oneRupee=headerFixture('One rupee');oneRupee.find('.servicePaymentReceived').val('1');
+ const noteHeader=headerFixture('Notes only');noteHeader.find('.serviceBlockComment').val('Keep');
+ const dateHeader=headerFixture('Date only');dateHeader.find('.paymentDepositDate').val('01.10.2026');
+ const instrumentHeader=headerFixture('Instrument only');instrumentHeader.find('.serviceChequeDetails').val('NEFT');
+ const zeroHeader=headerFixture('Zero only');zeroHeader.find('.servicePaymentReceived').val('0.00');
+ const invoiceHeader=headerFixture('Zero invoice');invoiceHeader.find('.invoiceNo').val('CD/2026/OCT-1');
+ const newHeader=headerFixture('New draft').attr('data-draft-header','1');
+ w.pruneEmptyPaymentBlocks();
+ assert.equal(w.document.contains(emptyHeader[0]),false);assert.equal(w.document.contains(zeroHeader[0]),false);checks++;
+ for(const keep of [oneRupee,noteHeader,dateHeader,instrumentHeader,invoiceHeader,newHeader]) assert.ok(w.document.contains(keep[0]));checks++;
+ assert.equal(w.paymentRowNeedsSave(dateHeader.find('tr.cb_subsection').last(),w.paymentRowData(dateHeader.find('tr.cb_subsection').last())),true);checks++;
+ const clearing=oneRupee.find('.service-details-table tr.cb_subsection');clearing.find('.row-id').val('999');clearing.data('saved-payment',w.paymentSnapshot(w.paymentRowData(clearing)));
+ clearing.find('.servicePaymentReceived').val('0');w.pruneEmptyPaymentBlocks();assert.ok(w.document.contains(oneRupee[0]));checks++;
+ clearing.data('saved-payment',w.paymentSnapshot(w.paymentRowData(clearing)));w.pruneEmptyPaymentBlocks();assert.equal(w.document.contains(oneRupee[0]),false);checks++;
+ // Parse every inline JS block after replacing PHP output expressions.
+ const page=fs.readFileSync('customerAccount.php','utf8');
+ const scripts=[...page.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)];
+ for (let i=0;i<scripts.length;i++) {
+  if(scripts[i][1].includes('function resetFinalInvoiceModal')) new vm.Script(scripts[i][1].replace(/<\?php[\s\S]*?\?>/g,'0'),{filename:'customerAccount-inline.js'});
+ }
+ checks++;
+ console.log(`PASS: ${checks} payment UI checks.`);w.close();
+})().catch(e=>{console.error(e);w.close();process.exitCode=1;});

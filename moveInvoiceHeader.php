@@ -28,31 +28,21 @@ if ($targetService === '') {
 }
 
 try {
+    require_once __DIR__ . '/include/payment_ledger.php';
+    if (empty($_SESSION['username']) || in_array(strtolower($_SESSION['role'] ?? ''), ['client', 'external'], true)) {
+        throw new RuntimeException('Please sign in with a staff account.');
+    }
+    aitf_payment_schema($db);
+    $customerId = (int)($_POST['customer_id'] ?? 0);
+    if ($customerId <= 0) throw new RuntimeException('Invalid customer.');
+    if (isset($_POST['payment_ids']) || ($_POST['action'] ?? '') === 'preview') throw new RuntimeException('Payment mapping has been removed. Reload the account page.');
     // Check if column service_type exists
     $colsStmt = $db->query("SHOW COLUMNS FROM invoice_details LIKE 'service_type'");
     if (!$colsStmt || $colsStmt->rowCount() === 0) {
         $db->exec("ALTER TABLE invoice_details ADD COLUMN service_type VARCHAR(100) NULL AFTER invoice_type");
     }
 
-    $updateStmt = $db->prepare("UPDATE invoice_details SET service_type = :target_service WHERE invoice_id = :invoice_id");
-    $updateStmt->bindParam(':target_service', $targetService);
-    $updateStmt->bindParam(':invoice_id', $invoiceId);
-    $updateStmt->execute();
-
-    if ($targetService !== '' && strcasecmp($targetService, 'Till Sep 2026') !== 0) {
-        $custStmt = $db->prepare("SELECT customer_id FROM invoice_details WHERE invoice_id = :invoice_id");
-        $custStmt->execute([':invoice_id' => $invoiceId]);
-        $invCustId = $custStmt->fetchColumn();
-
-        if ($invCustId) {
-            $chkComm = $db->prepare("SELECT id FROM payment_block_comments WHERE customer_id = :cid AND UPPER(TRIM(service_type)) = :st");
-            $chkComm->execute([':cid' => $invCustId, ':st' => strtoupper(trim($targetService))]);
-            if (!$chkComm->fetch()) {
-                $insComm = $db->prepare("INSERT INTO payment_block_comments (customer_id, service_type, comment) VALUES (:cid, :st, '')");
-                $insComm->execute([':cid' => $invCustId, ':st' => $targetService]);
-            }
-        }
-    }
+    $targetService = aitf_payment_move_invoice($db, $invoiceId, $targetService, (int)($_POST['customer_id'] ?? 0));
 
     sendJsonResponse([
         'success' => true,

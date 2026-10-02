@@ -761,6 +761,16 @@ $indianGstStates = array(
                                     </button>
                                 </div>
                             </div>
+                            <div id="newMoveInvoiceHeaderPanel" style="display:none; margin-top:10px; border-top:1px solid #cbd5e1; padding-top:10px;">
+                                <label for="newMoveInvoiceHeaderService" style="font-size:12px; color:#1e3a8a;">New service header</label>
+                                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                                    <select id="newMoveInvoiceHeaderService" class="form-control" style="max-width:280px; height:34px;"></select>
+                                    <input id="newMoveInvoiceHeaderName" class="form-control" type="text" maxlength="100" placeholder="Service header name" aria-label="Service header name" style="display:none; max-width:240px; height:34px;" />
+                                    <button type="button" id="btnSaveMoveInvoiceHeader" class="btn btn-primary btn-sm">Done</button>
+                                    <button type="button" id="btnCancelMoveInvoiceHeader" class="btn btn-default btn-sm">Cancel</button>
+                                </div>
+                            </div>
+                            <div id="moveInvoiceHeaderError" role="alert" style="color:#b91c1c; font-size:12px; margin-top:6px;"></div>
                         </div>
                     </div>
                     <div class="row" style="">
