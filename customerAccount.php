@@ -1619,7 +1619,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 (SELECT GROUP_CONCAT(DISTINCT service_desc SEPARATOR ', ') FROM invoice_services WHERE invoice_ids = inv.invoice_id) AS invoice_service_type
             FROM `invoice_details` inv 
             WHERE inv.invoice_type = 'final' AND inv.customer_id = :id AND (inv.is_deleted = 'No' OR inv.is_deleted IS NULL) 
-            ORDER BY inv.invoice_id ASC";
+            ORDER BY inv.invoice_date ASC, CAST(NULLIF(inv.final_invoice_no, '') AS UNSIGNED) ASC, inv.invoice_id ASC";
             $statement = $db->prepare($invoice);
             $statement->bindParam(':id', $_GET['customerid']);
             $statement->execute();
@@ -6342,15 +6342,31 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         $$mapName = $merged;
                     }
 
-                    // Sort invoices chronologically inside each service block
+                    // Sort invoices chronologically inside each service block; on same date sort by invoice number ascending (e.g. 22 before 23)
                     foreach ($invoicesByService as $k => &$invGroup) {
                         usort($invGroup, function($a, $b) {
                             $da = !empty($a['invoice_date']) && $a['invoice_date'] !== '0000-00-00' ? strtotime($a['invoice_date']) : 0;
                             $db = !empty($b['invoice_date']) && $b['invoice_date'] !== '0000-00-00' ? strtotime($b['invoice_date']) : 0;
-                            if ($da === $db) {
-                                return intval($a['invoice_id'] ?? 0) <=> intval($b['invoice_id'] ?? 0);
+                            if ($da !== $db) {
+                                if ($da === 0) return 1;
+                                if ($db === 0) return -1;
+                                return $da <=> $db;
                             }
-                            return $da <=> $db;
+                            // Same date: sort by invoice number ascending (e.g. 22 before 23)
+                            $numA = is_numeric($a['final_invoice_no'] ?? null) ? (int)$a['final_invoice_no'] : null;
+                            $numB = is_numeric($b['final_invoice_no'] ?? null) ? (int)$b['final_invoice_no'] : null;
+                            if ($numA !== null && $numB !== null && $numA !== $numB) {
+                                return $numA <=> $numB;
+                            }
+                            $fullA = trim(($a['final_prefix'] ?? '') . '-' . ($a['final_invoice_no'] ?? ''));
+                            $fullB = trim(($b['final_prefix'] ?? '') . '-' . ($b['final_invoice_no'] ?? ''));
+                            if ($fullA === '-' || $fullA === '') $fullA = trim((string)($a['invoice_no'] ?? ''));
+                            if ($fullB === '-' || $fullB === '') $fullB = trim((string)($b['invoice_no'] ?? ''));
+                            $cmp = strnatcasecmp($fullA, $fullB);
+                            if ($cmp !== 0) {
+                                return $cmp;
+                            }
+                            return intval($a['invoice_id'] ?? 0) <=> intval($b['invoice_id'] ?? 0);
                         });
                     }
                     unset($invGroup);
@@ -6593,8 +6609,73 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                             gap: 4px;
                             white-space: nowrap;
                         }
-                        .service-payment-block.service-block-matched .serviceBlockRemainingWrapper {
+                        /* Keep the payment summary inside the panel at normal zoom. */
+                        .payment-tables-row > .table-responsive {
+                            overflow-x: hidden !important;
+                        }
+                        .service-block-summary-bar {
+                            display: flex !important;
+                            align-items: center !important;
+                            justify-content: space-between !important;
+                            flex-wrap: nowrap !important;
+                            white-space: nowrap !important;
+                            gap: 4px !important;
+                            overflow: hidden !important;
+                            line-height: 1.2 !important;
+                            padding: 3px 5px !important;
+                        }
+                        .service-block-summary-bar .serviceBlockInvSum {
                             display: none !important;
+                        }
+                        .service-block-summary-bar > div:first-of-type {
+                            display: contents !important;
+                        }
+                        .service-block-summary-bar > div:last-child {
+                            display: contents !important;
+                        }
+                        .service-block-summary-bar > div:first-of-type > div,
+                        .service-block-summary-bar > div:last-child {
+                            min-width: 0 !important;
+                            display: inline-flex !important;
+                            align-items: center !important;
+                            white-space: nowrap !important;
+                            overflow: hidden !important;
+                            gap: 2px !important;
+                            flex-shrink: 0 !important;
+                        }
+                        .service-block-summary-bar .serviceBlockDiscountWrapper:not([style*="display: none"]) {
+                            display: inline-flex !important;
+                            align-items: center !important;
+                            white-space: nowrap !important;
+                            gap: 2px !important;
+                            flex-shrink: 0 !important;
+                        }
+                        .service-block-summary-bar > div:first-of-type > div > span,
+                        .service-block-summary-bar .serviceBlockDiscountWrapper > span,
+                        .service-block-summary-bar .serviceBlockRemainingWrapper > span {
+                            font-size: 9px !important;
+                            font-weight: 700 !important;
+                            text-transform: uppercase !important;
+                            letter-spacing: -0.15px !important;
+                        }
+                        .service-block-summary-bar > div:first-of-type > div > strong,
+                        .service-block-summary-bar .serviceBlockDiscountWrapper > strong,
+                        .service-block-summary-bar .serviceBlockRemainingWrapper > strong,
+                        .service-block-summary-bar .serviceBlockPaidSum,
+                        .service-block-summary-bar .serviceBlockTdsSum,
+                        .service-block-summary-bar .serviceBlockDiscountSum,
+                        .service-block-summary-bar .serviceBlockRemainingSum {
+                            font-size: 10.5px !important;
+                            font-weight: 800 !important;
+                            letter-spacing: -0.15px !important;
+                        }
+                        .service-block-summary-bar .serviceBlockRemainingWrapper {
+                            font-size: 9px !important;
+                            padding: 1px 5px !important;
+                            border-radius: 4px !important;
+                            display: inline-flex !important;
+                            align-items: center !important;
+                            flex-shrink: 0 !important;
                         }
                         .serviceBlockTypeSelect {
                             background-color: #ffffff !important;
@@ -6687,6 +6768,12 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                             $svcLabel = $headerCatalog[strtoupper($svcName)]["header_name"] ?? $svcName;
                             $serviceInvoices = $invoicesByService[$svcName] ?? [];
                             $servicePayments = $paymentsByService[$svcName] ?? [];
+                            $settlementNote = '';
+                            foreach ($servicePayments as $settlementPayment) {
+                                if (!empty($settlementPayment['settlement_kind']) && trim((string)($settlementPayment['comment'] ?? '')) !== '') {
+                                    $settlementNote = trim((string)$settlementPayment['comment']);
+                                }
+                            }
                             
                             $blockInvoiceSum = 0;
                             foreach ($serviceInvoices as $inv) {
@@ -6920,6 +7007,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                         <input type="hidden" data_row_id="" class="serviceDiscountAmount" name="serviceDiscountAmount" value="<?php echo htmlspecialchars($displayDiscount); ?>" />
                                                                         <?php if ($isDiscountRow) { ?>
                                                                             <input type="number" min="0" step="0.01" <?php echo (!$isSettlement || $isRowReconciled) ? 'readonly="readonly"' : ''; ?> class="serviceDiscountDisplay" value="<?php echo number_format(abs($discountVal), 2, '.', ''); ?>" title="Settlement: ₹<?php echo number_format($discountVal, 2, '.', ''); ?>" style="background-color: #faf5ff; border-bottom: 1px solid #8b5cf6; color: #6d28d9; font-weight: 700; text-align: right;" />
+                                                                            <?php if ($isSettlement) { ?><input type="hidden" class="settlementNote" value="<?php echo htmlspecialchars($payInfo['comment'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" /><?php } ?>
                                                                             <input type="hidden" data_row_id="" class="servicePaymentReceived" name="servicePaymentReceived" value="0" />
                                                                         <?php } else { ?>
                                                                             <input type="number" step="any" min="0" data_row_id="" class="servicePaymentReceived <?php echo $isRowReconciled ? 'reconciled-locked-input' : ''; ?>" name="servicePaymentReceived" value="<?php echo htmlspecialchars($displayRcv); ?>" placeholder="" <?php echo $isRowReconciled ? 'readonly="readonly" data-reconciled="1"' : ''; ?> style="background-color: <?php echo $isRowReconciled ? '#f8fafc' : '#ffffff'; ?>; border-bottom: 1px solid <?php echo $isRowReconciled ? '#86efac' : '#cbd5e1'; ?>; color: <?php echo $isRowReconciled ? '#15803d' : '#0f172a'; ?>; font-weight: 700; <?php echo $isRowReconciled ? 'cursor: not-allowed;' : ''; ?>" title="<?php echo $isRowReconciled ? 'Reconciled Entry - Cannot edit reconciled payment entry' : ''; ?>" />
@@ -6950,8 +7038,11 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                     <div class="table-edit-control" style="display: flex; align-items: center; justify-content: center;">
                                                                         <input type="hidden" class="serviceReconciliation" name="serviceReconciliation" value="<?php echo $recStatusText; ?>" />
                                                                         <button type="button" class="btn btn-xs toggleReconcileBtn <?php echo $isVerified ? 'reconcile-verified' : 'reconcile-not-verify'; ?>" data-status="<?php echo $recStatusText; ?>" data-pay-id="<?php echo htmlspecialchars($payInfo['payment_id'] ?? ''); ?>" style="width: 96%; height: 23px; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 0 2px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; cursor: pointer; transition: all 0.2s ease; <?php echo $isVerified ? 'background-color: #16a34a; border: 1px solid #15803d; color: #ffffff;' : 'background-color: #ef4444; border: 1px solid #dc2626; color: #ffffff;'; ?>" title="Click to toggle: <?php echo $isVerified ? 'Mark as Verify' : 'Mark as Verified'; ?>">
-                                                                            <i class="fa <?php echo $isVerified ? 'fa-check' : 'fa-times'; ?>"></i>
-                                                                            <span><?php echo $recStatusText; ?></span>
+                                                                            <?php if ($isVerified) { ?>
+                                                                                <i class="fa fa-check" style="font-size: 13px;"></i>
+                                                                            <?php } else { ?>
+                                                                                <span>Verify</span>
+                                                                            <?php } ?>
                                                                         </button>
                                                                     </div>
                                                                 </td>
@@ -6993,7 +7084,6 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                 <div class="table-edit-control" style="display: flex; align-items: center; justify-content: center;">
                                                                     <input type="hidden" class="serviceReconciliation" name="serviceReconciliation" value="Verify" />
                                                                     <button type="button" class="btn btn-xs toggleReconcileBtn reconcile-not-verify" data-status="Verify" data-pay-id="" style="width: 96%; height: 23px; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 0 2px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; cursor: pointer; transition: all 0.2s ease; background-color: #ef4444; border: 1px solid #dc2626; color: #ffffff;" title="Click to toggle: Mark as Verified">
-                                                                        <i class="fa fa-times"></i>
                                                                         <span>Verify</span>
                                                                     </button>
                                                                 </div>
@@ -7011,32 +7101,32 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                         </div>
 
                                         <!-- Service Block Summary Ribbon (Placed in Received Payment column) -->
-                                        <div class="service-block-summary-bar" style="margin-top: 4px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 3px 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: nowrap; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); white-space: nowrap;">
+                                        <div class="service-block-summary-bar" style="margin-top: 4px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 3px 5px; display: flex; align-items: center; justify-content: space-between; flex-wrap: nowrap; gap: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); white-space: nowrap;">
                                             <span class="serviceBlockInvSum" style="display: none;"><?php echo number_format($blockInvoiceSum, 2, '.', ''); ?></span>
                                             <div style="display: flex; align-items: center; gap: 8px; flex-wrap: nowrap;">
-                                                <div style="display: inline-flex; align-items: center; gap: 3px;">
-                                                    <span style="color: #166534; font-weight: 700; text-transform: uppercase; font-size: 9.5px;"><i class="fa fa-check-circle" style="color: #16a34a; margin-right: 2px;"></i> Received Total:</span>
-                                                    <strong style="color: #15803d; font-size: 11px; font-weight: 800;">₹<span class="serviceBlockPaidSum"><?php echo number_format($blockRcvSum, 2, '.', ''); ?></span></strong>
+                                                <div style="display: inline-flex; align-items: center; gap: 2px;">
+                                                    <span style="color: #166534; font-weight: 700; text-transform: uppercase; font-size: 9px; letter-spacing: -0.15px;">Received Total:</span>
+                                                    <strong style="color: #15803d; font-size: 10.5px; font-weight: 800; letter-spacing: -0.15px;">₹<span class="serviceBlockPaidSum"><?php echo number_format($blockRcvSum, 2, '.', ''); ?></span></strong>
                                                 </div>
-                                                <div style="display: inline-flex; align-items: center; gap: 3px;">
-                                                    <span style="color: #92400e; font-weight: 700; text-transform: uppercase; font-size: 9.5px;">TDS Total:</span>
-                                                    <strong style="color: #b45309; font-size: 11px; font-weight: 800;">₹<span class="serviceBlockTdsSum"><?php echo number_format($blockTdsSum, 2, '.', ''); ?></span></strong>
+                                                <div style="display: inline-flex; align-items: center; gap: 2px;">
+                                                    <span style="color: #92400e; font-weight: 700; text-transform: uppercase; font-size: 9px; letter-spacing: -0.15px;">TDS Total:</span>
+                                                    <strong style="color: #b45309; font-size: 10.5px; font-weight: 800; letter-spacing: -0.15px;">₹<span class="serviceBlockTdsSum"><?php echo number_format($blockTdsSum, 2, '.', ''); ?></span></strong>
                                                 </div>
-                                                <div class="serviceBlockDiscountWrapper" style="display: <?php echo (abs($blockDiscountSum) > 0) ? 'inline-flex' : 'none'; ?>; align-items: center; gap: 3px;">
-                                                    <span style="color: #6b21a8; font-weight: 700; text-transform: uppercase; font-size: 9.5px;"><i class="fa fa-tag" style="color: #7c3aed; font-size: 9px; margin-right: 2px;"></i> <span class="serviceBlockSettlementLabel"><?php echo $blockDiscountSum < 0 ? 'Excess settle:' : 'Short settle:'; ?></span></span>
-                                                    <strong style="color: #7c3aed; font-size: 11px; font-weight: 800;">₹<span class="serviceBlockDiscountSum"><?php echo number_format($blockDiscountSum, 2, '.', ''); ?></span></strong>
+                                                <div class="serviceBlockDiscountWrapper" data-settlement-note="<?php echo htmlspecialchars($settlementNote, ENT_QUOTES, 'UTF-8'); ?>" title="Click to view settlement note" style="display: <?php echo (abs($blockDiscountSum) > 0) ? 'inline-flex' : 'none'; ?>; align-items: center; gap: 2px; cursor: <?php echo $settlementNote !== '' ? 'pointer' : 'default'; ?>;">
+                                                    <span style="color: #6b21a8; font-weight: 700; text-transform: uppercase; font-size: 9px; letter-spacing: -0.15px;"><span class="serviceBlockSettlementLabel"><?php echo $blockDiscountSum < 0 ? 'Excess settle:' : 'Short settle:'; ?></span></span>
+                                                    <strong style="color: #7c3aed; font-size: 10.5px; font-weight: 800; letter-spacing: -0.15px;">₹<span class="serviceBlockDiscountSum"><?php echo number_format($blockDiscountSum, 2, '.', ''); ?></span></strong>
                                                 </div>
                                             </div>
                                             <div>
-                                                <span class="serviceBlockRemainingWrapper" style="display: inline-flex; align-items: center; font-size: 10px; padding: 2px 7px; border-radius: 4px; font-weight: 800; background: <?php echo ($isBlockMatched) ? '#dcfce7' : (($blockRemaining <= 0) ? '#ecfdf5' : '#fef2f2'); ?>; border: 1px solid <?php echo ($isBlockMatched) ? '#4ade80' : (($blockRemaining <= 0) ? '#a7f3d0' : '#fca5a5'); ?>; white-space: nowrap;">
-                                                    <span style="color: <?php echo ($isBlockMatched) ? '#166534' : (($blockRemaining <= 0) ? '#065f46' : '#991b1b'); ?>; text-transform: uppercase; font-size: 9.5px; margin-right: 3px;">
+                                                <span class="serviceBlockRemainingWrapper" style="display: inline-flex; align-items: center; font-size: 9px; padding: 1px 5px; border-radius: 4px; font-weight: 800; background: <?php echo ($isBlockMatched) ? '#dcfce7' : (($blockRemaining <= 0) ? '#ecfdf5' : '#fef2f2'); ?>; border: 1px solid <?php echo ($isBlockMatched) ? '#4ade80' : (($blockRemaining <= 0) ? '#a7f3d0' : '#fca5a5'); ?>; white-space: nowrap;">
+                                                    <span style="color: <?php echo ($isBlockMatched) ? '#166534' : (($blockRemaining <= 0) ? '#065f46' : '#991b1b'); ?>; text-transform: uppercase; font-size: 9px; letter-spacing: -0.15px; margin-right: 2px;">
                                                         <?php if ($isBlockMatched) { ?>
                                                             <i class="fa fa-check-circle" style="color: #16a34a; margin-right: 2px;"></i> Matched:
                                                         <?php } else { ?>
-                                                            Remaining Total:
+                                                            Remaining:
                                                         <?php } ?>
                                                     </span>
-                                                    <strong class="serviceBlockRemainingSum" style="color: <?php echo ($isBlockMatched) ? '#15803d' : (($blockRemaining <= 0) ? '#16a34a' : '#dc2626'); ?>; font-size: 11px;">₹<?php echo number_format($blockRemaining, 2, '.', ''); ?></strong>
+                                                    <strong class="serviceBlockRemainingSum" style="color: <?php echo ($isBlockMatched) ? '#15803d' : (($blockRemaining <= 0) ? '#16a34a' : '#dc2626'); ?>; font-size: 10.5px; letter-spacing: -0.15px;">₹<?php echo number_format($blockRemaining, 2, '.', ''); ?></strong>
                                                 </span>
                                             </div>
                                         </div>
@@ -7185,6 +7275,10 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                          </div>
 
                                          <input type="hidden" id="modalDiscountDate" value="<?php echo date('d.m.Y'); ?>" />
+                                         <div class="form-group" style="margin-bottom: 8px;">
+                                             <label style="font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 4px;">Notes (if any)</label>
+                                             <textarea class="form-control" id="modalSettlementNote" rows="2" placeholder="Enter settlement note (optional)" style="font-size: 13px; resize: vertical;"></textarea>
+                                         </div>
                                     </form>
                                 </div>
                                 <div class="modal-footer" style="background-color: #f1f5f9; padding: 10px 18px; border-top: 1px solid #e2e8f0;">
@@ -22243,7 +22337,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         '<div class="table-edit-control" style="display: flex; align-items: center; justify-content: center;">' +
                             '<input type="hidden" class="serviceReconciliation" name="serviceReconciliation" value="Verify" />' +
                             '<button type="button" class="btn btn-xs toggleReconcileBtn reconcile-not-verify" data-status="Verify" data-pay-id="" style="width: 96%; height: 23px; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 0 2px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; cursor: pointer; transition: all 0.2s ease; background-color: #ef4444; border: 1px solid #dc2626; color: #ffffff;" title="Click to toggle: Mark as Verified">' +
-                                '<i class="fa fa-times"></i> <span>Verify</span>' +
+                                '<span>Verify</span>' +
                             '</button>' +
                         '</div>' +
                     '</td>' +
@@ -22531,7 +22625,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     var verified = status === 'Verified';
                     $btn.attr('data-status', status).toggleClass('reconcile-verified', verified).toggleClass('reconcile-not-verify', !verified)
                         .css({'background-color':verified ? '#16a34a' : '#ef4444', 'border-color':verified ? '#15803d' : '#dc2626'})
-                        .html('<i class="fa '+(verified?'fa-check':'fa-times')+'"></i> <span>'+status+'</span>');
+                        .html(verified ? '<i class="fa fa-check" style="font-size: 13px;"></i>' : '<span>Verify</span>')
+                        .attr('title', 'Click to toggle: ' + (verified ? 'Mark as Verify' : 'Mark as Verified'));
                     $row.attr('data-version', res.version).toggleClass('row-reconciled-locked', !!res.locked);
                     $row.find('.serviceReconciliation').val(status);
                     $row.find('.servicePaymentReceived,.serviceDiscountDisplay,.serviceTdsAmount,.paymentDepositDate,.serviceChequeDetails')
@@ -22690,7 +22785,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     $block.find(".serviceBlockDiscountSum").text(blockDiscount.toFixed(2));
                     $block.find(".serviceBlockSettlementLabel").text(blockDiscount < 0 ? "Excess settle:" : "Short settle:");
                     if (Math.abs(blockDiscount) > 0) {
-                        $block.find(".serviceBlockDiscountWrapper").show();
+                        $block.find(".serviceBlockDiscountWrapper").css("display", "inline-flex");
                     } else {
                         $block.find(".serviceBlockDiscountWrapper").hide();
                     }
@@ -22706,7 +22801,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                             "background": "#dcfce7",
                             "border-color": "#4ade80"
                         });
-                        $block.find(".serviceBlockRemainingWrapper span").css("color", "#166534").html('<i class="fa fa-check-circle" style="color: #16a34a; margin-right: 2px;"></i> Matched:');
+                        $block.find(".serviceBlockRemainingWrapper span").css("color", "#166534").text("Remaining:");
                         $block.find(".serviceBlockRemainingSum").css("color", "#15803d");
                     } else {
                         $block.removeClass("service-block-matched");
@@ -22716,14 +22811,14 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                 "background": "#ecfdf5",
                                 "border-color": "#a7f3d0"
                             });
-                            $block.find(".serviceBlockRemainingWrapper span").css("color", "#065f46").text("Remaining Total:");
+                            $block.find(".serviceBlockRemainingWrapper span").css("color", "#065f46").text("Remaining:");
                             $block.find(".serviceBlockRemainingSum").css("color", "#16a34a");
                         } else {
                             $block.find(".serviceBlockRemainingWrapper").css({
                                 "background": "#fef2f2",
                                 "border-color": "#fca5a5"
                             });
-                            $block.find(".serviceBlockRemainingWrapper span").css("color", "#991b1b").text("Remaining Total:");
+                            $block.find(".serviceBlockRemainingWrapper span").css("color", "#991b1b").text("Remaining:");
                             $block.find(".serviceBlockRemainingSum").css("color", "#dc2626");
                         }
                     }
@@ -22929,20 +23024,20 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             html += '                            <td style="padding: 0px; background-color: #ffffff;"><div class="table-edit-control"><label></label><input type="number" step="any" min="0" data_row_id="" class="serviceTdsAmount" name="serviceTdsAmount" value="" placeholder="" style="background-color: #ffffff; border-bottom: 1px solid #cbd5e1; color: #b45309; font-weight: 700; text-align: right;" /></div></td>';
             html += '                            <td style="padding: 0px;"><div class="table-edit-control"><label></label><input type="text" data_row_id="" class="paymentDepositDate" name="paymentDepositDate" value="" placeholder="DD.MM.YYYY"></div></td>';
             html += '                            <td style="padding: 0px;"><div class="table-edit-control"><label></label><input type="text" data_row_id="" class="serviceChequeDetails" name="serviceChequeDetails" value="" placeholder="" /></div></td>';
-            html += '                            <td style="padding: 1px 2px; text-align: center; vertical-align: middle;"><div class="table-edit-control" style="display: flex; align-items: center; justify-content: center;"><input type="hidden" class="serviceReconciliation" name="serviceReconciliation" value="Verify" /><button type="button" class="btn btn-xs toggleReconcileBtn reconcile-not-verify" data-status="Verify" data-pay-id="" style="width: 96%; height: 23px; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 0 2px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; cursor: pointer; transition: all 0.2s ease; background-color: #ef4444; border: 1px solid #dc2626; color: #ffffff;" title="Click to toggle: Mark as Verified"><i class="fa fa-times"></i> <span>Verify</span></button></div></td>';
+            html += '                            <td style="padding: 1px 2px; text-align: center; vertical-align: middle;"><div class="table-edit-control" style="display: flex; align-items: center; justify-content: center;"><input type="hidden" class="serviceReconciliation" name="serviceReconciliation" value="Verify" /><button type="button" class="btn btn-xs toggleReconcileBtn reconcile-not-verify" data-status="Verify" data-pay-id="" style="width: 96%; height: 23px; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 0 2px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; cursor: pointer; transition: all 0.2s ease; background-color: #ef4444; border: 1px solid #dc2626; color: #ffffff;" title="Click to toggle: Mark as Verified"><span>Verify</span></button></div></td>';
             html += '                            <td style="padding: 0px;"><div class="table-edit-control"><input type="hidden" data_row_id="" class="serviceBalance" name="serviceBalance" value="0.00" /><input type="hidden" data_row_id="" class="row-id" name="row-id" value=""></div></td>';
             html += '                        </tr>';
             html += '                    </tbody>';
             html += '                </table>';
             html += '            </div>';
-            html += '            <div class="service-block-summary-bar" style="margin-top: 4px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 3px 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: nowrap; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); white-space: nowrap;">';
+            html += '            <div class="service-block-summary-bar" style="margin-top: 4px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 3px 5px; display: flex; align-items: center; justify-content: space-between; flex-wrap: nowrap; gap: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); white-space: nowrap;">';
             html += '                <span class="serviceBlockInvSum" style="display: none;">0.00</span>';
             html += '                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: nowrap;">';
-            html += '                    <div style="display: inline-flex; align-items: center; gap: 3px;"><span style="color: #166534; font-weight: 700; text-transform: uppercase; font-size: 9.5px;"><i class="fa fa-check-circle" style="color: #16a34a; margin-right: 2px;"></i> Received Total:</span> <strong style="color: #15803d; font-size: 11px; font-weight: 800;">₹<span class="serviceBlockPaidSum">0.00</span></strong></div>';
-            html += '                    <div style="display: inline-flex; align-items: center; gap: 3px;"><span style="color: #92400e; font-weight: 700; text-transform: uppercase; font-size: 9.5px;">TDS Total:</span> <strong style="color: #b45309; font-size: 11px; font-weight: 800;">₹<span class="serviceBlockTdsSum">0.00</span></strong></div>';
-            html += '                    <div class="serviceBlockDiscountWrapper" style="display: none; align-items: center; gap: 3px;"><span style="color: #6b21a8; font-weight: 700; text-transform: uppercase; font-size: 9.5px;"><i class="fa fa-tag" style="color: #7c3aed; font-size: 9px; margin-right: 2px;"></i> <span class="serviceBlockSettlementLabel">Short settle:</span></span> <strong style="color: #7c3aed; font-size: 11px; font-weight: 800;">₹<span class="serviceBlockDiscountSum">0.00</span></strong></div>';
+            html += '                    <div style="display: inline-flex; align-items: center; gap: 2px;"><span style="color: #166534; font-weight: 700; text-transform: uppercase; font-size: 9px; letter-spacing: -0.15px;"><i class="fa fa-check-circle" style="color: #16a34a; margin-right: 2px;"></i> Received Total:</span> <strong style="color: #15803d; font-size: 10.5px; font-weight: 800; letter-spacing: -0.15px;">₹<span class="serviceBlockPaidSum">0.00</span></strong></div>';
+            html += '                    <div style="display: inline-flex; align-items: center; gap: 2px;"><span style="color: #92400e; font-weight: 700; text-transform: uppercase; font-size: 9px; letter-spacing: -0.15px;">TDS Total:</span> <strong style="color: #b45309; font-size: 10.5px; font-weight: 800; letter-spacing: -0.15px;">₹<span class="serviceBlockTdsSum">0.00</span></strong></div>';
+            html += '                    <div class="serviceBlockDiscountWrapper" style="display: none; align-items: center; gap: 2px;"><span style="color: #6b21a8; font-weight: 700; text-transform: uppercase; font-size: 9px; letter-spacing: -0.15px;"><span class="serviceBlockSettlementLabel">Short settle:</span></span> <strong style="color: #7c3aed; font-size: 10.5px; font-weight: 800; letter-spacing: -0.15px;">₹<span class="serviceBlockDiscountSum">0.00</span></strong></div>';
             html += '                </div>';
-            html += '                <div><span class="serviceBlockRemainingWrapper" style="display: inline-flex; align-items: center; font-size: 10px; padding: 2px 7px; border-radius: 4px; font-weight: 800; background: #ecfdf5; border: 1px solid #a7f3d0; white-space: nowrap;"><span style="color: #065f46; text-transform: uppercase; font-size: 9.5px; margin-right: 3px;">Remaining Total:</span> <strong class="serviceBlockRemainingSum" style="color: #16a34a; font-size: 11px;">₹0.00</strong></span></div>';
+            html += '                <div><span class="serviceBlockRemainingWrapper" style="display: inline-flex; align-items: center; font-size: 9px; padding: 1px 5px; border-radius: 4px; font-weight: 800; background: #ecfdf5; border: 1px solid #a7f3d0; white-space: nowrap;"><span style="color: #065f46; text-transform: uppercase; font-size: 9px; letter-spacing: -0.15px; margin-right: 2px;">Remaining:</span> <strong class="serviceBlockRemainingSum" style="color: #16a34a; font-size: 10.5px; letter-spacing: -0.15px;">₹0.00</strong></span></div>';
             html += '            </div>';
             html += '        </div>';
 

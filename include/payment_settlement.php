@@ -17,9 +17,11 @@ function aitf_settlement_snapshot(PDO $db, $customer, $header) {
         $remaining += (int)round((float)$invoice['final_amount'] * 100);
         $invoices[] = ['id'=>(int)$invoice['invoice_id'],'number'=>$invoice['final_prefix'].'-'.$invoice['final_invoice_no'],'amount'=>number_format((float)$invoice['final_amount'],2,'.','')];
     }
+    $note = '';
     $stmt = $db->prepare('SELECT * FROM payment_system WHERE customer_id=?'); $stmt->execute([$customer]);
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
         if (strcasecmp(aitf_payment_header($row,$multi),$header) !== 0) continue;
+        if (!empty($row['settlement_kind']) && trim((string)($row['comment'] ?? '')) !== '') $note = trim((string)$row['comment']);
         $service = strtolower($row['service_type'] ?? '');
         $isDiscount = !empty($row['settlement_kind']) || strpos($service,'discount') !== false || strpos($service,'short') !== false;
         $isTds = !$isDiscount && strpos($service,'tds') !== false && (float)$row['tds_amount'] == 0;
@@ -29,7 +31,7 @@ function aitf_settlement_snapshot(PDO $db, $customer, $header) {
         $tds = (float)$row['tds_amount'] > 0 ? (float)$row['tds_amount'] : ($isTds ? (float)$row['payment_received'] : 0);
         $remaining -= (int)round(($received + $tds + $discount) * 100);
     }
-    return ['success'=>true,'service_type'=>$header,'remaining'=>number_format($remaining/100,2,'.',''),'kind'=>$remaining < 0 ? 'excess' : ($remaining > 0 ? 'short' : 'settled'),'invoices'=>$invoices];
+    return ['success'=>true,'service_type'=>$header,'remaining'=>number_format($remaining/100,2,'.',''),'kind'=>$remaining < 0 ? 'excess' : ($remaining > 0 ? 'short' : 'settled'),'invoices'=>$invoices,'note'=>$note];
 }
 
 function aitf_payment_settle(PDO $db, $customer, array $req) {

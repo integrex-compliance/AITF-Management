@@ -55,6 +55,7 @@ function paymentRowData($row) {
         tds: $row.find('.serviceTdsAmount').val() || '',
         discount: $row.attr('data-settlement-kind') && $row.find('.serviceDiscountDisplay').length ? String(($row.attr('data-settlement-kind') === 'excess' ? -1 : 1) * Number($row.find('.serviceDiscountDisplay').val() || 0)) : $row.find('.serviceDiscountAmount').val() || '',
         settlement_amount: $row.attr('data-settlement-kind') ? $row.find('.serviceDiscountDisplay').val() : undefined,
+        note: $row.attr('data-settlement-kind') ? ($row.find('.settlementNote').val() || '') : undefined,
         date: ($row.find('.paymentDepositDate').val() || '').trim(),
         instrument: ($row.find('.serviceChequeDetails').val() || '').trim()
     };

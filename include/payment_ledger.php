@@ -233,8 +233,9 @@ function aitf_payment_save(PDO $db, $customer, array $rows) {
             }
             $total = number_format((float)$received + (float)$tds + (float)$discount, 2, '.', '');
             if ($old) {
-                $stmt = $db->prepare('UPDATE payment_system SET payment_header=?, amount_decided=?, payment_received=?, tds_amount=?, discount_amount=?, payment_date=?, cheque_details=?, balance=0, row_version=row_version+1 WHERE payment_id=? AND customer_id=?');
-                $stmt->execute([$header, $total, $received, $tds, $discount, $date, $instrument, $id, $customer]);
+                $note = !empty($old['settlement_kind']) ? trim((string)($row['note'] ?? $old['comment'] ?? '')) : $old['comment'];
+                $stmt = $db->prepare('UPDATE payment_system SET payment_header=?, amount_decided=?, payment_received=?, tds_amount=?, discount_amount=?, payment_date=?, cheque_details=?, comment=?, balance=0, row_version=row_version+1 WHERE payment_id=? AND customer_id=?');
+                $stmt->execute([$header, $total, $received, $tds, $discount, $date, $instrument, $note, $id, $customer]);
                 $version = (int)$old['row_version'] + 1;
             } else {
                 $stmt = $db->prepare("INSERT INTO payment_system (payment_sy_id, customer_id, service_id, service_type, payment_header, amount_decided, payment_received, tds_amount, discount_amount, payment_date, cheque_details, reconciliation, balance, comment, client_row_key) VALUES (?,?,'',?,?,?,?,?,?,?,?, 'Verify',0,'',?)");
