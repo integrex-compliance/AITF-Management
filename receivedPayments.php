@@ -90,8 +90,18 @@ if (!empty($endDate)) {
     $params[':endDate'] = $endDate;
 }
 if (!empty($clientSearch)) {
-    $paymentsQuery .= " AND (ci.customer_name LIKE :clientSearch OR ci.unique_id LIKE :clientSearch)";
-    $params[':clientSearch'] = '%' . $clientSearch . '%';
+    $searchWords = array_values(array_filter(explode(' ', $clientSearch)));
+    if (!empty($searchWords)) {
+        $cIndex = 0;
+        $wordConditions = [];
+        foreach ($searchWords as $w) {
+            $pName = ':clientSearch_' . $cIndex;
+            $wordConditions[] = "(ci.customer_name LIKE $pName OR ci.unique_id LIKE $pName)";
+            $params[$pName] = '%' . trim($w) . '%';
+            $cIndex++;
+        }
+        $paymentsQuery .= " AND (" . implode(' AND ', $wordConditions) . ")";
+    }
 }
 if (!empty($serviceFilter) && $serviceFilter !== 'all') {
     $paymentsQuery .= " AND ps.service_type LIKE :svcFilter";
@@ -163,8 +173,18 @@ try {
             $spParams[':spEndDate'] = $endDate;
         }
         if (!empty($clientSearch)) {
-            $stmtQuery .= " AND (ci.customer_name LIKE :spClientSearch OR ci.unique_id LIKE :spClientSearch)";
-            $spParams[':spClientSearch'] = '%' . $clientSearch . '%';
+            $searchWords = array_values(array_filter(explode(' ', $clientSearch)));
+            if (!empty($searchWords)) {
+                $cIndex = 0;
+                $wordConditions = [];
+                foreach ($searchWords as $w) {
+                    $pName = ':spClientSearch_' . $cIndex;
+                    $wordConditions[] = "(ci.customer_name LIKE $pName OR ci.unique_id LIKE $pName)";
+                    $spParams[$pName] = '%' . trim($w) . '%';
+                    $cIndex++;
+                }
+                $stmtQuery .= " AND (" . implode(' AND ', $wordConditions) . ")";
+            }
         }
         
         $stmtSP = $db->prepare($stmtQuery);
@@ -326,15 +346,22 @@ if (!function_exists('aitf_format_instrument_display')) {
 
 if (!function_exists('aitf_format_payment_date_display')) {
     function aitf_format_payment_date_display($rawDate) {
+        if ($rawDate === null) return '-';
         $raw = trim((string)$rawDate);
-        if ($raw === '' || $raw === '0000-00-00' || $raw === '0000-00-00 00:00:00' || strtolower($raw) === 'null') {
+        if ($raw === '' || $raw === '0000-00-00' || $raw === '0000-00-00 00:00:00' || $raw === '00-00-0000' || $raw === '00.00.0000' || strtolower($raw) === 'null') {
             return '-';
         }
-        if (preg_match('/^(\d{4})-(\d{2})-(\d{2})/', $raw, $m)) {
-            return $m[3] . '.' . $m[2] . '.' . $m[1];
+        // YYYY-MM-DD or YYYY/MM/DD (with optional time)
+        if (preg_match('/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/', $raw, $m)) {
+            return str_pad($m[3], 2, '0', STR_PAD_LEFT) . '.' . str_pad($m[2], 2, '0', STR_PAD_LEFT) . '.' . $m[1];
         }
-        if (preg_match('/^(\d{2})\.(\d{2})\.(\d{4})/', $raw)) {
-            return $raw;
+        // DD.MM.YYYY
+        if (preg_match('/^(\d{1,2})\.(\d{1,2})\.(\d{4})/', $raw, $m)) {
+            return str_pad($m[1], 2, '0', STR_PAD_LEFT) . '.' . str_pad($m[2], 2, '0', STR_PAD_LEFT) . '.' . $m[3];
+        }
+        // DD-MM-YYYY or DD/MM/YYYY
+        if (preg_match('/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/', $raw, $m)) {
+            return str_pad($m[1], 2, '0', STR_PAD_LEFT) . '.' . str_pad($m[2], 2, '0', STR_PAD_LEFT) . '.' . $m[3];
         }
         $ts = strtotime($raw);
         if ($ts !== false && $ts > 0) {
@@ -624,12 +651,12 @@ if (!function_exists('aitf_format_payment_date_display')) {
         }
 
         /* =====================================================================
-           TABLE DESIGN (MasterCreator SaaS Table - Pixel Perfect Fixed Grid)
+           TABLE DESIGN (MasterCreator SaaS Table - Responsive Fluid Grid)
            ===================================================================== */
         #table_received_payments,
         .dataTables_scrollHeadInner table {
             width: 100% !important;
-            table-layout: fixed !important;
+            min-width: 1100px !important;
             border-collapse: separate !important;
             border-spacing: 0 !important;
             margin: 0 !important;
@@ -640,18 +667,16 @@ if (!function_exists('aitf_format_payment_date_display')) {
         .dataTables_scrollHead thead th {
             background: #f1f5f9;
             color: #0f172a;
-            font-size: 10.5px;
+            font-size: 11px;
             font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 0.4px;
-            padding: 9px 8px;
+            padding: 10px 8px;
             border-top: none;
             border-bottom: 2px solid #cbd5e1;
-            vertical-align: middle;
+            vertical-align: middle !important;
             white-space: nowrap !important;
             word-break: keep-all !important;
-            overflow: hidden;
-            text-overflow: ellipsis;
         }
 
         #table_received_payments tbody td {
@@ -659,13 +684,114 @@ if (!function_exists('aitf_format_payment_date_display')) {
             color: #334155;
             padding: 6px 8px;
             border-bottom: 1px solid #f1f5f9;
-            vertical-align: middle;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            vertical-align: middle !important;
         }
 
         #table_received_payments tbody tr:hover td {
             background-color: #f8fafc !important;
+        }
+
+        /* Generic alignment utilities */
+        .text-left { text-align: left !important; }
+        .text-center { text-align: center !important; }
+        .text-right { text-align: right !important; }
+
+        /* Column Specific Alignments & Proportions */
+        .col-rcv-id {
+            min-width: 110px !important;
+            width: 110px !important;
+            text-align: left !important;
+        }
+
+        .col-rcv-client {
+            min-width: 220px !important;
+            text-align: left !important;
+        }
+
+        .col-rcv-service {
+            min-width: 80px !important;
+            width: 80px !important;
+            text-align: center !important;
+        }
+
+        .col-rcv-amount {
+            min-width: 130px !important;
+            width: 130px !important;
+            text-align: right !important;
+        }
+
+        .col-rcv-date {
+            min-width: 120px !important;
+            width: 120px !important;
+            text-align: center !important;
+            white-space: nowrap !important;
+        }
+
+        .col-rcv-instrument {
+            min-width: 130px !important;
+            width: 130px !important;
+            text-align: center !important;
+        }
+
+        .col-rcv-comment {
+            min-width: 170px !important;
+            text-align: left !important;
+        }
+
+        .col-rcv-reconcile {
+            min-width: 140px !important;
+            width: 140px !important;
+            text-align: center !important;
+        }
+
+        .rcv-date-badge {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 5px !important;
+            font-size: 12px !important;
+            font-weight: 700 !important;
+            color: #0f172a !important;
+            white-space: nowrap !important;
+            letter-spacing: 0.2px !important;
+            background: #f8fafc !important;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 6px !important;
+            padding: 3px 8px !important;
+            min-width: 98px !important;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+        }
+
+        .rcv-date-icon {
+            color: #64748b !important;
+            font-size: 11px !important;
+            flex-shrink: 0 !important;
+        }
+
+        .rcv-date-text {
+            display: inline-block !important;
+            white-space: nowrap !important;
+            font-weight: 700 !important;
+            font-size: 12px !important;
+            color: #0f172a !important;
+        }
+
+        .rcv-date-empty {
+            color: #94a3b8 !important;
+            font-weight: 600 !important;
+            font-size: 12px !important;
+        }
+
+        html.theme-dark .rcv-date-badge {
+            background: #1e293b !important;
+            border-color: #334155 !important;
+            color: #f8fafc !important;
+        }
+        html.theme-dark .rcv-date-text {
+            color: #f8fafc !important;
+        }
+        html.theme-dark .rcv-date-icon {
+            color: #94a3b8 !important;
         }
 
         /* Badges */
@@ -755,12 +881,12 @@ if (!function_exists('aitf_format_payment_date_display')) {
 
         /* Action Buttons */
         .btn-reconcile-toggle {
-            height: 23px;
-            font-size: 10.5px;
+            height: 26px;
+            font-size: 11px;
             font-weight: 700;
             border-radius: 4px;
-            padding: 0 8px;
-            min-width: 78px;
+            padding: 0 10px;
+            min-width: 90px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -801,9 +927,9 @@ if (!function_exists('aitf_format_payment_date_display')) {
 
         .rcv-comment-input {
             width: 100% !important;
-            height: 44px !important;
-            min-height: 44px !important;
-            max-height: 80px !important;
+            height: 38px !important;
+            min-height: 38px !important;
+            max-height: 75px !important;
             line-height: 1.35 !important;
             padding: 4px 6px !important;
             font-size: 11px !important;
@@ -882,23 +1008,22 @@ if (!function_exists('aitf_format_payment_date_display')) {
             margin: 0 !important;
         }
 
-        /* Scroll & Layout Containers (Strictly No Horizontal Overflow) */
+        /* Scroll & Layout Containers */
         .rcv-table-wrapper {
             width: 100% !important;
-            overflow: hidden !important;
+            position: relative;
         }
 
         .dataTables_wrapper {
             width: 100% !important;
             box-sizing: border-box !important;
-            overflow-x: hidden !important;
             position: relative;
             clear: both;
         }
 
         .dataTables_scroll {
             width: 100% !important;
-            overflow: hidden !important;
+            position: relative;
         }
 
         .dataTables_scrollHead {
@@ -908,14 +1033,13 @@ if (!function_exists('aitf_format_payment_date_display')) {
         }
 
         .dataTables_scrollHeadInner {
-            width: 100% !important;
-            box-sizing: border-box !important;
+            box-sizing: content-box !important;
             padding-right: 0 !important;
         }
 
         .dataTables_scrollBody {
             width: 100% !important;
-            overflow-x: hidden !important;
+            overflow-x: auto !important;
             overflow-y: auto !important;
             position: relative !important;
             -webkit-overflow-scrolling: touch;
@@ -973,7 +1097,8 @@ if (!function_exists('aitf_format_payment_date_display')) {
             color: var(--hpd-text) !important;
         }
 
-        html.theme-dark #table_received_payments thead th {
+        html.theme-dark #table_received_payments thead th,
+        html.theme-dark .dataTables_scrollHead thead th {
             background: #0b1320 !important;
             color: #f8fafc !important;
             border-bottom-color: #334155 !important;
@@ -1059,7 +1184,7 @@ if (!function_exists('aitf_format_payment_date_display')) {
                         <div class="row">
                             <div class="col-xs-12 text-center btn qms_complete_btn">
                                 <span><i class="fa fa-list"></i> Received Payment Entries &amp; Bank Reconciliation Statements</span>
-                                <span style="font-size: 11.5px; text-transform: none; opacity: 0.95; font-weight: 600;">Showing <?php echo count($allPayments); ?> records</span>
+                                <span id="rcvRecordCountText" style="font-size: 11.5px; text-transform: none; opacity: 0.95; font-weight: 600;">Showing <?php echo count($allPayments); ?> records</span>
                             </div>
                         </div>
                         <div class="row">
@@ -1068,14 +1193,14 @@ if (!function_exists('aitf_format_payment_date_display')) {
                                     <table class="table table-hover table-striped" id="table_received_payments">
                                         <thead>
                                             <tr>
-                                                <th style="width: 10%; white-space: nowrap;">Unique ID</th>
-                                                <th style="width: 24%;">Client Name</th>
-                                                <th style="width: 7%; text-align: center; white-space: nowrap;">Service</th>
-                                                <th style="width: 11%; text-align: right; white-space: nowrap;">Received Amount</th>
-                                                <th style="width: 9%; text-align: center; white-space: nowrap;">Received Date</th>
-                                                <th style="width: 12%; white-space: nowrap;">Instrument / NEFT</th>
-                                                <th style="width: 14%; white-space: nowrap;">Comment</th>
-                                                <th style="width: 13%; text-align: center; white-space: nowrap;">Statement Reconciliation</th>
+                                                <th class="col-rcv-id text-left" style="min-width: 110px; width: 110px; white-space: nowrap;">Unique ID</th>
+                                                <th class="col-rcv-client text-left" style="min-width: 220px;">Client Name</th>
+                                                <th class="col-rcv-service text-center" style="min-width: 80px; width: 80px; text-align: center; white-space: nowrap;">Service</th>
+                                                <th class="col-rcv-amount text-right" style="min-width: 130px; width: 130px; text-align: right; white-space: nowrap;">Received Amount</th>
+                                                <th class="col-rcv-date text-center" style="min-width: 120px; width: 120px; text-align: center; white-space: nowrap;">Received Date</th>
+                                                <th class="col-rcv-instrument text-center" style="min-width: 130px; width: 130px; text-align: center; white-space: nowrap;">Instrument / NEFT</th>
+                                                <th class="col-rcv-comment text-left" style="min-width: 170px; white-space: nowrap;">Comment</th>
+                                                <th class="col-rcv-reconcile text-center" style="min-width: 140px; width: 140px; text-align: center; white-space: nowrap;">Statement Reconciliation</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -1104,39 +1229,42 @@ if (!function_exists('aitf_format_payment_date_display')) {
                                                 }
                                             ?>
                                                 <tr id="pay_row_<?php echo $pay['payment_id']; ?>" data-customer-id="<?php echo $pay['customer_id']; ?>">
-                                                    <td>
+                                                    <td class="col-rcv-id text-left" style="vertical-align: middle;">
                                                         <a href="customerAccount.php?customerid=<?php echo $pay['customer_id']; ?>" class="unique-id-link" title="Open Customer Account: <?php echo $uniqueId ?: ('#' . $pay['customer_id']); ?>">
                                                             <?php echo $uniqueId ?: ('#' . $pay['customer_id']); ?>
                                                         </a>
                                                     </td>
-                                                    <td>
+                                                    <td class="col-rcv-client text-left" style="vertical-align: middle;">
                                                         <strong style="color: #0f172a; font-weight: 700; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="<?php echo $clientName; ?>"><?php echo $clientName; ?></strong>
                                                         <?php if (!empty($pay['contact_person'])) { ?>
                                                             <div style="font-size: 10.5px; color: #64748b; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"><i class="fa fa-user" style="font-size: 9.5px;"></i> <?php echo htmlspecialchars($pay['contact_person']); ?></div>
                                                         <?php } ?>
                                                     </td>
-                                                    <td style="text-align: center;">
+                                                    <td class="col-rcv-service text-center" style="vertical-align: middle; text-align: center;">
                                                         <span class="service-badge <?php echo $serviceClass; ?>">
                                                             <i class="fa fa-tag" style="font-size: 8.5px; opacity: 0.85;"></i>
                                                             <?php echo $serviceName; ?>
                                                         </span>
                                                     </td>
-                                                    <td style="text-align: right;">
+                                                    <td class="col-rcv-amount text-right" style="vertical-align: middle; text-align: right;">
                                                         <strong style="color: #059669; font-size: 13px; font-weight: 800; white-space: nowrap;">₹<?php echo number_format($rcvAmt, 2); ?></strong>
                                                     </td>
-                                                    <td style="text-align: center; white-space: nowrap;">
-                                                        <span style="color: #0f172a; font-weight: 700; font-size: 11.5px; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 4px;">
-                                                            <i class="fa fa-calendar-o" style="color: #64748b; font-size: 10.5px;"></i>
-                                                            <span><?php echo $dateFormatted; ?></span>
-                                                        </span>
+                                                    <td class="col-rcv-date text-center" style="vertical-align: middle; text-align: center; white-space: nowrap;">
+                                                        <?php if ($dateFormatted !== '-') { ?>
+                                                            <span class="rcv-date-badge" title="Received Date: <?php echo $dateFormatted; ?>">
+                                                                <i class="fa fa-calendar-o rcv-date-icon"></i><span class="rcv-date-text"><?php echo $dateFormatted; ?></span>
+                                                            </span>
+                                                        <?php } else { ?>
+                                                            <span class="rcv-date-empty">-</span>
+                                                        <?php } ?>
                                                     </td>
-                                                    <td>
+                                                    <td class="col-rcv-instrument text-center" style="vertical-align: middle; text-align: center;">
                                                         <span class="instrument-badge" title="<?php echo $chequeDetails; ?>">
                                                             <i class="fa <?php echo $instIcon; ?>" style="color: #64748b; font-size: 9.5px;"></i> 
                                                             <?php echo $chequeDetails; ?>
                                                         </span>
                                                     </td>
-                                                    <td>
+                                                    <td class="col-rcv-comment text-left" style="vertical-align: middle;">
                                                         <div class="rcv-comment-wrap">
                                                             <textarea class="rcv-comment-input" 
                                                                       data-pay-id="<?php echo htmlspecialchars($pay['payment_id'] ?? ''); ?>" 
@@ -1145,7 +1273,7 @@ if (!function_exists('aitf_format_payment_date_display')) {
                                                                       placeholder=""><?php echo htmlspecialchars($pay['comment'] ?? ''); ?></textarea>
                                                         </div>
                                                     </td>
-                                                    <td style="text-align: center; vertical-align: middle;">
+                                                    <td class="col-rcv-reconcile text-center" style="vertical-align: middle; text-align: center;">
                                                         <button type="button" 
                                                                 class="btn btn-xs btn-reconcile-toggle <?php echo $isReconciled ? 'reconcile-verified' : 'reconcile-pending'; ?>"
                                                                 data-status="<?php echo $isReconciled ? 'Verified' : 'Verify'; ?>"
@@ -1190,34 +1318,10 @@ if (!function_exists('aitf_format_payment_date_display')) {
     }
 
     $(document).ready(function () {
-        var debouncedRcvSearch = debounce(function () {
-            table.draw();
-        }, 150);
-
-        $('#clientSearch').on('input keyup change', debouncedRcvSearch);
-        $('#startDate, #endDate').on('change', function () {
-            table.draw();
-        });
-
-        setTimeout(function() {
-            if (typeof $.fn.datepicker !== 'undefined') {
-                $('.datepicker-rcv').datepicker({
-                    minDate: '-100Y',
-                    maxDate: '+100Y',
-                    changeYear: true,
-                    changeMonth: true,
-                    yearRange: "-20:+100",
-                    dateFormat: 'dd.mm.yy',
-                    onSelect: function() {
-                        $('#receivedFilterForm').submit();
-                    }
-                });
-            }
-        }, 100);
-
         var table = $('#table_received_payments').DataTable({
             "scrollY": '68vh',
             "scrollCollapse": true,
+            "scrollX": true,
             "paging": true,
             "pageLength": 50,
             "ordering": false,
@@ -1225,14 +1329,14 @@ if (!function_exists('aitf_format_payment_date_display')) {
             "lengthChange": false,
             "dom": "tr<'row dt-bottom-row'<'col-sm-6 col-xs-12'i><'col-sm-6 col-xs-12'p>>",
             "columnDefs": [
-                { "width": "10%", "targets": 0, "className": "text-nowrap" },
-                { "width": "24%", "targets": 1 },
-                { "width": "7%", "targets": 2, "className": "text-nowrap text-center" },
-                { "width": "11%", "targets": 3, "className": "text-nowrap text-right" },
-                { "width": "9%", "targets": 4, "className": "text-nowrap text-center" },
-                { "width": "12%", "targets": 5, "className": "text-nowrap" },
-                { "width": "14%", "targets": 6, "className": "text-nowrap" },
-                { "width": "13%", "targets": 7, "className": "text-nowrap text-center" }
+                { "targets": 0, "className": "col-rcv-id text-left text-nowrap", "width": "110px" },
+                { "targets": 1, "className": "col-rcv-client text-left", "width": "220px" },
+                { "targets": 2, "className": "col-rcv-service text-center text-nowrap", "width": "80px" },
+                { "targets": 3, "className": "col-rcv-amount text-right text-nowrap", "width": "130px" },
+                { "targets": 4, "className": "col-rcv-date text-center text-nowrap", "width": "120px" },
+                { "targets": 5, "className": "col-rcv-instrument text-center text-nowrap", "width": "130px" },
+                { "targets": 6, "className": "col-rcv-comment text-left", "width": "170px" },
+                { "targets": 7, "className": "col-rcv-reconcile text-center text-nowrap", "width": "140px" }
             ],
             "language": {
                 "emptyTable": "No received payment entries found",
@@ -1252,8 +1356,66 @@ if (!function_exists('aitf_format_payment_date_display')) {
                 setTimeout(function() {
                     api.columns.adjust();
                 }, 50);
+
+                var initSearch = $.trim($('#clientSearch').val());
+                if (initSearch) {
+                    api.search(initSearch).draw();
+                }
             }
         });
+
+        table.on('draw', function() {
+            var info = table.page.info();
+            if (info && $('#rcvRecordCountText').length) {
+                if (info.recordsTotal === info.recordsDisplay) {
+                    $('#rcvRecordCountText').text('Showing ' + info.recordsTotal.toLocaleString() + ' records');
+                } else {
+                    $('#rcvRecordCountText').text('Showing ' + info.recordsDisplay.toLocaleString() + ' of ' + info.recordsTotal.toLocaleString() + ' records');
+                }
+            }
+        });
+
+        function performClientSearch() {
+            var val = $.trim($('#clientSearch').val());
+            table.search(val).draw();
+        }
+
+        var debouncedRcvSearch = debounce(function () {
+            performClientSearch();
+        }, 150);
+
+        $('#clientSearch').on('input keyup change paste search', debouncedRcvSearch);
+
+        $('#clientSearch').on('keydown', function(e) {
+            if (e.which === 13 || e.keyCode === 13) {
+                e.preventDefault();
+                performClientSearch();
+            } else if (e.which === 27 || e.keyCode === 27) {
+                e.preventDefault();
+                $(this).val('');
+                performClientSearch();
+            }
+        });
+
+        $('#startDate, #endDate').on('change', function () {
+            table.draw();
+        });
+
+        setTimeout(function() {
+            if (typeof $.fn.datepicker !== 'undefined') {
+                $('.datepicker-rcv').datepicker({
+                    minDate: '-100Y',
+                    maxDate: '+100Y',
+                    changeYear: true,
+                    changeMonth: true,
+                    yearRange: "-20:+100",
+                    dateFormat: 'dd.mm.yy',
+                    onSelect: function() {
+                        $('#receivedFilterForm').submit();
+                    }
+                });
+            }
+        }, 100);
 
         $(window).on('resize', function () {
             table.columns.adjust();

@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/payment_service_names.php';
 /** Payment grouping and persistence shared by the account page and its endpoints. */
 function aitf_payment_schema(PDO $db) {
     static $ready = false;
@@ -7,6 +8,7 @@ function aitf_payment_schema(PDO $db) {
         'payment_header' => 'VARCHAR(100) NULL',
         'client_row_key' => 'VARCHAR(80) NULL',
         'row_version' => 'INT NOT NULL DEFAULT 0',
+        'settlement_kind' => 'VARCHAR(10) NULL',
     ];
     foreach ($columns as $name => $definition) {
         if (!$db->query("SHOW COLUMNS FROM payment_system LIKE '$name'")->fetch()) {
@@ -209,7 +211,14 @@ function aitf_payment_save(PDO $db, $customer, array $rows) {
             $service = $old ? $old['service_type'] : $header;
             $received = aitf_payment_money($row['received'] ?? 0);
             $tds = aitf_payment_money($row['tds'] ?? 0);
-            $discount = aitf_payment_money($row['discount'] ?? 0);
+            if ($old && !empty($old['settlement_kind'])) {
+                if (strcasecmp($header, $old['payment_header']) !== 0) throw new RuntimeException('A settlement must stay in its original header.');
+                if ((float)$received != 0 || (float)$tds != 0) throw new InvalidArgumentException('Edit the settlement amount, not cash received or TDS.');
+                $amount = aitf_payment_money($row['settlement_amount'] ?? abs((float)$old['discount_amount']));
+                $discount = number_format(($old['settlement_kind'] === 'excess' ? -1 : 1) * (float)$amount, 2, '.', '');
+            } else {
+                $discount = aitf_payment_money($row['discount'] ?? 0);
+            }
             $date = aitf_payment_date($row['date'] ?? '');
             $instrument = trim((string)($row['instrument'] ?? ''));
             if (mb_strlen($instrument) > 100) throw new InvalidArgumentException('Instrument must be at most 100 characters.');
@@ -292,7 +301,7 @@ function aitf_payment_verify(PDO $db, $id, $status, $column) {
         $stmt->execute([$id]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$row) throw new RuntimeException('Payment no longer exists.');
-        if ($status === 'Verified' && (float)$row['payment_received'] + (float)$row['tds_amount'] + (float)$row['discount_amount'] <= 0) throw new RuntimeException('Enter an amount before verifying a payment.');
+        if ($status === 'Verified' && (float)$row['payment_received'] + (float)$row['tds_amount'] + abs((float)$row['discount_amount']) <= 0) throw new RuntimeException('Enter an amount before verifying a payment.');
         $db->prepare("UPDATE payment_system SET `$column`=?,row_version=row_version+1 WHERE payment_id=?")->execute([$status,$id]);
         $row[$column] = $status;
         $db->commit();
@@ -308,10 +317,11 @@ function aitf_payment_move_receipt(PDO $db, $customer, $id, $target, $version) {
     $db->beginTransaction();
     try {
         aitf_payment_lock_customer($db, $customer);
-        $stmt = $db->prepare('SELECT row_version FROM payment_system WHERE payment_id=? AND customer_id=? FOR UPDATE');
+        $stmt = $db->prepare('SELECT row_version,settlement_kind FROM payment_system WHERE payment_id=? AND customer_id=? FOR UPDATE');
         $stmt->execute([$id,$customer]);
         $old = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$old) throw new RuntimeException('Payment not found.');
+        if (!empty($old['settlement_kind'])) throw new RuntimeException('A settlement belongs to its original header. Delete it and settle the correct header instead.');
         if ($version === null || (int)$version !== (int)$old['row_version']) throw new RuntimeException('This payment changed. Reload before moving it.');
         $db->prepare('UPDATE payment_system SET payment_header=?,row_version=row_version+1 WHERE payment_id=? AND customer_id=?')->execute([$target,$id,$customer]);
         $db->commit();

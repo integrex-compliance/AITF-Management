@@ -151,7 +151,7 @@ $_GET['customerid']=380;
 $invoiceList=$db->query('SELECT * FROM invoice_details WHERE customer_id=380')->fetchAll(PDO::FETCH_ASSOC);
 $paymentInfo=$db->query('SELECT * FROM payment_system WHERE customer_id=380')->fetchAll(PDO::FETCH_ASSOC);
 $source=file_get_contents(__DIR__.'/../customerAccount.php');
-$start=strpos($source,"if (!function_exists('normalizePaymentServiceType'))");
+$start=strpos($source,"// Payment service grouping starts here.");
 $end=strpos($source,'?>',$start);
 eval(substr($source,$start,$end-$start));
 check(in_array($keys[2],$activeServiceBlocks,true) && in_array($renamed['service_type'],$activeServiceBlocks,true),'Actual account grouping preserves both RC headers after reload');

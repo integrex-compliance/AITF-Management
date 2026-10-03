@@ -8,13 +8,18 @@ function aitf_payment_json($data) {
 }
 
 $ledgerAction = $req['action'] ?? '';
-$ledgerActions = ['autoSavePayments', 'deletePayment', 'createPaymentHeader', 'renamePaymentHeader', 'removePaymentHeader', 'updateInvoiceServiceType', 'updatePaymentServiceType'];
+$ledgerActions = ['autoSavePayments', 'deletePayment', 'createPaymentHeader', 'renamePaymentHeader', 'removePaymentHeader', 'updateInvoiceServiceType', 'updatePaymentServiceType', 'getPaymentSettlement', 'saveDiscount'];
 if (in_array($ledgerAction, $ledgerActions, true)) {
     try {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new RuntimeException('Use POST for payment changes.');
         if (empty($_SESSION['username']) || in_array(strtolower($_SESSION['role'] ?? ''), ['client', 'external'], true)) throw new RuntimeException('Please sign in with a staff account.');
         aitf_payment_schema($db);
         $customer = (int)($req['customer_id'] ?? $req['customer'] ?? 0);
+        if ($ledgerAction === 'getPaymentSettlement' || $ledgerAction === 'saveDiscount') {
+            require_once __DIR__ . '/payment_settlement.php';
+            if ($customer <= 0) throw new InvalidArgumentException('Invalid customer.');
+            aitf_payment_json($ledgerAction === 'saveDiscount' ? aitf_payment_settle($db,$customer,$req) : aitf_settlement_snapshot($db,$customer,$req['service_type'] ?? ''));
+        }
         if ($ledgerAction === 'autoSavePayments') {
             $rows = json_decode($req['rows'] ?? 'null', true);
             if (!is_array($rows) || count($rows) > 1000) throw new InvalidArgumentException('Invalid payment rows. Reload this page.');

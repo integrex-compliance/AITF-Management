@@ -1626,9 +1626,9 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             $invoiceList = $statement->fetchAll();
 
             $paymentrcv = "SELECT 
-                SUM(CASE WHEN (discount_amount > 0 OR service_type LIKE '%tds%' OR service_type LIKE '%discount%' OR service_type LIKE '%short%') THEN 0 ELSE payment_received END) as payment_sum,
+                SUM(CASE WHEN (discount_amount <> 0 OR service_type LIKE '%tds%' OR service_type LIKE '%discount%' OR service_type LIKE '%short%') THEN 0 ELSE payment_received END) as payment_sum,
                 SUM(CASE WHEN tds_amount > 0 THEN tds_amount WHEN service_type LIKE '%tds%' THEN payment_received ELSE 0 END) as tds_sum,
-                SUM(CASE WHEN discount_amount > 0 THEN discount_amount WHEN (service_type LIKE '%discount%' OR service_type LIKE '%short%') THEN payment_received ELSE 0 END) as discount_sum
+                SUM(CASE WHEN discount_amount <> 0 THEN discount_amount WHEN (service_type LIKE '%discount%' OR service_type LIKE '%short%') THEN payment_received ELSE 0 END) as discount_sum
                 FROM `payment_system` WHERE customer_id = :id";
             $statement = $db->prepare($paymentrcv);
             $statement->bindParam(':id', $_GET['customerid']);
@@ -6232,121 +6232,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                 </div>
                     <div class="servicebox-data payment-desc" id="servicebox-data" style="display: none;">
                     <?php
-                    if (!function_exists('normalizePaymentServiceType')) {
-                        function normalizePaymentServiceType($svcRaw) {
-                            $raw = trim((string)$svcRaw);
-                            if ($raw === '' || strcasecmp($raw, 'payment') === 0) return 'CA';
-                            $lower = strtolower($raw);
-
-                            // Clean spaces and underscores/dashes for uniform matching
-                            $clean = preg_replace('/[\s_-]+/', ' ', $lower);
-
-                            // 1. Contract Review (CR)
-                            if (preg_match('/\b(contract\s*review|cr)\b/i', $raw) || $lower === 'cr' || strpos($lower, 'contract review') !== false) {
-                                return 'Contract Review';
-                            }
-
-                            // 2. Transition Audit
-                            if (strpos($lower, 'transition') !== false) {
-                                return 'Transition Audit';
-                            }
-
-                            // 3. PTR
-                            if (preg_match('/\bptr\b/i', $raw) || strpos($lower, 'ptr') !== false) {
-                                return 'PTR';
-                            }
-
-                            // 4. Special Audit (SP)
-                            if (preg_match('/\b(special\s*audit|sp)\b/i', $raw) || $lower === 'sp' || strpos($lower, 'sp-') !== false) {
-                                return 'SP';
-                            }
-
-                            // 5. 1st Surveillance (SA-I) - check before RC if it's explicitly SA
-                            if (
-                                preg_match('/\b(1st|1\s*st|first|3rd|3\s*rd|third|5th|5\s*th)\s*surveillance/i', $clean) ||
-                                preg_match('/surveillance\s*(1|i|01|3|03|5|05)\b/i', $clean) ||
-                                preg_match('/\bsa\s*[-_]?\s*(0?1|i|0?3|0?5)\b/i', $clean) ||
-                                strpos($lower, 'sa-01') !== false ||
-                                strpos($lower, 'sa-1') !== false ||
-                                strpos($lower, 'sa-i') !== false ||
-                                strpos($lower, 'sa 1') !== false ||
-                                strpos($lower, 'sa1') !== false ||
-                                strpos($lower, 'sa-03') !== false ||
-                                strpos($lower, 'sa-3') !== false ||
-                                strpos($lower, 'sa3') !== false ||
-                                strpos($lower, 'sa-05') !== false ||
-                                strpos($lower, 'sa-5') !== false ||
-                                strpos($lower, 'sa5') !== false
-                            ) {
-                                return 'SA-I';
-                            }
-
-                            // 6. 2nd Surveillance (SA-II)
-                            if (
-                                preg_match('/\b(2nd|2\s*nd|second|4th|4\s*th|fourth|6th|6\s*th)\s*surveillance/i', $clean) ||
-                                preg_match('/surveillance\s*(2|ii|02|4|04|6|06)\b/i', $clean) ||
-                                preg_match('/\bsa\s*[-_]?\s*(0?2|ii|0?4|0?6)\b/i', $clean) ||
-                                strpos($lower, 'sa-02') !== false ||
-                                strpos($lower, 'sa-2') !== false ||
-                                strpos($lower, 'sa-ii') !== false ||
-                                strpos($lower, 'sa 2') !== false ||
-                                strpos($lower, 'sa2') !== false ||
-                                strpos($lower, 'sa-04') !== false ||
-                                strpos($lower, 'sa-4') !== false ||
-                                strpos($lower, 'sa4') !== false ||
-                                strpos($lower, 'sa-06') !== false ||
-                                strpos($lower, 'sa-6') !== false ||
-                                strpos($lower, 'sa6') !== false
-                            ) {
-                                return 'SA-II';
-                            }
-
-                            // 7. Re-Certification (RC) - MUST BE CHECKED BEFORE general CA/certification
-                            if (
-                                preg_match('/\b(re\s*cert|recert|re\s*certification|recertification|rc)\b/i', $raw) ||
-                                strpos($clean, 're cert') !== false ||
-                                strpos($clean, 'recert') !== false ||
-                                strpos($lower, 'rc-') !== false ||
-                                strpos($lower, 'rc -') !== false ||
-                                $lower === 'rc'
-                            ) {
-                                return 'RC';
-                            }
-
-                            // 8. General Surveillance (if unspecified 1 or 2, default to SA-I)
-                            if (strpos($lower, 'surveillance') !== false) {
-                                return 'SA-I';
-                            }
-
-                            // 9. Generic Training
-                            if (strpos($lower, 'generic') !== false || strpos($lower, 'training') !== false) {
-                                return 'Generic Training';
-                            }
-
-                            // 10. Initial Certification (CA)
-                            if (
-                                preg_match('/\b(ca|stage\s*1|stage\s*2|stage1|stage2|initial|payment)\b/i', $raw) ||
-                                strpos($lower, 'ca-') !== false ||
-                                strpos($lower, 'stage 1') !== false ||
-                                strpos($lower, 'stage 2') !== false ||
-                                strpos($lower, 'application') !== false ||
-                                strpos($lower, 'certification') !== false ||
-                                $lower === 'ca'
-                            ) {
-                                return 'CA';
-                            }
-
-                            // 11. Auxiliary / Expense line descriptions (Travelling, Hotel, Conveyance, Expense, etc.) - merge into CA instead of creating an orphan section
-                            if (
-                                preg_match('/\b(travel|travelling|traveling|flight|train|air\s*ticket|fare|conveyance|hotel|lodging|boarding|stay|accommodation|expense|expenses|reimbursement|out\s*of\s*pocket|ta\s*\/?\s*da|da\s*\/?\s*ta|misc|miscellaneous|discount|tds|short|admin|charges|fee|fees)\b/i', $raw)
-                            ) {
-                                return 'CA';
-                            }
-
-                            return $raw;
-                        }
-                    }
-
+                    // Payment service grouping starts here.
                     if (!function_exists('isPaymentRowMeaningful')) {
                         function isPaymentRowMeaningful($pay) {
                             return is_array($pay) && aitf_payment_meaningful($pay);
@@ -6548,7 +6434,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                             box-sizing: border-box !important;
                         }
                         .service-details-table thead th:last-child {
-                            width: 70px;
+                            width: 40px;
                         }
                         .service-details-table tbody tr.cb_subsection > td:last-child .table-edit-control {
                             display: flex;
@@ -6558,8 +6444,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                             min-height: 28px;
                         }
                         .service-details-table .infoDelete,
-                        .service-details-table .removeNewPaymentRow,
-                        .service-details-table .movePaymentHeader {
+                        .service-details-table .removeNewPaymentRow {
                             display: inline-flex;
                             align-items: center;
                             justify-content: center;
@@ -6574,26 +6459,19 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                             cursor: pointer;
                             text-decoration: none;
                         }
-                        .service-details-table .movePaymentHeader {
-                            border-color: #bfdbfe;
-                            background: #eff6ff;
-                            color: #2563eb;
-                        }
                         .service-details-table .infoDelete[data-reconciled="1"] {
                             border-color: #cbd5e1;
                             background: #f8fafc;
                             cursor: not-allowed;
                         }
                         .service-details-table .infoDelete i,
-                        .service-details-table .removeNewPaymentRow i,
-                        .service-details-table .movePaymentHeader i {
+                        .service-details-table .removeNewPaymentRow i {
                             float: none !important;
                             padding: 0 !important;
                             margin: 0 !important;
                         }
                         .service-details-table .infoDelete:hover,
-                        .service-details-table .removeNewPaymentRow:hover,
-                        .service-details-table .movePaymentHeader:hover {
+                        .service-details-table .removeNewPaymentRow:hover {
                             filter: brightness(0.95);
                         }
                         .invoiceServiceTypeSelect,
@@ -6710,6 +6588,14 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                             font-size: 14px !important;
                             line-height: 1 !important;
                         }
+                        .block-matched-badge.payment-match-label {
+                            font-size: 10px !important;
+                            gap: 4px;
+                            white-space: nowrap;
+                        }
+                        .service-payment-block.service-block-matched .serviceBlockRemainingWrapper {
+                            display: none !important;
+                        }
                         .serviceBlockTypeSelect {
                             background-color: #ffffff !important;
                             color: #1e3a8a !important;
@@ -6813,7 +6699,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                             $blockValidCount = 0;
 
                             foreach ($servicePayments as $pay) {
-                                $isDisc = (stripos($pay['service_type'] ?? '', 'discount') !== false || stripos($pay['service_type'] ?? '', 'short') !== false);
+                                $isDisc = (!empty($pay['settlement_kind']) || stripos($pay['service_type'] ?? '', 'discount') !== false || stripos($pay['service_type'] ?? '', 'short') !== false);
                                 $isTds = (stripos($pay['service_type'] ?? '', 'tds') !== false && floatval($pay['tds_amount'] ?? 0) == 0 && !$isDisc);
 
                                 $discVal = floatval($pay['discount_amount'] ?? 0);
@@ -6971,13 +6857,13 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                     </div>
 
                                     <!-- Right: Payments Column -->
-                                    <div class="col-xs-5 table-responsive payments-container-col" style="flex: 52 52 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px;">
+                                    <div class="col-xs-5 table-responsive payments-container-col" style="flex: 50 50 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px;">
                                         <div class="row">
                                             <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 10px;">
                                                 <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.4px;">
                                                     <i class="fa ">Received Payment</i> (<span class="col-service-label"><?php echo ($blockIdx + 1) . '. ' . htmlspecialchars($svcLabel); ?></span>)
                                                     <?php if ($isBlockMatched) { ?>
-                                                        <span class="block-matched-badge" title="Matched"><i class="fa fa-check-circle"></i></span>
+                                                        <span class="block-matched-badge payment-match-label" title="Matched"><i class="fa fa-check-circle"></i> Matched</span>
                                                     <?php } ?>
                                                 </span>
                                                 <div style="display: inline-flex; align-items: center; gap: 70px;">
@@ -7006,7 +6892,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                     <?php
                                                     if (!empty($servicePayments)) {
                                                         foreach ($servicePayments as $payInfo) {
-                                                            $isDiscountRow = (stripos($payInfo['service_type'] ?? '', 'discount') !== false || stripos($payInfo['service_type'] ?? '', 'short') !== false);
+                                                            $isSettlement = !empty($payInfo['settlement_kind']);
+                                                            $isDiscountRow = ($isSettlement || stripos($payInfo['service_type'] ?? '', 'discount') !== false || stripos($payInfo['service_type'] ?? '', 'short') !== false);
                                                             $isLegacyTdsRow = (stripos($payInfo['service_type'] ?? '', 'tds') !== false && floatval($payInfo['tds_amount'] ?? 0) == 0 && !$isDiscountRow);
 
                                                             $discountVal = floatval($payInfo['discount_amount'] ?? 0);
@@ -7016,7 +6903,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
 
                                                             $displayRcv = ($isLegacyTdsRow || $isDiscountRow) ? '' : (floatval($payInfo['payment_received'] ?? 0) > 0 ? $payInfo['payment_received'] : ($payInfo['payment_received'] === '0' || $payInfo['payment_received'] === 0 ? '0' : ''));
                                                             $displayTds = floatval($payInfo['tds_amount'] ?? 0) > 0 ? $payInfo['tds_amount'] : ($isLegacyTdsRow && floatval($payInfo['payment_received'] ?? 0) > 0 ? $payInfo['payment_received'] : '');
-                                                            $displayDiscount = ($discountVal > 0) ? $discountVal : '';
+                                                            $displayDiscount = ($discountVal != 0) ? $discountVal : '';
 
                                                             $recRaw = trim(strtolower($payInfo['reconciliation'] ?? ''));
                                                             $isVerified = in_array($recRaw, ['verified', 'yes', '1']);
@@ -7025,14 +6912,14 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                             $isTdsLocked = $isTdsVerified;
                                                             $isRowReconciled = $isVerified || $isTdsLocked;
                                                             ?>
-                                                            <tr class="cb_subsection previousCBData pamentrow<?php echo $payInfo["payment_id"] ?> <?php echo $isDiscountRow ? 'discount-settlement-row' : ''; ?> <?php echo $isRowReconciled ? 'row-reconciled-locked' : ''; ?>" data-preserve-details="<?php echo (aitf_payment_text_meaningful($payInfo['comment'] ?? '') || ((float)($payInfo['amount_decided'] ?? 0) > 0 && (float)($payInfo['payment_received'] ?? 0) + (float)($payInfo['tds_amount'] ?? 0) + (float)($payInfo['discount_amount'] ?? 0) == 0)) ? '1' : '0'; ?>" data-version="<?php echo (int)($payInfo['row_version'] ?? 0); ?>" id="cb_subsection_0" style="<?php echo $isDiscountRow ? 'background-color: #faf5ff !important; border-left: 4px solid #8b5cf6 !important;' : ($isRowReconciled ? 'background-color: #f8fafc !important;' : ''); ?>">
+                                                            <tr class="cb_subsection previousCBData pamentrow<?php echo $payInfo["payment_id"] ?> <?php echo $isDiscountRow ? 'discount-settlement-row' : ''; ?> <?php echo $isRowReconciled ? 'row-reconciled-locked' : ''; ?>" data-settlement-kind="<?php echo htmlspecialchars($payInfo['settlement_kind'] ?? ''); ?>" data-preserve-details="<?php echo (aitf_payment_text_meaningful($payInfo['comment'] ?? '') || ((float)($payInfo['amount_decided'] ?? 0) > 0 && (float)($payInfo['payment_received'] ?? 0) + (float)($payInfo['tds_amount'] ?? 0) + (float)($payInfo['discount_amount'] ?? 0) == 0)) ? '1' : '0'; ?>" data-version="<?php echo (int)($payInfo['row_version'] ?? 0); ?>" id="cb_subsection_0" style="<?php echo $isDiscountRow ? 'background-color: #faf5ff !important; border-left: 4px solid #8b5cf6 !important;' : ($isRowReconciled ? 'background-color: #f8fafc !important;' : ''); ?>">
                                                                 <td style="padding: 0px; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ($isRowReconciled ? 'background-color: #f8fafc;' : ''); ?>">
                                                                     <div class="table-edit-control"><label></label>
                                                                         <input type="hidden" data_row_id="" class="serviceTypeName" name="serviceTypeName" value="<?php echo htmlspecialchars($payInfo['service_type'] ?? $svcName); ?>" />
                                                                         <input type="hidden" data_row_id="" class="serviceAmountDecided" name="serviceAmountDecided" value="<?php echo htmlspecialchars((floatval($displayRcv) + floatval($displayTds) + floatval($displayDiscount)) ?: ($payInfo['amount_decided'] ?? '')); ?>" />
                                                                         <input type="hidden" data_row_id="" class="serviceDiscountAmount" name="serviceDiscountAmount" value="<?php echo htmlspecialchars($displayDiscount); ?>" />
                                                                         <?php if ($isDiscountRow) { ?>
-                                                                            <input type="text" readonly class="serviceDiscountDisplay" value="<?php echo number_format($discountVal, 2, '.', ''); ?>" title="Discount Settled: ₹<?php echo number_format($discountVal, 2, '.', ''); ?>" style="background-color: #faf5ff; border-bottom: 1px solid #8b5cf6; color: #6d28d9; font-weight: 700; text-align: right;" />
+                                                                            <input type="number" min="0" step="0.01" <?php echo (!$isSettlement || $isRowReconciled) ? 'readonly="readonly"' : ''; ?> class="serviceDiscountDisplay" value="<?php echo number_format(abs($discountVal), 2, '.', ''); ?>" title="Settlement: ₹<?php echo number_format($discountVal, 2, '.', ''); ?>" style="background-color: #faf5ff; border-bottom: 1px solid #8b5cf6; color: #6d28d9; font-weight: 700; text-align: right;" />
                                                                             <input type="hidden" data_row_id="" class="servicePaymentReceived" name="servicePaymentReceived" value="0" />
                                                                         <?php } else { ?>
                                                                             <input type="number" step="any" min="0" data_row_id="" class="servicePaymentReceived <?php echo $isRowReconciled ? 'reconciled-locked-input' : ''; ?>" name="servicePaymentReceived" value="<?php echo htmlspecialchars($displayRcv); ?>" placeholder="" <?php echo $isRowReconciled ? 'readonly="readonly" data-reconciled="1"' : ''; ?> style="background-color: <?php echo $isRowReconciled ? '#f8fafc' : '#ffffff'; ?>; border-bottom: 1px solid <?php echo $isRowReconciled ? '#86efac' : '#cbd5e1'; ?>; color: <?php echo $isRowReconciled ? '#15803d' : '#0f172a'; ?>; font-weight: 700; <?php echo $isRowReconciled ? 'cursor: not-allowed;' : ''; ?>" title="<?php echo $isRowReconciled ? 'Reconciled Entry - Cannot edit reconciled payment entry' : ''; ?>" />
@@ -7041,7 +6928,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                 </td>
                                                                 <td style="padding: 0px; background-color: <?php echo $isDiscountRow ? '#faf5ff' : ($isRowReconciled ? '#f0fdf4' : '#ffffff'); ?>; position: relative;">
                                                                     <div class="table-edit-control" style="position: relative; display: flex; align-items: center; width: 100%;"><label></label>
-                                                                        <input type="number" step="any" min="0" data_row_id="" class="serviceTdsAmount <?php echo $isRowReconciled ? 'tds-locked-input reconciled-locked-input' : ''; ?>" name="serviceTdsAmount" value="<?php echo htmlspecialchars($displayTds); ?>" placeholder="" <?php echo $isRowReconciled ? 'readonly="readonly" data-tds-locked="1" data-reconciled="1"' : ''; ?> style="background-color: <?php echo $isDiscountRow ? '#faf5ff' : ($isRowReconciled ? '#f0fdf4' : '#ffffff'); ?>; border-bottom: 1px solid <?php echo ($isRowReconciled) ? '#86efac' : '#cbd5e1'; ?>; color: <?php echo ($isRowReconciled) ? '#15803d' : '#b45309'; ?>; font-weight: 700; text-align: right; <?php echo ($isRowReconciled) ? 'padding-right: 20px !important; cursor: not-allowed;' : ''; ?>" title="<?php echo $isRowReconciled ? 'Reconciled Entry - Cannot edit reconciled payment entry' : ''; ?>" />
+                                                                        <input type="number" step="any" min="0" data_row_id="" class="serviceTdsAmount <?php echo $isRowReconciled ? 'tds-locked-input reconciled-locked-input' : ''; ?>" name="serviceTdsAmount" <?php echo $isSettlement ? 'readonly="readonly"' : ''; ?> value="<?php echo htmlspecialchars($displayTds); ?>" placeholder="" <?php echo $isRowReconciled ? 'readonly="readonly" data-tds-locked="1" data-reconciled="1"' : ''; ?> style="background-color: <?php echo $isDiscountRow ? '#faf5ff' : ($isRowReconciled ? '#f0fdf4' : '#ffffff'); ?>; border-bottom: 1px solid <?php echo ($isRowReconciled) ? '#86efac' : '#cbd5e1'; ?>; color: <?php echo ($isRowReconciled) ? '#15803d' : '#b45309'; ?>; font-weight: 700; text-align: right; <?php echo ($isRowReconciled) ? 'padding-right: 20px !important; cursor: not-allowed;' : ''; ?>" title="<?php echo $isRowReconciled ? 'Reconciled Entry - Cannot edit reconciled payment entry' : ''; ?>" />
                                                                         <?php if ($isRowReconciled) { ?>
                                                                             <span class="tds-verified-icon" title="Reconciled / Verified Entry" style="position: absolute; right: 3px; top: 50%; transform: translateY(-50%); color: #16a34a; font-size: 11px; display: inline-flex; align-items: center; pointer-events: none; z-index: 2;">
                                                                                 <i class="fa fa-check-circle" style="color: #16a34a; font-size: 11.5px;"></i>
@@ -7056,7 +6943,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                 </td>
                                                                 <td style="padding: 0px; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ($isRowReconciled ? 'background-color: #f8fafc;' : ''); ?>">
                                                                     <div class="table-edit-control"><label></label>
-                                                                        <input type="text" data_row_id="" class="serviceChequeDetails <?php echo $isRowReconciled ? 'reconciled-locked-input' : ''; ?>" name="serviceChequeDetails" value="<?php echo htmlspecialchars($payInfo['cheque_details'] ?? ''); ?>" placeholder="" <?php echo $isRowReconciled ? 'readonly="readonly" data-reconciled="1"' : ''; ?> style="background-color: <?php echo $isRowReconciled ? '#f8fafc' : '#ffffff'; ?>; color: <?php echo $isRowReconciled ? '#334155' : '#0f172a'; ?>; <?php echo $isRowReconciled ? 'cursor: not-allowed; font-weight: 600;' : ''; ?>" title="<?php echo $isRowReconciled ? 'Reconciled Entry - Cannot edit reconciled payment entry' : ''; ?>" />
+                                                                        <input type="text" data_row_id="" class="serviceChequeDetails <?php echo $isRowReconciled ? 'reconciled-locked-input' : ''; ?>" name="serviceChequeDetails" value="<?php echo htmlspecialchars($payInfo['cheque_details'] ?? ''); ?>" placeholder="" <?php echo $isRowReconciled ? 'readonly="readonly" data-reconciled="1"' : ''; ?> style="background-color: <?php echo $isRowReconciled ? '#f8fafc' : '#ffffff'; ?>; color: <?php echo $isSettlement ? '#6d28d9' : ($isRowReconciled ? '#334155' : '#0f172a'); ?>; <?php echo $isRowReconciled ? 'cursor: not-allowed; font-weight: 600;' : ''; ?>" title="<?php echo $isRowReconciled ? 'Reconciled Entry - Cannot edit reconciled payment entry' : ''; ?>" />
                                                                     </div>
                                                                 </td>
                                                                 <td style="padding: 1px 2px; text-align: center; vertical-align: middle; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ($isRowReconciled ? 'background-color: #f8fafc;' : ''); ?>">
@@ -7135,8 +7022,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                     <span style="color: #92400e; font-weight: 700; text-transform: uppercase; font-size: 9.5px;">TDS Total:</span>
                                                     <strong style="color: #b45309; font-size: 11px; font-weight: 800;">₹<span class="serviceBlockTdsSum"><?php echo number_format($blockTdsSum, 2, '.', ''); ?></span></strong>
                                                 </div>
-                                                <div class="serviceBlockDiscountWrapper" style="display: <?php echo ($blockDiscountSum > 0) ? 'inline-flex' : 'none'; ?>; align-items: center; gap: 3px;">
-                                                    <span style="color: #6b21a8; font-weight: 700; text-transform: uppercase; font-size: 9.5px;"><i class="fa fa-tag" style="color: #7c3aed; font-size: 9px; margin-right: 2px;"></i> Disc:</span>
+                                                <div class="serviceBlockDiscountWrapper" style="display: <?php echo (abs($blockDiscountSum) > 0) ? 'inline-flex' : 'none'; ?>; align-items: center; gap: 3px;">
+                                                    <span style="color: #6b21a8; font-weight: 700; text-transform: uppercase; font-size: 9.5px;"><i class="fa fa-tag" style="color: #7c3aed; font-size: 9px; margin-right: 2px;"></i> <span class="serviceBlockSettlementLabel"><?php echo $blockDiscountSum < 0 ? 'Excess settle:' : 'Short settle:'; ?></span></span>
                                                     <strong style="color: #7c3aed; font-size: 11px; font-weight: 800;">₹<span class="serviceBlockDiscountSum"><?php echo number_format($blockDiscountSum, 2, '.', ''); ?></span></strong>
                                                 </div>
                                             </div>
@@ -7167,7 +7054,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                         }
                                     }
                                     ?>
-                                    <div class="col-xs-3 comments-container-col" style="flex: 10 10 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px; display: flex; flex-direction: column;">
+                                    <div class="col-xs-3 comments-container-col" style="flex: 12 12 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px; display: flex; flex-direction: column;">
                                         <div class="row">
                                             <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: center; padding: 4px 4px; overflow: hidden; white-space: nowrap;">
                                                 <span style="font-weight: 700; font-size: 11px; letter-spacing: 0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="Notes (If Any) (<?php echo ($blockIdx + 1) . '. ' . htmlspecialchars($svcLabel); ?>)">
@@ -7281,73 +7168,29 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                 <div class="modal-header" style="background: linear-gradient(135deg, #1e293b, #334155); color: #ffffff; padding: 12px 18px;">
                                      <button type="button" class="close" data-dismiss="modal" aria-hidden="true" style="color: #ffffff; opacity: 0.9; font-size: 22px;">&times;</button>
                                      <h4 class="modal-title" id="discountModalLabel" style="font-weight: 700; font-size: 16px; margin: 0; display: flex; align-items: center; gap: 8px;">
-                                         <i class="fa fa-tags"></i> Discount (Short Paid) Settlement
+                                         <i class="fa fa-tags"></i> Payment Settlement
                                      </h4>
                                  </div>
                                  <div class="modal-body" style="padding: 20px; background-color: #f8fafc;">
-                                     <!-- Remaining Balance Box -->
-                                     <div style="background-color: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; padding: 12px 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
-                                         <div>
-                                             <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #475569;">Current Remaining Balance:</span>
-                                             <div style="font-size: 20px; font-weight: 800; color: #0f172a;">
-                                                 ₹<span id="discountModalRemainingBalance">0.00</span>
-                                             </div>
-                                         </div>
-                                         <button type="button" class="btn btn-sm" id="btnAutoFillFullBalance" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #fff; border: 1px solid #1e40af; font-weight: 600; font-size: 11.5px; border-radius: 4px; padding: 6px 12px; box-shadow: 0 1px 3px rgba(37, 99, 235, 0.25);" title="Auto-fill the full remaining balance as discount to settle account">
-                                             <i class="fa fa-bolt"></i> Settle Full Balance
-                                         </button>
-                                     </div>
-
                                      <form id="discountSettlementForm">
                                          <div class="form-group" style="margin-bottom: 14px;">
                                              <label style="font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 4px;">
-                                                 Discount / Short Paid Amount <span style="color: #ef4444;">*</span>
+                                                 Settlement Amount <span style="color: #ef4444;">*</span>
                                              </label>
                                              <div class="input-group">
                                                  <span class="input-group-addon" style="background-color: #f1f5f9; border-color: #cbd5e1; color: #334155; font-weight: 700;">₹</span>
-                                                 <input type="number" step="any" min="0.01" class="form-control" id="modalDiscountAmount" name="modalDiscountAmount" placeholder="Enter discount amount" required style="font-size: 15px; font-weight: 700; color: #0f172a; border-color: #cbd5e1;" />
+                                                 <input type="number" step="any" min="0.01" class="form-control" id="modalDiscountAmount" name="modalDiscountAmount" placeholder="Enter settlement amount" required style="font-size: 15px; font-weight: 700; color: #0f172a; border-color: #cbd5e1;" />
                                              </div>
-                                             <small style="color: #64748b; font-size: 11px;">This amount will be settled and deducted from the remaining balance.</small>
+                                             <small style="color: #64748b; font-size: 11px;">This adjustment settles the selected header balance.</small>
                                          </div>
 
-                                         <div class="form-group" style="margin-bottom: 14px;">
-                                             <label style="font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 4px;">
-                                                 <i class="fa fa-file-text-o" style="color: #2563eb; margin-right: 4px;"></i> Discount Against Invoice No. <span style="color: #ef4444;">*</span>
-                                             </label>
-                                             <select class="form-control" id="modalDiscountInvoice" name="modalDiscountInvoice" required style="font-size: 13px; font-weight: 600; color: #0f172a; border-color: #cbd5e1; background-color: #ffffff;">
-                                                <?php if (!empty($invoiceList) && count($invoiceList) > 0) { ?>
-                                                    <?php foreach ($invoiceList as $idx => $inv) { 
-                                                        $fullInvNo = $inv['final_prefix'] . '-' . $inv['final_invoice_no'];
-                                                        $invAmt = floatval($inv['final_amount'] ?? 0);
-                                                    ?>
-                                                        <option value="<?php echo htmlspecialchars($fullInvNo); ?>" 
-                                                            data-amount="<?php echo $invAmt; ?>" 
-                                                            data-id="<?php echo $inv['invoice_id']; ?>"
-                                                            <?php echo $idx === 0 ? 'selected' : ''; ?>>
-                                                            <?php echo htmlspecialchars($fullInvNo . ' (₹' . number_format($invAmt, 2, '.', '') . ')'); ?>
-                                                        </option>
-                                                    <?php } ?>
-                                                <?php } else { ?>
-                                                    <option value="">No Invoices Found</option>
-                                                <?php } ?>
-                                            </select>
-                                            <small style="color: #64748b; font-size: 11px;">Select the invoice against which this discount is settled.</small>
-                                            <input type="hidden" id="modalDiscountInvoiceId" name="modalDiscountInvoiceId" value="<?php echo (!empty($invoiceList) && isset($invoiceList[0]['invoice_id'])) ? $invoiceList[0]['invoice_id'] : ''; ?>" />
-                                            <input type="hidden" id="modalDiscountDate" name="modalDiscountDate" value="<?php echo date('d.m.Y'); ?>" />
-                                        </div>
-
-                                        <div class="form-group" style="margin-bottom: 8px;">
-                                            <label style="font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 4px;">
-                                                Remarks / Reason
-                                            </label>
-                                            <input type="text" class="form-control" id="modalDiscountRemarks" name="modalDiscountRemarks" value="Short Paid" placeholder="Reason or reference" style="font-size: 13px;" />
-                                        </div>
+                                         <input type="hidden" id="modalDiscountDate" value="<?php echo date('d.m.Y'); ?>" />
                                     </form>
                                 </div>
                                 <div class="modal-footer" style="background-color: #f1f5f9; padding: 10px 18px; border-top: 1px solid #e2e8f0;">
                                     <button type="button" class="btn btn-default" data-dismiss="modal" style="font-size: 12px; font-weight: 600;">Cancel</button>
                                     <button type="button" class="btn" id="btnSaveDiscountSettlement" style="background: linear-gradient(135deg, #16a34a, #15803d); color: #ffffff; border: none; font-size: 12.5px; font-weight: 700; padding: 6px 16px; border-radius: 4px; box-shadow: 0 1px 3px rgba(22, 163, 74, 0.25);">
-                                        <i class="fa fa-check-circle" style="margin-right: 4px;"></i> Save &amp; Settle Discount
+                                        <i class="fa fa-check-circle" style="margin-right: 4px;"></i> Save Settlement
                                     </button>
                                 </div>
                             </div>
@@ -13944,7 +13787,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             </div>
         </div>
     <?php } ?>
-    <script src="js/payment-ledger.js?v=20261002-2"></script>
+    <script src="js/payment-ledger.js?v=20261003-1"></script>
+    <script src="js/payment-settlement.js?v=20261002-2"></script>
     <script src="js/invoice-header-controls.js?v=20261002-2"></script>
     <script type="text/javascript">
         (function () {
@@ -22690,9 +22534,10 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         .html('<i class="fa '+(verified?'fa-check':'fa-times')+'"></i> <span>'+status+'</span>');
                     $row.attr('data-version', res.version).toggleClass('row-reconciled-locked', !!res.locked);
                     $row.find('.serviceReconciliation').val(status);
-                    $row.find('.servicePaymentReceived,.serviceTdsAmount,.paymentDepositDate,.serviceChequeDetails')
+                    $row.find('.servicePaymentReceived,.serviceDiscountDisplay,.serviceTdsAmount,.paymentDepositDate,.serviceChequeDetails')
                         .prop('readonly',!!res.locked).toggleClass('reconciled-locked-input',!!res.locked)
                         .attr('data-reconciled',res.locked?'1':'0').removeAttr('data-tds-locked').removeClass('tds-locked-input');
+                    if ($row.attr('data-settlement-kind')) $row.find('.serviceTdsAmount').prop('readonly',true);
                     $row.find('.infoDelete').attr('data-reconciled',res.locked?'1':'0').attr('data-tds-locked','0');
                 }).fail(function () { alert('Could not verify payment.'); });
             });
@@ -22843,7 +22688,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     $block.find(".serviceBlockPaidSum").text(blockReceived.toFixed(2));
                     $block.find(".serviceBlockTdsSum").text(blockTds.toFixed(2));
                     $block.find(".serviceBlockDiscountSum").text(blockDiscount.toFixed(2));
-                    if (blockDiscount > 0) {
+                    $block.find(".serviceBlockSettlementLabel").text(blockDiscount < 0 ? "Excess settle:" : "Short settle:");
+                    if (Math.abs(blockDiscount) > 0) {
                         $block.find(".serviceBlockDiscountWrapper").show();
                     } else {
                         $block.find(".serviceBlockDiscountWrapper").hide();
@@ -22855,7 +22701,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                         $block.addClass("service-block-matched");
                         $block.find(".block-matched-badge").remove();
                         $block.find(".invoice-container-col .qms_complete_btn > span").append(' <span class="block-matched-badge" title="Matched"><i class="fa fa-check-circle"></i></span>');
-                        $block.find(".payments-container-col .qms_complete_btn > span").append(' <span class="block-matched-badge" title="Matched"><i class="fa fa-check-circle"></i></span>');
+                        $block.find(".payments-container-col .qms_complete_btn > span").append(' <span class="block-matched-badge payment-match-label" title="Matched"><i class="fa fa-check-circle"></i> Matched</span>');
                         $block.find(".serviceBlockRemainingWrapper").css({
                             "background": "#dcfce7",
                             "border-color": "#4ade80"
@@ -23056,8 +22902,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             html += '            </div>';
             html += '        </div>';
 
-            // Payments column (52%)
-            html += '        <div class="col-xs-5 table-responsive payments-container-col" style="flex: 52 52 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px;">';
+            // Payments column (50%)
+            html += '        <div class="col-xs-5 table-responsive payments-container-col" style="flex: 50 50 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px;">';
             html += '            <div class="row">';
             html += '                <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: space-between; padding: 4px 10px;">';
             html += '                    <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.4px;"><i class="fa ">Received Payment</i> (<span class="col-service-label">' + blockNumber + '. ' + svcLabel + '</span>)</span>';
@@ -23094,14 +22940,14 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             html += '                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: nowrap;">';
             html += '                    <div style="display: inline-flex; align-items: center; gap: 3px;"><span style="color: #166534; font-weight: 700; text-transform: uppercase; font-size: 9.5px;"><i class="fa fa-check-circle" style="color: #16a34a; margin-right: 2px;"></i> Received Total:</span> <strong style="color: #15803d; font-size: 11px; font-weight: 800;">₹<span class="serviceBlockPaidSum">0.00</span></strong></div>';
             html += '                    <div style="display: inline-flex; align-items: center; gap: 3px;"><span style="color: #92400e; font-weight: 700; text-transform: uppercase; font-size: 9.5px;">TDS Total:</span> <strong style="color: #b45309; font-size: 11px; font-weight: 800;">₹<span class="serviceBlockTdsSum">0.00</span></strong></div>';
-            html += '                    <div class="serviceBlockDiscountWrapper" style="display: none; align-items: center; gap: 3px;"><span style="color: #6b21a8; font-weight: 700; text-transform: uppercase; font-size: 9.5px;"><i class="fa fa-tag" style="color: #7c3aed; font-size: 9px; margin-right: 2px;"></i> Disc:</span> <strong style="color: #7c3aed; font-size: 11px; font-weight: 800;">₹<span class="serviceBlockDiscountSum">0.00</span></strong></div>';
+            html += '                    <div class="serviceBlockDiscountWrapper" style="display: none; align-items: center; gap: 3px;"><span style="color: #6b21a8; font-weight: 700; text-transform: uppercase; font-size: 9.5px;"><i class="fa fa-tag" style="color: #7c3aed; font-size: 9px; margin-right: 2px;"></i> <span class="serviceBlockSettlementLabel">Short settle:</span></span> <strong style="color: #7c3aed; font-size: 11px; font-weight: 800;">₹<span class="serviceBlockDiscountSum">0.00</span></strong></div>';
             html += '                </div>';
             html += '                <div><span class="serviceBlockRemainingWrapper" style="display: inline-flex; align-items: center; font-size: 10px; padding: 2px 7px; border-radius: 4px; font-weight: 800; background: #ecfdf5; border: 1px solid #a7f3d0; white-space: nowrap;"><span style="color: #065f46; text-transform: uppercase; font-size: 9.5px; margin-right: 3px;">Remaining Total:</span> <strong class="serviceBlockRemainingSum" style="color: #16a34a; font-size: 11px;">₹0.00</strong></span></div>';
             html += '            </div>';
             html += '        </div>';
 
-            // Add Comment column on the far right (10%)
-            html += '        <div class="col-xs-3 comments-container-col" style="flex: 10 10 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px; display: flex; flex-direction: column;">';
+            // Add Comment column on the far right (12%)
+            html += '        <div class="col-xs-3 comments-container-col" style="flex: 12 12 0; min-width: 0; width: auto !important; max-width: none !important; float: none !important; padding-left: 5px; padding-right: 5px; display: flex; flex-direction: column;">';
             html += '            <div class="row">';
             html += '                <div class="col-xs-12 text-center btn qms_complete_btn" style="display: flex; align-items: center; justify-content: center; padding: 4px 4px; overflow: hidden; white-space: nowrap;">';
             html += '                    <span style="font-weight: 700; font-size: 11px; letter-spacing: 0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="Notes (If Any) (' + blockNumber + '. ' + svcLabel + ')"><i class="fa fa-commenting-o"></i> Notes (If Any) (<span class="col-service-comment-label">' + blockNumber + '. ' + svcLabel + '</span>)</span>';
@@ -23374,98 +23220,10 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             recalculatePaymentSystem();
         }, 200);
 
-        // Discount (Short Paid) Modal Handlers
-        $(document).on('click', '.openDiscountModalBtn', function (e) {
-            e.preventDefault();
-            var calc = (typeof recalculatePaymentSystem === 'function') ? recalculatePaymentSystem() : null;
-            var rem = (calc && calc.remainingBalance > 0) ? calc.remainingBalance : 0;
-            $("#discountModalRemainingBalance").text(rem.toFixed(2));
-            $("#modalDiscountAmount").val(rem > 0 ? rem.toFixed(2) : '');
-
-            var $firstOpt = $("#modalDiscountInvoice option:selected");
-            if (!$firstOpt.length) {
-                $firstOpt = $("#modalDiscountInvoice option:first");
-            }
-            if ($firstOpt.length) {
-                var invId = $firstOpt.attr('data-id') || '';
-                $("#modalDiscountInvoiceId").val(invId);
-            }
-            $("#discountModal").modal('show');
-        });
-
-        $(document).on('change', '#modalDiscountInvoice', function () {
-            var $opt = $(this).find('option:selected');
-            var invId = $opt.attr('data-id') || '';
-            $("#modalDiscountInvoiceId").val(invId);
-        });
-
-        $(document).on('click', '#btnAutoFillFullBalance', function () {
-            var rem = parseFloat($("#discountModalRemainingBalance").text()) || 0;
-            if (rem <= 0) {
-                alert("Remaining balance is already ₹0.00 or settled.");
-                return;
-            }
-            $("#modalDiscountAmount").val(rem.toFixed(2));
-        });
-
-        $(document).on('click', '#btnSaveDiscountSettlement', function () {
-            var discountAmt = parseFloat($("#modalDiscountAmount").val()) || 0;
-            if (discountAmt <= 0) {
-                alert("Please enter a valid discount amount greater than 0.");
-                $("#modalDiscountAmount").focus();
-                return;
-            }
-
-            var selectedInvNo = $("#modalDiscountInvoice").val() || "";
-            var selectedInvId = $("#modalDiscountInvoiceId").val() || ($("#modalDiscountInvoice").find('option:selected').attr('data-id') || "");
-            var discDate = $("#modalDiscountDate").val() || '<?php echo date('d.m.Y'); ?>';
-            var discRemarks = $("#modalDiscountRemarks").val() || "Short Paid";
-            var customerID = '<?php echo $_GET['customerid'] ?? ''; ?>';
-
-            if (!selectedInvNo) {
-                alert("Please select an invoice number.");
-                $("#modalDiscountInvoice").focus();
-                return;
-            }
-
-            var $btn = $(this);
-            $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Saving...');
-
-            $.ajax({
-                url: 'addPayment.php',
-                type: 'POST',
-                data: {
-                    action: 'saveDiscount',
-                    customer_id: customerID,
-                    discount_amount: discountAmt,
-                    invoice_no: selectedInvNo,
-                    invoice_id: selectedInvId,
-                    discount_date: discDate,
-                    remarks: discRemarks
-                },
-                dataType: 'json',
-                success: function (res) {
-                    $btn.prop('disabled', false).html('<i class="fa fa-check-circle"></i> Save &amp; Settle Discount');
-                    if (res && res.success) {
-                        location.reload(true);
-                    } else {
-                        alert("Error: " + ((res && res.message) ? res.message : "Failed to save discount"));
-                    }
-                },
-                error: function (xhr, status, err) {
-                    $btn.prop('disabled', false).html('<i class="fa fa-check-circle"></i> Save &amp; Settle Discount');
-                    alert("Network/Server error while saving discount: " + status);
-                }
-            });
-        });
-
+        // Header settlement handlers are in js/payment-settlement.js.
         $(document).on('change', '.invoiceServiceTypeSelect', function () {
             moveInvoiceToHeader(Number($(this).attr('data-invoice-id')), $(this).val(), $(this).closest('.service-payment-block').attr('data-service'));
         });
-        $(document).on('change', '.paymentServiceTypeSelect', function () {
-            movePaymentToHeader($(this).closest('tr'), $(this).val());
-        });
-
         /* Auto-Save & Payment System Core */
         function showAutoSaveIndicator(state, message) {
             var $message = $('#paymentSaveMessage');

@@ -53,7 +53,8 @@ function paymentRowData($row) {
         header: $row.closest('.service-payment-block').attr('data-service') || 'CA',
         received: $row.find('.servicePaymentReceived').val() || '',
         tds: $row.find('.serviceTdsAmount').val() || '',
-        discount: $row.find('.serviceDiscountAmount').val() || '',
+        discount: $row.attr('data-settlement-kind') && $row.find('.serviceDiscountDisplay').length ? String(($row.attr('data-settlement-kind') === 'excess' ? -1 : 1) * Number($row.find('.serviceDiscountDisplay').val() || 0)) : $row.find('.serviceDiscountAmount').val() || '',
+        settlement_amount: $row.attr('data-settlement-kind') ? $row.find('.serviceDiscountDisplay').val() : undefined,
         date: ($row.find('.paymentDepositDate').val() || '').trim(),
         instrument: ($row.find('.serviceChequeDetails').val() || '').trim()
     };
@@ -118,28 +119,6 @@ function pruneEmptyPaymentBlocks() {
         recalculatePaymentSystem();
     }
 }
-function installPaymentMoveButton($row) {
-    if (!$row.find('.movePaymentHeader').length && Number($row.find('.row-id').val())) {
-        var $cell = $row.find('td').last();
-        var $actions = $cell.children('.table-edit-control');
-        $('<a href="#" class="movePaymentHeader" title="Move payment to another header" aria-label="Move payment to another header"><i class="fa fa-exchange"></i></a>').appendTo($actions.length ? $actions : $cell);
-    }
-}
-function movePaymentToHeader($row, target) {
-    if (!target || target === $row.closest('.service-payment-block').attr('data-service')) return;
-    paymentMutation(function () {
-        var data=paymentRowData($row);
-        return paymentRequest({action:'updatePaymentServiceType',payment_id:data.id,version:data.version,service_type:target})
-            .done(function (res) {
-                if (!res || !res.success) { alert(res && res.message || 'Move failed.'); return; }
-                var $target=$('.service-payment-block').filter(function () { return $(this).attr('data-service') === res.service_type; }).first();
-                if (!$target.length) { paymentMutationPending=false; window.location.reload(); return; }
-                $row.appendTo($target.find('.service-details-table tbody')).attr('data-version',res.version);
-                $row.data('saved-payment',paymentSnapshot(paymentRowData($row)));
-                recalculatePaymentSystem();
-            }).fail(function () { alert('Move failed.'); });
-    });
-}
 function paymentRowNeedsSave($row, row) {
     if ($row.hasClass('row-reconciled-locked')) return false;
     if (!row.id && !paymentRowHasDetails(row)) return false;
@@ -183,7 +162,6 @@ function executePaymentAutoSave() {
             $row.attr('data-version', saved.version);
             $row.find('.toggleReconcileBtn').attr('data-pay-id', saved.id);
             $row.find('.infoDelete').attr('data-row-id', saved.id);
-            installPaymentMoveButton($row);
             $row.data('saved-payment', saved.replayed ? null : paymentSnapshot(rows[i]));
         });
         if (res.payid) $('#paymentAutoSaveStatus, .savePayment').attr('data-row-id', res.payid);
@@ -259,21 +237,13 @@ $(function () {
     paymentRows().each(function () {
         var $row = $(this);
         if (Number($row.find('.row-id').val())) $row.data('saved-payment', paymentSnapshot(paymentRowData($row)));
-        installPaymentMoveButton($row);
     });
-    $(document).on('click.paymentLedger', '.movePaymentHeader', function (e) {
-        e.preventDefault(); e.stopPropagation();
-        var $row=$(this).closest('tr'), options={}, names=[];
-        $('.service-payment-block').each(function (index) {
-            var name=$(this).attr('data-service'); options[name]=(index+1)+'. '+paymentHeaderLabel(name); names.push(name);
-        });
-        if (typeof Swal !== 'undefined') {
-            Swal.fire({title:'Move payment',input:'select',inputOptions:options,inputValue:$row.closest('.service-payment-block').attr('data-service'),showCancelButton:true,confirmButtonText:'Move'})
-                .then(function (result) { if (result.isConfirmed || (result.value && !result.dismiss)) movePaymentToHeader($row,result.value); });
-        } else {
-            var choice=window.prompt('Move payment to header number:\n'+names.map(function (name,i) { return (i+1)+'. '+paymentHeaderLabel(name); }).join('\n'));
-            if (choice !== null && /^[1-9][0-9]*$/.test(choice) && names[Number(choice)-1]) movePaymentToHeader($row,names[Number(choice)-1]);
-        }
+    $(document).on('input change', '.serviceDiscountDisplay', function () {
+        var $row = $(this).closest('tr');
+        if (!$row.attr('data-settlement-kind') || $row.hasClass('row-reconciled-locked')) return;
+        $row.find('.serviceDiscountAmount').val(paymentRowData($row).discount);
+        recalculatePaymentSystem();
+        triggerPaymentAutoSave();
     });
     $(document).on('click.paymentLedger', '.infoDelete, .removeNewPaymentRow', function (e) {
         e.preventDefault();

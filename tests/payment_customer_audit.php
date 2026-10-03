@@ -9,7 +9,7 @@ $invoiceList=$db->query('SELECT * FROM invoice_details WHERE customer_id=380')->
 $paymentInfo=$db->query('SELECT * FROM payment_system WHERE customer_id=380')->fetchAll(PDO::FETCH_ASSOC);
 // Exercise the exact grouping code used to render the account page, without its mail cron/header.
 $source=file_get_contents(__DIR__.'/../customerAccount.php');
-$start=strpos($source,"if (!function_exists('normalizePaymentServiceType'))");
+$start=strpos($source,"// Payment service grouping starts here.");
 $end=strpos($source,'?>',$start);
 if ($start===false || $end===false) throw new RuntimeException('Grouping section not found.');
 eval(substr($source,$start,$end-$start));
