@@ -9,6 +9,8 @@ npm install --prefix "$env:TEMP\aitf-payment-tests" jsdom@26 --no-audit --no-fun
 node tests/payment_ledger_ui_test.cjs
 C:\xampp\php\php.exe tests/payment_settlement_test.php
 node tests/payment_settlement_ui_test.cjs
+C:\xampp\php\php.exe tests/payment_verification_test.php
+node tests/payment_verification_ui_test.cjs
 ```
 
 The PHP suite uses connection-local temporary tables and customer 380's invoice 1760 as a fixture. Test writes do not change customer data. The UI suite exercises repository jQuery, the actual service-block template and header controls in jsdom with controlled AJAX responses; it is not a full authenticated browser test.
@@ -16,6 +18,8 @@ The PHP suite uses connection-local temporary tables and customer 380's invoice 
 Current flow
 ------------
 
+- The Payment System Reconcile column is display-only for saved and new rows (green tick or Pending). Verification controls are available only on Received Payments and the TDS list; clicking the account status never sends a verification request.
+- Received payment reconciliation and TDS verification are independent. Each amount displays its own tick and locks only after its own verification. Shared date/instrument fields and row deletion stay protected while either status is verified. Statement receipts use a separate reconciliation column; historical TDS flags are not copied or reset. The verification suites cover all four status combinations, independent edits/unverify, statement receipts, and the actual Received Payments filters and totals. Deploy receivedPayments.php and include/statement_helper.php along with the ledger files for this change; the statement column is added automatically on page load.
 - Invoice editing shows existing headers in the Move dropdown.
 - The last dropdown option, + Add new header, opens the service list. Done saves the header and selects it in the Move dropdown without closing or resetting the invoice form. Other supports custom names.
 - Selecting a target does not move anything. Move changes only the invoice; receipts are entered manually; the payment-row Move icon is removed.

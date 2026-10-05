@@ -161,7 +161,6 @@ function executePaymentAutoSave() {
             var $row = matched[i];
             $row.find('.row-id').val(saved.id || '');
             $row.attr('data-version', saved.version);
-            $row.find('.toggleReconcileBtn').attr('data-pay-id', saved.id);
             $row.find('.infoDelete').attr('data-row-id', saved.id);
             $row.data('saved-payment', saved.replayed ? null : paymentSnapshot(rows[i]));
         });

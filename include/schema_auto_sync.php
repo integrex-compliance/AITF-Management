@@ -517,6 +517,9 @@ if (!function_exists('aitf_ensure_tds_columns')) {
                     if (!isset($spCols['tds_verified'])) {
                         $db->exec("ALTER TABLE `statement_payments` ADD COLUMN `tds_verified` VARCHAR(50) NOT NULL DEFAULT 'unverified'");
                     }
+                    if (!isset($spCols['reconciliation'])) {
+                        $db->exec("ALTER TABLE `statement_payments` ADD COLUMN `reconciliation` VARCHAR(50) NOT NULL DEFAULT 'Verify'");
+                    }
                     if (!isset($spCols['tds_decided'])) {
                         $db->exec("ALTER TABLE `statement_payments` ADD COLUMN `tds_decided` DECIMAL(12,2) DEFAULT 0.00");
                     }
@@ -698,7 +701,15 @@ if (!function_exists('aitf_migrate_legacy_tds_to_payment_columns')) {
                 UNIQUE KEY `uniq_cust_service` (`customer_id`, `service_type`),
                 KEY `idx_cust` (`customer_id`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8");
+
+            // Ensure payment_page_comments table for paymentPage.php dedicated follow-up notes (isolated from customerAccount.php)
+            $db->exec("CREATE TABLE IF NOT EXISTS `payment_page_comments` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `customer_id` INT NOT NULL UNIQUE,
+                `comment` TEXT NULL,
+                `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX `idx_ppc_cust` (`customer_id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
         } catch (Throwable $e) {}
     }
 }
-

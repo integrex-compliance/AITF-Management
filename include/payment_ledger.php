@@ -201,9 +201,6 @@ function aitf_payment_save(PDO $db, $customer, array $rows) {
                 $result[] = ['id' => (int)$old['payment_id'], 'key' => $key, 'version' => (int)$old['row_version'], 'replayed' => true];
                 continue;
             }
-            if ($old && (aitf_payment_verified($old['reconciliation']) || aitf_payment_verified($old['tds_verified']))) {
-                throw new RuntimeException('Cannot edit a verified/reconciled payment.');
-            }
             if ($old && (!isset($row['version']) || (int)$row['version'] !== (int)$old['row_version'])) {
                 throw new RuntimeException('This payment was changed in another window. Reload before saving.');
             }
@@ -222,6 +219,25 @@ function aitf_payment_save(PDO $db, $customer, array $rows) {
             $date = aitf_payment_date($row['date'] ?? '');
             $instrument = trim((string)($row['instrument'] ?? ''));
             if (mb_strlen($instrument) > 100) throw new InvalidArgumentException('Instrument must be at most 100 characters.');
+            if ($old) {
+                $paymentVerified = aitf_payment_verified($old['reconciliation']);
+                $tdsVerified = aitf_payment_verified($old['tds_verified']);
+                if ($paymentVerified && (float)$received != (float)$old['payment_received']) {
+                    throw new RuntimeException('Cannot edit the verified received amount.');
+                }
+                if ($tdsVerified && (float)$tds != (float)$old['tds_amount']) {
+                    throw new RuntimeException('Cannot edit the verified TDS amount.');
+                }
+                // Date, instrument, header and adjustments are shared by both amounts.
+                if (($paymentVerified || $tdsVerified) && (
+                    strcasecmp($header, trim((string)($old['payment_header'] ?: $header))) !== 0 ||
+                    (float)$discount != (float)$old['discount_amount'] ||
+                    $date != $old['payment_date'] || $instrument !== trim((string)$old['cheque_details']) ||
+                    (!empty($old['settlement_kind']) && trim((string)($row['note'] ?? $old['comment'] ?? '')) !== trim((string)$old['comment']))
+                )) {
+                    throw new RuntimeException('Cannot edit shared details of a verified payment or TDS entry.');
+                }
+            }
             if (!$old && !aitf_payment_meaningful(['payment_received'=>$received,'tds_amount'=>$tds,'discount_amount'=>$discount,'payment_date'=>$date,'cheque_details'=>$instrument])) {
                 $result[] = ['id' => 0, 'key' => $key, 'version' => 0];
                 continue;
@@ -290,23 +306,28 @@ function aitf_payment_move_invoice(PDO $db, $invoiceId, $target, $customer = 0) 
     }
 }
 
-function aitf_payment_verify(PDO $db, $id, $status, $column) {
+function aitf_payment_verify(PDO $db, $id, $status, $column, $isStatement = false) {
     if (!in_array($column, ['reconciliation', 'tds_verified'], true) || !in_array($status, ['Verify', 'Verified'], true)) throw new InvalidArgumentException('Invalid verification status.');
+    $table = $isStatement ? 'statement_payments' : 'payment_system';
+    $primaryKey = $isStatement ? 'id' : 'payment_id';
     $db->beginTransaction();
     try {
-        $stmt = $db->prepare('SELECT customer_id FROM payment_system WHERE payment_id=?');
+        $stmt = $db->prepare("SELECT customer_id FROM $table WHERE $primaryKey=?");
         $stmt->execute([$id]);
         $customer = (int)$stmt->fetchColumn();
         aitf_payment_lock_customer($db,$customer);
-        $stmt = $db->prepare('SELECT * FROM payment_system WHERE payment_id=? FOR UPDATE');
+        $stmt = $db->prepare("SELECT * FROM $table WHERE $primaryKey=? FOR UPDATE");
         $stmt->execute([$id]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$row) throw new RuntimeException('Payment no longer exists.');
-        if ($status === 'Verified' && (float)$row['payment_received'] + (float)$row['tds_amount'] + abs((float)$row['discount_amount']) <= 0) throw new RuntimeException('Enter an amount before verifying a payment.');
-        $db->prepare("UPDATE payment_system SET `$column`=?,row_version=row_version+1 WHERE payment_id=?")->execute([$status,$id]);
+        if ($status === 'Verified' && (float)$row['payment_received'] + (float)($row['tds_amount'] ?? $row['tds_received'] ?? 0) + abs((float)($row['discount_amount'] ?? 0)) <= 0) throw new RuntimeException('Enter an amount before verifying a payment.');
+        $versionUpdate = $isStatement ? '' : ',row_version=row_version+1';
+        $db->prepare("UPDATE $table SET `$column`=?$versionUpdate WHERE $primaryKey=?")->execute([$status,$id]);
         $row[$column] = $status;
         $db->commit();
-        return ['success'=>true,'status'=>$status,'payment_id'=>$id,'version'=>(int)$row['row_version']+1,'locked'=>aitf_payment_verified($row['tds_verified']) || aitf_payment_verified($row['reconciliation'])];
+        return ['success'=>true,'status'=>$status,'payment_id'=>$id,'version'=>$isStatement ? null : (int)$row['row_version']+1,
+            'payment_verified'=>aitf_payment_verified($row['reconciliation']), 'tds_verified'=>aitf_payment_verified($row['tds_verified']),
+            'locked'=>aitf_payment_verified($row['tds_verified']) || aitf_payment_verified($row['reconciliation'])];
     } catch (Throwable $e) {
         if ($db->inTransaction()) $db->rollBack();
         throw $e;

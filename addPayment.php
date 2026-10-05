@@ -153,7 +153,8 @@ if (isset($req['action']) && $req['action'] === 'updateReconcileStatus') {
         $isStatement = !empty($req['is_statement']) && $req['is_statement'] !== '0' && $req['is_statement'] !== false;
         if ($payId > 0) {
             if ($isStatement) {
-                $stmt = $db->prepare("UPDATE `statement_payments` SET `tds_verified` = :status WHERE `id` = :id");
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new RuntimeException('Use POST for verification.');
+                aitf_payment_json(aitf_payment_verify($db, $payId, $status, 'reconciliation', true));
             } else {
                 if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new RuntimeException('Use POST for verification.');
                 aitf_payment_schema($db);
@@ -194,7 +195,8 @@ if (isset($req['action']) && $req['action'] === 'updateTdsVerifyStatus') {
         $isStatement = !empty($req['is_statement']) && $req['is_statement'] !== '0' && $req['is_statement'] !== false;
         if ($payId > 0) {
             if ($isStatement) {
-                $stmt = $db->prepare("UPDATE `statement_payments` SET `tds_verified` = :status WHERE `id` = :id");
+                if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new RuntimeException('Use POST for verification.');
+                aitf_payment_json(aitf_payment_verify($db, $payId, $status, 'tds_verified', true));
             } else {
                 if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new RuntimeException('Use POST for verification.');
                 aitf_payment_schema($db);

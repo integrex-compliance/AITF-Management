@@ -6998,10 +6998,11 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                             $isTdsVerified = (isset($payInfo['tds_verified']) && in_array(strtolower(trim($payInfo['tds_verified'])), ['verified', 'yes', '1']));
                                                             $isTdsLocked = $isTdsVerified;
                                                             $isRowReconciled = $isVerified || $isTdsLocked;
+                                                            $isRowFullyLocked = $isVerified && ($isTdsLocked || $isSettlement);
                                                             ?>
-                                                            <tr class="cb_subsection previousCBData pamentrow<?php echo $payInfo["payment_id"] ?> <?php echo $isDiscountRow ? 'discount-settlement-row' : ''; ?> <?php echo $isRowReconciled ? 'row-reconciled-locked' : ''; ?>" data-settlement-kind="<?php echo htmlspecialchars($payInfo['settlement_kind'] ?? ''); ?>" data-preserve-details="<?php echo (aitf_payment_text_meaningful($payInfo['comment'] ?? '') || ((float)($payInfo['amount_decided'] ?? 0) > 0 && (float)($payInfo['payment_received'] ?? 0) + (float)($payInfo['tds_amount'] ?? 0) + (float)($payInfo['discount_amount'] ?? 0) == 0)) ? '1' : '0'; ?>" data-version="<?php echo (int)($payInfo['row_version'] ?? 0); ?>" id="cb_subsection_0" style="<?php echo $isDiscountRow ? 'background-color: #faf5ff !important; border-left: 4px solid #8b5cf6 !important;' : ($isRowReconciled ? 'background-color: #f8fafc !important;' : ''); ?>">
+                                                            <tr class="cb_subsection previousCBData pamentrow<?php echo $payInfo["payment_id"] ?> <?php echo $isDiscountRow ? 'discount-settlement-row' : ''; ?> <?php echo $isRowFullyLocked ? 'row-reconciled-locked' : ''; ?>" data-settlement-kind="<?php echo htmlspecialchars($payInfo['settlement_kind'] ?? ''); ?>" data-preserve-details="<?php echo (aitf_payment_text_meaningful($payInfo['comment'] ?? '') || ((float)($payInfo['amount_decided'] ?? 0) > 0 && (float)($payInfo['payment_received'] ?? 0) + (float)($payInfo['tds_amount'] ?? 0) + (float)($payInfo['discount_amount'] ?? 0) == 0)) ? '1' : '0'; ?>" data-version="<?php echo (int)($payInfo['row_version'] ?? 0); ?>" id="cb_subsection_0" style="<?php echo $isDiscountRow ? 'background-color: #faf5ff !important; border-left: 4px solid #8b5cf6 !important;' : ($isRowReconciled ? 'background-color: #f8fafc !important;' : ''); ?>">
                                                                 <td style="padding: 0px; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ($isRowReconciled ? 'background-color: #f8fafc;' : ''); ?>">
-                                                                    <div class="table-edit-control"><label></label>
+                                                                    <div class="table-edit-control" style="position: relative;"><label></label>
                                                                         <input type="hidden" data_row_id="" class="serviceTypeName" name="serviceTypeName" value="<?php echo htmlspecialchars($payInfo['service_type'] ?? $svcName); ?>" />
                                                                         <input type="hidden" data_row_id="" class="serviceAmountDecided" name="serviceAmountDecided" value="<?php echo htmlspecialchars((floatval($displayRcv) + floatval($displayTds) + floatval($displayDiscount)) ?: ($payInfo['amount_decided'] ?? '')); ?>" />
                                                                         <input type="hidden" data_row_id="" class="serviceDiscountAmount" name="serviceDiscountAmount" value="<?php echo htmlspecialchars($displayDiscount); ?>" />
@@ -7010,15 +7011,16 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                             <?php if ($isSettlement) { ?><input type="hidden" class="settlementNote" value="<?php echo htmlspecialchars($payInfo['comment'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" /><?php } ?>
                                                                             <input type="hidden" data_row_id="" class="servicePaymentReceived" name="servicePaymentReceived" value="0" />
                                                                         <?php } else { ?>
-                                                                            <input type="number" step="any" min="0" data_row_id="" class="servicePaymentReceived <?php echo $isRowReconciled ? 'reconciled-locked-input' : ''; ?>" name="servicePaymentReceived" value="<?php echo htmlspecialchars($displayRcv); ?>" placeholder="" <?php echo $isRowReconciled ? 'readonly="readonly" data-reconciled="1"' : ''; ?> style="background-color: <?php echo $isRowReconciled ? '#f8fafc' : '#ffffff'; ?>; border-bottom: 1px solid <?php echo $isRowReconciled ? '#86efac' : '#cbd5e1'; ?>; color: <?php echo $isRowReconciled ? '#15803d' : '#0f172a'; ?>; font-weight: 700; <?php echo $isRowReconciled ? 'cursor: not-allowed;' : ''; ?>" title="<?php echo $isRowReconciled ? 'Reconciled Entry - Cannot edit reconciled payment entry' : ''; ?>" />
+                                                                            <input type="number" step="any" min="0" data_row_id="" class="servicePaymentReceived <?php echo $isVerified ? 'reconciled-locked-input' : ''; ?>" name="servicePaymentReceived" value="<?php echo htmlspecialchars($displayRcv); ?>" placeholder="" <?php echo $isVerified ? 'readonly="readonly" data-reconciled="1"' : ''; ?> style="background-color: <?php echo $isVerified ? '#f8fafc' : '#ffffff'; ?>; border-bottom: 1px solid <?php echo $isVerified ? '#86efac' : '#cbd5e1'; ?>; color: <?php echo $isVerified ? '#15803d' : '#0f172a'; ?>; font-weight: 700; <?php echo $isVerified ? 'cursor: not-allowed;' : ''; ?>" title="<?php echo $isVerified ? 'Reconciled Entry - Cannot edit reconciled payment entry' : ''; ?>" />
+                                                                            <?php if ($isVerified) { ?><span class="payment-verified-icon" title="Received amount verified" style="position: absolute; right: 3px; top: 50%; transform: translateY(-50%); color: #16a34a; pointer-events: none;"><i class="fa fa-check-circle"></i></span><?php } ?>
                                                                         <?php } ?>
                                                                     </div>
                                                                 </td>
-                                                                <td style="padding: 0px; background-color: <?php echo $isDiscountRow ? '#faf5ff' : ($isRowReconciled ? '#f0fdf4' : '#ffffff'); ?>; position: relative;">
+                                                                <td style="padding: 0px; background-color: <?php echo $isDiscountRow ? '#faf5ff' : ($isTdsLocked ? '#f0fdf4' : '#ffffff'); ?>; position: relative;">
                                                                     <div class="table-edit-control" style="position: relative; display: flex; align-items: center; width: 100%;"><label></label>
-                                                                        <input type="number" step="any" min="0" data_row_id="" class="serviceTdsAmount <?php echo $isRowReconciled ? 'tds-locked-input reconciled-locked-input' : ''; ?>" name="serviceTdsAmount" <?php echo $isSettlement ? 'readonly="readonly"' : ''; ?> value="<?php echo htmlspecialchars($displayTds); ?>" placeholder="" <?php echo $isRowReconciled ? 'readonly="readonly" data-tds-locked="1" data-reconciled="1"' : ''; ?> style="background-color: <?php echo $isDiscountRow ? '#faf5ff' : ($isRowReconciled ? '#f0fdf4' : '#ffffff'); ?>; border-bottom: 1px solid <?php echo ($isRowReconciled) ? '#86efac' : '#cbd5e1'; ?>; color: <?php echo ($isRowReconciled) ? '#15803d' : '#b45309'; ?>; font-weight: 700; text-align: right; <?php echo ($isRowReconciled) ? 'padding-right: 20px !important; cursor: not-allowed;' : ''; ?>" title="<?php echo $isRowReconciled ? 'Reconciled Entry - Cannot edit reconciled payment entry' : ''; ?>" />
-                                                                        <?php if ($isRowReconciled) { ?>
-                                                                            <span class="tds-verified-icon" title="Reconciled / Verified Entry" style="position: absolute; right: 3px; top: 50%; transform: translateY(-50%); color: #16a34a; font-size: 11px; display: inline-flex; align-items: center; pointer-events: none; z-index: 2;">
+                                                                        <input type="number" step="any" min="0" data_row_id="" class="serviceTdsAmount <?php echo $isTdsLocked ? 'tds-locked-input reconciled-locked-input' : ''; ?>" name="serviceTdsAmount" <?php echo $isSettlement ? 'readonly="readonly"' : ''; ?> value="<?php echo htmlspecialchars($displayTds); ?>" placeholder="" <?php echo $isTdsLocked ? 'readonly="readonly" data-tds-locked="1" data-reconciled="1"' : ''; ?> style="background-color: <?php echo $isDiscountRow ? '#faf5ff' : ($isTdsLocked ? '#f0fdf4' : '#ffffff'); ?>; border-bottom: 1px solid <?php echo ($isTdsLocked) ? '#86efac' : '#cbd5e1'; ?>; color: <?php echo ($isTdsLocked) ? '#15803d' : '#b45309'; ?>; font-weight: 700; text-align: right; <?php echo ($isTdsLocked) ? 'padding-right: 20px !important; cursor: not-allowed;' : ''; ?>" title="<?php echo $isTdsLocked ? 'TDS verified - Cannot edit verified TDS amount' : ''; ?>" />
+                                                                        <?php if ($isTdsLocked) { ?>
+                                                                            <span class="tds-verified-icon" title="TDS verified" style="position: absolute; right: 3px; top: 50%; transform: translateY(-50%); color: #16a34a; font-size: 11px; display: inline-flex; align-items: center; pointer-events: none; z-index: 2;">
                                                                                 <i class="fa fa-check-circle" style="color: #16a34a; font-size: 11.5px;"></i>
                                                                             </span>
                                                                         <?php } ?>
@@ -7037,19 +7039,19 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                                 <td style="padding: 1px 2px; text-align: center; vertical-align: middle; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ($isRowReconciled ? 'background-color: #f8fafc;' : ''); ?>">
                                                                     <div class="table-edit-control" style="display: flex; align-items: center; justify-content: center;">
                                                                         <input type="hidden" class="serviceReconciliation" name="serviceReconciliation" value="<?php echo $recStatusText; ?>" />
-                                                                        <button type="button" class="btn btn-xs toggleReconcileBtn <?php echo $isVerified ? 'reconcile-verified' : 'reconcile-not-verify'; ?>" data-status="<?php echo $recStatusText; ?>" data-pay-id="<?php echo htmlspecialchars($payInfo['payment_id'] ?? ''); ?>" style="width: 96%; height: 23px; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 0 2px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; cursor: pointer; transition: all 0.2s ease; <?php echo $isVerified ? 'background-color: #16a34a; border: 1px solid #15803d; color: #ffffff;' : 'background-color: #ef4444; border: 1px solid #dc2626; color: #ffffff;'; ?>" title="Click to toggle: <?php echo $isVerified ? 'Mark as Verify' : 'Mark as Verified'; ?>">
+                                                                        <span role="status" class="btn btn-xs paymentReconcileStatus <?php echo $isVerified ? 'reconcile-verified' : 'reconcile-not-verify'; ?>" data-status="<?php echo $recStatusText; ?>" style="width: 96%; height: 23px; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 0 2px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; cursor: default; <?php echo $isVerified ? 'background-color: #16a34a; border: 1px solid #15803d; color: #ffffff;' : 'background-color: #ef4444; border: 1px solid #dc2626; color: #ffffff;'; ?>" title="Payment reconciliation status. Verification is managed from Received Payments.">
                                                                             <?php if ($isVerified) { ?>
                                                                                 <i class="fa fa-check" style="font-size: 13px;"></i>
                                                                             <?php } else { ?>
-                                                                                <span>Verify</span>
+                                                                                <span>Pending</span>
                                                                             <?php } ?>
-                                                                        </button>
+                                                                        </span>
                                                                     </div>
                                                                 </td>
                                                                 <td style="padding: 0px; <?php echo $isDiscountRow ? 'background-color: #faf5ff;' : ($isRowReconciled ? 'background-color: #f8fafc;' : ''); ?>">
                                                                     <div class="table-edit-control">
                                                                         <input type="hidden" data_row_id="" class="serviceBalance" name="serviceBalance" value="<?php echo htmlspecialchars($payInfo['balance'] ?? '0.00'); ?>" />
-                                                                        <a class="infoDelete" data-row-id="<?php echo $payInfo['payment_id'] ?>" data-tds-locked="<?php echo $isRowReconciled ? '1' : '0'; ?>" data-reconciled="<?php echo $isRowReconciled ? '1' : '0'; ?>" value="<?php echo $payInfo['payment_id'] ?>"><i class="fa fa-trash-o pull-right " style="padding-right: 10px; color: <?php echo $isRowReconciled ? '#94a3b8' : '#ef4444'; ?>;" title="<?php echo $isRowReconciled ? 'Cannot delete reconciled payment entry' : 'Delete Row Details'; ?>"></i></a>
+                                                                        <a class="infoDelete" data-row-id="<?php echo $payInfo['payment_id'] ?>" data-tds-locked="<?php echo $isTdsLocked ? '1' : '0'; ?>" data-reconciled="<?php echo $isRowReconciled ? '1' : '0'; ?>" value="<?php echo $payInfo['payment_id'] ?>"><i class="fa fa-trash-o pull-right " style="padding-right: 10px; color: <?php echo $isRowReconciled ? '#94a3b8' : '#ef4444'; ?>;" title="<?php echo $isRowReconciled ? 'Cannot delete reconciled payment entry' : 'Delete Row Details'; ?>"></i></a>
                                                                         <input type="hidden" data-row-id="" class="row-id" name="row-id" value="<?php echo $payInfo['payment_id'] ?>">
                                                                     </div>
                                                                 </td>
@@ -7083,9 +7085,9 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                                                             <td style="padding: 1px 2px; text-align: center; vertical-align: middle;">
                                                                 <div class="table-edit-control" style="display: flex; align-items: center; justify-content: center;">
                                                                     <input type="hidden" class="serviceReconciliation" name="serviceReconciliation" value="Verify" />
-                                                                    <button type="button" class="btn btn-xs toggleReconcileBtn reconcile-not-verify" data-status="Verify" data-pay-id="" style="width: 96%; height: 23px; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 0 2px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; cursor: pointer; transition: all 0.2s ease; background-color: #ef4444; border: 1px solid #dc2626; color: #ffffff;" title="Click to toggle: Mark as Verified">
-                                                                        <span>Verify</span>
-                                                                    </button>
+                                                                    <span role="status" class="btn btn-xs paymentReconcileStatus reconcile-not-verify" data-status="Verify" style="width: 96%; height: 23px; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 0 2px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; cursor: default; background-color: #ef4444; border: 1px solid #dc2626; color: #ffffff;" title="Payment reconciliation status. Verification is managed from Received Payments.">
+                                                                        <span>Pending</span>
+                                                                    </span>
                                                                 </div>
                                                             </td>
                                                             <td style="padding: 0px;">
@@ -13881,7 +13883,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             </div>
         </div>
     <?php } ?>
-    <script src="js/payment-ledger.js?v=20261003-1"></script>
+    <script src="js/payment-ledger.js?v=20261005-2"></script>
     <script src="js/payment-settlement.js?v=20261002-2"></script>
     <script src="js/invoice-header-controls.js?v=20261002-2"></script>
     <script type="text/javascript">
@@ -22336,9 +22338,9 @@ if ($currentRole === 'client' || $currentRole === 'external') {
                     '<td style="padding: 1px 2px; text-align: center; vertical-align: middle;">' +
                         '<div class="table-edit-control" style="display: flex; align-items: center; justify-content: center;">' +
                             '<input type="hidden" class="serviceReconciliation" name="serviceReconciliation" value="Verify" />' +
-                            '<button type="button" class="btn btn-xs toggleReconcileBtn reconcile-not-verify" data-status="Verify" data-pay-id="" style="width: 96%; height: 23px; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 0 2px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; cursor: pointer; transition: all 0.2s ease; background-color: #ef4444; border: 1px solid #dc2626; color: #ffffff;" title="Click to toggle: Mark as Verified">' +
-                                '<span>Verify</span>' +
-                            '</button>' +
+                            '<span role="status" class="btn btn-xs paymentReconcileStatus reconcile-not-verify" data-status="Verify" style="width: 96%; height: 23px; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 0 2px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; cursor: default; background-color: #ef4444; border: 1px solid #dc2626; color: #ffffff;" title="Payment reconciliation status. Verification is managed from Received Payments.">' +
+                                '<span>Pending</span>' +
+                            '</span>' +
                         '</div>' +
                     '</td>' +
                     '<td style="padding: 0px;">' +
@@ -22612,31 +22614,6 @@ if ($currentRole === 'client' || $currentRole === 'external') {
         });
 
 
-
-        $(document).on('click', '.toggleReconcileBtn', function (e) {
-            e.preventDefault();
-            var $btn = $(this), $row = $btn.closest('tr');
-            var status = $btn.attr('data-status') === 'Verified' ? 'Verify' : 'Verified';
-            paymentMutation(function () {
-                var id = Number($row.find('.row-id').val());
-                if (!id) { alert('Enter and save a payment amount before verifying.'); return; }
-                return paymentRequest({action:'updateReconcileStatus',payment_id:id,status:status}).done(function (res) {
-                    if (!res || !res.success) { alert(res && res.message || 'Could not verify payment.'); return; }
-                    var verified = status === 'Verified';
-                    $btn.attr('data-status', status).toggleClass('reconcile-verified', verified).toggleClass('reconcile-not-verify', !verified)
-                        .css({'background-color':verified ? '#16a34a' : '#ef4444', 'border-color':verified ? '#15803d' : '#dc2626'})
-                        .html(verified ? '<i class="fa fa-check" style="font-size: 13px;"></i>' : '<span>Verify</span>')
-                        .attr('title', 'Click to toggle: ' + (verified ? 'Mark as Verify' : 'Mark as Verified'));
-                    $row.attr('data-version', res.version).toggleClass('row-reconciled-locked', !!res.locked);
-                    $row.find('.serviceReconciliation').val(status);
-                    $row.find('.servicePaymentReceived,.serviceDiscountDisplay,.serviceTdsAmount,.paymentDepositDate,.serviceChequeDetails')
-                        .prop('readonly',!!res.locked).toggleClass('reconciled-locked-input',!!res.locked)
-                        .attr('data-reconciled',res.locked?'1':'0').removeAttr('data-tds-locked').removeClass('tds-locked-input');
-                    if ($row.attr('data-settlement-kind')) $row.find('.serviceTdsAmount').prop('readonly',true);
-                    $row.find('.infoDelete').attr('data-reconciled',res.locked?'1':'0').attr('data-tds-locked','0');
-                }).fail(function () { alert('Could not verify payment.'); });
-            });
-        });
 
         $(document).on('click', '.invoiceStatusBtn', function (e) {
             e.preventDefault();
@@ -23024,7 +23001,7 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             html += '                            <td style="padding: 0px; background-color: #ffffff;"><div class="table-edit-control"><label></label><input type="number" step="any" min="0" data_row_id="" class="serviceTdsAmount" name="serviceTdsAmount" value="" placeholder="" style="background-color: #ffffff; border-bottom: 1px solid #cbd5e1; color: #b45309; font-weight: 700; text-align: right;" /></div></td>';
             html += '                            <td style="padding: 0px;"><div class="table-edit-control"><label></label><input type="text" data_row_id="" class="paymentDepositDate" name="paymentDepositDate" value="" placeholder="DD.MM.YYYY"></div></td>';
             html += '                            <td style="padding: 0px;"><div class="table-edit-control"><label></label><input type="text" data_row_id="" class="serviceChequeDetails" name="serviceChequeDetails" value="" placeholder="" /></div></td>';
-            html += '                            <td style="padding: 1px 2px; text-align: center; vertical-align: middle;"><div class="table-edit-control" style="display: flex; align-items: center; justify-content: center;"><input type="hidden" class="serviceReconciliation" name="serviceReconciliation" value="Verify" /><button type="button" class="btn btn-xs toggleReconcileBtn reconcile-not-verify" data-status="Verify" data-pay-id="" style="width: 96%; height: 23px; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 0 2px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; cursor: pointer; transition: all 0.2s ease; background-color: #ef4444; border: 1px solid #dc2626; color: #ffffff;" title="Click to toggle: Mark as Verified"><span>Verify</span></button></div></td>';
+            html += '                            <td style="padding: 1px 2px; text-align: center; vertical-align: middle;"><div class="table-edit-control" style="display: flex; align-items: center; justify-content: center;"><input type="hidden" class="serviceReconciliation" name="serviceReconciliation" value="Verify" /><span role="status" class="btn btn-xs paymentReconcileStatus reconcile-not-verify" data-status="Verify" style="width: 96%; height: 23px; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 0 2px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; cursor: default; background-color: #ef4444; border: 1px solid #dc2626; color: #ffffff;" title="Payment reconciliation status. Verification is managed from Received Payments."><span>Pending</span></span></div></td>';
             html += '                            <td style="padding: 0px;"><div class="table-edit-control"><input type="hidden" data_row_id="" class="serviceBalance" name="serviceBalance" value="0.00" /><input type="hidden" data_row_id="" class="row-id" name="row-id" value=""></div></td>';
             html += '                        </tr>';
             html += '                    </tbody>';
@@ -23402,8 +23379,8 @@ if ($currentRole === 'client' || $currentRole === 'external') {
             triggerPaymentAutoSave(true);
         });
 
-        // Prevent editing ANY field of a reconciled / locked payment entry and alert the user
-        $(document).on('click focus keydown mousedown', '.reconciled-locked-input, input[data-reconciled="1"], .servicePaymentReceived[data-reconciled="1"], .serviceTdsAmount[data-tds-locked="1"], .serviceTdsAmount[data-reconciled="1"], .tds-locked-input, .paymentDepositDate[data-reconciled="1"], .serviceChequeDetails[data-reconciled="1"], tr.row-reconciled-locked input', function (e) {
+        // Protect only the fields locked by their own verification status.
+        $(document).on('click focus keydown mousedown', '.reconciled-locked-input, input[data-reconciled="1"], .servicePaymentReceived[data-reconciled="1"], .serviceTdsAmount[data-tds-locked="1"], .serviceTdsAmount[data-reconciled="1"], .tds-locked-input, .paymentDepositDate[data-reconciled="1"], .serviceChequeDetails[data-reconciled="1"]', function (e) {
             e.preventDefault();
             $(this).blur();
             if (typeof Swal !== 'undefined') {

@@ -10,6 +10,26 @@ session_start();
 include_once './dbConnect.php';
 date_default_timezone_set('Asia/Kolkata');
 
+if ((isset($_POST['action']) && $_POST['action'] === 'savePaymentFollowUp') || (isset($_POST['customerId']) && isset($_POST['comment']) && !isset($_POST['cbCustomer']))) {
+    header('Content-Type: application/json');
+    $customerId = intval($_POST['customerId'] ?? 0);
+    $comment = trim((string)($_POST['comment'] ?? ''));
+    if ($customerId > 0) {
+        $stmt = $db->prepare("INSERT INTO `payment_page_comments` (`customer_id`, `comment`) 
+                              VALUES (:cid, :comm) 
+                              ON DUPLICATE KEY UPDATE `comment` = :comm2");
+        $stmt->bindParam(':cid', $customerId, PDO::PARAM_INT);
+        $stmt->bindParam(':comm', $comment);
+        $stmt->bindParam(':comm2', $comment);
+        $stmt->execute();
+        echo json_encode(['status' => 'success', 'comment' => $comment]);
+        exit;
+    } else {
+        echo json_encode(['status' => 'error', 'message' => 'Invalid customer ID']);
+        exit;
+    }
+}
+
 if (isset($_POST["certificationComment"]) && !empty($_POST["certificationComment"])) {
     $sql = "UPDATE `payment_system` SET `comment`=:comment WHERE `payment_id` = :row";
     $statement = $db->prepare($sql);

@@ -12,33 +12,14 @@ $minAmount = $_POST['minAmount'] ?? '';
 $maxAmount = $_POST['maxAmount'] ?? '';
 $clientName = $_POST['clientName'] ?? '';
 
-$sql = "SELECT ci.id, customer_name, unique_id, contact_person, contact, ps.payment_id, ps.service_type, balance, ps.comment 
-        FROM customer_info ci 
-        JOIN payment_system ps on ps.customer_id = ci.id 
-        WHERE ps.balance > 0 AND ps.service_type <> 'TDS' AND ci.is_deleted = 'NO'";
+require_once __DIR__ . '/include/payment_due_helper.php';
 
-$params = [];
-if ($clientName != '') {
-    $sql .= " AND ci.customer_name LIKE :clientName";
-    $params[':clientName'] = '%' . $clientName . '%';
-}
-if ($minAmount != '') {
-    $sql .= " AND ps.balance >= :minAmount";
-    $params[':minAmount'] = (float)$minAmount;
-}
-if ($maxAmount != '') {
-    $sql .= " AND ps.balance <= :maxAmount";
-    $params[':maxAmount'] = (float)$maxAmount;
-}
+$payments = aitf_get_due_payments($db, [
+    'clientName' => $clientName,
+    'minAmount' => $minAmount,
+    'maxAmount' => $maxAmount
+]);
 
-$sql .= " ORDER BY ps.balance DESC";
-
-$statement = $db->prepare($sql);
-foreach ($params as $key => &$val) {
-    $statement->bindParam($key, $val);
-}
-$statement->execute();
-$payments = $statement->fetchAll(PDO::FETCH_ASSOC);
 
 $xlsx = new SimpleXlsx();
 

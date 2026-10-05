@@ -41,7 +41,7 @@ check((float)$db->query('SELECT payment_received FROM payment_system')->fetchCol
 $bad['date']='01.10.2026'; $bad['received']='-5';
 rejected(function() use($db,$bad) { aitf_payment_save($db,380,[$bad]); },'Reject negative amounts');
 $db->exec("UPDATE payment_system SET reconciliation='Verified'");
-rejected(function() use($db,$row) { aitf_payment_save($db,380,[$row]); }, 'Cannot edit verified receipt');
+rejected(function() use($db,$row) { $row['received']='99'; aitf_payment_save($db,380,[$row]); }, 'Cannot edit verified received amount');
 rejected(function() use($db,$id) { aitf_payment_delete($db,380,$id,1); }, 'Cannot delete verified receipt');
 $db->exec("UPDATE payment_system SET reconciliation='Verify',tds_verified='verified'");
 rejected(function() use($db,$id) { aitf_payment_delete($db,380,$id,1); }, 'Cannot delete TDS-verified receipt');

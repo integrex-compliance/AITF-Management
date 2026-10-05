@@ -62,7 +62,6 @@ $paymentsQuery = "SELECT
     ps.payment_date,
     ps.cheque_details,
     ps.reconciliation,
-    ps.tds_verified,
     ps.balance,
     ps.comment,
     ci.contact_person,
@@ -76,7 +75,7 @@ WHERE ps.payment_received > 0
 $params = [];
 
 if ($statusFilter === 'reconciled') {
-    $paymentsQuery .= " AND (LOWER(TRIM(COALESCE(ps.reconciliation, ''))) IN ('verified', 'yes', '1') OR LOWER(TRIM(COALESCE(ps.tds_verified, ''))) IN ('verified', 'yes', '1'))";
+    $paymentsQuery .= " AND LOWER(TRIM(COALESCE(ps.reconciliation, ''))) IN ('verified', 'yes', '1')";
 } elseif ($statusFilter === 'pending') {
     $paymentsQuery .= " AND (ps.reconciliation IS NULL OR LOWER(TRIM(ps.reconciliation)) NOT IN ('verified', 'yes', '1'))";
 }
@@ -146,8 +145,7 @@ try {
             0.00 as discount_amount,
             sp.payment_date,
             sp.instrument as cheque_details,
-            sp.tds_verified as reconciliation,
-            sp.tds_verified,
+            sp.reconciliation,
             sp.balance,
             sp.comment,
             ci.contact_person,
@@ -160,9 +158,9 @@ try {
         
         $spParams = [];
         if ($statusFilter === 'reconciled') {
-            $stmtQuery .= " AND LOWER(TRIM(COALESCE(sp.tds_verified, ''))) IN ('verified', 'yes', '1')";
+            $stmtQuery .= " AND LOWER(TRIM(COALESCE(sp.reconciliation, ''))) IN ('verified', 'yes', '1')";
         } elseif ($statusFilter === 'pending') {
-            $stmtQuery .= " AND (sp.tds_verified IS NULL OR LOWER(TRIM(sp.tds_verified)) NOT IN ('verified', 'yes', '1'))";
+            $stmtQuery .= " AND (sp.reconciliation IS NULL OR LOWER(TRIM(sp.reconciliation)) NOT IN ('verified', 'yes', '1'))";
         }
         if (!empty($startDate)) {
             $stmtQuery .= " AND sp.payment_date >= :spStartDate";
@@ -211,8 +209,7 @@ foreach ($allPayments as $p) {
     $rcv = floatval($p['payment_received'] ?? 0);
     $totalReceivedSum += $rcv;
 
-    $isRec = in_array(strtolower(trim($p['reconciliation'] ?? '')), ['verified', 'yes', '1'])
-          || in_array(strtolower(trim($p['tds_verified'] ?? '')), ['verified', 'yes', '1']);
+    $isRec = in_array(strtolower(trim($p['reconciliation'] ?? '')), ['verified', 'yes', '1']);
 
     if ($isRec) {
         $totalReconciledSum += $rcv;
@@ -1206,8 +1203,7 @@ if (!function_exists('aitf_format_payment_date_display')) {
                                         <tbody>
                                             <?php foreach ($allPayments as $pay) { 
                                                 $rcvAmt = floatval($pay['payment_received'] ?? 0);
-                                                $isReconciled = in_array(strtolower(trim($pay['reconciliation'] ?? '')), ['verified', 'yes', '1'])
-                                                              || in_array(strtolower(trim($pay['tds_verified'] ?? '')), ['verified', 'yes', '1']);
+                                                $isReconciled = in_array(strtolower(trim($pay['reconciliation'] ?? '')), ['verified', 'yes', '1']);
                                                 $statusText = $isReconciled ? 'Reconciled' : 'Reconcile';
                                                 $dateFormatted = htmlspecialchars(aitf_format_payment_date_display($pay['payment_date'] ?? ''));
                                                 $serviceName = htmlspecialchars(aitf_format_service_display($pay['service_type'] ?? '', $pay['customer_id'] ?? 0, $db));
